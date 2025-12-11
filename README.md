@@ -2,9 +2,12 @@
 
 A calm, distraction-free note-taking app inspired by Japanese stationery and wabi-sabi aesthetics.
 
+**Live Demo:** [https://zenote.vercel.app](https://zenote.vercel.app)
+
 ![React](https://img.shields.io/badge/React-19-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green)
+![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black)
 
 ## Features
 
@@ -24,6 +27,7 @@ A calm, distraction-free note-taking app inspired by Japanese stationery and wab
 - **Auto-save Indicator** - Visual feedback when changes are being saved
 - **Google Sign-In** - Quick authentication via Google OAuth
 - **Secure** - User authentication with row-level security
+- **Error Boundary** - Graceful error handling with user-friendly recovery UI
 
 ## Tech Stack
 
@@ -44,7 +48,7 @@ A calm, distraction-free note-taking app inspired by Japanese stationery and wab
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/yourusername/zenote.git
+   git clone https://github.com/anbuneel/zenote.git
    cd zenote
    ```
 
@@ -138,19 +142,34 @@ create index note_tags_tag_id_idx on note_tags(tag_id);
 |---------|-------------|
 | `npm run dev` | Start development server |
 | `npm run build` | Build for production |
+| `npm run lint` | Run ESLint |
 | `npm run preview` | Preview production build |
+| `npx tsc --noEmit` | Type check without emitting |
 
 ## Project Structure
 
 ```
 src/
-├── components/     # React components (UI, tags, editor)
-├── contexts/       # React contexts (Auth)
-├── lib/            # Supabase client
-├── services/       # API services (notes, tags CRUD)
-├── types/          # TypeScript types
-├── utils/          # Utility functions (time formatting, export/import)
-└── index.css       # Design system & styles
+├── components/        # React components
+│   ├── Auth.tsx           # Login/signup/Google OAuth/password reset
+│   ├── Editor.tsx         # Note editor with rich text + tags
+│   ├── ErrorBoundary.tsx  # Error boundary for graceful error handling
+│   ├── Header.tsx         # App header with search, profile menu
+│   ├── Library.tsx        # Notes grid view
+│   ├── NoteCard.tsx       # Individual note card
+│   ├── RichTextEditor.tsx # Tiptap editor wrapper
+│   ├── SettingsModal.tsx  # Settings modal (profile, password, theme)
+│   ├── TagBadge.tsx       # Small tag badge for note cards
+│   ├── TagFilterBar.tsx   # Horizontal tag filter strip
+│   ├── TagModal.tsx       # Modal for creating/editing tags
+│   ├── TagPill.tsx        # Tag pill component
+│   └── TagSelector.tsx    # Dropdown for assigning tags
+├── contexts/          # React contexts (Auth)
+├── lib/               # Supabase client
+├── services/          # API services (notes, tags CRUD)
+├── types/             # TypeScript types
+├── utils/             # Utility functions (time formatting, export/import)
+└── index.css          # Design system & styles
 ```
 
 ## Export & Import
@@ -188,6 +207,19 @@ Tags use a curated wabi-sabi color palette:
 | Clay | `#A67B5B` |
 | Sage | `#87A878` |
 | Plum | `#6B4C5A` |
+
+## Deployment
+
+This app is deployed on [Vercel](https://vercel.com). To deploy your own instance:
+
+1. Fork this repository
+2. Import to Vercel
+3. Add environment variables:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+4. Update Supabase Auth settings:
+   - Set **Site URL** to your Vercel domain
+   - Add your Vercel domain to **Redirect URLs**
 
 ## License
 

@@ -3,6 +3,9 @@
 ## Overview
 Zenote is a calm, distraction-free note-taking application inspired by Japanese stationery, Muji aesthetics, and architectural journals. It features a "wabi-sabi" design with asymmetric card corners, warm colors, and elegant typography.
 
+**Live URL:** https://zenote.vercel.app
+**Repository:** https://github.com/anbuneel/zenote
+
 ## Tech Stack
 - **Frontend:** React 19 + TypeScript + Vite
 - **Styling:** Tailwind CSS v4 with CSS custom properties
@@ -16,6 +19,7 @@ src/
 ├── components/
 │   ├── Auth.tsx           # Login/signup/Google OAuth/password reset UI with theme toggle
 │   ├── Editor.tsx         # Note editor with rich text + tag selector + save indicator
+│   ├── ErrorBoundary.tsx  # Error boundary for graceful error handling
 │   ├── Header.tsx         # App header with search, profile menu, settings
 │   ├── Library.tsx        # Notes grid view
 │   ├── NoteCard.tsx       # Individual note card with tag badges
@@ -34,7 +38,7 @@ src/
 │   ├── notes.ts           # CRUD operations for notes (with tags)
 │   └── tags.ts            # CRUD operations for tags
 ├── types/
-│   └── database.ts        # Supabase DB types (notes, tags, note_tags)
+│   └── database.ts        # Supabase DB types (notes, tags, note_tags) with full schema
 ├── utils/
 │   ├── exportImport.ts    # Export/import utilities (JSON, Markdown)
 │   └── formatTime.ts      # Relative time formatting
@@ -42,13 +46,14 @@ src/
 ├── App.css                # Additional app styles
 ├── index.css              # Design system + Tiptap styles
 ├── types.ts               # App types (Note, Tag, Theme, ViewMode, TagColor)
-└── main.tsx               # Entry point with AuthProvider
+└── main.tsx               # Entry point with AuthProvider and ErrorBoundary
 ```
 
 ## Key Commands
 ```bash
 npm run dev      # Start development server
-npm run build    # Production build
+npm run build    # Production build (tsc + vite build)
+npm run lint     # Run ESLint
 npm run preview  # Preview production build
 npx tsc --noEmit # Type check without emitting
 ```
@@ -133,8 +138,14 @@ VITE_SUPABASE_ANON_KEY=xxx
 - [x] Settings modal (display name, password change, theme toggle)
 - [x] Loading states for tag operations (create/update/delete)
 - [x] Duplicate tag name prevention (client-side validation)
+- [x] Error boundary for graceful error handling
+- [x] Production deployment on Vercel
 
 ## Features Not Yet Implemented
+- [ ] Test coverage (Vitest + Testing Library)
+- [ ] Error monitoring (Sentry)
+- [ ] CI/CD pipeline (GitHub Actions)
+- [ ] Code splitting (lazy load Tiptap editor)
 - [ ] Additional OAuth providers (GitHub, etc.)
 - [ ] Offline support / PWA
 - [ ] Image attachments
@@ -254,3 +265,17 @@ The Settings modal (`SettingsModal.tsx`) has two tabs:
 - Import operations show a loading overlay with spinner
 - Google OAuth uses Supabase's `signInWithOAuth` with redirect back to app origin
 - Google sign-in button appears on login and signup screens with "or" divider
+- ErrorBoundary wraps the entire app to catch and display runtime errors gracefully
+- Production OAuth requires Supabase Site URL and Redirect URLs to match deployment domain
+
+## Deployment
+
+### Production (Vercel)
+- **URL:** https://zenote.vercel.app
+- **Host:** Vercel (auto-deploys from `main` branch)
+- **Environment Variables:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+
+### Supabase Auth Configuration (for OAuth)
+When deploying to a new domain, update in Supabase Dashboard → Authentication → URL Configuration:
+1. **Site URL:** Set to your production domain (e.g., `https://zenote.vercel.app`)
+2. **Redirect URLs:** Add your production domain (keep localhost for local dev)
