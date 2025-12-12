@@ -225,7 +225,6 @@ VITE_SUPABASE_ANON_KEY=xxx
 └─────────────────────────────────┘
 
 Pinned notes:
-- Show persistent accent line at top
 - Pin icon is always visible and filled with accent color
 - Sorted to appear first in the library
 ```

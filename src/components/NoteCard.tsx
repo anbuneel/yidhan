@@ -71,15 +71,17 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
         e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
-      {/* Accent line - persistent for pinned, animates on hover for unpinned */}
+      {/* Accent line - animates on hover */}
       <div
-        className={`
+        className="
           absolute top-0 left-0 w-full h-[2px]
           bg-[var(--color-accent)]
+          opacity-50
           origin-left
           transition-transform duration-500 ease-out
-          ${note.pinned ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-50 group-hover:scale-x-100'}
-        `}
+          scale-x-0
+          group-hover:scale-x-100
+        "
       />
 
       {/* Pin button - top-left corner */}
