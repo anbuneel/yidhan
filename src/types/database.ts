@@ -9,6 +9,7 @@ export type Database = {
           content: string;
           created_at: string;
           updated_at: string;
+          pinned: boolean;
         };
         Insert: {
           id?: string;
@@ -17,6 +18,7 @@ export type Database = {
           content?: string;
           created_at?: string;
           updated_at?: string;
+          pinned?: boolean;
         };
         Update: {
           id?: string;
@@ -25,6 +27,7 @@ export type Database = {
           content?: string;
           created_at?: string;
           updated_at?: string;
+          pinned?: boolean;
         };
         Relationships: [
           {

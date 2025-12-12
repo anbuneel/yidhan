@@ -12,6 +12,7 @@ export interface Note {
   createdAt: Date;
   updatedAt: Date;
   tags: Tag[];
+  pinned: boolean;
 }
 
 export type ViewMode = 'library' | 'editor';

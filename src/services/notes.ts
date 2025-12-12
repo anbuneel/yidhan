@@ -21,12 +21,14 @@ function toNote(dbNote: DbNote, tags: Tag[] = []): Note {
     createdAt: new Date(dbNote.created_at),
     updatedAt: new Date(dbNote.updated_at),
     tags,
+    pinned: dbNote.pinned ?? false,
   };
 }
 
 // Fetch all notes for the current user (with optional tag filtering)
 export async function fetchNotes(filterTagIds?: string[]): Promise<Note[]> {
   // First, get all notes with their tags via join
+  // Order by pinned first, then by updated_at
   const { data, error } = await supabase
     .from('notes')
     .select(`
@@ -36,6 +38,7 @@ export async function fetchNotes(filterTagIds?: string[]): Promise<Note[]> {
         tags (*)
       )
     `)
+    .order('pinned', { ascending: false })
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -139,6 +142,19 @@ export async function deleteNote(id: string): Promise<void> {
   }
 }
 
+// Toggle pin status of a note
+export async function toggleNotePin(id: string, pinned: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('notes')
+    .update({ pinned })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error toggling note pin:', error);
+    throw error;
+  }
+}
+
 // Search notes by title and content
 export async function searchNotes(query: string): Promise<Note[]> {
   if (!query.trim()) {
@@ -157,6 +173,7 @@ export async function searchNotes(query: string): Promise<Note[]> {
       )
     `)
     .or(`title.ilike.${searchTerm},content.ilike.${searchTerm}`)
+    .order('pinned', { ascending: false })
     .order('updated_at', { ascending: false });
 
   if (error) {

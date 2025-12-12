@@ -5,10 +5,11 @@ interface LibraryProps {
   notes: Note[];
   onNoteClick: (id: string) => void;
   onNoteDelete: (id: string) => void;
+  onTogglePin: (id: string, pinned: boolean) => void;
   searchQuery?: string;
 }
 
-export function Library({ notes, onNoteClick, onNoteDelete, searchQuery }: LibraryProps) {
+export function Library({ notes, onNoteClick, onNoteDelete, onTogglePin, searchQuery }: LibraryProps) {
   if (notes.length === 0) {
     const isSearching = searchQuery && searchQuery.trim().length > 0;
 
@@ -102,6 +103,7 @@ export function Library({ notes, onNoteClick, onNoteDelete, searchQuery }: Libra
             note={note}
             onClick={onNoteClick}
             onDelete={onNoteDelete}
+            onTogglePin={onTogglePin}
           />
         ))}
       </div>

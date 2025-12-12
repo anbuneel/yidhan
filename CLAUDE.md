@@ -85,6 +85,7 @@ create table notes (
   user_id uuid references auth.users(id) on delete cascade not null,
   title text not null default '',
   content text not null default '',  -- Stores HTML from Tiptap
+  pinned boolean default false not null,  -- Pin notes to top of library
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null
 );
@@ -143,6 +144,7 @@ VITE_SUPABASE_ANON_KEY=xxx
 - [x] Production deployment on Vercel
 - [x] Welcome note for new users (via database trigger)
 - [x] Security hardening (XSS prevention, input validation, error sanitization)
+- [x] Pin notes to top of library (pin button top-left, delete moved to bottom-right)
 
 ## Features Not Yet Implemented
 - [ ] Test coverage (Vitest + Testing Library)
@@ -210,7 +212,8 @@ VITE_SUPABASE_ANON_KEY=xxx
 ### Note Card
 ```
 ┌─────────────────────────────────┐
-│                            [🗑] │  ← Delete button (appears on hover)
+│ [📌]                            │  ← Pin button (top-left, appears on hover, filled when pinned)
+│                                 │
 │ Note Title                      │
 │                                 │
 │ Rich content preview with       │
@@ -218,8 +221,13 @@ VITE_SUPABASE_ANON_KEY=xxx
 │ 1. Numbered lists               │
 │ 2. Bold, italic text            │
 │                                 │
-│ [tag] [tag]          JUST NOW   │
+│ [tag] [tag]    JUST NOW    [🗑] │  ← Delete button (bottom-right, appears on hover)
 └─────────────────────────────────┘
+
+Pinned notes:
+- Show persistent accent line at top
+- Pin icon is always visible and filled with accent color
+- Sorted to appear first in the library
 ```
 
 ## Export/Import
@@ -316,3 +324,4 @@ When deploying to a new domain, update in Supabase Dashboard → Authentication 
 SQL migrations are stored in `supabase/migrations/`:
 - `create_welcome_note_trigger.sql` - Auto-creates welcome note for new users
 - `security_audit_checklist.sql` - RLS audit queries and rate limiting docs
+- `add_pinned_column.sql` - Add pinned column to notes table

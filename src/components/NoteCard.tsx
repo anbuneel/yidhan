@@ -8,9 +8,10 @@ interface NoteCardProps {
   note: Note;
   onClick: (id: string) => void;
   onDelete: (id: string) => void;
+  onTogglePin: (id: string, pinned: boolean) => void;
 }
 
-export function NoteCard({ note, onClick, onDelete }: NoteCardProps) {
+export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -27,6 +28,11 @@ export function NoteCard({ note, onClick, onDelete }: NoteCardProps) {
   const handleCancelDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowDeleteConfirm(false);
+  };
+
+  const handlePinClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onTogglePin(note.id, !note.pinned);
   };
 
   return (
@@ -65,51 +71,52 @@ export function NoteCard({ note, onClick, onDelete }: NoteCardProps) {
         e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
-      {/* Accent line that animates on hover */}
+      {/* Accent line - persistent for pinned, animates on hover for unpinned */}
       <div
-        className="
+        className={`
           absolute top-0 left-0 w-full h-[2px]
           bg-[var(--color-accent)]
-          opacity-50
           origin-left
           transition-transform duration-500 ease-out
-          scale-x-0
-          group-hover:scale-x-100
-        "
+          ${note.pinned ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-50 group-hover:scale-x-100'}
+        `}
       />
 
-      {/* Delete button - appears on hover */}
+      {/* Pin button - top-left corner */}
       <button
-        onClick={handleDeleteClick}
-        className="
-          absolute top-3 right-3
+        onClick={handlePinClick}
+        className={`
+          absolute top-3 left-3
           w-8 h-8
           rounded-full
           flex items-center justify-center
-          opacity-0
-          group-hover:opacity-100
           transition-all duration-200
           focus:outline-none
           focus:opacity-100
           hover:scale-110
-        "
+          ${note.pinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+        `}
         style={{
-          background: 'var(--color-bg-secondary)',
-          color: 'var(--color-text-tertiary)',
+          background: note.pinned ? 'var(--color-accent)' : 'var(--color-bg-secondary)',
+          color: note.pinned ? 'var(--color-bg-primary)' : 'var(--color-text-tertiary)',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.color = 'var(--color-destructive)';
-          e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
+          if (!note.pinned) {
+            e.currentTarget.style.color = 'var(--color-accent)';
+            e.currentTarget.style.background = 'rgba(var(--color-accent-rgb), 0.1)';
+          }
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.color = 'var(--color-text-tertiary)';
-          e.currentTarget.style.background = 'var(--color-bg-secondary)';
+          if (!note.pinned) {
+            e.currentTarget.style.color = 'var(--color-text-tertiary)';
+            e.currentTarget.style.background = 'var(--color-bg-secondary)';
+          }
         }}
-        aria-label="Delete note"
-        title="Delete note"
+        aria-label={note.pinned ? 'Unpin note' : 'Pin note'}
+        title={note.pinned ? 'Unpin note' : 'Pin note'}
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        <svg className="w-4 h-4" fill={note.pinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
         </svg>
       </button>
 
@@ -138,7 +145,7 @@ export function NoteCard({ note, onClick, onDelete }: NoteCardProps) {
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
       />
 
-      {/* Footer: Tags + Timestamp */}
+      {/* Footer: Tags + Timestamp + Delete */}
       <div className="flex items-center justify-between mt-auto pt-6">
         {/* Tag badges */}
         <div className="flex-1 min-w-0">
@@ -167,6 +174,42 @@ export function NoteCard({ note, onClick, onDelete }: NoteCardProps) {
         >
           {formatRelativeTime(note.updatedAt)}
         </time>
+
+        {/* Delete button - bottom-right, appears on hover */}
+        <button
+          onClick={handleDeleteClick}
+          className="
+            w-7 h-7
+            rounded-full
+            flex items-center justify-center
+            opacity-0
+            group-hover:opacity-100
+            transition-all duration-200
+            focus:outline-none
+            focus:opacity-100
+            hover:scale-110
+            ml-2
+            shrink-0
+          "
+          style={{
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-tertiary)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'var(--color-destructive)';
+            e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--color-text-tertiary)';
+            e.currentTarget.style.background = 'var(--color-bg-secondary)';
+          }}
+          aria-label="Delete note"
+          title="Delete note"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
       </div>
 
       {/* Delete Confirmation Overlay */}

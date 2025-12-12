@@ -8,7 +8,7 @@ import { TagFilterBar } from './components/TagFilterBar';
 import { TagModal } from './components/TagModal';
 import { SettingsModal } from './components/SettingsModal';
 import { useAuth } from './contexts/AuthContext';
-import { fetchNotes, createNote, updateNote, deleteNote, subscribeToNotes, searchNotes } from './services/notes';
+import { fetchNotes, createNote, updateNote, deleteNote, subscribeToNotes, searchNotes, toggleNotePin } from './services/notes';
 import { fetchTags, subscribeToTags, addTagToNote, removeTagFromNote, createTag, updateTag, deleteTag } from './services/tags';
 import {
   exportNotesToJSON,
@@ -148,8 +148,12 @@ function App() {
     return () => unsubscribeTags();
   }, [user]);
 
-  // Sort notes by most recent
+  // Sort notes: pinned first, then by most recent
   const sortedNotes = [...notes].sort((a, b) => {
+    // Pinned notes come first
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    // Within same pin status, sort by updated time
     return b.updatedAt.getTime() - a.updatedAt.getTime();
   });
 
@@ -201,6 +205,23 @@ function App() {
       setSelectedNoteId(null);
     } catch (error) {
       console.error('Failed to delete note:', error);
+    }
+  };
+
+  const handleTogglePin = async (id: string, pinned: boolean) => {
+    try {
+      // Update local state immediately for responsiveness
+      setNotes((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, pinned } : n))
+      );
+      // Persist to database
+      await toggleNotePin(id, pinned);
+    } catch (error) {
+      console.error('Failed to toggle pin:', error);
+      // Revert on error
+      setNotes((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, pinned: !pinned } : n))
+      );
     }
   };
 
@@ -547,6 +568,7 @@ function App() {
             notes={displayNotes}
             onNoteClick={handleNoteClick}
             onNoteDelete={handleNoteDelete}
+            onTogglePin={handleTogglePin}
             searchQuery={searchQuery}
           />
         )}
