@@ -28,6 +28,8 @@ A calm, distraction-free note-taking app inspired by Japanese stationery and wab
 - **Google Sign-In** - Quick authentication via Google OAuth
 - **Secure** - User authentication with row-level security
 - **Error Boundary** - Graceful error handling with user-friendly recovery UI
+- **Welcome Note** - New users receive a helpful onboarding note automatically
+- **Security Hardened** - XSS prevention, input validation, sanitized error messages
 
 ## Tech Stack
 
@@ -182,6 +184,10 @@ src/
 - **JSON** (`.json`) - Restore from backup, automatically creates missing tags
 - **Markdown** (`.md`) - Import single note, extracts title from first `# Heading`
 
+### Import Limits
+- Maximum file size: 10MB
+- Maximum notes per import: 1,000
+
 ## Design Philosophy
 
 Zenote embraces **wabi-sabi** - finding beauty in imperfection:
@@ -220,6 +226,18 @@ This app is deployed on [Vercel](https://vercel.com). To deploy your own instanc
 4. Update Supabase Auth settings:
    - Set **Site URL** to your Vercel domain
    - Add your Vercel domain to **Redirect URLs**
+
+## Security
+
+Zenote implements several security measures:
+
+- **XSS Prevention** - All user content (titles, imported data) is sanitized using DOMPurify
+- **Input Validation** - File size limits, JSON schema validation, tag name length limits
+- **Error Sanitization** - Technical errors are mapped to user-friendly messages
+- **Password Policy** - Minimum 8 character passwords required
+- **Row-Level Security** - Database policies ensure users can only access their own data
+
+For security audits, see `supabase/migrations/security_audit_checklist.sql`.
 
 ## License
 

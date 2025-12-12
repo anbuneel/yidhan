@@ -40,8 +40,9 @@ src/
 ├── types/
 │   └── database.ts        # Supabase DB types (notes, tags, note_tags) with full schema
 ├── utils/
-│   ├── exportImport.ts    # Export/import utilities (JSON, Markdown)
-│   └── formatTime.ts      # Relative time formatting
+│   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
+│   ├── formatTime.ts      # Relative time formatting
+│   └── sanitize.ts        # HTML/text sanitization (XSS prevention)
 ├── App.tsx                # Main app component with state management
 ├── App.css                # Additional app styles
 ├── index.css              # Design system + Tiptap styles
@@ -140,6 +141,8 @@ VITE_SUPABASE_ANON_KEY=xxx
 - [x] Duplicate tag name prevention (client-side validation)
 - [x] Error boundary for graceful error handling
 - [x] Production deployment on Vercel
+- [x] Welcome note for new users (via database trigger)
+- [x] Security hardening (XSS prevention, input validation, error sanitization)
 
 ## Features Not Yet Implemented
 - [ ] Test coverage (Vitest + Testing Library)
@@ -149,6 +152,8 @@ VITE_SUPABASE_ANON_KEY=xxx
 - [ ] Additional OAuth providers (GitHub, etc.)
 - [ ] Offline support / PWA
 - [ ] Image attachments
+- [ ] Virtual scrolling for large note lists
+- [ ] Analytics
 
 ## Common Tasks
 
@@ -248,7 +253,7 @@ The `AuthContext` provides these functions:
 ## Settings Modal
 The Settings modal (`SettingsModal.tsx`) has two tabs:
 - **Profile Tab:** Email (read-only), display name input, theme toggle button
-- **Password Tab:** New password + confirmation with validation (min 6 chars)
+- **Password Tab:** New password + confirmation with validation (min 8 chars)
 
 ## Notes
 - Content is stored as HTML (from Tiptap's `getHTML()`)
@@ -279,3 +284,35 @@ The Settings modal (`SettingsModal.tsx`) has two tabs:
 When deploying to a new domain, update in Supabase Dashboard → Authentication → URL Configuration:
 1. **Site URL:** Set to your production domain (e.g., `https://zenote.vercel.app`)
 2. **Redirect URLs:** Add your production domain (keep localhost for local dev)
+
+## Security
+
+### Input Validation
+- **File imports:** Max 10MB file size, max 1000 notes per import
+- **Tag names:** 1-20 characters, validated client and server-side
+- **JSON imports:** Strict schema validation with `ValidationError` class
+- **Note titles:** Sanitized with DOMPurify to prevent XSS
+
+### Sanitization Functions (`src/utils/sanitize.ts`)
+- `sanitizeHtml(html)` - Sanitize rich HTML content (allows safe tags)
+- `sanitizeText(text)` - Strip HTML and escape special characters
+- `escapeHtml(text)` - Escape HTML special characters only
+
+### Error Handling
+- Auth errors are sanitized in `Auth.tsx` to prevent information disclosure
+- Technical error messages are mapped to user-friendly messages
+- Generic fallback for unrecognized errors
+
+### Password Policy
+- Minimum 8 characters (enforced in Auth.tsx and SettingsModal.tsx)
+
+### Database Security
+- Row Level Security (RLS) enabled on all tables
+- Users can only access their own notes and tags
+- See `supabase/migrations/security_audit_checklist.sql` for audit queries
+
+## Database Migrations
+
+SQL migrations are stored in `supabase/migrations/`:
+- `create_welcome_note_trigger.sql` - Auto-creates welcome note for new users
+- `security_audit_checklist.sql` - RLS audit queries and rate limiting docs
