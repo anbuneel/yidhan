@@ -1,4 +1,15 @@
-import type { Note, Tag } from '../types';
+import type { Note, Tag, TagColor } from '../types';
+import { TAG_COLORS } from '../types';
+
+// Maximum file size for imports (10MB)
+export const MAX_IMPORT_FILE_SIZE = 10 * 1024 * 1024;
+
+// Maximum number of notes that can be imported at once
+export const MAX_IMPORT_NOTES = 1000;
+
+// Maximum length for note title and tag name
+export const MAX_TITLE_LENGTH = 500;
+export const MAX_TAG_NAME_LENGTH = 20;
 
 // JSON Export/Import types
 interface ExportedNote {
@@ -9,11 +20,107 @@ interface ExportedNote {
   updatedAt: string;
 }
 
+interface ExportedTag {
+  name: string;
+  color: string;
+}
+
 interface ExportData {
   version: 1;
   exportedAt: string;
   notes: ExportedNote[];
-  tags: { name: string; color: string }[];
+  tags: ExportedTag[];
+}
+
+// Validation error class for better error handling
+export class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+
+/**
+ * Validate that a value is a non-empty string
+ */
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+/**
+ * Validate that a value is a valid ISO date string
+ */
+function isValidDateString(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const date = new Date(value);
+  return !isNaN(date.getTime());
+}
+
+/**
+ * Validate that a color is a valid TagColor
+ */
+function isValidTagColor(color: unknown): color is TagColor {
+  return typeof color === 'string' && color in TAG_COLORS;
+}
+
+/**
+ * Validate and sanitize an exported note
+ */
+function validateExportedNote(note: unknown, index: number): ExportedNote {
+  if (!note || typeof note !== 'object') {
+    throw new ValidationError(`Note at index ${index} is invalid`);
+  }
+
+  const n = note as Record<string, unknown>;
+
+  // Title: required string, truncate if too long
+  if (!isNonEmptyString(n.title)) {
+    throw new ValidationError(`Note at index ${index} has invalid title`);
+  }
+  const title = n.title.slice(0, MAX_TITLE_LENGTH);
+
+  // Content: required string (can be empty)
+  if (typeof n.content !== 'string') {
+    throw new ValidationError(`Note at index ${index} has invalid content`);
+  }
+  const content = n.content;
+
+  // Tags: optional array of strings
+  let tags: string[] = [];
+  if (Array.isArray(n.tags)) {
+    tags = n.tags
+      .filter((t): t is string => typeof t === 'string')
+      .map((t) => t.slice(0, MAX_TAG_NAME_LENGTH));
+  }
+
+  // Dates: optional, use current date if invalid
+  const now = new Date().toISOString();
+  const createdAt = isValidDateString(n.createdAt) ? (n.createdAt as string) : now;
+  const updatedAt = isValidDateString(n.updatedAt) ? (n.updatedAt as string) : now;
+
+  return { title, content, tags, createdAt, updatedAt };
+}
+
+/**
+ * Validate and sanitize an exported tag
+ */
+function validateExportedTag(tag: unknown, index: number): ExportedTag {
+  if (!tag || typeof tag !== 'object') {
+    throw new ValidationError(`Tag at index ${index} is invalid`);
+  }
+
+  const t = tag as Record<string, unknown>;
+
+  // Name: required non-empty string
+  if (!isNonEmptyString(t.name) || t.name.trim().length === 0) {
+    throw new ValidationError(`Tag at index ${index} has invalid name`);
+  }
+  const name = t.name.trim().slice(0, MAX_TAG_NAME_LENGTH);
+
+  // Color: must be valid, default to 'stone' if invalid
+  const color = isValidTagColor(t.color) ? t.color : 'stone';
+
+  return { name, color };
 }
 
 /**
@@ -55,22 +162,61 @@ export function downloadFile(content: string, filename: string, mimeType: string
 }
 
 /**
- * Parse imported JSON data
+ * Parse and validate imported JSON data.
+ * Performs strict validation on all fields to prevent data corruption and security issues.
+ * @throws {ValidationError} If the data is invalid
  */
-export function parseImportedJSON(jsonString: string): ExportData | null {
+export function parseImportedJSON(jsonString: string): ExportData {
+  let data: unknown;
+
   try {
-    const data = JSON.parse(jsonString);
-
-    // Validate structure
-    if (!data.version || !Array.isArray(data.notes)) {
-      throw new Error('Invalid export format');
-    }
-
-    return data as ExportData;
-  } catch (error) {
-    console.error('Failed to parse import data:', error);
-    return null;
+    data = JSON.parse(jsonString);
+  } catch {
+    throw new ValidationError('Invalid JSON format');
   }
+
+  if (!data || typeof data !== 'object') {
+    throw new ValidationError('Invalid export format: expected an object');
+  }
+
+  const d = data as Record<string, unknown>;
+
+  // Validate version
+  if (d.version !== 1) {
+    throw new ValidationError('Invalid or unsupported export version');
+  }
+
+  // Validate notes array
+  if (!Array.isArray(d.notes)) {
+    throw new ValidationError('Invalid export format: notes must be an array');
+  }
+
+  if (d.notes.length > MAX_IMPORT_NOTES) {
+    throw new ValidationError(`Too many notes: maximum ${MAX_IMPORT_NOTES} allowed`);
+  }
+
+  // Validate and sanitize each note
+  const notes: ExportedNote[] = d.notes.map((note, index) =>
+    validateExportedNote(note, index)
+  );
+
+  // Validate tags array (optional, default to empty)
+  let tags: ExportedTag[] = [];
+  if (Array.isArray(d.tags)) {
+    tags = d.tags.map((tag, index) => validateExportedTag(tag, index));
+  }
+
+  // Validate exportedAt (optional)
+  const exportedAt = isValidDateString(d.exportedAt)
+    ? (d.exportedAt as string)
+    : new Date().toISOString();
+
+  return {
+    version: 1,
+    exportedAt,
+    notes,
+    tags,
+  };
 }
 
 /**

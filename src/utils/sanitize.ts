@@ -30,3 +30,28 @@ export function sanitizeHtml(html: string): string {
     FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
   });
 }
+
+/**
+ * Sanitize plain text by escaping HTML special characters.
+ * Use this for user-provided text that should NOT contain HTML (e.g., titles, tag names).
+ */
+export function escapeHtml(text: string): string {
+  const htmlEscapes: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEscapes[char]);
+}
+
+/**
+ * Sanitize a plain text string for safe display.
+ * Strips any HTML tags and escapes special characters.
+ */
+export function sanitizeText(text: string): string {
+  // First strip any HTML tags, then escape remaining special chars
+  const stripped = DOMPurify.sanitize(text, { ALLOWED_TAGS: [] });
+  return escapeHtml(stripped);
+}

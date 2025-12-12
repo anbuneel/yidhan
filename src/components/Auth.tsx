@@ -4,6 +4,54 @@ import type { Theme } from '../types';
 
 type AuthMode = 'login' | 'signup' | 'forgot' | 'reset';
 
+/**
+ * Sanitize error messages to prevent information disclosure.
+ * Maps technical/sensitive error messages to user-friendly ones.
+ */
+function sanitizeErrorMessage(message: string): string {
+  const lowerMessage = message.toLowerCase();
+
+  // Authentication errors - use generic messages to prevent user enumeration
+  if (lowerMessage.includes('invalid login credentials') ||
+      lowerMessage.includes('invalid email or password')) {
+    return 'Invalid email or password';
+  }
+
+  if (lowerMessage.includes('email not confirmed')) {
+    return 'Please confirm your email before signing in';
+  }
+
+  if (lowerMessage.includes('user already registered') ||
+      lowerMessage.includes('already exists')) {
+    return 'An account with this email already exists';
+  }
+
+  if (lowerMessage.includes('rate limit') ||
+      lowerMessage.includes('too many requests')) {
+    return 'Too many attempts. Please try again later';
+  }
+
+  if (lowerMessage.includes('network') ||
+      lowerMessage.includes('fetch')) {
+    return 'Network error. Please check your connection';
+  }
+
+  if (lowerMessage.includes('password') && lowerMessage.includes('weak')) {
+    return 'Password is too weak. Please use a stronger password';
+  }
+
+  // For any unrecognized error, return a generic message
+  // to avoid exposing sensitive technical details
+  if (lowerMessage.includes('error') ||
+      lowerMessage.includes('exception') ||
+      lowerMessage.includes('failed')) {
+    return 'An error occurred. Please try again';
+  }
+
+  // If the message seems safe (no technical details), return it as-is
+  return message;
+}
+
 interface AuthProps {
   theme: Theme;
   onThemeToggle: () => void;
@@ -33,18 +81,18 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     try {
       if (mode === 'login') {
         const { error } = await signIn(email, password);
-        if (error) setError(error.message);
+        if (error) setError(sanitizeErrorMessage(error.message));
       } else if (mode === 'signup') {
         const { error } = await signUp(email, password, fullName.trim() || undefined);
         if (error) {
-          setError(error.message);
+          setError(sanitizeErrorMessage(error.message));
         } else {
           setMessage('Check your email for a confirmation link!');
         }
       } else if (mode === 'forgot') {
         const { error } = await resetPassword(email);
         if (error) {
-          setError(error.message);
+          setError(sanitizeErrorMessage(error.message));
         } else {
           setMessage('Check your email for a password reset link!');
         }
@@ -53,13 +101,13 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           setError('Passwords do not match');
           return;
         }
-        if (password.length < 6) {
-          setError('Password must be at least 6 characters');
+        if (password.length < 8) {
+          setError('Password must be at least 8 characters');
           return;
         }
         const { error } = await updatePassword(password);
         if (error) {
-          setError(error.message);
+          setError(sanitizeErrorMessage(error.message));
         } else {
           setMessage('Password updated successfully!');
           setPassword('');
@@ -281,7 +329,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 className="
                   w-full px-4 py-3
                   rounded-lg
@@ -321,7 +369,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 className="
                   w-full px-4 py-3
                   rounded-lg

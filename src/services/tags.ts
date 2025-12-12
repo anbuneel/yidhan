@@ -2,6 +2,27 @@ import { supabase } from '../lib/supabase';
 import type { Tag, TagColor } from '../types';
 import type { DbTag } from '../types/database';
 
+// Validation constants
+const MAX_TAG_NAME_LENGTH = 20;
+const MIN_TAG_NAME_LENGTH = 1;
+
+/**
+ * Validate tag name and throw if invalid
+ */
+function validateTagName(name: string): string {
+  const trimmed = name.trim();
+
+  if (trimmed.length < MIN_TAG_NAME_LENGTH) {
+    throw new Error('Tag name cannot be empty');
+  }
+
+  if (trimmed.length > MAX_TAG_NAME_LENGTH) {
+    throw new Error(`Tag name must be ${MAX_TAG_NAME_LENGTH} characters or less`);
+  }
+
+  return trimmed;
+}
+
 // Convert database tag to app tag
 function toTag(dbTag: DbTag): Tag {
   return {
@@ -33,11 +54,14 @@ export async function createTag(
   name: string,
   color: TagColor
 ): Promise<Tag> {
+  // Validate tag name before sending to database
+  const validatedName = validateTagName(name);
+
   const { data, error } = await supabase
     .from('tags')
     .insert({
       user_id: userId,
-      name: name.trim(),
+      name: validatedName,
       color,
     })
     .select()
@@ -56,10 +80,13 @@ export async function updateTag(
   id: string,
   updates: { name?: string; color?: TagColor }
 ): Promise<Tag> {
+  // Validate tag name if provided
+  const validatedName = updates.name ? validateTagName(updates.name) : undefined;
+
   const { data, error } = await supabase
     .from('tags')
     .update({
-      ...(updates.name && { name: updates.name.trim() }),
+      ...(validatedName && { name: validatedName }),
       ...(updates.color && { color: updates.color }),
     })
     .eq('id', id)

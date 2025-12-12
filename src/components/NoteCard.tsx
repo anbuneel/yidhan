@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Note } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
-import { sanitizeHtml } from '../utils/sanitize';
+import { sanitizeHtml, sanitizeText } from '../utils/sanitize';
 
 interface NoteCardProps {
   note: Note;
@@ -113,7 +113,7 @@ export function NoteCard({ note, onClick, onDelete }: NoteCardProps) {
         </svg>
       </button>
 
-      {/* Title */}
+      {/* Title - sanitized to prevent XSS */}
       <h3
         className="
           text-[1.8rem]
@@ -126,9 +126,8 @@ export function NoteCard({ note, onClick, onDelete }: NoteCardProps) {
           fontFamily: 'var(--font-display)',
           color: 'var(--color-text-primary)',
         }}
-      >
-        {note.title || 'Untitled'}
-      </h3>
+        dangerouslySetInnerHTML={{ __html: sanitizeText(note.title) || 'Untitled' }}
+      />
 
       {/* Preview - Rendered HTML content (sanitized to prevent XSS) */}
       <div
@@ -194,7 +193,10 @@ export function NoteCard({ note, onClick, onDelete }: NoteCardProps) {
               color: 'var(--color-text-secondary)',
             }}
           >
-            Delete "<span style={{ color: 'var(--color-text-primary)' }}>{note.title || 'Untitled'}</span>"?
+            Delete "<span
+              style={{ color: 'var(--color-text-primary)' }}
+              dangerouslySetInnerHTML={{ __html: sanitizeText(note.title) || 'Untitled' }}
+            />"?
           </p>
           <div className="flex gap-2">
             <button

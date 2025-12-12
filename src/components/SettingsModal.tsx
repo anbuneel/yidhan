@@ -58,8 +58,8 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle }: Setting
     e.preventDefault();
     setPasswordMessage(null);
 
-    if (newPassword.length < 6) {
-      setPasswordMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+    if (newPassword.length < 8) {
+      setPasswordMessage({ type: 'error', text: 'Password must be at least 8 characters' });
       return;
     }
 
@@ -383,7 +383,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle }: Setting
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new password"
-                  minLength={6}
+                  minLength={8}
                   required
                   className="
                     w-full px-4 py-3
@@ -422,7 +422,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle }: Setting
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm new password"
-                  minLength={6}
+                  minLength={8}
                   required
                   className="
                     w-full px-4 py-3

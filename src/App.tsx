@@ -17,6 +17,8 @@ import {
   readFileAsText,
   downloadMarkdownZip,
   markdownToHtml,
+  ValidationError,
+  MAX_IMPORT_FILE_SIZE,
 } from './utils/exportImport';
 import { sanitizeHtml } from './utils/sanitize';
 import './App.css';
@@ -29,7 +31,11 @@ function App() {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('zenote-theme');
-    return (saved as Theme) || 'dark';
+    // Validate that saved theme is a valid Theme value
+    if (saved === 'light' || saved === 'dark') {
+      return saved;
+    }
+    return 'dark';
   });
 
   // Search state
@@ -354,6 +360,13 @@ function App() {
   const handleImportFile = useCallback(async (file: File) => {
     if (!user) return;
 
+    // Validate file size before reading
+    if (file.size > MAX_IMPORT_FILE_SIZE) {
+      const maxSizeMB = Math.round(MAX_IMPORT_FILE_SIZE / (1024 * 1024));
+      alert(`File too large. Maximum size is ${maxSizeMB}MB.`);
+      return;
+    }
+
     setIsImporting(true);
     try {
       const content = await readFileAsText(file);
@@ -361,12 +374,8 @@ function App() {
       const isMarkdown = file.name.endsWith('.md') || file.name.endsWith('.markdown');
 
       if (isJSON) {
-        // Import JSON backup
+        // Import JSON backup with validation
         const data = parseImportedJSON(content);
-        if (!data) {
-          alert('Invalid backup file format');
-          return;
-        }
 
         // Create tags first (if they don't exist)
         const tagMap = new Map<string, string>(); // name -> id
@@ -440,7 +449,11 @@ function App() {
       }
     } catch (error) {
       console.error('Import failed:', error);
-      alert('Failed to import file. Please check the file format.');
+      if (error instanceof ValidationError) {
+        alert(`Import failed: ${error.message}`);
+      } else {
+        alert('Failed to import file. Please check the file format.');
+      }
     } finally {
       setIsImporting(false);
     }
