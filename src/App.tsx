@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import toast from 'react-hot-toast';
 import type { Note, Tag, ViewMode, Theme } from './types';
 import { Header } from './components/Header';
 import { Library } from './components/Library';
@@ -23,10 +24,15 @@ import {
   MAX_IMPORT_FILE_SIZE,
 } from './utils/exportImport';
 import { sanitizeHtml } from './utils/sanitize';
+import { useNetworkStatus } from './hooks/useNetworkStatus';
 import './App.css';
 
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery } = useAuth();
+
+  // Network connectivity monitoring
+  useNetworkStatus();
+
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewMode>('library');
@@ -386,7 +392,7 @@ function App() {
     // Validate file size before reading
     if (file.size > MAX_IMPORT_FILE_SIZE) {
       const maxSizeMB = Math.round(MAX_IMPORT_FILE_SIZE / (1024 * 1024));
-      alert(`File too large. Maximum size is ${maxSizeMB}MB.`);
+      toast.error(`File too large. Maximum size is ${maxSizeMB}MB.`);
       return;
     }
 
@@ -441,7 +447,7 @@ function App() {
           importedCount++;
         }
 
-        alert(`Successfully imported ${importedCount} notes`);
+        toast.success(`Successfully imported ${importedCount} note${importedCount === 1 ? '' : 's'}`);
 
         // Refresh notes
         const refreshedNotes = await fetchNotes();
@@ -466,16 +472,16 @@ function App() {
         const newNote = await createNote(user.id, title, htmlContent);
         setNotes(prev => [newNote, ...prev]);
 
-        alert(`Successfully imported "${title}"`);
+        toast.success(`Imported "${title}"`);
       } else {
-        alert('Unsupported file format. Please use .json or .md files.');
+        toast.error('Unsupported file format. Please use .json or .md files.');
       }
     } catch (error) {
       console.error('Import failed:', error);
       if (error instanceof ValidationError) {
-        alert(`Import failed: ${error.message}`);
+        toast.error(`Import failed: ${error.message}`);
       } else {
-        alert('Failed to import file. Please check the file format.');
+        toast.error('Failed to import file. Please check the file format.');
       }
     } finally {
       setIsImporting(false);
