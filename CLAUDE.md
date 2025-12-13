@@ -139,6 +139,7 @@ create table note_tags (
 ```
 VITE_SUPABASE_URL=https://xxx.supabase.co
 VITE_SUPABASE_ANON_KEY=xxx
+VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty to disable
 ```
 
 ## Features Implemented
@@ -169,12 +170,12 @@ VITE_SUPABASE_ANON_KEY=xxx
 - [x] Welcome note for new users (via database trigger)
 - [x] Security hardening (XSS prevention, input validation, error sanitization)
 - [x] Pin notes to top of library (pin button top-left, delete moved to bottom-right)
+- [x] Test coverage (Vitest + Testing Library)
+- [x] CI/CD pipeline (GitHub Actions)
+- [x] Code splitting (lazy load Tiptap editor)
+- [x] Error monitoring (Sentry)
 
 ## Features Not Yet Implemented
-- [ ] Test coverage (Vitest + Testing Library)
-- [ ] Error monitoring (Sentry)
-- [ ] CI/CD pipeline (GitHub Actions)
-- [ ] Code splitting (lazy load Tiptap editor)
 - [ ] Additional OAuth providers (GitHub, etc.)
 - [ ] Offline support / PWA
 - [ ] Image attachments
