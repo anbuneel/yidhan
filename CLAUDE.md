@@ -39,10 +39,14 @@ src/
 │   └── tags.ts            # CRUD operations for tags
 ├── types/
 │   └── database.ts        # Supabase DB types (notes, tags, note_tags) with full schema
+├── hooks/
+│   └── useNetworkStatus.ts # Network connectivity monitoring hook
 ├── utils/
 │   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
 │   ├── formatTime.ts      # Relative time formatting
 │   └── sanitize.ts        # HTML/text sanitization (XSS prevention)
+├── test/
+│   └── setup.ts           # Vitest test setup
 ├── App.tsx                # Main app component with state management
 ├── App.css                # Additional app styles
 ├── index.css              # Design system + Tiptap styles
@@ -174,6 +178,8 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] CI/CD pipeline (GitHub Actions)
 - [x] Code splitting (lazy load Tiptap editor)
 - [x] Error monitoring (Sentry)
+- [x] Toast notifications (react-hot-toast)
+- [x] Network connectivity detection (offline/online alerts)
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (GitHub, etc.)
@@ -304,13 +310,17 @@ The Settings modal (`SettingsModal.tsx`) has two tabs:
 - Google sign-in button appears on login and signup screens with "or" divider
 - ErrorBoundary wraps the entire app to catch and display runtime errors gracefully
 - Production OAuth requires Supabase Site URL and Redirect URLs to match deployment domain
+- Toast notifications use react-hot-toast with theme-aware styling
+- Network status monitored via useNetworkStatus hook (shows offline/online toasts)
+- Sentry error monitoring enabled when VITE_SENTRY_DSN is configured
+- Editor component is lazy-loaded to reduce initial bundle size (~384KB saved)
 
 ## Deployment
 
 ### Production (Vercel)
 - **URL:** https://zenote.vercel.app
 - **Host:** Vercel (auto-deploys from `main` branch)
-- **Environment Variables:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+- **Environment Variables:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SENTRY_DSN` (optional)
 
 ### Supabase Auth Configuration (for OAuth)
 When deploying to a new domain, update in Supabase Dashboard → Authentication → URL Configuration:

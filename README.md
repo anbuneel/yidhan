@@ -30,6 +30,13 @@ A calm, distraction-free note-taking app inspired by Japanese stationery and wab
 - **Error Boundary** - Graceful error handling with user-friendly recovery UI
 - **Welcome Note** - New users receive a helpful onboarding note automatically
 - **Security Hardened** - XSS prevention, input validation, sanitized error messages
+- **Pin Notes** - Pin important notes to the top of your library
+- **Toast Notifications** - Modern, non-intrusive feedback for all actions
+- **Network Detection** - Alerts when you go offline or come back online
+- **Error Monitoring** - Optional Sentry integration for production error tracking
+- **Test Coverage** - Comprehensive tests with Vitest and React Testing Library
+- **CI/CD Pipeline** - Automated testing and builds via GitHub Actions
+- **Code Splitting** - Lazy-loaded editor for faster initial page loads
 
 ## Tech Stack
 
@@ -146,7 +153,10 @@ create index note_tags_tag_id_idx on note_tags(tag_id);
 | `npm run build` | Build for production |
 | `npm run lint` | Run ESLint |
 | `npm run preview` | Preview production build |
-| `npx tsc --noEmit` | Type check without emitting |
+| `npm run typecheck` | Type check without emitting |
+| `npm run test` | Run tests in watch mode |
+| `npm run test:run` | Run tests once |
+| `npm run check` | **Run before committing** - Full CI check (typecheck + lint + test + build) |
 
 ## Project Structure
 
@@ -167,10 +177,12 @@ src/
 │   ├── TagPill.tsx        # Tag pill component
 │   └── TagSelector.tsx    # Dropdown for assigning tags
 ├── contexts/          # React contexts (Auth)
+├── hooks/             # Custom React hooks (useNetworkStatus)
 ├── lib/               # Supabase client
 ├── services/          # API services (notes, tags CRUD)
+├── test/              # Test setup files
 ├── types/             # TypeScript types
-├── utils/             # Utility functions (time formatting, export/import)
+├── utils/             # Utility functions (time formatting, export/import, sanitization)
 └── index.css          # Design system & styles
 ```
 
@@ -223,6 +235,7 @@ This app is deployed on [Vercel](https://vercel.com). To deploy your own instanc
 3. Add environment variables:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_SENTRY_DSN` (optional - for error monitoring)
 4. Update Supabase Auth settings:
    - Set **Site URL** to your Vercel domain
    - Add your Vercel domain to **Redirect URLs**
