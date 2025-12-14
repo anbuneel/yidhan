@@ -17,8 +17,9 @@ Zenote is a calm, distraction-free note-taking application inspired by Japanese 
 ```
 src/
 ├── components/
-│   ├── Auth.tsx           # Login/signup/Google OAuth/password reset UI with theme toggle
+│   ├── Auth.tsx           # Login/signup/Google OAuth/password reset UI (supports modal mode)
 │   ├── Editor.tsx         # Note editor with rich text + tag selector + save indicator
+│   ├── LandingPage.tsx    # Split-screen landing page with interactive demo
 │   ├── ErrorBoundary.tsx  # Error boundary for graceful error handling
 │   ├── Header.tsx         # App header with search, profile menu, settings
 │   ├── Library.tsx        # Notes grid view
@@ -180,6 +181,7 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Error monitoring (Sentry)
 - [x] Toast notifications (react-hot-toast)
 - [x] Network connectivity detection (offline/online alerts)
+- [x] Landing page with interactive demo (split-screen, localStorage persistence)
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (GitHub, etc.)
@@ -213,6 +215,30 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - Tag components: `TagPill`, `TagBadge`, `TagFilterBar`, `TagSelector`, `TagModal`
 
 ## UI Layout
+
+### Landing Page (Split-Screen)
+```
+┌─────────────────────────────────┬─────────────────────────────────────────────┐
+│ Zenote                          │                          [🌙] [Sign In]     │
+├─────────────────────────────────┼─────────────────────────────────────────────┤
+│                                 │  ┌─────────────┐  ┌─────────────┐          │
+│  A quiet space                  │  │ Sample Note │  │ Sample Note │          │
+│  for your mind.                 │  │ [tag] TIME  │  │ [tag] TIME  │          │
+│                                 │  └─────────────┘  └─────────────┘          │
+│  The distraction-free...        │  ┌─────────────────────────────────┐       │
+│                                 │  │ Try it here              [DEMO] │       │
+│  [Start Writing]  For free      │  │                                 │       │
+│                                 │  │ Start typing...                 │       │
+│                                 │  │                                 │       │
+│                                 │  │ Sign up to save your notes...   │       │
+│                                 │  └─────────────────────────────────┘       │
+└─────────────────────────────────┴─────────────────────────────────────────────┘
+
+Left panel (42%): Hero section with value prop and CTA
+Right panel (58%): Sample note cards + interactive demo editor
+- Demo content persists to localStorage (zenote-demo-content)
+- Auth opens as modal overlay
+```
 
 ### Header (Three-Zone Layout)
 ```
@@ -314,6 +340,8 @@ The Settings modal (`SettingsModal.tsx`) has two tabs:
 - Network status monitored via useNetworkStatus hook (shows offline/online toasts)
 - Sentry error monitoring enabled when VITE_SENTRY_DSN is configured
 - Editor component is lazy-loaded to reduce initial bundle size (~384KB saved)
+- Landing page shows for unauthenticated users with interactive demo
+- Auth component supports modal mode (`isModal` prop) for landing page overlay
 
 ## Deployment
 

@@ -11,6 +11,7 @@ A calm, distraction-free note-taking app inspired by Japanese stationery and wab
 
 ## Features
 
+- **Landing Page** - Split-screen design with interactive demo editor to try before signing up
 - **Rich Text Editor** - Format your notes with bold, italic, headers, lists, quotes, and code blocks
 - **Tag Organization** - Organize notes with colorful tags and filter by multiple tags
 - **Tag Management** - Create, edit, and delete tags with a beautiful color picker
@@ -166,6 +167,7 @@ src/
 │   ├── Auth.tsx           # Login/signup/Google OAuth/password reset
 │   ├── Editor.tsx         # Note editor with rich text + tags
 │   ├── ErrorBoundary.tsx  # Error boundary for graceful error handling
+│   ├── LandingPage.tsx    # Split-screen landing with interactive demo
 │   ├── Header.tsx         # App header with search, profile menu
 │   ├── Library.tsx        # Notes grid view
 │   ├── NoteCard.tsx       # Individual note card
