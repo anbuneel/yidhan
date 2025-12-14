@@ -150,7 +150,7 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 ## Features Implemented
 - [x] Wabi-sabi design with light/dark themes (dark default)
 - [x] Card-based note library with responsive grid
-- [x] Rich text editor (bold, italic, underline, headers, lists, quotes, code)
+- [x] Rich text editor (bold, italic, underline, headers, lists, quotes, code, task lists)
 - [x] User authentication (email/password + Google OAuth) with full name capture
 - [x] Supabase database integration
 - [x] Real-time sync across tabs/devices

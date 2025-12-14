@@ -4,6 +4,8 @@ import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
 import { useEffect } from 'react';
 
 interface RichTextEditorProps {
@@ -83,6 +85,10 @@ export function RichTextEditor({ content, onChange, onBlur }: RichTextEditorProp
       }),
       Highlight.configure({
         multicolor: false,
+      }),
+      TaskList,
+      TaskItem.configure({
+        nested: true,
       }),
     ],
     content,
@@ -221,6 +227,15 @@ export function RichTextEditor({ content, onChange, onBlur }: RichTextEditorProp
             <text x="2" y="7" fontSize="6" fill="currentColor">1</text>
             <text x="2" y="13" fontSize="6" fill="currentColor">2</text>
             <text x="2" y="19" fontSize="6" fill="currentColor">3</text>
+          </svg>
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleTaskList().run()}
+          isActive={editor.isActive('taskList')}
+          title="Task List"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
           </svg>
         </ToolbarButton>
 

@@ -19,6 +19,8 @@
     "@supabase/supabase-js": "^2.86.2",
     "@tiptap/extension-highlight": "^3.13.0",
     "@tiptap/extension-placeholder": "^3.13.0",
+    "@tiptap/extension-task-item": "^3.13.0",
+    "@tiptap/extension-task-list": "^3.13.0",
     "@tiptap/extension-text-align": "^3.13.0",
     "@tiptap/extension-underline": "^3.13.0",
     "@tiptap/react": "^3.13.0",
