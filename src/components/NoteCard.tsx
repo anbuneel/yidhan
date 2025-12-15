@@ -173,11 +173,11 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
           {formatRelativeTime(note.updatedAt)}
         </time>
 
-        {/* Delete button - bottom-right, appears on hover */}
+        {/* Delete button - same size as pin button, right-aligned with pin */}
         <button
           onClick={handleDeleteClick}
           className="
-            w-7 h-7
+            w-8 h-8
             rounded-full
             flex items-center justify-center
             opacity-0
@@ -186,7 +186,8 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
             focus:outline-none
             focus:opacity-100
             hover:scale-110
-            ml-2
+            ml-auto
+            -mr-3
             shrink-0
           "
           style={{
@@ -204,7 +205,7 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
           aria-label="Delete note"
           title="Delete note"
         >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </button>

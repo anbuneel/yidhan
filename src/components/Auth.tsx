@@ -170,7 +170,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   // Auth card content (shared between modal and full page)
   const authCard = (
     <div
-        className="w-full max-w-[600px] p-6 md:p-10 mx-4 md:mx-0"
+        className="w-full max-w-[600px] p-6 md:p-10 mx-auto"
         style={{
           background: 'var(--color-card-bg)',
           backdropFilter: 'blur(20px)',

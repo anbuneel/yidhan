@@ -632,6 +632,8 @@ body::before {
 
 .auth-modal-content {
   position: relative;
+  width: calc(100% - 2rem);
+  max-width: 600px;
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
   animation: auth-modal-scale-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
