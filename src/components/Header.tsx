@@ -94,16 +94,16 @@ export function Header({
     <header
       className="
         h-16
-        px-6
+        px-4 md:px-6
         flex
         items-center
-        gap-6
+        gap-3 md:gap-6
       "
       style={{ background: 'transparent' }}
     >
       {/* Left Zone - Logo */}
       <h1
-        className="text-[1.75rem] font-semibold tracking-tight cursor-pointer shrink-0"
+        className="text-2xl md:text-[1.75rem] font-semibold tracking-tight cursor-pointer shrink-0"
         style={{
           fontFamily: 'var(--font-display)',
           color: 'var(--color-text-primary)',
@@ -192,7 +192,7 @@ export function Header({
               </button>
             ) : (
               <span
-                className="text-xs px-1.5 py-0.5 rounded"
+                className="hidden md:inline text-xs px-1.5 py-0.5 rounded"
                 style={{
                   background: 'var(--color-bg-tertiary)',
                   color: 'var(--color-text-tertiary)',
@@ -207,12 +207,12 @@ export function Header({
       </div>
 
       {/* Right Zone - Actions */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1 md:gap-2 shrink-0">
         {/* New Note Button - Primary Action */}
         <button
           onClick={onNewNote}
           className="
-            px-4 py-2
+            p-2 md:px-4 md:py-2
             rounded-full
             flex items-center gap-2
             transition-all duration-300
@@ -231,24 +231,25 @@ export function Header({
           }}
           aria-label="New note"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          <span className="text-sm font-medium">New Note</span>
+          <span className="hidden md:inline text-sm font-medium">New Note</span>
         </button>
 
-        {/* Separator */}
+        {/* Separator - hidden on mobile */}
         <div
-          className="w-px h-6 mx-1"
+          className="hidden md:block w-px h-6 mx-1"
           style={{ background: 'var(--glass-border)' }}
         />
-        {/* Theme Toggle */}
+        {/* Theme Toggle - hidden on mobile, accessible via profile menu */}
         <button
           onClick={onThemeToggle}
           className="
+            hidden md:flex
             w-9 h-9
             rounded-full
-            flex items-center justify-center
+            items-center justify-center
             transition-all duration-300
             focus:outline-none
             focus:ring-2
@@ -336,6 +337,37 @@ export function Header({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 Settings
+              </button>
+
+              {/* Theme Toggle - visible on mobile only in menu */}
+              <button
+                onClick={() => {
+                  setIsProfileMenuOpen(false);
+                  onThemeToggle();
+                }}
+                className="
+                  md:hidden
+                  w-full px-4 py-2.5
+                  flex items-center gap-3
+                  text-left text-sm
+                  transition-colors duration-150
+                  hover:bg-[var(--color-bg-tertiary)]
+                "
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                {theme === 'light' ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                )}
+                {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
               </button>
 
               <div
