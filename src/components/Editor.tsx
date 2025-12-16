@@ -23,7 +23,9 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Separate refs for save indicator phases to avoid nested timeout issues
+  const savePhaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [currentNoteId, setCurrentNoteId] = useState(note.id);
 
   // Reset local state when switching to a different note
@@ -48,21 +50,23 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
       updatedAt: new Date(),
     });
 
-    // Clear any existing saved indicator timeout
-    if (savedIndicatorTimeoutRef.current) {
-      clearTimeout(savedIndicatorTimeoutRef.current);
+    // Clear any existing indicator timeouts (flat structure, no nesting)
+    if (savePhaseTimeoutRef.current) {
+      clearTimeout(savePhaseTimeoutRef.current);
+    }
+    if (hideIndicatorTimeoutRef.current) {
+      clearTimeout(hideIndicatorTimeoutRef.current);
     }
 
-    // Show "Saved" briefly after saving, then hide
-    const savedTimeoutId = setTimeout(() => {
+    // After 500ms, transition from "Saving..." to "Saved"
+    savePhaseTimeoutRef.current = setTimeout(() => {
       setSaveStatus('saved');
-      // Hide the "Saved" indicator after 2 seconds
-      const hideTimeoutId = setTimeout(() => {
-        setSaveStatus('idle');
-      }, 2000);
-      savedIndicatorTimeoutRef.current = hideTimeoutId;
-    }, 500); // Wait for server save (debounced in App.tsx)
-    savedIndicatorTimeoutRef.current = savedTimeoutId;
+    }, 500);
+
+    // After 2500ms total, hide the indicator
+    hideIndicatorTimeoutRef.current = setTimeout(() => {
+      setSaveStatus('idle');
+    }, 2500);
   }, [title, content, note, onUpdate]);
 
   // Auto-save when content changes (debounced)
@@ -105,8 +109,11 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
-      if (savedIndicatorTimeoutRef.current) {
-        clearTimeout(savedIndicatorTimeoutRef.current);
+      if (savePhaseTimeoutRef.current) {
+        clearTimeout(savePhaseTimeoutRef.current);
+      }
+      if (hideIndicatorTimeoutRef.current) {
+        clearTimeout(hideIndicatorTimeoutRef.current);
       }
     };
   }, []);
