@@ -24,7 +24,7 @@ export function TagFilterBar({
     <div
       className="
         h-[60px]
-        px-12
+        px-6 md:px-12
         flex items-center
         gap-3
         overflow-x-auto
@@ -33,7 +33,7 @@ export function TagFilterBar({
       style={{
         scrollbarWidth: 'none',
         maskImage: tags.length > 5
-          ? 'linear-gradient(to right, black 48px, black calc(100% - 48px), transparent)'
+          ? 'linear-gradient(to right, black 24px, black calc(100% - 24px), transparent)'
           : 'none',
       }}
     >

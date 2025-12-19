@@ -91,7 +91,7 @@ export function Library({ notes, onNoteClick, onNoteDelete, onTogglePin, searchQ
           1100: 2,
           700: 1,
         }}
-        className="masonry-grid max-w-[1300px] mx-auto px-12 pt-4"
+        className="masonry-grid px-6 md:px-12 pt-4"
         columnClassName="masonry-grid-column"
       >
         {notes.map((note) => (

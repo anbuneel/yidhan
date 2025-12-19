@@ -94,7 +94,7 @@ export function Header({
     <header
       className="
         h-16
-        px-4 md:px-6
+        px-6 md:px-12
         flex
         items-center
         gap-3 md:gap-6

@@ -472,18 +472,19 @@ body::before {
   line-height: 1.6;
   color: var(--color-text-secondary);
   position: relative;
-}
-
-/* Fade effect at bottom when content overflows */
-.note-card-preview::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  background: linear-gradient(to bottom, transparent, var(--color-card-bg));
-  pointer-events: none;
+  /* Smooth fade-out at bottom using mask-image */
+  mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    black calc(100% - 48px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    black calc(100% - 48px),
+    transparent 100%
+  );
 }
 
 .note-card-preview > * + * {
