@@ -1,55 +1,58 @@
 import type { Theme } from '../types';
 
-interface MinimalHeaderProps {
+interface SimpleHeaderProps {
   theme: Theme;
   onThemeToggle: () => void;
-  onBack: () => void;
+  onLogoClick?: () => void;
   onSignIn?: () => void;
   isAuthenticated?: boolean;
 }
 
-export function MinimalHeader({
+export function SimpleHeader({
   theme,
   onThemeToggle,
-  onBack,
+  onLogoClick,
   onSignIn,
   isAuthenticated = false,
-}: MinimalHeaderProps) {
-  return (
-    <header
-      className="px-6 md:px-8 py-5 flex items-center justify-between shrink-0"
-      style={{ borderBottom: '1px solid var(--glass-border)' }}
+}: SimpleHeaderProps) {
+  const logoElement = onLogoClick ? (
+    <button
+      onClick={onLogoClick}
+      className="text-[1.75rem] font-semibold tracking-tight transition-colors duration-200"
+      style={{
+        fontFamily: 'var(--font-display)',
+        color: 'var(--color-text-primary)',
+        letterSpacing: '-0.5px',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = 'var(--color-accent)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.color = 'var(--color-text-primary)';
+      }}
     >
-      {/* Left: Back button */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-sm transition-colors duration-200"
-        style={{
-          fontFamily: 'var(--font-body)',
-          color: 'var(--color-text-secondary)',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.color = 'var(--color-accent)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.color = 'var(--color-text-secondary)';
-        }}
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-          />
-        </svg>
-        <span>Back</span>
-      </button>
+      Zenote
+    </button>
+  ) : (
+    <span
+      className="text-[1.75rem] font-semibold tracking-tight"
+      style={{
+        fontFamily: 'var(--font-display)',
+        color: 'var(--color-text-primary)',
+        letterSpacing: '-0.5px',
+      }}
+    >
+      Zenote
+    </span>
+  );
+
+  return (
+    <header className="px-6 md:px-8 py-5 flex items-center justify-between shrink-0">
+      {/* Logo */}
+      {logoElement}
 
       {/* Right: Theme Toggle + Sign In */}
       <div className="flex items-center gap-2 md:gap-3">

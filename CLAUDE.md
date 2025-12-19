@@ -26,7 +26,7 @@ src/
 │   ├── Header.tsx         # App header with search, profile menu, settings
 │   ├── LandingPage.tsx    # Split-screen landing page with interactive demo
 │   ├── Library.tsx        # Notes masonry grid view
-│   ├── MinimalHeader.tsx  # Minimal header with back button for public pages
+│   ├── SimpleHeader.tsx   # Simple header with clickable logo for public pages
 │   ├── NoteCard.tsx       # Individual note card with tag badges
 │   ├── RichTextEditor.tsx # Tiptap editor wrapper
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
