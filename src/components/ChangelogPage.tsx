@@ -48,7 +48,7 @@ export function ChangelogPage({ theme, onThemeToggle, onSignIn, onLogoClick, onR
       />
 
       {/* Content */}
-      <main className="flex-1 px-6 md:px-12 py-10 md:py-16">
+      <main className="flex-1 px-6 md:px-12 py-4 md:py-6">
         <div className="max-w-2xl mx-auto">
           {/* Title */}
           <h1
