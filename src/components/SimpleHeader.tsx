@@ -50,7 +50,7 @@ export function SimpleHeader({
   );
 
   return (
-    <header className="px-6 md:px-8 py-5 flex items-center justify-between shrink-0">
+    <header className="h-16 px-6 flex items-center justify-between shrink-0">
       {/* Logo */}
       {logoElement}
 

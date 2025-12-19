@@ -35,13 +35,14 @@ export function RoadmapPage({ theme, onThemeToggle, onSignIn, onLogoClick, onCha
       />
 
       {/* Content */}
-      <main className="flex-1 px-6 md:px-12 py-4 md:py-6">
-        <div className="max-w-2xl mx-auto">
+      <main className="flex-1">
+        <div className="max-w-[800px] mx-auto px-10 pb-20">
           {/* Title */}
           <h1
-            className="text-3xl md:text-4xl font-semibold mb-3"
+            className="font-semibold mb-3"
             style={{
               fontFamily: 'var(--font-display)',
+              fontSize: '2.75rem',
               color: 'var(--color-text-primary)',
               letterSpacing: '-0.02em',
             }}
