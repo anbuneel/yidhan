@@ -23,16 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 
-# Claude conversation logs
-claude-code-conversation*.txt
-
 # Misc files
 nul
 *.txt
 !README.txt
-
-# Design/planning docs (optional - remove if you want to track these)
-tech-stack-*.md
+!docs/**/*.txt
 
 # Claude Code local settings
 .claude/
