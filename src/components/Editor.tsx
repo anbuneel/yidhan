@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Note, Tag } from '../types';
+import type { Note, Tag, Theme } from '../types';
 import { RichTextEditor } from './RichTextEditor';
 import { TagSelector } from './TagSelector';
 import { formatShortDate, formatRelativeTime } from '../utils/formatTime';
@@ -12,11 +12,13 @@ interface EditorProps {
   onDelete: (id: string) => void;
   onToggleTag: (noteId: string, tagId: string) => void;
   onCreateTag?: () => void;
+  theme: Theme;
+  onThemeToggle: () => void;
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
 
-export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, onCreateTag }: EditorProps) {
+export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle }: EditorProps) {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -266,34 +268,67 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
           )}
         </nav>
 
-        {/* Delete Button */}
-        <button
-          onClick={handleDelete}
-          className="
-            w-9 h-9
-            rounded-full
-            flex items-center justify-center
-            transition-all duration-200
-            focus:outline-none
-            focus:ring-2
-            focus:ring-[var(--color-accent)]
-          "
-          style={{ color: 'var(--color-text-tertiary)' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'var(--color-destructive)';
-            e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = 'var(--color-text-tertiary)';
-            e.currentTarget.style.background = 'transparent';
-          }}
-          aria-label="Delete note"
-          title="Delete note"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
+        {/* Right Actions */}
+        <div className="flex items-center gap-1">
+          {/* Theme Toggle */}
+          <button
+            onClick={onThemeToggle}
+            className="
+              w-9 h-9
+              rounded-full
+              flex items-center justify-center
+              transition-all duration-300
+              focus:outline-none
+              focus:ring-2
+              focus:ring-[var(--color-accent)]
+              hover:text-[var(--color-accent)]
+              hover:bg-[var(--color-bg-secondary)]
+            "
+            style={{
+              color: 'var(--color-text-secondary)',
+            }}
+            aria-label="Toggle theme"
+          >
+            {theme === 'light' ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            )}
+          </button>
+
+          {/* Delete Button */}
+          <button
+            onClick={handleDelete}
+            className="
+              w-9 h-9
+              rounded-full
+              flex items-center justify-center
+              transition-all duration-200
+              focus:outline-none
+              focus:ring-2
+              focus:ring-[var(--color-accent)]
+            "
+            style={{ color: 'var(--color-text-tertiary)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--color-destructive)';
+              e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--color-text-tertiary)';
+              e.currentTarget.style.background = 'transparent';
+            }}
+            aria-label="Delete note"
+            title="Delete note"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       {/* Editor Content */}

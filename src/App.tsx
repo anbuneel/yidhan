@@ -899,6 +899,8 @@ function App() {
             onDelete={handleNoteDelete}
             onToggleTag={handleNoteTagToggle}
             onCreateTag={handleAddTag}
+            theme={theme}
+            onThemeToggle={handleThemeToggle}
           />
         </Suspense>
         {/* Tag Modal */}
