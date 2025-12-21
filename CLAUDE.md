@@ -103,6 +103,39 @@ The `check` script runs the same steps as GitHub Actions CI:
 3. `test:run` - Vitest tests
 4. `build` - Production build
 
+## Documentation Updates
+
+**IMPORTANT:** When making significant enhancements, fixes, or changes, update these files:
+
+1. **`CLAUDE.md`** - Update relevant sections:
+   - Features Implemented (add new features)
+   - Project Structure (add new files/components)
+   - UI Layout (document new UI patterns)
+   - Any affected documentation sections
+
+2. **`README.md`** - Update if changes affect:
+   - Installation instructions
+   - Usage examples
+   - Feature descriptions visible to users
+
+3. **`src/data/changelog.ts`** - Add new version entry with:
+   - Version number (semantic versioning)
+   - Date
+   - Changes array with type ('feature' | 'improvement' | 'fix') and description
+
+Example changelog entry:
+```typescript
+{
+  version: '1.x.0',
+  date: '2025-XX-XX',
+  changes: [
+    { type: 'feature', text: 'Description of new feature' },
+    { type: 'improvement', text: 'Description of improvement' },
+    { type: 'fix', text: 'Description of bug fix' },
+  ],
+},
+```
+
 ## Design System
 
 ### Themes
