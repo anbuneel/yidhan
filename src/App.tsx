@@ -125,15 +125,37 @@ function App() {
         });
       },
       (updatedNote) => {
-        setNotes((prev) =>
-          prev.map((n) => {
-            if (n.id === updatedNote.id) {
-              // Preserve existing tags since real-time events don't include them
-              return { ...updatedNote, tags: n.tags };
-            }
-            return n;
-          })
-        );
+        // Check if this is a soft-delete (note now has deletedAt set)
+        if (updatedNote.deletedAt) {
+          // Remove from active notes and update faded count
+          setNotes((prev) => prev.filter((n) => n.id !== updatedNote.id));
+          setFadedNotesCount((prev) => prev + 1);
+          if (selectedNoteId === updatedNote.id) {
+            setView('library');
+            setSelectedNoteId(null);
+          }
+          return;
+        }
+
+        // Check if this is a restore (note no longer has deletedAt)
+        // This handles notes restored from another tab
+        setNotes((prev) => {
+          const existingNote = prev.find((n) => n.id === updatedNote.id);
+          if (existingNote) {
+            // Note exists, update it preserving tags
+            return prev.map((n) => {
+              if (n.id === updatedNote.id) {
+                return { ...updatedNote, tags: n.tags };
+              }
+              return n;
+            });
+          } else {
+            // Note doesn't exist in active list (was restored from faded)
+            // Add it back (tags will be empty, will refresh on next full load)
+            setFadedNotesCount((prev) => Math.max(0, prev - 1));
+            return [updatedNote, ...prev];
+          }
+        });
       },
       (deletedId) => {
         setNotes((prev) => prev.filter((n) => n.id !== deletedId));

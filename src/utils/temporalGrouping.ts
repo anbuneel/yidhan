@@ -8,7 +8,7 @@ export interface ChapterGroup {
   notes: Note[];
 }
 
-const CHAPTER_LABELS: Record<ChapterKey, string> = {
+export const CHAPTER_LABELS: Record<ChapterKey, string> = {
   today: 'Today',
   thisWeek: 'This Week',
   thisMonth: 'This Month',

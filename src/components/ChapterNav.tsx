@@ -1,20 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { ChapterKey } from '../utils/temporalGrouping';
+import { type ChapterKey, CHAPTER_LABELS } from '../utils/temporalGrouping';
 
 interface ChapterNavProps {
   chapters: { key: ChapterKey; label: string }[];
   currentChapter: ChapterKey | null;
   onChapterClick: (key: ChapterKey) => void;
 }
-
-// Chapter labels for tooltips
-const CHAPTER_LABELS: Record<ChapterKey, string> = {
-  today: 'Today',
-  thisWeek: 'This Week',
-  thisMonth: 'This Month',
-  lastMonth: 'Last Month',
-  seasonsPast: 'Seasons Past',
-};
 
 export function ChapterNav({
   chapters,
