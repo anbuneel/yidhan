@@ -1,6 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import type { Note } from '../types';
 import { ChapterSection } from './ChapterSection';
+import { ChapterNav } from './ChapterNav';
+import { TimeRibbon } from './TimeRibbon';
 import {
   groupNotesByChapter,
   getDefaultExpansionState,
@@ -42,6 +44,57 @@ export function ChapteredLibrary({
   const defaultExpansion = useMemo(() => {
     return getDefaultExpansionState(notes.length);
   }, [notes.length]);
+
+  // Track current chapter for navigation
+  const [currentChapter, setCurrentChapter] = useState<ChapterKey | null>(
+    chapters.length > 0 ? (chapters[0].key as ChapterKey) : null
+  );
+
+  // Intersection Observer for scroll detection
+  useEffect(() => {
+    if (chapters.length === 0) return;
+
+    const observers: IntersectionObserver[] = [];
+
+    chapters.forEach((chapter) => {
+      const element = document.getElementById(`chapter-${chapter.key}`);
+      if (!element) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.3) {
+              setCurrentChapter(chapter.key as ChapterKey);
+            }
+          });
+        },
+        {
+          threshold: [0.3, 0.5, 0.7],
+          rootMargin: '-100px 0px -50% 0px',
+        }
+      );
+
+      observer.observe(element);
+      observers.push(observer);
+    });
+
+    return () => {
+      observers.forEach((observer) => observer.disconnect());
+    };
+  }, [chapters]);
+
+  // Smooth scroll to chapter
+  const scrollToChapter = useCallback((key: ChapterKey) => {
+    const element = document.getElementById(`chapter-${key}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
+  // Navigation chapters (for ChapterNav and TimeRibbon)
+  const navChapters = useMemo(() => {
+    return chapters.map((c) => ({ key: c.key as ChapterKey, label: c.label }));
+  }, [chapters]);
 
   // Empty state
   if (notes.length === 0) {
@@ -108,23 +161,39 @@ export function ChapteredLibrary({
   }
 
   return (
-    <main
-      className="flex-1 overflow-y-auto pb-32"
-      style={{ scrollbarWidth: 'none' }}
-    >
-      {/* Render each non-empty chapter */}
-      {chapters.map((chapter) => (
-        <ChapterSection
-          key={chapter.key}
-          chapterKey={chapter.key as ChapterKey}
-          label={chapter.label}
-          notes={chapter.notes}
-          defaultExpanded={defaultExpansion[chapter.key as ChapterKey]}
-          onNoteClick={onNoteClick}
-          onNoteDelete={onNoteDelete}
-          onTogglePin={onTogglePin}
-        />
-      ))}
-    </main>
+    <>
+      <main
+        className="flex-1 overflow-y-auto pb-32"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {/* Render each non-empty chapter */}
+        {chapters.map((chapter) => (
+          <ChapterSection
+            key={chapter.key}
+            chapterKey={chapter.key as ChapterKey}
+            label={chapter.label}
+            notes={chapter.notes}
+            defaultExpanded={defaultExpansion[chapter.key as ChapterKey]}
+            onNoteClick={onNoteClick}
+            onNoteDelete={onNoteDelete}
+            onTogglePin={onTogglePin}
+          />
+        ))}
+      </main>
+
+      {/* Chapter Navigation - Desktop (right sidebar) */}
+      <ChapterNav
+        chapters={navChapters}
+        currentChapter={currentChapter}
+        onChapterClick={scrollToChapter}
+      />
+
+      {/* Time Ribbon - Mobile (bottom scrubber) */}
+      <TimeRibbon
+        chapters={navChapters}
+        currentChapter={currentChapter}
+        onChapterClick={scrollToChapter}
+      />
+    </>
   );
 }

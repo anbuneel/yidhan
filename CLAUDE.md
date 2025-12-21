@@ -24,9 +24,11 @@ src/
 │   ├── ErrorBoundary.tsx  # Error boundary for graceful error handling
 │   ├── Footer.tsx         # Minimal footer with changelog/roadmap/GitHub links
 │   ├── ChapteredLibrary.tsx # Temporal chapters note organization (Today, This Week, etc.)
+│   ├── ChapterNav.tsx     # Desktop dot navigation sidebar for chapter jumping
 │   ├── ChapterSection.tsx # Collapsible chapter section with masonry grid
 │   ├── FadedNoteCard.tsx  # Card for soft-deleted notes (restore/permanent delete)
 │   ├── FadedNotesView.tsx # View for recovering soft-deleted notes
+│   ├── TimeRibbon.tsx     # Mobile chapter scrubber navigation
 │   ├── Header.tsx         # App header with search, profile menu, settings
 │   ├── LandingPage.tsx    # Split-screen landing page with interactive demo
 │   ├── Library.tsx        # Notes masonry grid view (legacy, replaced by ChapteredLibrary)
@@ -209,6 +211,7 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Faded Notes view with restore and permanent delete options
 - [x] Temporal Chapters (automatic grouping: Today, This Week, This Month, Last Month, Seasons Past)
 - [x] Collapsible chapter sections with note counts and preview titles
+- [x] Chapter navigation: Desktop dot sidebar + Mobile time ribbon scrubber
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (GitHub, etc.)
