@@ -13,9 +13,10 @@ export interface Note {
   updatedAt: Date;
   tags: Tag[];
   pinned: boolean;
+  deletedAt?: Date | null;
 }
 
-export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap';
+export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded';
 export type Theme = 'light' | 'dark';
 
 // Curated wabi-sabi color palette for tags

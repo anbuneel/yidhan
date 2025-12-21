@@ -1,0 +1,26 @@
+Critical Feedback & Refinements for "Chapters"
+While the plan is solid, here are three specific refinements to ensure it hits the quality bar of the rest of the app:
+
+A. The "Empty State" Problem
+
+Risk: If I haven't written anything in 3 days, "Today" is empty. Does the header disappear? If I have gaps in my writing habit, the timeline might look broken.
+
+Refinement: Do not render empty chapters. If "Today" is empty, start with "This Week." The interface should be honest about the content, not a template waiting to be filled.
+
+B. The "Masonry" Conflict
+
+Risk: Masonry grids rely on vertical stacking. If "Today" has only 1 note and "This Week" has 5, how do they transition? A hard horizontal line breaks the masonry flow.
+
+Refinement: Use "Soft Breaks." Instead of a full-width rigid divider line (<hr>), use the sticky header on the left margin (or center) and let the masonry grid continue flowing, but push the cards for that section down.
+
+Alternatively: Accept that each Chapter is a separate masonry grid container. This is easier to code but might leave jagged white space at the bottom of "Today" if you have an odd number of notes.
+
+C. The Sidebar Navigation (The "Dot" Nav)
+
+Risk: On mobile, this will be unusable (too small, no hover).
+
+Refinement:
+
+Desktop: The dots are perfect.
+
+Mobile: Replace the dots with a "Time Scrubber" pill at the bottom (like the photo scroll bar on iOS). Slide your thumb to jump between months/eras.

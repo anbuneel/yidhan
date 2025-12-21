@@ -23,9 +23,13 @@ src/
 │   ├── Editor.tsx         # Note editor with rich text + tag selector + save indicator
 │   ├── ErrorBoundary.tsx  # Error boundary for graceful error handling
 │   ├── Footer.tsx         # Minimal footer with changelog/roadmap/GitHub links
+│   ├── ChapteredLibrary.tsx # Temporal chapters note organization (Today, This Week, etc.)
+│   ├── ChapterSection.tsx # Collapsible chapter section with masonry grid
+│   ├── FadedNoteCard.tsx  # Card for soft-deleted notes (restore/permanent delete)
+│   ├── FadedNotesView.tsx # View for recovering soft-deleted notes
 │   ├── Header.tsx         # App header with search, profile menu, settings
 │   ├── LandingPage.tsx    # Split-screen landing page with interactive demo
-│   ├── Library.tsx        # Notes masonry grid view
+│   ├── Library.tsx        # Notes masonry grid view (legacy, replaced by ChapteredLibrary)
 │   ├── SimpleHeader.tsx   # Simple header with clickable logo for public pages
 │   ├── NoteCard.tsx       # Individual note card with tag badges
 │   ├── RichTextEditor.tsx # Tiptap editor wrapper
@@ -53,7 +57,8 @@ src/
 ├── utils/
 │   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
 │   ├── formatTime.ts      # Relative time formatting
-│   └── sanitize.ts        # HTML/text sanitization (XSS prevention)
+│   ├── sanitize.ts        # HTML/text sanitization (XSS prevention)
+│   └── temporalGrouping.ts # Group notes by time (Today, This Week, This Month, etc.)
 ├── test/
 │   └── setup.ts           # Vitest test setup
 ├── App.tsx                # Main app component with state management
@@ -123,6 +128,7 @@ create table notes (
   title text not null default '',
   content text not null default '',  -- Stores HTML from Tiptap
   pinned boolean default false not null,  -- Pin notes to top of library
+  deleted_at timestamptz default null,  -- Soft-delete timestamp (null = active, set = faded)
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null
 );
@@ -199,6 +205,10 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Public changelog page (version history with categorized changes)
 - [x] Public roadmap page (status-grouped feature plans)
 - [x] Footer navigation (Changelog · Roadmap · GitHub links)
+- [x] Soft-delete notes ("Faded Notes" - 30-day recovery window)
+- [x] Faded Notes view with restore and permanent delete options
+- [x] Temporal Chapters (automatic grouping: Today, This Week, This Month, Last Month, Seasons Past)
+- [x] Collapsible chapter sections with note counts and preview titles
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (GitHub, etc.)
@@ -230,6 +240,15 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - Tag service functions are in `src/services/tags.ts`
 - Tag state is managed in `App.tsx`
 - Tag components: `TagPill`, `TagBadge`, `TagFilterBar`, `TagSelector`, `TagModal`
+
+### Soft-delete (Faded Notes) service functions
+Located in `src/services/notes.ts`:
+- `softDeleteNote(id)` - Set deleted_at timestamp (moves to Faded Notes)
+- `restoreNote(id)` - Clear deleted_at (restores to library)
+- `permanentDeleteNote(id)` - Hard delete from database
+- `fetchFadedNotes()` - Get all soft-deleted notes for current user
+- `countFadedNotes()` - Get count for badge display
+- `emptyFadedNotes()` - Permanently delete all faded notes
 
 ## UI Layout
 
@@ -342,6 +361,49 @@ Pinned notes:
 - Pin icon is always visible and filled with accent color
 - Sorted to appear first in the library
 ```
+
+### Temporal Chapters (Note Organization)
+```
+┌─────────────────────────────────────────────────────────────┐
+│ ▼ Today                                            2 notes  │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐                          │
+│  │ Note Card   │  │ Note Card   │                          │
+│  └─────────────┘  └─────────────┘                          │
+├─────────────────────────────────────────────────────────────┤
+│ ▶ This Week                                        5 notes  │
+│   Note A · Note B · Note C ...                              │
+├─────────────────────────────────────────────────────────────┤
+│ ▶ This Month                                       8 notes  │
+│   Note X · Note Y · Note Z ...                              │
+└─────────────────────────────────────────────────────────────┘
+```
+- Notes automatically grouped by time (Today, This Week, This Month, Last Month, Seasons Past)
+- Empty chapters are not rendered ("Honest Presence" pattern)
+- Collapsed state shows first 3 note titles as preview
+- Each chapter has its own masonry grid
+
+### Faded Notes View
+```
+┌─────────────────────────────────────────────────────────────┐
+│ ← Back to Notes                              [Empty All]    │
+├─────────────────────────────────────────────────────────────┤
+│                      Faded Notes                            │
+│           Notes here will be permanently                    │
+│           removed after 30 days                             │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Note Title                                          │   │
+│  │ Deleted 3 days ago · 27 days left                   │   │
+│  │ [Restore] [Delete Forever]                          │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+- Accessed via "Faded Notes" in profile menu (shows badge count)
+- Cards show deletion time and days remaining
+- Restore returns note to library
+- "Delete Forever" permanently removes note
+- "Empty All" permanently deletes all faded notes
 
 ### Footer (Library & Landing Page)
 ```
@@ -493,3 +555,4 @@ SQL migrations are stored in `supabase/migrations/`:
 - `create_welcome_note_trigger.sql` - Auto-creates welcome note for new users
 - `security_audit_checklist.sql` - RLS audit queries and rate limiting docs
 - `add_pinned_column.sql` - Add pinned column to notes table
+- `add_soft_delete.sql` - Add deleted_at column for soft-delete feature

@@ -22,12 +22,13 @@ function toNote(dbNote: DbNote, tags: Tag[] = []): Note {
     updatedAt: new Date(dbNote.updated_at),
     tags,
     pinned: dbNote.pinned ?? false,
+    deletedAt: dbNote.deleted_at ? new Date(dbNote.deleted_at) : null,
   };
 }
 
-// Fetch all notes for the current user (with optional tag filtering)
+// Fetch all active notes for the current user (excludes soft-deleted)
 export async function fetchNotes(filterTagIds?: string[]): Promise<Note[]> {
-  // First, get all notes with their tags via join
+  // Get all active notes (not soft-deleted) with their tags via join
   // Order by pinned first, then by updated_at
   const { data, error } = await supabase
     .from('notes')
@@ -38,6 +39,7 @@ export async function fetchNotes(filterTagIds?: string[]): Promise<Note[]> {
         tags (*)
       )
     `)
+    .is('deleted_at', null)
     .order('pinned', { ascending: false })
     .order('updated_at', { ascending: false });
 
@@ -129,15 +131,41 @@ export async function updateNote(note: Note): Promise<Note> {
   return toNote(data, note.tags);
 }
 
-// Delete a note
-export async function deleteNote(id: string): Promise<void> {
+// Soft delete a note (move to Faded Notes)
+export async function softDeleteNote(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('notes')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error soft-deleting note:', error);
+    throw error;
+  }
+}
+
+// Restore a soft-deleted note
+export async function restoreNote(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('notes')
+    .update({ deleted_at: null })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error restoring note:', error);
+    throw error;
+  }
+}
+
+// Permanently delete a note (cannot be recovered)
+export async function permanentDeleteNote(id: string): Promise<void> {
   const { error } = await supabase
     .from('notes')
     .delete()
     .eq('id', id);
 
   if (error) {
-    console.error('Error deleting note:', error);
+    console.error('Error permanently deleting note:', error);
     throw error;
   }
 }
@@ -155,7 +183,7 @@ export async function toggleNotePin(id: string, pinned: boolean): Promise<void> 
   }
 }
 
-// Search notes by title and content
+// Search active notes by title and content (excludes soft-deleted)
 export async function searchNotes(query: string): Promise<Note[]> {
   if (!query.trim()) {
     return fetchNotes();
@@ -172,6 +200,7 @@ export async function searchNotes(query: string): Promise<Note[]> {
         tags (*)
       )
     `)
+    .is('deleted_at', null)
     .or(`title.ilike.${searchTerm},content.ilike.${searchTerm}`)
     .order('pinned', { ascending: false })
     .order('updated_at', { ascending: false });
@@ -188,6 +217,62 @@ export async function searchNotes(query: string): Promise<Note[]> {
       .map(toTag);
     return toNote(row as DbNote, tags);
   });
+}
+
+// Fetch all soft-deleted (faded) notes for the current user
+export async function fetchFadedNotes(): Promise<Note[]> {
+  const { data, error } = await supabase
+    .from('notes')
+    .select(`
+      *,
+      note_tags (
+        tag_id,
+        tags (*)
+      )
+    `)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching faded notes:', error);
+    throw error;
+  }
+
+  return (data || []).map((row) => {
+    const tags = (row.note_tags || [])
+      .map((nt: { tags: DbTag | null }) => nt.tags)
+      .filter((tag): tag is DbTag => tag !== null)
+      .map(toTag);
+    return toNote(row as DbNote, tags);
+  });
+}
+
+// Count soft-deleted notes (for badge display)
+export async function countFadedNotes(): Promise<number> {
+  const { count, error } = await supabase
+    .from('notes')
+    .select('*', { count: 'exact', head: true })
+    .not('deleted_at', 'is', null);
+
+  if (error) {
+    console.error('Error counting faded notes:', error);
+    throw error;
+  }
+
+  return count || 0;
+}
+
+// Empty all faded notes (permanent delete)
+export async function emptyFadedNotes(): Promise<void> {
+  const { error } = await supabase
+    .from('notes')
+    .delete()
+    .not('deleted_at', 'is', null);
+
+  if (error) {
+    console.error('Error emptying faded notes:', error);
+    throw error;
+  }
 }
 
 // Subscribe to real-time changes

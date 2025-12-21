@@ -32,6 +32,8 @@ interface HeaderProps {
   onExportMarkdown: () => void;
   onImportFile: (file: File) => void;
   onSettingsClick: () => void;
+  onFadedNotesClick: () => void;
+  fadedNotesCount: number;
 }
 
 export function Header({
@@ -44,6 +46,8 @@ export function Header({
   onExportMarkdown,
   onImportFile,
   onSettingsClick,
+  onFadedNotesClick,
+  fadedNotesCount,
 }: HeaderProps) {
   const { signOut, user } = useAuth();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -445,6 +449,47 @@ export function Header({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 Import Notes
+              </button>
+
+              {/* Faded Notes */}
+              <button
+                onClick={() => {
+                  setIsProfileMenuOpen(false);
+                  onFadedNotesClick();
+                }}
+                className="
+                  w-full px-4 py-2.5
+                  flex items-center gap-3
+                  text-left text-sm
+                  transition-colors duration-150
+                  hover:bg-[var(--color-bg-tertiary)]
+                "
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.6 }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="flex-1">Faded Notes</span>
+                {fadedNotesCount > 0 && (
+                  <span
+                    className="
+                      min-w-[20px] h-5
+                      px-1.5
+                      rounded-full
+                      text-xs font-medium
+                      flex items-center justify-center
+                    "
+                    style={{
+                      background: 'var(--color-accent-glow)',
+                      color: 'var(--color-accent)',
+                    }}
+                  >
+                    {fadedNotesCount > 99 ? '99+' : fadedNotesCount}
+                  </span>
+                )}
               </button>
 
               <div

@@ -1,17 +1,47 @@
 import { useState } from 'react';
 import type { Note } from '../types';
-import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
 import { sanitizeHtml, sanitizeText } from '../utils/sanitize';
 
-interface NoteCardProps {
+interface FadedNoteCardProps {
   note: Note;
-  onClick: (id: string) => void;
-  onDelete: (id: string) => void;
-  onTogglePin: (id: string, pinned: boolean) => void;
+  onRestore: (id: string) => void;
+  onPermanentDelete: (id: string) => void;
 }
 
-export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps) {
+/**
+ * Format how long ago the note was deleted
+ */
+function formatDeletedTime(deletedAt: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - deletedAt.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    if (diffHours === 0) {
+      return 'Just now';
+    }
+    return `${diffHours}h ago`;
+  }
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 14) return '1 week ago';
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`;
+}
+
+/**
+ * Calculate days remaining before permanent deletion (30 day limit)
+ */
+function getDaysRemaining(deletedAt: Date): number {
+  const now = new Date();
+  const diffMs = now.getTime() - deletedAt.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return Math.max(0, 30 - diffDays);
+}
+
+export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteCardProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -21,7 +51,7 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
 
   const handleConfirmDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onDelete(note.id);
+    onPermanentDelete(note.id);
     setShowDeleteConfirm(false);
   };
 
@@ -30,10 +60,13 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
     setShowDeleteConfirm(false);
   };
 
-  const handlePinClick = (e: React.MouseEvent) => {
+  const handleRestoreClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onTogglePin(note.id, !note.pinned);
+    onRestore(note.id);
   };
+
+  const daysRemaining = note.deletedAt ? getDaysRemaining(note.deletedAt) : 30;
+  const deletedTimeAgo = note.deletedAt ? formatDeletedTime(note.deletedAt) : 'Unknown';
 
   return (
     <article
@@ -41,15 +74,9 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
         group
         relative
         overflow-hidden
-        cursor-pointer
         p-6 pb-5
         flex flex-col
         transition-all duration-500
-        focus:outline-none
-        focus:ring-2
-        focus:ring-[var(--color-accent)]
-        focus:ring-offset-2
-        active:scale-[0.98]
       "
       style={{
         background: 'var(--color-card-bg)',
@@ -61,35 +88,24 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
         transitionTimingFunction: 'cubic-bezier(0.25, 0.8, 0.25, 1)',
         minHeight: '200px',
         maxHeight: '300px',
-      }}
-      role="button"
-      tabIndex={0}
-      onClick={() => onClick(note.id)}
-      onKeyDown={(e) => e.key === 'Enter' && onClick(note.id)}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-10px)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
+        // Faded visual treatment
+        opacity: 0.75,
+        filter: 'saturate(0.7)',
       }}
     >
-      {/* Accent line - animates on hover */}
+      {/* Muted accent line */}
       <div
-        className="
-          absolute top-0 left-0 w-full h-[2px]
-          bg-[var(--color-accent)]
-          opacity-50
-          origin-left
-          transition-transform duration-500 ease-out
-          scale-x-0
-          group-hover:scale-x-100
-        "
+        className="absolute top-0 left-0 w-full h-[2px]"
+        style={{
+          background: 'var(--color-accent)',
+          opacity: 0.3,
+        }}
       />
 
-      {/* Pin button - top-right corner */}
+      {/* Restore button - top-right corner */}
       <button
-        onClick={handlePinClick}
-        className={`
+        onClick={handleRestoreClick}
+        className="
           absolute top-3 right-3
           w-8 h-8
           rounded-full
@@ -98,33 +114,29 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
           focus:outline-none
           focus:opacity-100
           hover:scale-110
-          ${note.pinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
-        `}
+          opacity-0 group-hover:opacity-100
+        "
         style={{
-          background: note.pinned ? 'var(--color-accent)' : 'var(--color-bg-secondary)',
-          color: note.pinned ? 'var(--color-bg-primary)' : 'var(--color-text-tertiary)',
+          background: 'var(--color-bg-secondary)',
+          color: 'var(--color-text-tertiary)',
         }}
         onMouseEnter={(e) => {
-          if (!note.pinned) {
-            e.currentTarget.style.color = 'var(--color-accent)';
-            e.currentTarget.style.background = 'rgba(var(--color-accent-rgb), 0.1)';
-          }
+          e.currentTarget.style.color = 'var(--color-accent)';
+          e.currentTarget.style.background = 'var(--color-accent-glow)';
         }}
         onMouseLeave={(e) => {
-          if (!note.pinned) {
-            e.currentTarget.style.color = 'var(--color-text-tertiary)';
-            e.currentTarget.style.background = 'var(--color-bg-secondary)';
-          }
+          e.currentTarget.style.color = 'var(--color-text-tertiary)';
+          e.currentTarget.style.background = 'var(--color-bg-secondary)';
         }}
-        aria-label={note.pinned ? 'Unpin note' : 'Pin note'}
-        title={note.pinned ? 'Unpin note' : 'Pin note'}
+        aria-label="Restore note"
+        title="Restore note"
       >
-        <svg className="w-4 h-4" fill={note.pinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
         </svg>
       </button>
 
-      {/* Title - sanitized to prevent XSS */}
+      {/* Title */}
       <h3
         className="
           text-xl
@@ -141,13 +153,13 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
         dangerouslySetInnerHTML={{ __html: sanitizeText(note.title) || 'Untitled' }}
       />
 
-      {/* Preview - Rendered HTML content (sanitized to prevent XSS) */}
+      {/* Preview */}
       <div
         className="note-card-preview flex-1 overflow-hidden"
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
       />
 
-      {/* Footer: Tags + Timestamp + Delete */}
+      {/* Footer: Tags + Deletion info + Delete button */}
       <div className="flex items-center justify-between mt-auto pt-4 shrink-0">
         {/* Tag badges */}
         <div className="flex-1 min-w-0">
@@ -158,26 +170,29 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
           )}
         </div>
 
-        {/* Timestamp */}
-        <time
+        {/* Deletion info */}
+        <div
           className="
-            text-[0.65rem]
+            text-[0.6rem]
             uppercase
-            tracking-[0.1em]
+            tracking-[0.08em]
             font-medium
             shrink-0
             ml-3
+            text-right
           "
-          dateTime={note.updatedAt.toISOString()}
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-tertiary)',
           }}
         >
-          {formatRelativeTime(note.updatedAt)}
-        </time>
+          <div>{deletedTimeAgo}</div>
+          <div style={{ color: daysRemaining <= 7 ? 'var(--color-destructive)' : 'var(--color-text-tertiary)' }}>
+            {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left
+          </div>
+        </div>
 
-        {/* Delete button - inline with footer, right-aligned with pin */}
+        {/* Permanent delete button */}
         <button
           onClick={handleDeleteClick}
           className="
@@ -206,22 +221,22 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
             e.currentTarget.style.color = 'var(--color-text-tertiary)';
             e.currentTarget.style.background = 'var(--color-bg-secondary)';
           }}
-          aria-label="Delete note"
-          title="Delete note"
+          aria-label="Delete permanently"
+          title="Delete permanently"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      {/* Delete Confirmation Overlay */}
+      {/* Permanent Delete Confirmation Overlay */}
       {showDeleteConfirm && (
         <div
           className="
             absolute inset-0
             flex flex-col items-center justify-center
-            gap-3
+            gap-4
             p-6
           "
           style={{
@@ -239,10 +254,10 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
               color: 'var(--color-text-secondary)',
             }}
           >
-            Move "<span
+            Permanently delete "<span
               style={{ color: 'var(--color-text-primary)' }}
               dangerouslySetInnerHTML={{ __html: sanitizeText(note.title) || 'Untitled' }}
-            />" to Faded Notes?
+            />"?
           </p>
           <p
             className="text-center text-xs"
@@ -251,9 +266,9 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
               color: 'var(--color-text-tertiary)',
             }}
           >
-            It will be permanently removed after 30 days.
+            This cannot be undone.
           </p>
-          <div className="flex gap-2 mt-1">
+          <div className="flex gap-2">
             <button
               onClick={handleCancelDelete}
               className="
@@ -287,17 +302,17 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
               "
               style={{
                 fontFamily: 'var(--font-body)',
-                color: 'var(--color-bg-primary)',
-                background: 'var(--color-accent)',
+                color: '#fff',
+                background: 'var(--color-destructive)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--color-accent-hover)';
+                e.currentTarget.style.opacity = '0.9';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-accent)';
+                e.currentTarget.style.opacity = '1';
               }}
             >
-              Move to Faded
+              Delete Forever
             </button>
           </div>
         </div>
