@@ -346,7 +346,7 @@ All pages use `HeaderShell` component for pixel-perfect header consistency:
 (fixed)             (flexible)               (fixed position)
 ```
 
-**Library Header:**
+**Library Header (Desktop):**
 ```
 [Zenote]   [  Search...  ⌘K  ] [+ New Note]   [☀] [JD ↓]
                                                     │
@@ -362,6 +362,14 @@ All pages use `HeaderShell` component for pixel-perfect header consistency:
                                           └───────────────────┘
 ```
 
+**Library Header (Mobile - Two Rows):**
+```
+Row 1: [Zenote]                    [+] [☀] [JD]
+Row 2: [         Search...          ]
+```
+- New Note button moved to Row 1 for quick access
+- Search bar gets full width on Row 2
+
 **Editor Header:**
 ```
 [Zenote]   / Note Title  [Saving.../Saved ✓]    [🗑] | [☀] [JD]
@@ -376,7 +384,7 @@ All pages use `HeaderShell` component for pixel-perfect header consistency:
 
 | Page | Center Content | Right Actions | Menu Sections |
 |------|----------------|---------------|---------------|
-| Library | Search bar + New Note button | - | Export, Import, Faded Notes |
+| Library | Search bar | New Note button | Export, Import, Faded Notes |
 | Editor | Breadcrumb (/ Note Title) + Save status | Delete button | - |
 | Landing | - | - | - |
 | Changelog | - | - | - |
@@ -401,10 +409,22 @@ All pages use `HeaderShell` component for pixel-perfect header consistency:
 | `/divider` | Horizontal line |
 
 ### Tag Filter Bar (below header)
+
+**Desktop (2 rows collapsed, expandable):**
 ```
-[All Notes]  |  [Tag 1 ✏]  [Tag 2 ✏]  [Tag 3 ✏]  [+]
-                    ↑ Edit button appears on hover
+[All Notes]  |  [Tag 1 ✏]  [Tag 2 ✏]  [Tag 3 ✏]  [Tag 4 ✏]  [Tag 5 ✏]
+              [Tag 6 ✏]  [Tag 7 ✏]  [+]  [+3 ▼]
+                                          ↑ Expand button (if >2 rows)
 ```
+
+**Mobile (all tags visible, wrapped):**
+```
+[All Notes]  |  [Tag 1]  [Tag 2]
+              [Tag 3]  [Tag 4]  [+]
+```
+- Mobile shows all tags in wrapping layout (no collapse)
+- Desktop shows 2 rows by default with expand/collapse if more tags exist
+- Edit button appears on hover (desktop only)
 
 ### Note Card
 ```

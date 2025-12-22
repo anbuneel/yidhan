@@ -90,47 +90,49 @@ export function HeaderShell({
 
   return (
     <header
-      className="h-16 px-4 md:px-12 flex items-center shrink-0"
+      className="px-4 md:px-12 shrink-0"
       style={{ background: 'var(--color-bg-primary)' }}
     >
-      {/* Left Zone - Logo (fixed position) */}
-      <div className="shrink-0">
-        {onLogoClick ? (
-          <button
-            onClick={onLogoClick}
-            className="text-xl md:text-[1.75rem] font-semibold tracking-tight transition-colors duration-200 hover:text-[var(--color-accent)]"
-            style={{
-              fontFamily: 'var(--font-display)',
-              color: 'var(--color-text-primary)',
-              letterSpacing: '-0.5px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            Zenote
-          </button>
-        ) : (
-          <span
-            className="text-xl md:text-[1.75rem] font-semibold tracking-tight"
-            style={{
-              fontFamily: 'var(--font-display)',
-              color: 'var(--color-text-primary)',
-              letterSpacing: '-0.5px',
-            }}
-          >
-            Zenote
-          </span>
-        )}
-      </div>
+      {/* Row 1: Logo + Center (desktop) + Right actions */}
+      <div className="h-16 flex items-center">
+        {/* Left Zone - Logo (fixed position) */}
+        <div className="shrink-0">
+          {onLogoClick ? (
+            <button
+              onClick={onLogoClick}
+              className="text-xl md:text-[1.75rem] font-semibold tracking-tight transition-colors duration-200 hover:text-[var(--color-accent)]"
+              style={{
+                fontFamily: 'var(--font-display)',
+                color: 'var(--color-text-primary)',
+                letterSpacing: '-0.5px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              Zenote
+            </button>
+          ) : (
+            <span
+              className="text-xl md:text-[1.75rem] font-semibold tracking-tight"
+              style={{
+                fontFamily: 'var(--font-display)',
+                color: 'var(--color-text-primary)',
+                letterSpacing: '-0.5px',
+              }}
+            >
+              Zenote
+            </span>
+          )}
+        </div>
 
-      {/* Center Zone - Flexible content (varies by page) */}
-      <div className="flex-1 flex justify-center items-center min-w-0 mx-2 md:mx-4">
-        {center}
-      </div>
+        {/* Center Zone - Hidden on mobile, visible on desktop */}
+        <div className="hidden sm:flex flex-1 justify-center items-center min-w-0 mx-4">
+          {center}
+        </div>
 
-      {/* Right Zone - Theme Toggle + Avatar/Sign In (fixed position) */}
-      <div className="flex items-center gap-1 shrink-0">
+        {/* Right Zone - Theme Toggle + Avatar/Sign In (fixed position) */}
+        <div className="ml-auto sm:ml-0 flex items-center gap-1 shrink-0">
         {/* Page-specific right actions (e.g., delete button) */}
         {rightActions}
 
@@ -317,7 +319,15 @@ export function HeaderShell({
             </button>
           )
         )}
+        </div>
       </div>
+
+      {/* Row 2: Center content on mobile only */}
+      {center && (
+        <div className="sm:hidden pb-3">
+          {center}
+        </div>
+      )}
     </header>
   );
 }

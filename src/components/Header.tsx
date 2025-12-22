@@ -104,18 +104,18 @@ export function Header({
     },
   ];
 
-  // Center content: Search bar + New Note button
+  // Center content: Search bar only
   const centerContent = (
-    <div className="flex items-center gap-2 md:gap-4 w-full justify-center">
+    <div className="flex items-center w-full sm:justify-center">
       {/* Search Bar */}
       <div
-        className="flex-1 max-w-[280px] md:max-w-[420px] relative transition-all duration-300"
+        className="flex-1 sm:max-w-[420px] relative transition-all duration-300"
         style={{
           transform: isSearchFocused ? 'scale(1.02)' : 'scale(1)',
         }}
       >
         <div
-          className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 rounded-full transition-all duration-300"
+          className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-full transition-all duration-300"
           style={{
             background: 'var(--color-bg-secondary)',
             border: isSearchFocused
@@ -164,7 +164,7 @@ export function Header({
             </button>
           ) : (
             <span
-              className="hidden md:inline text-xs px-1.5 py-0.5 rounded shrink-0"
+              className="hidden sm:inline text-xs px-1.5 py-0.5 rounded shrink-0"
               style={{
                 background: 'var(--color-bg-tertiary)',
                 color: 'var(--color-text-tertiary)',
@@ -176,36 +176,38 @@ export function Header({
           )}
         </div>
       </div>
-
-      {/* New Note Button */}
-      <button
-        onClick={onNewNote}
-        className="
-          p-2 md:px-4 md:py-2
-          rounded-full
-          flex items-center gap-2
-          transition-all duration-300
-          focus:outline-none
-          focus:ring-2
-          focus:ring-[var(--color-accent)]
-          focus:ring-offset-2
-          hover:-translate-y-0.5
-          shrink-0
-        "
-        style={{
-          background: 'var(--color-accent)',
-          color: 'var(--color-bg-primary)',
-          boxShadow: '0 4px 20px var(--color-accent-glow)',
-          fontFamily: 'var(--font-body)',
-        }}
-        aria-label="New note"
-      >
-        <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-        <span className="hidden md:inline text-sm font-medium">New Note</span>
-      </button>
     </div>
+  );
+
+  // New Note button (shown in header row 1)
+  const newNoteButton = (
+    <button
+      onClick={onNewNote}
+      className="
+        p-2 sm:px-4 sm:py-2
+        rounded-full
+        flex items-center gap-2
+        transition-all duration-300
+        focus:outline-none
+        focus:ring-2
+        focus:ring-[var(--color-accent)]
+        focus:ring-offset-2
+        hover:-translate-y-0.5
+        shrink-0
+      "
+      style={{
+        background: 'var(--color-accent)',
+        color: 'var(--color-bg-primary)',
+        boxShadow: '0 4px 20px var(--color-accent-glow)',
+        fontFamily: 'var(--font-body)',
+      }}
+      aria-label="New note"
+    >
+      <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
+      <span className="hidden sm:inline text-sm font-medium">New Note</span>
+    </button>
   );
 
   return (
@@ -214,6 +216,7 @@ export function Header({
         theme={theme}
         onThemeToggle={onThemeToggle}
         center={centerContent}
+        rightActions={newNoteButton}
         onSettingsClick={onSettingsClick}
         menuSections={menuSections}
       />
