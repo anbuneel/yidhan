@@ -372,6 +372,16 @@ All pages use `HeaderShell` component for pixel-perfect header consistency:
 [Zenote]                                         [☀] [Sign In]
 ```
 
+**HeaderShell Props by Page:**
+
+| Page | Center Content | Right Actions | Menu Sections |
+|------|----------------|---------------|---------------|
+| Library | Search bar + New Note button | - | Export, Import, Faded Notes |
+| Editor | Breadcrumb (/ Note Title) + Save status | Delete button | - |
+| Landing | - | - | - |
+| Changelog | - | - | - |
+| Roadmap | - | - | - |
+
 ### Keyboard Shortcuts
 | Shortcut | Action | Context |
 |----------|--------|---------|
