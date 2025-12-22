@@ -666,7 +666,7 @@ function App() {
           }}
           onLogoClick={() => setView('library')}
           onRoadmapClick={() => setView('roadmap')}
-          isAuthenticated={!!user}
+          onSettingsClick={() => setShowSettingsModal(true)}
         />
         {showAuthModal && (
           <Auth
@@ -693,7 +693,7 @@ function App() {
           }}
           onLogoClick={() => setView('library')}
           onChangelogClick={() => setView('changelog')}
-          isAuthenticated={!!user}
+          onSettingsClick={() => setShowSettingsModal(true)}
         />
         {showAuthModal && (
           <Auth

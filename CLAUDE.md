@@ -29,10 +29,10 @@ src/
 │   ├── FadedNoteCard.tsx  # Card for soft-deleted notes (restore/permanent delete)
 │   ├── FadedNotesView.tsx # View for recovering soft-deleted notes
 │   ├── TimeRibbon.tsx     # Mobile chapter scrubber navigation
-│   ├── Header.tsx         # App header with search, profile menu, settings
+│   ├── Header.tsx         # Library header with search, new note button (uses HeaderShell)
+│   ├── HeaderShell.tsx    # Shared header component for consistent layout across all pages
 │   ├── LandingPage.tsx    # Split-screen landing page with interactive demo
 │   ├── Library.tsx        # Notes masonry grid view (legacy, replaced by ChapteredLibrary)
-│   ├── SimpleHeader.tsx   # Simple header with clickable logo for public pages
 │   ├── NoteCard.tsx       # Individual note card with tag badges
 │   ├── RichTextEditor.tsx # Tiptap editor wrapper
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
@@ -336,24 +336,40 @@ Located in `src/services/notes.ts`:
 - Auth opens as modal overlay (responsive, scrollable on mobile)
 - Mobile: Stacked layout, sample cards hidden, unified header
 
-### Header (Three-Zone Layout)
+### HeaderShell (Consistent Three-Zone Layout)
+
+All pages use `HeaderShell` component for pixel-perfect header consistency:
 ```
-[Zenote]        [    Search notes...  ⌘K    ]        [+ New Note] | [☀] [JD]
-                                                                         ↓
-                                                              ┌──────────────────┐
-                                                              │ ⚙ Settings       │
-                                                              │──────────────────│
-                                                              │ ↑ Export (JSON)  │
-                                                              │ ↑ Export (MD)    │
-                                                              │ ↓ Import Notes   │
-                                                              │──────────────────│
-                                                              │ → Sign out       │
-                                                              └──────────────────┘
+[Zenote]        [    Center Content    ]        [☀] [JD]
+  ↑                      ↑                         ↑
+ Logo              Page-specific             Theme + Avatar
+(fixed)             (flexible)               (fixed position)
 ```
 
-### Editor Header (Breadcrumb with Save Indicator)
+**Library Header:**
 ```
-[Zenote] / [Note Title]                        [Saving.../Saved ✓]  [🗑]
+[Zenote]   [  Search...  ⌘K  ] [+ New Note]   [☀] [JD ↓]
+                                                    │
+                                          ┌─────────┴─────────┐
+                                          │ ⚙ Settings        │
+                                          │───────────────────│
+                                          │ ↑ Export (JSON)   │
+                                          │ ↑ Export (MD)     │
+                                          │ ↓ Import Notes    │
+                                          │ ⏱ Faded Notes     │
+                                          │───────────────────│
+                                          │ → Sign out        │
+                                          └───────────────────┘
+```
+
+**Editor Header:**
+```
+[Zenote]   / Note Title  [Saving.../Saved ✓]    [🗑] | [☀] [JD]
+```
+
+**Landing/Public Pages:**
+```
+[Zenote]                                         [☀] [Sign In]
 ```
 
 ### Keyboard Shortcuts

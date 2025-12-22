@@ -1,5 +1,5 @@
 import { changelog, type ChangeType } from '../data/changelog';
-import { SimpleHeader } from './SimpleHeader';
+import { HeaderShell } from './HeaderShell';
 import { Footer } from './Footer';
 import type { Theme } from '../types';
 
@@ -9,7 +9,7 @@ interface ChangelogPageProps {
   onSignIn: () => void;
   onLogoClick: () => void;
   onRoadmapClick: () => void;
-  isAuthenticated?: boolean;
+  onSettingsClick?: () => void;
 }
 
 const changeTypeIcons: Record<ChangeType, { icon: string; label: string }> = {
@@ -33,18 +33,18 @@ function formatDate(dateString: string): string {
   });
 }
 
-export function ChangelogPage({ theme, onThemeToggle, onSignIn, onLogoClick, onRoadmapClick, isAuthenticated }: ChangelogPageProps) {
+export function ChangelogPage({ theme, onThemeToggle, onSignIn, onLogoClick, onRoadmapClick, onSettingsClick }: ChangelogPageProps) {
   return (
     <div
       className="min-h-screen flex flex-col"
       style={{ background: 'var(--color-bg-primary)' }}
     >
-      <SimpleHeader
+      <HeaderShell
         theme={theme}
         onThemeToggle={onThemeToggle}
         onLogoClick={onLogoClick}
         onSignIn={onSignIn}
-        isAuthenticated={isAuthenticated}
+        onSettingsClick={onSettingsClick}
       />
 
       {/* Content */}

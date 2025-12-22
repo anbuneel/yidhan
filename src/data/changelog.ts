@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.4.3',
+    date: '2025-12-21',
+    changes: [
+      { type: 'improvement', text: 'Pixel-perfect header consistency - Logo, theme toggle, and avatar are now in the exact same position on every page' },
+      { type: 'improvement', text: 'New HeaderShell component ensures uniform header structure across Library, Editor, Landing, Changelog, and Roadmap pages' },
+      { type: 'improvement', text: 'Reduced code redundancy by eliminating SimpleHeader in favor of shared HeaderShell' },
+    ],
+  },
+  {
     version: '1.4.2',
     date: '2025-12-21',
     changes: [
