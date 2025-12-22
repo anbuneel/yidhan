@@ -4,6 +4,7 @@ import { RichTextEditor } from './RichTextEditor';
 import { TagSelector } from './TagSelector';
 import { formatShortDate, formatRelativeTime } from '../utils/formatTime';
 import { HeaderShell } from './HeaderShell';
+import { WhisperBack } from './WhisperBack';
 
 interface EditorProps {
   note: Note;
@@ -178,35 +179,72 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
     onBack();
   };
 
-  // Center content: Breadcrumb with note title and save status
-  const centerContent = (
-    <div className="flex items-baseline gap-2 min-w-0">
-      {/* Separator */}
+  // Left content: Logo + Breadcrumb (integrated for visual continuity)
+  const leftContent = (
+    <div className="flex items-center min-w-0">
+      {/* Clickable Logo */}
+      <button
+        onClick={handleLogoClick}
+        className="text-xl md:text-[1.75rem] font-semibold tracking-tight transition-colors duration-200 hover:text-[var(--color-accent)] shrink-0"
+        style={{
+          fontFamily: 'var(--font-display)',
+          color: 'var(--color-text-primary)',
+          letterSpacing: '-0.5px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+        }}
+      >
+        Zenote
+      </button>
+
+      {/* Separator - visible on desktop */}
       <span
-        className="shrink-0 text-lg"
+        className="hidden sm:inline mx-2 md:mx-3 text-xl"
         style={{ color: 'var(--color-text-tertiary)' }}
       >
         /
       </span>
 
-      {/* Note Title */}
+      {/* Note Title - visible on desktop */}
       <span
-        className="truncate text-lg"
+        className="hidden sm:inline truncate text-xl max-w-[200px] md:max-w-[300px]"
         style={{
-          fontFamily: 'var(--font-body)',
+          fontFamily: 'var(--font-display)',
           fontWeight: 400,
-          color: 'var(--color-text-secondary)',
+          fontStyle: 'italic',
+          color: 'var(--color-text-primary)',
         }}
         title={title || 'Untitled'}
       >
         {title || 'Untitled'}
       </span>
+    </div>
+  );
 
+  // Center content: Mobile note title only
+  const centerContent = (
+    <div className="sm:hidden flex items-center min-w-0">
+      <span
+        className="truncate text-sm font-medium"
+        style={{
+          fontFamily: 'var(--font-body)',
+          color: 'var(--color-text-primary)',
+        }}
+      >
+        {title || 'Untitled'}
+      </span>
+    </div>
+  );
+
+  // Right actions: Save status + Delete button
+  const rightActions = (
+    <div className="flex items-center gap-2">
       {/* Save Status Indicator */}
       {saveStatus !== 'idle' && (
         <span
           className={`
-            shrink-0 ml-3 text-xs px-2 py-1 rounded-full flex items-center gap-1.5
+            shrink-0 text-xs px-2 py-1 rounded-full flex items-center gap-1.5
             transition-opacity duration-300
             ${saveStatus === 'saved' ? 'opacity-80' : 'opacity-100'}
           `}
@@ -234,38 +272,36 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
           )}
         </span>
       )}
-    </div>
-  );
 
-  // Right actions: Delete button
-  const rightActions = (
-    <button
-      onClick={handleDelete}
-      className="
-        w-9 h-9
-        rounded-full
-        flex items-center justify-center
-        transition-all duration-200
-        focus:outline-none
-        focus:ring-2
-        focus:ring-[var(--color-accent)]
-      "
-      style={{ color: 'var(--color-text-tertiary)' }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.color = 'var(--color-destructive)';
-        e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.color = 'var(--color-text-tertiary)';
-        e.currentTarget.style.background = 'transparent';
-      }}
-      aria-label="Delete note"
-      title="Delete note"
-    >
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-      </svg>
-    </button>
+      {/* Delete button */}
+      <button
+        onClick={handleDelete}
+        className="
+          w-9 h-9
+          rounded-full
+          flex items-center justify-center
+          transition-all duration-200
+          focus:outline-none
+          focus:ring-2
+          focus:ring-[var(--color-accent)]
+        "
+        style={{ color: 'var(--color-text-tertiary)' }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = 'var(--color-destructive)';
+          e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = 'var(--color-text-tertiary)';
+          e.currentTarget.style.background = 'transparent';
+        }}
+        aria-label="Delete note"
+        title="Delete note"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </button>
+    </div>
   );
 
   return (
@@ -278,7 +314,7 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
         <HeaderShell
           theme={theme}
           onThemeToggle={onThemeToggle}
-          onLogoClick={handleLogoClick}
+          leftContent={leftContent}
           center={centerContent}
           rightActions={rightActions}
           onSettingsClick={onSettingsClick}
@@ -345,8 +381,65 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
             noteId={note.id}
             autoFocus={hasContent}
           />
+
+          {/* Organic Footer - appears at natural end of content */}
+          <footer
+            className="mt-16 mb-8 flex flex-col items-center gap-4"
+            style={{ color: 'var(--color-text-tertiary)' }}
+          >
+            {/* Decorative dots - like end of a letter */}
+            <div className="flex gap-2 opacity-40">
+              <span className="w-1 h-1 rounded-full bg-current" />
+              <span className="w-1 h-1 rounded-full bg-current" />
+              <span className="w-1 h-1 rounded-full bg-current" />
+            </div>
+
+            {/* Return link - larger touch target on mobile */}
+            <button
+              onClick={handleLogoClick}
+              className="
+                flex items-center gap-2
+                px-4 py-3
+                min-h-[44px]
+                text-sm
+                transition-colors duration-300
+                hover:text-[var(--color-accent)]
+                active:text-[var(--color-accent)]
+              "
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-tertiary)',
+              }}
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              Return to notes
+            </button>
+
+            {/* Keyboard hint - desktop only */}
+            <span
+              className="hidden sm:block text-xs opacity-50"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >
+              Press <kbd className="px-1.5 py-0.5 rounded text-[10px] bg-[var(--color-bg-secondary)]">Esc</kbd> to save & exit
+            </span>
+          </footer>
         </div>
       </main>
+
+      {/* Whisper Float - fixed position back button */}
+      <WhisperBack onClick={handleLogoClick} />
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (

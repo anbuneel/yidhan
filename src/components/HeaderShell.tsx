@@ -39,6 +39,8 @@ interface HeaderShellProps {
   onThemeToggle: () => void;
   /** Logo click callback (usually navigates to home/library) */
   onLogoClick?: () => void;
+  /** Override left zone with custom content (e.g., logo + breadcrumb). If provided, replaces default logo. */
+  leftContent?: ReactNode;
   /** Center content - varies by page (search bar, breadcrumb, etc.) */
   center?: ReactNode;
   /** Page-specific actions to show before theme toggle (e.g., delete button) */
@@ -55,6 +57,7 @@ export function HeaderShell({
   theme,
   onThemeToggle,
   onLogoClick,
+  leftContent,
   center,
   rightActions,
   onSettingsClick,
@@ -95,34 +98,36 @@ export function HeaderShell({
     >
       {/* Row 1: Logo + Center (desktop) + Right actions */}
       <div className="h-16 flex items-center">
-        {/* Left Zone - Logo (fixed position) */}
-        <div className="shrink-0">
-          {onLogoClick ? (
-            <button
-              onClick={onLogoClick}
-              className="text-xl md:text-[1.75rem] font-semibold tracking-tight transition-colors duration-200 hover:text-[var(--color-accent)]"
-              style={{
-                fontFamily: 'var(--font-display)',
-                color: 'var(--color-text-primary)',
-                letterSpacing: '-0.5px',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              Zenote
-            </button>
-          ) : (
-            <span
-              className="text-xl md:text-[1.75rem] font-semibold tracking-tight"
-              style={{
-                fontFamily: 'var(--font-display)',
-                color: 'var(--color-text-primary)',
-                letterSpacing: '-0.5px',
-              }}
-            >
-              Zenote
-            </span>
+        {/* Left Zone - Custom content or default Logo */}
+        <div className="shrink-0 flex items-center min-w-0">
+          {leftContent || (
+            onLogoClick ? (
+              <button
+                onClick={onLogoClick}
+                className="text-xl md:text-[1.75rem] font-semibold tracking-tight transition-colors duration-200 hover:text-[var(--color-accent)]"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  color: 'var(--color-text-primary)',
+                  letterSpacing: '-0.5px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                Zenote
+              </button>
+            ) : (
+              <span
+                className="text-xl md:text-[1.75rem] font-semibold tracking-tight"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  color: 'var(--color-text-primary)',
+                  letterSpacing: '-0.5px',
+                }}
+              >
+                Zenote
+              </span>
+            )
           )}
         </div>
 

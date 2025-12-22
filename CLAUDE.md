@@ -41,7 +41,8 @@ src/
 │   ├── TagFilterBar.tsx   # Horizontal tag filter strip with edit support
 │   ├── TagModal.tsx       # Modal for creating/editing/deleting tags
 │   ├── TagPill.tsx        # Tag pill component with edit button
-│   └── TagSelector.tsx    # Dropdown for assigning tags in editor
+│   ├── TagSelector.tsx    # Dropdown for assigning tags in editor
+│   └── WhisperBack.tsx    # Floating back button for long notes (scroll-triggered)
 ├── data/
 │   ├── changelog.ts       # Version history data
 │   └── roadmap.ts         # Roadmap items with status
@@ -249,6 +250,9 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Tag filter bar with dynamic scroll fade indicators
 - [x] Compact tag pills on mobile screens
 - [x] Global overflow prevention for mobile devices
+- [x] Integrated editor breadcrumb (logo + note title in same zone for visual continuity)
+- [x] Organic footer in editor ("Return to notes" link at end of content)
+- [x] WhisperBack floating button (appears when scrolled, thumb-friendly on mobile)
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (GitHub, etc.)
@@ -370,9 +374,18 @@ Row 2: [         Search...          ]
 - New Note button moved to Row 1 for quick access
 - Search bar gets full width on Row 2
 
-**Editor Header:**
+**Editor Header (Desktop):**
 ```
-[Zenote]   / Note Title  [Saving.../Saved ✓]    [🗑] | [☀] [JD]
+[Zenote / Note Title]                    [Saving.../Saved ✓] [🗑] | [☀] [JD]
+     ↑                                          ↑
+ Left Zone                                Right Actions
+(logo + breadcrumb integrated)          (save status + delete)
+```
+
+**Editor Header (Mobile):**
+```
+Row 1: [Zenote]                         [Saving...] [🗑] [☀] [JD]
+Row 2: [Note Title]
 ```
 
 **Landing/Public Pages:**
@@ -382,13 +395,13 @@ Row 2: [         Search...          ]
 
 **HeaderShell Props by Page:**
 
-| Page | Center Content | Right Actions | Menu Sections |
-|------|----------------|---------------|---------------|
-| Library | Search bar | New Note button | Export, Import, Faded Notes |
-| Editor | Breadcrumb (/ Note Title) + Save status | Delete button | - |
-| Landing | - | - | - |
-| Changelog | - | - | - |
-| Roadmap | - | - | - |
+| Page | Left Content | Center Content | Right Actions | Menu Sections |
+|------|--------------|----------------|---------------|---------------|
+| Library | - (default logo) | Search bar | New Note button | Export, Import, Faded Notes |
+| Editor | Logo + Breadcrumb | Mobile: Note title | Save status + Delete | - |
+| Landing | - (default logo) | - | - | - |
+| Changelog | - (default logo) | - | - | - |
+| Roadmap | - (default logo) | - | - | - |
 
 ### Keyboard Shortcuts
 | Shortcut | Action | Context |

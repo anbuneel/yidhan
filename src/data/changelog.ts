@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.4.4',
+    date: '2025-12-21',
+    changes: [
+      { type: 'improvement', text: 'Integrated editor breadcrumb - logo and note title now flow together as a connected navigation path' },
+      { type: 'feature', text: 'Organic footer in editor - "Return to notes" link at end of content with Escape key hint' },
+      { type: 'feature', text: 'WhisperBack floating button - appears when scrolled, positioned for easy thumb access on mobile' },
+      { type: 'improvement', text: 'Save indicator moved to right actions for cleaner header layout' },
+    ],
+  },
+  {
     version: '1.4.3',
     date: '2025-12-21',
     changes: [
