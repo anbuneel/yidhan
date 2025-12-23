@@ -445,12 +445,12 @@ body::before {
 .rich-text-editor .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
   content: '';
   position: absolute;
-  left: 3px;
+  left: 4px;
   top: 0px;
-  width: 5px;
-  height: 9px;
+  width: 6px;
+  height: 11px;
   border: solid #fff;
-  border-width: 0 2px 2px 0;
+  border-width: 0 2.5px 2.5px 0;
   transform: rotate(45deg);
 }
 
