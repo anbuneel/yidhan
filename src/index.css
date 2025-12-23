@@ -753,3 +753,35 @@ body::before {
 .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
 }
+
+/* Sticky Editor Zone */
+.editor-sticky-zone {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--color-bg-primary);
+  /* Subtle bottom border when content scrolls underneath */
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Add visual separation when scrolled */
+.editor-sticky-zone::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--glass-border);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Mobile toolbar adjustments */
+@media (max-width: 640px) {
+  .editor-sticky-zone .editor-toolbar button {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}

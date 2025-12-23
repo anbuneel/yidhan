@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.4.5',
+    date: '2025-12-23',
+    changes: [
+      { type: 'fix', text: 'Formatting toolbar now stays visible when scrolling through long notes' },
+      { type: 'improvement', text: 'Toolbar moved to sticky header zone for reliable positioning' },
+    ],
+  },
+  {
     version: '1.4.4',
     date: '2025-12-21',
     changes: [

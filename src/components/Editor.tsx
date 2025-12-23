@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { Editor as TiptapEditor } from '@tiptap/react';
 import type { Note, Tag, Theme } from '../types';
 import { RichTextEditor } from './RichTextEditor';
+import { EditorToolbar } from './EditorToolbar';
 import { TagSelector } from './TagSelector';
 import { formatShortDate, formatRelativeTime } from '../utils/formatTime';
 import { HeaderShell } from './HeaderShell';
@@ -26,6 +28,7 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
   const [content, setContent] = useState(note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [editor, setEditor] = useState<TiptapEditor | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Separate refs for save indicator phases to avoid nested timeout issues
@@ -309,8 +312,8 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
       className="min-h-screen flex flex-col"
       style={{ background: 'var(--color-bg-primary)' }}
     >
-      {/* Editor Header - Uses HeaderShell for consistent positioning */}
-      <div className="sticky top-0 z-10" style={{ background: 'var(--color-bg-primary)' }}>
+      {/* Sticky Zone: Header + Toolbar */}
+      <div className="editor-sticky-zone sticky top-0 z-20" style={{ background: 'var(--color-bg-primary)' }}>
         <HeaderShell
           theme={theme}
           onThemeToggle={onThemeToggle}
@@ -319,11 +322,15 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
           rightActions={rightActions}
           onSettingsClick={onSettingsClick}
         />
+        {/* Toolbar - now in sticky zone */}
+        <div className="max-w-[800px] mx-auto px-4 sm:px-10 pb-3">
+          <EditorToolbar editor={editor} />
+        </div>
       </div>
 
       {/* Editor Content */}
       <main className="flex-1">
-        <div className="max-w-[800px] mx-auto px-10 pb-40">
+        <div className="max-w-[800px] mx-auto px-4 sm:px-10 pb-40">
           {/* Title */}
           <textarea
             ref={titleRef}
@@ -380,6 +387,7 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
             onBlur={performSave}
             noteId={note.id}
             autoFocus={hasContent}
+            onEditorReady={setEditor}
           />
 
           {/* Organic Footer - appears at natural end of content */}

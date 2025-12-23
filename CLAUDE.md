@@ -21,6 +21,7 @@ src/
 │   ├── Auth.tsx           # Login/signup/Google OAuth/password reset UI (supports modal mode)
 │   ├── ChangelogPage.tsx  # Version history page with categorized changes
 │   ├── Editor.tsx         # Note editor with rich text + tag selector + save indicator
+│   ├── EditorToolbar.tsx  # Formatting toolbar for rich text editor (sticky in header zone)
 │   ├── ErrorBoundary.tsx  # Error boundary for graceful error handling
 │   ├── Footer.tsx         # Minimal footer with changelog/roadmap/GitHub links
 │   ├── ChapteredLibrary.tsx # Temporal chapters note organization (Pinned, This Week, Last Week, etc.)
@@ -34,7 +35,7 @@ src/
 │   ├── LandingPage.tsx    # Split-screen landing page with interactive demo
 │   ├── Library.tsx        # Notes masonry grid view (legacy, replaced by ChapteredLibrary)
 │   ├── NoteCard.tsx       # Individual note card with tag badges
-│   ├── RichTextEditor.tsx # Tiptap editor wrapper
+│   ├── RichTextEditor.tsx # Tiptap editor content wrapper (toolbar extracted to EditorToolbar)
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
 │   ├── SettingsModal.tsx  # Settings modal (profile, password, theme)
 │   ├── TagBadge.tsx       # Small tag badge for note cards
