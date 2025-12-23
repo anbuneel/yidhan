@@ -271,9 +271,10 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 4. Use asymmetric border-radius: `2px 12px 4px 12px` for small elements
 
 ### Modifying the editor
-- Toolbar buttons are in `RichTextEditor.tsx`
+- Toolbar buttons are in `EditorToolbar.tsx` (rendered in sticky zone by `Editor.tsx`)
+- Editor content is in `RichTextEditor.tsx` (exposes editor via `onEditorReady` callback)
 - Editor styles are in `index.css` under `.rich-text-editor`
-- Add new Tiptap extensions via npm and configure in the editor
+- Add new Tiptap extensions via npm and configure in `RichTextEditor.tsx`
 
 ### Database changes
 1. Update schema in Supabase SQL Editor

@@ -174,6 +174,7 @@ src/
 │   ├── Auth.tsx           # Login/signup/Google OAuth/password reset
 │   ├── ChangelogPage.tsx  # Public version history page
 │   ├── Editor.tsx         # Note editor with rich text + tags
+│   ├── EditorToolbar.tsx  # Sticky formatting toolbar
 │   ├── ErrorBoundary.tsx  # Error boundary for graceful error handling
 │   ├── Footer.tsx         # Footer with changelog/roadmap/GitHub links
 │   ├── LandingPage.tsx    # Split-screen landing with interactive demo

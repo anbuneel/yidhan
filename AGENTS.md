@@ -21,6 +21,7 @@ src/
 │   ├── Auth.tsx           # Login/signup/Google OAuth/password reset UI (supports modal mode)
 │   ├── ChangelogPage.tsx  # Version history page with categorized changes
 │   ├── Editor.tsx         # Note editor with rich text + tag selector + save indicator
+│   ├── EditorToolbar.tsx  # Formatting toolbar for rich text editor (sticky in header zone)
 │   ├── ErrorBoundary.tsx  # Error boundary for graceful error handling
 │   ├── Footer.tsx         # Minimal footer with changelog/roadmap/GitHub links
 │   ├── ChapteredLibrary.tsx # Temporal chapters note organization (Pinned, This Week, Last Week, etc.)
@@ -34,7 +35,7 @@ src/
 │   ├── LandingPage.tsx    # Split-screen landing page with interactive demo
 │   ├── Library.tsx        # Notes masonry grid view (legacy, replaced by ChapteredLibrary)
 │   ├── NoteCard.tsx       # Individual note card with tag badges
-│   ├── RichTextEditor.tsx # Tiptap editor wrapper
+│   ├── RichTextEditor.tsx # Tiptap editor content wrapper (toolbar extracted to EditorToolbar)
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
 │   ├── SettingsModal.tsx  # Settings modal (profile, password, theme)
 │   ├── TagBadge.tsx       # Small tag badge for note cards
@@ -270,9 +271,10 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 4. Use asymmetric border-radius: `2px 12px 4px 12px` for small elements
 
 ### Modifying the editor
-- Toolbar buttons are in `RichTextEditor.tsx`
+- Toolbar buttons are in `EditorToolbar.tsx` (rendered in sticky zone by `Editor.tsx`)
+- Editor content is in `RichTextEditor.tsx` (exposes editor via `onEditorReady` callback)
 - Editor styles are in `index.css` under `.rich-text-editor`
-- Add new Tiptap extensions via npm and configure in the editor
+- Add new Tiptap extensions via npm and configure in `RichTextEditor.tsx`
 
 ### Database changes
 1. Update schema in Supabase SQL Editor
