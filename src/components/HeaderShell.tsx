@@ -104,7 +104,7 @@ export function HeaderShell({
             onLogoClick ? (
               <button
                 onClick={onLogoClick}
-                className="text-xl md:text-[1.75rem] font-semibold tracking-tight transition-colors duration-200 hover:text-[var(--color-accent)]"
+                className="text-[1.4rem] md:text-[1.75rem] font-semibold tracking-tight transition-colors duration-200 hover:text-[var(--color-accent)]"
                 style={{
                   fontFamily: 'var(--font-display)',
                   color: 'var(--color-text-primary)',
@@ -118,7 +118,7 @@ export function HeaderShell({
               </button>
             ) : (
               <span
-                className="text-xl md:text-[1.75rem] font-semibold tracking-tight"
+                className="text-[1.4rem] md:text-[1.75rem] font-semibold tracking-tight"
                 style={{
                   fontFamily: 'var(--font-display)',
                   color: 'var(--color-text-primary)',

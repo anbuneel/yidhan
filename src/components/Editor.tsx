@@ -188,7 +188,7 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
       {/* Clickable Logo */}
       <button
         onClick={handleLogoClick}
-        className="text-xl md:text-[1.75rem] font-semibold tracking-tight transition-colors duration-200 hover:text-[var(--color-accent)] shrink-0"
+        className="text-[1.4rem] md:text-[1.75rem] font-semibold tracking-tight transition-colors duration-200 hover:text-[var(--color-accent)] shrink-0"
         style={{
           fontFamily: 'var(--font-display)',
           color: 'var(--color-text-primary)',
