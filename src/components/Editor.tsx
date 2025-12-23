@@ -309,11 +309,14 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="h-screen overflow-y-auto"
       style={{ background: 'var(--color-bg-primary)' }}
     >
       {/* Sticky Zone: Header + Toolbar */}
-      <div className="editor-sticky-zone sticky top-0 z-20" style={{ background: 'var(--color-bg-primary)' }}>
+      <div
+        className="editor-sticky-zone"
+        style={{ background: 'var(--color-bg-primary)' }}
+      >
         <HeaderShell
           theme={theme}
           onThemeToggle={onThemeToggle}
@@ -329,7 +332,7 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
       </div>
 
       {/* Editor Content */}
-      <main className="flex-1">
+      <main>
         <div className="max-w-[800px] mx-auto px-4 sm:px-10 pb-40">
           {/* Title */}
           <textarea
