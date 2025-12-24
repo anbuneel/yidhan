@@ -6,6 +6,7 @@ import { ChapteredLibrary } from './components/ChapteredLibrary';
 import { FadedNotesView } from './components/FadedNotesView';
 import { Auth } from './components/Auth';
 import { LandingPage } from './components/LandingPage';
+import { sanitizeText } from './utils/sanitize';
 
 // Lazy load the Editor component (includes heavy Tiptap dependencies)
 const Editor = lazy(() => import('./components/Editor').then(module => ({ default: module.Editor })));
@@ -192,8 +193,9 @@ function App() {
     if (demoContent?.trim()) {
       hasMigratedDemoContent.current = true;
 
-      // Create note with demo content (wrap plain text in paragraph tags for Tiptap)
-      const htmlContent = `<p>${demoContent.replace(/\n/g, '</p><p>')}</p>`;
+      // Create note with demo content (sanitize and wrap plain text in paragraph tags for Tiptap)
+      const sanitized = sanitizeText(demoContent);
+      const htmlContent = `<p>${sanitized.replace(/\n/g, '</p><p>')}</p>`;
       createNote(userId, 'My first note', htmlContent)
         .then((newNote) => {
           if (newNote) {
