@@ -254,6 +254,14 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Integrated editor breadcrumb (logo + note title in same zone for visual continuity)
 - [x] Organic footer in editor ("Return to notes" link at end of content)
 - [x] WhisperBack floating button (appears when scrolled, thumb-friendly on mobile)
+- [x] Demo-to-signup CTA ("Save this note" button appears after typing in demo editor)
+- [x] Demo content migration (notes typed in demo auto-saved as first note after signup)
+- [x] Email confirmation UX (resend email, change email options with 60s cooldown)
+- [x] Signup form polish (optional name label, password hint, modal dismiss confirmation)
+- [x] Enhanced empty library state (icon, CTA button, keyboard shortcut hint)
+- [x] Google OAuth "Instant" badge (emphasizes faster signup path)
+- [x] Mobile sample note on landing page (shows what notes look like)
+- [x] Loading spinner on auth submit button
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (GitHub, etc.)

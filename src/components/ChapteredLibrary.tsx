@@ -14,6 +14,7 @@ interface ChapteredLibraryProps {
   onNoteClick: (id: string) => void;
   onNoteDelete: (id: string) => void;
   onTogglePin: (id: string, pinned: boolean) => void;
+  onNewNote?: () => void;
   searchQuery?: string;
 }
 
@@ -22,6 +23,7 @@ export function ChapteredLibrary({
   onNoteClick,
   onNoteDelete,
   onTogglePin,
+  onNewNote,
   searchQuery,
 }: ChapteredLibraryProps) {
   // Sort notes by most recent (pinned handling is done in groupNotesByChapter)
@@ -129,23 +131,88 @@ export function ChapteredLibrary({
             </>
           ) : (
             <>
+              {/* Notebook icon */}
+              <svg
+                className="w-16 h-16 mx-auto mb-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                style={{ color: 'var(--color-text-tertiary)', opacity: 0.6 }}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
               <p
-                className="text-lg mb-2"
+                className="text-xl mb-2"
                 style={{
                   fontFamily: 'var(--font-display)',
-                  color: 'var(--color-text-secondary)',
+                  color: 'var(--color-text-primary)',
                 }}
               >
-                No notes yet
+                Your notes await
               </p>
               <p
-                className="text-sm"
+                className="text-sm mb-6"
                 style={{
                   fontFamily: 'var(--font-body)',
                   color: 'var(--color-text-tertiary)',
                 }}
               >
-                Create your first note to get started
+                A quiet space for your thoughts
+              </p>
+              {onNewNote && (
+                <button
+                  onClick={onNewNote}
+                  className="px-6 py-3 rounded-lg font-medium transition-all duration-300 mb-4"
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    background: 'var(--color-accent)',
+                    color: '#fff',
+                    boxShadow: '0 4px 20px var(--color-accent-glow)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--color-accent-hover)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--color-accent)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  Create your first note
+                </button>
+              )}
+              <p
+                className="text-xs"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-text-tertiary)',
+                }}
+              >
+                or press{' '}
+                <kbd
+                  className="px-1.5 py-0.5 rounded text-xs"
+                  style={{
+                    background: 'var(--color-bg-secondary)',
+                    border: '1px solid var(--glass-border)',
+                  }}
+                >
+                  {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}
+                </kbd>
+                {' + '}
+                <kbd
+                  className="px-1.5 py-0.5 rounded text-xs"
+                  style={{
+                    background: 'var(--color-bg-secondary)',
+                    border: '1px solid var(--glass-border)',
+                  }}
+                >
+                  N
+                </kbd>
               </p>
             </>
           )}

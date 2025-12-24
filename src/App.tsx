@@ -6,6 +6,7 @@ import { ChapteredLibrary } from './components/ChapteredLibrary';
 import { FadedNotesView } from './components/FadedNotesView';
 import { Auth } from './components/Auth';
 import { LandingPage } from './components/LandingPage';
+import { sanitizeText } from './utils/sanitize';
 
 // Lazy load the Editor component (includes heavy Tiptap dependencies)
 const Editor = lazy(() => import('./components/Editor').then(module => ({ default: module.Editor })));
@@ -46,6 +47,8 @@ import {
 import { sanitizeHtml } from './utils/sanitize';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import './App.css';
+
+const DEMO_STORAGE_KEY = 'zenote-demo-content';
 
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery } = useAuth();
@@ -99,6 +102,9 @@ function App() {
   // Debounce timer refs
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Track if we've migrated demo content (prevent duplicate migrations)
+  const hasMigratedDemoContent = useRef(false);
 
   // Apply theme to document
   useEffect(() => {
@@ -178,6 +184,41 @@ function App() {
 
     return () => unsubscribe();
   }, [userId, selectedNoteId]);
+
+  // Migrate demo content from landing page to user's first note
+  useEffect(() => {
+    if (!userId || hasMigratedDemoContent.current) return;
+
+    const demoContent = localStorage.getItem(DEMO_STORAGE_KEY);
+    if (demoContent?.trim()) {
+      hasMigratedDemoContent.current = true;
+
+      // Create note with demo content (sanitize and wrap plain text in paragraph tags for Tiptap)
+      const sanitized = sanitizeText(demoContent);
+      const htmlContent = `<p>${sanitized.replace(/\n/g, '</p><p>')}</p>`;
+      createNote(userId, 'My first note', htmlContent)
+        .then((newNote) => {
+          if (newNote) {
+            // Clear demo content from localStorage
+            localStorage.removeItem(DEMO_STORAGE_KEY);
+            // Show toast notification
+            toast.success('Your demo note has been saved!');
+            // Add to notes list
+            setNotes((prev) => [newNote, ...prev]);
+            // Open the note in editor
+            setSelectedNoteId(newNote.id);
+            setView('editor');
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to migrate demo content:', error);
+          // Reset flag so user can try again
+          hasMigratedDemoContent.current = false;
+        });
+    } else {
+      hasMigratedDemoContent.current = true;
+    }
+  }, [userId]);
 
   // Fetch tags when user is authenticated
   useEffect(() => {
@@ -941,6 +982,7 @@ function App() {
             onNoteClick={handleNoteClick}
             onNoteDelete={handleNoteDelete}
             onTogglePin={handleTogglePin}
+            onNewNote={handleNewNote}
             searchQuery={searchQuery}
           />
         )}
