@@ -219,7 +219,54 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
         {/* Cards Container - Vertically Centered */}
         <div className="flex-1 flex items-center justify-center px-6 md:px-10 py-6 md:py-8">
           <div className="w-full max-w-3xl flex flex-col gap-6">
-            {/* Sample Cards Row - Hidden on mobile */}
+            {/* Mobile-only single sample card */}
+            <article
+              className="md:hidden p-5 relative overflow-hidden"
+              style={{
+                background: 'var(--color-card-bg)',
+                border: '1px solid var(--glass-border)',
+                borderRadius: 'var(--radius-card)',
+                boxShadow: 'var(--shadow-sm)',
+                opacity: 0.7,
+              }}
+            >
+              <div
+                className="absolute top-0 left-0 w-full h-[2px]"
+                style={{ background: 'var(--color-accent)', opacity: 0.5 }}
+              />
+              <h3
+                className="text-lg font-semibold mb-2"
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
+              >
+                {SAMPLE_NOTES[0].title}
+              </h3>
+              <p
+                className="text-sm line-clamp-2"
+                style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', fontWeight: 300 }}
+              >
+                {SAMPLE_NOTES[0].preview}
+              </p>
+              <div className="flex items-center justify-between mt-3">
+                <span
+                  className="text-xs px-2 py-0.5 rounded"
+                  style={{
+                    background: `${TAG_COLORS[SAMPLE_NOTES[0].tag.color]}15`,
+                    color: TAG_COLORS[SAMPLE_NOTES[0].tag.color],
+                    fontWeight: 500,
+                  }}
+                >
+                  {SAMPLE_NOTES[0].tag.name}
+                </span>
+                <span
+                  className="text-[0.6rem] uppercase tracking-widest"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                >
+                  {SAMPLE_NOTES[0].time}
+                </span>
+              </div>
+            </article>
+
+            {/* Sample Cards Row - Desktop only */}
             <div
               className="hidden md:grid grid-cols-2 items-start"
               style={{ gap: '28px' }}

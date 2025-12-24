@@ -980,6 +980,7 @@ function App() {
             onNoteClick={handleNoteClick}
             onNoteDelete={handleNoteDelete}
             onTogglePin={handleTogglePin}
+            onNewNote={handleNewNote}
             searchQuery={searchQuery}
           />
         )}
