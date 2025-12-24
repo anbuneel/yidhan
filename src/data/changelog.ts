@@ -13,7 +13,12 @@ export const changelog: ChangelogEntry[] = [
     changes: [
       { type: 'feature', text: 'Demo-to-signup bridge - "Save this note" button appears after typing in demo editor' },
       { type: 'feature', text: 'Demo content migration - notes typed in demo are automatically saved after signup' },
+      { type: 'feature', text: 'Enhanced empty library state with CTA button and keyboard shortcut hint' },
       { type: 'improvement', text: 'Email confirmation flow - resend email and change email options with countdown timer' },
+      { type: 'improvement', text: 'Signup form polish - optional name label, password requirements hint, modal dismiss confirmation' },
+      { type: 'improvement', text: 'Google OAuth now shows "Instant" badge to indicate faster signup' },
+      { type: 'improvement', text: 'Mobile landing page now shows sample note card' },
+      { type: 'improvement', text: 'Loading spinner added to auth submit button' },
     ],
   },
   {

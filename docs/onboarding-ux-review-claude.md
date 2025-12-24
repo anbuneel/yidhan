@@ -321,11 +321,32 @@ The goal is to make signup feel like a natural continuation of the experience, n
 
 ---
 
-## Next Steps
+## Implementation Status
 
-1. Implement P1 items first (findings 1, 2, 6)
-2. Bundle P2 items in a single PR (findings 3, 4, 5)
-3. Evaluate P3 items based on user feedback after P1/P2 ship
+**All items implemented on 2025-12-24** in branch `feature/improve-onboarding-ux`.
+
+### Commits
+
+| Commit | Priority | Changes |
+|--------|----------|---------|
+| `b67c376` | P1 | Demo-to-signup CTA, email confirmation flow, demo content migration |
+| `cb50aec` | P2 | Optional name label, password hint, modal dismiss confirmation |
+| `e9a0c57` | P3 | Empty state guidance, Google OAuth badge, mobile sample note, loading spinner |
+
+### Implementation Details
+
+| # | Item | Priority | Status | File(s) Changed |
+|---|------|----------|--------|-----------------|
+| 1 | Demo-to-signup "Save this note" CTA | P1 | ✅ Done | `LandingPage.tsx` |
+| 2 | Email confirmation with resend/change email | P1 | ✅ Done | `Auth.tsx` |
+| 3 | Demo content auto-migration | P1 | ✅ Done | `App.tsx` |
+| 4 | Full Name "(optional)" label | P2 | ✅ Done | `Auth.tsx` |
+| 5 | Password "8+ characters" hint | P2 | ✅ Done | `Auth.tsx` |
+| 6 | Modal dismiss confirmation | P2 | ✅ Done | `Auth.tsx` |
+| 7 | Enhanced empty library state | P3 | ✅ Done | `ChapteredLibrary.tsx`, `App.tsx` |
+| 8 | Google OAuth "Instant" badge | P3 | ✅ Done | `Auth.tsx` |
+| 9 | Mobile sample note card | P3 | ✅ Done | `LandingPage.tsx` |
+| 10 | Loading spinner on submit | P3 | ✅ Done | `Auth.tsx` |
 
 ---
 
