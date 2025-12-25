@@ -89,6 +89,8 @@ npm run typecheck # Type check without emitting
 npm run test     # Run tests in watch mode
 npm run test:run # Run tests once
 npm run check    # Full CI check: typecheck + lint + test + build
+npm run theme:generate  # Generate CSS from active themes
+npm run theme:preview   # Preview theme CSS without updating
 ```
 
 ## Development Workflow

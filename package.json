@@ -12,7 +12,9 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run lint && npm run test:run && npm run build"
+    "check": "npm run typecheck && npm run lint && npm run test:run && npm run build",
+    "theme:generate": "tsx scripts/generate-theme-css.ts",
+    "theme:preview": "tsx scripts/generate-theme-css.ts --preview"
   },
   "dependencies": {
     "@sentry/react": "^10.30.0",
@@ -50,6 +52,7 @@
     "globals": "^16.5.0",
     "jsdom": "^27.3.0",
     "tailwindcss": "^4.1.17",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
