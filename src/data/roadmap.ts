@@ -28,8 +28,8 @@ export const roadmap: RoadmapItem[] = [
   },
   {
     id: '4',
-    title: 'Collaborative Notes',
-    description: 'Share notes with others and edit together in real-time.',
+    title: 'Public Garden',
+    description: 'Toggle notes as public to create a minimal blog at your own URL. No analytics, no comments — just your words, quietly visible.',
     status: 'exploring',
   },
   {

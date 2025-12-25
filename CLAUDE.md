@@ -138,6 +138,41 @@ Example changelog entry:
 },
 ```
 
+## Frontend Design Skill Consultations
+
+When using the `frontend-design` skill for design analysis or recommendations, **always write the output to a file** in the `docs/` folder with the following format:
+
+**File naming:** `docs/<topic>-claude.md` (use `-claude` suffix to indicate AI-authored)
+
+**Required file structure:**
+```markdown
+# [Analysis Title]
+
+**Author:** Claude (Opus 4.5)
+**Date:** YYYY-MM-DD
+**Consulted:** Frontend Design Skill
+
+---
+
+## Original Prompt
+
+> [Include the user's original prompt/question here]
+
+---
+
+## [Analysis Content]
+
+[Full design analysis with recommendations]
+```
+
+**Key elements:**
+- Author attribution (Claude Opus 4.5)
+- Date of analysis
+- Original prompt at the top (quoted)
+- Full design analysis with recommendations
+
+**Example:** See `docs/collaboration-feature-analysis-claude.md`
+
 ## Design System
 
 ### Themes
