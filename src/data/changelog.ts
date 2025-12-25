@@ -8,6 +8,13 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.6.5',
+    date: '2025-12-24',
+    changes: [
+      { type: 'fix', text: 'Hide password settings tab for Google OAuth users (they authenticate via Google)' },
+    ],
+  },
+  {
     version: '1.6.4',
     date: '2025-12-24',
     changes: [

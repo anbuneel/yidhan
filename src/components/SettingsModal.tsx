@@ -15,6 +15,10 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle }: Setting
   const { user, updateProfile, updatePassword } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
 
+  // Check if user signed up with OAuth (Google, etc.)
+  const isOAuthUser = user?.app_metadata?.provider === 'google' ||
+    user?.identities?.some(identity => identity.provider !== 'email');
+
   // Profile state
   const [fullName, setFullName] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
@@ -145,41 +149,43 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle }: Setting
             </button>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-1 mt-4">
-            <button
-              onClick={() => setActiveTab('profile')}
-              className="
-                px-4 py-2
-                text-sm font-medium
-                rounded-lg
-                transition-colors duration-200
-              "
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: activeTab === 'profile' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-                background: activeTab === 'profile' ? 'var(--color-accent-glow)' : 'transparent',
-              }}
-            >
-              Profile
-            </button>
-            <button
-              onClick={() => setActiveTab('password')}
-              className="
-                px-4 py-2
-                text-sm font-medium
-                rounded-lg
-                transition-colors duration-200
-              "
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: activeTab === 'password' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-                background: activeTab === 'password' ? 'var(--color-accent-glow)' : 'transparent',
-              }}
-            >
-              Password
-            </button>
-          </div>
+          {/* Tabs - only show Password tab for non-OAuth users */}
+          {!isOAuthUser && (
+            <div className="flex gap-1 mt-4">
+              <button
+                onClick={() => setActiveTab('profile')}
+                className="
+                  px-4 py-2
+                  text-sm font-medium
+                  rounded-lg
+                  transition-colors duration-200
+                "
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: activeTab === 'profile' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                  background: activeTab === 'profile' ? 'var(--color-accent-glow)' : 'transparent',
+                }}
+              >
+                Profile
+              </button>
+              <button
+                onClick={() => setActiveTab('password')}
+                className="
+                  px-4 py-2
+                  text-sm font-medium
+                  rounded-lg
+                  transition-colors duration-200
+                "
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: activeTab === 'password' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                  background: activeTab === 'password' ? 'var(--color-accent-glow)' : 'transparent',
+                }}
+              >
+                Password
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -354,8 +360,8 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle }: Setting
             </form>
           )}
 
-          {/* Password Tab */}
-          {activeTab === 'password' && (
+          {/* Password Tab - only for non-OAuth users */}
+          {activeTab === 'password' && !isOAuthUser && (
             <form onSubmit={handlePasswordSubmit}>
               <p
                 className="text-sm mb-5"
