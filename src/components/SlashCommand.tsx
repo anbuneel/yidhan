@@ -39,6 +39,91 @@ interface SlashCommandItem {
 }
 
 const slashCommandItems: SlashCommandItem[] = [
+  // Headings
+  {
+    title: 'Heading 1',
+    description: 'Large section heading',
+    searchTerms: ['h1', 'heading', 'title', 'large'],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).setNode('heading', { level: 1 }).run();
+    },
+  },
+  {
+    title: 'Heading 2',
+    description: 'Medium section heading',
+    searchTerms: ['h2', 'heading', 'subtitle', 'medium'],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).setNode('heading', { level: 2 }).run();
+    },
+  },
+  {
+    title: 'Heading 3',
+    description: 'Small section heading',
+    searchTerms: ['h3', 'heading', 'small'],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).setNode('heading', { level: 3 }).run();
+    },
+  },
+  // Lists
+  {
+    title: 'Bullet List',
+    description: 'Create a bullet point list',
+    searchTerms: ['bullet', 'list', 'unordered', 'ul'],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).toggleBulletList().run();
+    },
+  },
+  {
+    title: 'Numbered List',
+    description: 'Create a numbered list',
+    searchTerms: ['numbered', 'list', 'ordered', 'ol', 'number'],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).toggleOrderedList().run();
+    },
+  },
+  {
+    title: 'Todo List',
+    description: 'Create a task checklist',
+    searchTerms: ['todo', 'task', 'checkbox', 'check', 'checklist'],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).toggleTaskList().run();
+    },
+  },
+  // Block formatting
+  {
+    title: 'Quote',
+    description: 'Add a block quote',
+    searchTerms: ['quote', 'blockquote', 'callout'],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).toggleBlockquote().run();
+    },
+  },
+  {
+    title: 'Code Block',
+    description: 'Add a code snippet',
+    searchTerms: ['code', 'codeblock', 'pre', 'snippet'],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).toggleCodeBlock().run();
+    },
+  },
+  {
+    title: 'Highlight',
+    description: 'Highlight text with color',
+    searchTerms: ['highlight', 'mark', 'background', 'color'],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).toggleHighlight().run();
+    },
+  },
+  // Divider
+  {
+    title: 'Divider',
+    description: 'Insert horizontal line',
+    searchTerms: ['divider', 'hr', 'line', 'separator'],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).setHorizontalRule().run();
+    },
+  },
+  // Timestamps
   {
     title: 'Date',
     description: 'Insert current date',
@@ -61,14 +146,6 @@ const slashCommandItems: SlashCommandItem[] = [
     searchTerms: ['now', 'timestamp', 'datetime'],
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).insertContent(formatDateTime()).run();
-    },
-  },
-  {
-    title: 'Divider',
-    description: 'Insert horizontal line',
-    searchTerms: ['divider', 'hr', 'line', 'separator'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).setHorizontalRule().run();
     },
   },
 ];

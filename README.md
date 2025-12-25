@@ -40,7 +40,7 @@ A calm, distraction-free note-taking app inspired by Japanese stationery and wab
 - **CI/CD Pipeline** - Automated testing and builds via GitHub Actions
 - **Code Splitting** - Lazy-loaded editor for faster initial page loads
 - **Sticky Toolbar** - Formatting toolbar stays visible while scrolling long notes
-- **Slash Commands** - Type `/date`, `/time`, `/now`, or `/divider` to insert content
+- **Slash Commands** - Type `/` for quick formatting: headings, lists, quotes, code blocks, timestamps, and more
 - **Keyboard Shortcuts** - `Cmd/Ctrl+N` for new note, `Cmd/Ctrl+K` for search, `Escape` to go back
 - **Note Timestamps** - Created and edited dates displayed in the editor
 - **Public Changelog** - Browse version history and recent updates
@@ -185,7 +185,7 @@ src/
 │   ├── NoteCard.tsx       # Individual note card
 │   ├── RichTextEditor.tsx # Tiptap editor wrapper
 │   ├── RoadmapPage.tsx    # Public feature roadmap page
-│   ├── SlashCommand.tsx   # Slash commands extension (/date, /time, /now)
+│   ├── SlashCommand.tsx   # Slash commands extension (headings, lists, formatting)
 │   ├── SettingsModal.tsx  # Settings modal (profile, password, theme)
 │   ├── TagBadge.tsx       # Small tag badge for note cards
 │   ├── TagFilterBar.tsx   # Horizontal tag filter strip

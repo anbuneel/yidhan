@@ -426,10 +426,17 @@ Row 2: [Note Title]
 ### Slash Commands (type `/` in editor)
 | Command | Inserts |
 |---------|---------|
+| `/h1`, `/h2`, `/h3` | Section headings (large, medium, small) |
+| `/bullet` | Bullet point list |
+| `/numbered` | Numbered list |
+| `/todo` | Task checklist with checkboxes |
+| `/quote` | Block quote |
+| `/code` | Code block |
+| `/highlight` | Highlighted text |
+| `/divider` | Horizontal line |
 | `/date` | Current date (e.g., "Dec 16, 2024") |
 | `/time` | Current time (e.g., "3:30 PM") |
 | `/now` | Date and time (e.g., "Dec 16, 2024 at 3:30 PM") |
-| `/divider` | Horizontal line |
 
 ### Tag Filter Bar (below header)
 

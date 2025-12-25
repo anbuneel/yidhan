@@ -8,6 +8,13 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.6.1',
+    date: '2025-12-24',
+    changes: [
+      { type: 'feature', text: 'Expanded slash commands - /h1, /h2, /h3, /bullet, /numbered, /todo, /quote, /code, /highlight' },
+    ],
+  },
+  {
     version: '1.6.0',
     date: '2025-12-24',
     changes: [
