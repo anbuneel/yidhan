@@ -12,22 +12,16 @@ interface NoteCardProps {
 }
 
 export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps) {
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowDeleteConfirm(true);
-  };
-
-  const handleConfirmDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDelete(note.id);
-    setShowDeleteConfirm(false);
-  };
-
-  const handleCancelDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowDeleteConfirm(false);
+    // Start fade animation
+    setIsDeleting(true);
+    // After animation completes, trigger actual delete
+    setTimeout(() => {
+      onDelete(note.id);
+    }, 300);
   };
 
   const handlePinClick = (e: React.MouseEvent) => {
@@ -37,20 +31,21 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
 
   return (
     <article
-      className="
+      className={`
         group
         relative
         overflow-hidden
         cursor-pointer
         p-6 pb-5
         flex flex-col
-        transition-all duration-500
+        transition-all duration-300
         focus:outline-none
         focus:ring-2
         focus:ring-[var(--color-accent)]
         focus:ring-offset-2
         active:scale-[0.98]
-      "
+        ${isDeleting ? 'pointer-events-none' : ''}
+      `}
       style={{
         background: 'var(--color-card-bg)',
         backdropFilter: 'blur(20px)',
@@ -61,6 +56,9 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
         transitionTimingFunction: 'cubic-bezier(0.25, 0.8, 0.25, 1)',
         minHeight: '200px',
         maxHeight: '300px',
+        // Fade animation when deleting
+        opacity: isDeleting ? 0.4 : 1,
+        transform: isDeleting ? 'scale(0.98) translateY(8px)' : 'translateY(0)',
       }}
       role="button"
       tabIndex={0}
@@ -215,93 +213,6 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
         </button>
       </div>
 
-      {/* Delete Confirmation Overlay */}
-      {showDeleteConfirm && (
-        <div
-          className="
-            absolute inset-0
-            flex flex-col items-center justify-center
-            gap-3
-            p-6
-          "
-          style={{
-            background: 'var(--color-card-bg)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            borderRadius: 'var(--radius-card)',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <p
-            className="text-center text-sm"
-            style={{
-              fontFamily: 'var(--font-body)',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
-            Move "<span
-              style={{ color: 'var(--color-text-primary)' }}
-              dangerouslySetInnerHTML={{ __html: sanitizeText(note.title) || 'Untitled' }}
-            />" to Faded Notes?
-          </p>
-          <p
-            className="text-center text-xs"
-            style={{
-              fontFamily: 'var(--font-body)',
-              color: 'var(--color-text-tertiary)',
-            }}
-          >
-            It will be permanently removed after 30 days.
-          </p>
-          <div className="flex gap-2 mt-1">
-            <button
-              onClick={handleCancelDelete}
-              className="
-                px-4 py-2
-                rounded-lg
-                text-sm font-medium
-                transition-all duration-200
-              "
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-secondary)',
-                background: 'transparent',
-                border: '1px solid var(--glass-border)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-text-secondary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--glass-border)';
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleConfirmDelete}
-              className="
-                px-4 py-2
-                rounded-lg
-                text-sm font-medium
-                transition-all duration-200
-              "
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-bg-primary)',
-                background: 'var(--color-accent)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--color-accent-hover)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-accent)';
-              }}
-            >
-              Move to Faded
-            </button>
-          </div>
-        </div>
-      )}
     </article>
   );
 }

@@ -10,28 +10,6 @@ interface FadedNoteCardProps {
 }
 
 /**
- * Format how long ago the note was deleted
- */
-function formatDeletedTime(deletedAt: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - deletedAt.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    if (diffHours === 0) {
-      return 'Just now';
-    }
-    return `${diffHours}h ago`;
-  }
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffDays < 14) return '1 week ago';
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-  return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`;
-}
-
-/**
  * Calculate days remaining before permanent deletion (30 day limit)
  */
 function getDaysRemaining(deletedAt: Date): number {
@@ -39,6 +17,18 @@ function getDaysRemaining(deletedAt: Date): number {
   const diffMs = now.getTime() - deletedAt.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   return Math.max(0, 30 - diffDays);
+}
+
+/**
+ * Get organic phrase based on days remaining
+ * Creates a gentle, wabi-sabi feeling about the note's lifecycle
+ */
+function getOrganicPhrase(daysRemaining: number): string {
+  if (daysRemaining >= 25) return 'Just arrived';
+  if (daysRemaining >= 15) return 'Resting quietly';
+  if (daysRemaining >= 7) return 'Fading gently';
+  if (daysRemaining >= 1) return 'Nearly gone';
+  return 'Releasing today';
 }
 
 export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteCardProps) {
@@ -66,7 +56,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
   };
 
   const daysRemaining = note.deletedAt ? getDaysRemaining(note.deletedAt) : 30;
-  const deletedTimeAgo = note.deletedAt ? formatDeletedTime(note.deletedAt) : 'Unknown';
+  const organicPhrase = getOrganicPhrase(daysRemaining);
 
   return (
     <article
@@ -84,13 +74,14 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
         WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid var(--glass-border)',
         borderRadius: 'var(--radius-card)',
-        boxShadow: 'var(--shadow-md)',
+        // Softer shadow for faded notes
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
         transitionTimingFunction: 'cubic-bezier(0.25, 0.8, 0.25, 1)',
         minHeight: '200px',
         maxHeight: '300px',
-        // Faded visual treatment
-        opacity: 0.75,
-        filter: 'saturate(0.7)',
+        // Faded visual treatment - paper left in sunlight
+        opacity: 0.8,
+        filter: 'saturate(0.6) sepia(0.08)',
       }}
     >
       {/* Muted accent line */}
@@ -136,11 +127,11 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
         </svg>
       </button>
 
-      {/* Title */}
+      {/* Title - lighter weight for faded effect */}
       <h3
         className="
           text-xl
-          font-semibold
+          font-medium
           line-clamp-2
           mb-3
           leading-tight
@@ -148,7 +139,8 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
         "
         style={{
           fontFamily: 'var(--font-display)',
-          color: 'var(--color-text-primary)',
+          color: 'var(--color-text-secondary)',
+          letterSpacing: '0.01em',
         }}
         dangerouslySetInnerHTML={{ __html: sanitizeText(note.title) || 'Untitled' }}
       />
@@ -186,9 +178,16 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
             color: 'var(--color-text-tertiary)',
           }}
         >
-          <div>{deletedTimeAgo}</div>
-          <div style={{ color: daysRemaining <= 7 ? 'var(--color-destructive)' : 'var(--color-text-tertiary)' }}>
-            Releasing in {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'}
+          <div style={{
+            color: daysRemaining <= 6 ? 'var(--color-destructive)' : 'var(--color-text-secondary)',
+            fontStyle: 'italic',
+            textTransform: 'none',
+            letterSpacing: '0.02em',
+          }}>
+            {organicPhrase}
+          </div>
+          <div style={{ color: daysRemaining <= 6 ? 'var(--color-destructive)' : 'var(--color-text-tertiary)' }}>
+            {daysRemaining === 0 ? 'Today' : `${daysRemaining}d remaining`}
           </div>
         </div>
 

@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.6.3',
+    date: '2025-12-24',
+    changes: [
+      { type: 'improvement', text: 'Fade animation when deleting notes - gentle visual transition before removal' },
+      { type: 'improvement', text: 'Organic time phrases in Faded Notes - "Just arrived", "Resting quietly", "Fading gently", "Nearly gone"' },
+      { type: 'improvement', text: 'Enhanced Faded Notes visual treatment - sepia tint, softer shadows, lighter typography' },
+      { type: 'improvement', text: 'Removed delete confirmation dialog - undo toast provides quicker, less intrusive safety net' },
+    ],
+  },
+  {
     version: '1.6.2',
     date: '2025-12-24',
     changes: [
