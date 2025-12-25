@@ -197,10 +197,12 @@ src/themes/
 └── mori.ts       # Dark: Proposed (deep forest + aged gold)
 ```
 
-**To switch themes:**
-1. Update `ACTIVE_LIGHT_THEME` and `ACTIVE_DARK_THEME` in `src/themes/index.ts`
-2. Run `generateThemeCss()` to get CSS output
-3. Replace the `:root` and `[data-theme="dark"]` sections in `index.css`
+**Quick Reference:**
+```bash
+npm run theme:generate -- --theme washi mori      # Try new wabi-sabi themes
+npm run theme:generate -- --theme kintsugi midnight  # Restore original themes
+npm run theme:preview                              # Preview without changing
+```
 
 ### Active Themes
 - **Light (Kintsugi):** Warm paper backgrounds, terracotta accent (#C25634)
