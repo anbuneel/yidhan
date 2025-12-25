@@ -37,7 +37,7 @@ src/
 │   ├── NoteCard.tsx       # Individual note card with tag badges
 │   ├── RichTextEditor.tsx # Tiptap editor content wrapper (toolbar extracted to EditorToolbar)
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
-│   ├── SettingsModal.tsx  # Settings modal (profile, password, theme)
+│   ├── SettingsModal.tsx  # Settings modal (profile, password for non-OAuth, theme)
 │   ├── TagBadge.tsx       # Small tag badge for note cards
 │   ├── TagFilterBar.tsx   # Horizontal tag filter strip with edit support
 │   ├── TagModal.tsx       # Modal for creating/editing/deleting tags
@@ -620,6 +620,7 @@ The `AuthContext` provides these functions:
 The Settings modal (`SettingsModal.tsx`) has two tabs:
 - **Profile Tab:** Email (read-only), display name input, theme toggle button
 - **Password Tab:** New password + confirmation with validation (min 8 chars)
+  - Hidden for OAuth users (Google sign-in) since they authenticate via their provider
 
 ## Notes
 - Content is stored as HTML (from Tiptap's `getHTML()`)
