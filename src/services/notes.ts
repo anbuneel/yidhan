@@ -343,6 +343,35 @@ export async function emptyFadedNotes(): Promise<void> {
   }
 }
 
+// Cleanup expired faded notes (older than 30 days)
+// This runs client-side on app load to auto-release expired notes
+const FADED_NOTES_RETENTION_DAYS = 30;
+
+export async function cleanupExpiredFadedNotes(): Promise<number> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - FADED_NOTES_RETENTION_DAYS);
+
+  const { data, error } = await supabase
+    .from('notes')
+    .delete()
+    .not('deleted_at', 'is', null)
+    .lt('deleted_at', cutoffDate.toISOString())
+    .select('id');
+
+  if (error) {
+    console.error('Error cleaning up expired faded notes:', error);
+    // Don't throw - cleanup is non-critical, app should continue
+    return 0;
+  }
+
+  const deletedCount = data?.length || 0;
+  if (deletedCount > 0) {
+    console.log(`Released ${deletedCount} expired note(s)`);
+  }
+
+  return deletedCount;
+}
+
 // Subscribe to real-time changes
 export function subscribeToNotes(
   userId: string,

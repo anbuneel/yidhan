@@ -31,6 +31,7 @@ import {
   fetchFadedNotes,
   countFadedNotes,
   emptyFadedNotes,
+  cleanupExpiredFadedNotes,
 } from './services/notes';
 import { fetchTags, subscribeToTags, addTagToNote, removeTagFromNote, createTag, updateTag, deleteTag } from './services/tags';
 import {
@@ -263,8 +264,10 @@ function App() {
       return;
     }
 
-    // Fetch initial count
-    countFadedNotes()
+    // Cleanup expired notes first, then fetch count
+    // This ensures users never see notes past their 30-day window
+    cleanupExpiredFadedNotes()
+      .then(() => countFadedNotes())
       .then(setFadedNotesCount)
       .catch(console.error);
   }, [userId]);

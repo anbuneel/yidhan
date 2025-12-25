@@ -303,6 +303,7 @@ Located in `src/services/notes.ts`:
 - `fetchFadedNotes()` - Get all soft-deleted notes for current user
 - `countFadedNotes()` - Get count for badge display
 - `emptyFadedNotes()` - Permanently delete all faded notes
+- `cleanupExpiredFadedNotes()` - Auto-release notes older than 30 days (runs on app load)
 
 ## UI Layout
 
