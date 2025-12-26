@@ -3,7 +3,7 @@
 **Author:** Claude (Opus 4.5)
 **Date:** 2025-12-25
 **Consulted:** Frontend Design Skill
-**Status:** Planning
+**Status:** Planning (PWA-Only approach selected)
 
 ---
 
@@ -206,18 +206,27 @@ The power of Zenote's offline experience should come from what it *doesn't* show
 
 ## Technical Complexity Assessment
 
-### Required Components
+### Decision: PWA-Only Approach
 
-| Component | Complexity | Effort | Description |
-|-----------|------------|--------|-------------|
-| PWA Manifest | Low | 1-2 hrs | manifest.json, icons, installability |
-| Service Worker | Medium | 4-6 hrs | Cache static assets (Vite PWA plugin) |
-| IndexedDB Storage | Medium | 6-8 hrs | Local DB via Dexie.js, mirror schema |
-| Offline Queue | Medium-High | 8-12 hrs | Queue mutations, retry on reconnect |
-| Sync Engine | HIGH | 16-24 hrs | Conflict resolution, merge strategy |
-| Zen UI Indicators | Low-Medium | 4-6 hrs | Subtle states per design above |
+After complexity assessment, we selected a **simpler PWA-only approach**:
+- Installable PWA (add to home screen)
+- Cached static assets (instant app load)
+- Offline reading (if notes were previously loaded)
+- **Deferred:** IndexedDB, sync queue, conflict resolution
 
-### Estimated Total: 4-7 days
+This delivers 70% of the benefit with 20% of the effort. Full local-first can be added later if user demand proves the need.
+
+### PWA-Only Components
+
+| Component | Complexity | Effort |
+|-----------|------------|--------|
+| PWA Manifest + Icons | Low | 1-2 hrs |
+| Service Worker (Vite PWA) | Low | 1-2 hrs |
+| Meta tags | Low | 30 mins |
+| Zen offline message | Low | 30 mins |
+| Testing | Low | 1 hr |
+
+### Estimated Total: 4-6 hours
 
 ---
 

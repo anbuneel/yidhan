@@ -2,49 +2,47 @@
 
 **Author:** Claude (Opus 4.5)
 **Date:** 2025-12-25
+**Updated:** 2025-12-25
 **Status:** Proposed
 **Design Reference:** `docs/analysis/offline-support-design-claude.md`
 
 ---
 
-## Overview
+## Decision: PWA-Only Approach
 
-Implement local-first offline support for Zenote that aligns with the Zen/wabi-sabi design philosophy. Users should feel like they're writing in a personal notebook that occasionally syncs, not using cloud software that caches.
+After complexity assessment, we're taking a **simpler PWA-only approach** that delivers 70% of the benefit with 20% of the effort.
+
+### What We're Building
+- Installable PWA (add to home screen)
+- Cached static assets (instant app load)
+- Offline reading (if notes were previously loaded)
+- Service worker with smart caching
+
+### What We're Deferring
+- Local IndexedDB storage
+- Offline editing with sync queue
+- Conflict resolution UI
+- Full local-first architecture
+
+This can be upgraded later if user demand proves the need.
 
 ---
 
-## Implementation Phases
+## Implementation Plan (1-2 days)
 
-### Phase 1: Local-First Foundation (4-5 days)
+### Step 1: Install Dependencies (15 mins)
 
-Full offline capability with silent sync. No "degraded mode" — offline is the natural state.
-
-### Phase 2: Kintsugi Conflicts (2-3 days, optional)
-
-Beautiful conflict resolution UI. Deferrable since conflicts are rare for single-device users.
-
----
-
-## Phase 1: Detailed Implementation
-
-### Step 1: Dependencies & PWA Setup (4-6 hours)
-
-**Install dependencies:**
 ```bash
-npm install vite-plugin-pwa dexie workbox-window
+npm install vite-plugin-pwa -D
 ```
 
-**Files to create/modify:**
+### Step 2: Configure Vite PWA Plugin (1-2 hours)
 
-| File | Action | Purpose |
-|------|--------|---------|
-| `vite.config.ts` | Modify | Add PWA plugin configuration |
-| `public/manifest.json` | Create | PWA manifest with app metadata |
-| `public/icons/` | Create | App icons (192x192, 512x512) |
-| `src/sw.ts` | Create | Service worker registration |
+**Modify `vite.config.ts`:**
 
-**vite.config.ts changes:**
 ```typescript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
@@ -52,12 +50,29 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'robots.txt'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com/,
+            // Cache Google Fonts
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Cache font files
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'gstatic-fonts-cache',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
           },
         ],
       },
@@ -68,9 +83,26 @@ export default defineConfig({
         theme_color: '#1a1f1a',
         background_color: '#1a1f1a',
         display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
+        start_url: '/',
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          {
+            src: '/icons/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: '/icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: '/icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
     }),
@@ -78,316 +110,133 @@ export default defineConfig({
 });
 ```
 
----
-
-### Step 2: IndexedDB Local Storage (6-8 hours)
+### Step 3: Create App Icons (1-2 hours)
 
 **Files to create:**
 
-| File | Purpose |
-|------|---------|
-| `src/lib/db.ts` | Dexie database schema definition |
-| `src/services/localNotes.ts` | Local CRUD operations |
-| `src/services/localTags.ts` | Local tag operations |
-| `src/hooks/useLocalStorage.ts` | React hook for local data |
+| File | Size | Purpose |
+|------|------|---------|
+| `public/icons/icon-192.png` | 192x192 | Standard PWA icon |
+| `public/icons/icon-512.png` | 512x512 | Large PWA icon / splash |
+| `public/icons/apple-touch-icon.png` | 180x180 | iOS home screen |
 
-**Database schema (`src/lib/db.ts`):**
-```typescript
-import Dexie, { Table } from 'dexie';
+**Icon design:**
+- Simple leaf/paper motif matching Zenote brand
+- Works on both light and dark backgrounds
+- Wabi-sabi aesthetic (not overly polished)
 
-export interface LocalNote {
-  id: string;
-  title: string;
-  content: string;
-  pinned: boolean;
-  deletedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  // Sync metadata
-  syncStatus: 'synced' | 'pending' | 'conflict';
-  lastSyncedAt: string | null;
-  serverVersion: number;
-}
+### Step 4: Add Meta Tags (30 mins)
 
-export interface LocalTag {
-  id: string;
-  name: string;
-  color: string;
-  createdAt: string;
-  syncStatus: 'synced' | 'pending';
-}
+**Update `index.html`:**
 
-export interface LocalNoteTag {
-  noteId: string;
-  tagId: string;
-  syncStatus: 'synced' | 'pending';
-}
+```html
+<head>
+  <!-- Existing tags... -->
 
-export interface SyncQueueItem {
-  id: string;
-  type: 'note' | 'tag' | 'noteTag';
-  operation: 'create' | 'update' | 'delete';
-  entityId: string;
-  payload: unknown;
-  createdAt: string;
-  retryCount: number;
-}
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#1a1f1a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Zenote" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 
-class ZenoteDB extends Dexie {
-  notes!: Table<LocalNote>;
-  tags!: Table<LocalTag>;
-  noteTags!: Table<LocalNoteTag>;
-  syncQueue!: Table<SyncQueueItem>;
-
-  constructor() {
-    super('zenote');
-    this.version(1).stores({
-      notes: 'id, syncStatus, updatedAt, deletedAt',
-      tags: 'id, syncStatus, name',
-      noteTags: '[noteId+tagId], noteId, tagId, syncStatus',
-      syncQueue: 'id, type, operation, createdAt',
-    });
-  }
-}
-
-export const db = new ZenoteDB();
+  <!-- Open Graph (optional but nice) -->
+  <meta property="og:title" content="Zenote" />
+  <meta property="og:description" content="A quiet space for your mind" />
+  <meta property="og:type" content="website" />
+</head>
 ```
+
+### Step 5: Update Network Status Hook (30 mins)
+
+**Modify `src/hooks/useNetworkStatus.ts`:**
+
+Update the offline message to be more Zen:
+
+```typescript
+const handleOffline = () => {
+  wasOffline.current = true;
+  toast('Writing locally. Will sync when the path clears.', {
+    icon: '雲',
+    duration: 4000,
+    style: {
+      background: 'var(--color-bg-secondary)',
+      color: 'var(--color-text-primary)',
+    },
+  });
+};
+```
+
+### Step 6: Test PWA (1 hour)
+
+**Testing checklist:**
+
+- [ ] `npm run build && npm run preview`
+- [ ] Open Chrome DevTools → Application → Manifest
+- [ ] Verify manifest loads correctly
+- [ ] Check "Install" prompt appears
+- [ ] Install app to desktop/home screen
+- [ ] Verify app launches in standalone mode
+- [ ] Test offline: disconnect network, reload app
+- [ ] Verify cached assets load offline
+- [ ] Test on mobile (iOS Safari, Android Chrome)
 
 ---
 
-### Step 3: Sync Engine (8-12 hours)
+## File Changes Summary
 
-**Files to create:**
-
-| File | Purpose |
-|------|---------|
-| `src/services/sync.ts` | Core sync logic |
-| `src/hooks/useSyncStatus.ts` | React hook for sync state |
-| `src/contexts/SyncContext.tsx` | Sync state provider |
-
-**Sync strategy:**
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      SYNC FLOW                              │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  1. User makes change                                       │
-│     ↓                                                       │
-│  2. Write to IndexedDB immediately (optimistic)             │
-│     ↓                                                       │
-│  3. Add to sync queue with status: 'pending'                │
-│     ↓                                                       │
-│  4. If online → attempt sync to Supabase                    │
-│     ├─ Success → mark as 'synced', remove from queue        │
-│     └─ Failure → keep in queue, retry on reconnect          │
-│     ↓                                                       │
-│  5. If offline → stays in queue until reconnect             │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Core sync service (`src/services/sync.ts`):**
-```typescript
-export class SyncService {
-  private isOnline: boolean = navigator.onLine;
-  private isSyncing: boolean = false;
-
-  // Initialize and set up listeners
-  init(): void;
-
-  // Process pending queue items
-  async processQueue(): Promise<void>;
-
-  // Sync a single note to server
-  async syncNote(note: LocalNote): Promise<SyncResult>;
-
-  // Pull latest from server (on reconnect)
-  async pullFromServer(): Promise<void>;
-
-  // Handle conflicts (Phase 1: last-write-wins)
-  resolveConflict(local: LocalNote, server: DbNote): LocalNote;
-
-  // Subscribe to online/offline events
-  private setupNetworkListeners(): void;
-}
-```
-
-**Conflict resolution (Phase 1 - Last Write Wins):**
-```typescript
-resolveConflict(local: LocalNote, server: DbNote): LocalNote {
-  const localTime = new Date(local.updatedAt).getTime();
-  const serverTime = new Date(server.updated_at).getTime();
-
-  // Last write wins - simple but effective for single-device use
-  return localTime > serverTime ? local : toLocalNote(server);
-}
-```
-
----
-
-### Step 4: UI Indicators (4-6 hours)
-
-**Files to modify:**
-
-| File | Change |
+| File | Action |
 |------|--------|
-| `src/components/Header.tsx` | Add "quiet sky" offline indicator |
-| `src/components/NoteCard.tsx` | Add "ink drying" pending dot |
-| `src/hooks/useNetworkStatus.ts` | Enhance with sync awareness |
-
-**"Quiet Sky" Offline Indicator:**
-```tsx
-// In Header.tsx
-{!isOnline && (
-  <span
-    className="offline-indicator"
-    title="Writing locally. Will sync when the path clears."
-    style={{
-      opacity: 0.3,
-      fontSize: '0.875rem',
-      color: 'var(--color-text-tertiary)',
-      transition: 'opacity 2s ease-out',
-    }}
-  >
-    雲
-  </span>
-)}
-```
-
-**"Ink Drying" Pending Indicator:**
-```tsx
-// In NoteCard.tsx
-{note.syncStatus === 'pending' && (
-  <span
-    className="pending-dot"
-    style={{
-      opacity: 0.6,
-      color: 'var(--color-text-tertiary)',
-      marginLeft: '4px',
-      animation: 'fade-out 0.3s ease-out forwards',
-    }}
-  >
-    ·
-  </span>
-)}
-```
-
-**Breath-rhythm animation (`src/index.css`):**
-```css
-@keyframes breath-pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.5; }
-}
-
-.syncing-indicator {
-  animation: breath-pulse 1.1s ease-in-out infinite;
-}
-```
+| `vite.config.ts` | Add VitePWA plugin |
+| `index.html` | Add PWA meta tags |
+| `public/icons/icon-192.png` | Create |
+| `public/icons/icon-512.png` | Create |
+| `public/icons/apple-touch-icon.png` | Create |
+| `src/hooks/useNetworkStatus.ts` | Update message |
 
 ---
 
-### Step 5: Integration & Migration (4-6 hours)
+## What Users Get
 
-**Files to modify:**
+| Feature | Benefit |
+|---------|---------|
+| **Installable** | Add to home screen, app-like experience |
+| **Fast loads** | Cached assets = instant startup |
+| **Offline shell** | App UI loads even offline |
+| **Offline reading** | Previously loaded notes viewable |
+| **Auto-updates** | Service worker updates in background |
 
-| File | Change |
-|------|--------|
-| `src/App.tsx` | Wrap with SyncProvider, use local data |
-| `src/services/notes.ts` | Add local-first wrapper functions |
-| `src/contexts/AuthContext.tsx` | Trigger initial sync on login |
+### Limitations (Accepted)
 
-**Data flow change:**
-
-```
-BEFORE (Cloud-First):
-  App → Supabase → UI
-
-AFTER (Local-First):
-  App → IndexedDB → UI
-           ↓
-       SyncService → Supabase (background)
-```
-
-**Migration strategy for existing users:**
-1. On first load with new version, pull all notes from Supabase
-2. Store in IndexedDB
-3. Mark all as 'synced'
-4. Future operations go through local-first flow
+| Limitation | Workaround |
+|------------|------------|
+| Can't create notes offline | Show friendly message |
+| Can't edit notes offline | Notes are read-only offline |
+| Must be online to sync | Standard cloud app behavior |
 
 ---
 
-## Phase 2: Kintsugi Conflicts (Optional)
+## Future Upgrade Path
 
-### Step 6: Conflict Detection (2-3 hours)
+If users request full offline editing:
 
-Enhance `resolveConflict()` to detect when both local and server changed:
-
-```typescript
-resolveConflict(local: LocalNote, server: DbNote): ConflictResult {
-  const localChanged = local.updatedAt > local.lastSyncedAt;
-  const serverChanged = server.updated_at > local.lastSyncedAt;
-
-  if (localChanged && serverChanged) {
-    return { type: 'conflict', local, server };
-  }
-  // ... last-write-wins for non-conflicts
-}
-```
-
-### Step 7: "Two Paths" Resolution UI (4-6 hours)
-
-**Files to create:**
-
-| File | Purpose |
-|------|---------|
-| `src/components/ConflictModal.tsx` | Two-column comparison view |
-| `src/components/KintsugiEffect.tsx` | Gold shimmer animation |
-
-**ConflictModal design:**
-- Serif heading: "Two versions of this thought exist."
-- Side-by-side cards with equal visual weight
-- Three options: Keep local, Keep server, Keep both
-- Gold shimmer on resolution
+1. Add Dexie.js for IndexedDB storage
+2. Implement sync queue
+3. Add conflict resolution UI
+4. See `docs/analysis/offline-support-design-claude.md` for full design
 
 ---
 
-## Testing Checklist
+## Timeline
 
-### Offline Scenarios
-- [ ] Create note while offline → syncs on reconnect
-- [ ] Edit note while offline → syncs on reconnect
-- [ ] Delete note while offline → syncs on reconnect
-- [ ] Multiple edits while offline → all sync correctly
-- [ ] Close app while offline, reopen → data persisted
-
-### Sync Scenarios
-- [ ] Slow connection → UI remains responsive
-- [ ] Sync failure → retries automatically
-- [ ] Large note collection → initial sync handles gracefully
-- [ ] Real-time updates from other devices → merge correctly
-
-### UI Scenarios
-- [ ] Offline indicator appears/disappears correctly
-- [ ] Pending dot shows on unsaved notes
-- [ ] No jarring transitions or flashes
-- [ ] Animations follow breath rhythm
-
----
-
-## Estimated Timeline
-
-| Step | Task | Time |
-|------|------|------|
-| 1 | Dependencies & PWA Setup | 4-6 hrs |
-| 2 | IndexedDB Local Storage | 6-8 hrs |
-| 3 | Sync Engine | 8-12 hrs |
-| 4 | UI Indicators | 4-6 hrs |
-| 5 | Integration & Migration | 4-6 hrs |
-| | **Phase 1 Total** | **26-38 hrs (~4-5 days)** |
-| 6 | Conflict Detection | 2-3 hrs |
-| 7 | Two Paths UI | 4-6 hrs |
-| | **Phase 2 Total** | **6-9 hrs (~1-2 days)** |
+| Task | Time |
+|------|------|
+| Install & configure PWA plugin | 1-2 hrs |
+| Create icons | 1-2 hrs |
+| Add meta tags | 30 mins |
+| Update network hook | 30 mins |
+| Testing | 1 hr |
+| **Total** | **4-6 hours** |
 
 ---
 
@@ -395,32 +244,11 @@ resolveConflict(local: LocalNote, server: DbNote): ConflictResult {
 
 ```json
 {
-  "vite-plugin-pwa": "^0.17.0",
-  "dexie": "^4.0.0",
-  "workbox-window": "^7.0.0"
+  "devDependencies": {
+    "vite-plugin-pwa": "^0.17.0"
+  }
 }
 ```
-
----
-
-## Risks & Mitigations
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| IndexedDB quota limits | Notes lost if quota exceeded | Monitor usage, warn user |
-| Sync race conditions | Data corruption | Use versioning, queue serialization |
-| PWA caching issues | Stale app version | Implement update prompt |
-| Complex merge conflicts | User frustration | Phase 1 uses simple last-write-wins |
-
----
-
-## Success Criteria
-
-1. **Invisible when working:** User shouldn't notice sync happening
-2. **Reliable offline:** All CRUD operations work without connection
-3. **No data loss:** Queue persists through app restarts
-4. **Zen aesthetic:** Indicators follow design philosophy (quiet, breath-rhythm)
-5. **Performance:** No perceptible delay from local-first approach
 
 ---
 
@@ -428,4 +256,3 @@ resolveConflict(local: LocalNote, server: DbNote): ConflictResult {
 
 - Design Philosophy: `docs/analysis/offline-support-design-claude.md`
 - Network Status Hook: `src/hooks/useNetworkStatus.ts`
-- Current Notes Service: `src/services/notes.ts`
