@@ -46,6 +46,7 @@ A calm, distraction-free note-taking app inspired by Japanese stationery and wab
 - **Public Changelog** - Browse version history and recent updates
 - **Public Roadmap** - See what's coming next and features being explored
 - **Footer Navigation** - Quick links to Changelog, Roadmap, and GitHub
+- **PWA Support** - Install to home screen for app-like experience, offline UI shell loads instantly
 
 ## Tech Stack
 
