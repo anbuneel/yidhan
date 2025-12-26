@@ -363,6 +363,8 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Google OAuth "Instant" badge (emphasizes faster signup path)
 - [x] Mobile sample note on landing page (shows what notes look like)
 - [x] Loading spinner on auth submit button
+- [x] Copy note to clipboard (plain text or with formatting) from export menu
+- [x] Keyboard shortcut Cmd/Ctrl+Shift+C to copy entire note
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (GitHub, etc.)
@@ -521,6 +523,7 @@ Row 2: [Note Title]
 | `Cmd/Ctrl + N` | Create new note | Library |
 | `Cmd/Ctrl + K` | Focus search | Library |
 | `Escape` | Save and go back | Editor |
+| `Cmd/Ctrl + Shift + C` | Copy note to clipboard | Editor |
 | `Cmd/Ctrl + B` | Bold | Editor |
 | `Cmd/Ctrl + I` | Italic | Editor |
 | `Cmd/Ctrl + U` | Underline | Editor |
@@ -672,7 +675,12 @@ Pinned notes:
 - Status badges: In Progress (gold), Coming Soon (terracotta), Exploring (stone)
 - Data stored in `src/data/roadmap.ts`
 
-## Export/Import
+## Copy & Export
+
+### Copy Options (Editor)
+- **Copy as text**: Plain text to clipboard (title + tags + content)
+- **Copy with formatting**: HTML-formatted for pasting into rich editors
+- Keyboard shortcut: `Cmd/Ctrl + Shift + C` copies as plain text
 
 ### Export Options
 - **All Notes (JSON)**: Full backup with notes, tags, and metadata
@@ -698,6 +706,8 @@ content...
 
 ### Utilities
 Export/import functions are in `src/utils/exportImport.ts`:
+- `copyNoteToClipboard()` / `copyNoteWithFormatting()` - Copy to clipboard
+- `htmlToPlainText()` / `formatNoteForClipboard()` - Plain text conversion
 - `exportNotesToJSON()` / `parseImportedJSON()` - JSON backup
 - `exportNoteToJSON()` / `exportNoteToMarkdown()` - Single note export
 - `parseMultiNoteMarkdown()` - Parse combined markdown exports

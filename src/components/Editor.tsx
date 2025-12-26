@@ -12,6 +12,8 @@ import {
   exportNoteToJSON,
   getSanitizedFilename,
   downloadFile,
+  copyNoteToClipboard,
+  copyNoteWithFormatting,
 } from '../utils/exportImport';
 
 interface EditorProps {
@@ -27,7 +29,7 @@ interface EditorProps {
   onSettingsClick: () => void;
 }
 
-type SaveStatus = 'idle' | 'saving' | 'saved';
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'copied';
 
 export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick }: EditorProps) {
   const [title, setTitle] = useState(note.title);
@@ -107,17 +109,26 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
     };
   }, [title, content, note.title, note.content, performSave]);
 
-  // Handle Escape key to save and go back
+  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape: save and go back
       if (e.key === 'Escape') {
         performSave();
         onBack();
       }
+      // Cmd/Ctrl+Shift+C: copy note to clipboard
+      if (e.key === 'c' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+        e.preventDefault();
+        const currentNote = { ...note, title, content };
+        copyNoteToClipboard(currentNote).then(() => {
+          showCopiedIndicator();
+        });
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [performSave, onBack]);
+  }, [performSave, onBack, note, title, content]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -207,6 +218,38 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
     setShowExportMenu(false);
   };
 
+  // Copy handlers
+  const handleCopyPlainText = async () => {
+    const currentNote = { ...note, title, content };
+    await copyNoteToClipboard(currentNote);
+    setShowExportMenu(false);
+    showCopiedIndicator();
+  };
+
+  const handleCopyWithFormatting = async () => {
+    const currentNote = { ...note, title, content };
+    await copyNoteWithFormatting(currentNote);
+    setShowExportMenu(false);
+    showCopiedIndicator();
+  };
+
+  const showCopiedIndicator = () => {
+    // Clear any existing indicator timeouts
+    if (savePhaseTimeoutRef.current) {
+      clearTimeout(savePhaseTimeoutRef.current);
+    }
+    if (hideIndicatorTimeoutRef.current) {
+      clearTimeout(hideIndicatorTimeoutRef.current);
+    }
+
+    setSaveStatus('copied');
+
+    // Hide the indicator after 2 seconds
+    hideIndicatorTimeoutRef.current = setTimeout(() => {
+      setSaveStatus('idle');
+    }, 2000);
+  };
+
   // Close export menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -285,13 +328,13 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
   // Right actions: Save status + Export button + Delete button
   const rightActions = (
     <div className="flex items-center gap-2">
-      {/* Save Status Indicator */}
+      {/* Save/Copy Status Indicator */}
       {saveStatus !== 'idle' && (
         <span
           className={`
             shrink-0 text-xs px-2 py-1 rounded-full flex items-center gap-1.5
             transition-opacity duration-300
-            ${saveStatus === 'saved' ? 'opacity-80' : 'opacity-100'}
+            ${saveStatus === 'saved' || saveStatus === 'copied' ? 'opacity-80' : 'opacity-100'}
           `}
           style={{
             fontFamily: 'var(--font-body)',
@@ -306,6 +349,13 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
                 style={{ background: 'var(--color-accent)' }}
               />
               Saving...
+            </>
+          ) : saveStatus === 'copied' ? (
+            <>
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+              Copied
             </>
           ) : (
             <>
@@ -358,12 +408,59 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
         {/* Export dropdown menu */}
         {showExportMenu && (
           <div
-            className="absolute right-0 mt-2 py-1 rounded-lg shadow-lg z-50 min-w-[160px]"
+            className="absolute right-0 mt-2 py-1 rounded-lg shadow-lg z-50 min-w-[180px]"
             style={{
               background: 'var(--color-bg-primary)',
               border: '1px solid var(--glass-border)',
             }}
           >
+            {/* Copy options */}
+            <button
+              onClick={handleCopyPlainText}
+              className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-primary)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--color-bg-secondary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <svg className="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              Copy as text
+            </button>
+            <button
+              onClick={handleCopyWithFormatting}
+              className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-primary)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--color-bg-secondary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <svg className="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Copy with formatting
+            </button>
+
+            {/* Divider */}
+            <div
+              className="my-1 mx-3"
+              style={{ borderTop: '1px solid var(--glass-border)' }}
+            />
+
+            {/* Export options */}
             <button
               onClick={handleExportMarkdown}
               className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
@@ -379,9 +476,9 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
               }}
             >
               <svg className="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              Markdown (.md)
+              Download (.md)
             </button>
             <button
               onClick={handleExportJSON}
@@ -398,9 +495,9 @@ export function Editor({ note, tags, onBack, onUpdate, onDelete, onToggleTag, on
               }}
             >
               <svg className="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              JSON (.json)
+              Download (.json)
             </button>
           </div>
         )}

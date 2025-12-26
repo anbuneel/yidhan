@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.7.1',
+    date: '2025-12-25',
+    changes: [
+      { type: 'feature', text: 'Copy note to clipboard - plain text or with formatting for pasting anywhere' },
+      { type: 'feature', text: 'Keyboard shortcut Cmd/Ctrl+Shift+C to copy entire note' },
+      { type: 'improvement', text: 'Reorganized export menu with copy options and download sections' },
+    ],
+  },
+  {
     version: '1.7.0',
     date: '2025-12-25',
     changes: [
