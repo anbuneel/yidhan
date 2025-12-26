@@ -14,6 +14,8 @@ export const changelog: ChangelogEntry[] = [
       { type: 'feature', text: 'Copy note to clipboard - plain text or with formatting for pasting anywhere' },
       { type: 'feature', text: 'Keyboard shortcut Cmd/Ctrl+Shift+C to copy entire note' },
       { type: 'improvement', text: 'Reorganized export menu with copy options and download sections' },
+      { type: 'improvement', text: 'Friendly "New version available" message when app updates during use' },
+      { type: 'fix', text: 'Auto-refresh when deployment causes chunk loading errors' },
     ],
   },
   {
