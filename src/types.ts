@@ -16,7 +16,16 @@ export interface Note {
   deletedAt?: Date | null;
 }
 
-export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded';
+export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded' | 'shared';
+
+export interface NoteShare {
+  id: string;
+  noteId: string;
+  userId: string;
+  shareToken: string;
+  expiresAt: Date | null;
+  createdAt: Date;
+}
 export type Theme = 'light' | 'dark';
 
 // Curated wabi-sabi color palette for tags

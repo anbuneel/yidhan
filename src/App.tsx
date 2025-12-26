@@ -4,6 +4,7 @@ import type { Note, Tag, ViewMode, Theme } from './types';
 import { Header } from './components/Header';
 import { ChapteredLibrary } from './components/ChapteredLibrary';
 import { FadedNotesView } from './components/FadedNotesView';
+import { SharedNoteView } from './components/SharedNoteView';
 import { Auth } from './components/Auth';
 import { LandingPage } from './components/LandingPage';
 import { sanitizeText } from './utils/sanitize';
@@ -105,6 +106,12 @@ function App() {
   // Faded notes state
   const [fadedNotes, setFadedNotes] = useState<Note[]>([]);
   const [fadedNotesCount, setFadedNotesCount] = useState(0);
+
+  // Share token state (for viewing shared notes)
+  const [shareToken, setShareToken] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('s');
+  });
 
   // Debounce timer refs
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -871,6 +878,24 @@ function App() {
     );
   }
 
+  // Show shared note view if share token is present
+  if (shareToken) {
+    return (
+      <SharedNoteView
+        token={shareToken}
+        theme={theme}
+        onThemeToggle={handleThemeToggle}
+        onInvalidToken={() => {
+          // Clear URL and show landing/library
+          window.history.replaceState({}, '', window.location.pathname);
+          setShareToken(null);
+        }}
+        onChangelogClick={() => setView('changelog')}
+        onRoadmapClick={() => setView('roadmap')}
+      />
+    );
+  }
+
   // Public pages (accessible without login)
   if (view === 'changelog') {
     return (
@@ -1164,6 +1189,7 @@ function App() {
           <Editor
             note={selectedNote}
             tags={tags}
+            userId={user.id}
             onBack={handleBack}
             onUpdate={handleNoteUpdate}
             onDelete={handleNoteDelete}

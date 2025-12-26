@@ -100,6 +100,46 @@ export type Database = {
           }
         ];
       };
+      note_shares: {
+        Row: {
+          id: string;
+          note_id: string;
+          user_id: string;
+          share_token: string;
+          expires_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          note_id: string;
+          user_id: string;
+          share_token: string;
+          expires_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          note_id?: string;
+          user_id?: string;
+          share_token?: string;
+          expires_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'note_shares_note_id_fkey';
+            columns: ['note_id'];
+            referencedRelation: 'notes';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'note_shares_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -119,3 +159,4 @@ export type Database = {
 export type DbNote = Database['public']['Tables']['notes']['Row'];
 export type DbTag = Database['public']['Tables']['tags']['Row'];
 export type DbNoteTag = Database['public']['Tables']['note_tags']['Row'];
+export type DbNoteShare = Database['public']['Tables']['note_shares']['Row'];

@@ -36,6 +36,8 @@ src/
 │   ├── LettingGoModal.tsx # Account departure modal with keepsakes export
 │   ├── Library.tsx        # Notes masonry grid view (legacy, replaced by ChapteredLibrary)
 │   ├── NoteCard.tsx       # Individual note card with tag badges
+│   ├── ShareModal.tsx     # Modal for creating/managing share links
+│   ├── SharedNoteView.tsx # Public read-only view for shared notes
 │   ├── RichTextEditor.tsx # Tiptap editor content wrapper (toolbar extracted to EditorToolbar)
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
 │   ├── SettingsModal.tsx  # Settings modal (profile, password for non-OAuth, theme, offboarding)
@@ -57,7 +59,7 @@ src/
 │   ├── notes.ts           # CRUD operations for notes (with tags)
 │   └── tags.ts            # CRUD operations for tags
 ├── types/
-│   └── database.ts        # Supabase DB types (notes, tags, note_tags) with full schema
+│   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares) with full schema
 ├── hooks/
 │   └── useNetworkStatus.ts # Network connectivity monitoring hook
 ├── utils/
@@ -289,8 +291,20 @@ create table note_tags (
   primary key (note_id, tag_id)
 );
 
+-- Note shares table (for "Share as Letter" feature)
+create table note_shares (
+  id uuid default gen_random_uuid() primary key,
+  note_id uuid references notes(id) on delete cascade not null,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  share_token varchar(32) unique not null,  -- 32-char secure token
+  expires_at timestamptz,  -- null = never expires
+  created_at timestamptz default now() not null,
+  unique(note_id)  -- One active share per note
+);
+
 -- Row Level Security on all tables
 -- Users can only access their own notes and tags
+-- Public can read share tokens for validation
 ```
 
 ## Environment Variables
@@ -370,6 +384,9 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Account offboarding ("Letting Go") with 14-day grace period
 - [x] Keepsakes export during offboarding (Markdown or JSON download)
 - [x] Return during grace period (sign in to cancel departure)
+- [x] Share as Letter (temporary, read-only share links for notes)
+- [x] Configurable share expiration (1 day, 7 days, 30 days, never)
+- [x] Public shared note view with preserved formatting and tags
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (GitHub, etc.)
@@ -412,6 +429,14 @@ Located in `src/services/notes.ts`:
 - `countFadedNotes()` - Get count for badge display
 - `emptyFadedNotes()` - Permanently delete all faded notes
 - `cleanupExpiredFadedNotes()` - Auto-release notes older than 30 days (runs on app load)
+
+### Share as Letter service functions
+Located in `src/services/notes.ts`:
+- `createNoteShare(noteId, userId, expiresInDays)` - Create share link with optional expiration
+- `getNoteShare(noteId)` - Get existing share for a note (if any)
+- `updateNoteShareExpiration(noteId, expiresInDays)` - Update share expiration
+- `deleteNoteShare(noteId)` - Revoke share access
+- `fetchSharedNote(token)` - Fetch shared note by token (public, no auth required)
 
 ## UI Layout
 
@@ -814,3 +839,4 @@ SQL migrations are stored in `supabase/migrations/`:
 - `security_audit_checklist.sql` - RLS audit queries and rate limiting docs
 - `add_pinned_column.sql` - Add pinned column to notes table
 - `add_soft_delete.sql` - Add deleted_at column for soft-delete feature
+- `add_note_shares.sql` - Add note_shares table for "Share as Letter" feature

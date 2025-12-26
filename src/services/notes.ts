@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
-import type { Note, Tag, TagColor } from '../types';
-import type { DbNote, DbTag } from '../types/database';
+import type { Note, Tag, TagColor, NoteShare } from '../types';
+import type { DbNote, DbTag, DbNoteShare } from '../types/database';
 
 // Convert database tag to app tag
 function toTag(dbTag: DbTag): Tag {
@@ -416,4 +416,164 @@ export function subscribeToNotes(
   return () => {
     supabase.removeChannel(channel);
   };
+}
+
+// ============================================
+// Note Sharing Functions ("Share as Letter")
+// ============================================
+
+// Convert database note share to app note share
+function toNoteShare(dbShare: DbNoteShare): NoteShare {
+  return {
+    id: dbShare.id,
+    noteId: dbShare.note_id,
+    userId: dbShare.user_id,
+    shareToken: dbShare.share_token,
+    expiresAt: dbShare.expires_at ? new Date(dbShare.expires_at) : null,
+    createdAt: new Date(dbShare.created_at),
+  };
+}
+
+// Generate a secure 32-character token
+function generateShareToken(): string {
+  return crypto.randomUUID().replace(/-/g, '');
+}
+
+// Create a share link for a note
+export async function createNoteShare(
+  noteId: string,
+  userId: string,
+  expiresInDays: number | null = 7
+): Promise<NoteShare> {
+  const shareToken = generateShareToken();
+  const expiresAt = expiresInDays
+    ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
+    : null;
+
+  const { data, error } = await supabase
+    .from('note_shares')
+    .insert({
+      note_id: noteId,
+      user_id: userId,
+      share_token: shareToken,
+      expires_at: expiresAt,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating note share:', error);
+    throw error;
+  }
+
+  return toNoteShare(data);
+}
+
+// Get existing share for a note (if any)
+export async function getNoteShare(noteId: string): Promise<NoteShare | null> {
+  const { data, error } = await supabase
+    .from('note_shares')
+    .select('*')
+    .eq('note_id', noteId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching note share:', error);
+    throw error;
+  }
+
+  return data ? toNoteShare(data) : null;
+}
+
+// Update share expiration
+export async function updateNoteShareExpiration(
+  noteId: string,
+  expiresInDays: number | null
+): Promise<NoteShare> {
+  const expiresAt = expiresInDays
+    ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
+    : null;
+
+  const { data, error } = await supabase
+    .from('note_shares')
+    .update({ expires_at: expiresAt })
+    .eq('note_id', noteId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating note share:', error);
+    throw error;
+  }
+
+  return toNoteShare(data);
+}
+
+// Delete a share (revoke access)
+export async function deleteNoteShare(noteId: string): Promise<void> {
+  const { error } = await supabase
+    .from('note_shares')
+    .delete()
+    .eq('note_id', noteId);
+
+  if (error) {
+    console.error('Error deleting note share:', error);
+    throw error;
+  }
+}
+
+// Fetch a shared note by token (public, no auth required)
+// Returns null if token is invalid or expired
+export async function fetchSharedNote(token: string): Promise<Note | null> {
+  // First, validate the share token and check expiration
+  const { data: shareData, error: shareError } = await supabase
+    .from('note_shares')
+    .select('note_id, expires_at')
+    .eq('share_token', token)
+    .maybeSingle();
+
+  if (shareError) {
+    console.error('Error fetching share:', shareError);
+    return null;
+  }
+
+  if (!shareData) {
+    return null; // Invalid token
+  }
+
+  // Check if share has expired
+  if (shareData.expires_at && new Date(shareData.expires_at) < new Date()) {
+    return null; // Expired
+  }
+
+  // Fetch the note with its tags
+  const { data: noteData, error: noteError } = await supabase
+    .from('notes')
+    .select(`
+      *,
+      note_tags (
+        tag_id,
+        tags (*)
+      )
+    `)
+    .eq('id', shareData.note_id)
+    .is('deleted_at', null) // Don't show soft-deleted notes
+    .maybeSingle();
+
+  if (noteError) {
+    console.error('Error fetching shared note:', noteError);
+    return null;
+  }
+
+  if (!noteData) {
+    return null; // Note not found or deleted
+  }
+
+  // Transform the data
+  const tags = (noteData.note_tags || [])
+    .map((nt: { tags: DbTag | null }) => nt.tags)
+    .filter((tag): tag is DbTag => tag !== null)
+    .map(toTag);
+
+  return toNote(noteData as DbNote, tags);
 }

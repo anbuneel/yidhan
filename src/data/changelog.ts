@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.9.0',
+    date: '2025-12-26',
+    changes: [
+      { type: 'feature', text: 'Share as Letter - create temporary, read-only links to share notes quietly' },
+      { type: 'feature', text: 'Configurable link expiration - 1 day, 7 days, 30 days, or never' },
+      { type: 'feature', text: 'Beautiful shared note view - read-only display with preserved formatting and tags' },
+      { type: 'improvement', text: 'Share links respect wabi-sabi philosophy - impermanent, one-way, no tracking' },
+    ],
+  },
+  {
     version: '1.8.0',
     date: '2025-12-26',
     changes: [
