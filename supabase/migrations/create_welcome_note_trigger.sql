@@ -18,7 +18,8 @@ begin
   <li><strong>Organize with tags</strong> — Add tags to categorize your notes and filter by them later</li>
   <li><strong>Quick search</strong> — Press <code>Cmd+K</code> (or <code>Ctrl+K</code>) to search your notes instantly</li>
   <li><strong>Switch themes</strong> — Toggle between light (Kintsugi) and dark (Midnight) themes in the header</li>
-  <li><strong>Export your notes</strong> — Back up to JSON or export as Markdown from the profile menu</li>
+  <li><strong>Import your notes</strong> — Bring notes from other apps via JSON or Markdown from the profile menu</li>
+  <li><strong>Export your notes</strong> — Back up to JSON or export as Markdown anytime</li>
 </ul>
 <h3>Tips</h3>
 <p>Your notes sync automatically across devices. Changes are saved as you type — look for the save indicator in the editor.</p>
