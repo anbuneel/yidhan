@@ -3,6 +3,20 @@
 **Author:** Claude (Opus 4.5)
 **Date:** 2025-12-25
 **Consulted:** Frontend Design Skill
+**Status:** ✅ IMPLEMENTED
+
+---
+
+## Implementation Decision
+
+After analysis and preview, we decided to **keep the current Kintsugi (light) + Midnight (dark) themes** with the following enhancements:
+
+- ✅ Added warm paper texture to light mode (`sepia(80%) saturate(120%)`)
+- ✅ Increased noise opacity to 0.10 for both themes
+- ✅ Reduced light mode card opacity to 0.75 for texture visibility
+- ✅ Added configurable `--noise-filter` CSS variable
+
+The proposed Washi/Mori themes remain available in `src/themes/` for future use.
 
 ---
 
