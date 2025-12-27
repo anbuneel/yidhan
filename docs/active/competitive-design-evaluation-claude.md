@@ -26,6 +26,42 @@ Zenote occupies a **distinctive niche** in the note-taking landscape: a contempl
 
 ---
 
+## Quick Summary
+
+### Zenote's Competitive Position
+
+| Dimension | Zenote vs. Competitors |
+|-----------|------------------------|
+| **Visual Identity** | **Best in class** — Wabi-sabi aesthetic, serif typography, terracotta/gold palette. More distinctive than Notion, Bear, or Apple Notes. |
+| **Interaction Design** | Good but sparse — Card animations are nice, but lacks page transitions and scroll effects. |
+| **Information Architecture** | Deliberately simple — Temporal chapters are innovative. No folder paralysis. |
+| **Mobile** | Untested risk — CSS is responsive, but real device validation is critical. |
+| **Onboarding** | Functional — Demo editor is clever, but lacks feature discovery. |
+
+### Unique Differentiators
+1. **Wabi-sabi corners** (asymmetric border-radius)
+2. **Temporal chapters** (auto-organization by time)
+3. **"Faded Notes"** and **"Letting Go"** (organic language for deletion)
+4. **Demo-to-signup** content migration
+5. **Serif typography** (Cormorant Garamond — literary positioning)
+
+### Strategic Recommendation
+
+> **"The note-taking app for people overwhelmed by note-taking apps."**
+
+Don't chase Notion/Obsidian on features. Double down on the calm. The aesthetic is the moat.
+
+### Critical Gaps Before Launch
+
+| Gap | Priority |
+|-----|----------|
+| Real mobile device testing | P0 |
+| Offline sync (PWA) | P0 |
+| Image attachments | P1 |
+| Feature discovery hints | P1 |
+
+---
+
 ## 1. Visual Design & Aesthetics
 
 ### Zenote's Approach
