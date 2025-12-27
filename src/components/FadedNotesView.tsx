@@ -6,6 +6,7 @@ import { HeaderShell } from './HeaderShell';
 
 interface FadedNotesViewProps {
   notes: Note[];
+  isLoading?: boolean;
   onBack: () => void;
   onRestore: (id: string) => void;
   onPermanentDelete: (id: string) => void;
@@ -17,6 +18,7 @@ interface FadedNotesViewProps {
 
 export function FadedNotesView({
   notes,
+  isLoading = false,
   onBack,
   onRestore,
   onPermanentDelete,
@@ -27,7 +29,7 @@ export function FadedNotesView({
 }: FadedNotesViewProps) {
   const [showEmptyConfirm, setShowEmptyConfirm] = useState(false);
 
-  const rightActions = notes.length > 0 ? (
+  const rightActions = !isLoading && notes.length > 0 ? (
     <button
       onClick={() => setShowEmptyConfirm(true)}
       className="
@@ -92,7 +94,28 @@ export function FadedNotesView({
       </div>
 
       {/* Content */}
-      {notes.length === 0 ? (
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center">
+            <div
+              className="w-8 h-8 mx-auto mb-4 animate-spin rounded-full border-2"
+              style={{
+                borderColor: 'var(--color-bg-tertiary)',
+                borderTopColor: 'var(--color-accent)',
+              }}
+            />
+            <p
+              className="text-sm"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-tertiary)',
+              }}
+            >
+              Loading faded notes...
+            </p>
+          </div>
+        </div>
+      ) : notes.length === 0 ? (
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
             <div

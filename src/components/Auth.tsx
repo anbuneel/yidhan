@@ -72,6 +72,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   const [message, setMessage] = useState<string | null>(null);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
   const { signIn, signUp, signInWithGoogle, signInWithGitHub, resetPassword, updatePassword } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -830,12 +831,15 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
 
   const handleModalClose = () => {
     if (isDirty && !awaitingConfirmation) {
-      if (window.confirm('You have unsaved changes. Close anyway?')) {
-        onClose?.();
-      }
+      setShowCloseConfirm(true);
     } else {
       onClose?.();
     }
+  };
+
+  const handleConfirmClose = () => {
+    setShowCloseConfirm(false);
+    onClose?.();
   };
 
   // Modal mode: wrap in overlay
@@ -855,6 +859,69 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           </button>
           {authCard}
         </div>
+
+        {/* Close confirmation modal */}
+        {showCloseConfirm && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+            onClick={() => setShowCloseConfirm(false)}
+          >
+            <div
+              className="w-full max-w-sm p-6 rounded-lg text-center"
+              style={{
+                background: 'var(--color-bg-primary)',
+                border: '1px solid var(--glass-border)',
+                boxShadow: 'var(--shadow-lg)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3
+                className="text-lg font-semibold mb-2"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  color: 'var(--color-text-primary)',
+                }}
+              >
+                Discard changes?
+              </h3>
+              <p
+                className="text-sm mb-6"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                You have unsaved changes that will be lost.
+              </p>
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={() => setShowCloseConfirm(false)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    color: 'var(--color-text-secondary)',
+                    background: 'transparent',
+                    border: '1px solid var(--glass-border)',
+                  }}
+                >
+                  Keep Editing
+                </button>
+                <button
+                  onClick={handleConfirmClose}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    color: 'var(--color-bg-primary)',
+                    background: 'var(--color-accent)',
+                  }}
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

@@ -106,6 +106,7 @@ function App() {
   // Faded notes state
   const [fadedNotes, setFadedNotes] = useState<Note[]>([]);
   const [fadedNotesCount, setFadedNotesCount] = useState(0);
+  const [fadedNotesLoading, setFadedNotesLoading] = useState(false);
 
   // Share token state (for viewing shared notes)
   const [shareToken, setShareToken] = useState<string | null>(() => {
@@ -455,13 +456,16 @@ function App() {
 
   // Navigate to Faded Notes view
   const handleFadedNotesClick = async () => {
+    setView('faded');
+    setFadedNotesLoading(true);
     try {
       const faded = await fetchFadedNotes();
       setFadedNotes(faded);
-      setView('faded');
     } catch (error) {
       console.error('Failed to fetch faded notes:', error);
       toast.error('Failed to load faded notes');
+    } finally {
+      setFadedNotesLoading(false);
     }
   };
 
@@ -1014,6 +1018,7 @@ function App() {
     return (
       <FadedNotesView
         notes={fadedNotes}
+        isLoading={fadedNotesLoading}
         onBack={() => setView('library')}
         onRestore={handleRestoreNote}
         onPermanentDelete={handlePermanentDelete}
