@@ -79,6 +79,40 @@ Zenote occupies a **distinctive niche** in the note-taking landscape: a contempl
 
 **Monetization Angle:** This could be the paid tier feature that doesn't gate core note-taking functionality.
 
+### Potential Differentiator: Daily Whisper (Personalized Quotes)
+
+**Opportunity:** Show a daily quote, thought, or gentle joke when users open the app — curated to their interests based on what they've been writing about.
+
+**Why This Works:**
+
+| Aspect | How It Aligns |
+|--------|---------------|
+| **Personality** | Note apps are cold/utilitarian. This makes Zenote feel alive. |
+| **Curation** | Personalized to interests = feels like the app "knows" you |
+| **Mood** | Starts the session with positivity, not a blank page stare |
+| **Retention** | Gives users a reason to open the app even when not writing |
+
+**Possible Names (keeping the aesthetic):**
+- "Daily Whisper"
+- "Morning Muse"
+- "A Quiet Word"
+- "Today's Thought"
+
+**Where It Could Appear:**
+- Subtle banner when opening library
+- Part of the daily email digest
+- In the empty state (before any notes)
+- As a loading state moment
+
+**The AI Personalization Angle:**
+- *"Because you've been writing about focus lately..."* followed by a relevant quote
+- Curated from philosophy, literature, or gentle humor based on note themes
+- Feels personal without being creepy
+
+**Marketing Message:**
+
+> *"A quiet word to start your day — chosen just for you."*
+
 ### Strategic Recommendation
 
 > **"The note-taking app for people overwhelmed by note-taking apps."**
