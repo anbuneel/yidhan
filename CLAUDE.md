@@ -318,7 +318,7 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Wabi-sabi design with light/dark themes (dark default)
 - [x] Card-based note library with responsive grid
 - [x] Rich text editor (bold, italic, underline, headers, lists, quotes, code, task lists)
-- [x] User authentication (email/password + Google OAuth) with full name capture
+- [x] User authentication (email/password + Google/GitHub OAuth) with full name capture
 - [x] Supabase database integration
 - [x] Real-time sync across tabs/devices
 - [x] Note creation, editing, deletion
@@ -389,7 +389,7 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Public shared note view with preserved formatting and tags
 
 ## Features Not Yet Implemented
-- [ ] Additional OAuth providers (GitHub, etc.)
+- [ ] Additional OAuth providers (Apple, etc.)
 - [ ] Offline support / PWA
 - [ ] Image attachments
 - [ ] Virtual scrolling for large note lists
@@ -749,6 +749,7 @@ Export/import functions are in `src/utils/exportImport.ts`:
 The `AuthContext` provides these functions:
 - `signIn(email, password)` - Log in with email/password
 - `signInWithGoogle()` - Log in with Google OAuth (redirects to Google)
+- `signInWithGitHub()` - Log in with GitHub OAuth (redirects to GitHub)
 - `signUp(email, password, fullName)` - Create account with display name
 - `signOut()` - Log out current user
 - `resetPassword(email)` - Send password reset email
@@ -782,8 +783,8 @@ At the bottom of the modal is the "Let go of Zenote" link that opens the offboar
 - Password recovery detected via Supabase `PASSWORD_RECOVERY` auth event
 - TagModal shows loading spinners during async create/update/delete operations
 - Import operations show a loading overlay with spinner
-- Google OAuth uses Supabase's `signInWithOAuth` with redirect back to app origin
-- Google sign-in button appears on login and signup screens with "or" divider
+- Google/GitHub OAuth use Supabase's `signInWithOAuth` with redirect back to app origin
+- OAuth buttons appear side-by-side on login and signup screens with "or" divider
 - ErrorBoundary wraps the entire app to catch and display runtime errors gracefully
 - Chunk loading errors (from deployments) show "New version available" and auto-refresh
 - Production OAuth requires Supabase Site URL and Redirect URLs to match deployment domain

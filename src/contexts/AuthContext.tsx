@@ -10,6 +10,7 @@ interface AuthContextType {
   clearPasswordRecovery: () => void;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
+  signInWithGitHub: () => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -70,6 +71,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    return { error };
+  };
+
+  const signInWithGitHub = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
       options: {
         redirectTo: window.location.origin,
       },
@@ -154,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   })();
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isPasswordRecovery, clearPasswordRecovery, signIn, signInWithGoogle, signUp, signOut, resetPassword, updatePassword, updateProfile, initiateOffboarding, cancelOffboarding, isDeparting, daysUntilRelease }}>
+    <AuthContext.Provider value={{ user, session, loading, isPasswordRecovery, clearPasswordRecovery, signIn, signInWithGoogle, signInWithGitHub, signUp, signOut, resetPassword, updatePassword, updateProfile, initiateOffboarding, cancelOffboarding, isDeparting, daysUntilRelease }}>
       {children}
     </AuthContext.Provider>
   );

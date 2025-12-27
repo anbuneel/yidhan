@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.9.1',
+    date: '2025-12-26',
+    changes: [
+      { type: 'feature', text: 'GitHub OAuth login - sign in with your GitHub account' },
+      { type: 'improvement', text: 'OAuth buttons now displayed side-by-side for cleaner layout' },
+    ],
+  },
+  {
     version: '1.9.0',
     date: '2025-12-26',
     changes: [
