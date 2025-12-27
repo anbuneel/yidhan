@@ -224,7 +224,7 @@ Day 1 (PR 1): ✅ COMPLETE
   [x] 1.1 Create test utilities & mocks
   [x] 1.2 Update test setup
   [x] 2.1 temporalGrouping.test.ts (35 tests)
-  → PR #XX
+  → PR #33
 
 Day 2 (PR 2):
   [ ] 2.2 exportImport.test.ts
