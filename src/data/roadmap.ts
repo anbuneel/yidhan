@@ -44,6 +44,12 @@ export const roadmap: RoadmapItem[] = [
     description: 'Insights into your writing habits and note-taking patterns.',
     status: 'exploring',
   },
+  {
+    id: '7',
+    title: 'Native Mobile Apps',
+    description: 'Dedicated iOS and Android apps for a truly native mobile experience with offline support and system integrations.',
+    status: 'exploring',
+  },
 ];
 
 export const statusLabels: Record<RoadmapStatus, string> = {
