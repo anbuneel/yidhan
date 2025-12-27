@@ -46,6 +46,10 @@ Zenote occupies a **distinctive niche** in the note-taking landscape: a contempl
 5. **Serif typography** (Cormorant Garamond — literary positioning)
 6. **True cross-platform** (works on Windows, Linux, Android — anywhere Apple Notes/Bear can't)
 
+### Marketing Message: Cross-Platform Freedom
+
+> *"Your notes shouldn't be locked to one ecosystem. Zenote works on any device — Mac, Windows, Linux, iOS, Android, ChromeOS. No app to install. Just open and write."*
+
 ### Strategic Recommendation
 
 > **"The note-taking app for people overwhelmed by note-taking apps."**
