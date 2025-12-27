@@ -44,6 +44,7 @@ Zenote occupies a **distinctive niche** in the note-taking landscape: a contempl
 3. **"Faded Notes"** and **"Letting Go"** (organic language for deletion)
 4. **Demo-to-signup** content migration
 5. **Serif typography** (Cormorant Garamond — literary positioning)
+6. **True cross-platform** (works on Windows, Linux, Android — anywhere Apple Notes/Bear can't)
 
 ### Strategic Recommendation
 
@@ -332,6 +333,7 @@ Editor
 | **Demo Editor** | Try before signup, content migrates | Friction reduction |
 | **Serif Typography** | Cormorant Garamond for titles | Literary positioning |
 | **Contemplative Voice** | "A quiet space for your mind" | Emotional resonance |
+| **True Cross-Platform** | Web-based, works everywhere with a browser | Escapes Apple/Google ecosystem lock-in; reaches Windows, Linux, Android, ChromeOS users that Apple Notes and Bear cannot |
 
 ### Positioning Matrix
 
