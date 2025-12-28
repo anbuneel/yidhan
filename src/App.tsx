@@ -425,7 +425,7 @@ function App() {
 
     try {
       await softDeleteNote(id);
-      setNotes(notes.filter((n) => n.id !== id));
+      setNotes((prev) => prev.filter((n) => n.id !== id));
       setFadedNotesCount((prev) => prev + 1);
       if (selectedNoteId === id) {
         setView('library');

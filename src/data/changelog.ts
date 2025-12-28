@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.9.6',
+    date: '2025-12-28',
+    changes: [
+      { type: 'fix', text: 'Honest offline messaging - no longer implies sync capability that does not exist' },
+      { type: 'improvement', text: 'Defense-in-depth XSS protection - shared notes now explicitly sanitized' },
+      { type: 'fix', text: 'Delete race condition - fixed stale closure bug in note deletion' },
+    ],
+  },
+  {
     version: '1.9.5',
     date: '2025-12-28',
     changes: [

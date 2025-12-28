@@ -52,9 +52,12 @@ describe('withRetry', () => {
     const fn = vi.fn().mockRejectedValue(new Error('persistent failure'));
 
     const resultPromise = withRetry(fn, { maxAttempts: 3, initialDelayMs: 100 });
-    await vi.runAllTimersAsync();
 
-    await expect(resultPromise).rejects.toThrow('persistent failure');
+    // Attach rejection handler before running timers to avoid unhandled rejection
+    const expectation = expect(resultPromise).rejects.toThrow('persistent failure');
+    await vi.runAllTimersAsync();
+    await expectation;
+
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
@@ -120,9 +123,12 @@ describe('withRetry', () => {
     const fn = vi.fn().mockRejectedValue(new Error('fail'));
 
     const resultPromise = withRetry(fn, { maxAttempts: 5, initialDelayMs: 100 });
-    await vi.runAllTimersAsync();
 
-    await expect(resultPromise).rejects.toThrow('fail');
+    // Attach rejection handler before running timers to avoid unhandled rejection
+    const expectation = expect(resultPromise).rejects.toThrow('fail');
+    await vi.runAllTimersAsync();
+    await expectation;
+
     expect(fn).toHaveBeenCalledTimes(5);
   });
 
@@ -130,8 +136,10 @@ describe('withRetry', () => {
     const fn = vi.fn().mockRejectedValue('string error');
 
     const resultPromise = withRetry(fn, { maxAttempts: 1 });
-    await vi.runAllTimersAsync();
 
-    await expect(resultPromise).rejects.toThrow('string error');
+    // Attach rejection handler before running timers to avoid unhandled rejection
+    const expectation = expect(resultPromise).rejects.toThrow('string error');
+    await vi.runAllTimersAsync();
+    await expectation;
   });
 });

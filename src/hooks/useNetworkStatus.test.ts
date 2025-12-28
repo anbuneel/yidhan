@@ -78,7 +78,7 @@ describe('useNetworkStatus', () => {
     renderHook(() => useNetworkStatus());
 
     expect(toast).toHaveBeenCalledWith(
-      'Writing locally. Will sync when the path clears.',
+      'Connection lost. Changes may not be saved.',
       expect.objectContaining({
         icon: '雲',
         duration: 4000,
@@ -96,7 +96,7 @@ describe('useNetworkStatus', () => {
     window.dispatchEvent(new Event('offline'));
 
     expect(toast).toHaveBeenCalledWith(
-      'Writing locally. Will sync when the path clears.',
+      'Connection lost. Changes may not be saved.',
       expect.objectContaining({
         icon: '雲',
         duration: 4000,
@@ -147,7 +147,7 @@ describe('useNetworkStatus', () => {
     // Go offline
     window.dispatchEvent(new Event('offline'));
     expect(toast).toHaveBeenCalledWith(
-      'Writing locally. Will sync when the path clears.',
+      'Connection lost. Changes may not be saved.',
       expect.anything()
     );
 
@@ -169,7 +169,7 @@ describe('useNetworkStatus', () => {
     // Go offline again
     window.dispatchEvent(new Event('offline'));
     expect(toast).toHaveBeenCalledWith(
-      'Writing locally. Will sync when the path clears.',
+      'Connection lost. Changes may not be saved.',
       expect.anything()
     );
   });

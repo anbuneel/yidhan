@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Note, Theme } from '../types';
 import { fetchSharedNote } from '../services/notes';
+import { sanitizeHtml } from '../utils/sanitize';
 import { TagBadge } from './TagBadge';
 import { Footer } from './Footer';
 
@@ -257,7 +258,7 @@ export function SharedNoteView({
               color: 'var(--color-text-primary)',
               lineHeight: 1.8,
             }}
-            dangerouslySetInnerHTML={{ __html: note?.content || '' }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(note?.content || '') }}
           />
 
           {/* Footer attribution */}
