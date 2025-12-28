@@ -35,6 +35,8 @@ export const midnight: ThemeConfig = {
     destructive: '#E07A5F',
     success: '#4CAF50',
     successGlow: 'rgba(76, 175, 80, 0.2)',
+    error: '#EF4444',
+    errorLight: 'rgba(239, 68, 68, 0.15)',
 
     // Status colors
     statusProgress: '#D4AF37',

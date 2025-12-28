@@ -417,11 +417,14 @@ describe('Editor', () => {
       const titleInput = screen.getByDisplayValue('Test Note');
       fireEvent.change(titleInput, { target: { value: 'Changed' } });
 
-      // Press Escape
+      // Press Escape - now async, await the save before checking
       fireEvent.keyDown(window, { key: 'Escape' });
 
-      expect(onUpdate).toHaveBeenCalled();
-      expect(onBack).toHaveBeenCalled();
+      // Wait for the async save and navigation to complete
+      await waitFor(() => {
+        expect(onUpdate).toHaveBeenCalled();
+        expect(onBack).toHaveBeenCalled();
+      });
     });
 
     it('copies note on Cmd+Shift+C', async () => {

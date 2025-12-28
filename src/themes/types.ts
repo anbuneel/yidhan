@@ -27,6 +27,8 @@ export interface ThemeColors {
   destructive: string;
   success: string;
   successGlow: string;
+  error: string;
+  errorLight: string;
 
   // Status colors (roadmap/changelog)
   statusProgress: string;
@@ -73,6 +75,8 @@ export function themeToCssVariables(theme: ThemeColors): Record<string, string> 
     '--color-destructive': theme.destructive,
     '--color-success': theme.success,
     '--color-success-glow': theme.successGlow,
+    '--color-error': theme.error,
+    '--color-error-light': theme.errorLight,
     '--color-status-progress': theme.statusProgress,
     '--color-status-coming': theme.statusComing,
     '--color-status-exploring': theme.statusExploring,

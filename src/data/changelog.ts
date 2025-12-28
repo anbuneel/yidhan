@@ -8,6 +8,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.9.7',
+    date: '2025-12-28',
+    changes: [
+      { type: 'improvement', text: 'Smart retry logic - 4xx errors fail fast, only network/5xx errors retry' },
+      { type: 'improvement', text: 'Save tracking - navigation now awaits in-flight saves to prevent data loss' },
+      { type: 'improvement', text: 'Sentry privacy - note content masked in session replays' },
+      { type: 'improvement', text: 'Accessibility - Space key now works for keyboard navigation' },
+      { type: 'improvement', text: 'Error tokens - consistent error colors across light and dark themes' },
+    ],
+  },
+  {
     version: '1.9.6',
     date: '2025-12-28',
     changes: [

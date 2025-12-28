@@ -33,7 +33,13 @@ if (sentryDsn) {
     environment: import.meta.env.MODE,
     integrations: [
       Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration(),
+      Sentry.replayIntegration({
+        // Mask note content in session replays for privacy
+        maskAllInputs: true,
+        blockAllMedia: false,
+        // Block sensitive content selectors
+        block: ['.rich-text-editor', '.ProseMirror', '[data-sensitive]'],
+      }),
     ],
     // Performance monitoring sample rate (10% of transactions)
     tracesSampleRate: 0.1,

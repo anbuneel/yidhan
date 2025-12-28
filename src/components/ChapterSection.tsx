@@ -91,7 +91,12 @@ export function ChapterSection({
         aria-expanded={isCollapsible ? isExpanded : undefined}
         aria-controls={isCollapsible ? `chapter-content-${chapterKey}` : undefined}
         tabIndex={isCollapsible ? 0 : undefined}
-        onKeyDown={isCollapsible ? (e) => e.key === 'Enter' && setIsExpanded(!isExpanded) : undefined}
+        onKeyDown={isCollapsible ? (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsExpanded(!isExpanded);
+          }
+        } : undefined}
       >
         {/* Label with optional chevron for collapsible sections */}
         <div className="flex items-center gap-2 shrink-0">

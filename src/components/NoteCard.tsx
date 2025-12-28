@@ -63,7 +63,12 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
       role="button"
       tabIndex={0}
       onClick={() => onClick(note.id)}
-      onKeyDown={(e) => e.key === 'Enter' && onClick(note.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick(note.id);
+        }
+      }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-6px)';
       }}

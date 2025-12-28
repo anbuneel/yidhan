@@ -37,6 +37,8 @@ export const mori: ThemeConfig = {
     destructive: '#D4715E',
     success: '#5A9E5F',
     successGlow: 'rgba(90, 158, 95, 0.2)',
+    error: '#EF4444',
+    errorLight: 'rgba(239, 68, 68, 0.15)',
 
     // Status colors
     statusProgress: '#C9A962',

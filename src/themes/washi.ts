@@ -37,6 +37,8 @@ export const washi: ThemeConfig = {
     destructive: '#9B3D2B',
     success: '#4A6741',
     successGlow: 'rgba(74, 103, 65, 0.15)',
+    error: '#DC2626',
+    errorLight: '#FEE2E2',
 
     // Status colors
     statusProgress: '#B8860B',
