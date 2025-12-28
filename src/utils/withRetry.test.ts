@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { withRetry } from './withRetry';
+import { withRetry, isRetryableError } from './withRetry';
 
 describe('withRetry', () => {
   beforeEach(() => {
@@ -141,5 +141,88 @@ describe('withRetry', () => {
     const expectation = expect(resultPromise).rejects.toThrow('string error');
     await vi.runAllTimersAsync();
     await expectation;
+  });
+
+  it('does not retry 4xx errors by default', async () => {
+    const fn = vi.fn().mockRejectedValue(new Error('400 Bad Request'));
+
+    const resultPromise = withRetry(fn, { maxAttempts: 3, initialDelayMs: 100 });
+
+    const expectation = expect(resultPromise).rejects.toThrow('400 Bad Request');
+    await vi.runAllTimersAsync();
+    await expectation;
+
+    // Should only try once - no retries for 4xx
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries 5xx errors by default', async () => {
+    const fn = vi.fn()
+      .mockRejectedValueOnce(new Error('500 Internal Server Error'))
+      .mockResolvedValue('success');
+
+    const resultPromise = withRetry(fn, { maxAttempts: 3, initialDelayMs: 100 });
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result).toBe('success');
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries network errors by default', async () => {
+    const fn = vi.fn()
+      .mockRejectedValueOnce(new Error('Network request failed'))
+      .mockResolvedValue('success');
+
+    const resultPromise = withRetry(fn, { maxAttempts: 3, initialDelayMs: 100 });
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result).toBe('success');
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('respects custom shouldRetry function', async () => {
+    const fn = vi.fn().mockRejectedValue(new Error('custom error'));
+    const shouldRetry = vi.fn().mockReturnValue(false);
+
+    const resultPromise = withRetry(fn, {
+      maxAttempts: 3,
+      initialDelayMs: 100,
+      shouldRetry,
+    });
+
+    const expectation = expect(resultPromise).rejects.toThrow('custom error');
+    await vi.runAllTimersAsync();
+    await expectation;
+
+    // Should only try once when shouldRetry returns false
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(shouldRetry).toHaveBeenCalledWith(expect.any(Error));
+  });
+});
+
+describe('isRetryableError', () => {
+  it('returns true for network errors', () => {
+    expect(isRetryableError(new Error('Network request failed'))).toBe(true);
+    expect(isRetryableError(new Error('Failed to fetch'))).toBe(true);
+    expect(isRetryableError(new Error('Connection timeout'))).toBe(true);
+  });
+
+  it('returns false for 4xx errors', () => {
+    expect(isRetryableError(new Error('400 Bad Request'))).toBe(false);
+    expect(isRetryableError(new Error('401 Unauthorized'))).toBe(false);
+    expect(isRetryableError(new Error('403 Forbidden'))).toBe(false);
+    expect(isRetryableError(new Error('404 Not Found'))).toBe(false);
+  });
+
+  it('returns true for 5xx errors', () => {
+    expect(isRetryableError(new Error('500 Internal Server Error'))).toBe(true);
+    expect(isRetryableError(new Error('502 Bad Gateway'))).toBe(true);
+    expect(isRetryableError(new Error('503 Service Unavailable'))).toBe(true);
+  });
+
+  it('returns true for unknown errors', () => {
+    expect(isRetryableError(new Error('Something went wrong'))).toBe(true);
   });
 });

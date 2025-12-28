@@ -47,6 +47,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   // Separate refs for save indicator phases to avoid nested timeout issues
   const savePhaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track in-flight save promise to await on navigation
+  const inFlightSaveRef = useRef<Promise<void> | null>(null);
   const [currentNoteId, setCurrentNoteId] = useState(note.id);
 
   // Reset local state when switching to a different note
@@ -73,30 +75,39 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
     setSaveStatus('saving');
 
-    try {
-      await onUpdate({
-        ...note,
-        title,
-        content,
-        updatedAt: new Date(),
-      });
+    // Create and track the save promise
+    const savePromise = (async () => {
+      try {
+        await onUpdate({
+          ...note,
+          title,
+          content,
+          updatedAt: new Date(),
+        });
 
-      // Save succeeded - show success state
-      setSaveStatus('saved');
+        // Save succeeded - show success state
+        setSaveStatus('saved');
 
-      // Hide indicator after 2 seconds
-      hideIndicatorTimeoutRef.current = setTimeout(() => {
-        setSaveStatus('idle');
-      }, 2000);
-    } catch {
-      // Save failed after retries - show error state
-      setSaveStatus('error');
+        // Hide indicator after 2 seconds
+        hideIndicatorTimeoutRef.current = setTimeout(() => {
+          setSaveStatus('idle');
+        }, 2000);
+      } catch {
+        // Save failed after retries - show error state
+        setSaveStatus('error');
 
-      // Keep error visible for 5 seconds
-      hideIndicatorTimeoutRef.current = setTimeout(() => {
-        setSaveStatus('idle');
-      }, 5000);
-    }
+        // Keep error visible for 5 seconds
+        hideIndicatorTimeoutRef.current = setTimeout(() => {
+          setSaveStatus('idle');
+        }, 5000);
+      } finally {
+        // Clear the in-flight ref when done
+        inFlightSaveRef.current = null;
+      }
+    })();
+
+    inFlightSaveRef.current = savePromise;
+    await savePromise;
   }, [title, content, note, onUpdate]);
 
   // Auto-save when content changes (debounced)
@@ -123,10 +134,15 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
   // Handle keyboard shortcuts
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Escape: save and go back
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      // Escape: save and go back (await any in-flight save)
       if (e.key === 'Escape') {
-        performSave();
+        // First await any existing in-flight save
+        if (inFlightSaveRef.current) {
+          await inFlightSaveRef.current;
+        }
+        // Then trigger a new save if needed and await it
+        await performSave();
         onBack();
       }
       // Cmd/Ctrl+Shift+C: copy note to clipboard
@@ -144,14 +160,16 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
   // Cleanup timeouts on unmount
   useEffect(() => {
+    // Capture refs to clear on cleanup (required by exhaustive-deps rule)
+    const autoSaveTimeout = autoSaveTimeoutRef;
+    const savePhaseTimeout = savePhaseTimeoutRef;
+    const hideIndicatorTimeout = hideIndicatorTimeoutRef;
+
     return () => {
-      // These refs are intentionally accessed in cleanup to clear any pending timeouts
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      if (savePhaseTimeoutRef.current) clearTimeout(savePhaseTimeoutRef.current);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      if (hideIndicatorTimeoutRef.current) clearTimeout(hideIndicatorTimeoutRef.current);
+      // Clear any pending timeouts when component unmounts
+      if (autoSaveTimeout.current) clearTimeout(autoSaveTimeout.current);
+      if (savePhaseTimeout.current) clearTimeout(savePhaseTimeout.current);
+      if (hideIndicatorTimeout.current) clearTimeout(hideIndicatorTimeout.current);
     };
   }, []);
 
@@ -203,9 +221,14 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     onDelete(note.id);
   };
 
-  // Handle logo click: save and go back
-  const handleLogoClick = () => {
-    performSave();
+  // Handle logo click: save and go back (awaits any in-flight save)
+  const handleLogoClick = async () => {
+    // First await any existing in-flight save
+    if (inFlightSaveRef.current) {
+      await inFlightSaveRef.current;
+    }
+    // Then trigger a new save if needed and await it
+    await performSave();
     onBack();
   };
 
@@ -349,12 +372,12 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
             color: saveStatus === 'saving'
               ? 'var(--color-accent)'
               : saveStatus === 'error'
-                ? 'var(--color-error, #dc2626)'
+                ? 'var(--color-error)'
                 : 'var(--color-success)',
             background: saveStatus === 'saving'
               ? 'var(--color-accent-glow)'
               : saveStatus === 'error'
-                ? 'var(--color-error-glow, rgba(220, 38, 38, 0.1))'
+                ? 'var(--color-error-light)'
                 : 'var(--color-success-glow)',
           }}
         >

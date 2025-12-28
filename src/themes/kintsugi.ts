@@ -35,6 +35,8 @@ export const kintsugi: ThemeConfig = {
     destructive: '#B54A32',
     success: '#3D7A4A',
     successGlow: 'rgba(61, 122, 74, 0.15)',
+    error: '#DC2626',
+    errorLight: '#FEE2E2',
 
     // Status colors
     statusProgress: '#D4AF37',
