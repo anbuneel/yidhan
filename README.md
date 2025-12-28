@@ -36,7 +36,7 @@ A calm, distraction-free note-taking app inspired by Japanese stationery and wab
 - **Toast Notifications** - Modern, non-intrusive feedback for all actions
 - **Network Detection** - Alerts when you go offline or come back online
 - **Error Monitoring** - Optional Sentry integration for production error tracking
-- **Test Coverage** - Comprehensive tests with Vitest and React Testing Library
+- **Test Coverage** - Comprehensive tests with Vitest, React Testing Library, and Playwright E2E tests
 - **CI/CD Pipeline** - Automated testing and builds via GitHub Actions
 - **Code Splitting** - Lazy-loaded editor for faster initial page loads
 - **Sticky Toolbar** - Formatting toolbar stays visible while scrolling long notes
@@ -168,6 +168,10 @@ create index note_tags_tag_id_idx on note_tags(tag_id);
 | `npm run test` | Run tests in watch mode |
 | `npm run test:run` | Run tests once |
 | `npm run check` | **Run before committing** - Full CI check (typecheck + lint + test + build) |
+| `npm run e2e` | Run Playwright E2E tests |
+| `npm run e2e:ui` | Open Playwright UI for interactive testing |
+| `npm run e2e:headed` | Run E2E tests with visible browser |
+| `npm run e2e:report` | View E2E test HTML report |
 
 ## Project Structure
 

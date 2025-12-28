@@ -81,6 +81,15 @@ src/
 ├── index.css              # Design system + Tiptap styles
 ├── types.ts               # App types (Note, Tag, Theme, ViewMode, TagColor)
 └── main.tsx               # Entry point with AuthProvider and ErrorBoundary
+
+e2e/
+├── fixtures.ts            # Playwright test fixtures and helpers
+├── auth.spec.ts           # Authentication E2E tests
+├── notes.spec.ts          # Note CRUD E2E tests
+├── tags.spec.ts           # Tag management E2E tests
+├── sharing.spec.ts        # Share link E2E tests
+├── export-import.spec.ts  # Export/Import E2E tests
+└── settings.spec.ts       # Settings E2E tests
 ```
 
 ## Key Commands
@@ -93,6 +102,10 @@ npm run typecheck # Type check without emitting
 npm run test     # Run tests in watch mode
 npm run test:run # Run tests once
 npm run check    # Full CI check: typecheck + lint + test + build
+npm run e2e      # Run Playwright E2E tests
+npm run e2e:ui   # Open Playwright UI for interactive testing
+npm run e2e:headed # Run E2E tests with visible browser
+npm run e2e:report # View E2E test HTML report
 npm run theme:generate  # Generate CSS from active themes
 npm run theme:preview   # Preview theme CSS without updating
 npm run icons:generate  # Generate PWA icons from SVG source

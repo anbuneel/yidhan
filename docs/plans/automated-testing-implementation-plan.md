@@ -2,7 +2,7 @@
 
 **Author:** Claude (Opus 4.5)
 **Date:** 2025-12-27
-**Status:** In Progress (Phase 5 Complete)
+**Status:** In Progress (Phase 6 Complete)
 
 ---
 
@@ -248,10 +248,10 @@ Day 7 (PR 5): ✅ COMPLETE
   [x] 5.2 useNetworkStatus.test.ts (9 tests)
   → PR #37
 
-Day 8-9 (PR 6):
-  [ ] 6.1 Playwright setup
-  [ ] 6.2 E2E test files
-  → Commit & PR
+Day 8-9 (PR 6): ✅ COMPLETE
+  [x] 6.1 Playwright setup
+  [x] 6.2 E2E test files
+  → PR #38
 ```
 
 ---
@@ -274,17 +274,17 @@ Day 8-9 (PR 6):
 | `src/components/Auth.test.tsx` | Integration | 43 | ✅ |
 | `src/components/ChapteredLibrary.test.tsx` | Integration | 17 | ✅ |
 | `src/hooks/useNetworkStatus.test.ts` | Unit | 9 | ✅ |
-| `playwright.config.ts` | Config | - | |
-| `e2e/fixtures.ts` | E2E Helper | - | |
-| `e2e/auth.spec.ts` | E2E | 6 | |
-| `e2e/notes.spec.ts` | E2E | 8 | |
-| `e2e/tags.spec.ts` | E2E | 5 | |
-| `e2e/sharing.spec.ts` | E2E | 4 | |
-| `e2e/export-import.spec.ts` | E2E | 4 | |
-| `e2e/settings.spec.ts` | E2E | 3 | |
+| `playwright.config.ts` | Config | - | ✅ |
+| `e2e/fixtures.ts` | E2E Helper | - | ✅ |
+| `e2e/auth.spec.ts` | E2E | 20 | ✅ |
+| `e2e/notes.spec.ts` | E2E | 22 | ✅ |
+| `e2e/tags.spec.ts` | E2E | 16 | ✅ |
+| `e2e/sharing.spec.ts` | E2E | 9 | ✅ |
+| `e2e/export-import.spec.ts` | E2E | 9 | ✅ |
+| `e2e/settings.spec.ts` | E2E | 10 | ✅ |
 
-**Total: 22 new files, ~450 new tests**
-**Progress: 14 files created, 439 tests written**
+**Total: 22 new files, ~525 tests**
+**Progress: 22 files created, 439 unit tests + 86 E2E tests written**
 
 ---
 
@@ -293,7 +293,9 @@ Day 8-9 (PR 6):
 | File | Change | Status |
 |------|--------|--------|
 | `src/test/setup.ts` | Add global mocks | ✅ |
-| `package.json` | Add coverage script, Playwright dep | |
+| `package.json` | Add E2E scripts, Playwright dep | ✅ |
+| `.gitignore` | Add Playwright artifacts | ✅ |
+| `eslint.config.js` | Disable React hooks rules for e2e/ | ✅ |
 | `vite.config.ts` | Add coverage thresholds | |
 
 ---
@@ -307,7 +309,7 @@ Day 8-9 (PR 6):
 | PR #35 | 3 | 141 | Service layer tests (tags + notes) | ✅ |
 | PR #36 | 4 | 143 | Component integration tests | ✅ |
 | PR #37 | 5 | 26 | ChapteredLibrary + hooks tests | ✅ |
-| PR 6 | 6 | ~30 | E2E tests with Playwright | |
+| PR #38 | 6 | 86 | E2E tests with Playwright | ✅ |
 
 ---
 
@@ -492,3 +494,81 @@ Day 8-9 (PR 6):
 - `window.dispatchEvent(new Event('offline'))` for network event simulation
 - `vi.spyOn(window, 'addEventListener')` for listener verification
 - IntersectionObserver implicitly tested via global mock in test/setup.ts
+
+### Phase 6: E2E Tests with Playwright (Complete)
+
+**PR:** [#38](https://github.com/anbuneel/zenote/pull/38)
+**Branch:** `feature/phase6-e2e-tests`
+**Tests:** 86 E2E tests
+
+#### Files Created
+| File | Description |
+|------|-------------|
+| `playwright.config.ts` | Playwright configuration with webServer, browsers, and retry settings |
+| `e2e/fixtures.ts` | Test fixtures (authenticatedPage) and reusable helper functions |
+| `e2e/auth.spec.ts` | 20 tests for authentication flows (login, signup, forgot password, OAuth) |
+| `e2e/notes.spec.ts` | 22 tests for note CRUD, search, pinning, faded notes |
+| `e2e/tags.spec.ts` | 16 tests for tag creation, editing, deletion, filtering, assignment |
+| `e2e/sharing.spec.ts` | 9 tests for share link creation, viewing, and revocation |
+| `e2e/export-import.spec.ts` | 9 tests for export (JSON, Markdown) and import functionality |
+| `e2e/settings.spec.ts` | 10 tests for settings modal, profile, password, theme, offboarding |
+
+#### Files Modified
+| File | Change |
+|------|--------|
+| `package.json` | Added E2E scripts (e2e, e2e:ui, e2e:headed, e2e:report) |
+| `.gitignore` | Added Playwright artifacts (test-results/, playwright-report/, etc.) |
+| `eslint.config.js` | Disabled React hooks rules for e2e/ directory |
+
+#### Test Coverage by Feature
+| Feature | Tests |
+|---------|-------|
+| Landing Page | 4 |
+| Login Flow | 5 |
+| Signup Flow | 5 |
+| Forgot Password | 3 |
+| Auth Modal Behavior | 3 |
+| Note Creation | 4 |
+| Note Editing | 5 |
+| Note Deletion | 3 |
+| Note Search | 5 |
+| Note Pinning | 2 |
+| Faded Notes | 3 |
+| Tag Creation | 4 |
+| Tag Editing | 2 |
+| Tag Deletion | 1 |
+| Tag Filtering | 4 |
+| Tag Assignment | 5 |
+| Share Creation | 4 |
+| Shared Note View | 3 |
+| Share Revocation | 2 |
+| Export | 4 |
+| Copy to Clipboard | 2 |
+| Import | 3 |
+| Settings Modal | 3 |
+| Profile Settings | 2 |
+| Password Settings | 2 |
+| Theme Settings | 1 |
+| Offboarding | 2 |
+
+#### Key Testing Patterns
+- Custom test fixtures with `base.extend<{}>` for authenticated page context
+- Reusable helper functions for common actions (loginUser, createNote, createTag, etc.)
+- `authenticatedPage` fixture that logs in before each test
+- `page.waitForEvent('download')` for testing file downloads
+- Semantic locators using `getByRole`, `getByTestId`, `getByText`, `getByPlaceholder`
+- Flexible regex patterns for matching UI text (e.g., `/sign in/i`, `/save|create/i`)
+- Conditional logic for optional UI elements (confirmation dialogs, etc.)
+
+#### E2E Test Scripts
+```bash
+npm run e2e          # Run all E2E tests headless
+npm run e2e:ui       # Open Playwright UI for interactive testing
+npm run e2e:headed   # Run tests with visible browser
+npm run e2e:report   # View HTML test report
+```
+
+#### Prerequisites for Running E2E Tests
+- Test user account configured in Supabase
+- Environment variables: `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`
+- Dev server running (or use webServer config in playwright.config.ts)
