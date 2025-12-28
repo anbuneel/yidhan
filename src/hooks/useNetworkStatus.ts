@@ -30,7 +30,7 @@ export function useNetworkStatus() {
 
     const handleOffline = () => {
       wasOffline.current = true;
-      toast('Writing locally. Will sync when the path clears.', {
+      toast('Connection lost. Changes may not be saved.', {
         icon: '雲',
         duration: 4000,
         style: {
@@ -47,7 +47,7 @@ export function useNetworkStatus() {
     // Check initial state
     if (!navigator.onLine) {
       wasOffline.current = true;
-      toast('Writing locally. Will sync when the path clears.', {
+      toast('Connection lost. Changes may not be saved.', {
         icon: '雲',
         duration: 4000,
         style: {

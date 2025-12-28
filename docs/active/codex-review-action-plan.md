@@ -11,19 +11,19 @@
 
 Prioritized action plan addressing findings from Codex code review. Items are grouped by priority with effort estimates and acceptance criteria.
 
-| Priority | Items | Total Effort |
-|----------|-------|--------------|
-| P1 (Pre-Launch) | 3 | ~35 min |
-| P2 (Launch Week) | 4 | ~2-3 hrs |
-| P3 (Post-Launch) | 4 | ~1.5 hrs |
-| Dismissed | 1 | - |
+| Priority | Items | Total Effort | Status |
+|----------|-------|--------------|--------|
+| P1 (Pre-Launch) | 3 | ~35 min | ✅ Complete |
+| P2 (Launch Week) | 4 | ~2-3 hrs | Pending |
+| P3 (Post-Launch) | 4 | ~1.5 hrs | Pending |
+| Dismissed | 1 | - | - |
 
 ---
 
 ## P1 - Pre-Launch (Must Fix)
 
 ### 1.1 Fix Offline Messaging
-**Status:** [ ] Open
+**Status:** [x] Completed (2025-12-28)
 **Effort:** 15 min
 **File:** `src/hooks/useNetworkStatus.ts`
 
@@ -46,7 +46,7 @@ toast('Connection lost. Changes may not be saved.', ...);
 ---
 
 ### 1.2 Add Sanitization to SharedNoteView
-**Status:** [ ] Open
+**Status:** [x] Completed (2025-12-28)
 **Effort:** 15 min
 **File:** `src/components/SharedNoteView.tsx`
 
@@ -71,7 +71,7 @@ dangerouslySetInnerHTML={{ __html: sanitizeHtml(note?.content || '') }}
 ---
 
 ### 1.3 Fix Delete Stale Closure
-**Status:** [ ] Open
+**Status:** [x] Completed (2025-12-28)
 **Effort:** 5 min
 **File:** `src/App.tsx` (line ~428)
 
@@ -295,6 +295,7 @@ onKeyDown={(e) => {
 | Date | Action | Items Completed |
 |------|--------|-----------------|
 | 2025-12-28 | Plan created | - |
+| 2025-12-28 | P1 fixes completed | 1.1, 1.2, 1.3 |
 
 ---
 
