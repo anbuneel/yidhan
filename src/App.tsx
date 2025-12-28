@@ -3,22 +3,26 @@ import toast from 'react-hot-toast';
 import type { Note, Tag, ViewMode, Theme } from './types';
 import { Header } from './components/Header';
 import { ChapteredLibrary } from './components/ChapteredLibrary';
-import { FadedNotesView } from './components/FadedNotesView';
-import { SharedNoteView } from './components/SharedNoteView';
 import { Auth } from './components/Auth';
 import { LandingPage } from './components/LandingPage';
 import { sanitizeText } from './utils/sanitize';
 
-// Lazy load the Editor component (includes heavy Tiptap dependencies)
+// Lazy load heavy components to reduce initial bundle size
 const Editor = lazy(() => import('./components/Editor').then(module => ({ default: module.Editor })));
+const ChangelogPage = lazy(() => import('./components/ChangelogPage').then(module => ({ default: module.ChangelogPage })));
+const RoadmapPage = lazy(() => import('./components/RoadmapPage').then(module => ({ default: module.RoadmapPage })));
+const FadedNotesView = lazy(() => import('./components/FadedNotesView').then(module => ({ default: module.FadedNotesView })));
+const SharedNoteView = lazy(() => import('./components/SharedNoteView').then(module => ({ default: module.SharedNoteView })));
+
 import { TagFilterBar } from './components/TagFilterBar';
-import { TagModal } from './components/TagModal';
-import { SettingsModal } from './components/SettingsModal';
-import { LettingGoModal } from './components/LettingGoModal';
 import { WelcomeBackPrompt } from './components/WelcomeBackPrompt';
-import { ChangelogPage } from './components/ChangelogPage';
-import { RoadmapPage } from './components/RoadmapPage';
 import { Footer } from './components/Footer';
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+// Lazy load modals (only loaded when opened)
+const TagModal = lazy(() => import('./components/TagModal').then(module => ({ default: module.TagModal })));
+const SettingsModal = lazy(() => import('./components/SettingsModal').then(module => ({ default: module.SettingsModal })));
+const LettingGoModal = lazy(() => import('./components/LettingGoModal').then(module => ({ default: module.LettingGoModal })));
 import { useAuth } from './contexts/AuthContext';
 import {
   fetchNotes,
@@ -53,6 +57,26 @@ import { useNetworkStatus } from './hooks/useNetworkStatus';
 import './App.css';
 
 const DEMO_STORAGE_KEY = 'zenote-demo-content';
+
+// Reusable loading fallback for lazy-loaded components
+function LoadingFallback({ message = 'Loading...' }: { message?: string }) {
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{ background: 'var(--color-bg-primary)' }}
+    >
+      <div className="text-center">
+        <div
+          className="w-8 h-8 mx-auto mb-4 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
+        />
+        <p style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}>
+          {message}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease } = useAuth();
@@ -893,18 +917,22 @@ function App() {
   // Show shared note view if share token is present
   if (shareToken) {
     return (
-      <SharedNoteView
-        token={shareToken}
-        theme={theme}
-        onThemeToggle={handleThemeToggle}
-        onInvalidToken={() => {
-          // Clear URL and show landing/library
-          window.history.replaceState({}, '', window.location.pathname);
-          setShareToken(null);
-        }}
-        onChangelogClick={() => setView('changelog')}
-        onRoadmapClick={() => setView('roadmap')}
-      />
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback message="Loading shared note..." />}>
+          <SharedNoteView
+          token={shareToken}
+          theme={theme}
+          onThemeToggle={handleThemeToggle}
+          onInvalidToken={() => {
+            // Clear URL and show landing/library
+            window.history.replaceState({}, '', window.location.pathname);
+            setShareToken(null);
+          }}
+          onChangelogClick={() => setView('changelog')}
+          onRoadmapClick={() => setView('roadmap')}
+        />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
@@ -912,17 +940,21 @@ function App() {
   if (view === 'changelog') {
     return (
       <>
-        <ChangelogPage
-          theme={theme}
-          onThemeToggle={handleThemeToggle}
-          onSignIn={() => {
-            setAuthModalMode('login');
-            setShowAuthModal(true);
-          }}
-          onLogoClick={() => setView('library')}
-          onRoadmapClick={() => setView('roadmap')}
-          onSettingsClick={() => setShowSettingsModal(true)}
-        />
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingFallback />}>
+            <ChangelogPage
+              theme={theme}
+              onThemeToggle={handleThemeToggle}
+              onSignIn={() => {
+                setAuthModalMode('login');
+                setShowAuthModal(true);
+              }}
+              onLogoClick={() => setView('library')}
+              onRoadmapClick={() => setView('roadmap')}
+              onSettingsClick={() => setShowSettingsModal(true)}
+            />
+          </Suspense>
+        </ErrorBoundary>
         {showAuthModal && (
           <Auth
             theme={theme}
@@ -939,17 +971,21 @@ function App() {
   if (view === 'roadmap') {
     return (
       <>
-        <RoadmapPage
-          theme={theme}
-          onThemeToggle={handleThemeToggle}
-          onSignIn={() => {
-            setAuthModalMode('login');
-            setShowAuthModal(true);
-          }}
-          onLogoClick={() => setView('library')}
-          onChangelogClick={() => setView('changelog')}
-          onSettingsClick={() => setShowSettingsModal(true)}
-        />
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingFallback />}>
+            <RoadmapPage
+              theme={theme}
+              onThemeToggle={handleThemeToggle}
+              onSignIn={() => {
+                setAuthModalMode('login');
+                setShowAuthModal(true);
+              }}
+              onLogoClick={() => setView('library')}
+              onChangelogClick={() => setView('changelog')}
+              onSettingsClick={() => setShowSettingsModal(true)}
+            />
+          </Suspense>
+        </ErrorBoundary>
         {showAuthModal && (
           <Auth
             theme={theme}
@@ -1024,17 +1060,21 @@ function App() {
   // Faded Notes View
   if (view === 'faded') {
     return (
-      <FadedNotesView
-        notes={fadedNotes}
-        isLoading={fadedNotesLoading}
-        onBack={() => setView('library')}
-        onRestore={handleRestoreNote}
-        onPermanentDelete={handlePermanentDelete}
-        onEmptyAll={handleEmptyFadedNotes}
-        theme={theme}
-        onThemeToggle={handleThemeToggle}
-        onSettingsClick={() => setShowSettingsModal(true)}
-      />
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback message="Loading faded notes..." />}>
+          <FadedNotesView
+            notes={fadedNotes}
+            isLoading={fadedNotesLoading}
+            onBack={() => setView('library')}
+            onRestore={handleRestoreNote}
+            onPermanentDelete={handlePermanentDelete}
+            onEmptyAll={handleEmptyFadedNotes}
+            theme={theme}
+            onThemeToggle={handleThemeToggle}
+            onSettingsClick={() => setShowSettingsModal(true)}
+          />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
@@ -1079,31 +1119,49 @@ function App() {
         )}
 
         {/* Tag Modal */}
-        <TagModal
-          isOpen={showTagModal}
-          onClose={handleCloseTagModal}
-          onSave={handleSaveTag}
-          onDelete={handleDeleteTag}
-          editingTag={editingTag}
-          existingTags={tags}
-        />
+        {showTagModal && (
+          <ErrorBoundary>
+            <Suspense fallback={null}>
+              <TagModal
+                isOpen={showTagModal}
+                onClose={handleCloseTagModal}
+                onSave={handleSaveTag}
+                onDelete={handleDeleteTag}
+                editingTag={editingTag}
+                existingTags={tags}
+              />
+            </Suspense>
+          </ErrorBoundary>
+        )}
 
         {/* Settings Modal */}
-        <SettingsModal
-          isOpen={showSettingsModal}
-          onClose={() => setShowSettingsModal(false)}
-          theme={theme}
-          onThemeToggle={handleThemeToggle}
-          onLetGoClick={() => setShowLettingGoModal(true)}
-        />
+        {showSettingsModal && (
+          <ErrorBoundary>
+            <Suspense fallback={null}>
+              <SettingsModal
+                isOpen={showSettingsModal}
+                onClose={() => setShowSettingsModal(false)}
+                theme={theme}
+                onThemeToggle={handleThemeToggle}
+                onLetGoClick={() => setShowLettingGoModal(true)}
+              />
+            </Suspense>
+          </ErrorBoundary>
+        )}
 
         {/* Letting Go Modal (offboarding) */}
-        <LettingGoModal
-          isOpen={showLettingGoModal}
-          onClose={() => setShowLettingGoModal(false)}
-          notes={notes}
-          tags={tags}
-        />
+        {showLettingGoModal && (
+          <ErrorBoundary>
+            <Suspense fallback={null}>
+              <LettingGoModal
+                isOpen={showLettingGoModal}
+                onClose={() => setShowLettingGoModal(false)}
+                notes={notes}
+                tags={tags}
+              />
+            </Suspense>
+          </ErrorBoundary>
+        )}
 
         {/* Welcome Back Prompt (shown when user signs in during grace period) */}
         {showWelcomeBack && daysUntilRelease !== null && (
@@ -1181,24 +1239,8 @@ function App() {
   if (view === 'editor' && selectedNote) {
     return (
       <>
-        <Suspense
-          fallback={
-            <div
-              className="min-h-screen flex items-center justify-center"
-              style={{ background: 'var(--color-bg-primary)' }}
-            >
-              <div className="text-center">
-                <div
-                  className="w-8 h-8 mx-auto mb-4 border-2 border-t-transparent rounded-full animate-spin"
-                  style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
-                />
-                <p style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}>
-                  Loading editor...
-                </p>
-              </div>
-            </div>
-          }
-        >
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingFallback message="Loading editor..." />}>
           <Editor
             note={selectedNote}
             tags={tags}
@@ -1212,16 +1254,23 @@ function App() {
             onThemeToggle={handleThemeToggle}
             onSettingsClick={() => setShowSettingsModal(true)}
           />
-        </Suspense>
+          </Suspense>
+        </ErrorBoundary>
         {/* Tag Modal */}
-        <TagModal
-          isOpen={showTagModal}
-          onClose={handleCloseTagModal}
-          onSave={handleSaveTag}
-          onDelete={handleDeleteTag}
-          editingTag={editingTag}
-          existingTags={tags}
-        />
+        {showTagModal && (
+          <ErrorBoundary>
+            <Suspense fallback={null}>
+              <TagModal
+                isOpen={showTagModal}
+                onClose={handleCloseTagModal}
+                onSave={handleSaveTag}
+                onDelete={handleDeleteTag}
+                editingTag={editingTag}
+                existingTags={tags}
+              />
+            </Suspense>
+          </ErrorBoundary>
+        )}
       </>
     );
   }

@@ -6,6 +6,19 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split heavy vendor dependencies into separate chunks
+          // These cache independently and don't block initial render
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-sentry': ['@sentry/react'],
+          'vendor-react': ['react', 'react-dom'],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),

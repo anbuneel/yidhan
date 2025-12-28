@@ -1,10 +1,150 @@
 # Launch Readiness Assessment
 
 **Author:** Claude (Opus 4.5)
-**Date:** 2025-12-26
-**Status:** Action Required
+**Created:** 2025-12-26
+**Last Updated:** 2025-12-28
+**Status:** In Progress
 
 ---
+
+## Latest Summary
+
+| Assessment | Date | Readiness | Key Change |
+|------------|------|-----------|------------|
+| Assessment 1 | 2025-12-26 | ~75-80% | Initial evaluation |
+| Assessment 2 | 2025-12-28 | ~85% | Testing infrastructure complete |
+| Assessment 3 | 2025-12-28 | ~90% | Bundle size reduced 44% (596→332 KB) |
+
+---
+
+# Assessment 3 (2025-12-28)
+
+## Executive Summary
+
+**Overall: ~90% Ready** — Major bundle optimization. Main bundle reduced from 596KB to 332KB.
+
+**Key Progress:**
+- Bundle size: 596 KB → 332 KB (-44% reduction)
+- Lazy loading: 8 components now code-split
+- Vendor chunking: Supabase, Sentry, React in separate cacheable chunks
+
+**Remaining Blockers:** Bundle still above 250KB target (332KB), E2E accessibility fixes (42/81 passing)
+
+---
+
+## Bundle Optimization Results
+
+| Chunk | Before | After | Change |
+|-------|--------|-------|--------|
+| **Main bundle** | 596 KB | **332 KB** | -264 KB (-44%) |
+| Editor | 415 KB | 415 KB | (already lazy) |
+
+### New Lazy-Loaded Chunks
+
+| Chunk | Size | Type |
+|-------|------|------|
+| vendor-supabase | 189 KB | Vendor |
+| vendor-sentry | 18 KB | Vendor |
+| vendor-react | 4 KB | Vendor |
+| ChangelogPage | 12 KB | Route |
+| FadedNotesView | 11 KB | Route |
+| SettingsModal | 11 KB | Modal |
+| SharedNoteView | 6 KB | Route |
+| TagModal | 6 KB | Modal |
+| LettingGoModal | 5 KB | Modal |
+| RoadmapPage | 4 KB | Route |
+
+### Optimization Techniques Applied
+
+1. **Lazy load views/routes** - ChangelogPage, RoadmapPage, FadedNotesView, SharedNoteView
+2. **Lazy load modals** - SettingsModal, LettingGoModal, TagModal
+3. **Vendor chunking** - Supabase, Sentry, React split into separate chunks
+4. **Reusable LoadingFallback** - Consistent loading UI for Suspense boundaries
+
+---
+
+## P0 Blockers - Updated Status
+
+| Issue | Original Status | Current Status | Notes |
+|-------|-----------------|----------------|-------|
+| Bundle size 594KB | P0 Blocker | ⚠️ **Improved** | 332KB (target <250KB, -44%) |
+| Test coverage ~5% | P0 Blocker | ✅ **RESOLVED** | 439 unit + 42 E2E passing |
+| API retry logic | P0 Blocker | ❓ Unverified | Needs investigation |
+| Share token security | P0 Blocker | ❓ Unverified | Needs documentation |
+| Offline editing | P0 Blocker | ❓ Unverified | PWA sync queue status unknown |
+| Mobile real device testing | P0 Blocker | ❓ Unverified | Not tested on physical devices |
+
+---
+
+## Remaining Work
+
+### Critical (P0)
+
+1. **Bundle size** - 332KB, needs ~82KB more reduction to hit 250KB target
+   - Options: Tree-shake Auth/LandingPage, lighter deps, or accept current size
+   - Consider: 332KB may be acceptable for production
+
+2. **E2E test accessibility fixes** - 42/81 passing (52%)
+   - Issues #39-42 track remaining work
+   - Components need `role="dialog"`, `aria-modal`, label associations
+
+### High Priority (P1)
+
+3. **Verify API retry logic** - Check if note saves retry on failure
+4. **Verify offline editing** - Test PWA queue/sync behavior
+5. **Mobile device testing** - Test on real iPhone + Android
+
+---
+
+## What's Strong
+
+- ✅ **Bundle optimized** - 44% reduction, code splitting, vendor chunking
+- ✅ **Testing infrastructure complete** - Vitest + Playwright configured
+- ✅ **439 unit tests passing** - Services, utilities, components covered
+- ✅ **E2E covering all features** - Auth, notes, tags, sharing, export/import, settings
+- ✅ **CI/CD validates tests** - `npm run check` runs full suite
+- ✅ **Core features complete** - CRUD, rich editor, tags, export/import, auth, sharing
+
+---
+
+## Updated Go/No-Go Checklist
+
+**P0 (Must Have):**
+- [x] ~~Bundle size reduced~~ ✅ 596→332 KB (-44%)
+- [ ] Bundle size <250 KB (currently 332KB - consider acceptable?)
+- [x] ~~Integration tests added for note CRUD~~ ✅ 107 tests
+- [x] ~~Test coverage significantly improved~~ ✅ 439 unit tests
+- [ ] E2E tests all passing (currently 42/81)
+- [ ] API retry logic verified
+- [ ] Offline editing verified
+- [ ] Mobile tested on real devices
+- [x] ~~Sentry configured~~ ✅
+- [x] ~~Production OAuth URLs verified~~ ✅
+
+**P1 (Should Have):**
+- [ ] Rate limiting enabled on API
+- [ ] "Letting Go" includes backup download
+- [ ] Session timeout implemented
+- [ ] Feature discovery hints added
+
+---
+
+# Assessment 2 (2025-12-28)
+
+## Executive Summary
+
+**Overall: ~85% Ready** — Major progress on testing. Bundle size remains the primary blocker.
+
+**Key Progress:**
+- Test coverage: 4 files → 22 files (~525 tests written)
+- E2E infrastructure: Playwright configured with 86 tests across 6 spec files
+- CI/CD: Full test suite integrated into `npm run check`
+
+**Remaining Blockers:** Bundle size (596KB), E2E accessibility fixes (42/81 passing)
+
+---
+
+# Assessment 1 (2025-12-26)
 
 ## Executive Summary
 

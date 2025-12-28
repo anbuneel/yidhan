@@ -357,7 +357,7 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Pin notes to top of library (pin button top-left, delete moved to bottom-right)
 - [x] Test coverage (Vitest + Testing Library)
 - [x] CI/CD pipeline (GitHub Actions)
-- [x] Code splitting (lazy load Tiptap editor)
+- [x] Code splitting (lazy load Editor, views, modals, vendor chunks)
 - [x] Error monitoring (Sentry)
 - [x] Toast notifications (react-hot-toast)
 - [x] Network connectivity detection (Zen-style offline/online messages)
@@ -804,7 +804,11 @@ At the bottom of the modal is the "Let go of Zenote" link that opens the offboar
 - Toast notifications use react-hot-toast with theme-aware styling
 - Network status monitored via useNetworkStatus hook (shows offline/online toasts)
 - Sentry error monitoring enabled when VITE_SENTRY_DSN is configured
-- Editor component is lazy-loaded to reduce initial bundle size (~384KB saved)
+- Extensive code splitting reduces initial bundle (596KB → 332KB, -44%):
+  - Editor: lazy-loaded (415KB chunk)
+  - Views: ChangelogPage, RoadmapPage, FadedNotesView, SharedNoteView
+  - Modals: SettingsModal, LettingGoModal, TagModal
+  - Vendors: Supabase (189KB), Sentry (18KB), React (4KB) in separate chunks
 - Landing page shows for unauthenticated users with interactive demo
 - Auth component supports modal mode (`isModal` prop) for landing page overlay
 

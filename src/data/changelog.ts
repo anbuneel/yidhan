@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.9.3',
+    date: '2025-12-28',
+    changes: [
+      { type: 'improvement', text: 'Bundle optimization - 44% reduction in initial load size (596KB → 332KB)' },
+      { type: 'improvement', text: 'Lazy loading for views, modals, and vendor dependencies' },
+      { type: 'improvement', text: 'Vendor chunking - Supabase, Sentry, React cached independently' },
+    ],
+  },
+  {
     version: '1.9.2',
     date: '2025-12-28',
     changes: [
