@@ -212,6 +212,7 @@ docs/
 ├── archive/
 │   ├── planning/     # Historical planning & analysis docs
 │   └── plans/        # Completed implementation plans
+├── codebase-snapshot/ # Point-in-time codebase snapshots
 ├── conversations/    # Claude Code session logs
 ├── reviews/          # External reviews (Gemini, code reviews)
 │   └── code-review/  # Code review reports
@@ -223,6 +224,7 @@ docs/
 - **archive/plans/**: Implementation plans after feature is complete
 - **archive/planning/**: Old planning docs, tech comparisons
 - **active/**: Docs with ongoing action items
+- **codebase-snapshot/**: Architecture, metrics, and timeline snapshots
 - **reviews/**: External feedback (Gemini, human reviews)
 - **setup/**: How-to guides for configuration
 
