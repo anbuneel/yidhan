@@ -84,6 +84,11 @@
 - ✅ **Privacy enhanced** - Sentry replay masking for note content
 - ✅ **Accessibility improved** - Space key navigation, ARIA roles
 
+### Related Documents
+
+- [Codex Code Review](../reviews/zenote-comprehensive-review-Codex.md) - Original findings
+- [Codex Review Action Plan](../archive/plans/codex-review-action-plan.md) - Implementation details (✅ Complete)
+
 ---
 
 # Assessment 3 (2025-12-28)

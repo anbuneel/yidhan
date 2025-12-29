@@ -113,3 +113,11 @@ Codex was **mostly correct** but overstated severity on two items. Most findings
 ## Conclusion
 
 Codex provided a thorough review. The two "Critical" findings are **not launch blockers** - token enumeration is by design, and XSS risk is mitigated by input sanitization. The P1 items above should be addressed before launch. P2/P3 items can be done post-launch.
+
+---
+
+## Related Documents
+
+- **Action Plan:** [Codex Review Action Plan](../archive/plans/codex-review-action-plan.md) - Prioritized implementation plan with acceptance criteria (✅ Complete)
+- **PR #44:** P1 fixes - Offline messaging, SharedNoteView sanitization, delete stale closure
+- **PR #45:** P2/P3 fixes - Sentry masking, retry discrimination, save tracking, accessibility

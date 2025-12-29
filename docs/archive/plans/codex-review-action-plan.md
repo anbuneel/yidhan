@@ -2,7 +2,7 @@
 
 **Author:** Claude (Opus 4.5)
 **Created:** 2025-12-28
-**Source:** [Codex Review](../reviews/zenote-comprehensive-review-Codex.md)
+**Source:** [Codex Review](../../reviews/zenote-comprehensive-review-Codex.md)
 **Status:** Complete
 
 ---
@@ -313,6 +313,6 @@ onKeyDown={(e) => {
 
 ## Related Documents
 
-- [Codex Review](../reviews/zenote-comprehensive-review-Codex.md)
-- [Launch Readiness Assessment](./launch-readiness-assessment.md)
-- [API Retry Logic Analysis](../analysis/api-retry-logic-analysis-claude.md)
+- [Codex Review](../../reviews/zenote-comprehensive-review-Codex.md)
+- [Launch Readiness Assessment](../../active/launch-readiness-assessment.md)
+- [API Retry Logic Analysis](../../analysis/api-retry-logic-analysis-claude.md)
