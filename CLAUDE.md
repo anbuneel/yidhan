@@ -206,6 +206,8 @@ The `docs/` folder is organized as follows:
 
 ```
 docs/
+├── prd.md            # Product Requirements Document
+├── technical-spec.md # Technical Specification
 ├── active/           # Currently relevant follow-up docs
 ├── analysis/         # Claude analysis docs (suffix: -claude.md)
 ├── archive/
@@ -217,6 +219,10 @@ docs/
 │   └── code-review/  # Code review reports
 └── setup/            # Configuration guides (OAuth, etc.)
 ```
+
+**Key documents:**
+- **prd.md**: Product vision, personas, features, user flows, success metrics
+- **technical-spec.md**: Architecture, database schema, state management, security, deployment
 
 **Placement guidelines:**
 - **analysis/**: AI-authored design analysis (`*-claude.md`)
