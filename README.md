@@ -58,6 +58,11 @@ A calm, distraction-free note-taking app inspired by Japanese stationery and wab
 - **Backend:** Supabase (PostgreSQL, Auth, Real-time)
 - **Fonts:** Cormorant Garamond, Inter
 
+## Documentation
+
+- **[Product Requirements Document](docs/prd.md)** - Product vision, user personas, feature requirements, user flows, and success metrics
+- **[Technical Specification](docs/technical-spec.md)** - System architecture, database schema, state management, security, and deployment
+
 ## Getting Started
 
 ### Prerequisites
