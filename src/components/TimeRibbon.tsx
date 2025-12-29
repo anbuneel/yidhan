@@ -157,24 +157,34 @@ export function TimeRibbon({
             <button
               key={chapter.key}
               onClick={() => handleChapterClick(chapter.key)}
-              className={`
+              className="
+                inline-flex items-center justify-center
+                min-w-[48px] min-h-[48px]
+                md:min-w-0 md:min-h-0
                 rounded-full
                 transition-all duration-300
                 focus:outline-none
-                ${isActive ? 'w-3 h-3' : 'w-2 h-2'}
-              `}
-              style={{
-                background: isActive
-                  ? 'var(--color-accent)'
-                  : 'var(--color-text-tertiary)',
-                opacity: isActive ? 1 : 0.5,
-                boxShadow: isActive
-                  ? '0 0 6px var(--color-accent-glow)'
-                  : 'none',
-              }}
+              "
               aria-label={`Jump to ${chapter.label}`}
               aria-current={isActive ? 'true' : undefined}
-            />
+            >
+              <span
+                className={`
+                  block rounded-full
+                  transition-all duration-300
+                  ${isActive ? 'w-3 h-3' : 'w-2 h-2'}
+                `}
+                style={{
+                  background: isActive
+                    ? 'var(--color-accent)'
+                    : 'var(--color-text-tertiary)',
+                  opacity: isActive ? 1 : 0.5,
+                  boxShadow: isActive
+                    ? '0 0 6px var(--color-accent-glow)'
+                    : 'none',
+                }}
+              />
+            </button>
           );
         })}
       </div>
