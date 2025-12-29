@@ -3,6 +3,13 @@
 **Version:** 1.0
 **Last Updated:** 2025-12-29
 **Status:** Living Document
+**Author:** Claude (Opus 4.5)
+
+---
+
+## Original Prompt
+
+> Can you reverse engineer the application and create a Spec and PRD documentation?
 
 ---
 

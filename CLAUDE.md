@@ -165,19 +165,22 @@ Example changelog entry:
 },
 ```
 
-## Frontend Design Skill Consultations
+## AI-Generated Documentation Standards
 
-When using the `frontend-design` skill for design analysis or recommendations, **always write the output to a file** in the `docs/analysis/` folder with the following format:
+**IMPORTANT:** All documentation created by Claude must include the following metadata:
 
-**File naming:** `docs/analysis/<topic>-claude.md` (use `-claude` suffix to indicate AI-authored)
+1. **Author:** Claude (Opus 4.5)
+2. **Date/Timestamp:** YYYY-MM-DD (date of creation)
+3. **Original Prompt:** The user's original request (quoted in blockquote)
 
-**Required file structure:**
+**Required header format for all AI-generated docs:**
 ```markdown
-# [Analysis Title]
+# [Document Title]
 
+**Version:** 1.0
+**Last Updated:** YYYY-MM-DD
+**Status:** [Living Document | Complete | Draft]
 **Author:** Claude (Opus 4.5)
-**Date:** YYYY-MM-DD
-**Consulted:** Frontend Design Skill
 
 ---
 
@@ -187,16 +190,17 @@ When using the `frontend-design` skill for design analysis or recommendations, *
 
 ---
 
-## [Analysis Content]
-
-[Full design analysis with recommendations]
+## [Document Content]
 ```
 
-**Key elements:**
-- Author attribution (Claude Opus 4.5)
-- Date of analysis
-- Original prompt at the top (quoted)
-- Full design analysis with recommendations
+**File naming convention:** Use `-claude` suffix for AI-authored docs in analysis folder (e.g., `topic-claude.md`)
+
+## Frontend Design Skill Consultations
+
+When using the `frontend-design` skill, follow the AI-Generated Documentation Standards above and save output to `docs/analysis/` folder.
+
+**Additional field for design consultations:**
+- **Consulted:** Frontend Design Skill
 
 **Example:** See `docs/analysis/collaboration-feature-analysis-claude.md`
 
