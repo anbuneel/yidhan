@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.9.10',
+    date: '2025-12-29',
+    changes: [
+      { type: 'improvement', text: 'Smart chunk loading - auto-retries and quietly reloads on version updates when safe' },
+      { type: 'improvement', text: 'Preserves unsaved work during version updates by detecting active editing' },
+    ],
+  },
+  {
     version: '1.9.9',
     date: '2025-12-29',
     changes: [

@@ -362,6 +362,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       {/* Save/Copy Status Indicator */}
       {saveStatus !== 'idle' && (
         <span
+          data-save-status={saveStatus}
           className={`
             shrink-0 text-xs px-2 py-1 rounded-full flex items-center gap-1.5
             transition-opacity duration-300

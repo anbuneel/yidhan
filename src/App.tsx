@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import toast from 'react-hot-toast';
 import type { Note, Tag, ViewMode, Theme } from './types';
 import { Header } from './components/Header';
@@ -7,23 +7,24 @@ import { Auth } from './components/Auth';
 import { LandingPage } from './components/LandingPage';
 import { sanitizeText } from './utils/sanitize';
 import { withRetry } from './utils/withRetry';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
-// Lazy load heavy components to reduce initial bundle size
-const Editor = lazy(() => import('./components/Editor').then(module => ({ default: module.Editor })));
-const ChangelogPage = lazy(() => import('./components/ChangelogPage').then(module => ({ default: module.ChangelogPage })));
-const RoadmapPage = lazy(() => import('./components/RoadmapPage').then(module => ({ default: module.RoadmapPage })));
-const FadedNotesView = lazy(() => import('./components/FadedNotesView').then(module => ({ default: module.FadedNotesView })));
-const SharedNoteView = lazy(() => import('./components/SharedNoteView').then(module => ({ default: module.SharedNoteView })));
+// Lazy load heavy components with smart retry (auto-reloads on chunk errors when safe)
+const Editor = lazyWithRetry(() => import('./components/Editor').then(module => ({ default: module.Editor })));
+const ChangelogPage = lazyWithRetry(() => import('./components/ChangelogPage').then(module => ({ default: module.ChangelogPage })));
+const RoadmapPage = lazyWithRetry(() => import('./components/RoadmapPage').then(module => ({ default: module.RoadmapPage })));
+const FadedNotesView = lazyWithRetry(() => import('./components/FadedNotesView').then(module => ({ default: module.FadedNotesView })));
+const SharedNoteView = lazyWithRetry(() => import('./components/SharedNoteView').then(module => ({ default: module.SharedNoteView })));
 
 import { TagFilterBar } from './components/TagFilterBar';
 import { WelcomeBackPrompt } from './components/WelcomeBackPrompt';
 import { Footer } from './components/Footer';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-// Lazy load modals (only loaded when opened)
-const TagModal = lazy(() => import('./components/TagModal').then(module => ({ default: module.TagModal })));
-const SettingsModal = lazy(() => import('./components/SettingsModal').then(module => ({ default: module.SettingsModal })));
-const LettingGoModal = lazy(() => import('./components/LettingGoModal').then(module => ({ default: module.LettingGoModal })));
+// Lazy load modals with smart retry (only loaded when opened)
+const TagModal = lazyWithRetry(() => import('./components/TagModal').then(module => ({ default: module.TagModal })));
+const SettingsModal = lazyWithRetry(() => import('./components/SettingsModal').then(module => ({ default: module.SettingsModal })));
+const LettingGoModal = lazyWithRetry(() => import('./components/LettingGoModal').then(module => ({ default: module.LettingGoModal })));
 import { useAuth } from './contexts/AuthContext';
 import {
   fetchNotes,
