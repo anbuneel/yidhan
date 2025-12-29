@@ -72,14 +72,14 @@ EXTERNAL SERVICES
 
 | Metric | Count |
 |--------|-------|
-| **Total Lines of Code** | 20,408 |
-| TypeScript/TSX (src/) | 18,203 |
+| **Total Lines of Code** | 20,178 |
+| TypeScript/TSX (src/) | 17,973 |
 | CSS (src/) | 724 |
 | E2E Tests (e2e/) | 1,054 |
 | SQL Migrations | 288 |
 | Build Scripts | 139 |
 | **Source Files** | |
-| React Components | 35 |
+| React Components | 34 |
 | Component Tests | 8 |
 | Utility/Service Tests | 8 |
 | E2E Spec Files | 6 |
@@ -103,7 +103,7 @@ EXTERNAL SERVICES
 - ChangelogPage - Version history display
 - RoadmapPage - Feature roadmap with status badges
 
-**Shared Components (29):**
+**Shared Components (28):**
 - Auth - Login/signup/OAuth/password reset
 - ChapterNav - Desktop dot navigation sidebar
 - ChapterSection - Collapsible chapter with masonry grid
@@ -114,7 +114,6 @@ EXTERNAL SERVICES
 - Header - Library header with search
 - HeaderShell - Consistent header structure
 - LettingGoModal - Account offboarding
-- Library - Legacy masonry grid (deprecated)
 - NoteCard - Individual note display
 - RichTextEditor - Tiptap wrapper component
 - SettingsModal - Profile and theme settings
@@ -163,7 +162,7 @@ note_shares
 - expires_at (timestamptz, nullable)
 - created_at (timestamptz)
 
-### Features Implemented (v1.9.7)
+### Features Implemented (v1.9.8)
 
 **Core Functionality:**
 - Wabi-sabi design with light/dark themes (dark default)
@@ -214,7 +213,11 @@ note_shares
 
 ### Notable Changes Since Last Snapshot
 
-This is the first snapshot of the codebase.
+**v1.9.8 (2025-12-29):** Code cleanup - removed 230 lines of dead code
+- Deleted legacy `Library.tsx` component (replaced by ChapteredLibrary)
+- Removed unused `getNoteTags()` function from tags service
+- Removed unused theme utilities and type exports
+- Updated component count: 35 → 34
 
 ---
 

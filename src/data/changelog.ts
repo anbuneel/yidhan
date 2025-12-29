@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.9.8',
+    date: '2025-12-29',
+    changes: [
+      { type: 'improvement', text: 'Codebase cleanup - removed ~230 lines of verified dead code' },
+      { type: 'improvement', text: 'Removed legacy Library component (replaced by ChapteredLibrary)' },
+      { type: 'improvement', text: 'Removed unused theme utilities and type exports' },
+    ],
+  },
+  {
     version: '1.9.7',
     date: '2025-12-28',
     changes: [

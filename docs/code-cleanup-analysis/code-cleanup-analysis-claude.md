@@ -169,30 +169,45 @@ Items that appeared unused but have legitimate purposes.
 
 ---
 
-## Next Steps
+## Completion Summary
 
-### Priority 1: Safe Removal (Low Risk)
-1. Delete `src/components/Library.tsx` - orphaned legacy component
-2. Remove `'shared'` from ViewMode type union
-3. Remove unused theme utility functions (getTheme, getLightThemes, getDarkThemes, printThemeCss)
+**Status:** ✅ Completed
+**PR:** [#46](https://github.com/anbuneel/zenote/pull/46)
+**Merged:** 2025-12-29
 
-### Priority 2: Review and Decide
-1. Evaluate if `getNoteTags()` should be removed from tags.ts service
-2. Consider removing `DbNoteTag` type if not needed for future type safety
-3. Decide if `exportAllNotesToMarkdown()` should be used for a new feature or removed
+### Items Removed
 
-### Priority 3: Documentation
-1. Add JSDoc comments to exported utilities explaining their purpose
-2. Update CLAUDE.md to remove Library.tsx from Project Structure section
+| Item | Status |
+|------|--------|
+| `src/components/Library.tsx` | ✅ Deleted |
+| `'shared'` from ViewMode | ✅ Removed |
+| `DbNoteTag` type | ✅ Removed |
+| `getTheme()` | ✅ Removed |
+| `getLightThemes()` | ✅ Removed |
+| `getDarkThemes()` | ✅ Removed |
+| `printThemeCss()` | ✅ Removed |
+| `getNoteTags()` | ✅ Removed (Priority 2 item) |
+
+### Items Kept (Intentionally)
+
+| Item | Reason |
+|------|--------|
+| `exportAllNotesToMarkdown()` | May be useful for future bulk export |
+| `getChapterLabel()` | Low cost utility |
+| `getChapterOrder()` | Navigation utility |
+| `washi.ts` / `mori.ts` | Alternative themes for theme switcher |
+
+### Final Impact
+
+| Metric | Value |
+|--------|-------|
+| Lines Removed | 230 |
+| Files Changed | 8 |
+| Tests Removed | 4 (for `getNoteTags`) |
+| Tests Passing | 453 |
 
 ---
 
-## Estimated Impact
+## Archived Next Steps
 
-| Category | Items | Lines of Code |
-|----------|-------|---------------|
-| Safe to Remove | 5 items | ~150 lines |
-| Recommended Review | 6 functions | ~80 lines |
-| Total Potential Cleanup | 11 items | ~230 lines |
-
-The cleanup would reduce codebase size by approximately 0.5-1% while improving maintainability.
+~~Priority 1, 2, 3 items~~ - All actionable items completed. Remaining items intentionally kept.
