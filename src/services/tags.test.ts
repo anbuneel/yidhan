@@ -6,7 +6,6 @@ import {
   deleteTag,
   addTagToNote,
   removeTagFromNote,
-  getNoteTags,
   subscribeToTags,
 } from './tags';
 import {
@@ -420,71 +419,6 @@ describe('tags service', () => {
 
       await expect(removeTagFromNote('note-123', 'tag-456'))
         .rejects.toThrow('Remove failed');
-    });
-  });
-
-  describe('getNoteTags', () => {
-    it('returns empty array when note has no tags', async () => {
-      const mockBuilder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: [], error: null }),
-      };
-      mockSupabaseFrom(mockBuilder);
-
-      const result = await getNoteTags('note-123');
-
-      expect(result).toEqual([]);
-      expect(supabase.from).toHaveBeenCalledWith('note_tags');
-      expect(mockBuilder.select).toHaveBeenCalledWith('tag_id, tags(*)');
-      expect(mockBuilder.eq).toHaveBeenCalledWith('note_id', 'note-123');
-    });
-
-    it('returns tags for a note', async () => {
-      const dbData = [
-        { tag_id: 't1', tags: createDbTag({ id: 't1', name: 'Work' }) },
-        { tag_id: 't2', tags: createDbTag({ id: 't2', name: 'Personal' }) },
-      ];
-      const mockBuilder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: dbData, error: null }),
-      };
-      mockSupabaseFrom(mockBuilder);
-
-      const result = await getNoteTags('note-123');
-
-      expect(result).toHaveLength(2);
-      expect(result[0].name).toBe('Work');
-      expect(result[1].name).toBe('Personal');
-    });
-
-    it('filters out null tags', async () => {
-      const dbData = [
-        { tag_id: 't1', tags: createDbTag({ id: 't1', name: 'Valid' }) },
-        { tag_id: 't2', tags: null },
-      ];
-      const mockBuilder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: dbData, error: null }),
-      };
-      mockSupabaseFrom(mockBuilder);
-
-      const result = await getNoteTags('note-123');
-
-      expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Valid');
-    });
-
-    it('throws error when fetch fails', async () => {
-      const mockBuilder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
-          data: null,
-          error: new Error('Fetch failed')
-        }),
-      };
-      mockSupabaseFrom(mockBuilder);
-
-      await expect(getNoteTags('note-123')).rejects.toThrow('Fetch failed');
     });
   });
 

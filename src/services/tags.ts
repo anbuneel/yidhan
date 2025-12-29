@@ -143,24 +143,6 @@ export async function removeTagFromNote(noteId: string, tagId: string): Promise<
   }
 }
 
-// Get all tags for a specific note
-export async function getNoteTags(noteId: string): Promise<Tag[]> {
-  const { data, error } = await supabase
-    .from('note_tags')
-    .select('tag_id, tags(*)')
-    .eq('note_id', noteId);
-
-  if (error) {
-    console.error('Error fetching note tags:', error);
-    throw error;
-  }
-
-  return (data || [])
-    .map((row) => row.tags as unknown as DbTag)
-    .filter(Boolean)
-    .map(toTag);
-}
-
 // Subscribe to real-time tag changes
 export function subscribeToTags(
   userId: string,

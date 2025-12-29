@@ -158,5 +158,4 @@ export type Database = {
 
 export type DbNote = Database['public']['Tables']['notes']['Row'];
 export type DbTag = Database['public']['Tables']['tags']['Row'];
-export type DbNoteTag = Database['public']['Tables']['note_tags']['Row'];
 export type DbNoteShare = Database['public']['Tables']['note_shares']['Row'];
