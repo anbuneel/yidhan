@@ -8,6 +8,13 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '1.9.9',
+    date: '2025-12-29',
+    changes: [
+      { type: 'fix', text: 'Shared notes now viewable by unauthenticated users (fixed RLS policy)' },
+    ],
+  },
+  {
     version: '1.9.8',
     date: '2025-12-29',
     changes: [
