@@ -23,8 +23,9 @@
 | `getLightThemes()` | Grep for calls: `getLightThemes\(` | ✅ Only defined, never called |
 | `getDarkThemes()` | Grep for calls: `getDarkThemes\(` | ✅ Only defined, never called |
 | `printThemeCss()` | Grep for calls: `printThemeCss\(` | ✅ Only defined, never called |
+| `getNoteTags()` | Grep for usage in src/ | ✅ Only used in tests, legacy function |
 
-**Conclusion:** All Priority 1 items are confirmed safe to remove. Proceed with cleanup.
+**Conclusion:** All Priority 1 items + `getNoteTags()` confirmed safe to remove. Cleanup completed in PR #46.
 
 ---
 

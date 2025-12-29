@@ -34,7 +34,6 @@ src/
 │   ├── HeaderShell.tsx    # Shared header component for consistent layout across all pages
 │   ├── LandingPage.tsx    # Split-screen landing page with interactive demo
 │   ├── LettingGoModal.tsx # Account departure modal with keepsakes export
-│   ├── Library.tsx        # Notes masonry grid view (legacy, replaced by ChapteredLibrary)
 │   ├── NoteCard.tsx       # Individual note card with tag badges
 │   ├── ShareModal.tsx     # Modal for creating/managing share links
 │   ├── SharedNoteView.tsx # Public read-only view for shared notes

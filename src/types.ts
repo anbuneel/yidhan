@@ -16,7 +16,7 @@ export interface Note {
   deletedAt?: Date | null;
 }
 
-export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded' | 'shared';
+export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded';
 
 export interface NoteShare {
   id: string;

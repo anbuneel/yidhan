@@ -56,27 +56,6 @@ export { themeToCss, type ThemeConfig, type ThemeColors } from './types';
 // ============================================
 
 /**
- * Get a theme by name
- */
-export function getTheme(name: string): ThemeConfig | undefined {
-  return allThemes[name];
-}
-
-/**
- * Get all available light themes
- */
-export function getLightThemes(): ThemeConfig[] {
-  return Object.values(lightThemes);
-}
-
-/**
- * Get all available dark themes
- */
-export function getDarkThemes(): ThemeConfig[] {
-  return Object.values(darkThemes);
-}
-
-/**
  * Generate complete CSS for index.css
  * Copy this output to replace the theme sections in index.css
  */
@@ -99,16 +78,4 @@ ${themeToCss(lightTheme.colors)}
 [data-theme="dark"] {
 ${themeToCss(darkTheme.colors)}
 }`;
-}
-
-/**
- * Log theme CSS to console (for development)
- */
-export function printThemeCss(
-  lightTheme: ThemeConfig = ACTIVE_LIGHT_THEME,
-  darkTheme: ThemeConfig = ACTIVE_DARK_THEME
-): void {
-  console.log('\n=== Generated Theme CSS ===\n');
-  console.log(generateThemeCss(lightTheme, darkTheme));
-  console.log('\n=== End Theme CSS ===\n');
 }
