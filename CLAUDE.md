@@ -207,25 +207,29 @@ When using the `frontend-design` skill, follow the AI-Generated Documentation St
 
 ## Documentation Structure
 
-The `docs/` folder is organized as follows:
+The `docs/` folder is organized as follows. **See [docs/Index.md](docs/Index.md) for the master index.**
 
 ```
 docs/
+├── Index.md          # Master index of all documentation (start here)
 ├── prd.md            # Product Requirements Document
 ├── technical-spec.md # Technical Specification
-├── active/           # Currently relevant follow-up docs
+├── ui-layout.md      # UI layout ASCII diagrams
+├── active/           # Current strategy and in-progress work
 ├── analysis/         # Claude analysis docs (suffix: -claude.md)
+├── plans/            # Active implementation plans
 ├── archive/
 │   ├── planning/     # Historical planning & analysis docs
 │   └── plans/        # Completed implementation plans
 ├── codebase-snapshot/ # Point-in-time codebase snapshots
 ├── conversations/    # Claude Code session logs
-├── reviews/          # External reviews (Gemini, code reviews)
+├── reviews/          # External reviews (Codex, Gemini, code reviews)
 │   └── code-review/  # Code review reports
-└── setup/            # Configuration guides (OAuth, etc.)
+└── setup/            # Configuration guides (OAuth, CI, testing)
 ```
 
 **Key documents:**
+- **Index.md**: Master documentation index — all docs organized by category
 - **prd.md**: Product vision, personas, features, user flows, success metrics
 - **technical-spec.md**: Architecture, database schema, state management, security, deployment
 
