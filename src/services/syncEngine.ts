@@ -22,6 +22,9 @@ import { markTagSynced } from './offlineTags';
 // Track pending mutations to self-ignore realtime events
 const pendingMutations = new Set<string>();
 
+// Track timeout IDs to prevent memory leaks
+const pendingTimeouts = new Set<ReturnType<typeof setTimeout>>();
+
 // Sync state
 let isSyncing = false;
 let syncPromise: Promise<SyncResult> | null = null;
@@ -110,7 +113,11 @@ async function processQueueEntry(
     return true; // Remove from queue
   } finally {
     // Remove from pending after a delay to allow realtime to process
-    setTimeout(() => removePendingMutation(clientMutationId), 2000);
+    const timeoutId = setTimeout(() => {
+      removePendingMutation(clientMutationId);
+      pendingTimeouts.delete(timeoutId);
+    }, 2000);
+    pendingTimeouts.add(timeoutId);
   }
 }
 
@@ -601,4 +608,24 @@ export async function fullSync(userId: string): Promise<SyncResult> {
  */
 export function isSyncInProgress(): boolean {
   return isSyncing;
+}
+
+/**
+ * Clear all sync state (call on logout)
+ * Cleans up pending timeouts and mutations to prevent memory leaks
+ */
+export function clearSyncState(): void {
+  // Clear all pending timeouts
+  pendingTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+  pendingTimeouts.clear();
+
+  // Clear pending mutations
+  pendingMutations.clear();
+
+  // Reset sync state
+  isSyncing = false;
+  syncPromise = null;
+
+  // Clear conflict handler
+  onConflictDetected = null;
 }

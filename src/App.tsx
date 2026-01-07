@@ -567,12 +567,20 @@ function App() {
   const handleConflictResolve = async (choice: 'local' | 'server' | 'both') => {
     if (!activeConflict || !user) return;
 
-    await resolveConflict(user.id, activeConflict, choice);
-    removeConflict(activeConflict.entityId);
+    try {
+      await resolveConflict(user.id, activeConflict, choice);
+      removeConflict(activeConflict.entityId);
 
-    // Refresh notes after conflict resolution
-    const refreshedNotes = await fetchNotes();
-    setNotes(refreshedNotes);
+      // Refresh notes after conflict resolution
+      const refreshedNotes = await fetchNotes();
+      setNotes(refreshedNotes);
+    } catch (error) {
+      console.error('Failed to resolve conflict:', error);
+      toast.error('Failed to resolve conflict. Please try again.');
+      // Still remove the conflict to prevent infinite retry loops
+      // User can trigger a sync to re-detect conflicts if needed
+      removeConflict(activeConflict.entityId);
+    }
   };
 
   const handleConflictDismiss = () => {

@@ -92,8 +92,8 @@ class ZenoteDB extends Dexie {
     super(`zenote-offline-${userId}`);
 
     this.version(1).stores({
-      // Notes indexed by id, oderId, and sync status
-      notes: 'id, oderId, syncStatus, deletedAt, pinned, updatedAt',
+      // Notes indexed by id, userId, and sync status
+      notes: 'id, userId, syncStatus, deletedAt, pinned, updatedAt',
       // Tags indexed by id and name (for duplicate checking)
       tags: 'id, name, syncStatus',
       // Note-tags compound key
