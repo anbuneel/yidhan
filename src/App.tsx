@@ -56,6 +56,8 @@ import {
 } from './utils/exportImport';
 import { sanitizeHtml } from './utils/sanitize';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
+import { useSyncEngine, resolveConflict } from './hooks/useSyncEngine';
+import { ConflictModal } from './components/ConflictModal';
 import './App.css';
 
 const DEMO_STORAGE_KEY = 'zenote-demo-content';
@@ -85,6 +87,17 @@ function App() {
 
   // Network connectivity monitoring
   useNetworkStatus();
+
+  // Sync engine for offline support
+  const { conflicts, removeConflict } = useSyncEngine();
+  const [activeConflict, setActiveConflict] = useState<typeof conflicts[0] | null>(null);
+
+  // Show first conflict when conflicts array changes
+  useEffect(() => {
+    if (conflicts.length > 0 && !activeConflict) {
+      setActiveConflict(conflicts[0]);
+    }
+  }, [conflicts, activeConflict]);
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
@@ -548,6 +561,25 @@ function App() {
 
   const handleThemeToggle = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
+  };
+
+  // Conflict resolution handler
+  const handleConflictResolve = async (choice: 'local' | 'server' | 'both') => {
+    if (!activeConflict || !user) return;
+
+    await resolveConflict(user.id, activeConflict, choice);
+    removeConflict(activeConflict.entityId);
+
+    // Refresh notes after conflict resolution
+    const refreshedNotes = await fetchNotes();
+    setNotes(refreshedNotes);
+  };
+
+  const handleConflictDismiss = () => {
+    if (activeConflict) {
+      removeConflict(activeConflict.entityId);
+    }
+    setActiveConflict(null);
   };
 
   // Tag filter handlers
@@ -1259,6 +1291,13 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* Conflict Resolution Modal */}
+        <ConflictModal
+          conflict={activeConflict}
+          onResolve={handleConflictResolve}
+          onDismiss={handleConflictDismiss}
+        />
       </div>
     );
   }
@@ -1299,6 +1338,13 @@ function App() {
             </Suspense>
           </ErrorBoundary>
         )}
+
+        {/* Conflict Resolution Modal */}
+        <ConflictModal
+          conflict={activeConflict}
+          onResolve={handleConflictResolve}
+          onDismiss={handleConflictDismiss}
+        />
       </>
     );
   }

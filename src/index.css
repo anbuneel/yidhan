@@ -220,6 +220,19 @@ body::before {
   }
 }
 
+/* Kintsugi glow animation for conflict resolution */
+@keyframes kintsugi-glow {
+  0% {
+    box-shadow: 0 0 0 0 var(--color-accent-glow);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px var(--color-accent-glow);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
