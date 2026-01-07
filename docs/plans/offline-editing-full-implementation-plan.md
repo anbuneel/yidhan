@@ -1,8 +1,8 @@
 # Offline Editing Implementation Plan
 
-**Version:** 1.2
+**Version:** 1.3
 **Last Updated:** 2026-01-07
-**Status:** Approved
+**Status:** In Progress
 **Author:** Claude (Opus 4.5)
 **Branch:** `feature/offline-editing`
 
@@ -23,10 +23,62 @@ Full offline editing for Zenote using IndexedDB (Dexie.js) with automatic sync w
 
 ---
 
+## Implementation Progress
+
+| Phase | Status | Commit | Description |
+|-------|--------|--------|-------------|
+| Phase 0 | ✅ Complete | `4904553` | PWA Foundation - iOS safe areas, touch feel, keyboard handling |
+| Phase 1 | ✅ Complete | `64f2958` | IndexedDB Foundation + Service Worker with full offline-first |
+| Phase 2 | ✅ Complete | `190f230` | Offline Writes with sync queue, compaction, dependency ordering |
+| Phase 3 | ⏳ Pending | - | Sync Engine with self-ignore and conflict detection |
+| Phase 4 | ⏳ Pending | - | Conflict Resolution UI ("Two Paths" modal) |
+| Phase 5 | ⏳ Pending | - | UI Polish and testing |
+
+### Phase 0 Summary (Complete)
+- Added `viewport-fit=cover` to `index.html` for iOS safe areas
+- Added safe area padding with `env(safe-area-inset-*)` CSS variables
+- Added `user-select: none` to interactive elements for native touch feel
+- Added `scroll-margin-top` for keyboard handling in editor
+
+### Phase 1 Summary (Complete)
+- Installed `dexie`, `dexie-react-hooks`, `vite-plugin-pwa`
+- Created `src/lib/offlineDb.ts` with per-user database naming (`zenote-offline-${userId}`)
+- Created `src/services/offlineNotes.ts` with hydration and read operations
+- Updated `vite.config.ts` with `navigateFallback` for full offline-first
+- Integrated hydration on login and clear on logout in `AuthContext.tsx`
+
+### Phase 2 Summary (Complete)
+**New Files:**
+- `src/services/offlineTags.ts` - Offline-first tag CRUD operations
+- `src/hooks/useSyncStatus.ts` - Hook to track sync state for UI
+
+**Note Write Operations Added:**
+- `createNoteOffline()` - Generate local UUID, write to IndexedDB, queue for sync
+- `updateNoteOffline()` - Update locally with queue compaction
+- `softDeleteNoteOffline()`, `restoreNoteOffline()`, `permanentDeleteNoteOffline()`
+- `toggleNotePinOffline()`, `addTagToNoteOffline()`, `removeTagFromNoteOffline()`
+
+**Tag Write Operations Added:**
+- `createTagOffline()`, `updateTagOffline()`, `deleteTagOffline()`
+- Includes duplicate name validation
+
+**Sync Queue Features:**
+- Queue compaction: Consecutive updates to same entity → keep only latest
+- Dependency ordering: Creates before add_tag, notes/tags before noteTags
+- `clientMutationId` for idempotent server upserts
+- `getPendingSyncQueue()` with FIFO + dependency ordering
+
+**Enhanced Hooks:**
+- `useNetworkStatus` now returns `isOnline` + `onReconnect` callback
+- `useSyncStatus` tracks pending operations count
+
+---
+
 ## Review Log
 
 - 2026-01-07 - Codex (GPT-5): Added review findings, recommendations, and open questions for offline architecture and UX.
 - 2026-01-07 - User: Approved decisions on open questions. Plan status → Approved.
+- 2026-01-07 - Implementation: Phases 0-2 completed. All 455 tests passing.
 
 ---
 
@@ -104,31 +156,32 @@ interface SyncQueueEntry {
 
 ## New Files
 
-| File | Purpose |
-|------|---------|
-| `src/lib/offlineDb.ts` | Dexie database schema (per-user naming) |
-| `src/services/offlineNotes.ts` | Offline-aware note CRUD |
-| `src/services/offlineTags.ts` | Offline-aware tag ops |
-| `src/services/syncEngine.ts` | Queue processor, conflict detection, mutation tracking |
-| `src/hooks/useSyncStatus.ts` | Sync state for UI |
-| `src/components/SyncIndicator.tsx` | Subtle offline indicator (accessible, SVG icons) |
-| `src/components/ConflictModal.tsx` | "Two Paths" conflict UI (respects prefers-reduced-motion) |
-| `vite.config.ts` | Update with vite-plugin-pwa config |
-| `src/lib/offlineDb.test.ts` | Unit tests for IndexedDB operations |
-| `src/services/syncEngine.test.ts` | Unit tests for sync engine |
+| File | Purpose | Status |
+|------|---------|--------|
+| `src/lib/offlineDb.ts` | Dexie database schema (per-user naming) | ✅ Created |
+| `src/services/offlineNotes.ts` | Offline-aware note CRUD | ✅ Created |
+| `src/services/offlineTags.ts` | Offline-aware tag ops | ✅ Created |
+| `src/hooks/useSyncStatus.ts` | Sync state for UI | ✅ Created |
+| `src/services/syncEngine.ts` | Queue processor, conflict detection, mutation tracking | ⏳ Phase 3 |
+| `src/components/SyncIndicator.tsx` | Subtle offline indicator (accessible, SVG icons) | ⏳ Phase 5 |
+| `src/components/ConflictModal.tsx` | "Two Paths" conflict UI (respects prefers-reduced-motion) | ⏳ Phase 4 |
+| `src/lib/offlineDb.test.ts` | Unit tests for IndexedDB operations | ⏳ Phase 5 |
+| `src/services/syncEngine.test.ts` | Unit tests for sync engine | ⏳ Phase 5 |
 
-## Files to Modify
+## Files Modified
 
-| File | Changes |
-|------|---------|
-| `index.html` | Add `viewport-fit=cover` for iOS safe areas |
-| `src/index.css` | Add safe area padding, `user-select: none` for UI elements |
-| `package.json` | Add `dexie` |
-| `src/App.tsx` | Initialize offline DB, add sync engine |
-| `src/hooks/useNetworkStatus.ts` | Trigger sync on reconnect |
-| `src/components/Editor.tsx` | Use offline save, show sync status, keyboard scroll |
-| `src/components/NoteCard.tsx` | Show ink dot for pending sync |
-| `src/components/Header.tsx` | Add SyncIndicator |
+| File | Changes | Status |
+|------|---------|--------|
+| `index.html` | Add `viewport-fit=cover` for iOS safe areas | ✅ Done |
+| `src/index.css` | Add safe area padding, `user-select: none` for UI elements | ✅ Done |
+| `package.json` | Add `dexie`, `dexie-react-hooks`, `vite-plugin-pwa` | ✅ Done |
+| `vite.config.ts` | Add VitePWA config with `navigateFallback` | ✅ Done |
+| `src/contexts/AuthContext.tsx` | Hydrate on login, clear on logout, expose `isHydrating` | ✅ Done |
+| `src/hooks/useNetworkStatus.ts` | Return `isOnline`, `onReconnect` callback | ✅ Done |
+| `src/App.tsx` | Initialize offline DB, add sync engine | ⏳ Phase 3 |
+| `src/components/Editor.tsx` | Use offline save, show sync status | ⏳ Phase 3 |
+| `src/components/NoteCard.tsx` | Show ink dot for pending sync | ⏳ Phase 5 |
+| `src/components/Header.tsx` | Add SyncIndicator | ⏳ Phase 5 |
 
 ---
 
