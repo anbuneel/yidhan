@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+
+node scripts/sync-agents.mjs --quiet
+git add AGENTS.md

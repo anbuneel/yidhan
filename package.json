@@ -19,7 +19,9 @@
     "e2e:report": "playwright show-report",
     "theme:generate": "tsx scripts/generate-theme-css.ts",
     "theme:preview": "tsx scripts/generate-theme-css.ts --preview",
-    "icons:generate": "tsx scripts/generate-icons.ts"
+    "icons:generate": "tsx scripts/generate-icons.ts",
+    "docs:sync-agents": "node scripts/sync-agents.mjs",
+    "docs:sync-agents:check": "node scripts/sync-agents.mjs --check"
   },
   "dependencies": {
     "@sentry/react": "^10.30.0",

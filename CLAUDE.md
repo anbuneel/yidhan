@@ -153,6 +153,8 @@ The `check` script runs the same steps as GitHub Actions CI:
    - Date
    - Changes array with type ('feature' | 'improvement' | 'fix') and description
 
+Note: `AGENTS.md` is synced from `CLAUDE.md`. Run `npm run docs:sync-agents` (or `npm run docs:sync-agents:check` in CI). A pre-commit hook in `.githooks/pre-commit` keeps it updated when `core.hooksPath` is set to `.githooks`.
+
 Example changelog entry:
 ```typescript
 {

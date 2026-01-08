@@ -22,7 +22,7 @@ src/
 │   ├── ChangelogPage.tsx  # Version history page with categorized changes
 │   ├── Editor.tsx         # Note editor with rich text + tag selector + save indicator
 │   ├── EditorToolbar.tsx  # Formatting toolbar for rich text editor (sticky in header zone)
-│   ├── ErrorBoundary.tsx  # Error boundary for graceful error handling
+│   ├── ErrorBoundary.tsx  # Error boundary with chunk error detection (deployment handling)
 │   ├── Footer.tsx         # Minimal footer with changelog/roadmap/GitHub links
 │   ├── ChapteredLibrary.tsx # Temporal chapters note organization (Pinned, This Week, Last Week, etc.)
 │   ├── ChapterNav.tsx     # Desktop dot navigation sidebar for chapter jumping
@@ -33,36 +33,48 @@ src/
 │   ├── Header.tsx         # Library header with search, new note button (uses HeaderShell)
 │   ├── HeaderShell.tsx    # Shared header component for consistent layout across all pages
 │   ├── LandingPage.tsx    # Split-screen landing page with interactive demo
-│   ├── Library.tsx        # Notes masonry grid view (legacy, replaced by ChapteredLibrary)
+│   ├── LettingGoModal.tsx # Account departure modal with keepsakes export
 │   ├── NoteCard.tsx       # Individual note card with tag badges
+│   ├── ShareModal.tsx     # Modal for creating/managing share links
+│   ├── SharedNoteView.tsx # Public read-only view for shared notes
 │   ├── RichTextEditor.tsx # Tiptap editor content wrapper (toolbar extracted to EditorToolbar)
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
-│   ├── SettingsModal.tsx  # Settings modal (profile, password, theme)
+│   ├── SettingsModal.tsx  # Settings modal (profile, password for non-OAuth, theme, offboarding)
 │   ├── TagBadge.tsx       # Small tag badge for note cards
 │   ├── TagFilterBar.tsx   # Horizontal tag filter strip with edit support
 │   ├── TagModal.tsx       # Modal for creating/editing/deleting tags
 │   ├── TagPill.tsx        # Tag pill component with edit button
 │   ├── TagSelector.tsx    # Dropdown for assigning tags in editor
+│   ├── WelcomeBackPrompt.tsx # Prompt shown when departing user signs in during grace period
 │   └── WhisperBack.tsx    # Floating back button for long notes (scroll-triggered)
 ├── data/
 │   ├── changelog.ts       # Version history data
 │   └── roadmap.ts         # Roadmap items with status
 ├── contexts/
-│   └── AuthContext.tsx    # Auth state management (login, signup, Google OAuth, password reset, profile)
+│   └── AuthContext.tsx    # Auth state management (login, signup, Google OAuth, password reset, profile, offboarding)
 ├── lib/
 │   └── supabase.ts        # Supabase client instance
 ├── services/
 │   ├── notes.ts           # CRUD operations for notes (with tags)
 │   └── tags.ts            # CRUD operations for tags
 ├── types/
-│   └── database.ts        # Supabase DB types (notes, tags, note_tags) with full schema
+│   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares) with full schema
 ├── hooks/
 │   └── useNetworkStatus.ts # Network connectivity monitoring hook
 ├── utils/
 │   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
 │   ├── formatTime.ts      # Relative time formatting
+│   ├── lazyWithRetry.ts   # Smart lazy loading with retry and auto-reload on version updates
 │   ├── sanitize.ts        # HTML/text sanitization (XSS prevention)
-│   └── temporalGrouping.ts # Group notes by time (Pinned, This Week, Last Week, etc.)
+│   ├── temporalGrouping.ts # Group notes by time (Pinned, This Week, Last Week, etc.)
+│   └── withRetry.ts       # Retry utility with exponential backoff and error discrimination
+├── themes/
+│   ├── index.ts           # Theme exports and utilities
+│   ├── types.ts           # ThemeConfig type definitions
+│   ├── kintsugi.ts        # Light theme: Kintsugi (current)
+│   ├── midnight.ts        # Dark theme: Midnight (current)
+│   ├── washi.ts           # Light theme: Washi (proposed)
+│   └── mori.ts            # Dark theme: Mori (proposed)
 ├── test/
 │   └── setup.ts           # Vitest test setup
 ├── App.tsx                # Main app component with state management
@@ -70,6 +82,15 @@ src/
 ├── index.css              # Design system + Tiptap styles
 ├── types.ts               # App types (Note, Tag, Theme, ViewMode, TagColor)
 └── main.tsx               # Entry point with AuthProvider and ErrorBoundary
+
+e2e/
+├── fixtures.ts            # Playwright test fixtures and helpers
+├── auth.spec.ts           # Authentication E2E tests
+├── notes.spec.ts          # Note CRUD E2E tests
+├── tags.spec.ts           # Tag management E2E tests
+├── sharing.spec.ts        # Share link E2E tests
+├── export-import.spec.ts  # Export/Import E2E tests
+└── settings.spec.ts       # Settings E2E tests
 ```
 
 ## Key Commands
@@ -82,6 +103,13 @@ npm run typecheck # Type check without emitting
 npm run test     # Run tests in watch mode
 npm run test:run # Run tests once
 npm run check    # Full CI check: typecheck + lint + test + build
+npm run e2e      # Run Playwright E2E tests
+npm run e2e:ui   # Open Playwright UI for interactive testing
+npm run e2e:headed # Run E2E tests with visible browser
+npm run e2e:report # View E2E test HTML report
+npm run theme:generate  # Generate CSS from active themes
+npm run theme:preview   # Preview theme CSS without updating
+npm run icons:generate  # Generate PWA icons from SVG source
 ```
 
 ## Development Workflow
@@ -125,6 +153,8 @@ The `check` script runs the same steps as GitHub Actions CI:
    - Date
    - Changes array with type ('feature' | 'improvement' | 'fix') and description
 
+Note: `AGENTS.md` is synced from `CLAUDE.md`. Run `npm run docs:sync-agents` (or `npm run docs:sync-agents:check` in CI). A pre-commit hook in `.githooks/pre-commit` keeps it updated when `core.hooksPath` is set to `.githooks`.
+
 Example changelog entry:
 ```typescript
 {
@@ -138,16 +168,123 @@ Example changelog entry:
 },
 ```
 
+## AI-Generated Documentation Standards
+
+**IMPORTANT:** All documentation created by Claude must include the following metadata:
+
+1. **Author:** Claude (Opus 4.5)
+2. **Date/Timestamp:** YYYY-MM-DD (date of creation)
+3. **Original Prompt:** The user's original request (quoted in blockquote)
+
+**Required header format for all AI-generated docs:**
+```markdown
+# [Document Title]
+
+**Version:** 1.0
+**Last Updated:** YYYY-MM-DD
+**Status:** [Living Document | Complete | Draft]
+**Author:** Claude (Opus 4.5)
+
+---
+
+## Original Prompt
+
+> [Include the user's original prompt/question here]
+
+---
+
+## [Document Content]
+```
+
+**File naming convention:** Use `-claude` suffix for AI-authored docs in analysis folder (e.g., `topic-claude.md`)
+
+## Frontend Design Skill Consultations
+
+When using the `frontend-design` skill, follow the AI-Generated Documentation Standards above and save output to `docs/analysis/` folder.
+
+**Additional field for design consultations:**
+- **Consulted:** Frontend Design Skill
+
+**Example:** See `docs/analysis/collaboration-feature-analysis-claude.md`
+
+## Documentation Structure
+
+The `docs/` folder is organized as follows. **See [docs/Index.md](docs/Index.md) for the master index.**
+
+```
+docs/
+├── Index.md          # Master index of all documentation (start here)
+├── prd.md            # Product Requirements Document
+├── technical-spec.md # Technical Specification
+├── ui-layout.md      # UI layout ASCII diagrams
+├── active/           # Current strategy and in-progress work
+├── analysis/         # Claude analysis docs (suffix: -claude.md)
+├── plans/            # Active implementation plans
+├── archive/
+│   ├── planning/     # Historical planning & analysis docs
+│   └── plans/        # Completed implementation plans
+├── codebase-snapshot/ # Point-in-time codebase snapshots
+├── conversations/    # Claude Code session logs
+├── reviews/          # External reviews (Codex, Gemini, code reviews)
+│   └── code-review/  # Code review reports
+└── setup/            # Configuration guides (OAuth, CI, testing)
+```
+
+**Key documents:**
+- **Index.md**: Master documentation index — all docs organized by category
+- **prd.md**: Product vision, personas, features, user flows, success metrics
+- **technical-spec.md**: Architecture, database schema, state management, security, deployment
+
+**Placement guidelines:**
+- **analysis/**: AI-authored design analysis (`*-claude.md`)
+- **archive/plans/**: Implementation plans after feature is complete
+- **archive/planning/**: Old planning docs, tech comparisons
+- **active/**: Docs with ongoing action items
+- **codebase-snapshot/**: Architecture, metrics, and timeline snapshots
+- **reviews/**: External feedback (Gemini, human reviews)
+- **setup/**: How-to guides for configuration
+
 ## Design System
 
-### Themes
+### Theme Configuration System
+Themes are defined in `src/themes/` as TypeScript files for easy backup and switching:
+
+```
+src/themes/
+├── index.ts      # Theme exports, active theme config, utilities
+├── types.ts      # ThemeConfig type definitions
+├── kintsugi.ts   # Light: Current default (warm paper + terracotta)
+├── midnight.ts   # Dark: Current default (forest green + gold)
+├── washi.ts      # Light: Proposed (handmade paper + kakishibu brown)
+└── mori.ts       # Dark: Proposed (deep forest + aged gold)
+```
+
+**Quick Reference:**
+```bash
+npm run theme:generate -- --theme washi mori      # Try new wabi-sabi themes
+npm run theme:generate -- --theme kintsugi midnight  # Restore original themes
+npm run theme:preview                              # Preview without changing
+```
+
+### Active Themes
 - **Light (Kintsugi):** Warm paper backgrounds, terracotta accent (#C25634)
 - **Dark (Midnight):** Deep forest green, antique gold accent (#D4AF37) - **DEFAULT**
+
+### Available Themes
+| Theme | Mode | Description |
+|-------|------|-------------|
+| Kintsugi | Light | Warm aged paper, terracotta accents |
+| Washi | Light | Handmade paper, kakishibu brown accents |
+| Midnight | Dark | Deep forest green, antique gold accents |
+| Mori | Dark | Forest at dusk, aged kintsugi gold |
 
 ### CSS Variables (defined in index.css)
 - `--color-bg-primary`, `--color-bg-secondary`, `--color-bg-tertiary`
 - `--color-text-primary`, `--color-text-secondary`
 - `--color-accent`, `--color-accent-hover`, `--color-accent-glow`
+- `--color-error`, `--color-error-light` (error states)
+- `--color-status-progress`, `--color-status-coming`, `--color-status-exploring`
+- `--color-change-improvement`, `--color-change-fix`
 - `--font-display` (Cormorant Garamond), `--font-body` (Inter)
 - `--radius-card: 2px 24px 4px 24px` (asymmetric wabi-sabi corners)
 
@@ -187,8 +324,20 @@ create table note_tags (
   primary key (note_id, tag_id)
 );
 
+-- Note shares table (for "Share as Letter" feature)
+create table note_shares (
+  id uuid default gen_random_uuid() primary key,
+  note_id uuid references notes(id) on delete cascade not null,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  share_token varchar(32) unique not null,  -- 32-char secure token
+  expires_at timestamptz,  -- null = never expires
+  created_at timestamptz default now() not null,
+  unique(note_id)  -- One active share per note
+);
+
 -- Row Level Security on all tables
 -- Users can only access their own notes and tags
+-- Public can read share tokens for validation
 ```
 
 ## Environment Variables
@@ -202,7 +351,7 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Wabi-sabi design with light/dark themes (dark default)
 - [x] Card-based note library with responsive grid
 - [x] Rich text editor (bold, italic, underline, headers, lists, quotes, code, task lists)
-- [x] User authentication (email/password + Google OAuth) with full name capture
+- [x] User authentication (email/password + Google/GitHub OAuth) with full name capture
 - [x] Supabase database integration
 - [x] Real-time sync across tabs/devices
 - [x] Note creation, editing, deletion
@@ -213,8 +362,8 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Tag filtering (filter bar below header, clears search)
 - [x] Tag creation, editing, and deletion with color picker
 - [x] Profile avatar with user initials (from name or email)
-- [x] Export notes (JSON backup, Markdown)
-- [x] Import notes (JSON restore, Markdown files) with loading overlay
+- [x] Export notes (JSON backup, Markdown) - bulk and single note
+- [x] Import notes (JSON restore, Markdown files) with progress indicator and batch inserts
 - [x] Rich HTML preview in note cards (preserves formatting)
 - [x] Breadcrumb navigation in editor (Zenote / Note Title)
 - [x] Password reset flow (forgot password + email recovery)
@@ -228,10 +377,11 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Pin notes to top of library (pin button top-left, delete moved to bottom-right)
 - [x] Test coverage (Vitest + Testing Library)
 - [x] CI/CD pipeline (GitHub Actions)
-- [x] Code splitting (lazy load Tiptap editor)
+- [x] Code splitting (lazy load Editor, views, modals, vendor chunks)
 - [x] Error monitoring (Sentry)
 - [x] Toast notifications (react-hot-toast)
-- [x] Network connectivity detection (offline/online alerts)
+- [x] Network connectivity detection (Zen-style offline/online messages)
+- [x] PWA support (installable, cached assets, offline app shell)
 - [x] Landing page with interactive demo (split-screen, localStorage persistence)
 - [x] Mobile responsive landing page and auth modal
 - [x] Sticky formatting toolbar in editor (stays visible while scrolling)
@@ -254,9 +404,31 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Integrated editor breadcrumb (logo + note title in same zone for visual continuity)
 - [x] Organic footer in editor ("Return to notes" link at end of content)
 - [x] WhisperBack floating button (appears when scrolled, thumb-friendly on mobile)
+- [x] Demo-to-signup CTA ("Save this note" button appears after typing in demo editor)
+- [x] Demo content migration (notes typed in demo auto-saved as first note after signup)
+- [x] Email confirmation UX (resend email, change email options with 60s cooldown)
+- [x] Signup form polish (optional name label, password hint, modal dismiss confirmation)
+- [x] Enhanced empty library state (icon, CTA button, keyboard shortcut hint)
+- [x] Google OAuth "Instant" badge (emphasizes faster signup path)
+- [x] Mobile sample note on landing page (shows what notes look like)
+- [x] Loading spinner on auth submit button
+- [x] Copy note to clipboard (plain text or with formatting) from export menu
+- [x] Keyboard shortcut Cmd/Ctrl+Shift+C to copy entire note
+- [x] Account offboarding ("Letting Go") with 14-day grace period
+- [x] Keepsakes export during offboarding (Markdown or JSON download)
+- [x] Return during grace period (sign in to cancel departure)
+- [x] Share as Letter (temporary, read-only share links for notes)
+- [x] Configurable share expiration (1 day, 7 days, 30 days, never)
+- [x] Public shared note view with preserved formatting and tags
+- [x] API retry with exponential backoff (3 attempts for failed saves)
+- [x] Smart error discrimination (4xx fail fast, 5xx/network retry)
+- [x] In-flight save tracking (navigation awaits pending saves)
+- [x] Sentry session replay privacy (note content masked)
+- [x] Error design tokens (--color-error in all themes)
+- [x] Space key accessibility (keyboard navigation for all interactive elements)
 
 ## Features Not Yet Implemented
-- [ ] Additional OAuth providers (GitHub, etc.)
+- [ ] Additional OAuth providers (Apple, etc.)
 - [ ] Offline support / PWA
 - [ ] Image attachments
 - [ ] Virtual scrolling for large note lists
@@ -295,286 +467,69 @@ Located in `src/services/notes.ts`:
 - `fetchFadedNotes()` - Get all soft-deleted notes for current user
 - `countFadedNotes()` - Get count for badge display
 - `emptyFadedNotes()` - Permanently delete all faded notes
+- `cleanupExpiredFadedNotes()` - Auto-release notes older than 30 days (runs on app load)
+
+### Share as Letter service functions
+Located in `src/services/notes.ts`:
+- `createNoteShare(noteId, userId, expiresInDays)` - Create share link with optional expiration
+- `getNoteShare(noteId)` - Get existing share for a note (if any)
+- `updateNoteShareExpiration(noteId, expiresInDays)` - Update share expiration
+- `deleteNoteShare(noteId)` - Revoke share access
+- `fetchSharedNote(token)` - Fetch shared note by token (public, no auth required)
 
 ## UI Layout
 
-### Landing Page (Split-Screen)
+See [docs/ui-layout.md](docs/ui-layout.md) for detailed ASCII diagrams of all UI components including:
+- Landing page layouts (desktop/mobile)
+- HeaderShell three-zone layout
+- Note cards, temporal chapters, faded notes view
+- Keyboard shortcuts and slash commands
 
-**Desktop (≥768px):**
-```
-┌─────────────────────────────────┬─────────────────────────────────────────────┐
-│ Zenote                          │                          [🌙] [Sign In]     │
-├─────────────────────────────────┼─────────────────────────────────────────────┤
-│                                 │  ┌─────────────┐  ┌─────────────┐          │
-│  A quiet space                  │  │ Sample Note │  │ Sample Note │          │
-│  for your mind.                 │  │ [tag] TIME  │  │ [tag] TIME  │          │
-│                                 │  └─────────────┘  └─────────────┘          │
-│  The distraction-free...        │  ┌─────────────────────────────────┐       │
-│                                 │  │ Try it here              [DEMO] │       │
-│  [Start Writing]  For free      │  │                                 │       │
-│                                 │  │ Start typing...                 │       │
-│                                 │  └─────────────────────────────────┘       │
-└─────────────────────────────────┴─────────────────────────────────────────────┘
-```
+## Copy & Export
 
-**Mobile (<768px):**
-```
-┌─────────────────────────────┐
-│ Zenote          [🌙] [In]   │  ← Unified header
-├─────────────────────────────┤
-│                             │
-│   A quiet space             │
-│   for your mind.            │
-│                             │
-│   [Start Writing]  For free │
-│                             │
-├─────────────────────────────┤
-│   Try it here        [DEMO] │
-│                             │
-│   Start typing...           │
-│                             │
-└─────────────────────────────┘
-```
+### Copy Options (Editor)
+- **Copy as text**: Plain text to clipboard (title + tags + content)
+- **Copy with formatting**: HTML-formatted for pasting into rich editors
+- Keyboard shortcut: `Cmd/Ctrl + Shift + C` copies as plain text
 
-- Left panel (45%): Hero section with value prop and CTA
-- Right panel (55%): Sample note cards + interactive demo editor
-- Demo content persists to localStorage (zenote-demo-content)
-- Auth opens as modal overlay (responsive, scrollable on mobile)
-- Mobile: Stacked layout, sample cards hidden, unified header
+### Export Options
+- **All Notes (JSON)**: Full backup with notes, tags, and metadata
+- **All Notes (Markdown)**: Combined `.md` file with all notes
+- **Single Note**: Export from editor via download button (Markdown or JSON)
 
-### HeaderShell (Consistent Three-Zone Layout)
-
-All pages use `HeaderShell` component for pixel-perfect header consistency:
-```
-[Zenote]        [    Center Content    ]        [☀] [JD]
-  ↑                      ↑                         ↑
- Logo              Page-specific             Theme + Avatar
-(fixed)             (flexible)               (fixed position)
-```
-
-**Library Header (Desktop):**
-```
-[Zenote]   [  Search...  ⌘K  ] [+ New Note]   [☀] [JD ↓]
-                                                    │
-                                          ┌─────────┴─────────┐
-                                          │ ⚙ Settings        │
-                                          │───────────────────│
-                                          │ ↑ Export (JSON)   │
-                                          │ ↑ Export (MD)     │
-                                          │ ↓ Import Notes    │
-                                          │ ⏱ Faded Notes     │
-                                          │───────────────────│
-                                          │ → Sign out        │
-                                          └───────────────────┘
-```
-
-**Library Header (Mobile - Two Rows):**
-```
-Row 1: [Zenote]                    [+] [☀] [JD]
-Row 2: [         Search...          ]
-```
-- New Note button moved to Row 1 for quick access
-- Search bar gets full width on Row 2
-
-**Editor Header (Desktop):**
-```
-[Zenote / Note Title]                    [Saving.../Saved ✓] [🗑] | [☀] [JD]
-     ↑                                          ↑
- Left Zone                                Right Actions
-(logo + breadcrumb integrated)          (save status + delete)
-```
-
-**Editor Header (Mobile):**
-```
-Row 1: [Zenote]                         [Saving...] [🗑] [☀] [JD]
-Row 2: [Note Title]
-```
-
-**Landing/Public Pages:**
-```
-[Zenote]                                         [☀] [Sign In]
-```
-
-**HeaderShell Props by Page:**
-
-| Page | Left Content | Center Content | Right Actions | Menu Sections |
-|------|--------------|----------------|---------------|---------------|
-| Library | - (default logo) | Search bar | New Note button | Export, Import, Faded Notes |
-| Editor | Logo + Breadcrumb | Mobile: Note title | Save status + Delete | - |
-| Landing | - (default logo) | - | - | - |
-| Changelog | - (default logo) | - | - | - |
-| Roadmap | - (default logo) | - | - | - |
-
-### Keyboard Shortcuts
-| Shortcut | Action | Context |
-|----------|--------|---------|
-| `Cmd/Ctrl + N` | Create new note | Library |
-| `Cmd/Ctrl + K` | Focus search | Library |
-| `Escape` | Save and go back | Editor |
-| `Cmd/Ctrl + B` | Bold | Editor |
-| `Cmd/Ctrl + I` | Italic | Editor |
-| `Cmd/Ctrl + U` | Underline | Editor |
-
-### Slash Commands (type `/` in editor)
-| Command | Inserts |
-|---------|---------|
-| `/date` | Current date (e.g., "Dec 16, 2024") |
-| `/time` | Current time (e.g., "3:30 PM") |
-| `/now` | Date and time (e.g., "Dec 16, 2024 at 3:30 PM") |
-| `/divider` | Horizontal line |
-
-### Tag Filter Bar (below header)
-
-**Desktop (2 rows collapsed, expandable):**
-```
-[All Notes]  |  [Tag 1 ✏]  [Tag 2 ✏]  [Tag 3 ✏]  [Tag 4 ✏]  [Tag 5 ✏]
-              [Tag 6 ✏]  [Tag 7 ✏]  [+]  [+3 ▼]
-                                          ↑ Expand button (if >2 rows)
-```
-
-**Mobile (all tags visible, wrapped):**
-```
-[All Notes]  |  [Tag 1]  [Tag 2]
-              [Tag 3]  [Tag 4]  [+]
-```
-- Mobile shows all tags in wrapping layout (no collapse)
-- Desktop shows 2 rows by default with expand/collapse if more tags exist
-- Edit button appears on hover (desktop only)
-
-### Note Card
-```
-┌─────────────────────────────────┐
-│ Note Title                  [📌]│  ← Pin button (top-right, appears on hover)
-│                                 │
-│ Rich content preview with       │
-│ formatting (4-line clamp)...    │
-│                                 │
-│ [tag] [tag]    JUST NOW    [🗑] │  ← Delete button (appears on hover)
-└─────────────────────────────────┘
-
-Card design: Compact "editorial index card" style
-- Padding: 24px sides, 20px bottom (p-6 pb-5)
-- Title: 1.25rem serif font
-- Preview: CSS line-clamp (4 lines)
-- Grid: Masonry-style (items-start) - cards size to content
-
-Pinned notes:
-- Pin icon is always visible and filled with accent color
-- Sorted to appear first in the library
-```
-
-### Temporal Chapters (Note Organization)
-```
-┌─────────────────────────────────────────────────────────────┐
-│ ▼ Today                                            2 notes  │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐                          │
-│  │ Note Card   │  │ Note Card   │                          │
-│  └─────────────┘  └─────────────┘                          │
-├─────────────────────────────────────────────────────────────┤
-│ ▶ This Week                                        5 notes  │
-│   Note A · Note B · Note C ...                              │
-├─────────────────────────────────────────────────────────────┤
-│ ▶ This Month                                       8 notes  │
-│   Note X · Note Y · Note Z ...                              │
-└─────────────────────────────────────────────────────────────┘
-```
-- Notes automatically grouped by time (Pinned, This Week, Last Week, This Month, Earlier, Archive)
-- Empty chapters are not rendered ("Honest Presence" pattern)
-- Collapsed state shows first 3 note titles as preview
-- Each chapter has its own masonry grid
-
-### Faded Notes View
-```
-┌─────────────────────────────────────────────────────────────┐
-│ ← Back to Notes                              [Empty All]    │
-├─────────────────────────────────────────────────────────────┤
-│                      Faded Notes                            │
-│           Notes here will be permanently                    │
-│           removed after 30 days                             │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Note Title                                          │   │
-│  │ Deleted 3 days ago · 27 days left                   │   │
-│  │ [Restore] [Delete Forever]                          │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
-- Accessed via "Faded Notes" in profile menu (shows badge count)
-- Cards show deletion time and days remaining
-- Restore returns note to library
-- "Delete Forever" permanently removes note
-- "Empty All" permanently deletes all faded notes
-
-### Footer (Library & Landing Page)
-```
-              Changelog  ·  Roadmap  ·  GitHub
-```
-- Subtle links at bottom of page
-- Text: 12px, tertiary color
-- Accent color on hover
-- Public pages accessible without login
-
-### Changelog Page
-```
-┌─────────────────────────────────────────────────────────────┐
-│ ← Back                                                      │
-├─────────────────────────────────────────────────────────────┤
-│                      What's New                             │
-│                                                             │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ v1.3.0                               Dec 18, 2024     │  │
-│  │ ✦ Feature: Public changelog and roadmap pages        │  │
-│  │ ↑ Improvement: Enhanced descriptions                  │  │
-│  │ ✓ Fix: Bug fixes                                      │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│              Changelog  ·  Roadmap  ·  GitHub               │
-└─────────────────────────────────────────────────────────────┘
-```
-- Change icons: ✦ (feature), ↑ (improvement), ✓ (fix)
-- Data stored in `src/data/changelog.ts`
-
-### Roadmap Page
-```
-┌─────────────────────────────────────────────────────────────┐
-│ ← Back                                                      │
-├─────────────────────────────────────────────────────────────┤
-│                       Roadmap                               │
-│       What we're building and exploring next                │
-│                                                             │
-│  Coming Soon ─────────────────────────────────────────────  │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ Feature Title                         [Coming Soon]   │  │
-│  │ Description of the feature                            │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│              Changelog  ·  Roadmap  ·  GitHub               │
-└─────────────────────────────────────────────────────────────┘
-```
-- Status badges: In Progress (gold), Coming Soon (terracotta), Exploring (stone)
-- Data stored in `src/data/roadmap.ts`
-
-## Export/Import
-
-### Export Formats
-- **JSON**: Full backup with notes, tags, and metadata. Can be re-imported.
-- **Markdown**: Combined `.md` file with all notes (human-readable)
-
-### Import Formats
+### Import Features
 - **JSON** (`.json`): Restore full backup, creates missing tags automatically
-- **Markdown** (`.md`): Import single note, extracts title from `# Heading`
+- **Markdown** (`.md`): Imports single or multiple notes with tags preserved
+- **Batch import**: Uses efficient batch inserts with progress indicator
+- **Task lists**: Checkboxes preserved during import/export
+
+### Markdown Format
+All markdown exports use a unified format for consistency:
+```markdown
+---
+# Note Title
+Tags: tag1, tag2
+---
+
+content...
+```
 
 ### Utilities
 Export/import functions are in `src/utils/exportImport.ts`:
-- `exportNotesToJSON()` / `parseImportedJSON()`
-- `htmlToMarkdown()` / `markdownToHtml()`
-- `downloadFile()` / `readFileAsText()`
+- `copyNoteToClipboard()` / `copyNoteWithFormatting()` - Copy to clipboard
+- `htmlToPlainText()` / `formatNoteForClipboard()` - Plain text conversion
+- `exportNotesToJSON()` / `parseImportedJSON()` - JSON backup
+- `exportNoteToJSON()` / `exportNoteToMarkdown()` - Single note export
+- `parseMultiNoteMarkdown()` - Parse combined markdown exports
+- `htmlToMarkdown()` / `markdownToHtml()` - Format conversion
+- `downloadFile()` / `readFileAsText()` - File utilities
+- `createNotesBatch()` - Batch insert for efficient imports (in notes.ts)
 
 ## AuthContext API
 The `AuthContext` provides these functions:
 - `signIn(email, password)` - Log in with email/password
 - `signInWithGoogle()` - Log in with Google OAuth (redirects to Google)
+- `signInWithGitHub()` - Log in with GitHub OAuth (redirects to GitHub)
 - `signUp(email, password, fullName)` - Create account with display name
 - `signOut()` - Log out current user
 - `resetPassword(email)` - Send password reset email
@@ -582,11 +537,18 @@ The `AuthContext` provides these functions:
 - `updateProfile(fullName)` - Update display name in user metadata
 - `isPasswordRecovery` - Boolean indicating if user arrived via recovery link
 - `clearPasswordRecovery()` - Clear recovery state after password update
+- `initiateOffboarding()` - Start account departure (sets departing_at in user_metadata)
+- `cancelOffboarding()` - Cancel departure and stay (clears departing_at)
+- `isDeparting` - Boolean indicating if user is in departure grace period
+- `daysUntilRelease` - Days remaining until account release (null if not departing)
 
 ## Settings Modal
 The Settings modal (`SettingsModal.tsx`) has two tabs:
 - **Profile Tab:** Email (read-only), display name input, theme toggle button
 - **Password Tab:** New password + confirmation with validation (min 8 chars)
+  - Hidden for OAuth users (Google sign-in) since they authenticate via their provider
+
+At the bottom of the modal is the "Let go of Zenote" link that opens the offboarding modal.
 
 ## Notes
 - Content is stored as HTML (from Tiptap's `getHTML()`)
@@ -601,14 +563,19 @@ The Settings modal (`SettingsModal.tsx`) has two tabs:
 - Password recovery detected via Supabase `PASSWORD_RECOVERY` auth event
 - TagModal shows loading spinners during async create/update/delete operations
 - Import operations show a loading overlay with spinner
-- Google OAuth uses Supabase's `signInWithOAuth` with redirect back to app origin
-- Google sign-in button appears on login and signup screens with "or" divider
+- Google/GitHub OAuth use Supabase's `signInWithOAuth` with redirect back to app origin
+- OAuth buttons appear side-by-side on login and signup screens with "or" divider
 - ErrorBoundary wraps the entire app to catch and display runtime errors gracefully
+- Chunk loading errors (from deployments) show "New version available" and auto-refresh
 - Production OAuth requires Supabase Site URL and Redirect URLs to match deployment domain
 - Toast notifications use react-hot-toast with theme-aware styling
 - Network status monitored via useNetworkStatus hook (shows offline/online toasts)
 - Sentry error monitoring enabled when VITE_SENTRY_DSN is configured
-- Editor component is lazy-loaded to reduce initial bundle size (~384KB saved)
+- Extensive code splitting reduces initial bundle (596KB → 332KB, -44%):
+  - Editor: lazy-loaded (415KB chunk)
+  - Views: ChangelogPage, RoadmapPage, FadedNotesView, SharedNoteView
+  - Modals: SettingsModal, LettingGoModal, TagModal
+  - Vendors: Supabase (189KB), Sentry (18KB), React (4KB) in separate chunks
 - Landing page shows for unauthenticated users with interactive demo
 - Auth component supports modal mode (`isModal` prop) for landing page overlay
 
@@ -657,3 +624,4 @@ SQL migrations are stored in `supabase/migrations/`:
 - `security_audit_checklist.sql` - RLS audit queries and rate limiting docs
 - `add_pinned_column.sql` - Add pinned column to notes table
 - `add_soft_delete.sql` - Add deleted_at column for soft-delete feature
+- `add_note_shares.sql` - Add note_shares table for "Share as Letter" feature
