@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useNetworkStatus } from './useNetworkStatus';
 import toast from 'react-hot-toast';
 
 // Mock react-hot-toast
@@ -8,20 +7,23 @@ vi.mock('react-hot-toast', () => ({
   default: vi.fn(),
 }));
 
+// Import after mocking to get fresh module state
+// Note: We need to reset the module between tests due to singleton pattern
 describe('useNetworkStatus', () => {
   let originalNavigator: Navigator;
   let addEventListenerSpy: ReturnType<typeof vi.spyOn>;
-  let removeEventListenerSpy: ReturnType<typeof vi.spyOn>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+
+    // Reset the module to clear singleton state
+    vi.resetModules();
 
     // Store original navigator
     originalNavigator = window.navigator;
 
     // Spy on window event listeners
     addEventListenerSpy = vi.spyOn(window, 'addEventListener');
-    removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
 
     // Default to online
     Object.defineProperty(window.navigator, 'onLine', {
@@ -40,23 +42,35 @@ describe('useNetworkStatus', () => {
     });
   });
 
-  it('adds event listeners on mount', () => {
+  it('adds event listeners on first use (singleton pattern)', async () => {
+    const { useNetworkStatus } = await import('./useNetworkStatus');
     renderHook(() => useNetworkStatus());
 
     expect(addEventListenerSpy).toHaveBeenCalledWith('online', expect.any(Function));
     expect(addEventListenerSpy).toHaveBeenCalledWith('offline', expect.any(Function));
   });
 
-  it('removes event listeners on unmount', () => {
-    const { unmount } = renderHook(() => useNetworkStatus());
+  it('does not add duplicate listeners on multiple hook instances', async () => {
+    const { useNetworkStatus } = await import('./useNetworkStatus');
 
-    unmount();
+    // First hook instance
+    renderHook(() => useNetworkStatus());
+    const callCountAfterFirst = addEventListenerSpy.mock.calls.filter(
+      ([event]) => event === 'online' || event === 'offline'
+    ).length;
 
-    expect(removeEventListenerSpy).toHaveBeenCalledWith('online', expect.any(Function));
-    expect(removeEventListenerSpy).toHaveBeenCalledWith('offline', expect.any(Function));
+    // Second hook instance - should not add more listeners
+    renderHook(() => useNetworkStatus());
+    const callCountAfterSecond = addEventListenerSpy.mock.calls.filter(
+      ([event]) => event === 'online' || event === 'offline'
+    ).length;
+
+    expect(callCountAfterFirst).toBe(2); // online + offline
+    expect(callCountAfterSecond).toBe(2); // Still just 2, not 4
   });
 
-  it('does not show toast when initially online', () => {
+  it('does not show toast when initially online', async () => {
+    const { useNetworkStatus } = await import('./useNetworkStatus');
     Object.defineProperty(window.navigator, 'onLine', {
       value: true,
       writable: true,
@@ -68,20 +82,22 @@ describe('useNetworkStatus', () => {
     expect(toast).not.toHaveBeenCalled();
   });
 
-  it('sets isOnline to false when initially offline', () => {
+  it('sets isOnline to false when initially offline', async () => {
     Object.defineProperty(window.navigator, 'onLine', {
       value: false,
       writable: true,
       configurable: true,
     });
 
+    const { useNetworkStatus } = await import('./useNetworkStatus');
     const { result } = renderHook(() => useNetworkStatus());
 
     // Should be offline but no toast on initial render (only on transition)
     expect(result.current.isOnline).toBe(false);
   });
 
-  it('shows offline toast when going offline', () => {
+  it('shows offline toast when going offline', async () => {
+    const { useNetworkStatus } = await import('./useNetworkStatus');
     renderHook(() => useNetworkStatus());
 
     // Clear any initial calls
@@ -99,7 +115,8 @@ describe('useNetworkStatus', () => {
     );
   });
 
-  it('shows online toast when coming back online after being offline', () => {
+  it('shows online toast when coming back online after being offline', async () => {
+    const { useNetworkStatus } = await import('./useNetworkStatus');
     renderHook(() => useNetworkStatus());
 
     // Clear any initial calls
@@ -123,7 +140,8 @@ describe('useNetworkStatus', () => {
     );
   });
 
-  it('does not show online toast if never went offline', () => {
+  it('does not show online toast if never went offline', async () => {
+    const { useNetworkStatus } = await import('./useNetworkStatus');
     renderHook(() => useNetworkStatus());
 
     // Clear any initial calls
@@ -135,7 +153,8 @@ describe('useNetworkStatus', () => {
     expect(toast).not.toHaveBeenCalled();
   });
 
-  it('tracks offline state correctly across multiple transitions', () => {
+  it('tracks offline state correctly across multiple transitions', async () => {
+    const { useNetworkStatus } = await import('./useNetworkStatus');
     renderHook(() => useNetworkStatus());
     vi.mocked(toast).mockClear();
 
@@ -169,7 +188,8 @@ describe('useNetworkStatus', () => {
     );
   });
 
-  it('applies correct styling to toasts', () => {
+  it('applies correct styling to toasts', async () => {
+    const { useNetworkStatus } = await import('./useNetworkStatus');
     renderHook(() => useNetworkStatus());
     vi.mocked(toast).mockClear();
 
@@ -188,23 +208,36 @@ describe('useNetworkStatus', () => {
     );
   });
 
-  it('returns isOnline status', () => {
+  it('returns isOnline status', async () => {
+    const { useNetworkStatus } = await import('./useNetworkStatus');
     const { result } = renderHook(() => useNetworkStatus());
 
     expect(result.current.isOnline).toBe(true);
 
+    // Update navigator.onLine before dispatching (simulates real browser behavior)
     act(() => {
+      Object.defineProperty(window.navigator, 'onLine', {
+        value: false,
+        writable: true,
+        configurable: true,
+      });
       window.dispatchEvent(new Event('offline'));
     });
     expect(result.current.isOnline).toBe(false);
 
     act(() => {
+      Object.defineProperty(window.navigator, 'onLine', {
+        value: true,
+        writable: true,
+        configurable: true,
+      });
       window.dispatchEvent(new Event('online'));
     });
     expect(result.current.isOnline).toBe(true);
   });
 
-  it('provides onReconnect callback', () => {
+  it('provides onReconnect callback', async () => {
+    const { useNetworkStatus } = await import('./useNetworkStatus');
     const { result } = renderHook(() => useNetworkStatus());
     const reconnectHandler = vi.fn();
 

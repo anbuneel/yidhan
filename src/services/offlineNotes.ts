@@ -359,7 +359,7 @@ export async function clearOfflineData(): Promise<void> {
 /**
  * Add an operation to the sync queue
  */
-async function queueSyncOperation(
+export async function queueSyncOperation(
   userId: string,
   operation: SyncOperation,
   entityType: 'note' | 'tag' | 'noteTag',

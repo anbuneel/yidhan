@@ -194,22 +194,47 @@ export async function resolveConflict(
 
   switch (choice) {
     case 'local': {
-      // Push local version to server
-      await supabase
-        .from('notes')
-        .update({
+      // Push local version to server (or queue if offline)
+      const { queueSyncOperation } = await import('../services/offlineNotes');
+
+      if (navigator.onLine) {
+        // Try to push directly when online
+        const { error } = await supabase
+          .from('notes')
+          .update({
+            title: localNote.title,
+            content: localNote.content,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', localNote.id);
+
+        if (error) {
+          // Queue for retry if server update failed
+          await queueSyncOperation(userId, 'update', 'note', localNote.id, {
+            title: localNote.title,
+            content: localNote.content,
+          });
+          await db.notes.update(localNote.id, {
+            syncStatus: 'pending',
+          });
+        } else {
+          // Mark as synced
+          await db.notes.update(localNote.id, {
+            syncStatus: 'synced',
+            lastSyncedAt: Date.now(),
+            serverUpdatedAt: Date.now(),
+          });
+        }
+      } else {
+        // Queue for sync when back online
+        await queueSyncOperation(userId, 'update', 'note', localNote.id, {
           title: localNote.title,
           content: localNote.content,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', localNote.id);
-
-      // Mark as synced
-      await db.notes.update(localNote.id, {
-        syncStatus: 'synced',
-        lastSyncedAt: Date.now(),
-        serverUpdatedAt: Date.now(),
-      });
+        });
+        await db.notes.update(localNote.id, {
+          syncStatus: 'pending',
+        });
+      }
       break;
     }
 
@@ -233,14 +258,16 @@ export async function resolveConflict(
 
     case 'both': {
       // Keep both: update local with server version, create new note with local content
+      const { queueSyncOperation } = await import('../services/offlineNotes');
       const newNoteId = crypto.randomUUID();
       const now = Date.now();
+      const copyTitle = `${localNote.title} (copy)`;
 
-      // Create new note with local content
+      // Create new note with local content in IndexedDB
       await db.notes.add({
         id: newNoteId,
         userId,
-        title: `${localNote.title} (copy)`,
+        title: copyTitle,
         content: localNote.content,
         pinned: false,
         deletedAt: null,
@@ -252,23 +279,12 @@ export async function resolveConflict(
         localUpdatedAt: now,
       });
 
-      // Create via server directly if online
-      // (queueSyncOperation is internal to offlineNotes, so we sync directly)
-      if (navigator.onLine) {
-        await supabase.from('notes').insert({
-          id: newNoteId,
-          user_id: userId,
-          title: `${localNote.title} (copy)`,
-          content: localNote.content,
-          pinned: false,
-        });
-
-        await db.notes.update(newNoteId, {
-          syncStatus: 'synced',
-          lastSyncedAt: now,
-          serverUpdatedAt: now,
-        });
-      }
+      // Queue the create operation for sync (works both online and offline)
+      await queueSyncOperation(userId, 'create', 'note', newNoteId, {
+        title: copyTitle,
+        content: localNote.content,
+        pinned: false,
+      });
 
       // Update original with server version
       await db.notes.update(serverNote.id, {
