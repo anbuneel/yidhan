@@ -188,6 +188,7 @@ function App() {
   // 2. The value persists across renders without causing effect re-runs
   // 3. Prevents race conditions if multiple effects try to migrate simultaneously
   const hasMigratedDemoContent = useRef(false);
+  const isCreatingNoteFromShare = useRef(false);
 
   // Apply theme to document
   useEffect(() => {
@@ -339,6 +340,9 @@ function App() {
   // Handle Share Target data for authenticated users
   useEffect(() => {
     if (!userId || !sharedData) return;
+    // Prevent duplicate note creation (race condition in Strict Mode)
+    if (isCreatingNoteFromShare.current) return;
+    isCreatingNoteFromShare.current = true;
 
     const { title, content } = formatSharedContent(sharedData);
 
@@ -356,6 +360,8 @@ function App() {
       .catch((error: unknown) => {
         console.error('Failed to create note from share:', error);
         toast.error('Failed to create note from share');
+        // Reset flag so user can try again
+        isCreatingNoteFromShare.current = false;
       });
   }, [userId, sharedData, clearSharedData, trackNoteCreated, startTransition]);
 

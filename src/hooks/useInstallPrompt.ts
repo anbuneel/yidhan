@@ -116,6 +116,10 @@ export function useInstallPrompt() {
   // Track note creation (called by App.tsx)
   const trackNoteCreated = useCallback(() => {
     setEngagement((prev) => {
+      // Skip update if threshold already met (optimization)
+      if (prev.notesCreated >= ENGAGEMENT_THRESHOLD.notesCreated) {
+        return prev;
+      }
       const updated = {
         ...prev,
         notesCreated: prev.notesCreated + 1,

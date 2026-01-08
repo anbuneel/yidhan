@@ -32,7 +32,13 @@ export function formatSharedContent(data: SharedData): {
   }
 
   if (data.url) {
-    parts.push(`<p><a href="${escapeHtml(data.url)}">${escapeHtml(data.url)}</a></p>`);
+    // Only create clickable link for safe URLs (http/https)
+    if (isSafeUrl(data.url)) {
+      parts.push(`<p><a href="${escapeHtml(data.url)}">${escapeHtml(data.url)}</a></p>`);
+    } else {
+      // Show URL as plain text if protocol is unsafe
+      parts.push(`<p>${escapeHtml(data.url)}</p>`);
+    }
   }
 
   return {
@@ -51,6 +57,18 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+/**
+ * Validate URL has safe protocol (prevents javascript: XSS)
+ */
+function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ['http:', 'https:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
 }
 
 /**
