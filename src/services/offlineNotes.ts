@@ -177,16 +177,9 @@ export async function fetchNotesOffline(
 ): Promise<Note[]> {
   const db = getOfflineDb(userId);
 
-  // Get all active notes (not soft-deleted)
-  let notes = await db.notes
-    .where('deletedAt')
-    .equals(null as unknown as number) // Dexie quirk for null comparison
-    .or('deletedAt')
-    .equals(0)
-    .toArray();
-
-  // Filter to only null deletedAt (active notes)
-  notes = notes.filter((n) => n.deletedAt === null);
+  // Get all notes and filter in JS - Dexie null indexing is unreliable
+  const allNotes = await db.notes.toArray();
+  const notes = allNotes.filter((n) => n.deletedAt === null);
 
   // Sort: pinned first, then by updatedAt descending
   notes.sort((a, b) => {
