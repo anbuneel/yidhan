@@ -101,6 +101,7 @@
   --transition-fast: 150ms ease-out;
   --transition-normal: 300ms ease-out;
   --transition-slow: 500ms cubic-bezier(0.25, 0.8, 0.25, 1);
+  --ease-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 /* Base styles */
@@ -237,7 +238,7 @@ body::before {
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 250ms;
-  animation-timing-function: var(--transition-slow);
+  animation-timing-function: var(--ease-smooth);
 }
 
 ::view-transition-old(root) {
