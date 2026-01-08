@@ -35,7 +35,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
-  const [isHydrating, setIsHydrating] = useState(false);
+  // Start as true to prevent race condition: App.tsx should wait for hydration check
+  // before fetching notes from potentially empty IndexedDB
+  const [isHydrating, setIsHydrating] = useState(true);
 
   // Track the current user ID to prevent race conditions during hydration
   const hydrationUserIdRef = useRef<string | null>(null);
@@ -100,10 +102,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Hydrate offline DB when user is available
+  // Hydrate offline DB when user is available, or clear hydrating state if no user
   useEffect(() => {
-    if (user && !loading) {
+    if (loading) return; // Wait for auth to initialize
+
+    if (user) {
       hydrateOfflineDb();
+    } else {
+      // No user (logged out or landing page) - no hydration needed
+      setIsHydrating(false);
     }
   }, [user, loading, hydrateOfflineDb]);
 
