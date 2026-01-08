@@ -29,12 +29,12 @@ import {
   subscribeToNotes,
   cleanupExpiredFadedNotes,
   emptyFadedNotes,
-  createNotesBatch,
 } from './services/notes';
 import { subscribeToTags } from './services/tags';
 import {
   fetchNotesOffline,
   createNoteOffline,
+  createNotesBatchOffline,
   updateNoteOffline,
   searchNotesOffline,
   toggleNotePinOffline,
@@ -45,6 +45,10 @@ import {
   countFadedNotesOffline,
   addTagToNoteOffline,
   removeTagFromNoteOffline,
+  upsertNoteFromServer,
+  deleteNoteFromServer,
+  upsertTagFromServer,
+  deleteTagFromServer,
 } from './services/offlineNotes';
 import {
   fetchTagsOffline,
@@ -92,7 +96,7 @@ function LoadingFallback({ message = 'Loading...' }: { message?: string }) {
 }
 
 function App() {
-  const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease } = useAuth();
+  const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating } = useAuth();
 
   // Network connectivity monitoring
   useNetworkStatus();
@@ -185,14 +189,21 @@ function App() {
     }
   }, [user, isDeparting]);
 
-  // Fetch notes when user is authenticated
+  // Fetch notes when user is authenticated and hydration is complete
   // Use user?.id as dependency to avoid refetching when user object reference changes
   // (e.g., when Supabase refreshes the session on tab focus)
+  // Wait for hydration to complete so first-time users see their notes from server
   const userId = user?.id;
   useEffect(() => {
     if (!userId) {
       setNotes([]);
       setLoading(false);
+      return;
+    }
+
+    // Don't fetch until hydration is complete (first-time users need server data)
+    if (isHydrating) {
+      setLoading(true);
       return;
     }
 
@@ -202,10 +213,13 @@ function App() {
       .catch(console.error)
       .finally(() => setLoading(false));
 
-    // Subscribe to real-time changes
+    // Subscribe to real-time changes (also write to IndexedDB to keep IDB in sync)
     const unsubscribe = subscribeToNotes(
       userId,
       (newNote) => {
+        // Write to IndexedDB first
+        upsertNoteFromServer(userId, newNote).catch(console.error);
+
         setNotes((prev) => {
           // Avoid duplicates
           if (prev.some((n) => n.id === newNote.id)) return prev;
@@ -214,6 +228,9 @@ function App() {
         });
       },
       (updatedNote) => {
+        // Write to IndexedDB first
+        upsertNoteFromServer(userId, updatedNote).catch(console.error);
+
         // Check if this is a soft-delete (note now has deletedAt set)
         if (updatedNote.deletedAt) {
           // Remove from active notes and update faded count
@@ -247,6 +264,9 @@ function App() {
         });
       },
       (deletedId) => {
+        // Remove from IndexedDB
+        deleteNoteFromServer(userId, deletedId).catch(console.error);
+
         setNotes((prev) => prev.filter((n) => n.id !== deletedId));
         if (selectedNoteId === deletedId) {
           setView('library');
@@ -256,7 +276,7 @@ function App() {
     );
 
     return () => unsubscribe();
-  }, [userId, selectedNoteId]);
+  }, [userId, selectedNoteId, isHydrating]);
 
   // Migrate demo content from landing page to user's first note
   // Dependency: userId (string) instead of user (object) because:
@@ -295,7 +315,7 @@ function App() {
     }
   }, [userId]);
 
-  // Fetch tags when user is authenticated
+  // Fetch tags when user is authenticated and hydration is complete
   useEffect(() => {
     if (!userId) {
       setTags([]);
@@ -303,34 +323,46 @@ function App() {
       return;
     }
 
+    // Don't fetch until hydration is complete (first-time users need server data)
+    if (isHydrating) return;
+
     fetchTagsOffline(userId)
       .then(setTags)
       .catch(console.error);
 
-    // Subscribe to real-time tag changes
+    // Subscribe to real-time tag changes (also write to IndexedDB to keep IDB in sync)
     const unsubscribeTags = subscribeToTags(
       userId,
       (newTag) => {
+        // Write to IndexedDB first
+        upsertTagFromServer(userId, newTag).catch(console.error);
+
         setTags((prev) => {
           if (prev.some((t) => t.id === newTag.id)) return prev;
           return [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name));
         });
       },
       (updatedTag) => {
+        // Write to IndexedDB first
+        upsertTagFromServer(userId, updatedTag).catch(console.error);
+
         setTags((prev) =>
           prev.map((t) => (t.id === updatedTag.id ? updatedTag : t))
         );
       },
       (deletedId) => {
+        // Remove from IndexedDB
+        deleteTagFromServer(userId, deletedId).catch(console.error);
+
         setTags((prev) => prev.filter((t) => t.id !== deletedId));
         setSelectedTagIds((prev) => prev.filter((id) => id !== deletedId));
       }
     );
 
     return () => unsubscribeTags();
-  }, [userId]);
+  }, [userId, isHydrating]);
 
-  // Fetch faded notes count when user is authenticated
+  // Fetch faded notes count when user is authenticated and hydration is complete
   useEffect(() => {
     if (!userId) {
       setFadedNotesCount(0);
@@ -338,13 +370,16 @@ function App() {
       return;
     }
 
+    // Don't fetch until hydration is complete (first-time users need server data)
+    if (isHydrating) return;
+
     // Cleanup expired notes first, then fetch count
     // This ensures users never see notes past their 30-day window
     cleanupExpiredFadedNotes()
       .then(() => countFadedNotesOffline(userId))
       .then(setFadedNotesCount)
       .catch(console.error);
-  }, [userId]);
+  }, [userId, isHydrating]);
 
   // Sort notes: pinned first, then by most recent
   const sortedNotes = [...notes].sort((a, b) => {
@@ -795,17 +830,20 @@ function App() {
           }
         }
 
-        // Prepare notes for batch insert
-        const notesToImport = data.notes.map(noteData => ({
-          title: noteData.title,
-          content: sanitizeHtml(noteData.content),
-          createdAt: noteData.createdAt ? new Date(noteData.createdAt) : undefined,
-          updatedAt: noteData.updatedAt ? new Date(noteData.updatedAt) : undefined,
-          originalTags: noteData.tags, // Keep track of tags to add after insert
-        }));
+        // Prepare notes for batch insert (keep original tags for later)
+        const originalTagsMap = new Map<number, string[]>();
+        const notesToImport = data.notes.map((noteData, index) => {
+          originalTagsMap.set(index, noteData.tags);
+          return {
+            title: noteData.title,
+            content: sanitizeHtml(noteData.content),
+            createdAt: noteData.createdAt ? new Date(noteData.createdAt) : undefined,
+            updatedAt: noteData.updatedAt ? new Date(noteData.updatedAt) : undefined,
+          };
+        });
 
-        // Batch insert notes with progress callback
-        const createdNotes = await createNotesBatch(
+        // Batch insert notes with progress callback (offline-first)
+        const createdNotes = await createNotesBatchOffline(
           user.id,
           notesToImport,
           (completed, total) => {
@@ -817,7 +855,7 @@ function App() {
         setImportProgress({ isImporting: true, current: 0, total: createdNotes.length, phase: 'finalizing' });
         for (let i = 0; i < createdNotes.length; i++) {
           const note = createdNotes[i];
-          const originalTags = notesToImport[i].originalTags;
+          const originalTags = originalTagsMap.get(i) || [];
           for (const tagName of originalTags) {
             const tagId = tagMap.get(tagName);
             if (tagId) {
@@ -862,15 +900,18 @@ function App() {
             }
           }
 
-          // Prepare notes for batch insert
-          const notesToImport = multiNotes.map(noteData => ({
-            title: noteData.title,
-            content: sanitizeHtml(markdownToHtml(noteData.content)),
-            originalTags: noteData.tags,
-          }));
+          // Prepare notes for batch insert (keep original tags for later)
+          const originalTagsMap = new Map<number, string[]>();
+          const notesToImport = multiNotes.map((noteData, index) => {
+            originalTagsMap.set(index, noteData.tags);
+            return {
+              title: noteData.title,
+              content: sanitizeHtml(markdownToHtml(noteData.content)),
+            };
+          });
 
-          // Batch insert notes with progress callback
-          const createdNotes = await createNotesBatch(
+          // Batch insert notes with progress callback (offline-first)
+          const createdNotes = await createNotesBatchOffline(
             user.id,
             notesToImport,
             (completed, total) => {
@@ -883,7 +924,7 @@ function App() {
             setImportProgress({ isImporting: true, current: 0, total: createdNotes.length, phase: 'finalizing' });
             for (let i = 0; i < createdNotes.length; i++) {
               const note = createdNotes[i];
-              const originalTags = notesToImport[i].originalTags;
+              const originalTags = originalTagsMap.get(i) || [];
               for (const tagName of originalTags) {
                 const tagId = tagMap.get(tagName);
                 if (tagId) {

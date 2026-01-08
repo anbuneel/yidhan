@@ -436,6 +436,77 @@ export async function createNoteOffline(
 }
 
 /**
+ * Create multiple notes offline (for batch imports)
+ * Writes all notes to IndexedDB first, then queues for sync
+ * Returns created notes with progress callback support
+ */
+export async function createNotesBatchOffline(
+  userId: string,
+  notes: Array<{
+    title: string;
+    content: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+  }>,
+  onProgress?: (completed: number, total: number) => void
+): Promise<Note[]> {
+  const db = getOfflineDb(userId);
+  const now = Date.now();
+  const createdNotes: Note[] = [];
+
+  // Process in batches to avoid blocking the UI
+  const BATCH_SIZE = 50;
+  for (let i = 0; i < notes.length; i += BATCH_SIZE) {
+    const batch = notes.slice(i, i + BATCH_SIZE);
+
+    // Create local notes for this batch
+    const localNotes: LocalNote[] = batch.map((noteData) => {
+      const noteId = crypto.randomUUID();
+      const createdAt = noteData.createdAt?.getTime() ?? now;
+      const updatedAt = noteData.updatedAt?.getTime() ?? now;
+
+      return {
+        id: noteId,
+        userId,
+        title: noteData.title,
+        content: noteData.content,
+        pinned: false,
+        deletedAt: null,
+        createdAt,
+        updatedAt,
+        syncStatus: 'pending' as const,
+        lastSyncedAt: null,
+        serverUpdatedAt: null,
+        localUpdatedAt: now,
+      };
+    });
+
+    // Bulk add to IndexedDB
+    await db.notes.bulkAdd(localNotes);
+
+    // Queue sync operations for each note
+    for (const localNote of localNotes) {
+      await queueSyncOperation(userId, 'create', 'note', localNote.id, {
+        title: localNote.title,
+        content: localNote.content,
+        pinned: false,
+        createdAt: new Date(localNote.createdAt).toISOString(),
+        updatedAt: new Date(localNote.updatedAt).toISOString(),
+      });
+
+      createdNotes.push(localNoteToNote(localNote, []));
+    }
+
+    // Report progress
+    if (onProgress) {
+      onProgress(Math.min(i + batch.length, notes.length), notes.length);
+    }
+  }
+
+  return createdNotes;
+}
+
+/**
  * Update a note offline
  * Updates IndexedDB immediately, queues for sync
  */
@@ -713,6 +784,134 @@ export async function markNoteSynced(
 export async function getPendingSyncCount(userId: string): Promise<number> {
   const db = getOfflineDb(userId);
   return db.syncQueue.count();
+}
+
+// ============================================
+// REALTIME SYNC HELPERS
+// These functions handle server->local updates from realtime subscriptions
+// They don't queue sync operations since data comes from server
+// ============================================
+
+/**
+ * Insert or update a note from server (realtime subscription)
+ * Does NOT queue sync operation since this is server->local
+ */
+export async function upsertNoteFromServer(
+  userId: string,
+  note: Note
+): Promise<void> {
+  const db = getOfflineDb(userId);
+  const now = Date.now();
+
+  const existing = await db.notes.get(note.id);
+
+  if (existing) {
+    // Only update if server version is newer (or if local has no pending changes)
+    if (existing.syncStatus === 'synced' || !existing.localUpdatedAt ||
+        note.updatedAt.getTime() > existing.localUpdatedAt) {
+      await db.notes.update(note.id, {
+        title: note.title,
+        content: note.content,
+        pinned: note.pinned,
+        deletedAt: note.deletedAt?.getTime() ?? null,
+        updatedAt: note.updatedAt.getTime(),
+        serverUpdatedAt: note.updatedAt.getTime(),
+        syncStatus: existing.syncStatus === 'pending' ? 'pending' : 'synced',
+        lastSyncedAt: now,
+      });
+    }
+  } else {
+    // New note from server
+    const localNote: LocalNote = {
+      id: note.id,
+      userId,
+      title: note.title,
+      content: note.content,
+      pinned: note.pinned,
+      deletedAt: note.deletedAt?.getTime() ?? null,
+      createdAt: note.createdAt.getTime(),
+      updatedAt: note.updatedAt.getTime(),
+      syncStatus: 'synced',
+      lastSyncedAt: now,
+      serverUpdatedAt: note.updatedAt.getTime(),
+      localUpdatedAt: note.updatedAt.getTime(),
+    };
+    await db.notes.add(localNote);
+  }
+}
+
+/**
+ * Delete a note from IndexedDB (realtime subscription - server delete)
+ * Does NOT queue sync operation since this is server->local
+ */
+export async function deleteNoteFromServer(
+  userId: string,
+  noteId: string
+): Promise<void> {
+  const db = getOfflineDb(userId);
+
+  // Remove note and its tag associations
+  await db.transaction('rw', [db.notes, db.noteTags], async () => {
+    await db.notes.delete(noteId);
+    await db.noteTags.where('noteId').equals(noteId).delete();
+  });
+}
+
+/**
+ * Insert or update a tag from server (realtime subscription)
+ * Does NOT queue sync operation since this is server->local
+ */
+export async function upsertTagFromServer(
+  userId: string,
+  tag: Tag
+): Promise<void> {
+  const db = getOfflineDb(userId);
+  const now = Date.now();
+
+  const existing = await db.tags.get(tag.id);
+
+  if (existing) {
+    // Only update if not pending local changes
+    if (existing.syncStatus === 'synced') {
+      await db.tags.update(tag.id, {
+        name: tag.name,
+        color: tag.color,
+        lastSyncedAt: now,
+        serverUpdatedAt: now,
+      });
+    }
+  } else {
+    // New tag from server
+    const localTag: LocalTag = {
+      id: tag.id,
+      userId,
+      name: tag.name,
+      color: tag.color,
+      createdAt: tag.createdAt.getTime(),
+      syncStatus: 'synced',
+      lastSyncedAt: now,
+      serverUpdatedAt: now,
+      localUpdatedAt: now,
+    };
+    await db.tags.add(localTag);
+  }
+}
+
+/**
+ * Delete a tag from IndexedDB (realtime subscription - server delete)
+ * Does NOT queue sync operation since this is server->local
+ */
+export async function deleteTagFromServer(
+  userId: string,
+  tagId: string
+): Promise<void> {
+  const db = getOfflineDb(userId);
+
+  // Remove tag and its note associations
+  await db.transaction('rw', [db.tags, db.noteTags], async () => {
+    await db.tags.delete(tagId);
+    await db.noteTags.where('tagId').equals(tagId).delete();
+  });
 }
 
 // Re-export for convenience
