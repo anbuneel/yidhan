@@ -148,16 +148,15 @@ export function useInstallPrompt() {
     try {
       await prompt.prompt();
       const choice = await prompt.userChoice;
-
-      if (choice.outcome === 'accepted') {
-        deferredPrompt = null;
-        subscribers.forEach((cb) => cb());
-        return true;
-      }
-      return false;
+      return choice.outcome === 'accepted';
     } catch (error) {
       console.error('Install prompt failed:', error);
       return false;
+    } finally {
+      // Clear prompt after any completion (accept or dismiss)
+      // A consumed prompt cannot be reused
+      deferredPrompt = null;
+      subscribers.forEach((cb) => cb());
     }
   }, [prompt]);
 

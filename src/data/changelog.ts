@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.1.0',
+    date: '2026-01-08',
+    changes: [
+      { type: 'feature', text: 'Share Target - share text from other apps directly to Zenote (Android/Chrome)' },
+      { type: 'feature', text: 'Install prompt - friendly reminder to add Zenote to your home screen after engagement' },
+      { type: 'improvement', text: 'Install link added to landing page footer for easy PWA installation' },
+    ],
+  },
+  {
     version: '2.0.0',
     date: '2026-01-07',
     changes: [

@@ -48,6 +48,8 @@ A calm, distraction-free note-taking app inspired by Japanese stationery and wab
 - **Public Roadmap** - See what's coming next and features being explored
 - **Footer Navigation** - Quick links to Changelog, Roadmap, and GitHub
 - **PWA Support** - Install to home screen for app-like experience, offline UI shell loads instantly
+- **Share Target** - Share text from other apps directly to Zenote (Android/Chrome)
+- **Install Prompt** - Friendly reminder to install after using the app
 - **Offline Editing** - Notes persist locally with IndexedDB, automatic sync when back online
 - **Conflict Resolution** - "Two Paths" modal for resolving concurrent edits across devices
 - **Share as Letter** - Create temporary, read-only share links for your notes (1 day, 7 days, 30 days, or never expiring)

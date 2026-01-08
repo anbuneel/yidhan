@@ -360,7 +360,9 @@ function App() {
       .catch((error: unknown) => {
         console.error('Failed to create note from share:', error);
         toast.error('Failed to create note from share');
-        // Reset flag so user can try again
+      })
+      .finally(() => {
+        // Reset flag to allow future share-target launches in same session
         isCreatingNoteFromShare.current = false;
       });
   }, [userId, sharedData, clearSharedData, trackNoteCreated, startTransition]);
