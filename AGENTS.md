@@ -12,6 +12,7 @@ Zenote is a calm, distraction-free note-taking application inspired by Japanese 
 - **Rich Text:** Tiptap (ProseMirror-based)
 - **Layout:** react-masonry-css (Pinterest-style card grid)
 - **Backend:** Supabase (PostgreSQL + Auth + Real-time)
+- **Native:** Capacitor (Android, iOS planned)
 - **Fonts:** Cormorant Garamond (display), Inter (body)
 
 ## Project Structure
@@ -122,6 +123,9 @@ npm run e2e:report # View E2E test HTML report
 npm run theme:generate  # Generate CSS from active themes
 npm run theme:preview   # Preview theme CSS without updating
 npm run icons:generate  # Generate PWA icons from SVG source
+npm run cap:sync        # Build and sync to native platforms
+npm run cap:android     # Build, sync, and open Android Studio
+npm run cap:android:run # Build, sync, and run on Android device/emulator
 ```
 
 ## Development Workflow
@@ -609,6 +613,32 @@ At the bottom of the modal is the "Let go of Zenote" link that opens the offboar
 When deploying to a new domain, update in Supabase Dashboard → Authentication → URL Configuration:
 1. **Site URL:** Set to your production domain (e.g., `https://zenote.vercel.app`)
 2. **Redirect URLs:** Add your production domain (keep localhost for local dev)
+
+### Native App (Capacitor)
+
+Zenote can be built as a native Android app using Capacitor. The same React codebase is wrapped in a native WebView.
+
+**Requirements:**
+- Android Studio (for Android builds)
+- Xcode on macOS (for iOS builds - not available on Windows)
+
+**Development:**
+```bash
+npm run cap:android     # Open in Android Studio
+npm run cap:android:run # Run on connected device/emulator
+npm run cap:sync        # Sync web assets after code changes
+```
+
+**Project structure:**
+- `capacitor.config.ts` - Capacitor configuration
+- `android/` - Android Studio project (gitignore excludes build artifacts)
+
+**Distribution options:**
+- Debug APK: `android/app/build/outputs/apk/debug/app-debug.apk`
+- Play Store: Requires $25 one-time Google Play Developer fee
+- App Store (iOS): Requires $99/year Apple Developer fee + Mac
+
+See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 
 ## Security
 
