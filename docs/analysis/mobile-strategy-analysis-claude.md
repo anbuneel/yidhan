@@ -501,8 +501,20 @@ Phase 1 (Enhanced PWA) Progress:
 2. [x] ~~Implement IndexedDB storage layer with Dexie.js~~ ✅ Done (v2.0.0)
 3. [x] ~~Add offline sync queue with conflict resolution~~ ✅ Done (v2.0.0)
 4. [x] ~~Implement View Transitions API~~ ✅ Done
-5. [ ] Add Share Target to manifest
-6. [ ] Create custom install prompt UI
+5. [x] ~~Add Share Target to manifest~~ ✅ Done (2026-01-08)
+6. [x] ~~Create custom install prompt UI~~ ✅ Done (2026-01-08) - `InstallPrompt.tsx` with engagement tracking
 7. [ ] Test thoroughly on iOS Safari and Android Chrome
 8. [x] ~~Add offline indicator to header~~ ✅ Done (SyncIndicator)
-9. [ ] Update landing page to promote "install" option
+9. [x] ~~Update landing page to promote "install" option~~ ✅ Done (2026-01-08) - Footer install CTA
+
+**Phase 1 Status: COMPLETE** (as of 2026-01-08)
+
+### Remaining Mobile Improvements (Optional Phase 1.5)
+
+See `docs/analysis/mobile-readiness-evaluation-claude.md` for detailed assessment:
+
+1. [ ] iOS Safari install tutorial (manual "Add to Home Screen" guide)
+2. [ ] Swipe gestures (swipe to delete notes)
+3. [ ] iOS overscroll behavior fix
+4. [ ] Landscape mode optimization
+5. [ ] Small screen (< 320px) CSS fixes

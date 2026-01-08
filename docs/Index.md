@@ -37,7 +37,9 @@ Design analysis and feature exploration (Claude-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [mobile-strategy-analysis-claude.md](analysis/mobile-strategy-analysis-claude.md) | PWA vs native mobile strategy (Enhanced PWA recommended) | 2025-12-26 |
+| [mobile-readiness-evaluation-claude.md](analysis/mobile-readiness-evaluation-claude.md) | Mobile readiness assessment (iOS/Android) with recommendations | 2026-01-08 |
+| [mobile-strategy-analysis-claude.md](analysis/mobile-strategy-analysis-claude.md) | PWA vs native mobile strategy (Enhanced PWA - Phase 1 complete) | 2025-12-26 |
+| [mobile-touch-targets-claude.md](analysis/mobile-touch-targets-claude.md) | Touch target guidelines and TimeRibbon improvements | 2025-12-29 |
 | [offline-support-design-claude.md](analysis/offline-support-design-claude.md) | Offline editing architecture design | 2025-12-26 |
 | [onboarding-ux-review-claude.md](analysis/onboarding-ux-review-claude.md) | Onboarding experience analysis | 2025-12-24 |
 | [offboarding-design-claude.md](analysis/offboarding-design-claude.md) | "Letting Go" account departure design | 2025-12-25 |
@@ -95,8 +97,9 @@ Currently in-progress implementation plans and follow-ups.
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [offline-support-implementation-plan.md](active/offline-support-implementation-plan.md) | Offline editing implementation plan | 2025-12-26 |
-| [pwa-capabilities.md](active/pwa-capabilities.md) | PWA features and capabilities status | 2025-12-26 |
+| [competitive-growth-plan-claude.md](active/competitive-growth-plan-claude.md) | Competitive growth strategy and positioning | 2026-01-06 |
+| [zenote-competitive-roadmap-notes-codex.md](active/zenote-competitive-roadmap-notes-codex.md) | Competitive roadmap analysis (Codex) | 2026-01-06 |
+| [pwa-enhancements-plan.md](plans/pwa-enhancements-plan.md) | PWA enhancements (Share Target, Install Prompt) - **COMPLETE** | 2026-01-08 |
 | [onboarding-ux-followup.md](active/onboarding-ux-followup.md) | Onboarding improvements follow-up items | 2025-12-24 |
 
 ---
@@ -169,23 +172,32 @@ Early planning and analysis documents (kept for reference).
 
 **Current Status:**
 - Production app deployed at https://zenote.vercel.app
-- 93% launch ready (per launch-readiness-assessment.md)
+- PWA Phase 1 complete (offline, share target, install prompt)
+- Mobile readiness: 8.5/10 (see mobile-readiness-evaluation-claude.md)
 - 457 unit tests + 42 E2E tests passing
 - Bundle size: 332KB (44% reduction achieved)
 
-**Critical Gaps (P0):**
-- Offline editing not implemented
-- Mobile real device testing not done
-- App icon / OG image missing
+**Recently Completed:**
+- [x] Offline editing with IndexedDB and sync queue
+- [x] View Transitions API for smooth navigation
+- [x] Share Target API (receive shared content)
+- [x] Custom install prompt with engagement tracking
+- [x] Landing page install CTA
+
+**Remaining Mobile Improvements:**
+- [ ] iOS Safari install tutorial
+- [ ] Swipe gestures (swipe to delete)
+- [ ] Landscape mode optimization
+- [ ] Real device testing matrix
 
 **Key Documents:**
 - **Strategy:** [strategic-viability-review-claude.md](active/strategic-viability-review-claude.md)
 - **Launch:** [launch-readiness-assessment.md](active/launch-readiness-assessment.md)
 - **Competition:** [competitive-design-evaluation-claude.md](active/competitive-design-evaluation-claude.md)
 - **Security:** [zenote-comprehensive-review-Codex.md](reviews/zenote-comprehensive-review-Codex.md)
-- **Mobile:** [mobile-strategy-analysis-claude.md](analysis/mobile-strategy-analysis-claude.md)
+- **Mobile:** [mobile-readiness-evaluation-claude.md](analysis/mobile-readiness-evaluation-claude.md)
 - **PRD:** [prd.md](prd.md)
 
 ---
 
-*Last updated: 2026-01-06*
+*Last updated: 2026-01-08*

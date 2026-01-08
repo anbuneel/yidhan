@@ -21,9 +21,15 @@
     "theme:preview": "tsx scripts/generate-theme-css.ts --preview",
     "icons:generate": "tsx scripts/generate-icons.ts",
     "docs:sync-agents": "node scripts/sync-agents.mjs",
-    "docs:sync-agents:check": "node scripts/sync-agents.mjs --check"
+    "docs:sync-agents:check": "node scripts/sync-agents.mjs --check",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:android": "npm run build && npx cap sync android && npx cap open android",
+    "cap:android:run": "npm run build && npx cap sync android && npx cap run android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
     "@sentry/react": "^10.30.0",
     "@supabase/supabase-js": "^2.86.2",
     "@tiptap/extension-highlight": "^3.13.0",
