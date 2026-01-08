@@ -37,6 +37,8 @@ src/
 │   ├── NoteCard.tsx       # Individual note card with tag badges
 │   ├── ShareModal.tsx     # Modal for creating/managing share links
 │   ├── SharedNoteView.tsx # Public read-only view for shared notes
+│   ├── SyncIndicator.tsx  # Subtle offline/sync status indicator
+│   ├── ConflictModal.tsx  # "Two Paths" conflict resolution modal
 │   ├── RichTextEditor.tsx # Tiptap editor content wrapper (toolbar extracted to EditorToolbar)
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
 │   ├── SettingsModal.tsx  # Settings modal (profile, password for non-OAuth, theme, offboarding)
@@ -53,14 +55,20 @@ src/
 ├── contexts/
 │   └── AuthContext.tsx    # Auth state management (login, signup, Google OAuth, password reset, profile, offboarding)
 ├── lib/
-│   └── supabase.ts        # Supabase client instance
+│   ├── supabase.ts        # Supabase client instance
+│   └── offlineDb.ts       # Dexie IndexedDB schema for offline storage
 ├── services/
 │   ├── notes.ts           # CRUD operations for notes (with tags)
-│   └── tags.ts            # CRUD operations for tags
+│   ├── tags.ts            # CRUD operations for tags
+│   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue
+│   ├── offlineTags.ts     # Offline-aware tag operations
+│   └── syncEngine.ts      # Queue processor, conflict detection, sync
 ├── types/
 │   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares) with full schema
 ├── hooks/
-│   └── useNetworkStatus.ts # Network connectivity monitoring hook
+│   ├── useNetworkStatus.ts # Network connectivity monitoring (singleton pattern)
+│   ├── useSyncEngine.ts    # Sync engine React integration, conflict resolution
+│   └── useSyncStatus.ts    # Sync state for UI (pending count, online status)
 ├── utils/
 │   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
 │   ├── formatTime.ts      # Relative time formatting
@@ -426,10 +434,14 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Sentry session replay privacy (note content masked)
 - [x] Error design tokens (--color-error in all themes)
 - [x] Space key accessibility (keyboard navigation for all interactive elements)
+- [x] Offline editing with IndexedDB (Dexie.js) - notes persist locally, sync when online
+- [x] Sync queue with conflict detection and resolution
+- [x] "Two Paths" conflict modal for concurrent edit resolution
+- [x] SyncIndicator component (shows offline/pending status, zen "absence is peace")
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (Apple, etc.)
-- [ ] Offline support / PWA
+- [ ] Wire offline CRUD through App.tsx (infrastructure ready, integration pending)
 - [ ] Image attachments
 - [ ] Virtual scrolling for large note lists
 - [ ] Analytics
