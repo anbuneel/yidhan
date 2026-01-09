@@ -404,20 +404,27 @@ function App() {
     // Migrate demo data asynchronously
     (async () => {
       try {
-        // Create tags first
+        // Fetch existing tags from IndexedDB to avoid race condition with tags state
+        // (tags state might still be empty when this effect runs)
+        const existingTags = await fetchTagsOffline(userId);
+
+        // Create tags first, building maps for deduplication and tag objects
         const tagIdMap = new Map<string, string>(); // localId -> new server id
+        const tagObjectMap = new Map<string, Tag>(); // new server id -> Tag object
         for (const demoTag of demoTags) {
-          const existingTag = tags.find((t) => t.name.toLowerCase() === demoTag.name.toLowerCase());
+          const existingTag = existingTags.find((t) => t.name.toLowerCase() === demoTag.name.toLowerCase());
           if (existingTag) {
             tagIdMap.set(demoTag.localId, existingTag.id);
+            tagObjectMap.set(existingTag.id, existingTag);
           } else {
             const newTag = await createTagOffline(userId, demoTag.name, demoTag.color);
             tagIdMap.set(demoTag.localId, newTag.id);
+            tagObjectMap.set(newTag.id, newTag);
             setTags((prev) => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)));
           }
         }
 
-        // Create notes
+        // Create notes with populated tag objects
         for (const demoNote of demoNotes) {
           const newNote = await createNoteOffline(
             userId,
@@ -425,15 +432,21 @@ function App() {
             sanitizeHtml(demoNote.content)
           );
 
+          // Collect tag objects for this note
+          const noteTags: Tag[] = [];
+
           // Add tags to note
           for (const localTagId of demoNote.tagIds) {
             const newTagId = tagIdMap.get(localTagId);
             if (newTagId) {
               await addTagToNoteOffline(userId, newNote.id, newTagId);
+              const tagObj = tagObjectMap.get(newTagId);
+              if (tagObj) noteTags.push(tagObj);
             }
           }
 
-          setNotes((prev) => [newNote, ...prev]);
+          // Add note to state with populated tags array
+          setNotes((prev) => [{ ...newNote, tags: noteTags }, ...prev]);
         }
 
         // Clear demo state after successful migration
@@ -451,7 +464,7 @@ function App() {
         hasMigratedDemoNotes.current = false;
       }
     })();
-  }, [userId, tags, isHydrating]);
+  }, [userId, isHydrating]);
 
   // Handle Share Target data for authenticated users
   useEffect(() => {
