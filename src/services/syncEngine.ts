@@ -40,9 +40,11 @@ async function isOnline(): Promise<boolean> {
     try {
       const status = await Network.getStatus();
       return status.connected;
-    } catch {
-      // If Network plugin fails, assume online and let API calls fail naturally
-      return true;
+    } catch (error) {
+      // Fail safe: assume offline to prevent burning through retries
+      // This preserves queued operations until network is properly detected
+      console.warn('Capacitor Network plugin failed, assuming offline:', error);
+      return false;
     }
   }
   return navigator.onLine;
