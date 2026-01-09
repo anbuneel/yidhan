@@ -50,25 +50,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const hydratingForUserId = user.id;
     hydrationUserIdRef.current = hydratingForUserId;
 
+    // Timeout to prevent hanging forever (10 seconds)
+    const HYDRATION_TIMEOUT = 10000;
+
     try {
       setIsHydrating(true);
-      const needs = await needsHydration(hydratingForUserId);
 
-      // Check if user changed during async operation
-      if (hydrationUserIdRef.current !== hydratingForUserId) {
-        console.log('Hydration aborted: user changed');
-        return;
-      }
+      // Wrap hydration in a timeout
+      const hydrationPromise = (async () => {
+        const needs = await needsHydration(hydratingForUserId);
 
-      if (needs) {
-        await hydrateFromServer(hydratingForUserId);
-      }
+        // Check if user changed during async operation
+        if (hydrationUserIdRef.current !== hydratingForUserId) {
+          console.log('Hydration aborted: user changed');
+          return;
+        }
+
+        if (needs) {
+          await hydrateFromServer(hydratingForUserId);
+        }
+      })();
+
+      const timeoutPromise = new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('Hydration timeout')), HYDRATION_TIMEOUT)
+      );
+
+      await Promise.race([hydrationPromise, timeoutPromise]);
     } catch (error) {
       // Only log error if we're still hydrating for the same user
       if (hydrationUserIdRef.current === hydratingForUserId) {
-        console.error('Failed to hydrate offline DB:', error);
+        console.warn('Hydration failed or timed out, continuing with local data:', error);
       }
-      // Non-fatal - app continues to work online
+      // Non-fatal - app continues to work with local data or online
     } finally {
       // Only update state if we're still hydrating for the same user
       if (hydrationUserIdRef.current === hydratingForUserId) {

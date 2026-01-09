@@ -6,7 +6,6 @@
  */
 
 import { Capacitor } from '@capacitor/core';
-import { Network } from '@capacitor/network';
 import { supabase } from '../lib/supabase';
 import {
   getOfflineDb,
@@ -38,6 +37,8 @@ function isNativePlatform(): boolean {
 async function isOnline(): Promise<boolean> {
   if (isNativePlatform()) {
     try {
+      // Dynamic import to avoid module initialization issues
+      const { Network } = await import('@capacitor/network');
       const status = await Network.getStatus();
       return status.connected;
     } catch (error) {
