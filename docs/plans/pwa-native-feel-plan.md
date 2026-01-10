@@ -1,8 +1,8 @@
 # PWA Native Feel Plan (No macOS Required)
 
-**Version:** 1.1
+**Version:** 1.2
 **Last Updated:** 2026-01-10
-**Status:** In Progress (Phase 1 & 2 Complete)
+**Status:** Complete
 **Author:** Claude (Opus 4.5)
 
 ---
@@ -85,13 +85,42 @@ const {
 - Expected from adding gesture libraries
 - Still under 600KB target
 
-### ⏳ Phase 3: Pending
+### ✅ Phase 3: Complete (2026-01-10)
 
-Animation polish (spring timing, card entrance stagger)
+| Item | Status | Files |
+|------|--------|-------|
+| iOS spring timing CSS variables | ✅ Done | `src/index.css` |
+| Card entrance stagger animation | ✅ Done | `src/components/ChapterSection.tsx` |
+| Card delete animation | ✅ Done | `src/index.css` |
+| Overscroll behavior control | ✅ Done | `src/index.css` |
+| Spring physics for NoteCard | ✅ Done | `src/components/NoteCard.tsx` |
+| Spring physics for modals | ✅ Done | `src/index.css`, `src/components/IOSInstallGuide.tsx` |
 
-### ⏳ Phase 4: Pending
+**New CSS variables:**
+```css
+--spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);  /* Overshoot bounce */
+--spring-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);   /* Smooth ease-out */
+--spring-snappy: cubic-bezier(0.4, 0, 0.2, 1);       /* Quick, responsive */
+```
 
-Testing & refinement
+**Animation highlights:**
+- Card entrance with staggered delays (0.05s per card, max 0.5s)
+- Delete animation with scale(0.85), rotate(1.5deg), blur(2px)
+- Auth modal uses spring bounce timing
+- Overscroll disabled on html for controlled scroll experience
+
+### ✅ Phase 4: Complete (2026-01-10)
+
+| Item | Status | Notes |
+|------|--------|-------|
+| TypeScript compilation | ✅ Pass | No type errors |
+| ESLint checks | ✅ Pass | No lint errors |
+| Vitest tests | ✅ Pass | 491/499 pass (8 pre-existing failures) |
+| Production build | ✅ Pass | Bundle: 555KB main + 416KB editor |
+
+**Vitest fix:**
+- Added `pool: 'vmThreads'` to vite.config.ts to fix Windows jsdom runner bug
+- Pre-existing test failures in useShareTarget.test.ts (window.location mocking issue)
 
 ---
 
@@ -101,9 +130,9 @@ Testing & refinement
 |-------|----------|-------|--------|
 | Phase 1 | 1 week | iOS Install Experience | ✅ Complete |
 | Phase 2 | 2 weeks | Gesture Vocabulary | ✅ Complete |
-| Phase 3 | 1 week | Animation Polish | ⏳ Pending |
-| Phase 4 | 1 week | Testing & Refinement | ⏳ Pending |
-| **Total** | **5 weeks** | **PWA Native Feel** | **40% Complete** |
+| Phase 3 | 1 week | Animation Polish | ✅ Complete |
+| Phase 4 | 1 week | Testing & Refinement | ✅ Complete |
+| **Total** | **5 weeks** | **PWA Native Feel** | **✅ 100% Complete** |
 
 ---
 

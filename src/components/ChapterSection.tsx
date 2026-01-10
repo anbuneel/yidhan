@@ -181,25 +181,31 @@ export function ChapterSection({
             className="masonry-grid px-6 md:px-12"
             columnClassName="masonry-grid-column"
           >
-            {notes.map((note) =>
-              isTouchDevice ? (
-                <SwipeableNoteCard
-                  key={note.id}
-                  note={note}
-                  onClick={onNoteClick}
-                  onDelete={onNoteDelete}
-                  onTogglePin={onTogglePin}
-                />
-              ) : (
-                <NoteCard
-                  key={note.id}
-                  note={note}
-                  onClick={onNoteClick}
-                  onDelete={onNoteDelete}
-                  onTogglePin={onTogglePin}
-                />
-              )
-            )}
+            {notes.map((note, index) => (
+              <div
+                key={note.id}
+                className="note-card-entrance"
+                style={{
+                  animationDelay: `${Math.min(index * 0.05, 0.5)}s`,
+                }}
+              >
+                {isTouchDevice ? (
+                  <SwipeableNoteCard
+                    note={note}
+                    onClick={onNoteClick}
+                    onDelete={onNoteDelete}
+                    onTogglePin={onTogglePin}
+                  />
+                ) : (
+                  <NoteCard
+                    note={note}
+                    onClick={onNoteClick}
+                    onDelete={onNoteDelete}
+                    onTogglePin={onTogglePin}
+                  />
+                )}
+              </div>
+            ))}
           </Masonry>
         </div>
       )}

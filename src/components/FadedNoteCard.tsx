@@ -76,7 +76,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
         borderRadius: 'var(--radius-card)',
         // Softer shadow for faded notes
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
-        transitionTimingFunction: 'cubic-bezier(0.25, 0.8, 0.25, 1)',
+        transitionTimingFunction: 'var(--spring-smooth)',
         minHeight: '200px',
         maxHeight: '300px',
         // Faded visual treatment - paper left in sunlight

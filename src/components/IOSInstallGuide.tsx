@@ -67,13 +67,13 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
       <div
         className={`
           w-full max-w-md mx-4 mb-4 p-6
-          transition-all duration-300 ease-out
           ${isVisible ? 'translate-y-0' : 'translate-y-8'}
         `}
         style={{
           background: 'var(--color-bg-primary)',
           borderRadius: 'var(--radius-card)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          transition: 'transform 0.4s var(--spring-bounce), opacity 0.3s ease-out',
         }}
         onClick={(e) => e.stopPropagation()}
       >

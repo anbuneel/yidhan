@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.3.0',
+    date: '2026-01-10',
+    changes: [
+      { type: 'feature', text: 'iOS Safari install guide - visual tutorial for adding Zenote to home screen' },
+      { type: 'feature', text: 'Apple splash screens - branded launch images for all iOS devices' },
+      { type: 'feature', text: 'Swipe gestures - swipe left to delete, right to pin/unpin notes (mobile)' },
+      { type: 'feature', text: 'Pull-to-refresh - pull down on note list to sync (mobile)' },
+      { type: 'improvement', text: 'iOS-style spring animations for cards, modals, and transitions' },
+      { type: 'improvement', text: 'Card entrance animation with cascading stagger effect' },
+    ],
+  },
+  {
     version: '2.2.0',
     date: '2026-01-09',
     changes: [

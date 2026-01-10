@@ -52,6 +52,9 @@ src/
 │   ├── TagSelector.tsx    # Dropdown for assigning tags in editor
 │   ├── WelcomeBackPrompt.tsx # Prompt shown when departing user signs in during grace period
 │   ├── WhisperBack.tsx    # Floating back button for long notes (scroll-triggered)
+│   ├── IOSInstallGuide.tsx # Visual 3-step tutorial for iOS Safari PWA installation
+│   ├── SwipeableNoteCard.tsx # Note card wrapper with swipe gestures (delete/pin)
+│   ├── PullToRefresh.tsx  # Pull-to-refresh wrapper with spring physics
 │   └── demo/              # Demo mode components (Practice Space)
 │       ├── ImpermanenceRibbon.tsx # Subtle banner reminding notes aren't saved to cloud
 │       └── InvitationModal.tsx    # Soft signup prompt ("A Gentle Invitation")
@@ -83,7 +86,8 @@ src/
 │   ├── useInstallPrompt.ts  # PWA install prompt with engagement tracking
 │   ├── useShareTarget.ts    # Handle incoming shares from Share Target API
 │   ├── useDemoState.ts      # React state management for demo mode (localStorage)
-│   └── useSoftPrompt.ts     # Soft prompt trigger logic (note count + time thresholds)
+│   ├── useSoftPrompt.ts     # Soft prompt trigger logic (note count + time thresholds)
+│   └── useMobileDetect.ts   # Touch device detection (useMobileDetect, useTouchCapable)
 ├── utils/
 │   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
 │   ├── formatTime.ts      # Relative time formatting
@@ -478,6 +482,13 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] ImpermanenceRibbon - gentle reminder that demo notes aren't synced to cloud
 - [x] Demo-to-account migration (demo notes auto-migrate on signup)
 - [x] "Explore without signing up" CTA on landing page
+- [x] iOS Safari install guide (visual 3-step tutorial for PWA installation)
+- [x] Apple splash screens (14 device-specific launch images for iOS PWAs)
+- [x] Swipe gestures on mobile (swipe left to delete, right to pin/unpin notes)
+- [x] Pull-to-refresh on mobile (pull down to sync notes)
+- [x] iOS-style spring animations (--spring-bounce, --spring-smooth, --spring-snappy)
+- [x] Card entrance stagger animation (cascading reveal effect)
+- [x] Touch device detection hooks (useMobileDetect, useTouchCapable)
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (Apple, etc.)

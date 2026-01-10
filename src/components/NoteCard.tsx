@@ -33,6 +33,7 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
     <article
       className={`
         group
+        note-card
         relative
         overflow-hidden
         cursor-pointer
@@ -44,7 +45,7 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
         focus:ring-[var(--color-accent)]
         focus:ring-offset-2
         active:scale-[0.98]
-        ${isDeleting ? 'pointer-events-none' : ''}
+        ${isDeleting ? 'deleting' : ''}
       `}
       style={{
         background: 'var(--color-card-bg)',
@@ -53,12 +54,9 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin }: NoteCardProps
         border: '1px solid var(--glass-border)',
         borderRadius: 'var(--radius-card)',
         boxShadow: 'var(--shadow-md)',
-        transitionTimingFunction: 'cubic-bezier(0.25, 0.8, 0.25, 1)',
+        transitionTimingFunction: 'var(--spring-bounce)',
         minHeight: '200px',
         maxHeight: '300px',
-        // Fade animation when deleting
-        opacity: isDeleting ? 0.4 : 1,
-        transform: isDeleting ? 'scale(0.98) translateY(8px)' : 'translateY(0)',
       }}
       role="button"
       tabIndex={0}

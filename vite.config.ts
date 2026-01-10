@@ -99,5 +99,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    // Use vmThreads pool to avoid "failed to find runner" bug on Windows
+    pool: 'vmThreads',
   },
 })
