@@ -241,7 +241,12 @@ body::before {
   }
 }
 
-/* Card entrance animation (staggered reveal) */
+/* ============================================
+   CARD ANIMATIONS
+   Spring physics for native-feel interactions
+   ============================================ */
+
+/* Entrance: spring bounce with stagger delay (applied via inline style) */
 @keyframes card-enter {
   from {
     opacity: 0;
@@ -257,7 +262,7 @@ body::before {
   animation: card-enter 0.4s var(--spring-bounce) backwards;
 }
 
-/* Card delete animation (collapse and fade) */
+/* Delete: gentle collapse with subtle rotation */
 @keyframes card-delete {
   to {
     opacity: 0;

@@ -50,18 +50,28 @@ export function SwipeableNoteCard({
   }, []);
 
   // Handle delete action
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback(async () => {
     setIsTriggering(true);
     triggerHaptic('heavy');
 
-    // Animate off screen then trigger delete
+    // Animate off screen
     api.start({
       x: -window.innerWidth,
       config: { tension: 200, friction: 25 },
-      onRest: () => {
-        onDelete(note.id);
-      },
     });
+
+    try {
+      // Wait a moment for animation to be visible, then delete
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await Promise.resolve(onDelete(note.id));
+    } catch {
+      // Delete failed - snap card back to center
+      api.start({
+        x: 0,
+        config: { tension: 300, friction: 20 },
+      });
+      setIsTriggering(false);
+    }
   }, [api, note.id, onDelete, triggerHaptic]);
 
   // Handle pin action

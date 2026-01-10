@@ -29,7 +29,8 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
 
   const handleDismiss = () => {
     setIsVisible(false);
-    setTimeout(onDismiss, 300);
+    // Wait for spring transition (0.4s) to complete before unmounting
+    setTimeout(onDismiss, 400);
   };
 
   const steps = [

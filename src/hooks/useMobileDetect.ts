@@ -41,11 +41,23 @@ export function useMobileDetect(): boolean {
 
     // Check on pointer type change (handles laptop with touch screen)
     const mediaQuery = window.matchMedia('(pointer: coarse)');
-    mediaQuery.addEventListener('change', checkMobile);
+
+    // Use addEventListener with fallback to deprecated addListener for older Safari
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', checkMobile);
+    } else if (mediaQuery.addListener) {
+      // Fallback for older Safari (iOS < 14)
+      mediaQuery.addListener(checkMobile);
+    }
 
     return () => {
       window.removeEventListener('resize', checkMobile);
-      mediaQuery.removeEventListener('change', checkMobile);
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', checkMobile);
+      } else if (mediaQuery.removeListener) {
+        // Fallback for older Safari
+        mediaQuery.removeListener(checkMobile);
+      }
     };
   }, []);
 

@@ -79,6 +79,25 @@ export function PullToRefresh({
     }
   }, [api, onRefresh, triggerHaptic]);
 
+  // Find the actual scrollable element inside the container
+  const getScrollTop = useCallback(() => {
+    if (!containerRef.current) return 0;
+
+    // Check if the container itself is scrolling
+    if (containerRef.current.scrollTop > 0) {
+      return containerRef.current.scrollTop;
+    }
+
+    // Find the first scrollable child (e.g., <main> with overflow-y-auto)
+    const scrollableChild = containerRef.current.querySelector('[class*="overflow"]');
+    if (scrollableChild) {
+      return scrollableChild.scrollTop;
+    }
+
+    // Fallback to document scroll
+    return document.documentElement.scrollTop || document.body.scrollTop;
+  }, []);
+
   // Gesture binding
   const bind = useDrag(
     ({ movement: [, my], down, first, memo = { hapticTriggered: false } }) => {
@@ -86,7 +105,7 @@ export function PullToRefresh({
 
       // Check if at top of scroll on first touch
       if (first) {
-        const scrollTop = containerRef.current?.scrollTop ?? 0;
+        const scrollTop = getScrollTop();
         canPullRef.current = scrollTop <= 0;
       }
 
