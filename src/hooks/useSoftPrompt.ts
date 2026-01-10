@@ -69,76 +69,48 @@ export function useSoftPrompt({
     return () => clearInterval(interval);
   }, []);
 
-  // Calculate time spent in demo (in minutes)
-  const timeSpentMinutes = useMemo(() => {
-    if (!metadata) return 0;
-    return Math.floor((currentTime - metadata.createdAt) / (60 * 1000));
-  }, [metadata, currentTime]);
+  // Calculate all prompt states in a single memo
+  const promptState = useMemo(() => {
+    // Time spent in demo (in minutes)
+    const timeSpentMinutes = metadata
+      ? Math.floor((currentTime - metadata.createdAt) / (60 * 1000))
+      : 0;
 
-  // Check if user meets minimum requirements for prompt
-  const meetsMinimumRequirements = useMemo(() => {
-    if (!metadata) return false;
+    // Check minimum requirements for prompt
+    const meetsMinimumRequirements =
+      metadata !== null &&
+      userNoteCount >= MIN_NOTES_FOR_PROMPT &&
+      currentTime - metadata.createdAt >= MIN_TIME_FOR_PROMPT_MS;
 
-    // Must have created enough notes
-    if (userNoteCount < MIN_NOTES_FOR_PROMPT) return false;
+    // Check cooldown periods
+    const promptRecentlyDismissed =
+      metadata?.promptDismissedAt != null &&
+      currentTime - metadata.promptDismissedAt < PROMPT_COOLDOWN_MS;
 
-    // Must have spent enough time
-    const timeSpent = currentTime - metadata.createdAt;
-    if (timeSpent < MIN_TIME_FOR_PROMPT_MS) return false;
+    const ribbonRecentlyDismissed =
+      metadata?.ribbonDismissedAt != null &&
+      currentTime - metadata.ribbonDismissedAt < RIBBON_COOLDOWN_MS;
 
-    return true;
+    return {
+      timeSpentMinutes,
+      shouldShowPrompt: meetsMinimumRequirements && !promptRecentlyDismissed,
+      shouldShowInlineNudge:
+        metadata?.promptDismissedAt != null &&
+        userNoteCount >= MIN_NOTES_FOR_PROMPT,
+      shouldShowRibbon: !ribbonRecentlyDismissed,
+    };
   }, [metadata, userNoteCount, currentTime]);
 
-  // Check if prompt was recently dismissed
-  const promptRecentlyDismissed = useMemo(() => {
-    if (!metadata?.promptDismissedAt) return false;
-    const timeSinceDismiss = currentTime - metadata.promptDismissedAt;
-    return timeSinceDismiss < PROMPT_COOLDOWN_MS;
-  }, [metadata, currentTime]);
-
-  // Check if ribbon was recently dismissed
-  const ribbonRecentlyDismissed = useMemo(() => {
-    if (!metadata?.ribbonDismissedAt) return false;
-    const timeSinceDismiss = currentTime - metadata.ribbonDismissedAt;
-    return timeSinceDismiss < RIBBON_COOLDOWN_MS;
-  }, [metadata, currentTime]);
-
-  // Should show the modal prompt
-  const shouldShowPrompt = useMemo(() => {
-    // Must meet minimum requirements
-    if (!meetsMinimumRequirements) return false;
-
-    // Must not have been recently dismissed (within 24h cooldown)
-    if (promptRecentlyDismissed) return false;
-
-    return true;
-  }, [meetsMinimumRequirements, promptRecentlyDismissed]);
-
-  // Should show inline nudge (fallback after modal dismissed)
-  const shouldShowInlineNudge = useMemo(() => {
-    // Only show if user has dismissed the modal but still has enough notes
-    if (!metadata?.promptDismissedAt) return false;
-    if (userNoteCount < MIN_NOTES_FOR_PROMPT) return false;
-    return true;
-  }, [metadata?.promptDismissedAt, userNoteCount]);
-
-  // Should show impermanence ribbon
-  const shouldShowRibbon = useMemo(() => {
-    // Don't show if recently dismissed
-    if (ribbonRecentlyDismissed) return false;
-    return true;
-  }, [ribbonRecentlyDismissed]);
-
   return {
-    shouldShowPrompt,
+    shouldShowPrompt: promptState.shouldShowPrompt,
     dismissPrompt: onDismissPrompt,
 
-    shouldShowInlineNudge,
+    shouldShowInlineNudge: promptState.shouldShowInlineNudge,
 
-    shouldShowRibbon,
+    shouldShowRibbon: promptState.shouldShowRibbon,
     dismissRibbon: onDismissRibbon,
 
     noteCount: userNoteCount,
-    timeSpentMinutes,
+    timeSpentMinutes: promptState.timeSpentMinutes,
   };
 }

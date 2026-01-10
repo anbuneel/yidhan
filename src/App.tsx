@@ -20,6 +20,7 @@ import { TagFilterBar } from './components/TagFilterBar';
 import { WelcomeBackPrompt } from './components/WelcomeBackPrompt';
 import { Footer } from './components/Footer';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { LoadingFallback } from './components/LoadingFallback';
 
 // Lazy load modals with smart retry (only loaded when opened)
 const TagModal = lazyWithRetry(() => import('./components/TagModal').then(module => ({ default: module.TagModal })));
@@ -68,11 +69,8 @@ import {
   ValidationError,
   MAX_IMPORT_FILE_SIZE,
 } from './utils/exportImport';
-import {
-  hasDemoState,
-  getDemoDataForMigration,
-  clearDemoState,
-} from './services/demoStorage';
+import { hasDemoState } from './services/demoStorage';
+import { migrateDemoToAccount } from './services/demoMigration';
 import { sanitizeHtml } from './utils/sanitize';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useSyncEngine, resolveConflict } from './hooks/useSyncEngine';
@@ -84,26 +82,6 @@ import { InstallPrompt } from './components/InstallPrompt';
 import './App.css';
 
 const DEMO_STORAGE_KEY = 'zenote-demo-content';
-
-// Reusable loading fallback for lazy-loaded components
-function LoadingFallback({ message = 'Loading...' }: { message?: string }) {
-  return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{ background: 'var(--color-bg-primary)' }}
-    >
-      <div className="text-center">
-        <div
-          className="w-8 h-8 mx-auto mb-4 border-2 border-t-transparent rounded-full animate-spin"
-          style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
-        />
-        <p style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}>
-          {message}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating } = useAuth();
@@ -376,8 +354,7 @@ function App() {
     }
   }, [userId]);
 
-  // Migrate full demo notes (from /demo page) after user signs up
-  // Uses separate ref to track migration status
+  // Migrate demo notes to authenticated user's account
   // IMPORTANT: Must wait for hydration to complete to avoid:
   // 1. needsHydration returning false (skipping server pull)
   // 2. Hydration clearing IndexedDB and losing demo notes
@@ -394,68 +371,24 @@ function App() {
     }
 
     hasMigratedDemoNotes.current = true;
-    const { notes: demoNotes, tags: demoTags } = getDemoDataForMigration();
-
-    if (demoNotes.length === 0) {
-      clearDemoState();
-      return;
-    }
 
     // Migrate demo data asynchronously
     (async () => {
       try {
-        // Fetch existing tags from IndexedDB to avoid race condition with tags state
-        // (tags state might still be empty when this effect runs)
-        const existingTags = await fetchTagsOffline(userId);
+        const { migratedNotes, newTags, noteCount } = await migrateDemoToAccount(userId);
 
-        // Create tags first, building maps for deduplication and tag objects
-        const tagIdMap = new Map<string, string>(); // localId -> new server id
-        const tagObjectMap = new Map<string, Tag>(); // new server id -> Tag object
-        for (const demoTag of demoTags) {
-          const existingTag = existingTags.find((t) => t.name.toLowerCase() === demoTag.name.toLowerCase());
-          if (existingTag) {
-            tagIdMap.set(demoTag.localId, existingTag.id);
-            tagObjectMap.set(existingTag.id, existingTag);
-          } else {
-            const newTag = await createTagOffline(userId, demoTag.name, demoTag.color);
-            tagIdMap.set(demoTag.localId, newTag.id);
-            tagObjectMap.set(newTag.id, newTag);
-            setTags((prev) => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)));
-          }
+        if (noteCount === 0) return;
+
+        // Update React state with migrated data
+        if (newTags.length > 0) {
+          setTags((prev) => [...prev, ...newTags].sort((a, b) => a.name.localeCompare(b.name)));
         }
-
-        // Create notes with populated tag objects
-        for (const demoNote of demoNotes) {
-          const newNote = await createNoteOffline(
-            userId,
-            demoNote.title,
-            sanitizeHtml(demoNote.content)
-          );
-
-          // Collect tag objects for this note
-          const noteTags: Tag[] = [];
-
-          // Add tags to note
-          for (const localTagId of demoNote.tagIds) {
-            const newTagId = tagIdMap.get(localTagId);
-            if (newTagId) {
-              await addTagToNoteOffline(userId, newNote.id, newTagId);
-              const tagObj = tagObjectMap.get(newTagId);
-              if (tagObj) noteTags.push(tagObj);
-            }
-          }
-
-          // Add note to state with populated tags array
-          setNotes((prev) => [{ ...newNote, tags: noteTags }, ...prev]);
-        }
-
-        // Clear demo state after successful migration
-        clearDemoState();
+        setNotes((prev) => [...migratedNotes, ...prev]);
 
         toast.success(
-          demoNotes.length === 1
+          noteCount === 1
             ? 'Your demo note has been migrated!'
-            : `${demoNotes.length} demo notes have been migrated!`
+            : `${noteCount} demo notes have been migrated!`
         );
       } catch (error) {
         console.error('Failed to migrate demo notes:', error);

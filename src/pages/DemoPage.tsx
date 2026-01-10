@@ -19,6 +19,7 @@ import { ChapteredLibrary } from '../components/ChapteredLibrary';
 import { TagFilterBar } from '../components/TagFilterBar';
 import { Footer } from '../components/Footer';
 import { HeaderShell } from '../components/HeaderShell';
+import { LoadingFallback } from '../components/LoadingFallback';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 
 // Lazy load heavy components
@@ -31,25 +32,6 @@ const TagModal = lazyWithRetry(() =>
 
 // Demo-specific user ID (used internally, not a real user)
 const DEMO_USER_ID = 'demo-user';
-
-function LoadingFallback({ message = 'Loading...' }: { message?: string }) {
-  return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{ background: 'var(--color-bg-primary)' }}
-    >
-      <div className="text-center">
-        <div
-          className="w-8 h-8 mx-auto mb-4 border-2 border-t-transparent rounded-full animate-spin"
-          style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
-        />
-        <p style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}>
-          {message}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 interface DemoPageProps {
   onSignUp: () => void;
@@ -277,92 +259,9 @@ export function DemoPage({
     return <LoadingFallback message="Preparing your practice space..." />;
   }
 
-  // Editor view
-  if (view === 'editor' && selectedNote) {
-    return (
-      <Suspense fallback={<LoadingFallback message="Loading editor..." />}>
-        <Editor
-          note={selectedNote}
-          tags={tags}
-          userId={DEMO_USER_ID}
-          onBack={handleBack}
-          onUpdate={handleNoteUpdate}
-          onDelete={handleNoteDelete}
-          onToggleTag={handleNoteTagToggle}
-          onCreateTag={handleAddTag}
-          theme={theme}
-          onThemeToggle={onThemeToggle}
-          onSettingsClick={onSignUp} // Settings opens signup in demo
-          isDemo // Hide share functionality
-        />
-
-        {/* Tag Modal */}
-        {showTagModal && (
-          <Suspense fallback={null}>
-            <TagModal
-              isOpen={showTagModal}
-              onClose={handleCloseTagModal}
-              onSave={handleSaveTag}
-              onDelete={handleDeleteTag}
-              editingTag={editingTag}
-              existingTags={tags}
-            />
-          </Suspense>
-        )}
-
-        {/* Invitation Modal */}
-        {shouldShowPrompt && (
-          <InvitationModal
-            noteCount={noteCount}
-            onSignUp={onSignUp}
-            onDismiss={dismissPrompt}
-          />
-        )}
-      </Suspense>
-    );
-  }
-
-  // Library view
-  return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ background: 'var(--color-bg-primary)' }}
-    >
-      {/* Impermanence Ribbon */}
-      {shouldShowRibbon && (
-        <ImpermanenceRibbon onSignUp={onSignUp} onDismiss={dismissRibbon} />
-      )}
-
-      {/* Header */}
-      <DemoHeader
-        theme={theme}
-        onThemeToggle={onThemeToggle}
-        onNewNote={handleNewNote}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onSignIn={onSignIn}
-      />
-
-      {/* Tag Filter Bar */}
-      <TagFilterBar
-        tags={tags}
-        selectedTagIds={selectedTagIds}
-        onTagToggle={handleTagToggle}
-        onClearFilter={handleClearTagFilter}
-        onAddTag={handleAddTag}
-        onEditTag={handleEditTag}
-      />
-
-      {/* Note Library */}
-      <ChapteredLibrary
-        notes={filteredNotes}
-        onNoteClick={handleNoteClick}
-        onNoteDelete={handleNoteDelete}
-        onTogglePin={handleTogglePin}
-        onNewNote={handleNewNote}
-        searchQuery={searchQuery}
-      />
-
+  // Shared modals (rendered once, regardless of view)
+  const sharedModals = (
+    <>
       {/* Tag Modal */}
       {showTagModal && (
         <Suspense fallback={null}>
@@ -377,9 +276,6 @@ export function DemoPage({
         </Suspense>
       )}
 
-      {/* Footer */}
-      <Footer onChangelogClick={onChangelogClick} onRoadmapClick={onRoadmapClick} />
-
       {/* Invitation Modal */}
       {shouldShowPrompt && (
         <InvitationModal
@@ -388,7 +284,81 @@ export function DemoPage({
           onDismiss={dismissPrompt}
         />
       )}
-    </div>
+    </>
+  );
+
+  // Editor view
+  if (view === 'editor' && selectedNote) {
+    return (
+      <>
+        <Suspense fallback={<LoadingFallback message="Loading editor..." />}>
+          <Editor
+            note={selectedNote}
+            tags={tags}
+            userId={DEMO_USER_ID}
+            onBack={handleBack}
+            onUpdate={handleNoteUpdate}
+            onDelete={handleNoteDelete}
+            onToggleTag={handleNoteTagToggle}
+            onCreateTag={handleAddTag}
+            theme={theme}
+            onThemeToggle={onThemeToggle}
+            onSettingsClick={onSignUp} // Settings opens signup in demo
+            isDemo // Hide share functionality
+          />
+        </Suspense>
+        {sharedModals}
+      </>
+    );
+  }
+
+  // Library view
+  return (
+    <>
+      <div
+        className="min-h-screen flex flex-col"
+        style={{ background: 'var(--color-bg-primary)' }}
+      >
+        {/* Impermanence Ribbon */}
+        {shouldShowRibbon && (
+          <ImpermanenceRibbon onSignUp={onSignUp} onDismiss={dismissRibbon} />
+        )}
+
+        {/* Header */}
+        <DemoHeader
+          theme={theme}
+          onThemeToggle={onThemeToggle}
+          onNewNote={handleNewNote}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onSignIn={onSignIn}
+        />
+
+        {/* Tag Filter Bar */}
+        <TagFilterBar
+          tags={tags}
+          selectedTagIds={selectedTagIds}
+          onTagToggle={handleTagToggle}
+          onClearFilter={handleClearTagFilter}
+          onAddTag={handleAddTag}
+          onEditTag={handleEditTag}
+        />
+
+        {/* Note Library */}
+        <ChapteredLibrary
+          notes={filteredNotes}
+          onNoteClick={handleNoteClick}
+          onNoteDelete={handleNoteDelete}
+          onTogglePin={handleTogglePin}
+          onNewNote={handleNewNote}
+          searchQuery={searchQuery}
+        />
+
+        {/* Footer */}
+        <Footer onChangelogClick={onChangelogClick} onRoadmapClick={onRoadmapClick} />
+      </div>
+      {sharedModals}
+    </>
   );
 }
 

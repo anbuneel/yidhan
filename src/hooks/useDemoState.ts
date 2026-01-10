@@ -99,7 +99,6 @@ export function useDemoState(): UseDemoStateReturn {
     if (typeof window === 'undefined') return null;
     return getDemoState();
   });
-  const [loading] = useState(false);
 
   // Helper to refresh state from localStorage
   const refreshState = useCallback(() => {
@@ -243,7 +242,7 @@ export function useDemoState(): UseDemoStateReturn {
     notes,
     tags,
     metadata: state?.metadata ?? null,
-    loading,
+    loading: false, // Always false - localStorage is synchronous (kept for API stability)
 
     createNote: createNoteHandler,
     updateNote: updateNoteHandler,

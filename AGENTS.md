@@ -36,6 +36,7 @@ src/
 │   ├── InstallPrompt.tsx  # Zen-styled PWA install prompt (shown after engagement)
 │   ├── LandingPage.tsx    # Split-screen landing page with interactive demo
 │   ├── LettingGoModal.tsx # Account departure modal with keepsakes export
+│   ├── LoadingFallback.tsx # Shared loading spinner for Suspense boundaries
 │   ├── NoteCard.tsx       # Individual note card with tag badges
 │   ├── ShareModal.tsx     # Modal for creating/managing share links
 │   ├── SharedNoteView.tsx # Public read-only view for shared notes
@@ -70,7 +71,8 @@ src/
 │   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue
 │   ├── offlineTags.ts     # Offline-aware tag operations
 │   ├── syncEngine.ts      # Queue processor, conflict detection, sync
-│   └── demoStorage.ts     # localStorage operations for demo mode (no auth required)
+│   ├── demoStorage.ts     # localStorage operations for demo mode (no auth required)
+│   └── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, note creation)
 ├── types/
 │   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares) with full schema
 ├── hooks/

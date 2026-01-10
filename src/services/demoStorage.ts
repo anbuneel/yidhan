@@ -366,12 +366,6 @@ export function dismissDemoRibbon(): void {
 // Migration (Demo → Authenticated Account)
 // ============================================================================
 
-export interface MigrationResult {
-  migratedNotes: number;
-  migratedTags: number;
-  errors: string[];
-}
-
 /**
  * Get demo data for migration (does not clear state - caller should do that after successful migration)
  */
