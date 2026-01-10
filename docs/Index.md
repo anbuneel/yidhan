@@ -102,7 +102,6 @@ Currently in-progress implementation plans and follow-ups.
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [pwa-native-feel-plan.md](plans/pwa-native-feel-plan.md) | **NEW** PWA-only native feel plan (no macOS required, 5 weeks) | 2026-01-10 |
 | [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) | Full mobile/iOS overhaul (requires macOS, 9-13 weeks) | 2026-01-10 |
 | [competitive-growth-plan-claude.md](active/competitive-growth-plan-claude.md) | Competitive growth strategy and positioning | 2026-01-06 |
 | [zenote-competitive-roadmap-notes-codex.md](active/zenote-competitive-roadmap-notes-codex.md) | Competitive roadmap analysis (Codex) | 2026-01-06 |
@@ -142,6 +141,7 @@ Implementation plans that have been completed.
 
 | Document | Description |
 |----------|-------------|
+| [pwa-native-feel-plan.md](plans/pwa-native-feel-plan.md) | **NEW** PWA native feel - iOS install guide, swipe gestures, pull-to-refresh, spring animations |
 | [codex-review-action-plan.md](archive/plans/codex-review-action-plan.md) | Codex review fixes (P1/P2/P3 complete) |
 | [share-as-letter-implementation-plan.md](archive/plans/share-as-letter-implementation-plan.md) | Share as Letter feature (implemented) |
 | [offboarding-implementation-plan.md](archive/plans/offboarding-implementation-plan.md) | "Letting Go" offboarding (implemented) |
@@ -181,30 +181,32 @@ Early planning and analysis documents (kept for reference).
 
 **Current Status:**
 - Production app deployed at https://zenote.vercel.app
-- PWA Phase 1 complete (offline, share target, install prompt)
-- Mobile readiness: 8.5/10 (see mobile-readiness-evaluation-claude.md)
+- **PWA Native Feel: ✅ 100% Complete** (see [pwa-native-feel-plan.md](plans/pwa-native-feel-plan.md))
+- Mobile readiness: 9/10 (improved from 8.5/10)
 - Android Capacitor: ✅ Working | iOS Capacitor: ⏳ Pending setup
-- 457 unit tests + 42 E2E tests passing
-- Bundle size: 332KB (44% reduction achieved)
+- 491 unit tests + 42 E2E tests passing
+- Bundle size: 555KB main + 416KB editor (gesture libraries added)
 
-**Recently Completed:**
+**Recently Completed (v2.3.0):**
+- [x] 🍎 iOS Safari install guide (visual 3-step tutorial)
+- [x] 🖼️ Apple splash screens (14 device-specific launch images)
+- [x] 👆 Swipe gestures (swipe left = delete, right = pin/unpin)
+- [x] 🔄 Pull-to-refresh (sync notes on mobile)
+- [x] ✨ iOS spring animations (bouncy, native-feeling transitions)
+- [x] 🎭 Card entrance stagger animation
+
+**Previously Completed:**
 - [x] Practice Space (/demo) - full-featured demo without signup
 - [x] Offline editing with IndexedDB and sync queue
 - [x] View Transitions API for smooth navigation
 - [x] Share Target API (receive shared content)
 - [x] Custom install prompt with engagement tracking
-- [x] Landing page install CTA
 
-**Mobile Overhaul Plan (NEW):**
-See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for comprehensive 5-phase plan.
-
-| Phase | Focus | Duration |
-|-------|-------|----------|
-| Phase 1 | Quick wins + Capacitor iOS setup | 1-2 weeks |
-| Phase 2 | Core gestures (swipe, pull-to-refresh) | 2-3 weeks |
-| Phase 3 | Animations & polish | 1-2 weeks |
-| Phase 4 | System integration (widgets, Siri) | 3-4 weeks |
-| Phase 5 | Testing & App Store launch | 2 weeks |
+**Next Steps (requires macOS):**
+See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full native iOS features:
+- Capacitor iOS setup
+- System integration (widgets, Siri, Shortcuts)
+- App Store distribution
 
 **Key Documents:**
 - **Strategy:** [strategic-viability-review-claude.md](active/strategic-viability-review-claude.md)
@@ -217,4 +219,4 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for compreh
 
 ---
 
-*Last updated: 2026-01-10*
+*Last updated: 2026-01-10 (v2.3.0 - PWA Native Feel Complete)*

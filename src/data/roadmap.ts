@@ -10,44 +10,50 @@ export interface RoadmapItem {
 export const roadmap: RoadmapItem[] = [
   {
     id: '1',
+    title: 'Mobile Native Feel',
+    description: 'iOS-style swipe gestures, pull-to-refresh, spring animations, and iOS Safari install guide. Available now on mobile!',
+    status: 'in-progress',
+  },
+  {
+    id: '2',
     title: 'Zero-Knowledge Encryption',
     description: 'End-to-end encryption for all your notes. Even we cannot read them — your thoughts remain truly private.',
     status: 'coming-soon',
   },
   {
-    id: '2',
+    id: '3',
     title: 'Image Attachments',
     description: 'Add images, screenshots, and diagrams directly into your notes.',
     status: 'coming-soon',
   },
   {
-    id: '3',
+    id: '4',
     title: 'Virtual Scrolling',
     description: 'Smooth performance with large note collections through optimized rendering.',
     status: 'coming-soon',
   },
   {
-    id: '4',
+    id: '5',
     title: 'Public Garden',
     description: 'Toggle notes as public to create a minimal blog at your own URL. No analytics, no comments — just your words, quietly visible.',
     status: 'exploring',
   },
   {
-    id: '5',
+    id: '6',
     title: 'Additional OAuth Providers',
     description: 'Sign in with GitHub, Apple, and other popular providers.',
     status: 'exploring',
   },
   {
-    id: '6',
+    id: '7',
     title: 'Usage Analytics',
     description: 'Insights into your writing habits and note-taking patterns.',
     status: 'exploring',
   },
   {
-    id: '7',
-    title: 'Native Mobile Apps',
-    description: 'Dedicated iOS and Android apps for a truly native mobile experience with offline support and system integrations.',
+    id: '8',
+    title: 'App Store Distribution',
+    description: 'Native iOS and Android apps on the App Store and Play Store for system integrations like widgets and Siri.',
     status: 'exploring',
   },
 ];

@@ -54,6 +54,12 @@ A calm, distraction-free note-taking app inspired by Japanese stationery and wab
 - **Offline Editing** - Notes persist locally with IndexedDB, automatic sync when back online
 - **Conflict Resolution** - "Two Paths" modal for resolving concurrent edits across devices
 - **Share as Letter** - Create temporary, read-only share links for your notes (1 day, 7 days, 30 days, or never expiring)
+- **Swipe Gestures** - Swipe left to delete, right to pin/unpin notes (mobile)
+- **Pull-to-Refresh** - Pull down on note list to sync notes (mobile)
+- **iOS Install Guide** - Visual 3-step tutorial for iOS Safari PWA installation
+- **iOS Spring Animations** - Native-feeling bouncy transitions on cards and modals
+- **Card Entrance Animation** - Beautiful cascading reveal when notes load
+- **Apple Splash Screens** - Branded launch images for all iOS devices (no white flash)
 
 ## Mobile & PWA
 
