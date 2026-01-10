@@ -143,20 +143,38 @@ npm run cap:android:run # Build, sync, and run on Android device/emulator
 ```
 
 ## Development Workflow
-**IMPORTANT:** Always run `npm run check` before committing to ensure CI will pass.
+
+### Feature Work (Always Use PRs)
+**IMPORTANT:** For any feature work, always create a feature branch and open a PR for review.
 
 ```bash
-# 1. Make changes
-# 2. Run full check (mirrors CI pipeline)
+# 1. Create a feature branch
+git checkout -b feature/your-feature-name
+
+# 2. Make changes
+# 3. Run full check (mirrors CI pipeline)
 npm run check
 
-# 3. If check passes, commit
-git add . && git commit -m "your message"
+# 4. If check passes, commit
+git add . && git commit -m "feat: your message"
 
-# 4. Push
+# 5. Push to feature branch
+git push -u origin feature/your-feature-name
+
+# 6. Create PR for review
+gh pr create --title "feat: your feature" --body "Description of changes"
+```
+
+### Quick Fixes (Direct to Main)
+For small, low-risk changes (typos, minor doc updates), direct commits to main are acceptable:
+
+```bash
+npm run check
+git add . && git commit -m "fix: your message"
 git push
 ```
 
+### CI Pipeline
 The `check` script runs the same steps as GitHub Actions CI:
 1. `typecheck` - TypeScript type checking
 2. `lint` - ESLint
