@@ -267,6 +267,13 @@ docs/
 - **prd.md**: Product vision, personas, features, user flows, success metrics
 - **technical-spec.md**: Architecture, database schema, state management, security, deployment
 
+**Mobile documentation:**
+- **analysis/mobile-ios-gap-analysis-claude.md**: Comprehensive gap analysis (22 prioritized items)
+- **analysis/ios-native-competitive-analysis-claude.md**: Competitive analysis vs Bear, Craft, Apple Notes
+- **analysis/mobile-capability-spectrum-claude.md**: Visual progression Tier 1 (responsive) → Tier 5 (native)
+- **plans/pwa-native-feel-plan.md**: PWA-only plan (no macOS required, 5 weeks)
+- **plans/mobile-ios-overhaul-plan.md**: Full Capacitor plan (requires macOS, 9-13 weeks)
+
 **Placement guidelines:**
 - **analysis/**: AI-authored design analysis (`*-claude.md`)
 - **archive/plans/**: Implementation plans after feature is complete

@@ -55,12 +55,33 @@ A calm, distraction-free note-taking app inspired by Japanese stationery and wab
 - **Conflict Resolution** - "Two Paths" modal for resolving concurrent edits across devices
 - **Share as Letter** - Create temporary, read-only share links for your notes (1 day, 7 days, 30 days, or never expiring)
 
+## Mobile & PWA
+
+Zenote is designed mobile-first with progressive enhancement toward native-like experiences:
+
+| Platform | Status | Install Method |
+|----------|--------|----------------|
+| **Android (PWA)** | ✅ Fully supported | Chrome → Install prompt |
+| **Android (Native)** | ✅ Capacitor ready | APK available |
+| **iOS (PWA)** | ⚠️ Safari limitations | Safari → Add to Home Screen |
+| **iOS (Native)** | 🚧 Planned | App Store (requires macOS build) |
+
+**Current capabilities:**
+- Offline editing with IndexedDB persistence
+- Background sync when connection restored
+- Share Target API (receive shared content on Android)
+- View Transitions for smooth navigation
+- Touch-optimized with 48px minimum targets
+
+See [Mobile Gap Analysis](docs/analysis/mobile-ios-gap-analysis-claude.md) for detailed roadmap.
+
 ## Tech Stack
 
 - **Frontend:** React 19, TypeScript, Vite
 - **Styling:** Tailwind CSS v4
 - **Rich Text:** Tiptap (ProseMirror)
 - **Backend:** Supabase (PostgreSQL, Auth, Real-time)
+- **Native:** Capacitor (Android ready, iOS planned)
 - **Fonts:** Cormorant Garamond, Inter
 
 ## Documentation

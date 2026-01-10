@@ -37,6 +37,8 @@ Design analysis and feature exploration (Claude-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [ios-native-competitive-analysis-claude.md](analysis/ios-native-competitive-analysis-claude.md) | **NEW** iOS native apps competitive analysis (Bear, Craft, Apple Notes) | 2026-01-10 |
+| [mobile-ios-gap-analysis-claude.md](analysis/mobile-ios-gap-analysis-claude.md) | **NEW** Comprehensive mobile/iOS gap analysis with priorities | 2026-01-10 |
 | [frontend-skill-demo-writing-page-claude.md](analysis/frontend-skill-demo-writing-page-claude.md) | Practice Space demo page design (full-featured demo without signup) | 2026-01-09 |
 | [mobile-readiness-evaluation-claude.md](analysis/mobile-readiness-evaluation-claude.md) | Mobile readiness assessment (iOS/Android) with recommendations | 2026-01-08 |
 | [mobile-strategy-analysis-claude.md](analysis/mobile-strategy-analysis-claude.md) | PWA vs native mobile strategy (Enhanced PWA - Phase 1 complete) | 2025-12-26 |
@@ -100,9 +102,12 @@ Currently in-progress implementation plans and follow-ups.
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [pwa-native-feel-plan.md](plans/pwa-native-feel-plan.md) | **NEW** PWA-only native feel plan (no macOS required, 5 weeks) | 2026-01-10 |
+| [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) | Full mobile/iOS overhaul (requires macOS, 9-13 weeks) | 2026-01-10 |
 | [competitive-growth-plan-claude.md](active/competitive-growth-plan-claude.md) | Competitive growth strategy and positioning | 2026-01-06 |
 | [zenote-competitive-roadmap-notes-codex.md](active/zenote-competitive-roadmap-notes-codex.md) | Competitive roadmap analysis (Codex) | 2026-01-06 |
 | [ios-pwa-experience-checklist-codex.md](active/ios-pwa-experience-checklist-codex.md) | iOS PWA experience checklist (install, offline, keyboard, performance) | 2026-01-08 |
+| [capacitor-implementation-plan.md](plans/capacitor-implementation-plan.md) | Capacitor setup guide (Android done, iOS pending) | 2026-01-09 |
 | [pwa-enhancements-plan.md](plans/pwa-enhancements-plan.md) | PWA enhancements (Share Target, Install Prompt) - **COMPLETE** | 2026-01-08 |
 | [onboarding-ux-followup.md](active/onboarding-ux-followup.md) | Onboarding improvements follow-up items | 2025-12-24 |
 
@@ -178,6 +183,7 @@ Early planning and analysis documents (kept for reference).
 - Production app deployed at https://zenote.vercel.app
 - PWA Phase 1 complete (offline, share target, install prompt)
 - Mobile readiness: 8.5/10 (see mobile-readiness-evaluation-claude.md)
+- Android Capacitor: ✅ Working | iOS Capacitor: ⏳ Pending setup
 - 457 unit tests + 42 E2E tests passing
 - Bundle size: 332KB (44% reduction achieved)
 
@@ -189,20 +195,26 @@ Early planning and analysis documents (kept for reference).
 - [x] Custom install prompt with engagement tracking
 - [x] Landing page install CTA
 
-**Remaining Mobile Improvements:**
-- [ ] iOS Safari install tutorial
-- [ ] Swipe gestures (swipe to delete)
-- [ ] Landscape mode optimization
-- [ ] Real device testing matrix
+**Mobile Overhaul Plan (NEW):**
+See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for comprehensive 5-phase plan.
+
+| Phase | Focus | Duration |
+|-------|-------|----------|
+| Phase 1 | Quick wins + Capacitor iOS setup | 1-2 weeks |
+| Phase 2 | Core gestures (swipe, pull-to-refresh) | 2-3 weeks |
+| Phase 3 | Animations & polish | 1-2 weeks |
+| Phase 4 | System integration (widgets, Siri) | 3-4 weeks |
+| Phase 5 | Testing & App Store launch | 2 weeks |
 
 **Key Documents:**
 - **Strategy:** [strategic-viability-review-claude.md](active/strategic-viability-review-claude.md)
 - **Launch:** [launch-readiness-assessment.md](active/launch-readiness-assessment.md)
 - **Competition:** [competitive-design-evaluation-claude.md](active/competitive-design-evaluation-claude.md)
 - **Security:** [zenote-comprehensive-review-Codex.md](reviews/zenote-comprehensive-review-Codex.md)
-- **Mobile:** [mobile-readiness-evaluation-claude.md](analysis/mobile-readiness-evaluation-claude.md)
+- **Mobile:** [mobile-ios-gap-analysis-claude.md](analysis/mobile-ios-gap-analysis-claude.md) (NEW)
+- **iOS Native:** [ios-native-competitive-analysis-claude.md](analysis/ios-native-competitive-analysis-claude.md) (NEW)
 - **PRD:** [prd.md](prd.md)
 
 ---
 
-*Last updated: 2026-01-09*
+*Last updated: 2026-01-10*
