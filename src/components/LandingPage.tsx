@@ -142,6 +142,13 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 color: 'var(--color-text-tertiary)',
               }}
             >
+              <a
+                href="/demo"
+                className="landing-nav-link hover:underline transition-colors duration-200"
+              >
+                Practice
+              </a>
+              <span aria-hidden="true">·</span>
               <button
                 onClick={onChangelogClick}
                 className="landing-nav-link hover:underline transition-colors duration-200"

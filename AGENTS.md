@@ -36,6 +36,7 @@ src/
 │   ├── InstallPrompt.tsx  # Zen-styled PWA install prompt (shown after engagement)
 │   ├── LandingPage.tsx    # Split-screen landing page with interactive demo
 │   ├── LettingGoModal.tsx # Account departure modal with keepsakes export
+│   ├── LoadingFallback.tsx # Shared loading spinner for Suspense boundaries
 │   ├── NoteCard.tsx       # Individual note card with tag badges
 │   ├── ShareModal.tsx     # Modal for creating/managing share links
 │   ├── SharedNoteView.tsx # Public read-only view for shared notes
@@ -50,7 +51,12 @@ src/
 │   ├── TagPill.tsx        # Tag pill component with edit button
 │   ├── TagSelector.tsx    # Dropdown for assigning tags in editor
 │   ├── WelcomeBackPrompt.tsx # Prompt shown when departing user signs in during grace period
-│   └── WhisperBack.tsx    # Floating back button for long notes (scroll-triggered)
+│   ├── WhisperBack.tsx    # Floating back button for long notes (scroll-triggered)
+│   └── demo/              # Demo mode components (Practice Space)
+│       ├── ImpermanenceRibbon.tsx # Subtle banner reminding notes aren't saved to cloud
+│       └── InvitationModal.tsx    # Soft signup prompt ("A Gentle Invitation")
+├── pages/
+│   └── DemoPage.tsx       # Full-featured demo experience at /demo route
 ├── data/
 │   ├── changelog.ts       # Version history data
 │   └── roadmap.ts         # Roadmap items with status
@@ -64,7 +70,9 @@ src/
 │   ├── tags.ts            # CRUD operations for tags
 │   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue
 │   ├── offlineTags.ts     # Offline-aware tag operations
-│   └── syncEngine.ts      # Queue processor, conflict detection, sync
+│   ├── syncEngine.ts      # Queue processor, conflict detection, sync
+│   ├── demoStorage.ts     # localStorage operations for demo mode (no auth required)
+│   └── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, note creation)
 ├── types/
 │   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares) with full schema
 ├── hooks/
@@ -73,7 +81,9 @@ src/
 │   ├── useSyncStatus.ts    # Sync state for UI (pending count, online status)
 │   ├── useViewTransition.ts # View Transitions API wrapper for smooth page transitions
 │   ├── useInstallPrompt.ts  # PWA install prompt with engagement tracking
-│   └── useShareTarget.ts    # Handle incoming shares from Share Target API
+│   ├── useShareTarget.ts    # Handle incoming shares from Share Target API
+│   ├── useDemoState.ts      # React state management for demo mode (localStorage)
+│   └── useSoftPrompt.ts     # Soft prompt trigger logic (note count + time thresholds)
 ├── utils/
 │   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
 │   ├── formatTime.ts      # Relative time formatting
@@ -450,6 +460,12 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] PWA Share Target API (receive shared text from other apps on mobile)
 - [x] Custom install prompt with engagement tracking (shows after 3+ notes or 2+ visits)
 - [x] Landing page install CTA (subtle install link in footer nav)
+- [x] Practice Space (/demo) - full-featured demo without signup
+- [x] Demo notes persist in localStorage (survives browser refresh)
+- [x] Soft signup prompts after 3+ notes and 5+ minutes (non-aggressive "invitation")
+- [x] ImpermanenceRibbon - gentle reminder that demo notes aren't synced to cloud
+- [x] Demo-to-account migration (demo notes auto-migrate on signup)
+- [x] "Explore without signing up" CTA on landing page
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (Apple, etc.)
@@ -499,6 +515,32 @@ Located in `src/services/notes.ts`:
 - `updateNoteShareExpiration(noteId, expiresInDays)` - Update share expiration
 - `deleteNoteShare(noteId)` - Revoke share access
 - `fetchSharedNote(token)` - Fetch shared note by token (public, no auth required)
+
+### Demo Mode (Practice Space)
+The Practice Space at `/demo` provides a full-featured writing experience without requiring signup.
+
+**Architecture:**
+- `src/services/demoStorage.ts` - localStorage CRUD operations with `DemoNote` and `DemoTag` types
+- `src/hooks/useDemoState.ts` - React hook wrapper with type conversion to `Note`/`Tag`
+- `src/hooks/useSoftPrompt.ts` - Determines when to show signup prompts
+- `src/pages/DemoPage.tsx` - Main demo page with library/editor views
+
+**Key functions in demoStorage.ts:**
+- `getDemoState()` / `saveDemoState()` - Read/write complete state
+- `createDemoNote()` / `updateDemoNote()` / `deleteDemoNote()` - Note CRUD
+- `createDemoTag()` / `updateDemoTag()` / `deleteDemoTag()` - Tag CRUD
+- `getDemoDataForMigration()` - Export demo data for account migration
+- `clearDemoState()` - Clear all demo data
+
+**Soft prompt triggers (useSoftPrompt.ts):**
+- Minimum 3 notes created
+- Minimum 5 minutes since first visit
+- Not dismissed within last hour
+
+**Migration flow:**
+- On signup, `App.tsx` checks for `hasDemoState()`
+- Migrates demo notes/tags to Supabase via `createNotesBatch()`
+- Clears demo state after successful migration
 
 ## UI Layout
 

@@ -8,6 +8,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.2.0',
+    date: '2026-01-09',
+    changes: [
+      { type: 'feature', text: 'Practice Space - full demo experience at /demo without signing up' },
+      { type: 'feature', text: 'Demo notes persist in browser localStorage with full editor features' },
+      { type: 'feature', text: 'Soft signup prompt after creating 3+ notes and spending 5+ minutes' },
+      { type: 'feature', text: 'Automatic migration of demo notes when you create an account' },
+      { type: 'improvement', text: '"Explore without signing up" link added to landing page' },
+    ],
+  },
+  {
     version: '2.1.1',
     date: '2026-01-09',
     changes: [

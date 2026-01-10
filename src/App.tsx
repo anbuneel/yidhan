@@ -14,11 +14,13 @@ const ChangelogPage = lazyWithRetry(() => import('./components/ChangelogPage').t
 const RoadmapPage = lazyWithRetry(() => import('./components/RoadmapPage').then(module => ({ default: module.RoadmapPage })));
 const FadedNotesView = lazyWithRetry(() => import('./components/FadedNotesView').then(module => ({ default: module.FadedNotesView })));
 const SharedNoteView = lazyWithRetry(() => import('./components/SharedNoteView').then(module => ({ default: module.SharedNoteView })));
+const DemoPage = lazyWithRetry(() => import('./pages/DemoPage').then(module => ({ default: module.DemoPage })));
 
 import { TagFilterBar } from './components/TagFilterBar';
 import { WelcomeBackPrompt } from './components/WelcomeBackPrompt';
 import { Footer } from './components/Footer';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { LoadingFallback } from './components/LoadingFallback';
 
 // Lazy load modals with smart retry (only loaded when opened)
 const TagModal = lazyWithRetry(() => import('./components/TagModal').then(module => ({ default: module.TagModal })));
@@ -67,6 +69,8 @@ import {
   ValidationError,
   MAX_IMPORT_FILE_SIZE,
 } from './utils/exportImport';
+import { hasDemoState } from './services/demoStorage';
+import { migrateDemoToAccount } from './services/demoMigration';
 import { sanitizeHtml } from './utils/sanitize';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useSyncEngine, resolveConflict } from './hooks/useSyncEngine';
@@ -78,26 +82,6 @@ import { InstallPrompt } from './components/InstallPrompt';
 import './App.css';
 
 const DEMO_STORAGE_KEY = 'zenote-demo-content';
-
-// Reusable loading fallback for lazy-loaded components
-function LoadingFallback({ message = 'Loading...' }: { message?: string }) {
-  return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{ background: 'var(--color-bg-primary)' }}
-    >
-      <div className="text-center">
-        <div
-          className="w-8 h-8 mx-auto mb-4 border-2 border-t-transparent rounded-full animate-spin"
-          style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
-        />
-        <p style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}>
-          {message}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating } = useAuth();
@@ -179,6 +163,11 @@ function App() {
     return params.get('s');
   });
 
+  // Demo page state (for /demo route)
+  const [isDemo, setIsDemo] = useState<boolean>(() => {
+    return window.location.pathname === '/demo';
+  });
+
   // Debounce timer refs
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -195,6 +184,15 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('zenote-theme', theme);
   }, [theme]);
+
+  // Redirect from /demo to library when user logs in
+  // Using useEffect to avoid state updates during render
+  useEffect(() => {
+    if (isDemo && user) {
+      window.history.replaceState({}, '', '/');
+      setIsDemo(false);
+    }
+  }, [isDemo, user]);
 
   // Show WelcomeBackPrompt when user signs in during grace period
   useEffect(() => {
@@ -355,6 +353,51 @@ function App() {
       hasMigratedDemoContent.current = true;
     }
   }, [userId]);
+
+  // Migrate demo notes to authenticated user's account
+  // IMPORTANT: Must wait for hydration to complete to avoid:
+  // 1. needsHydration returning false (skipping server pull)
+  // 2. Hydration clearing IndexedDB and losing demo notes
+  const hasMigratedDemoNotes = useRef(false);
+  useEffect(() => {
+    // Gate on hydration complete to avoid race conditions
+    if (isHydrating) return;
+    if (!userId || hasMigratedDemoNotes.current) return;
+
+    // Check if user has demo notes to migrate
+    if (!hasDemoState()) {
+      hasMigratedDemoNotes.current = true;
+      return;
+    }
+
+    hasMigratedDemoNotes.current = true;
+
+    // Migrate demo data asynchronously
+    (async () => {
+      try {
+        const { migratedNotes, newTags, noteCount } = await migrateDemoToAccount(userId);
+
+        if (noteCount === 0) return;
+
+        // Update React state with migrated data
+        if (newTags.length > 0) {
+          setTags((prev) => [...prev, ...newTags].sort((a, b) => a.name.localeCompare(b.name)));
+        }
+        setNotes((prev) => [...migratedNotes, ...prev]);
+
+        toast.success(
+          noteCount === 1
+            ? 'Your demo note has been migrated!'
+            : `${noteCount} demo notes have been migrated!`
+        );
+      } catch (error) {
+        console.error('Failed to migrate demo notes:', error);
+        toast.error('Some notes could not be migrated. Please try refreshing.');
+        // Don't clear demo state on error so user can retry
+        hasMigratedDemoNotes.current = false;
+      }
+    })();
+  }, [userId, isHydrating]);
 
   // Handle Share Target data for authenticated users
   useEffect(() => {
@@ -1141,6 +1184,39 @@ function App() {
           onRoadmapClick={() => startTransition(() => setView('roadmap'))}
         />
         </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  // Show demo page for /demo route (accessible without login)
+  if (isDemo && !user) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback message="Preparing your practice space..." />}>
+          <DemoPage
+            onSignUp={() => {
+              setAuthModalMode('signup');
+              setShowAuthModal(true);
+            }}
+            onSignIn={() => {
+              setAuthModalMode('login');
+              setShowAuthModal(true);
+            }}
+            theme={theme}
+            onThemeToggle={handleThemeToggle}
+            onChangelogClick={() => startTransition(() => setView('changelog'))}
+            onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+          />
+        </Suspense>
+        {showAuthModal && (
+          <Auth
+            theme={theme}
+            onThemeToggle={handleThemeToggle}
+            initialMode={authModalMode}
+            isModal
+            onClose={() => setShowAuthModal(false)}
+          />
+        )}
       </ErrorBoundary>
     );
   }
