@@ -8,6 +8,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.3.1',
+    date: '2026-01-11',
+    changes: [
+      { type: 'fix', text: 'Pull-to-refresh now correctly detects scroll position with nested containers' },
+      { type: 'fix', text: 'Swipe-to-delete gracefully recovers UI if delete fails (shake animation feedback)' },
+      { type: 'fix', text: 'iOS install guide animation completes smoothly on dismiss' },
+      { type: 'fix', text: 'Improved compatibility with older iOS Safari versions (iOS < 14)' },
+      { type: 'improvement', text: 'Swipe gesture feels snappier (150ms vs 200ms delay)' },
+    ],
+  },
+  {
     version: '2.3.0',
     date: '2026-01-10',
     changes: [

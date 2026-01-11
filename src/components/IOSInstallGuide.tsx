@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
 
+// Animation timing constants
+const ENTRANCE_DELAY = 300; // Delay before showing guide
+const SPRING_TRANSITION_DURATION = 400; // Must match CSS transition duration
+
 interface IOSInstallGuideProps {
   onDismiss: () => void;
 }
@@ -23,14 +27,14 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
 
   // Animate in after short delay
   useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), 300);
+    const timer = setTimeout(() => setIsVisible(true), ENTRANCE_DELAY);
     return () => clearTimeout(timer);
   }, []);
 
   const handleDismiss = () => {
     setIsVisible(false);
-    // Wait for spring transition (0.4s) to complete before unmounting
-    setTimeout(onDismiss, 400);
+    // Wait for spring transition to complete before unmounting
+    setTimeout(onDismiss, SPRING_TRANSITION_DURATION);
   };
 
   const steps = [
