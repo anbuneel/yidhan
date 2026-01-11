@@ -11,6 +11,8 @@ export const changelog: ChangelogEntry[] = [
     version: '2.3.1',
     date: '2026-01-11',
     changes: [
+      { type: 'fix', text: 'Sync queue entries no longer get stuck forever when exceptions occur' },
+      { type: 'fix', text: 'Stale sync entries (>1hr, 3+ retries) are automatically cleaned up' },
       { type: 'fix', text: 'Pull-to-refresh now correctly detects scroll position with nested containers' },
       { type: 'fix', text: 'Swipe-to-delete gracefully recovers UI if delete fails (shake animation feedback)' },
       { type: 'fix', text: 'iOS install guide animation completes smoothly on dismiss' },

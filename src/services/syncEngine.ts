@@ -471,6 +471,31 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
     return result;
   }
 
+  // Cleanup stale sync entries to prevent permanent "pending" state
+  // Only removes non-create operations (creates could lose user data if removed)
+  // Entries older than 1 hour with 3+ retries are considered abandoned
+  try {
+    const db = getOfflineDb(userId);
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    const staleEntries = await db.syncQueue
+      .where('createdAt')
+      .below(oneHourAgo)
+      .filter((entry) => entry.retryCount >= 3 && entry.operation !== 'create')
+      .toArray();
+
+    if (staleEntries.length > 0) {
+      console.warn(
+        `Cleaning up ${staleEntries.length} stale sync entries (age > 1hr, retries >= 3)`
+      );
+      for (const entry of staleEntries) {
+        await removeSyncQueueEntry(userId, entry.clientMutationId);
+      }
+    }
+  } catch (cleanupError) {
+    // Non-fatal: if cleanup fails, continue with normal sync
+    console.warn('Stale entry cleanup failed:', cleanupError);
+  }
+
   const queue = await getPendingSyncQueue(userId);
 
   for (const entry of queue) {
@@ -498,12 +523,36 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
         }
       }
     } catch (error) {
-      result.failed++;
       result.errors.push(error instanceof Error ? error : new Error(String(error)));
 
       // Check if sync status is 'conflict'
       if (error instanceof Error && error.message.includes('conflict')) {
         result.conflicts++;
+      }
+
+      // FIX: Increment retry count for exceptions too (prevents infinite pending state)
+      // Previously, exceptions left entries stuck forever with retryCount never incrementing
+      try {
+        const db = getOfflineDb(userId);
+        const newRetryCount = entry.retryCount + 1;
+        await db.syncQueue
+          .where('clientMutationId')
+          .equals(entry.clientMutationId)
+          .modify({ retryCount: newRetryCount });
+
+        // Remove from queue if too many retries
+        if (newRetryCount >= 5) {
+          await removeSyncQueueEntry(userId, entry.clientMutationId);
+          result.failed++;
+          console.warn(
+            `Removing failed sync entry after ${newRetryCount} retries: ${entry.entityType}/${entry.entityId}`
+          );
+        }
+      } catch (dbError) {
+        // If we can't update the retry count, log and continue
+        // The stale entry cleanup will handle it eventually
+        console.error('Failed to update retry count:', dbError);
+        result.failed++;
       }
     }
   }
