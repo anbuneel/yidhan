@@ -861,7 +861,8 @@ body::before {
   background-clip: padding-box;
 }
 
-.masonry-grid-column > article {
+.masonry-grid-column > article,
+.masonry-grid-column > div {
   margin-bottom: 10px; /* vertical gap between cards - compact but breathable */
 }
 

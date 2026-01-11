@@ -11,6 +11,7 @@ export const changelog: ChangelogEntry[] = [
     version: '2.3.1',
     date: '2026-01-11',
     changes: [
+      { type: 'fix', text: 'Note cards now have proper vertical spacing on touch devices' },
       { type: 'fix', text: 'Sync queue entries no longer get stuck forever when exceptions occur' },
       { type: 'fix', text: 'Stale sync entries (>1hr, 3+ retries) are automatically cleaned up' },
       { type: 'fix', text: 'Pull-to-refresh now correctly detects scroll position with nested containers' },
