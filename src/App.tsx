@@ -648,6 +648,8 @@ function App() {
     } catch (error) {
       console.error('Failed to delete note:', error);
       toast.error('Failed to delete note');
+      // Re-throw so callers (like SwipeableNoteCard) can handle UI recovery
+      throw error;
     }
   };
 

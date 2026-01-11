@@ -88,8 +88,22 @@ export function PullToRefresh({
       return containerRef.current.scrollTop;
     }
 
-    // Find the first scrollable child (e.g., <main> with overflow-y-auto)
-    const scrollableChild = containerRef.current.querySelector('[class*="overflow"]');
+    // Find the first actually scrollable child by checking scrollHeight > clientHeight
+    // This is more reliable than class name matching (which could match overflow-hidden)
+    const findScrollableChild = (element: Element): Element | null => {
+      for (const child of Array.from(element.children)) {
+        // Check if this element is scrollable (has overflow content)
+        if (child.scrollHeight > child.clientHeight) {
+          return child;
+        }
+        // Recursively check children (but limit depth to avoid performance issues)
+        const nested = findScrollableChild(child);
+        if (nested) return nested;
+      }
+      return null;
+    };
+
+    const scrollableChild = findScrollableChild(containerRef.current);
     if (scrollableChild) {
       return scrollableChild.scrollTop;
     }
