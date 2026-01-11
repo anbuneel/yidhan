@@ -7,7 +7,8 @@ import { NoteCard } from './NoteCard';
 interface SwipeableNoteCardProps {
   note: Note;
   onClick: (id: string) => void;
-  onDelete: (id: string) => void;
+  // onDelete can return boolean (true=success, false=failure) or void for backwards compatibility
+  onDelete: (id: string) => void | boolean | Promise<void | boolean>;
   onTogglePin: (id: string, pinned: boolean) => void;
   disabled?: boolean;
 }
@@ -60,18 +61,22 @@ export function SwipeableNoteCard({
       config: { tension: 200, friction: 25 },
     });
 
-    try {
-      // Wait a moment for animation to be visible, then delete
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      await Promise.resolve(onDelete(note.id));
-    } catch {
-      // Delete failed - snap card back to center
+    // Wait a moment for animation to be visible, then delete
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // onDelete may return boolean (success/failure) or void
+    // Check result to determine if we need to recover UI
+    const result = await Promise.resolve(onDelete(note.id));
+
+    // If delete explicitly failed (returned false), snap card back
+    if (result === false) {
       api.start({
         x: 0,
         config: { tension: 300, friction: 20 },
       });
       setIsTriggering(false);
     }
+    // If result is true or undefined (legacy), delete succeeded or we assume success
   }, [api, note.id, onDelete, triggerHaptic]);
 
   // Handle pin action

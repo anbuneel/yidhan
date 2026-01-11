@@ -599,8 +599,9 @@ function App() {
   }, [user, notes]);
 
   // Soft delete a note (move to Faded Notes)
-  const handleNoteDelete = async (id: string) => {
-    if (!user) return;
+  // Returns true on success, false on failure (for UI recovery in swipe gestures)
+  const handleNoteDelete = async (id: string): Promise<boolean> => {
+    if (!user) return false;
 
     // Find the note before deleting (for potential undo)
     const deletedNote = notes.find((n) => n.id === id);
@@ -645,11 +646,11 @@ function App() {
         ),
         { duration: 5000 }
       );
+      return true;
     } catch (error) {
       console.error('Failed to delete note:', error);
       toast.error('Failed to delete note');
-      // Re-throw so callers (like SwipeableNoteCard) can handle UI recovery
-      throw error;
+      return false;
     }
   };
 

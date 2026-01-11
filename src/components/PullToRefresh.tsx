@@ -88,16 +88,26 @@ export function PullToRefresh({
       return containerRef.current.scrollTop;
     }
 
-    // Find the first actually scrollable child by checking scrollHeight > clientHeight
-    // This is more reliable than class name matching (which could match overflow-hidden)
-    const findScrollableChild = (element: Element): Element | null => {
+    // Helper to check if element is truly scrollable (not just overflow-hidden)
+    const isScrollable = (el: Element): boolean => {
+      // Must have overflow content
+      if (el.scrollHeight <= el.clientHeight) return false;
+
+      // Check computed overflow-y style (must be 'auto' or 'scroll', not 'hidden')
+      const style = window.getComputedStyle(el);
+      const overflowY = style.overflowY;
+      return overflowY === 'auto' || overflowY === 'scroll';
+    };
+
+    // Find the first actually scrollable child (depth-first, limited depth)
+    const findScrollableChild = (element: Element, depth = 0): Element | null => {
+      if (depth > 5) return null; // Limit recursion depth for performance
+
       for (const child of Array.from(element.children)) {
-        // Check if this element is scrollable (has overflow content)
-        if (child.scrollHeight > child.clientHeight) {
+        if (isScrollable(child)) {
           return child;
         }
-        // Recursively check children (but limit depth to avoid performance issues)
-        const nested = findScrollableChild(child);
+        const nested = findScrollableChild(child, depth + 1);
         if (nested) return nested;
       }
       return null;
