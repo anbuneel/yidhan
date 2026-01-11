@@ -2,8 +2,8 @@
 
 **Author:** Claude (Opus 4.5)
 **Created:** 2025-12-26
-**Last Updated:** 2026-01-07
-**Status:** In Progress
+**Last Updated:** 2026-01-11
+**Status:** ✅ Complete
 
 ---
 
@@ -16,6 +16,46 @@
 | Assessment 3 | 2025-12-28 | ~90% | Bundle size reduced 44% (596→332 KB) |
 | Assessment 4 | 2025-12-28 | ~93% | Codex review fixes complete |
 | Assessment 5 | 2026-01-07 | ~95% | Full offline editing complete (PR #48) |
+| Assessment 6 | 2026-01-11 | ~100% | Phase 0 launch polish complete |
+
+---
+
+# Assessment 6 (2026-01-11)
+
+## Executive Summary
+
+**Overall: ~100% Ready** — All Phase 0 launch polish items complete.
+
+**Key Progress:**
+- Session timeout: 30-minute inactivity auto-logout with 5-minute zen warning modal
+- Keyboard shortcuts modal: Press ? to view all shortcuts, slash commands, gestures
+- Full account backup: Export profile, notes, tags, and share links on offboarding
+- Rate limit handling: 429 detection with Retry-After header parsing
+- Footer shortcuts link: Easy access to keyboard shortcuts help
+
+---
+
+## Phase 0 Items Completed
+
+| Item | Status | Details |
+|------|--------|---------|
+| Session Timeout | ✅ Complete | 30min timeout, 5min warning, "session fading" UX |
+| Rate Limit Handling | ✅ Complete | 429 detection, Retry-After parsing, graceful retry |
+| Letting Go Backup | ✅ Complete | Full export with profile + share links (version 2) |
+| Feature Discovery | ✅ Complete | KeyboardShortcutsModal, ? shortcut, footer link |
+
+### New Files Created
+- `src/hooks/useSessionTimeout.ts` - Inactivity monitor hook
+- `src/components/SessionTimeoutModal.tsx` - Zen-styled timeout warning
+- `src/components/KeyboardShortcutsModal.tsx` - Shortcuts help modal
+
+### Files Modified
+- `src/utils/withRetry.ts` - Added 429 handling, isRateLimitError, parseRetryAfter
+- `src/utils/exportImport.ts` - Added exportFullAccountData (version 2 format)
+- `src/services/notes.ts` - Added fetchAllNoteShares
+- `src/components/LettingGoModal.tsx` - Added full backup button
+- `src/components/Footer.tsx` - Added optional shortcuts link
+- `src/App.tsx` - Integrated session timeout and shortcuts modal
 
 ---
 

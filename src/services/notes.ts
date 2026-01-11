@@ -583,3 +583,45 @@ export async function fetchSharedNote(token: string): Promise<Note | null> {
 
   return toNote(noteData as DbNote, tags);
 }
+
+// Share link export interface for full account backup
+export interface NoteShareExport {
+  noteTitle: string;
+  noteId: string;
+  token: string;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+// Fetch all share links for the current user (for account backup)
+export async function fetchAllNoteShares(): Promise<NoteShareExport[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from('note_shares')
+    .select(`
+      share_token,
+      expires_at,
+      created_at,
+      note_id,
+      notes!inner(title)
+    `)
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching note shares:', error);
+    return [];
+  }
+
+  if (!data) return [];
+
+  return data.map((share) => ({
+    noteTitle: (share.notes as { title: string })?.title || 'Untitled',
+    noteId: share.note_id,
+    token: share.share_token,
+    expiresAt: share.expires_at,
+    createdAt: share.created_at,
+  }));
+}

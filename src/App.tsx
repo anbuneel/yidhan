@@ -26,6 +26,7 @@ import { LoadingFallback } from './components/LoadingFallback';
 const TagModal = lazyWithRetry(() => import('./components/TagModal').then(module => ({ default: module.TagModal })));
 const SettingsModal = lazyWithRetry(() => import('./components/SettingsModal').then(module => ({ default: module.SettingsModal })));
 const LettingGoModal = lazyWithRetry(() => import('./components/LettingGoModal').then(module => ({ default: module.LettingGoModal })));
+const KeyboardShortcutsModal = lazyWithRetry(() => import('./components/KeyboardShortcutsModal').then(module => ({ default: module.KeyboardShortcutsModal })));
 import { useAuth } from './contexts/AuthContext';
 import {
   subscribeToNotes,
@@ -77,15 +78,17 @@ import { useSyncEngine, resolveConflict } from './hooks/useSyncEngine';
 import { useViewTransition } from './hooks/useViewTransition';
 import { useInstallPrompt } from './hooks/useInstallPrompt';
 import { useShareTarget, formatSharedContent } from './hooks/useShareTarget';
+import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { ConflictModal } from './components/ConflictModal';
 import { InstallPrompt } from './components/InstallPrompt';
 import { IOSInstallGuide } from './components/IOSInstallGuide';
+import { SessionTimeoutModal } from './components/SessionTimeoutModal';
 import './App.css';
 
 const DEMO_STORAGE_KEY = 'zenote-demo-content';
 
 function App() {
-  const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating } = useAuth();
+  const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
 
   // Network connectivity monitoring
   useNetworkStatus();
@@ -109,6 +112,39 @@ function App() {
 
   // Share Target handling
   const { sharedData, clearSharedData, hasStoredShare } = useShareTarget();
+
+  // Session timeout monitoring (30 min timeout, 5 min warning)
+  const { resetTimeout: resetSessionTimeout, minutesRemaining: sessionMinutesRemaining } = useSessionTimeout({
+    timeoutMinutes: 30,
+    warningMinutes: 5,
+    onWarning: () => setShowSessionTimeoutModal(true),
+    onTimeout: async () => {
+      setShowSessionTimeoutModal(false);
+      await signOut();
+      toast('Your session has faded. Please sign in again.', {
+        icon: '〇',
+        duration: 4000,
+        style: {
+          background: 'var(--color-bg-secondary)',
+          color: 'var(--color-text-primary)',
+          border: '1px solid var(--glass-border)',
+        },
+      });
+    },
+    enabled: Boolean(user),
+  });
+
+  // Handle session timeout modal actions
+  const handleSessionStay = () => {
+    resetSessionTimeout();
+    setShowSessionTimeoutModal(false);
+    toast.success('Session extended', { duration: 2000 });
+  };
+
+  const handleSessionSignOut = async () => {
+    setShowSessionTimeoutModal(false);
+    await signOut();
+  };
 
   // Show first conflict when conflicts array changes
   useEffect(() => {
@@ -155,6 +191,12 @@ function App() {
   // Offboarding ("Letting Go") modal state
   const [showLettingGoModal, setShowLettingGoModal] = useState(false);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
+
+  // Session timeout modal state
+  const [showSessionTimeoutModal, setShowSessionTimeoutModal] = useState(false);
+
+  // Keyboard shortcuts modal state
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   // Auth modal state (for landing page)
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -559,6 +601,27 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [user, view, handleNewNote]);
+
+  // Keyboard shortcut: ? to show keyboard shortcuts modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only trigger when user is logged in and in library view
+      // Don't trigger if focus is in an input/textarea
+      if (!user || view !== 'library') return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      if (e.key === '?') {
+        e.preventDefault();
+        setShowShortcutsModal(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [user, view]);
 
   // Note update with offline-first approach
   // Writes to IndexedDB immediately, queues for sync
@@ -1487,6 +1550,7 @@ function App() {
         <Footer
           onChangelogClick={() => startTransition(() => setView('changelog'))}
           onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+          onShortcutsClick={() => setShowShortcutsModal(true)}
         />
 
         {/* Import Loading Overlay with Progress */}
@@ -1561,6 +1625,26 @@ function App() {
         {/* iOS Install Guide (Safari) */}
         {shouldShowIOSGuide && (
           <IOSInstallGuide onDismiss={dismissIOSGuide} />
+        )}
+
+        {/* Session Timeout Modal */}
+        <SessionTimeoutModal
+          isOpen={showSessionTimeoutModal}
+          onStay={handleSessionStay}
+          onSignOut={handleSessionSignOut}
+          minutesRemaining={sessionMinutesRemaining}
+        />
+
+        {/* Keyboard Shortcuts Modal */}
+        {showShortcutsModal && (
+          <ErrorBoundary>
+            <Suspense fallback={null}>
+              <KeyboardShortcutsModal
+                isOpen={showShortcutsModal}
+                onClose={() => setShowShortcutsModal(false)}
+              />
+            </Suspense>
+          </ErrorBoundary>
         )}
       </div>
     );

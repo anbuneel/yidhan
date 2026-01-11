@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
-import { exportNotesToJSON, downloadMarkdownZip, downloadFile } from '../utils/exportImport';
+import {
+  exportNotesToJSON,
+  downloadMarkdownZip,
+  downloadFile,
+  exportFullAccountData,
+} from '../utils/exportImport';
+import { fetchAllNoteShares } from '../services/notes';
 import type { Note, Tag } from '../types';
 
 interface LettingGoModalProps {
@@ -12,8 +18,9 @@ interface LettingGoModalProps {
 }
 
 export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalProps) {
-  const { initiateOffboarding, signOut } = useAuth();
+  const { initiateOffboarding, signOut, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isExportingFull, setIsExportingFull] = useState(false);
 
   const handleExportJSON = () => {
     const jsonData = exportNotesToJSON(notes, tags);
@@ -25,6 +32,34 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
   const handleExportMarkdown = async () => {
     await downloadMarkdownZip(notes);
     toast.success('Keepsakes saved (Markdown)');
+  };
+
+  const handleExportFullBackup = async () => {
+    if (!user) return;
+
+    setIsExportingFull(true);
+    try {
+      // Fetch all share links for the user
+      const shareLinks = await fetchAllNoteShares();
+
+      // Prepare profile data
+      const profile = {
+        displayName: user.user_metadata?.full_name || null,
+        email: user.email || '',
+      };
+
+      // Generate full account export
+      const jsonData = exportFullAccountData(notes, tags, shareLinks, profile);
+      const date = new Date().toISOString().split('T')[0];
+      downloadFile(jsonData, `zenote-full-backup-${date}.json`, 'application/json');
+
+      toast.success('Full backup saved');
+    } catch (error) {
+      console.error('Failed to export full backup:', error);
+      toast.error('Failed to create backup. Please try again.');
+    } finally {
+      setIsExportingFull(false);
+    }
   };
 
   const handleLetGo = async () => {
@@ -165,7 +200,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
             >
               Your words belong to you.
             </p>
-            <div className="flex gap-2">
+            <div className="flex gap-2 mb-2">
               <button
                 onClick={handleExportMarkdown}
                 className="
@@ -213,6 +248,32 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 JSON
               </button>
             </div>
+            <button
+              onClick={handleExportFullBackup}
+              disabled={isExportingFull}
+              className="
+                w-full py-2 px-3
+                text-sm
+                rounded-lg
+                transition-all duration-200
+                disabled:opacity-50
+              "
+              style={{
+                fontFamily: 'var(--font-body)',
+                background: 'var(--color-accent)',
+                color: '#fff',
+              }}
+              onMouseEnter={(e) => {
+                if (!isExportingFull) {
+                  e.currentTarget.style.background = 'var(--color-accent-hover)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--color-accent)';
+              }}
+            >
+              {isExportingFull ? 'Preparing...' : 'Full Backup (includes share links)'}
+            </button>
           </div>
 
           {/* Action buttons */}

@@ -24,7 +24,9 @@ src/
 │   ├── Editor.tsx         # Note editor with rich text + tag selector + save indicator
 │   ├── EditorToolbar.tsx  # Formatting toolbar for rich text editor (sticky in header zone)
 │   ├── ErrorBoundary.tsx  # Error boundary with chunk error detection (deployment handling)
-│   ├── Footer.tsx         # Minimal footer with changelog/roadmap/GitHub links
+│   ├── Footer.tsx         # Minimal footer with changelog/roadmap/shortcuts/GitHub links
+│   ├── KeyboardShortcutsModal.tsx # Help modal showing all keyboard shortcuts and gestures
+│   ├── SessionTimeoutModal.tsx # Session timeout warning modal (zen "session fading" messaging)
 │   ├── ChapteredLibrary.tsx # Temporal chapters note organization (Pinned, This Week, Last Week, etc.)
 │   ├── ChapterNav.tsx     # Desktop dot navigation sidebar for chapter jumping
 │   ├── ChapterSection.tsx # Collapsible chapter section with masonry grid
@@ -87,7 +89,8 @@ src/
 │   ├── useShareTarget.ts    # Handle incoming shares from Share Target API
 │   ├── useDemoState.ts      # React state management for demo mode (localStorage)
 │   ├── useSoftPrompt.ts     # Soft prompt trigger logic (note count + time thresholds)
-│   └── useMobileDetect.ts   # Touch device detection (useMobileDetect, useTouchCapable)
+│   ├── useMobileDetect.ts   # Touch device detection (useMobileDetect, useTouchCapable)
+│   └── useSessionTimeout.ts # Session inactivity monitor (30min timeout, 5min warning)
 ├── utils/
 │   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
 │   ├── formatTime.ts      # Relative time formatting
@@ -507,6 +510,11 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] iOS-style spring animations (--spring-bounce, --spring-smooth, --spring-snappy)
 - [x] Card entrance stagger animation (cascading reveal effect)
 - [x] Touch device detection hooks (useMobileDetect, useTouchCapable)
+- [x] Session timeout (30-minute inactivity auto-logout with 5-minute warning modal)
+- [x] Keyboard shortcuts modal (press ? to view all shortcuts, slash commands, gestures)
+- [x] Full account backup export (includes profile, notes, tags, and share links)
+- [x] Rate limit handling (429 error detection with Retry-After header support)
+- [x] Footer shortcuts link (easy access to keyboard shortcuts help)
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (Apple, etc.)

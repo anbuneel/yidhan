@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.4.0',
+    date: '2026-01-11',
+    changes: [
+      { type: 'feature', text: 'Session timeout - auto-logout after 30 minutes with 5-minute warning modal' },
+      { type: 'feature', text: 'Keyboard shortcuts modal - press ? to see all shortcuts, slash commands, and gestures' },
+      { type: 'feature', text: 'Full account backup - export all data including share links when leaving' },
+      { type: 'improvement', text: 'Rate limit handling - graceful 429 error detection with automatic retry' },
+      { type: 'improvement', text: 'Retry-After header support for respecting server-specified wait times' },
+      { type: 'improvement', text: 'Shortcuts link added to footer for easy access to help' },
+    ],
+  },
+  {
     version: '2.3.1',
     date: '2026-01-11',
     changes: [

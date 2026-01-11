@@ -3,9 +3,10 @@ import './Footer.css';
 interface FooterProps {
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
+  onShortcutsClick?: () => void;
 }
 
-export function Footer({ onChangelogClick, onRoadmapClick }: FooterProps) {
+export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick }: FooterProps) {
   return (
     <footer className="py-6 px-4 text-center shrink-0">
       <nav
@@ -28,6 +29,17 @@ export function Footer({ onChangelogClick, onRoadmapClick }: FooterProps) {
         >
           Roadmap
         </button>
+        {onShortcutsClick && (
+          <>
+            <span aria-hidden="true">·</span>
+            <button
+              onClick={onShortcutsClick}
+              className="footer-link hover:underline transition-colors duration-200"
+            >
+              Shortcuts
+            </button>
+          </>
+        )}
         <span aria-hidden="true">·</span>
         <a
           href="https://github.com/anbuneel/zenote"

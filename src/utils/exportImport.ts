@@ -147,6 +147,82 @@ export function exportNotesToJSON(notes: Note[], tags: Tag[]): string {
 }
 
 /**
+ * Full account export interface (version 2)
+ * Includes profile info, notes, tags, and share links
+ */
+export interface FullAccountExport {
+  version: 2;
+  exportedAt: string;
+  profile: {
+    displayName: string | null;
+    email: string;
+  };
+  notes: Array<{
+    title: string;
+    content: string;
+    tags: string[];
+    pinned: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  tags: ExportedTag[];
+  shareLinks: Array<{
+    noteTitle: string;
+    noteId: string;
+    token: string;
+    expiresAt: string | null;
+    createdAt: string;
+  }>;
+}
+
+/**
+ * Export full account data including profile, notes, tags, and share links
+ * Used during offboarding ("Letting Go") for complete data backup
+ */
+export function exportFullAccountData(
+  notes: Note[],
+  tags: Tag[],
+  shareLinks: Array<{
+    noteTitle: string;
+    noteId: string;
+    token: string;
+    expiresAt: string | null;
+    createdAt: string;
+  }>,
+  profile: { displayName: string | null; email: string }
+): string {
+  const exportData: FullAccountExport = {
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    profile: {
+      displayName: profile.displayName,
+      email: profile.email,
+    },
+    notes: notes.map((note) => ({
+      title: note.title,
+      content: note.content,
+      tags: note.tags.map((t) => t.name),
+      pinned: note.pinned,
+      createdAt: note.createdAt.toISOString(),
+      updatedAt: note.updatedAt.toISOString(),
+    })),
+    tags: tags.map((tag) => ({
+      name: tag.name,
+      color: tag.color,
+    })),
+    shareLinks: shareLinks.map((share) => ({
+      noteTitle: share.noteTitle,
+      noteId: share.noteId,
+      token: share.token,
+      expiresAt: share.expiresAt,
+      createdAt: share.createdAt,
+    })),
+  };
+
+  return JSON.stringify(exportData, null, 2);
+}
+
+/**
  * Download a string as a file
  */
 export function downloadFile(content: string, filename: string, mimeType: string): void {
