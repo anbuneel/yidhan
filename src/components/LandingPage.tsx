@@ -10,36 +10,36 @@ interface LandingPageProps {
   onRoadmapClick: () => void;
 }
 
-// Sample notes for the app preview
+// Sample notes for the app preview - matches actual NoteCard sizing (200-300px)
 const SAMPLE_NOTES: Array<{
   title: string;
-  preview: string;
+  content: string; // HTML content for rich preview
   tag: { name: string; color: TagColor };
   time: string;
 }> = [
   {
     title: 'Morning reflections',
-    preview: 'The quiet hours before dawn have become my favorite time to think clearly...',
+    content: '<p>The quiet hours before dawn have become my favorite time to think clearly. There\'s something about the stillness that invites honest thoughts...</p>',
     tag: { name: 'Journal', color: 'terracotta' },
     time: '2 days ago',
   },
   {
+    title: 'Weekend errands',
+    content: '<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked disabled></label><div><p>Farmers market</p></div></li><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked disabled></label><div><p>Return library books</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox" disabled></label><div><p>Call mom</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox" disabled></label><div><p>Fix bike tire</p></div></li></ul>',
+    tag: { name: 'Tasks', color: 'sage' },
+    time: '3 days ago',
+  },
+  {
     title: 'Book notes: Atomic Habits',
-    preview: 'Key insight: habits are the compound interest of self-improvement.',
+    content: '<p>Key insight: habits are the compound interest of self-improvement.</p>',
     tag: { name: 'Reading', color: 'forest' },
     time: '1 week ago',
   },
   {
-    title: 'Weekend trip ideas',
-    preview: 'Coastal trail hike, farmers market brunch, that new ceramics studio...',
-    tag: { name: 'Ideas', color: 'gold' },
-    time: '3 days ago',
-  },
-  {
-    title: 'Meeting notes: Q1 planning',
-    preview: 'Focus areas for the quarter: simplify onboarding, improve mobile experience.',
-    tag: { name: 'Work', color: 'indigo' },
-    time: '1 week ago',
+    title: 'Recipe: Miso soup',
+    content: '<p>Dashi stock, white miso paste, silken tofu, wakame seaweed, green onions.</p>',
+    tag: { name: 'Cooking', color: 'gold' },
+    time: '5 days ago',
   },
 ];
 
@@ -273,7 +273,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
         {/* Cards Container - Vertically Centered */}
         <div className="flex-1 flex items-center justify-center px-6 md:px-10 py-6 md:py-8">
             <div className="w-full max-w-3xl flex flex-col gap-6">
-              {/* Mobile-only single sample card */}
+              {/* Mobile-only: Show task list card */}
               <article
                 className="md:hidden p-5 relative overflow-hidden showcase-card"
                 style={{
@@ -291,35 +291,35 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                   className="text-lg font-semibold mb-2"
                   style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
                 >
-                  {SAMPLE_NOTES[0].title}
+                  {SAMPLE_NOTES[1].title}
                 </h3>
-                <p
-                  className="text-sm line-clamp-2"
-                  style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', fontWeight: 300 }}
-                >
-                  {SAMPLE_NOTES[0].preview}
-                </p>
+                {/* Safe: content is hardcoded sample data, not user input */}
+                <div
+                  className="note-card-preview text-sm"
+                  style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)' }}
+                  dangerouslySetInnerHTML={{ __html: SAMPLE_NOTES[1].content }}
+                />
                 <div className="flex items-center justify-between mt-3">
                   <span
                     className="text-xs px-2 py-0.5 rounded"
                     style={{
-                      background: `${TAG_COLORS[SAMPLE_NOTES[0].tag.color]}15`,
-                      color: TAG_COLORS[SAMPLE_NOTES[0].tag.color],
+                      background: `${TAG_COLORS[SAMPLE_NOTES[1].tag.color]}15`,
+                      color: TAG_COLORS[SAMPLE_NOTES[1].tag.color],
                       fontWeight: 500,
                     }}
                   >
-                    {SAMPLE_NOTES[0].tag.name}
+                    {SAMPLE_NOTES[1].tag.name}
                   </span>
                   <span
                     className="text-[0.6rem] uppercase tracking-widest"
                     style={{ color: 'var(--color-text-tertiary)' }}
                   >
-                    {SAMPLE_NOTES[0].time}
+                    {SAMPLE_NOTES[1].time}
                   </span>
                 </div>
               </article>
 
-              {/* Sample Cards Grid - Desktop only (2x2) */}
+              {/* Sample Cards Grid - Desktop only (matches NoteCard sizing) */}
               <div
                 className="hidden md:grid grid-cols-2"
                 style={{ gap: '20px' }}
@@ -327,7 +327,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 {SAMPLE_NOTES.map((note, index) => (
                   <article
                     key={index}
-                    className="p-5 pb-4 relative overflow-hidden flex flex-col showcase-card"
+                    className="p-6 pb-5 relative overflow-hidden flex flex-col showcase-card"
                     style={{
                       background: 'var(--color-card-bg)',
                       backdropFilter: 'blur(20px)',
@@ -335,8 +335,9 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                       border: '1px solid var(--glass-border)',
                       borderTop: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : undefined,
                       borderRadius: 'var(--radius-card)',
-                      boxShadow: 'var(--shadow-sm)',
-                      minHeight: '160px',
+                      boxShadow: 'var(--shadow-md)',
+                      minHeight: '200px',
+                      maxHeight: '300px',
                       animationDelay: `${0.1 + index * 0.1}s`,
                     }}
                   >
@@ -360,17 +361,15 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                       {note.title}
                     </h3>
 
-                    {/* Preview */}
-                    <p
-                      className="text-sm leading-relaxed line-clamp-2"
+                    {/* Content Preview - Safe: hardcoded sample data, not user input */}
+                    <div
+                      className="note-card-preview text-sm leading-relaxed flex-1 overflow-hidden"
                       style={{
                         fontFamily: 'var(--font-body)',
                         color: 'var(--color-text-secondary)',
-                        fontWeight: 300,
                       }}
-                    >
-                      {note.preview}
-                    </p>
+                      dangerouslySetInnerHTML={{ __html: note.content }}
+                    />
 
                     {/* Footer: Tag + Timestamp */}
                     <div className="flex items-center justify-between mt-auto pt-4">
