@@ -152,15 +152,15 @@ export function DemoPage({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [view, handleNewNote]);
 
-  const handleNoteClick = useCallback((id: string) => {
+  const handleNoteClick = (id: string) => {
     setSelectedNoteId(id);
     setView('editor');
-  }, []);
+  };
 
-  const handleBack = useCallback(() => {
+  const handleBack = () => {
     setView('library');
     setSelectedNoteId(null);
-  }, []);
+  };
 
   const handleNoteUpdate = useCallback(
     async (updatedNote: Note): Promise<void> => {
@@ -207,25 +207,25 @@ export function DemoPage({
   );
 
   // Tag filter handlers
-  const handleTagToggle = useCallback((tagId: string) => {
+  const handleTagToggle = (tagId: string) => {
     setSearchQuery('');
     setSelectedTagIds((prev) =>
       prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
     );
-  }, []);
+  };
 
-  const handleClearTagFilter = useCallback(() => {
+  const handleClearTagFilter = () => {
     setSelectedTagIds([]);
-  }, []);
+  };
 
-  const handleAddTag = useCallback(() => {
+  const handleAddTag = () => {
     setShowTagModal(true);
-  }, []);
+  };
 
-  const handleEditTag = useCallback((tag: Tag) => {
+  const handleEditTag = (tag: Tag) => {
     setEditingTag(tag);
     setShowTagModal(true);
-  }, []);
+  };
 
   const handleSaveTag = useCallback(
     async (name: string, color: TagColor) => {
@@ -249,10 +249,10 @@ export function DemoPage({
     setShowTagModal(false);
   }, [editingTag, deleteTag]);
 
-  const handleCloseTagModal = useCallback(() => {
+  const handleCloseTagModal = () => {
     setShowTagModal(false);
     setEditingTag(null);
-  }, []);
+  };
 
   // Loading state
   if (loading) {

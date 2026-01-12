@@ -32,6 +32,39 @@ export interface MenuSectionConfig {
   items: MenuItemConfig[];
 }
 
+// Shared logo styles
+const logoBaseStyles: React.CSSProperties = {
+  fontFamily: 'var(--font-display)',
+  color: 'var(--color-text-primary)',
+  letterSpacing: '-0.5px',
+  userSelect: 'none',
+};
+
+// Logo component - renders as button if onClick provided, span otherwise
+function Logo({ onClick }: { onClick?: () => void }) {
+  const className = `text-[1.4rem] md:text-[1.75rem] font-semibold tracking-tight${
+    onClick ? ' transition-colors duration-200 hover:text-[var(--color-accent)]' : ''
+  }`;
+
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className={className}
+        style={{ ...logoBaseStyles, background: 'none', border: 'none', cursor: 'pointer' }}
+      >
+        Zenote
+      </button>
+    );
+  }
+
+  return (
+    <span className={className} style={logoBaseStyles}>
+      Zenote
+    </span>
+  );
+}
+
 interface HeaderShellProps {
   /** Current theme */
   theme: Theme;
@@ -101,35 +134,7 @@ export function HeaderShell({
         {/* Left Zone - Custom content or default Logo */}
         <div className="shrink-0 flex items-center min-w-0">
           {leftContent || (
-            onLogoClick ? (
-              <button
-                onClick={onLogoClick}
-                className="text-[1.4rem] md:text-[1.75rem] font-semibold tracking-tight transition-colors duration-200 hover:text-[var(--color-accent)]"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  color: 'var(--color-text-primary)',
-                  letterSpacing: '-0.5px',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-              >
-                Zenote
-              </button>
-            ) : (
-              <span
-                className="text-[1.4rem] md:text-[1.75rem] font-semibold tracking-tight"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  color: 'var(--color-text-primary)',
-                  letterSpacing: '-0.5px',
-                  userSelect: 'none',
-                }}
-              >
-                Zenote
-              </span>
-            )
+            <Logo onClick={onLogoClick} />
           )}
         </div>
 

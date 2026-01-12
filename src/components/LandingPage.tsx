@@ -135,36 +135,15 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                   borderTop: '1px dashed var(--glass-border)',
                 }}
               >
-                <div
-                  className="flex items-center gap-2 text-sm"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-tertiary)',
-                  }}
-                >
-                  <span style={{ color: 'var(--color-accent)', fontSize: '0.7rem' }}>✦</span>
-                  Open source
-                </div>
-                <div
-                  className="flex items-center gap-2 text-sm"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-tertiary)',
-                  }}
-                >
-                  <span style={{ color: 'var(--color-accent)', fontSize: '0.7rem' }}>✦</span>
-                  Works offline
-                </div>
-                <div
-                  className="flex items-center gap-2 text-sm"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-tertiary)',
-                  }}
-                >
-                  <span style={{ color: 'var(--color-accent)', fontSize: '0.7rem' }}>✦</span>
-                  Your data stays yours
-                </div>
+                {['Open source', 'Works offline', 'Your data stays yours'].map((signal) => (
+                  <div
+                    key={signal}
+                    className="landing-trust-signal flex items-center gap-2 text-sm"
+                  >
+                    <span className="landing-trust-signal-icon">✦</span>
+                    {signal}
+                  </div>
+                ))}
               </div>
 
               {/* Footer links - integrated into left panel */}
@@ -453,6 +432,14 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
         }
         .landing-nav-link:hover {
           color: var(--color-accent);
+        }
+        .landing-trust-signal {
+          font-family: var(--font-body);
+          color: var(--color-text-tertiary);
+        }
+        .landing-trust-signal-icon {
+          color: var(--color-accent);
+          font-size: 0.7rem;
         }
         .showcase-card {
           animation: card-reveal 0.8s ease-out backwards;
