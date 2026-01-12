@@ -112,6 +112,7 @@ export function HeaderShell({
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
+                  userSelect: 'none',
                 }}
               >
                 Zenote
@@ -123,6 +124,7 @@ export function HeaderShell({
                   fontFamily: 'var(--font-display)',
                   color: 'var(--color-text-primary)',
                   letterSpacing: '-0.5px',
+                  userSelect: 'none',
                 }}
               >
                 Zenote

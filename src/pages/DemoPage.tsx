@@ -256,7 +256,7 @@ export function DemoPage({
 
   // Loading state
   if (loading) {
-    return <LoadingFallback message="Preparing your practice space..." />;
+    return <LoadingFallback message="Preparing your space..." />;
   }
 
   // Shared modals (rendered once, regardless of view)
@@ -403,10 +403,9 @@ function DemoHeader({
       onThemeToggle={onThemeToggle}
       onSignIn={onSignIn}
       leftContent={
-        <a
-          href="/"
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-          style={{ textDecoration: 'none' }}
+        <div
+          className="flex items-center gap-2"
+          style={{ userSelect: 'none' }}
         >
           <span
             className="text-xl sm:text-2xl"
@@ -429,9 +428,9 @@ function DemoHeader({
               opacity: 0.9,
             }}
           >
-            Practice
+            Explore
           </span>
-        </a>
+        </div>
       }
       center={
         <div className="relative w-full max-w-sm">

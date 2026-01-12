@@ -37,8 +37,9 @@ Design analysis and feature exploration (Claude-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [ios-native-competitive-analysis-claude.md](analysis/ios-native-competitive-analysis-claude.md) | **NEW** iOS native apps competitive analysis (Bear, Craft, Apple Notes) | 2026-01-10 |
-| [mobile-ios-gap-analysis-claude.md](analysis/mobile-ios-gap-analysis-claude.md) | **NEW** Comprehensive mobile/iOS gap analysis with priorities | 2026-01-10 |
+| [landing-page-redesign-unified-demo-claude.md](analysis/landing-page-redesign-unified-demo-claude.md) | **NEW** Landing page redesign: unified demo strategy (remove inline demo, surface Practice Space) | 2026-01-12 |
+| [ios-native-competitive-analysis-claude.md](analysis/ios-native-competitive-analysis-claude.md) | iOS native apps competitive analysis (Bear, Craft, Apple Notes) | 2026-01-10 |
+| [mobile-ios-gap-analysis-claude.md](analysis/mobile-ios-gap-analysis-claude.md) | Comprehensive mobile/iOS gap analysis with priorities | 2026-01-10 |
 | [frontend-skill-demo-writing-page-claude.md](analysis/frontend-skill-demo-writing-page-claude.md) | Practice Space demo page design (full-featured demo without signup) | 2026-01-09 |
 | [mobile-readiness-evaluation-claude.md](analysis/mobile-readiness-evaluation-claude.md) | Mobile readiness assessment (iOS/Android) with recommendations | 2026-01-08 |
 | [mobile-strategy-analysis-claude.md](analysis/mobile-strategy-analysis-claude.md) | PWA vs native mobile strategy (Enhanced PWA - Phase 1 complete) | 2025-12-26 |
@@ -219,4 +220,4 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 
 ---
 
-*Last updated: 2026-01-10 (v2.3.0 - PWA Native Feel Complete)*
+*Last updated: 2026-01-12 (Landing page redesign analysis added)*

@@ -515,6 +515,9 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Full account backup export (includes profile, notes, tags, and share links)
 - [x] Rate limit handling (429 error detection with Retry-After header support)
 - [x] Footer shortcuts link (easy access to keyboard shortcuts help)
+- [x] Landing page unified demo strategy (removed inline demo, surfaces /demo "Explore" mode)
+- [x] Trust signals on landing page (Open source, Works offline, Your data stays yours)
+- [x] OAuth-first auth modal layout (OAuth buttons first, then email form)
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (Apple, etc.)
@@ -678,7 +681,7 @@ At the bottom of the modal is the "Let go of Zenote" link that opens the offboar
 - TagModal shows loading spinners during async create/update/delete operations
 - Import operations show a loading overlay with spinner
 - Google/GitHub OAuth use Supabase's `signInWithOAuth` with redirect back to app origin
-- OAuth buttons appear side-by-side on login and signup screens with "or" divider
+- OAuth-first layout: OAuth buttons appear FIRST, then "or continue with email" divider, then email form
 - ErrorBoundary wraps the entire app to catch and display runtime errors gracefully
 - Chunk loading errors (from deployments) show "New version available" and auto-refresh
 - Production OAuth requires Supabase Site URL and Redirect URLs to match deployment domain
@@ -690,7 +693,7 @@ At the bottom of the modal is the "Let go of Zenote" link that opens the offboar
   - Views: ChangelogPage, RoadmapPage, FadedNotesView, SharedNoteView
   - Modals: SettingsModal, LettingGoModal, TagModal
   - Vendors: Supabase (189KB), Sentry (18KB), React (4KB) in separate chunks
-- Landing page shows for unauthenticated users with interactive demo
+- Landing page shows for unauthenticated users with static preview cards and trust signals
 - Auth component supports modal mode (`isModal` prop) for landing page overlay
 
 ## Deployment

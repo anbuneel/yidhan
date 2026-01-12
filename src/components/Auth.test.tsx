@@ -87,12 +87,12 @@ describe('Auth', () => {
 
     it('does not show full name field in login mode', () => {
       render(<Auth {...defaultProps} />);
-      expect(screen.queryByPlaceholderText('John Doe')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/full name/i)).not.toBeInTheDocument();
     });
 
     it('shows full name field in signup mode', () => {
       render(<Auth {...defaultProps} initialMode="signup" />);
-      expect(screen.getByPlaceholderText('John Doe')).toBeInTheDocument();
+      expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
     });
   });
 
@@ -207,10 +207,8 @@ describe('Auth', () => {
       const user = userEvent.setup();
       render(<Auth {...defaultProps} initialMode="signup" />);
 
-      await user.type(screen.getByPlaceholderText('John Doe'), 'Test User');
-      // Email is the second textbox in signup mode (after name)
-      const textboxes = screen.getAllByRole('textbox');
-      await user.type(textboxes[1], 'test@example.com');
+      await user.type(screen.getByLabelText(/full name/i), 'Test User');
+      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
       await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 
