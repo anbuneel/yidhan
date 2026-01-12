@@ -37,7 +37,8 @@ Design analysis and feature exploration (Claude-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [landing-page-redesign-unified-demo-claude.md](analysis/landing-page-redesign-unified-demo-claude.md) | **NEW** Landing page redesign: unified demo strategy (remove inline demo, surface Practice Space) | 2026-01-12 |
+| [yidhan-brand-evaluation-claude.md](analysis/yidhan-brand-evaluation-claude.md) | **NEW** Yidhan rebrand evaluation: philosophical alignment, typography, taglines, SEO | 2026-01-12 |
+| [landing-page-redesign-unified-demo-claude.md](analysis/landing-page-redesign-unified-demo-claude.md) | Landing page redesign: unified demo strategy (remove inline demo, surface Practice Space) | 2026-01-12 |
 | [ios-native-competitive-analysis-claude.md](analysis/ios-native-competitive-analysis-claude.md) | iOS native apps competitive analysis (Bear, Craft, Apple Notes) | 2026-01-10 |
 | [mobile-ios-gap-analysis-claude.md](analysis/mobile-ios-gap-analysis-claude.md) | Comprehensive mobile/iOS gap analysis with priorities | 2026-01-10 |
 | [frontend-skill-demo-writing-page-claude.md](analysis/frontend-skill-demo-writing-page-claude.md) | Practice Space demo page design (full-featured demo without signup) | 2026-01-09 |
@@ -220,4 +221,4 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 
 ---
 
-*Last updated: 2026-01-12 (Landing page redesign analysis added)*
+*Last updated: 2026-01-12 (Yidhan brand evaluation added)*
