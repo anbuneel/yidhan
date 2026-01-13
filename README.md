@@ -106,8 +106,8 @@ See [Mobile Gap Analysis](docs/analysis/mobile-ios-gap-analysis-claude.md) for d
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/anbuneel/zenote.git
-   cd zenote
+   git clone https://github.com/anbuneel/yidhan.git
+   cd yidhan
    ```
 
 2. Install dependencies

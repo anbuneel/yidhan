@@ -185,7 +185,7 @@ Early planning and analysis documents (kept for reference).
 ## Quick Reference
 
 **Current Status:**
-- Production app deployed at https://zenote.vercel.app
+- Production app deployed at https://yidhan.vercel.app
 - **PWA Native Feel: ✅ 100% Complete** (see [pwa-native-feel-plan.md](plans/pwa-native-feel-plan.md))
 - Mobile readiness: 9/10 (improved from 8.5/10)
 - Android Capacitor: ✅ Working | iOS Capacitor: ⏳ Pending setup

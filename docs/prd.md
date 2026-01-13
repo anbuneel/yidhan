@@ -1,7 +1,7 @@
-# Zenote - Product Requirements Document
+# Yidhan - Product Requirements Document
 
 **Version:** 2.0
-**Last Updated:** 2026-01-09
+**Last Updated:** 2026-01-12
 **Status:** Living Document
 **Author:** Claude (Opus 4.5)
 
@@ -15,10 +15,10 @@
 
 ## Executive Summary
 
-Zenote is a calm, distraction-free note-taking application inspired by Japanese stationery, Muji aesthetics, and architectural journals. It provides a "wabi-sabi" design philosophy with asymmetric card corners, warm colors, and elegant typography, creating a peaceful digital space for thought capture and reflection.
+Yidhan is a calm, distraction-free note-taking application — where thoughts bloom with clarity. Named from Tamil origins meaning "Bright Spring," it features a wabi-sabi design philosophy with asymmetric card corners, warm colors, and elegant typography, creating a peaceful digital space for thought capture and reflection.
 
-**Live Product:** https://zenote.vercel.app
-**Repository:** https://github.com/anbuneel/zenote
+**Live Product:** https://yidhan.vercel.app
+**Repository:** https://github.com/anbuneel/yidhan
 
 ---
 
