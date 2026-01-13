@@ -68,3 +68,6 @@ ios/DerivedData/
 # Capacitor general
 *.keystore
 *.jks
+
+# Design assets (large source files for logo/icons)
+design-assets/
