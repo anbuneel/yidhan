@@ -105,6 +105,14 @@ class YidhanDB extends Dexie {
       // Conflicts with auto-increment id
       conflicts: '++id, entityType, entityId, detectedAt',
     });
+
+    this.version(2).stores({
+      notes: 'id, userId, syncStatus, deletedAt, pinned, updatedAt',
+      tags: 'id, name, syncStatus',
+      noteTags: '[noteId+tagId], noteId, tagId, syncStatus',
+      syncQueue: '++id, clientMutationId, entityType, entityId, createdAt',
+      conflicts: '++id, entityType, entityId, detectedAt',
+    });
   }
 }
 

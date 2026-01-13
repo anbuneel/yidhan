@@ -444,6 +444,22 @@ function isRetryableError(error: unknown): boolean {
   return false;
 }
 
+async function updateRetryCount(
+  userId: string,
+  entry: SyncQueueEntry,
+  retryCount: number
+): Promise<void> {
+  const db = getOfflineDb(userId);
+  if (typeof entry.id === 'number') {
+    await db.syncQueue.update(entry.id, { retryCount });
+    return;
+  }
+  await db.syncQueue
+    .where('clientMutationId')
+    .equals(entry.clientMutationId)
+    .modify({ retryCount });
+}
+
 /**
  * Process the entire sync queue
  * Called when coming back online or periodically
@@ -495,7 +511,7 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
         `Cleaning up ${staleEntries.length} stale sync entries (age > 1hr, retries >= 3)`
       );
       for (const entry of staleEntries) {
-        await removeSyncQueueEntry(userId, entry.clientMutationId);
+        await removeSyncQueueEntry(userId, entry.clientMutationId, entry.id);
       }
     }
   } catch (cleanupError) {
@@ -510,19 +526,16 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
       const success = await processQueueEntry(userId, entry);
 
       if (success) {
-        await removeSyncQueueEntry(userId, entry.clientMutationId);
+        await removeSyncQueueEntry(userId, entry.clientMutationId, entry.id);
         result.processed++;
       } else {
         // Increment retry count
-        const db = getOfflineDb(userId);
-        await db.syncQueue
-          .where('clientMutationId')
-          .equals(entry.clientMutationId)
-          .modify({ retryCount: entry.retryCount + 1 });
+        const newRetryCount = entry.retryCount + 1;
+        await updateRetryCount(userId, entry, newRetryCount);
 
         // If too many retries, remove from queue
-        if (entry.retryCount >= 5) {
-          await removeSyncQueueEntry(userId, entry.clientMutationId);
+        if (newRetryCount >= 5) {
+          await removeSyncQueueEntry(userId, entry.clientMutationId, entry.id);
           result.failed++;
           result.errors.push(
             new Error(`Max retries exceeded for ${entry.entityType}/${entry.entityId}`)
@@ -540,16 +553,12 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
       // FIX: Increment retry count for exceptions too (prevents infinite pending state)
       // Previously, exceptions left entries stuck forever with retryCount never incrementing
       try {
-        const db = getOfflineDb(userId);
         const newRetryCount = entry.retryCount + 1;
-        await db.syncQueue
-          .where('clientMutationId')
-          .equals(entry.clientMutationId)
-          .modify({ retryCount: newRetryCount });
+        await updateRetryCount(userId, entry, newRetryCount);
 
         // Remove from queue if too many retries
         if (newRetryCount >= 5) {
-          await removeSyncQueueEntry(userId, entry.clientMutationId);
+          await removeSyncQueueEntry(userId, entry.clientMutationId, entry.id);
           result.failed++;
           console.warn(
             `Removing failed sync entry after ${newRetryCount} retries: ${entry.entityType}/${entry.entityId}`

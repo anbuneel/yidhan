@@ -770,9 +770,14 @@ export async function getPendingSyncQueue(userId: string): Promise<SyncQueueEntr
  */
 export async function removeSyncQueueEntry(
   userId: string,
-  clientMutationId: string
+  clientMutationId: string,
+  entryId?: number
 ): Promise<void> {
   const db = getOfflineDb(userId);
+  if (typeof entryId === 'number') {
+    await db.syncQueue.delete(entryId);
+    return;
+  }
   await db.syncQueue.where('clientMutationId').equals(clientMutationId).delete();
 }
 

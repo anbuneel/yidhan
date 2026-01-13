@@ -8,6 +8,13 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.5.1',
+    date: '2026-01-12',
+    changes: [
+      { type: 'fix', text: 'Sync queue entries now clear correctly after processing to prevent stuck pending counts' },
+    ],
+  },
+  {
     version: '2.5.0',
     date: '2026-01-12',
     changes: [
