@@ -4,7 +4,7 @@
 Yidhan is a calm, distraction-free note-taking application — where thoughts bloom with clarity. Named from Tamil origins meaning "Bright Spring," it features a wabi-sabi design with asymmetric card corners, warm colors, and elegant typography.
 
 **Live URL:** https://yidhan.vercel.app
-**Repository:** https://github.com/anbuneel/yidhan
+**Repository:** https://github.com/anbuneel/zenote
 
 ## Tech Stack
 - **Frontend:** React 19 + TypeScript + Vite
