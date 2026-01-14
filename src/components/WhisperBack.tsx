@@ -1,22 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, RefObject } from 'react';
 
 interface WhisperBackProps {
   onClick: () => void;
+  scrollContainerRef?: RefObject<HTMLElement | null>;
 }
 
-export function WhisperBack({ onClick }: WhisperBackProps) {
+export function WhisperBack({ onClick, scrollContainerRef }: WhisperBackProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    const scrollContainer = scrollContainerRef?.current;
+
     const handleScroll = () => {
       // Show earlier on mobile (300px) vs desktop (400px)
       const threshold = window.innerWidth < 640 ? 300 : 400;
-      setIsVisible(window.scrollY > threshold);
+      const scrollY = scrollContainer ? scrollContainer.scrollTop : window.scrollY;
+      setIsVisible(scrollY > threshold);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    const target = scrollContainer || window;
+    target.addEventListener('scroll', handleScroll, { passive: true });
+    return () => target.removeEventListener('scroll', handleScroll);
+  }, [scrollContainerRef]);
 
   return (
     <button

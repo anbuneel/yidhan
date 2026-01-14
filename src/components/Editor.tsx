@@ -44,6 +44,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   const [showShareModal, setShowShareModal] = useState(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Separate refs for save indicator phases to avoid nested timeout issues
   const savePhaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -618,6 +619,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
   return (
     <div
+      ref={scrollContainerRef}
       className="h-screen overflow-y-auto"
       style={{ background: 'var(--color-bg-primary)' }}
       data-testid="note-editor"
@@ -761,7 +763,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       </main>
 
       {/* Whisper Float - fixed position back button */}
-      <WhisperBack onClick={handleLogoClick} />
+      <WhisperBack onClick={handleLogoClick} scrollContainerRef={scrollContainerRef} />
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
