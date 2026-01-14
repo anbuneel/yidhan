@@ -20,9 +20,9 @@ export const midnight: ThemeConfig = {
     bgTertiary: '#141E14',
     cardBg: 'rgba(20, 30, 20, 0.6)',
 
-    // Typography: Warm off-white
+    // Typography: Warm off-white (secondary bumped ~12% brighter per Gemini feedback)
     textPrimary: '#EAE6D8',
-    textSecondary: '#8F968F',
+    textSecondary: '#A3ABA3',
     textTertiary: '#5A615A',
 
     // Accent: Antique Gold / Firefly Light

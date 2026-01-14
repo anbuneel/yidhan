@@ -45,11 +45,11 @@ export const kintsugi: ThemeConfig = {
     changeImprovement: '#87A878',
     changeFix: '#8B8178',
 
-    // Borders and shadows (warm brown tones)
+    // Borders and shadows (warm terracotta-brown tones per Gemini feedback)
     glassBorder: 'rgba(62, 59, 54, 0.12)',
-    shadowSm: '0 2px 8px rgba(62, 59, 54, 0.08)',
-    shadowMd: '0 20px 40px -10px rgba(62, 59, 54, 0.15)',
-    shadowLg: '0 10px 40px rgba(62, 59, 54, 0.18)',
+    shadowSm: '0 2px 8px rgba(120, 80, 60, 0.10)',
+    shadowMd: '0 20px 40px -10px rgba(120, 80, 60, 0.18)',
+    shadowLg: '0 10px 40px rgba(120, 80, 60, 0.22)',
 
     // Effects
     noiseOpacity: '0.10',
