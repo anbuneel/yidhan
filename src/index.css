@@ -917,8 +917,8 @@ body::before {
   border-bottom: 1px solid var(--glass-border);
   margin-left: -1rem;
   margin-right: -1rem;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
+  padding: 0.375rem 1rem;
+  margin-bottom: 0.5rem;
 }
 
 @media (min-width: 640px) {

@@ -639,7 +639,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
       {/* Editor Content */}
       <main>
-        <div className="max-w-[800px] mx-auto px-4 sm:px-10 pb-40">
+        <div className="max-w-[800px] mx-auto px-4 sm:px-10 pt-2 pb-40">
           {/* Title */}
           <textarea
             ref={titleRef}
@@ -657,11 +657,11 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
               resize-none
               overflow-hidden
               leading-tight
-              mb-1
+              mb-2
             "
             style={{
               fontFamily: 'var(--font-display)',
-              fontSize: '2.75rem',
+              fontSize: '2.25rem',
               color: 'var(--color-text-primary)',
               letterSpacing: '-0.02em',
             }}
@@ -670,7 +670,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
           {/* Timestamps */}
           <div
-            className="text-xs mb-3"
+            className="text-xs mb-1"
             style={{
               fontFamily: 'var(--font-body)',
               color: 'var(--color-text-tertiary)',
@@ -680,7 +680,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
           </div>
 
           {/* Tag Selector */}
-          <div className="mb-4">
+          <div className="mb-1">
             <TagSelector
               tags={tags}
               selectedTagIds={note.tags.map((t) => t.id)}
