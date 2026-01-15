@@ -1,6 +1,6 @@
 # Quiet Tasks Implementation Plan
 
-**Version:** 1.0
+**Version:** 2.0
 **Last Updated:** 2026-01-14
 **Status:** Draft
 **Author:** Claude (Opus 4.5)
@@ -10,7 +10,13 @@
 ## Original Prompt
 
 > "we said we can start with the 'Quiet Reminder' feature. what decisions do we need to make before implementing that?"
-> (User selected batch processing, opted for unified view with both explicit checkboxes AND implicit intentions, MVP free for all users)
+
+## Revision History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0 | 2026-01-14 | Initial plan (client-side batch processing) |
+| 2.0 | 2026-01-14 | **Major revision**: Server-side architecture with extensibility for future LLM features |
 
 ---
 
@@ -20,31 +26,155 @@ Quiet Tasks is a unified view that surfaces:
 1. **Explicit tasks** — Tiptap checkboxes (`<li data-checked="false">`)
 2. **Implicit intentions** — Natural language patterns ("I should...", "need to...")
 
-The feature helps users remember what matters by surfacing buried tasks without requiring deadlines.
-
-## Key Decisions (Finalized)
-
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Processing location | Client-side (regex) | Privacy-first; no note content sent to server |
-| When to extract | Batch (background) | Avoid adding latency to note saves |
-| Storage | Supabase `note_tasks` table | Enables cross-device sync |
-| Include checkboxes? | Yes | Unified view more useful than separate systems |
-| Opt-in mechanism | `user_metadata.quiet_tasks_enabled` | Consistent with existing patterns |
-| MVP pricing | Free for all users | Validate feature value before gating |
-| Future pricing | Bloom tier ($4/mo) | Gate behind premium once validated |
+This is the first feature in the **Quiet Intelligence** suite — designed with an extensible architecture that can grow to support embeddings and LLM-powered features later.
 
 ---
 
-## Phase 1: Database Migration
+## Architecture Overview
 
-### 1.1 Create `note_tasks` Table
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Note Created/Updated                        │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   DATABASE TRIGGER                               │
+│              extract_tasks_from_note()                           │
+│                                                                  │
+│   • Checks user_intelligence_settings.tier1_enabled              │
+│   • Extracts tasks via PostgreSQL regex                          │
+│   • Inserts into note_tasks table                                │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     note_tasks TABLE                             │
+│                                                                  │
+│   Stores extracted tasks with status tracking                    │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   QUIET TASKS VIEW                               │
+│                                                                  │
+│   • Displays pending tasks grouped by age                        │
+│   • Actions: Complete, Snooze, Dismiss                           │
+│   • Links back to source note                                    │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-**File:** `supabase/migrations/add_note_tasks.sql`
+### Why Server-Side?
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| ~~Client-side batch~~ | Simple | Misses mid-session tasks, battery drain, inconsistent |
+| **Database trigger** ✓ | Always in sync, zero client load, works across devices | PostgreSQL regex limitations |
+| Edge Function | Full JS power | Additional infrastructure |
+
+**Decision:** Database trigger for Phase 1. Notes are already on Supabase — no additional privacy exposure.
+
+---
+
+## Privacy Tiers (Future-Proof Design)
+
+The architecture supports three tiers of intelligence processing:
+
+| Tier | Processing | Privacy | Cost | Phase |
+|------|-----------|---------|------|-------|
+| **Tier 1** | Regex/SQL (server-side) | None — data stays in Supabase | Free | **Phase 1 (now)** |
+| Tier 2 | Embeddings | Medium — vectors sent to API | ~$0.0001/note | Future |
+| Tier 3 | LLM | High — content sent to LLM | ~$0.01/note | Future |
+
+**Phase 1 implements Tier 1 only** — users can get Quiet Tasks without any third-party data sharing.
+
+---
+
+## Phase 1: Database Schema
+
+### 1.1 User Intelligence Settings
+
+This table replaces `user_metadata` for intelligence features — cleaner and more extensible.
+
+**File:** `supabase/migrations/001_intelligence_settings.sql`
 
 ```sql
--- Note tasks table for Quiet Tasks feature
--- Stores extracted tasks from notes (both explicit checkboxes and implicit intentions)
+-- ============================================
+-- User Intelligence Settings
+-- ============================================
+-- Centralized settings for all Quiet Intelligence features
+-- Designed to scale from regex (Tier 1) to LLM (Tier 3)
+
+create table user_intelligence_settings (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+
+  -- Tier 1: Pattern matching (free, server-side only)
+  tier1_enabled boolean default false,
+
+  -- Tier 2: Embeddings (future - Bloom tier)
+  tier2_enabled boolean default false,
+
+  -- Tier 3: LLM processing (future - Bloom tier + explicit consent)
+  tier3_enabled boolean default false,
+  tier3_provider text check (tier3_provider in ('openai', 'anthropic')),
+
+  -- Feature-specific toggles within Tier 1
+  feature_quiet_tasks boolean default true,
+  feature_quiet_questions boolean default true,
+  feature_seasonal_echo boolean default true,
+
+  -- Feature-specific toggles within Tier 2 (future)
+  feature_resonance_threads boolean default false,
+
+  -- Feature-specific toggles within Tier 3 (future)
+  feature_daily_whisper boolean default false,
+  feature_weekly_digest boolean default false,
+  feature_weekly_digest_email text,
+
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- RLS policies
+alter table user_intelligence_settings enable row level security;
+
+create policy "Users can view their own settings"
+  on user_intelligence_settings for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert their own settings"
+  on user_intelligence_settings for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own settings"
+  on user_intelligence_settings for update
+  using (auth.uid() = user_id);
+
+-- Auto-create settings for new users
+create or replace function create_intelligence_settings()
+returns trigger as $$
+begin
+  insert into user_intelligence_settings (user_id)
+  values (new.id)
+  on conflict (user_id) do nothing;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_auth_user_created_intelligence
+  after insert on auth.users
+  for each row execute function create_intelligence_settings();
+```
+
+### 1.2 Note Tasks Table
+
+**File:** `supabase/migrations/002_note_tasks.sql`
+
+```sql
+-- ============================================
+-- Note Tasks Table
+-- ============================================
+-- Stores extracted tasks from notes (checkboxes + intentions)
 
 create table note_tasks (
   id uuid default gen_random_uuid() primary key,
@@ -52,17 +182,17 @@ create table note_tasks (
   note_id uuid references notes(id) on delete cascade not null,
 
   -- Task content
-  text text not null,                    -- The task text (cleaned)
+  text text not null,
   type text not null check (type in ('checkbox', 'intention')),
 
   -- Source tracking
-  source_pattern text,                   -- Pattern that matched (for intentions)
-  source_html text,                      -- Original HTML snippet for context
+  source_pattern text,  -- e.g., 'I should', 'remind me to'
 
   -- Status
-  status text not null default 'pending' check (status in ('pending', 'completed', 'dismissed', 'snoozed')),
-  snoozed_until timestamptz,             -- When snooze expires
-  snooze_count int not null default 0,   -- Max 2 snoozes allowed
+  status text not null default 'pending'
+    check (status in ('pending', 'completed', 'dismissed', 'snoozed')),
+  snoozed_until timestamptz,
+  snooze_count int not null default 0,
 
   -- Timestamps
   extracted_at timestamptz default now() not null,
@@ -74,37 +204,244 @@ create table note_tasks (
   unique(note_id, text, type)
 );
 
--- Index for efficient queries
+-- Indexes
 create index idx_note_tasks_user_status on note_tasks(user_id, status);
 create index idx_note_tasks_note on note_tasks(note_id);
+create index idx_note_tasks_pending on note_tasks(user_id, extracted_at)
+  where status = 'pending';
 
 -- RLS policies
 alter table note_tasks enable row level security;
 
 create policy "Users can view their own tasks"
-  on note_tasks for select
-  using (auth.uid() = user_id);
+  on note_tasks for select using (auth.uid() = user_id);
 
 create policy "Users can insert their own tasks"
-  on note_tasks for insert
-  with check (auth.uid() = user_id);
+  on note_tasks for insert with check (auth.uid() = user_id);
 
 create policy "Users can update their own tasks"
-  on note_tasks for update
-  using (auth.uid() = user_id);
+  on note_tasks for update using (auth.uid() = user_id);
 
 create policy "Users can delete their own tasks"
-  on note_tasks for delete
-  using (auth.uid() = user_id);
+  on note_tasks for delete using (auth.uid() = user_id);
 
 -- Updated_at trigger
 create trigger update_note_tasks_updated_at
   before update on note_tasks
-  for each row
-  execute function update_updated_at_column();
+  for each row execute function update_updated_at_column();
 ```
 
-### 1.2 Update Types
+### 1.3 Intelligence Queue (Foundation)
+
+Schema only for Phase 1 — not actively used until Phase 2+.
+
+**File:** `supabase/migrations/003_intelligence_queue.sql`
+
+```sql
+-- ============================================
+-- Intelligence Queue (Foundation for Future)
+-- ============================================
+-- Async processing queue for Tier 2/3 features
+-- Created now for schema stability; not used in Phase 1
+
+create table intelligence_queue (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  note_id uuid references notes(id) on delete cascade,
+
+  -- Job routing
+  processor text not null check (processor in ('pattern', 'embedding', 'llm')),
+  job_type text not null,
+
+  -- Status tracking
+  status text default 'pending'
+    check (status in ('pending', 'processing', 'completed', 'failed')),
+  priority int default 0,
+  attempts int default 0,
+  max_attempts int default 3,
+
+  -- Job data
+  input_data jsonb,
+  output_data jsonb,
+  error_message text,
+
+  -- Timestamps
+  created_at timestamptz default now(),
+  started_at timestamptz,
+  completed_at timestamptz
+);
+
+-- Index for queue processing
+create index idx_queue_pending on intelligence_queue(status, priority desc, created_at)
+  where status = 'pending';
+
+-- RLS policies
+alter table intelligence_queue enable row level security;
+
+create policy "Users can view their own queue items"
+  on intelligence_queue for select using (auth.uid() = user_id);
+```
+
+---
+
+## Phase 2: Task Extraction Trigger
+
+### 2.1 Extraction Function
+
+**File:** `supabase/migrations/004_task_extraction_trigger.sql`
+
+```sql
+-- ============================================
+-- Task Extraction Trigger
+-- ============================================
+-- Automatically extracts tasks when notes are created/updated
+
+create or replace function extract_tasks_from_note()
+returns trigger as $$
+declare
+  settings_record record;
+  checkbox_matches text[];
+  intention_match record;
+  cleaned_text text;
+  plain_content text;
+begin
+  -- Check if user has Tier 1 enabled
+  select * into settings_record
+  from user_intelligence_settings
+  where user_id = NEW.user_id;
+
+  -- Exit if intelligence not enabled
+  if settings_record is null or not settings_record.tier1_enabled then
+    return NEW;
+  end if;
+
+  -- Exit if quiet_tasks feature is disabled
+  if not settings_record.feature_quiet_tasks then
+    return NEW;
+  end if;
+
+  -- Delete existing tasks for this note (will re-extract)
+  delete from note_tasks where note_id = NEW.id;
+
+  -- ========================================
+  -- Extract unchecked checkboxes
+  -- ========================================
+  -- Match: <li data-type="taskItem" data-checked="false">content</li>
+  for checkbox_matches in
+    select regexp_matches(
+      NEW.content,
+      '<li[^>]*data-type="taskItem"[^>]*data-checked="false"[^>]*>(.*?)</li>',
+      'gi'
+    )
+  loop
+    -- Strip HTML tags from matched content
+    cleaned_text := regexp_replace(checkbox_matches[1], '<[^>]*>', '', 'g');
+    cleaned_text := trim(cleaned_text);
+
+    -- Only insert if reasonable length
+    if length(cleaned_text) >= 3 and length(cleaned_text) <= 200 then
+      insert into note_tasks (user_id, note_id, text, type)
+      values (NEW.user_id, NEW.id, cleaned_text, 'checkbox')
+      on conflict (note_id, text, type) do nothing;
+    end if;
+  end loop;
+
+  -- ========================================
+  -- Extract intentions from plain text
+  -- ========================================
+  -- First, convert HTML to plain text
+  plain_content := regexp_replace(NEW.content, '<[^>]*>', ' ', 'g');
+  plain_content := regexp_replace(plain_content, '&nbsp;', ' ', 'g');
+  plain_content := regexp_replace(plain_content, '&amp;', '&', 'g');
+  plain_content := regexp_replace(plain_content, '\s+', ' ', 'g');
+  plain_content := trim(plain_content);
+
+  -- Pattern: "I should ..."
+  for intention_match in
+    select (regexp_matches(plain_content, '\mI should\s+(.{10,100}?)(?:\.|,|;|$)', 'gi'))[1] as captured
+  loop
+    if intention_match.captured is not null
+       and intention_match.captured !~* '(yesterday|already|finished|completed|done|did)' then
+      insert into note_tasks (user_id, note_id, text, type, source_pattern)
+      values (NEW.user_id, NEW.id, initcap(trim(intention_match.captured)), 'intention', 'I should')
+      on conflict (note_id, text, type) do nothing;
+    end if;
+  end loop;
+
+  -- Pattern: "I need to ..."
+  for intention_match in
+    select (regexp_matches(plain_content, '\mI need to\s+(.{10,100}?)(?:\.|,|;|$)', 'gi'))[1] as captured
+  loop
+    if intention_match.captured is not null
+       and intention_match.captured !~* '(yesterday|already|finished|completed|done|did)' then
+      insert into note_tasks (user_id, note_id, text, type, source_pattern)
+      values (NEW.user_id, NEW.id, initcap(trim(intention_match.captured)), 'intention', 'I need to')
+      on conflict (note_id, text, type) do nothing;
+    end if;
+  end loop;
+
+  -- Pattern: "remind me to ..."
+  for intention_match in
+    select (regexp_matches(plain_content, '\mremind me to\s+(.{10,100}?)(?:\.|,|;|$)', 'gi'))[1] as captured
+  loop
+    if intention_match.captured is not null then
+      insert into note_tasks (user_id, note_id, text, type, source_pattern)
+      values (NEW.user_id, NEW.id, initcap(trim(intention_match.captured)), 'intention', 'remind me to')
+      on conflict (note_id, text, type) do nothing;
+    end if;
+  end loop;
+
+  -- Pattern: "don't forget to ..."
+  for intention_match in
+    select (regexp_matches(plain_content, '\mdon''?t forget to\s+(.{10,100}?)(?:\.|,|;|$)', 'gi'))[1] as captured
+  loop
+    if intention_match.captured is not null then
+      insert into note_tasks (user_id, note_id, text, type, source_pattern)
+      values (NEW.user_id, NEW.id, initcap(trim(intention_match.captured)), 'intention', 'don''t forget')
+      on conflict (note_id, text, type) do nothing;
+    end if;
+  end loop;
+
+  -- Pattern: "I have to ..."
+  for intention_match in
+    select (regexp_matches(plain_content, '\mI have to\s+(.{10,100}?)(?:\.|,|;|$)', 'gi'))[1] as captured
+  loop
+    if intention_match.captured is not null
+       and intention_match.captured !~* '(yesterday|already|finished|completed|done|did)' then
+      insert into note_tasks (user_id, note_id, text, type, source_pattern)
+      values (NEW.user_id, NEW.id, initcap(trim(intention_match.captured)), 'intention', 'I have to')
+      on conflict (note_id, text, type) do nothing;
+    end if;
+  end loop;
+
+  -- Pattern: "I must ..."
+  for intention_match in
+    select (regexp_matches(plain_content, '\mI must\s+(.{10,100}?)(?:\.|,|;|$)', 'gi'))[1] as captured
+  loop
+    if intention_match.captured is not null
+       and intention_match.captured !~* '(yesterday|already|finished|completed|done|did)' then
+      insert into note_tasks (user_id, note_id, text, type, source_pattern)
+      values (NEW.user_id, NEW.id, initcap(trim(intention_match.captured)), 'intention', 'I must')
+      on conflict (note_id, text, type) do nothing;
+    end if;
+  end loop;
+
+  return NEW;
+end;
+$$ language plpgsql security definer;
+
+-- Create trigger on notes table
+create trigger extract_tasks_on_note_change
+  after insert or update of content on notes
+  for each row
+  execute function extract_tasks_from_note();
+```
+
+---
+
+## Phase 3: Task Service (Client)
+
+### 3.1 TypeScript Types
 
 **File:** `src/types/database.ts` (add to existing)
 
@@ -116,12 +453,28 @@ export interface NoteTask {
   text: string;
   type: 'checkbox' | 'intention';
   source_pattern: string | null;
-  source_html: string | null;
   status: 'pending' | 'completed' | 'dismissed' | 'snoozed';
   snoozed_until: string | null;
   snooze_count: number;
   extracted_at: string;
   completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserIntelligenceSettings {
+  user_id: string;
+  tier1_enabled: boolean;
+  tier2_enabled: boolean;
+  tier3_enabled: boolean;
+  tier3_provider: 'openai' | 'anthropic' | null;
+  feature_quiet_tasks: boolean;
+  feature_quiet_questions: boolean;
+  feature_seasonal_echo: boolean;
+  feature_resonance_threads: boolean;
+  feature_daily_whisper: boolean;
+  feature_weekly_digest: boolean;
+  feature_weekly_digest_email: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -133,7 +486,7 @@ export interface NoteTask {
 export interface Task {
   id: string;
   noteId: string;
-  noteTitle: string;  // For display context
+  noteTitle: string;
   text: string;
   type: 'checkbox' | 'intention';
   status: 'pending' | 'completed' | 'dismissed' | 'snoozed';
@@ -142,265 +495,21 @@ export interface Task {
   extractedAt: Date;
   completedAt: Date | null;
 }
-```
 
----
-
-## Phase 2: Extraction Utilities
-
-### 2.1 Task Extraction Module
-
-**File:** `src/utils/taskExtraction.ts`
-
-```typescript
-/**
- * Task extraction utilities for Quiet Tasks feature
- * Extracts both explicit checkboxes and implicit intentions from note HTML
- */
-
-export interface ExtractedTask {
-  text: string;
-  type: 'checkbox' | 'intention';
-  sourcePattern?: string;
-  sourceHtml: string;
-}
-
-// Intention patterns - things users say they want/need to do
-const INTENTION_PATTERNS = [
-  // Direct intentions
-  { pattern: /\bI should\s+(.{10,100}?)(?:\.|,|;|$)/gi, name: 'I should' },
-  { pattern: /\bI need to\s+(.{10,100}?)(?:\.|,|;|$)/gi, name: 'I need to' },
-  { pattern: /\bI want to\s+(.{10,100}?)(?:\.|,|;|$)/gi, name: 'I want to' },
-  { pattern: /\bI have to\s+(.{10,100}?)(?:\.|,|;|$)/gi, name: 'I have to' },
-  { pattern: /\bI must\s+(.{10,100}?)(?:\.|,|;|$)/gi, name: 'I must' },
-
-  // Reminder patterns
-  { pattern: /\bremind me to\s+(.{10,100}?)(?:\.|,|;|$)/gi, name: 'remind me to' },
-  { pattern: /\bdon'?t forget to\s+(.{10,100}?)(?:\.|,|;|$)/gi, name: "don't forget" },
-  { pattern: /\bneed to remember\s+(.{10,100}?)(?:\.|,|;|$)/gi, name: 'need to remember' },
-
-  // Future plans
-  { pattern: /\bI('ll| will)\s+(.{10,100}?)(?:\.|,|;|$)/gi, name: 'I will', captureGroup: 2 },
-  { pattern: /\bgoing to\s+(.{10,100}?)(?:\.|,|;|$)/gi, name: 'going to' },
-
-  // Soft intentions
-  { pattern: /\bmaybe I should\s+(.{10,100}?)(?:\.|,|;|$)/gi, name: 'maybe I should' },
-  { pattern: /\bI might\s+(.{10,100}?)(?:\.|,|;|$)/gi, name: 'I might' },
-];
-
-// Words that indicate the sentence is NOT a task
-const EXCLUSION_WORDS = [
-  'yesterday', 'last week', 'last month', 'already', 'finished',
-  'completed', 'done', 'did', 'was', 'were', 'had'
-];
-
-/**
- * Extract unchecked checkboxes from Tiptap HTML
- */
-export function extractCheckboxes(html: string): ExtractedTask[] {
-  const tasks: ExtractedTask[] = [];
-
-  // Match Tiptap task list items that are unchecked
-  // Format: <li data-type="taskItem" data-checked="false">content</li>
-  const taskItemRegex = /<li[^>]*data-type="taskItem"[^>]*data-checked="false"[^>]*>([\s\S]*?)<\/li>/gi;
-
-  let match;
-  while ((match = taskItemRegex.exec(html)) !== null) {
-    const content = match[1];
-    const text = stripHtml(content).trim();
-
-    if (text.length >= 3 && text.length <= 200) {
-      tasks.push({
-        text,
-        type: 'checkbox',
-        sourceHtml: match[0]
-      });
-    }
-  }
-
-  return tasks;
-}
-
-/**
- * Extract implicit intentions from plain text
- */
-export function extractIntentions(html: string): ExtractedTask[] {
-  const tasks: ExtractedTask[] = [];
-  const text = stripHtml(html);
-  const seen = new Set<string>();
-
-  for (const { pattern, name, captureGroup = 1 } of INTENTION_PATTERNS) {
-    // Reset regex state
-    pattern.lastIndex = 0;
-
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      const captured = match[captureGroup]?.trim();
-
-      if (!captured || captured.length < 10) continue;
-
-      // Skip if contains exclusion words (past tense indicators)
-      const lowerCaptured = captured.toLowerCase();
-      if (EXCLUSION_WORDS.some(word => lowerCaptured.includes(word))) continue;
-
-      // Normalize for deduplication
-      const normalized = captured.toLowerCase().replace(/\s+/g, ' ');
-      if (seen.has(normalized)) continue;
-      seen.add(normalized);
-
-      tasks.push({
-        text: capitalizeFirst(captured),
-        type: 'intention',
-        sourcePattern: name,
-        sourceHtml: match[0]
-      });
-    }
-  }
-
-  return tasks;
-}
-
-/**
- * Extract all tasks from note HTML
- */
-export function extractTasksFromNote(html: string): ExtractedTask[] {
-  const checkboxes = extractCheckboxes(html);
-  const intentions = extractIntentions(html);
-
-  return [...checkboxes, ...intentions];
-}
-
-/**
- * Strip HTML tags and decode entities
- */
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/**
- * Capitalize first letter
- */
-function capitalizeFirst(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1);
+export interface IntelligenceSettings {
+  tier1Enabled: boolean;
+  tier2Enabled: boolean;
+  tier3Enabled: boolean;
+  featureQuietTasks: boolean;
+  featureQuietQuestions: boolean;
+  featureSeasonalEcho: boolean;
+  featureResonanceThreads: boolean;
+  featureDailyWhisper: boolean;
+  featureWeeklyDigest: boolean;
 }
 ```
 
-### 2.2 Unit Tests
-
-**File:** `src/utils/taskExtraction.test.ts`
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import {
-  extractCheckboxes,
-  extractIntentions,
-  extractTasksFromNote
-} from './taskExtraction';
-
-describe('taskExtraction', () => {
-  describe('extractCheckboxes', () => {
-    it('extracts unchecked Tiptap task items', () => {
-      const html = `
-        <ul data-type="taskList">
-          <li data-type="taskItem" data-checked="false">Buy groceries</li>
-          <li data-type="taskItem" data-checked="true">Already done</li>
-          <li data-type="taskItem" data-checked="false">Call mom</li>
-        </ul>
-      `;
-
-      const tasks = extractCheckboxes(html);
-      expect(tasks).toHaveLength(2);
-      expect(tasks[0].text).toBe('Buy groceries');
-      expect(tasks[0].type).toBe('checkbox');
-      expect(tasks[1].text).toBe('Call mom');
-    });
-
-    it('ignores checked items', () => {
-      const html = '<li data-type="taskItem" data-checked="true">Done task</li>';
-      expect(extractCheckboxes(html)).toHaveLength(0);
-    });
-
-    it('ignores items that are too short', () => {
-      const html = '<li data-type="taskItem" data-checked="false">Hi</li>';
-      expect(extractCheckboxes(html)).toHaveLength(0);
-    });
-  });
-
-  describe('extractIntentions', () => {
-    it('extracts "I should" patterns', () => {
-      const html = '<p>I should call my dentist about the appointment.</p>';
-      const tasks = extractIntentions(html);
-
-      expect(tasks).toHaveLength(1);
-      expect(tasks[0].text).toBe('Call my dentist about the appointment');
-      expect(tasks[0].type).toBe('intention');
-      expect(tasks[0].sourcePattern).toBe('I should');
-    });
-
-    it('extracts "remind me to" patterns', () => {
-      const html = '<p>Remind me to check the project deadline tomorrow.</p>';
-      const tasks = extractIntentions(html);
-
-      expect(tasks).toHaveLength(1);
-      expect(tasks[0].sourcePattern).toBe('remind me to');
-    });
-
-    it('ignores past tense (already done)', () => {
-      const html = '<p>I should have called yesterday but I already did it.</p>';
-      const tasks = extractIntentions(html);
-
-      expect(tasks).toHaveLength(0);
-    });
-
-    it('deduplicates similar intentions', () => {
-      const html = `
-        <p>I should call mom.</p>
-        <p>I need to call mom.</p>
-      `;
-      const tasks = extractIntentions(html);
-
-      // Should dedupe to just one
-      expect(tasks).toHaveLength(1);
-    });
-
-    it('ignores intentions that are too short', () => {
-      const html = '<p>I should go.</p>';
-      expect(extractIntentions(html)).toHaveLength(0);
-    });
-  });
-
-  describe('extractTasksFromNote', () => {
-    it('combines checkboxes and intentions', () => {
-      const html = `
-        <ul data-type="taskList">
-          <li data-type="taskItem" data-checked="false">Review PR</li>
-        </ul>
-        <p>I should also update the documentation before the release.</p>
-      `;
-
-      const tasks = extractTasksFromNote(html);
-      expect(tasks).toHaveLength(2);
-      expect(tasks.find(t => t.type === 'checkbox')).toBeDefined();
-      expect(tasks.find(t => t.type === 'intention')).toBeDefined();
-    });
-  });
-});
-```
-
----
-
-## Phase 3: Task Service
-
-### 3.1 Task Service Module
+### 3.2 Task Service
 
 **File:** `src/services/tasks.ts`
 
@@ -408,7 +517,6 @@ describe('taskExtraction', () => {
 import { supabase } from '../lib/supabase';
 import type { NoteTask } from '../types/database';
 import type { Task } from '../types';
-import type { ExtractedTask } from '../utils/taskExtraction';
 
 /**
  * Convert database task to app task with note context
@@ -451,37 +559,6 @@ export async function fetchPendingTasks(): Promise<Task[]> {
   });
 
   return activeTasks.map(toAppTask);
-}
-
-/**
- * Sync extracted tasks for a note
- * Inserts new tasks, ignores duplicates
- */
-export async function syncTasksForNote(
-  noteId: string,
-  userId: string,
-  extractedTasks: ExtractedTask[]
-): Promise<void> {
-  if (extractedTasks.length === 0) return;
-
-  const tasksToInsert = extractedTasks.map(task => ({
-    user_id: userId,
-    note_id: noteId,
-    text: task.text,
-    type: task.type,
-    source_pattern: task.sourcePattern || null,
-    source_html: task.sourceHtml,
-  }));
-
-  // Use upsert with conflict handling (ignore duplicates)
-  const { error } = await supabase
-    .from('note_tasks')
-    .upsert(tasksToInsert, {
-      onConflict: 'note_id,text,type',
-      ignoreDuplicates: true
-    });
-
-  if (error) throw error;
 }
 
 /**
@@ -536,18 +613,6 @@ export async function snoozeTask(taskId: string, currentSnoozeCount: number): Pr
 }
 
 /**
- * Delete all tasks for a note (called when note is deleted)
- */
-export async function deleteTasksForNote(noteId: string): Promise<void> {
-  const { error } = await supabase
-    .from('note_tasks')
-    .delete()
-    .eq('note_id', noteId);
-
-  if (error) throw error;
-}
-
-/**
  * Get task count for badge display
  */
 export async function countPendingTasks(): Promise<number> {
@@ -561,77 +626,228 @@ export async function countPendingTasks(): Promise<number> {
 }
 ```
 
+### 3.3 Intelligence Settings Service
+
+**File:** `src/services/intelligenceSettings.ts`
+
+```typescript
+import { supabase } from '../lib/supabase';
+import type { UserIntelligenceSettings } from '../types/database';
+import type { IntelligenceSettings } from '../types';
+
+/**
+ * Convert database settings to app settings
+ */
+function toAppSettings(db: UserIntelligenceSettings): IntelligenceSettings {
+  return {
+    tier1Enabled: db.tier1_enabled,
+    tier2Enabled: db.tier2_enabled,
+    tier3Enabled: db.tier3_enabled,
+    featureQuietTasks: db.feature_quiet_tasks,
+    featureQuietQuestions: db.feature_quiet_questions,
+    featureSeasonalEcho: db.feature_seasonal_echo,
+    featureResonanceThreads: db.feature_resonance_threads,
+    featureDailyWhisper: db.feature_daily_whisper,
+    featureWeeklyDigest: db.feature_weekly_digest,
+  };
+}
+
+/**
+ * Fetch intelligence settings for current user
+ */
+export async function fetchIntelligenceSettings(): Promise<IntelligenceSettings | null> {
+  const { data, error } = await supabase
+    .from('user_intelligence_settings')
+    .select('*')
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null; // No settings yet
+    throw error;
+  }
+
+  return toAppSettings(data);
+}
+
+/**
+ * Enable/disable Tier 1 (pattern extraction)
+ */
+export async function setTier1Enabled(enabled: boolean): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { error } = await supabase
+    .from('user_intelligence_settings')
+    .upsert({
+      user_id: user.id,
+      tier1_enabled: enabled,
+    }, { onConflict: 'user_id' });
+
+  if (error) throw error;
+}
+
+/**
+ * Toggle a specific feature
+ */
+export async function setFeatureEnabled(
+  feature: keyof Pick<IntelligenceSettings,
+    'featureQuietTasks' | 'featureQuietQuestions' | 'featureSeasonalEcho'>,
+  enabled: boolean
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const columnMap = {
+    featureQuietTasks: 'feature_quiet_tasks',
+    featureQuietQuestions: 'feature_quiet_questions',
+    featureSeasonalEcho: 'feature_seasonal_echo',
+  };
+
+  const { error } = await supabase
+    .from('user_intelligence_settings')
+    .update({ [columnMap[feature]]: enabled })
+    .eq('user_id', user.id);
+
+  if (error) throw error;
+}
+```
+
 ---
 
 ## Phase 4: Settings UI
 
-### 4.1 Add Intelligence Tab to Settings
+### 4.1 Intelligence Settings Tab
 
-Update `src/components/SettingsModal.tsx` to add a third tab for Intelligence settings.
+Add a new "Intelligence" tab to the Settings modal.
 
-**Key changes:**
+**File:** `src/components/SettingsModal.tsx` (key additions)
 
 ```typescript
-// Add to tabs array
-const tabs = ['Profile', 'Password', 'Intelligence'] as const;
+// Add to imports
+import {
+  fetchIntelligenceSettings,
+  setTier1Enabled,
+  setFeatureEnabled
+} from '../services/intelligenceSettings';
+import type { IntelligenceSettings } from '../types';
 
-// Add state for quiet tasks
-const [quietTasksEnabled, setQuietTasksEnabled] = useState(
-  user?.user_metadata?.quiet_tasks_enabled ?? false
-);
+// Add state
+const [intelligenceSettings, setIntelligenceSettings] = useState<IntelligenceSettings | null>(null);
+const [loadingIntelligence, setLoadingIntelligence] = useState(false);
 
-// Add handler
-const handleQuietTasksToggle = async () => {
-  const newValue = !quietTasksEnabled;
-  setQuietTasksEnabled(newValue);
+// Load settings on mount
+useEffect(() => {
+  const loadSettings = async () => {
+    try {
+      const settings = await fetchIntelligenceSettings();
+      setIntelligenceSettings(settings);
+    } catch (error) {
+      console.error('Failed to load intelligence settings:', error);
+    }
+  };
+  loadSettings();
+}, []);
 
-  const { error } = await supabase.auth.updateUser({
-    data: { quiet_tasks_enabled: newValue }
-  });
+// Toggle handler
+const handleTier1Toggle = async () => {
+  if (!intelligenceSettings) return;
 
-  if (error) {
-    setQuietTasksEnabled(!newValue); // Revert on error
+  const newValue = !intelligenceSettings.tier1Enabled;
+  setIntelligenceSettings(prev => prev ? { ...prev, tier1Enabled: newValue } : null);
+
+  try {
+    await setTier1Enabled(newValue);
+    toast.success(newValue ? 'Quiet Intelligence enabled' : 'Quiet Intelligence disabled');
+  } catch (error) {
+    setIntelligenceSettings(prev => prev ? { ...prev, tier1Enabled: !newValue } : null);
     toast.error('Failed to update setting');
-  } else {
-    toast.success(newValue ? 'Quiet Tasks enabled' : 'Quiet Tasks disabled');
   }
 };
 
-// Add tab content
+// Tab content
 {activeTab === 'Intelligence' && (
   <div className="space-y-6">
+    {/* Header */}
     <div>
       <h3 className="text-lg font-medium text-[var(--color-text-primary)]">
         Quiet Intelligence
       </h3>
       <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-        Helpful features that surface your own words, not AI-generated content.
+        Helpful features that surface your own words — not AI-generated content.
       </p>
     </div>
 
-    <div className="flex items-center justify-between p-4 bg-[var(--color-bg-secondary)] rounded-lg">
-      <div>
-        <p className="font-medium text-[var(--color-text-primary)]">
-          Quiet Tasks
-        </p>
-        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-          Surface buried tasks and intentions from your notes
-        </p>
-      </div>
-      <button
-        onClick={handleQuietTasksToggle}
-        className={`relative w-12 h-6 rounded-full transition-colors ${
-          quietTasksEnabled
-            ? 'bg-[var(--color-accent)]'
-            : 'bg-[var(--color-bg-tertiary)]'
-        }`}
-      >
-        <span
-          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-            quietTasksEnabled ? 'left-7' : 'left-1'
+    {/* Tier 1 Master Toggle */}
+    <div className="p-4 bg-[var(--color-bg-secondary)] rounded-lg space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-medium text-[var(--color-text-primary)]">
+            Enable Pattern Recognition
+          </p>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+            Extract tasks and intentions from your notes automatically
+          </p>
+        </div>
+        <button
+          onClick={handleTier1Toggle}
+          className={`relative w-12 h-6 rounded-full transition-colors ${
+            intelligenceSettings?.tier1Enabled
+              ? 'bg-[var(--color-accent)]'
+              : 'bg-[var(--color-bg-tertiary)]'
           }`}
-        />
-      </button>
+          aria-label="Toggle pattern recognition"
+        >
+          <span
+            className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+              intelligenceSettings?.tier1Enabled ? 'left-7' : 'left-1'
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* Feature toggles (only shown when Tier 1 enabled) */}
+      {intelligenceSettings?.tier1Enabled && (
+        <div className="pt-4 border-t border-[var(--color-bg-tertiary)] space-y-3">
+          <p className="text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
+            Features
+          </p>
+
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={intelligenceSettings.featureQuietTasks}
+              onChange={() => setFeatureEnabled('featureQuietTasks', !intelligenceSettings.featureQuietTasks)}
+              className="w-4 h-4 rounded border-[var(--color-text-secondary)]"
+            />
+            <span className="text-[var(--color-text-primary)]">Quiet Tasks</span>
+          </label>
+
+          <label className="flex items-center gap-3 cursor-pointer opacity-50">
+            <input type="checkbox" disabled className="w-4 h-4 rounded" />
+            <span className="text-[var(--color-text-secondary)]">Quiet Questions (coming soon)</span>
+          </label>
+
+          <label className="flex items-center gap-3 cursor-pointer opacity-50">
+            <input type="checkbox" disabled className="w-4 h-4 rounded" />
+            <span className="text-[var(--color-text-secondary)]">Seasonal Echo (coming soon)</span>
+          </label>
+        </div>
+      )}
+    </div>
+
+    {/* Privacy note */}
+    <p className="text-xs text-[var(--color-text-secondary)]">
+      Pattern recognition runs entirely on our servers. Your notes are never sent to third-party AI services.
+    </p>
+
+    {/* Future tiers (teaser) */}
+    <div className="p-4 bg-[var(--color-bg-secondary)] rounded-lg opacity-60">
+      <p className="font-medium text-[var(--color-text-primary)]">
+        Coming in Bloom
+      </p>
+      <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+        Resonance Threads, Daily Whisper, and more — powered by AI, with your explicit consent.
+      </p>
     </div>
   </div>
 )}
@@ -647,7 +863,6 @@ const handleQuietTasksToggle = async () => {
 
 ```typescript
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { HeaderShell } from './HeaderShell';
 import { LoadingFallback } from './LoadingFallback';
 import {
@@ -665,7 +880,6 @@ interface QuietTasksViewProps {
 }
 
 export function QuietTasksView({ onBack, onNavigateToNote }: QuietTasksViewProps) {
-  const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -689,7 +903,7 @@ export function QuietTasksView({ onBack, onNavigateToNote }: QuietTasksViewProps
     try {
       await completeTask(task.id);
       setTasks(prev => prev.filter(t => t.id !== task.id));
-      toast.success('Task completed');
+      toast.success('Marked as done');
     } catch (error) {
       toast.error('Failed to complete task');
     }
@@ -699,9 +913,9 @@ export function QuietTasksView({ onBack, onNavigateToNote }: QuietTasksViewProps
     try {
       await dismissTask(task.id);
       setTasks(prev => prev.filter(t => t.id !== task.id));
-      toast.success('Task dismissed');
+      toast('Dismissed', { icon: '👋' });
     } catch (error) {
-      toast.error('Failed to dismiss task');
+      toast.error('Failed to dismiss');
     }
   };
 
@@ -715,7 +929,7 @@ export function QuietTasksView({ onBack, onNavigateToNote }: QuietTasksViewProps
         toast.error('Maximum snoozes reached');
       }
     } catch (error) {
-      toast.error('Failed to snooze task');
+      toast.error('Failed to snooze');
     }
   };
 
@@ -743,7 +957,7 @@ export function QuietTasksView({ onBack, onNavigateToNote }: QuietTasksViewProps
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            <span>Back</span>
+            <span className="hidden sm:inline">Back</span>
           </button>
         }
         centerContent={
@@ -756,15 +970,20 @@ export function QuietTasksView({ onBack, onNavigateToNote }: QuietTasksViewProps
       <main className="max-w-2xl mx-auto px-4 py-8">
         {tasks.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-[var(--color-text-secondary)] text-lg">
-              No pending tasks found
+            <div className="text-4xl mb-4">🍃</div>
+            <p className="text-[var(--color-text-primary)] text-lg font-display">
+              Nothing pressing
             </p>
-            <p className="text-[var(--color-text-secondary)] text-sm mt-2">
-              Your notes will be scanned for tasks and intentions
+            <p className="text-[var(--color-text-secondary)] text-sm mt-2 max-w-sm mx-auto">
+              Tasks and intentions from your notes will appear here as you write.
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
+            <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+              {tasks.length} {tasks.length === 1 ? 'thing' : 'things'} bubbling up from your notes
+            </p>
+
             {tasks.map(task => (
               <div
                 key={task.id}
@@ -772,7 +991,7 @@ export function QuietTasksView({ onBack, onNavigateToNote }: QuietTasksViewProps
               >
                 {/* Task content */}
                 <div className="flex items-start gap-3">
-                  <span className="text-lg">
+                  <span className="text-lg flex-shrink-0" title={task.type === 'checkbox' ? 'From a checklist' : 'An intention you expressed'}>
                     {task.type === 'checkbox' ? '☐' : '💭'}
                   </span>
                   <div className="flex-1 min-w-0">
@@ -781,18 +1000,20 @@ export function QuietTasksView({ onBack, onNavigateToNote }: QuietTasksViewProps
                     </p>
                     <button
                       onClick={() => onNavigateToNote(task.noteId)}
-                      className="text-sm text-[var(--color-accent)] hover:underline mt-1"
+                      className="text-sm text-[var(--color-accent)] hover:underline mt-1 truncate block max-w-full"
                     >
-                      from "{task.noteTitle}"
+                      in "{task.noteTitle}"
                     </button>
                   </div>
                 </div>
 
                 {/* Meta info */}
-                <div className="flex items-center justify-between text-sm text-[var(--color-text-secondary)]">
+                <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
                   <span>{formatAge(task.extractedAt)}</span>
                   {task.snoozeCount > 0 && (
-                    <span>Snoozed {task.snoozeCount}x</span>
+                    <span className="px-2 py-0.5 bg-[var(--color-bg-tertiary)] rounded">
+                      Snoozed {task.snoozeCount}×
+                    </span>
                   )}
                 </div>
 
@@ -800,22 +1021,24 @@ export function QuietTasksView({ onBack, onNavigateToNote }: QuietTasksViewProps
                 <div className="flex gap-2 pt-2 border-t border-[var(--color-bg-tertiary)]">
                   <button
                     onClick={() => handleComplete(task)}
-                    className="flex-1 px-3 py-2 text-sm bg-[var(--color-accent)] text-white rounded hover:opacity-90 transition-opacity"
+                    className="flex-1 px-3 py-2 text-sm bg-[var(--color-accent)] text-white rounded-md hover:opacity-90 transition-opacity"
                   >
                     Done
                   </button>
                   <button
                     onClick={() => handleSnooze(task)}
                     disabled={task.snoozeCount >= 2}
-                    className="flex-1 px-3 py-2 text-sm border border-[var(--color-text-secondary)] text-[var(--color-text-secondary)] rounded hover:bg-[var(--color-bg-tertiary)] transition-colors disabled:opacity-50"
+                    className="flex-1 px-3 py-2 text-sm border border-[var(--color-text-secondary)] text-[var(--color-text-secondary)] rounded-md hover:bg-[var(--color-bg-tertiary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={task.snoozeCount >= 2 ? 'Maximum snoozes reached' : 'Snooze for 1 week'}
                   >
                     Snooze
                   </button>
                   <button
                     onClick={() => handleDismiss(task)}
                     className="px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-error)] transition-colors"
+                    title="Won't show again"
                   >
-                    Dismiss
+                    ✕
                   </button>
                 </div>
               </div>
@@ -830,61 +1053,119 @@ export function QuietTasksView({ onBack, onNavigateToNote }: QuietTasksViewProps
 
 ---
 
-## Phase 6: Integration & Testing
+## Phase 6: Integration
 
-### 6.1 Background Extraction Hook
+### 6.1 Add Route to App
 
-**File:** `src/hooks/useTaskExtraction.ts`
+**File:** `src/App.tsx` (key additions)
 
 ```typescript
-import { useEffect, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { extractTasksFromNote } from '../utils/taskExtraction';
-import { syncTasksForNote } from '../services/tasks';
-import type { Note } from '../types';
+// Add import
+const QuietTasksView = lazy(() => import('./components/QuietTasksView').then(m => ({ default: m.QuietTasksView })));
 
-/**
- * Background task extraction hook
- * Runs on app load and periodically extracts tasks from notes
- */
-export function useTaskExtraction(notes: Note[]) {
-  const { user } = useAuth();
-  const hasRun = useRef(false);
+// Add state
+const [view, setView] = useState<'library' | 'editor' | 'faded' | 'tasks' | 'settings'>('library');
 
-  useEffect(() => {
-    // Only run once per session
-    if (hasRun.current || !user) return;
-
-    // Check if feature is enabled
-    const enabled = user.user_metadata?.quiet_tasks_enabled;
-    if (!enabled) return;
-
-    hasRun.current = true;
-
-    // Extract tasks from all notes (runs in background)
-    const extractAll = async () => {
-      for (const note of notes) {
-        if (!note.content) continue;
-
-        try {
-          const extracted = extractTasksFromNote(note.content);
-          if (extracted.length > 0) {
-            await syncTasksForNote(note.id, user.id, extracted);
-          }
-        } catch (error) {
-          console.error(`Failed to extract tasks from note ${note.id}:`, error);
-        }
-      }
-    };
-
-    // Run with a small delay to not block initial render
-    const timer = setTimeout(extractAll, 2000);
-    return () => clearTimeout(timer);
-  }, [notes, user]);
-}
+// Add to render logic
+{view === 'tasks' && (
+  <Suspense fallback={<LoadingFallback />}>
+    <QuietTasksView
+      onBack={() => setView('library')}
+      onNavigateToNote={(noteId) => {
+        setSelectedNoteId(noteId);
+        setView('editor');
+      }}
+    />
+  </Suspense>
+)}
 ```
 
-### 6.2 E2E Tests
+### 6.2 Add Navigation Link
+
+Add a link to Quiet Tasks in the header or footer. Example in footer:
+
+```typescript
+// In Footer.tsx or Header.tsx
+<button
+  onClick={() => onNavigateToTasks?.()}
+  className="text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] transition-colors"
+>
+  Quiet Tasks
+</button>
+```
+
+---
+
+## Phase 7: Testing
+
+### 7.1 Unit Tests
+
+**File:** `src/services/tasks.test.ts`
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fetchPendingTasks, completeTask, snoozeTask } from './tasks';
+import { supabase } from '../lib/supabase';
+
+vi.mock('../lib/supabase');
+
+describe('tasks service', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('fetchPendingTasks', () => {
+    it('fetches pending and active snoozed tasks', async () => {
+      const mockTasks = [
+        { id: '1', text: 'Task 1', status: 'pending', notes: { title: 'Note 1' } },
+        { id: '2', text: 'Task 2', status: 'snoozed', snoozed_until: '2020-01-01', notes: { title: 'Note 2' } },
+      ];
+
+      vi.mocked(supabase.from).mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          in: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: mockTasks, error: null })
+          })
+        })
+      } as any);
+
+      const tasks = await fetchPendingTasks();
+      expect(tasks).toHaveLength(2);
+    });
+
+    it('filters out snoozed tasks that have not expired', async () => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7);
+
+      const mockTasks = [
+        { id: '1', text: 'Task 1', status: 'pending', notes: { title: 'Note 1' } },
+        { id: '2', text: 'Task 2', status: 'snoozed', snoozed_until: futureDate.toISOString(), notes: { title: 'Note 2' } },
+      ];
+
+      vi.mocked(supabase.from).mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          in: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: mockTasks, error: null })
+          })
+        })
+      } as any);
+
+      const tasks = await fetchPendingTasks();
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0].id).toBe('1');
+    });
+  });
+
+  describe('snoozeTask', () => {
+    it('returns false when max snoozes reached', async () => {
+      const result = await snoozeTask('task-id', 2);
+      expect(result).toBe(false);
+    });
+  });
+});
+```
+
+### 7.2 E2E Tests
 
 **File:** `e2e/quiet-tasks.spec.ts`
 
@@ -895,66 +1176,71 @@ import { login, createNote } from './fixtures';
 test.describe('Quiet Tasks', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
+
+    // Enable Quiet Intelligence in settings
+    await page.click('[data-testid="settings-button"]');
+    await page.click('text=Intelligence');
+    await page.click('[data-testid="tier1-toggle"]');
+    await page.click('[data-testid="close-modal"]');
   });
 
   test('extracts checkbox tasks from notes', async ({ page }) => {
-    // Create a note with a task list
-    await createNote(page, {
-      title: 'My Tasks',
-      content: 'Things to do'
-    });
-
-    // Add a task list via slash command
+    // Create note with task list
+    await createNote(page, { title: 'Shopping' });
     await page.keyboard.type('/task');
     await page.keyboard.press('Enter');
-    await page.keyboard.type('Buy groceries');
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('Call dentist');
-
-    // Save and go back
+    await page.keyboard.type('Buy milk');
     await page.keyboard.press('Escape');
 
-    // Enable Quiet Tasks in settings
-    await page.click('[data-testid="settings-button"]');
-    await page.click('text=Intelligence');
-    await page.click('[data-testid="quiet-tasks-toggle"]');
-    await page.click('text=Close');
+    // Wait for extraction (runs on save via trigger)
+    await page.waitForTimeout(1000);
 
-    // Navigate to Quiet Tasks view
-    await page.click('[data-testid="quiet-tasks-link"]');
+    // Navigate to Quiet Tasks
+    await page.click('text=Quiet Tasks');
 
-    // Verify tasks are shown
-    await expect(page.locator('text=Buy groceries')).toBeVisible();
-    await expect(page.locator('text=Call dentist')).toBeVisible();
+    await expect(page.locator('text=Buy milk')).toBeVisible();
+    await expect(page.locator('text=☐')).toBeVisible();
   });
 
   test('extracts intention patterns', async ({ page }) => {
     await createNote(page, {
       title: 'Thoughts',
-      content: 'I should really organize my desk this weekend.'
+      content: 'I should call mom this weekend about the party.'
     });
 
-    // Enable and check Quiet Tasks
-    // ... (similar to above)
+    await page.waitForTimeout(1000);
+    await page.click('text=Quiet Tasks');
 
-    await expect(page.locator('text=organize my desk')).toBeVisible();
+    await expect(page.locator('text=Call mom this weekend about the party')).toBeVisible();
+    await expect(page.locator('text=💭')).toBeVisible();
   });
 
-  test('can complete, snooze, and dismiss tasks', async ({ page }) => {
-    // Setup note with task
-    // Navigate to Quiet Tasks
+  test('can complete a task', async ({ page }) => {
+    await createNote(page, { title: 'Todo' });
+    await page.keyboard.type('/task');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Test task');
+    await page.keyboard.press('Escape');
 
-    // Complete a task
+    await page.waitForTimeout(1000);
+    await page.click('text=Quiet Tasks');
+
     await page.click('button:has-text("Done")');
-    await expect(page.locator('text=Task completed')).toBeVisible();
+    await expect(page.locator('text=Marked as done')).toBeVisible();
+    await expect(page.locator('text=Test task')).not.toBeVisible();
+  });
 
-    // Snooze a task
-    await page.click('button:has-text("Snooze")');
-    await expect(page.locator('text=Snoozed for 1 week')).toBeVisible();
+  test('can snooze a task (max 2 times)', async ({ page }) => {
+    // Create and snooze task twice
+    // Verify third snooze is disabled
+  });
 
-    // Dismiss a task
-    await page.click('button:has-text("Dismiss")');
-    await expect(page.locator('text=Task dismissed')).toBeVisible();
+  test('can dismiss a task', async ({ page }) => {
+    // Create task, dismiss it, verify gone
+  });
+
+  test('navigates to source note', async ({ page }) => {
+    // Create task, click note link, verify editor opens
   });
 });
 ```
@@ -963,39 +1249,44 @@ test.describe('Quiet Tasks', () => {
 
 ## File Summary
 
-| File | Action | Description |
-|------|--------|-------------|
-| `supabase/migrations/add_note_tasks.sql` | Create | Database migration |
-| `src/types/database.ts` | Update | Add NoteTask interface |
-| `src/types.ts` | Update | Add Task type |
-| `src/utils/taskExtraction.ts` | Create | Extraction utilities |
-| `src/utils/taskExtraction.test.ts` | Create | Unit tests |
-| `src/services/tasks.ts` | Create | Task CRUD service |
-| `src/components/SettingsModal.tsx` | Update | Add Intelligence tab |
-| `src/components/QuietTasksView.tsx` | Create | Main view component |
-| `src/hooks/useTaskExtraction.ts` | Create | Background extraction |
-| `e2e/quiet-tasks.spec.ts` | Create | E2E tests |
-| `src/App.tsx` | Update | Add route and hook |
+| File | Action | Phase |
+|------|--------|-------|
+| `supabase/migrations/001_intelligence_settings.sql` | Create | 1 |
+| `supabase/migrations/002_note_tasks.sql` | Create | 1 |
+| `supabase/migrations/003_intelligence_queue.sql` | Create | 1 |
+| `supabase/migrations/004_task_extraction_trigger.sql` | Create | 2 |
+| `src/types/database.ts` | Update | 3 |
+| `src/types.ts` | Update | 3 |
+| `src/services/tasks.ts` | Create | 3 |
+| `src/services/intelligenceSettings.ts` | Create | 3 |
+| `src/components/SettingsModal.tsx` | Update | 4 |
+| `src/components/QuietTasksView.tsx` | Create | 5 |
+| `src/App.tsx` | Update | 6 |
+| `src/services/tasks.test.ts` | Create | 7 |
+| `e2e/quiet-tasks.spec.ts` | Create | 7 |
 
 ---
 
-## Implementation Order
+## Future Phases
 
-1. **Phase 1:** Run database migration in Supabase
-2. **Phase 2:** Create extraction utilities + tests
-3. **Phase 3:** Create task service
-4. **Phase 4:** Update Settings modal with Intelligence tab
-5. **Phase 5:** Create Quiet Tasks view
-6. **Phase 6:** Add background extraction hook and E2E tests
+| Phase | Features | Prerequisites |
+|-------|----------|---------------|
+| Phase 2 | Quiet Questions | Pattern patterns for "?" sentences |
+| Phase 3 | Queue processor | Edge Function infrastructure |
+| Phase 4 | Resonance Threads | pgvector extension, embedding API |
+| Phase 5 | Daily Whisper | LLM API integration, email service |
 
 ---
 
-## Future Enhancements (Post-MVP)
+## Migration Checklist
 
-- **Weekly Digest Email:** Surface top 3 pending tasks via email
-- **Smart Snooze:** Learn optimal snooze times from user behavior
-- **Task Aging Badges:** Visual indicators for tasks aging out
-- **Bloom Tier Gating:** Gate feature behind subscription when validated
+Before deploying:
+
+- [ ] Run migrations in order (001 → 004)
+- [ ] Verify RLS policies are active
+- [ ] Test trigger with sample note
+- [ ] Backfill existing users' settings (optional)
+- [ ] Backfill tasks from existing notes (optional one-time job)
 
 ---
 

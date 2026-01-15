@@ -1,8 +1,8 @@
 # Quiet Intelligence: AI Feature Analysis for Yidhan
 
-**Version:** 1.2
+**Version:** 1.3
 **Last Updated:** 2026-01-14
-**Status:** Living Document (with finalized implementation decisions)
+**Status:** Living Document (with finalized extensible architecture)
 **Author:** Claude (Opus 4.5)
 
 ---
@@ -1231,23 +1231,60 @@ Changelog · Roadmap · Tasks · Shortcuts · GitHub
 
 ## Appendix C: Implementation Decisions (Finalized)
 
-These decisions were finalized on 2026-01-14 for the Quiet Reminder MVP.
+These decisions were finalized on 2026-01-14 for the Quiet Tasks MVP.
+
+### Architecture Overview
+
+The architecture is designed to scale from regex (Phase 1) to LLM-powered features (future):
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Note Created/Updated                        │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   DATABASE TRIGGER                               │
+│              extract_tasks_from_note()                           │
+│                                                                  │
+│   • Checks user_intelligence_settings.tier1_enabled              │
+│   • Extracts tasks via PostgreSQL regex                          │
+│   • Inserts into note_tasks table                                │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     note_tasks TABLE                             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Privacy Tiers
+
+The architecture supports three privacy tiers for future extensibility:
+
+| Tier | Processing | Privacy Exposure | Cost | Features |
+|------|-----------|------------------|------|----------|
+| **Tier 1** | Regex/SQL (server-side) | None — data stays in Supabase | Free | Quiet Tasks, Quiet Questions |
+| Tier 2 | Embeddings | Medium — vectors sent to API | ~$0.0001/note | Resonance Threads |
+| Tier 3 | LLM | High — content sent to LLM | ~$0.01/note | Daily Whisper, Weekly Digest |
+
+**Phase 1 implements Tier 1 only** — users get Quiet Tasks without any third-party data sharing.
 
 ### Technical Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| **Processing location** | Client-side (regex) | Privacy-first; no note content sent to server. Can add LLM later for edge cases. |
-| **When to extract** | Batch (background) | Avoid adding latency to note saves. Run periodically (e.g., on app load, daily). |
+| **Processing location** | Server-side (database trigger) | Notes already on Supabase — no additional privacy exposure. Always in sync, zero client load. |
+| **When to extract** | On note save (via trigger) | Tasks extracted immediately when note is saved. No batch job needed. |
 | **Storage** | Supabase `note_tasks` table | Enables cross-device sync and future email digest feature. |
-| **LLM usage** | Start with regex only | Regex handles 80% of patterns. Graduate to LLM for ambiguous cases later. |
+| **LLM usage** | Start with regex only | Regex handles 80% of patterns. Graduate to LLM (Tier 3) for advanced features later. |
 
 ### UX Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | **Default behavior** | Opt-in | New feature, safer to let users discover and enable. Can flip to opt-out once validated. |
-| **Opt-in storage** | `user_metadata.quiet_tasks_enabled` | Reuses existing Supabase auth pattern (like `full_name`). |
+| **Opt-in storage** | `user_intelligence_settings` table | Dedicated table for all intelligence settings. More extensible than user_metadata. |
 | **Initial surfacing** | Dedicated "Quiet Tasks" view | Self-contained, testable. Add in-app banner and email later. |
 | **Surfacing frequency** | Max 3 per week | Avoid feeling naggy. Quality over quantity. |
 | **Surface timing** | After 2 weeks (no deadline) | Gives user time to naturally complete before surfacing. |
