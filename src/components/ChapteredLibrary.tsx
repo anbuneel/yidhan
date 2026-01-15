@@ -19,6 +19,7 @@ interface ChapteredLibraryProps {
   onNewNote?: () => void;
   onRefresh?: () => Promise<void>;
   searchQuery?: string;
+  isCompact?: boolean;
 }
 
 export function ChapteredLibrary({
@@ -29,6 +30,7 @@ export function ChapteredLibrary({
   onNewNote,
   onRefresh,
   searchQuery,
+  isCompact = false,
 }: ChapteredLibraryProps) {
   // Detect touch capability for pull-to-refresh
   const isTouchDevice = useTouchCapable();
@@ -247,6 +249,7 @@ export function ChapteredLibrary({
           onNoteClick={onNoteClick}
           onNoteDelete={onNoteDelete}
           onTogglePin={onTogglePin}
+          isCompact={isCompact}
         />
       ))}
     </main>

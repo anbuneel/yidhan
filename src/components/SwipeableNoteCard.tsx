@@ -11,6 +11,7 @@ interface SwipeableNoteCardProps {
   onDelete: (id: string) => void | boolean | Promise<void | boolean>;
   onTogglePin: (id: string, pinned: boolean) => void;
   disabled?: boolean;
+  isCompact?: boolean;
 }
 
 // Swipe thresholds (in pixels)
@@ -33,6 +34,7 @@ export function SwipeableNoteCard({
   onDelete,
   onTogglePin,
   disabled = false,
+  isCompact = false,
 }: SwipeableNoteCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isTriggering, setIsTriggering] = useState(false);
@@ -261,6 +263,7 @@ export function SwipeableNoteCard({
           onClick={onClick}
           onDelete={onDelete}
           onTogglePin={onTogglePin}
+          isCompact={isCompact}
         />
       </animated.div>
     </div>

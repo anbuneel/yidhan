@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import toast from 'react-hot-toast';
-import type { Note, Tag, ViewMode, Theme } from './types';
+import type { Note, Tag, ViewMode, Theme, CardDisplayMode } from './types';
 import { Header } from './components/Header';
 import { ChapteredLibrary } from './components/ChapteredLibrary';
 import { Auth } from './components/Auth';
@@ -202,6 +202,16 @@ function App() {
       return saved;
     }
     return 'dark';
+  });
+
+  // Card display mode (full cards vs condensed)
+  const [cardDisplayMode, setCardDisplayMode] = useState<CardDisplayMode>(() => {
+    const saved = localStorage.getItem('yidhan-card-display-mode');
+    if (saved === 'full' || saved === 'condensed') {
+      return saved;
+    }
+    // Default to condensed on mobile, full on desktop
+    return window.innerWidth < 700 ? 'condensed' : 'full';
   });
 
   // Search state
@@ -843,6 +853,12 @@ function App() {
 
   const handleThemeToggle = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
+  };
+
+  const handleCardDisplayModeToggle = () => {
+    const newMode = cardDisplayMode === 'full' ? 'condensed' : 'full';
+    setCardDisplayMode(newMode);
+    localStorage.setItem('yidhan-card-display-mode', newMode);
   };
 
   // Conflict resolution handler
@@ -1507,6 +1523,8 @@ function App() {
           onSettingsClick={() => setShowSettingsModal(true)}
           onFadedNotesClick={handleFadedNotesClick}
           fadedNotesCount={fadedNotesCount}
+          cardDisplayMode={cardDisplayMode}
+          onCardDisplayModeToggle={handleCardDisplayModeToggle}
         />
         <TagFilterBar
           tags={tags}
@@ -1529,6 +1547,7 @@ function App() {
             onNewNote={handleNewNote}
             onRefresh={handleRefresh}
             searchQuery={searchQuery}
+            isCompact={cardDisplayMode === 'condensed'}
           />
         )}
 

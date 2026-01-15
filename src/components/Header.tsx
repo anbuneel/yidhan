@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Theme } from '../types';
+import type { Theme, CardDisplayMode } from '../types';
 import { HeaderShell, type MenuSectionConfig } from './HeaderShell';
 import { SyncIndicator } from './SyncIndicator';
 
@@ -15,6 +15,8 @@ interface HeaderProps {
   onSettingsClick: () => void;
   onFadedNotesClick: () => void;
   fadedNotesCount: number;
+  cardDisplayMode: CardDisplayMode;
+  onCardDisplayModeToggle: () => void;
 }
 
 export function Header({
@@ -29,6 +31,8 @@ export function Header({
   onSettingsClick,
   onFadedNotesClick,
   fadedNotesCount,
+  cardDisplayMode,
+  onCardDisplayModeToggle,
 }: HeaderProps) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -211,10 +215,45 @@ export function Header({
     </button>
   );
 
-  // Combine sync indicator and new note button as right actions
+  // View mode toggle button
+  const viewModeToggle = (
+    <button
+      onClick={onCardDisplayModeToggle}
+      className="
+        p-2
+        rounded-lg
+        transition-all duration-200
+        focus:outline-none
+        focus:ring-2
+        focus:ring-[var(--color-accent)]
+        hover:scale-105
+      "
+      style={{
+        background: 'var(--color-bg-secondary)',
+        color: 'var(--color-text-secondary)',
+      }}
+      aria-label={cardDisplayMode === 'full' ? 'Switch to compact view' : 'Switch to full view'}
+      title={cardDisplayMode === 'full' ? 'Compact view' : 'Full view'}
+    >
+      {cardDisplayMode === 'full' ? (
+        // List/compact icon
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+        </svg>
+      ) : (
+        // Grid/full icon
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+        </svg>
+      )}
+    </button>
+  );
+
+  // Combine sync indicator, view toggle, and new note button as right actions
   const rightActionsContent = (
     <div className="flex items-center gap-2 sm:gap-3">
       <SyncIndicator />
+      {viewModeToggle}
       {newNoteButton}
     </div>
   );

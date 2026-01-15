@@ -518,6 +518,8 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Landing page unified demo strategy (removed inline demo, surfaces /demo "Explore" mode)
 - [x] Trust signals on landing page (Open source, Works offline, Your data stays yours)
 - [x] OAuth-first auth modal layout (OAuth buttons first, then email form)
+- [x] Condensed card view toggle (header toggle switches between full and compact cards)
+- [x] Smart view mode defaults (condensed on mobile, full on desktop, persisted to localStorage)
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (Apple, etc.)
