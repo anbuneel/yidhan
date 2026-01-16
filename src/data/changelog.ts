@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.6.0',
+    date: '2026-01-15',
+    changes: [
+      { type: 'feature', text: 'Automatic condensed cards on mobile - compact view shows more notes on small screens' },
+      { type: 'improvement', text: 'Responsive card sizing - full cards on desktop, compact on mobile (<700px)' },
+    ],
+  },
+  {
     version: '2.5.2',
     date: '2026-01-13',
     changes: [

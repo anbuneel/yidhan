@@ -1,4 +1,4 @@
-import { useState, useEffect, RefObject } from 'react';
+import { useState, useEffect, type RefObject } from 'react';
 
 interface WhisperBackProps {
   scrollContainerRef?: RefObject<HTMLElement | null>;

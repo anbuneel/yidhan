@@ -49,9 +49,20 @@ export function escapeHtml(text: string): string {
 /**
  * Sanitize a plain text string for safe display.
  * Strips any HTML tags and escapes special characters.
+ * Use with innerHTML-based rendering (for HTML context).
  */
 export function sanitizeText(text: string): string {
   // First strip any HTML tags, then escape remaining special chars
   const stripped = DOMPurify.sanitize(text, { ALLOWED_TAGS: [] });
   return escapeHtml(stripped);
+}
+
+/**
+ * Convert HTML to plain text (strips tags, decodes entities).
+ * Use for text node rendering (React will handle escaping).
+ * Avoids double-escaping that occurs with sanitizeText + text nodes.
+ */
+export function htmlToPlainText(html: string): string {
+  // Strip HTML tags but decode entities (DOMPurify decodes &amp; → &)
+  return DOMPurify.sanitize(html, { ALLOWED_TAGS: [] });
 }

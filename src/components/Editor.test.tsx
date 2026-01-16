@@ -36,8 +36,8 @@ vi.mock('./TagSelector', () => ({
 }));
 
 vi.mock('./WhisperBack', () => ({
-  WhisperBack: ({ onClick }: { onClick: () => void }) => (
-    <button data-testid="whisper-back" onClick={onClick}>Back</button>
+  WhisperBack: () => (
+    <button data-testid="whisper-back">Scroll to top</button>
   ),
 }));
 
@@ -396,14 +396,11 @@ describe('Editor', () => {
       expect(onBack).toHaveBeenCalled();
     });
 
-    it('calls onBack when whisper back clicked', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      const onBack = vi.fn();
-      render(<Editor {...defaultProps} onBack={onBack} />);
+    it('renders whisper back button for scrolling to top', () => {
+      render(<Editor {...defaultProps} />);
 
-      await user.click(screen.getByTestId('whisper-back'));
-
-      expect(onBack).toHaveBeenCalled();
+      // WhisperBack is rendered for scrolling back to top of long notes
+      expect(screen.getByTestId('whisper-back')).toBeInTheDocument();
     });
   });
 

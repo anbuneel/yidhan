@@ -753,6 +753,27 @@ body::before {
   opacity: 0.5;
 }
 
+/* ============================================
+   COMPACT CARD STYLES
+   Condensed view for mobile efficiency
+   ============================================ */
+.note-card-compact {
+  /* Smaller gap between cards in compact mode */
+  margin-bottom: 8px;
+}
+
+/* Compact entrance animation (faster, subtler) */
+.note-card-compact.note-card-entrance {
+  animation-duration: 0.25s;
+}
+
+/* Reduce masonry gap in compact mode */
+@media (max-width: 700px) {
+  .masonry-grid-column > .note-card-compact {
+    margin-bottom: 8px !important;
+  }
+}
+
 /* Auth Modal Overlay */
 .auth-modal-overlay {
   position: fixed;

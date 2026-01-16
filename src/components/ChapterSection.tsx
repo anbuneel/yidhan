@@ -15,6 +15,7 @@ interface ChapterSectionProps {
   onNoteClick: (id: string) => void;
   onNoteDelete: (id: string) => void;
   onTogglePin: (id: string, pinned: boolean) => void;
+  isCompact?: boolean;
 }
 
 // Visual treatment based on chapter age (subtle opacity reduction for older notes)
@@ -36,6 +37,7 @@ export function ChapterSection({
   onNoteClick,
   onNoteDelete,
   onTogglePin,
+  isCompact = false,
 }: ChapterSectionProps) {
   // Detect touch capability for swipe gestures
   const isTouchDevice = useTouchCapable();
@@ -195,6 +197,7 @@ export function ChapterSection({
                     onClick={onNoteClick}
                     onDelete={onNoteDelete}
                     onTogglePin={onTogglePin}
+                    isCompact={isCompact}
                   />
                 ) : (
                   <NoteCard
@@ -202,6 +205,7 @@ export function ChapterSection({
                     onClick={onNoteClick}
                     onDelete={onNoteDelete}
                     onTogglePin={onTogglePin}
+                    isCompact={isCompact}
                   />
                 )}
               </div>
