@@ -8,17 +8,38 @@ export function WhisperBack({ scrollContainerRef }: WhisperBackProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const scrollContainer = scrollContainerRef?.current;
-
     const handleScroll = () => {
+      const scrollContainer = scrollContainerRef?.current;
       // Show earlier on mobile (300px) vs desktop (400px)
       const threshold = window.innerWidth < 640 ? 300 : 400;
       const scrollY = scrollContainer ? scrollContainer.scrollTop : window.scrollY;
       setIsVisible(scrollY > threshold);
     };
 
+    // Try container first, fall back to window
+    const scrollContainer = scrollContainerRef?.current;
     const target = scrollContainer || window;
     target.addEventListener('scroll', handleScroll, { passive: true });
+
+    // If ref wasn't ready, also listen on window temporarily
+    // and re-check when container becomes available
+    if (!scrollContainer && scrollContainerRef) {
+      let attachedContainer: HTMLElement | null = null;
+      const checkRef = setInterval(() => {
+        if (scrollContainerRef.current) {
+          clearInterval(checkRef);
+          window.removeEventListener('scroll', handleScroll);
+          attachedContainer = scrollContainerRef.current;
+          attachedContainer.addEventListener('scroll', handleScroll, { passive: true });
+        }
+      }, 100);
+      return () => {
+        clearInterval(checkRef);
+        window.removeEventListener('scroll', handleScroll);
+        attachedContainer?.removeEventListener('scroll', handleScroll);
+      };
+    }
+
     return () => target.removeEventListener('scroll', handleScroll);
   }, [scrollContainerRef]);
 
