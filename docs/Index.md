@@ -37,6 +37,7 @@ Design analysis and feature exploration (Claude-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [mobile-implementation-review-claude.md](analysis/mobile-implementation-review-claude.md) | **NEW** Mobile implementation review: current state 8.5/10, 12 polish opportunities | 2026-01-16 |
 | [quiet-intelligence-features-claude.md](analysis/quiet-intelligence-features-claude.md) | "Quiet Intelligence" AI features: 12 unique scenarios for reflective AI | 2026-01-14 |
 | [subscription-architecture-claude.md](analysis/subscription-architecture-claude.md) | **NEW** Subscription & feature gating architecture (Bloom tier, payments, webhooks) | 2026-01-14 |
 | [yidhan-brand-evaluation-claude.md](analysis/yidhan-brand-evaluation-claude.md) | Yidhan rebrand evaluation: philosophical alignment, typography, taglines, SEO | 2026-01-12 |
@@ -222,10 +223,10 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 - **Launch:** [launch-readiness-assessment.md](active/launch-readiness-assessment.md)
 - **Competition:** [competitive-design-evaluation-claude.md](active/competitive-design-evaluation-claude.md)
 - **Security:** [zenote-comprehensive-review-Codex.md](reviews/zenote-comprehensive-review-Codex.md)
-- **Mobile:** [mobile-ios-gap-analysis-claude.md](analysis/mobile-ios-gap-analysis-claude.md) (NEW)
+- **Mobile:** [mobile-implementation-review-claude.md](analysis/mobile-implementation-review-claude.md) (current state + improvements)
 - **iOS Native:** [ios-native-competitive-analysis-claude.md](analysis/ios-native-competitive-analysis-claude.md) (NEW)
 - **PRD:** [prd.md](prd.md)
 
 ---
 
-*Last updated: 2026-01-14 (Quiet Tasks implementation plan added)*
+*Last updated: 2026-01-16 (Mobile implementation review added)*
