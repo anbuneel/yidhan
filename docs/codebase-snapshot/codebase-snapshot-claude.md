@@ -1,183 +1,154 @@
 ﻿# Codebase Snapshot Timeline
 
-This document tracks the evolution of the Zenote codebase over time.
+This document tracks the evolution of the Yidhan codebase over time.
 
 ---
 
-## Snapshot: 2026-01-10 at 18:00 UTC
+## Snapshot: 2026-01-17 at 13:58 EST
 
 **Author:** Claude (Opus 4.5)
-**Captured:** 2026-01-10T18:00:00Z
-**Commit:** f1f303d (main branch)
-**Release:** v2.3.1 - PWA Native Feel + Codex Review Fixes
+**Captured:** 2026-01-17T13:58:32-05:00
+**Commit:** 9d7f09f (main branch)
+**Release:** v2.7.0 - Mobile Polish Improvements (PR #74)
 
 ### Architecture Overview
 
-The Zenote application follows a layered architecture pattern with new mobile-native interaction components:
+The Yidhan application follows a layered architecture pattern with enhanced mobile-native components:
 
-ZENOTE ARCHITECTURE (React SPA with Supabase Backend)
+- **Presentation Layer:** Core views (LandingPage, ChapteredLibrary, Editor, etc.), mobile components, modals
+- **State Management:** App.tsx (notes, tags, UI), AuthContext (session, OAuth), useDemoState (demo mode)
+- **Service Layer:** notes.ts, tags.ts, syncEngine.ts, demoStorage.ts
+- **Hooks Layer:** 12 custom hooks for sync, UI, PWA, auth
+- **External Services:** Supabase (DB + Auth), Vercel (hosting), Sentry (monitoring), Capacitor (native)
 
-PRESENTATION LAYER
-- Core Views: LandingPage, ChapteredLibrary (with PullToRefresh), Editor, DemoPage, FadedNotesView, ChangelogPage, RoadmapPage
-- Mobile-Native Components (NEW v2.3): SwipeableNoteCard, PullToRefresh, IOSInstallGuide
-- HeaderShell provides consistent header across all views
-- UI Components: NoteCard, TagPill, TagBadge, WhisperBack, SyncIndicator
-- Navigation: ChapterNav (Desktop), TimeRibbon (Mobile), TagFilterBar
+### New Components in PR #74
 
-MODAL COMPONENTS
-- SettingsModal, TagModal, ShareModal, LettingGoModal
-- ConflictModal (Two Paths sync conflict resolution)
-- InstallPrompt, InvitationModal (demo signup prompt)
+**BottomSheet** (src/components/BottomSheet.tsx - 293 lines)
+- iOS-style bottom sheet modal with spring animations
+- Drag-to-dismiss gesture with velocity detection (100px threshold or 0.5 velocity)
+- Desktop fallback to centered modal
+- Uses @react-spring/web for physics-based animations
+- Safe area inset support for iPhone notch/home indicator
+- useKeyboardHeight integration for keyboard-aware sizing
 
-STATE MANAGEMENT
-- App.tsx: Notes, Tags, UI State, Real-time Subscriptions
-- AuthContext: User session, OAuth, Password reset, Offboarding
-- useDemoState: Demo mode localStorage state management
+**GestureHint** (src/components/GestureHint.tsx - 266 lines)
+- One-time overlay teaching swipe gestures
+- Animated swipe indicators (left=delete, right=pin)
+- Persists dismissal in localStorage (yidhan-gesture-hint-seen)
+- 1 second entrance delay
+- Accessibility: ESC key to dismiss, ARIA modal roles
 
-SERVICE LAYER
-- notes.ts, tags.ts, demoStorage.ts, demoMigration.ts
-- offlineNotes.ts, offlineTags.ts, syncEngine.ts
+**useKeyboardHeight** (src/hooks/useKeyboardHeight.ts - 93 lines)
+- Visual Viewport API for keyboard detection
+- Sets CSS variables (--keyboard-height, --keyboard-visible)
+- Handles address bar vs keyboard height differentiation (50px threshold)
+- useKeyboardVisible boolean helper (150px threshold)
 
-HOOKS LAYER (9 total, 5 NEW)
-- useNetworkStatus, useSyncEngine, useSyncStatus, useViewTransition
-- useInstallPrompt [NEW], useShareTarget [NEW], useDemoState [NEW]
-- useSoftPrompt [NEW], useMobileDetect [NEW]
+**SettingsModal Refactor**
+- Now uses BottomSheet wrapper
+- Slides up from bottom on mobile
+- Centered modal on desktop
+- Touch-friendly tab buttons
 
-UTILITY LAYER
-- sanitize, exportImport, formatTime, temporalGrouping, withRetry, lazyWithRetry
+### Code Metrics
 
-EXTERNAL SERVICES
-- Supabase (PostgreSQL, Auth, Real-time, RLS)
-- Vercel (Hosting, CDN)
-- Sentry (Error monitoring)
-- Capacitor (Native Android wrapper)
+| Metric | Count |
+|--------|-------|
+| Total Lines of Code | ~30,100 |
+| TypeScript TSX | 14,074 |
+| TypeScript TS (non-test) | 7,136 |
+| Test Files | 5,753 lines |
+| CSS (index.css) | 1,045 |
+| E2E Tests | 1,113 lines |
+| React Components | 45 |
+| Custom Hooks | 12 |
+| E2E Spec Files | 6 |
+| SQL Migrations | 324 |
 
 ### Tech Stack
 
 | Category | Technology | Version |
 |----------|------------|---------|
-| **Frontend Framework** | React | 19.2.0 |
-| **Language** | TypeScript | 5.9.3 |
-| **Build Tool** | Vite | 7.2.6 |
-| **Styling** | Tailwind CSS | 4.1.17 |
-| **Rich Text Editor** | Tiptap (ProseMirror) | 3.13.0 |
-| **Layout** | react-masonry-css | 1.0.16 |
-| **Backend/Database** | Supabase | 2.86.2 |
-| **Offline Storage** | Dexie (IndexedDB) | 4.2.1 |
-| **Gesture Library** | @use-gesture/react | 10.3.1 |
-| **Animation** | @react-spring/web | 10.0.3 |
-| **Native Wrapper** | Capacitor | 8.0.0 |
-| **Error Monitoring** | Sentry | 10.30.0 |
-| **Notifications** | react-hot-toast | 2.6.0 |
-| **XSS Prevention** | DOMPurify | 3.3.1 |
-| **Unit Testing** | Vitest | 4.0.15 |
-| **E2E Testing** | Playwright | 1.57.0 |
-| **Linting** | ESLint | 9.39.1 |
-
-**New Dependencies in v2.3:**
-- @use-gesture/react - Touch gesture handling (swipe, drag)
-- @react-spring/web - Physics-based spring animations
+| Frontend | React | 19.2.0 |
+| Language | TypeScript | 5.9.3 |
+| Build | Vite | 7.2.4 |
+| Styling | Tailwind CSS | 4.1.17 |
+| Editor | Tiptap (ProseMirror) | 3.13.0 |
+| Layout | react-masonry-css | 1.0.16 |
+| Backend | Supabase | 2.86.2 |
+| Offline | Dexie (IndexedDB) | 4.2.1 |
+| Gestures | @use-gesture/react | 10.3.1 |
+| Animation | @react-spring/web | 10.0.3 |
+| Native | Capacitor | 8.0.0 |
+| Monitoring | Sentry | 10.30.0 |
+| Testing | Vitest + Playwright | 4.0.15 / 1.57.0 |
 
 ### Production Deployment
 
-- **Platform:** Vercel (auto-deploys from main branch)
-- **Live URL:** https://zenote.vercel.app
-- **Repository:** https://github.com/anbuneel/zenote
+- **Live URL:** https://yidhan.vercel.app
+- **Platform:** Vercel (auto-deploy from main)
+- **Repository:** https://github.com/anbuneel/yidhan
 - **CI/CD:** GitHub Actions (typecheck, lint, test, build)
-- **PWA:** Yes (installable, offline app shell, Share Target, Apple splash screens)
-- **Native:** Android APK via Capacitor (iOS planned)
+- **PWA:** Installable, offline shell, Share Target, Apple splash screens
+- **Native:** Android APK via Capacitor
 
-### Code Metrics
+### Component Inventory (45 total)
 
-| Metric | Count | Change |
-|--------|-------|--------|
-| **Total Lines of Code** | 28,872 | +2,537 |
-| TypeScript/TSX (src/) | 26,074 | +2,690 |
-| CSS (src/) | 958 | +67 |
-| E2E Tests (e2e/) | 1,473 | - |
-| SQL Migrations | 370 | - |
-| Build Scripts | 375 | +158 |
-| **Source Files** | | |
-| React Components | 42 | +10 |
-| Component Tests | 9 | +1 |
-| Hook Tests | 3 | +2 |
-| E2E Spec Files | 6 | - |
-| **Bundle Size** | | |
-| Initial JS | 557 KB | +224 KB |
-| Editor Chunk | 417 KB | +10 KB |
-| DemoPage Chunk | 14 KB | NEW |
-| Total JS | ~1,261 KB | +267 KB |
-| Total CSS | 53 KB | +8 KB |
+**Core Views (8):**
+LandingPage, ChapteredLibrary, DemoPage, Editor, FadedNotesView, ChangelogPage, RoadmapPage, SharedNoteView
 
-### Component Inventory
-
-**Core Views (7):**
-- LandingPage, ChapteredLibrary, DemoPage [NEW], Editor
-- FadedNotesView, ChangelogPage, RoadmapPage
-
-**Mobile-Native Components (3) [NEW in v2.3]:**
-- SwipeableNoteCard - iOS-style swipe gestures (left=delete, right=pin)
+**Mobile-Native (5):**
+- SwipeableNoteCard - Swipe gestures (left=delete, right=pin)
 - PullToRefresh - Pull-down refresh with spring physics
-- IOSInstallGuide - Visual PWA install tutorial for Safari
+- IOSInstallGuide - PWA install tutorial for Safari
+- BottomSheet [NEW] - iOS-style modal with drag-to-dismiss
+- GestureHint [NEW] - One-time swipe gesture tutorial
 
-**Demo Components (2) [NEW in v2.2]:**
-- ImpermanenceRibbon, InvitationModal
+**Modal Components (10):**
+SettingsModal, TagModal, ShareModal, LettingGoModal, ConflictModal, InstallPrompt, InvitationModal, KeyboardShortcutsModal, SessionTimeoutModal, Auth
 
-**Shared Components (30):**
-Auth, ChapterNav, ChapterSection, ConflictModal, EditorToolbar,
-ErrorBoundary, FadedNoteCard, Footer, Header, HeaderShell,
-InstallPrompt [NEW], LettingGoModal, LoadingFallback [NEW], NoteCard,
-RichTextEditor, SettingsModal, ShareModal, SharedNoteView, SlashCommand,
-SyncIndicator, TagBadge, TagFilterBar, TagModal, TagPill, TagSelector,
-TimeRibbon, WelcomeBackPrompt, WhisperBack
+**Shared Components (22):**
+ChapterNav, ChapterSection, EditorToolbar, ErrorBoundary, FadedNoteCard, Footer, Header, HeaderShell, LoadingFallback, NoteCard, ReloadPrompt, RichTextEditor, SlashCommand, SyncIndicator, TagBadge, TagFilterBar, TagPill, TagSelector, TimeRibbon, WelcomeBackPrompt, WhisperBack, ImpermanenceRibbon
 
-### Hooks Inventory (9 total, 5 NEW)
+### Hooks Inventory (12 total)
 
 | Hook | Purpose |
 |------|---------|
 | useNetworkStatus | Network monitoring (Capacitor + browser) |
 | useSyncEngine | Sync engine React integration |
-| useSyncStatus | Sync state for UI |
+| useSyncStatus | Sync state for UI (pending count, online) |
 | useViewTransition | View Transitions API wrapper |
-| useInstallPrompt | PWA install with engagement tracking [NEW] |
-| useShareTarget | Share Target API handler [NEW] |
-| useDemoState | Demo mode state management [NEW] |
-| useSoftPrompt | Soft signup prompt triggers [NEW] |
-| useMobileDetect | Touch/mobile device detection [NEW] |
+| useInstallPrompt | PWA install with engagement tracking |
+| useShareTarget | Share Target API handler |
+| useDemoState | Demo mode state management |
+| useSoftPrompt | Soft signup prompt triggers |
+| useMobileDetect | Touch/mobile device detection |
+| useSessionTimeout | 30-min inactivity auto-logout |
+| useKeyboardHeight [NEW] | Visual Viewport API keyboard detection |
+| useKeyboardVisible [NEW] | Boolean keyboard visibility helper |
 
-### Features Implemented (v2.3.1)
+### CSS Enhancements in v2.7.0
 
-**Core:** Wabi-sabi design, rich text editor, tags, real-time sync, search, pin, slash commands
-**Auth:** Email/password, Google/GitHub OAuth, password reset, account offboarding
-**Organization:** Temporal chapters, soft-delete (Faded Notes), collapsible sections
-**Export/Import:** JSON backup, Markdown export, clipboard copy, batch import
-**Sharing:** Share as Letter, configurable expiration
+**Touch Press States:**
+- .touch-press - Scale to 0.96 on tap
+- .touch-press-light - Scale to 0.98 for smaller elements
 
-**PWA (Enhanced in v2.3):**
-- Installable, offline app shell, Share Target API
-- iOS Safari install guide [NEW]
-- Apple splash screens [NEW]
+**Gesture Hint Animations:**
+- @keyframes swipe-left / swipe-right
+- .animate-swipe-left / .animate-swipe-right
 
-**Mobile Native Feel (v2.3):**
-- Swipe left to delete, right to pin/unpin
-- Pull-to-refresh to sync
-- iOS-style spring animations
-- Card entrance animation with stagger
-- Haptic feedback at thresholds
+**Keyboard Handling:**
+- --keyboard-height CSS variable (set by useKeyboardHeight)
+- --keyboard-visible (0 or 1)
 
-**Practice Space (v2.2):**
-- Full demo at /demo without signup
-- localStorage persistence
-- Soft signup prompts, auto-migration
-
-**Offline Editing (v2.0):**
-- IndexedDB with Dexie.js
-- Sync queue, conflict detection
-- Two Paths conflict modal
+**Spring Timing Functions:**
+- --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1)
+- --spring-smooth: cubic-bezier(0.25, 0.1, 0.25, 1)
+- --spring-snappy: cubic-bezier(0.4, 0, 0.2, 1)
 
 ### Test Coverage
 
-| Category | Files | Tests |
+| Category | Count | Tests |
 |----------|-------|-------|
 | Component Tests | 9 | Auth, Editor, HeaderShell, ChapteredLibrary, ShareModal, TagModal, TagBadge, ErrorBoundary, InstallPrompt |
 | Utility Tests | 5 | formatTime, sanitize, temporalGrouping, exportImport, withRetry |
@@ -185,91 +156,59 @@ TimeRibbon, WelcomeBackPrompt, WhisperBack
 | Hook Tests | 3 | useNetworkStatus, useInstallPrompt, useShareTarget |
 | E2E Tests | 6 | auth, notes, tags, sharing, export-import, settings |
 
-### Notable Changes Since Last Snapshot (2026-01-07)
+### Notable Changes Since v2.3.1
 
-**v2.3.1 (2026-01-11):** Codex Review Bug Fixes
-- Pull-to-refresh correctly detects scroll position with nested containers
-- Swipe-to-delete gracefully recovers UI if delete fails (shake animation)
-- iOS install guide animation completes smoothly on dismiss
-- Improved compatibility with older iOS Safari versions (iOS < 14)
-- Swipe gesture timing reduced from 200ms to 150ms for snappier feel
+**v2.7.0 (2026-01-17):** Mobile Polish Improvements (PR #74)
+- BottomSheet component with iOS-style spring animations
+- GestureHint one-time swipe tutorial overlay
+- useKeyboardHeight hook for Visual Viewport API
+- Touch press CSS states for tactile feedback
+- SettingsModal refactored to use BottomSheet on mobile
+- iOS install guide detects non-Safari browsers
 
-**v2.3.0 (2026-01-10):** PWA Native Feel
-- iOS Safari install guide with visual tutorial
+**v2.6.x (2026-01-15):** Mobile Optimizations
+- Automatic condensed cards on mobile
+- Mobile Sign In link visible without scrolling
+
+**v2.5.x (2026-01-12-13):** Landing Page and Stability
+- Landing page redesign with trust signals
+- OAuth-first auth layout
+- User-controlled reload prompt
+
+**v2.4.0 (2026-01-11):** Session and Shortcuts
+- 30-minute session timeout with warning
+- Keyboard shortcuts modal (press ?)
+- Full account backup export
+
+---
+
+## Snapshot: 2026-01-10 (v2.3.1)
+
+**Commit:** f1f303d
+**Release:** PWA Native Feel + Codex Review Fixes
+
+- SwipeableNoteCard, PullToRefresh, IOSInstallGuide components
 - Apple splash screens for all iOS devices
-- Swipe gestures on mobile (left=delete, right=pin/unpin)
-- Pull-to-refresh on note list
-- iOS-style spring animations
-- Card entrance animation with stagger effect
-- New dependencies: @use-gesture/react, @react-spring/web
-
-**v2.2.0 (2026-01-09):** Practice Space
-- Full demo at /demo without signup
-- localStorage persistence
-- Soft signup prompts after 3+ notes and 5+ minutes
-- Auto-migration of demo notes on account creation
-- New: DemoPage, ImpermanenceRibbon, InvitationModal, useDemoState, useSoftPrompt
-
-**v2.1.x (2026-01-08-09):** Share Target, Install Prompt, Android Fix
-- Share Target API integration
-- Engagement-triggered PWA install prompt
-- Defense-in-depth timeout for Android WebView
-
-**v2.0.0 (2026-01-07):** Offline Editing
-- IndexedDB persistence, conflict resolution
-
-**Code Growth Summary:**
-- +4,520 lines of TypeScript
-- +10 new components, +5 new hooks
-- +2 new dependencies
-- +36 commits
+- ~28,872 lines of code, 42 components, 9 hooks
 
 ---
 
-## Snapshot: 2026-01-07 at 12:00 UTC
+## Snapshot: 2026-01-07 (v2.0.0)
 
-**Author:** Claude (Opus 4.5)
-**Captured:** 2026-01-07T12:00:00Z
-**Commit:** 0c34982 (main branch)
+**Commit:** 0c34982
+**Release:** Offline Editing
 
-### Code Metrics
-
-| Metric | Count |
-|--------|-------|
-| Total Lines of Code | 26,335 |
-| TypeScript/TSX (src/) | 23,384 |
-| CSS (src/) | 891 |
-| React Components | 32 |
-| Initial JS Bundle | 333 KB |
-| Total JS | 994 KB |
-
-### Notable Changes
-
-**v1.9.11:** Accessibility improvements
-**Offline Infrastructure:** Dexie.js, offlineNotes.ts, syncEngine.ts, ConflictModal
+- IndexedDB with Dexie.js, sync queue, conflict detection
+- ~26,335 lines of code, 32 components
 
 ---
 
-## Snapshot: 2025-12-28 at 19:00 UTC
+## Snapshot: 2025-12-28 (v1.9.x)
 
-**Author:** Claude (Opus 4.5)
-**Captured:** 2025-12-28T19:00:00Z
-**Commit:** ad6905b (main branch)
+**Commit:** ad6905b
 
-### Code Metrics
-
-| Metric | Count |
-|--------|-------|
-| Total Lines of Code | 20,178 |
-| TypeScript/TSX (src/) | 17,973 |
-| React Components | 34 |
-| Total JS | 994 KB |
-
-### Notable Changes
-
-**v1.9.10:** Smart chunk loading
-**v1.9.9:** Shared notes RLS fix
-**v1.9.8:** Code cleanup (removed 230 lines)
+- Smart chunk loading, shared notes RLS fix
+- ~20,178 lines of code, 34 components
 
 ---
 
