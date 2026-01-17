@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const STORAGE_KEY = 'yidhan-gesture-hint-seen';
 // Delay before showing hint - allows user to see the library first
@@ -47,14 +47,14 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
     return () => clearTimeout(timer);
   }, [enabled]);
 
-  const handleDismiss = () => {
+  const handleDismiss = useCallback(() => {
     setHasAnimatedIn(false);
     // Wait for exit animation (300ms matches transition duration)
     setTimeout(() => {
       setIsVisible(false);
       localStorage.setItem(STORAGE_KEY, 'true');
     }, 300);
-  };
+  }, []);
 
   // Handle ESC key to dismiss (accessibility)
   useEffect(() => {
@@ -68,7 +68,7 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isVisible]);
+  }, [isVisible, handleDismiss]);
 
   if (!isVisible) return null;
 

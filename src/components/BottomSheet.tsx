@@ -157,13 +157,16 @@ export function BottomSheet({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {title && (
-            <div
-              className="px-6 py-4 border-b"
-              style={{ borderColor: 'var(--glass-border)' }}
-            >
+          {/* Header with title and close button */}
+          <div
+            className="px-6 py-4 border-b flex items-center justify-between"
+            style={{ borderColor: 'var(--glass-border)' }}
+          >
+            {/* Spacer for centering */}
+            <div className="w-8" />
+            {title && (
               <h2
-                className="text-lg font-medium text-center"
+                className="text-lg font-medium text-center flex-1"
                 style={{
                   fontFamily: 'var(--font-display)',
                   color: 'var(--color-text-primary)',
@@ -171,8 +174,25 @@ export function BottomSheet({
               >
                 {title}
               </h2>
-            </div>
-          )}
+            )}
+            {/* Close button */}
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full transition-colors duration-200 touch-press-light"
+              style={{ color: 'var(--color-text-secondary)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--color-bg-tertiary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+              aria-label="Close"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
           <div className="overflow-y-auto max-h-[calc(85vh-60px)]">
             {children}
           </div>
@@ -225,15 +245,17 @@ export function BottomSheet({
           </div>
         )}
 
-        {/* Title - also draggable for larger touch target */}
-        {title && (
-          <div
-            {...bind()}
-            className="px-6 pb-3 border-b cursor-grab active:cursor-grabbing touch-none"
-            style={{ borderColor: 'var(--glass-border)' }}
-          >
+        {/* Header with title and close button - title area is draggable */}
+        <div
+          className="px-6 pb-3 border-b flex items-center justify-between"
+          style={{ borderColor: 'var(--glass-border)' }}
+        >
+          {/* Spacer for centering */}
+          <div className="w-8" />
+          {title && (
             <h2
-              className="text-lg font-medium text-center"
+              {...bind()}
+              className="text-lg font-medium text-center flex-1 cursor-grab active:cursor-grabbing touch-none"
               style={{
                 fontFamily: 'var(--font-display)',
                 color: 'var(--color-text-primary)',
@@ -241,8 +263,19 @@ export function BottomSheet({
             >
               {title}
             </h2>
-          </div>
-        )}
+          )}
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors duration-200 touch-press-light"
+            style={{ color: 'var(--color-text-secondary)' }}
+            aria-label="Close"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
         {/* Content - scrollable, NOT draggable */}
         <div
