@@ -127,6 +127,7 @@ migrateLocalStorageKeys();
 
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
+  const appLoadingMessage = 'Preparing your space...';
 
   // Network connectivity monitoring
   useNetworkStatus();
@@ -193,6 +194,11 @@ function App() {
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
+  const APP_LOADER_MIN_MS = 200;
+  const appLoading = authLoading || loading;
+  const [showAppLoader, setShowAppLoader] = useState(appLoading);
+  const appLoaderStartedAtRef = useRef<number | null>(null);
+  const appLoaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [view, setView] = useState<ViewMode>('library');
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(() => {
@@ -203,6 +209,56 @@ function App() {
     }
     return 'dark';
   });
+
+  // Hold the app loader briefly to avoid flashing on fast auth/note loads.
+  useEffect(() => {
+    if (appLoading) {
+      if (appLoaderTimerRef.current) {
+        clearTimeout(appLoaderTimerRef.current);
+        appLoaderTimerRef.current = null;
+      }
+      if (!showAppLoader) {
+        setShowAppLoader(true);
+      }
+      if (!appLoaderStartedAtRef.current) {
+        appLoaderStartedAtRef.current = Date.now();
+      }
+      return;
+    }
+
+    if (!showAppLoader) {
+      appLoaderStartedAtRef.current = null;
+      return;
+    }
+
+    const startedAt = appLoaderStartedAtRef.current ?? Date.now();
+    const elapsed = Date.now() - startedAt;
+    const remaining = Math.max(0, APP_LOADER_MIN_MS - elapsed);
+
+    if (remaining === 0) {
+      appLoaderStartedAtRef.current = null;
+      setShowAppLoader(false);
+      return;
+    }
+
+    if (appLoaderTimerRef.current) {
+      clearTimeout(appLoaderTimerRef.current);
+    }
+
+    appLoaderTimerRef.current = setTimeout(() => {
+      appLoaderTimerRef.current = null;
+      appLoaderStartedAtRef.current = null;
+      setShowAppLoader(false);
+    }, remaining);
+  }, [appLoading, showAppLoader]);
+
+  useEffect(() => {
+    return () => {
+      if (appLoaderTimerRef.current) {
+        clearTimeout(appLoaderTimerRef.current);
+      }
+    };
+  }, []);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -1270,15 +1326,10 @@ function App() {
     }
   }, [user, tags]);
 
-  // Show loading while checking auth
-  if (authLoading) {
+  // Show loading while checking auth or fetching notes
+  if (showAppLoader) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: 'var(--color-bg-primary)' }}
-      >
-        <p style={{ color: 'var(--color-text-secondary)' }}>Loading...</p>
-      </div>
+      <LoadingFallback message={appLoadingMessage} />
     );
   }
 
@@ -1440,18 +1491,6 @@ function App() {
           />
         )}
       </>
-    );
-  }
-
-  // Show loading while fetching notes
-  if (loading) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: 'var(--color-bg-primary)' }}
-      >
-        <p style={{ color: 'var(--color-text-secondary)' }}>Loading notes...</p>
-      </div>
     );
   }
 
