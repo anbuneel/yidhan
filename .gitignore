@@ -71,3 +71,6 @@ ios/DerivedData/
 
 # Design assets (large source files for logo/icons)
 design-assets/
+
+# Local startup scripts
+start-yidhan.bat

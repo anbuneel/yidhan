@@ -67,6 +67,10 @@ export function ChapterSection({
   // Pinned is never collapsible, others are collapsible if they have 20+ notes
   const isCollapsible = !isPinned && notes.length >= 20;
 
+  // If section is not collapsible, it must always be expanded
+  // (prevents stuck-collapsed state when defaultExpanded=false but isCollapsible=false)
+  const effectiveExpanded = isCollapsible ? isExpanded : true;
+
   return (
     <section
       id={`chapter-${chapterKey}`}
@@ -95,7 +99,7 @@ export function ChapterSection({
         }}
         onClick={isCollapsible ? () => setIsExpanded(!isExpanded) : undefined}
         role={isCollapsible ? 'button' : undefined}
-        aria-expanded={isCollapsible ? isExpanded : undefined}
+        aria-expanded={isCollapsible ? effectiveExpanded : undefined}
         aria-controls={isCollapsible ? `chapter-content-${chapterKey}` : undefined}
         tabIndex={isCollapsible ? 0 : undefined}
         onKeyDown={isCollapsible ? (e) => {
@@ -153,7 +157,7 @@ export function ChapterSection({
       </div>
 
       {/* Collapsed Preview (only for collapsible sections) */}
-      {isCollapsible && !isExpanded && previewTitles && (
+      {isCollapsible && !effectiveExpanded && previewTitles && (
         <div
           className="px-6 md:px-12 pb-2"
           style={{
@@ -169,7 +173,7 @@ export function ChapterSection({
       )}
 
       {/* Expanded Content */}
-      {isExpanded && (
+      {effectiveExpanded && (
         <div
           id={`chapter-content-${chapterKey}`}
           style={{ opacity }}
