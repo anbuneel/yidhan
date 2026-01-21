@@ -8,14 +8,38 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { SlashCommand } from './SlashCommand';
+import {
+  saveCursorPosition as persistCursorPosition,
+  getEditorPosition,
+  createThrottledSave,
+  type CursorPosition,
+} from '../utils/editorPosition';
 
 // Module-level cache to store cursor positions by noteId
 // This persists across component remounts (including React StrictMode double-mount)
 // and allows restoring cursor position when switching browser tabs
+// Works alongside localStorage for cross-session persistence
 const cursorPositionCache = new Map<string, { from: number; to: number }>();
 
 // Track which notes have had their initial focus applied (for new notes)
 const initialFocusApplied = new Set<string>();
+
+// Get cursor position: prefer in-memory cache (fast), fallback to localStorage (cross-session)
+function getCursorPosition(noteId: string): CursorPosition | null {
+  // Fast path: in-memory cache for tab switches
+  const cached = cursorPositionCache.get(noteId);
+  if (cached) return cached;
+
+  // Slow path: localStorage for cross-session
+  const stored = getEditorPosition(noteId);
+  if (stored) {
+    // Warm the cache for next time
+    cursorPositionCache.set(noteId, stored.cursor);
+    return stored.cursor;
+  }
+
+  return null;
+}
 
 interface RichTextEditorProps {
   content: string;
@@ -31,6 +55,8 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
   const prevNoteIdRef = useRef<string | undefined>(noteId);
   // Track if we've set up selection listener for this editor instance
   const selectionListenerSetupRef = useRef(false);
+  // Throttled localStorage save (created once per noteId)
+  const throttledPersistRef = useRef<(() => void) | null>(null);
 
   // Memoize extensions to prevent recreation on every render
   const extensions = useMemo(() => [
@@ -74,11 +100,24 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
 
   // Save cursor position whenever selection changes
   // This allows restoring position when editor remounts (e.g., after tab switch)
+  // Also persists to localStorage (throttled) for cross-session restoration
   const saveCursorPosition = useCallback(() => {
     if (editor && noteId && !editor.isDestroyed) {
       try {
         const { from, to } = editor.state.selection;
+        // Always update in-memory cache (fast)
         cursorPositionCache.set(noteId, { from, to });
+
+        // Throttled persist to localStorage (slower but cross-session)
+        if (!throttledPersistRef.current) {
+          throttledPersistRef.current = createThrottledSave(() => {
+            const cached = cursorPositionCache.get(noteId);
+            if (cached) {
+              persistCursorPosition(noteId, cached);
+            }
+          }, 2000); // Save at most every 2 seconds
+        }
+        throttledPersistRef.current();
       } catch {
         // Ignore errors if editor state is not accessible
       }
@@ -115,6 +154,8 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
         initialFocusApplied.delete(prevNoteIdRef.current);
         // Don't clear cursor position cache - keep it for when user returns
       }
+      // Reset throttled persist for new note
+      throttledPersistRef.current = null;
     }
     prevNoteIdRef.current = noteId;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,7 +165,8 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
   useEffect(() => {
     if (!editor || !noteId || !autoFocus) return;
 
-    const savedPosition = cursorPositionCache.get(noteId);
+    // Get position from memory (fast) or localStorage (cross-session)
+    const savedPosition = getCursorPosition(noteId);
     const hasHadInitialFocus = initialFocusApplied.has(noteId);
 
     // Use requestAnimationFrame to ensure editor view is ready

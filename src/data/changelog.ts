@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.8.0',
+    date: '2026-01-20',
+    changes: [
+      { type: 'feature', text: 'Resume where you left off - cursor and scroll position restored when reopening notes' },
+      { type: 'feature', text: '"Resume" chip appears for long notes, letting you jump to your last editing spot' },
+      { type: 'improvement', text: 'Editor positions persist across sessions (stored in localStorage)' },
+      { type: 'fix', text: 'Focus decision now uses current content state instead of saved content' },
+    ],
+  },
+  {
     version: '2.7.0',
     date: '2026-01-16',
     changes: [

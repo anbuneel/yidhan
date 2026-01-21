@@ -95,6 +95,7 @@ src/
 │   ├── useSessionTimeout.ts # Session inactivity monitor (30min timeout, 5min warning)
 │   └── useKeyboardHeight.ts # Visual Viewport API for keyboard height tracking
 ├── utils/
+│   ├── editorPosition.ts  # Cross-session cursor/scroll position persistence (localStorage)
 │   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
 │   ├── formatTime.ts      # Relative time formatting
 │   ├── lazyWithRetry.ts   # Smart lazy loading with retry and auto-reload on version updates
@@ -527,6 +528,8 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Gesture hint overlay - one-time swipe gesture tutorial on mobile
 - [x] iOS-style bottom sheet modals (SettingsModal slides up from bottom on mobile)
 - [x] iOS install guide non-Safari detection (shows "Open in Safari" for Chrome/Firefox/Edge)
+- [x] Cross-session editor position restoration (cursor + scroll persisted in localStorage)
+- [x] "Resume where you left off" chip for long notes (shown when reopening with saved position)
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (Apple, etc.)
