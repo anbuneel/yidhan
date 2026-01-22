@@ -61,6 +61,10 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   // Track when resume chip was shown to prevent immediate hiding
   const resumeChipShownAtRef = useRef<number>(0);
   const RESUME_CHIP_MIN_VISIBLE_MS = 2000; // Keep chip visible for at least 2 seconds
+  // Track the active note ID synchronously (updated during render, not in effects)
+  // This allows scroll handlers to detect stale closures during DOM reflow
+  const activeNoteIdRef = useRef(note.id);
+  activeNoteIdRef.current = note.id; // Update synchronously on every render
   // Separate refs for save indicator phases to avoid nested timeout issues
   const savePhaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,6 +113,11 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     if (!container) return;
 
     const handleScroll = () => {
+      // Ignore scroll events from stale handlers during DOM reflow
+      // The activeNoteIdRef is updated synchronously during render, before effects cleanup
+      // So if note.id (from closure) differs, this is an OLD handler firing after note switch
+      if (note.id !== activeNoteIdRef.current) return;
+
       // Capture both noteId and scrollTop NOW at scroll time
       // This prevents saving wrong data if note switches before timer fires
       pendingScrollSaveRef.current = {
