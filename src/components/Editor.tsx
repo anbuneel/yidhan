@@ -16,6 +16,17 @@ import {
   copyNoteToClipboard,
   copyNoteWithFormatting,
 } from '../utils/exportImport';
+import {
+  saveScrollPosition,
+  getEditorPosition,
+  createThrottledSave,
+  type ThrottledSave,
+} from '../utils/editorPosition';
+
+// Position restoration constants
+const RESUME_SCROLL_THRESHOLD_PX = 400; // Show resume chip if scrolled > 400px
+const RESUME_CHIP_MIN_VISIBLE_MS = 2000; // Keep chip visible for at least 2 seconds
+const SCROLL_SAVE_THROTTLE_MS = 1000; // Save scroll position at most every 1 second
 
 interface EditorProps {
   note: Note;
@@ -42,10 +53,22 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   const [editor, setEditor] = useState<TiptapEditor | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showResumeChip, setShowResumeChip] = useState(false);
+  const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const throttledScrollSaveRef = useRef<ThrottledSave | null>(null);
+  // Store pending scroll save data (captured at scroll time, not timer execution time)
+  // This prevents saving wrong scroll position if note switches before timer fires
+  const pendingScrollSaveRef = useRef<{ noteId: string; scroll: number } | null>(null);
+  // Track when resume chip was shown to prevent immediate hiding
+  const resumeChipShownAtRef = useRef<number>(0);
+  // Track the active note ID synchronously (updated during render, not in effects)
+  // This allows scroll handlers to detect stale closures during DOM reflow
+  const activeNoteIdRef = useRef(note.id);
+  activeNoteIdRef.current = note.id; // Update synchronously on every render
   // Separate refs for save indicator phases to avoid nested timeout issues
   const savePhaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -56,12 +79,96 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   // Reset local state when switching to a different note
   useEffect(() => {
     if (currentNoteId !== note.id) {
+      // Flush any pending scroll save for the previous note before switching
+      throttledScrollSaveRef.current?.flush();
+
       setCurrentNoteId(note.id);
       setTitle(note.title);
       setContent(note.content);
+      // Reset resume chip and scroll save for new note
+      setShowResumeChip(false);
+      setSavedScrollPosition(null);
+      resumeChipShownAtRef.current = 0;
+      throttledScrollSaveRef.current = null;
+      pendingScrollSaveRef.current = null; // Clear pending data for old note
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.id]);
+
+  // Load saved scroll position and show Resume chip if far from top
+  useEffect(() => {
+    const stored = getEditorPosition(note.id);
+
+    if (stored && stored.scroll > RESUME_SCROLL_THRESHOLD_PX) {
+      setSavedScrollPosition(stored.scroll);
+      setShowResumeChip(true);
+      resumeChipShownAtRef.current = Date.now(); // Track when chip was shown
+    } else {
+      setSavedScrollPosition(null);
+      setShowResumeChip(false);
+      resumeChipShownAtRef.current = 0;
+    }
+  }, [note.id]);
+
+  // Track scroll position (throttled save to localStorage)
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      // Ignore scroll events from stale handlers during DOM reflow
+      // The activeNoteIdRef is updated synchronously during render, before effects cleanup
+      // So if note.id (from closure) differs, this is an OLD handler firing after note switch
+      if (note.id !== activeNoteIdRef.current) return;
+
+      // Capture both noteId and scrollTop NOW at scroll time
+      // This prevents saving wrong data if note switches before timer fires
+      pendingScrollSaveRef.current = {
+        noteId: note.id,
+        scroll: container.scrollTop,
+      };
+
+      // Create throttled save if not exists
+      if (!throttledScrollSaveRef.current) {
+        throttledScrollSaveRef.current = createThrottledSave(() => {
+          // Read from ref (captured at scroll time) instead of closure/DOM
+          const pending = pendingScrollSaveRef.current;
+          if (pending) {
+            saveScrollPosition(pending.noteId, pending.scroll);
+          }
+        }, SCROLL_SAVE_THROTTLE_MS);
+      }
+      throttledScrollSaveRef.current.save();
+
+      // Hide resume chip after minimum visible time has passed
+      // This prevents programmatic scrolls (focus, keyboard resize) from hiding it immediately
+      if (showResumeChip) {
+        const elapsed = Date.now() - resumeChipShownAtRef.current;
+        if (elapsed >= RESUME_CHIP_MIN_VISIBLE_MS) {
+          setShowResumeChip(false);
+        }
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+
+    // Flush any pending scroll save on cleanup (component unmount or note switch)
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      throttledScrollSaveRef.current?.flush();
+    };
+  }, [note.id, showResumeChip]);
+
+  // Handle resume button click
+  const handleResumeScroll = useCallback(() => {
+    if (savedScrollPosition && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: savedScrollPosition,
+        behavior: 'smooth',
+      });
+      setShowResumeChip(false);
+    }
+  }, [savedScrollPosition]);
 
   // Perform the actual save (async with proper status tracking)
   const performSave = useCallback(async () => {
@@ -196,8 +303,9 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   };
 
   // Check if note has meaningful content (not just empty HTML)
+  // Uses current content state, not note.content prop, to handle unsaved changes
   const hasContent = (() => {
-    const stripped = note.content.replace(/<[^>]*>/g, '').trim();
+    const stripped = content.replace(/<[^>]*>/g, '').trim();
     return stripped.length > 0;
   })();
 
@@ -270,6 +378,18 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     setShowExportMenu(false);
     showCopiedIndicator();
   };
+
+  // Get save status styling based on current status
+  function getSaveStatusStyle(status: SaveStatus): { color: string; background: string } {
+    switch (status) {
+      case 'saving':
+        return { color: 'var(--color-accent)', background: 'var(--color-accent-glow)' };
+      case 'error':
+        return { color: 'var(--color-error)', background: 'var(--color-error-light)' };
+      default:
+        return { color: 'var(--color-success)', background: 'var(--color-success-glow)' };
+    }
+  }
 
   const showCopiedIndicator = () => {
     // Clear any existing indicator timeouts
@@ -386,19 +506,10 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
           `}
           style={{
             fontFamily: 'var(--font-body)',
-            color: saveStatus === 'saving'
-              ? 'var(--color-accent)'
-              : saveStatus === 'error'
-                ? 'var(--color-error)'
-                : 'var(--color-success)',
-            background: saveStatus === 'saving'
-              ? 'var(--color-accent-glow)'
-              : saveStatus === 'error'
-                ? 'var(--color-error-light)'
-                : 'var(--color-success-glow)',
+            ...getSaveStatusStyle(saveStatus),
           }}
         >
-          {saveStatus === 'saving' ? (
+          {saveStatus === 'saving' && (
             <>
               <span
                 className="w-2 h-2 rounded-full animate-pulse"
@@ -406,21 +517,24 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
               />
               Saving...
             </>
-          ) : saveStatus === 'error' ? (
+          )}
+          {saveStatus === 'error' && (
             <>
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
               Save failed
             </>
-          ) : saveStatus === 'copied' ? (
+          )}
+          {saveStatus === 'copied' && (
             <>
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
               Copied
             </>
-          ) : (
+          )}
+          {saveStatus === 'saved' && (
             <>
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -652,6 +766,47 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
           onSettingsClick={onSettingsClick}
         />
       </div>
+
+      {/* Resume chip - shown when reopening a note with saved scroll position */}
+      {showResumeChip && (
+        <div className="flex justify-center py-2">
+          <button
+            onClick={handleResumeScroll}
+            aria-label="Resume editing at your last position"
+            className="
+              flex items-center gap-2
+              px-4 py-2
+              text-xs
+              rounded-full
+              transition-all duration-300
+              hover:scale-105
+              active:scale-95
+              animate-fade-in
+            "
+            style={{
+              fontFamily: 'var(--font-body)',
+              color: 'var(--color-accent)',
+              background: 'var(--color-accent-glow)',
+              border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)',
+            }}
+          >
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 14l-7 7m0 0l-7-7m7 7V3"
+              />
+            </svg>
+            Resume where you left off
+          </button>
+        </div>
+      )}
 
       {/* Editor Content */}
       <main>
