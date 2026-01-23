@@ -39,15 +39,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // before fetching notes from potentially empty IndexedDB
   const [isHydrating, setIsHydrating] = useState(true);
 
+  const userId = user?.id ?? null;
+
   // Track the current user ID to prevent race conditions during hydration
   const hydrationUserIdRef = useRef<string | null>(null);
 
   // Hydrate offline database from server
   const hydrateOfflineDb = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
 
     // Store the user ID we're hydrating for
-    const hydratingForUserId = user.id;
+    const hydratingForUserId = userId;
     hydrationUserIdRef.current = hydratingForUserId;
 
     // Timeout to prevent hanging forever (10 seconds)
@@ -87,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsHydrating(false);
       }
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     // Get initial session with timeout to prevent hanging on Android
@@ -128,13 +130,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return; // Wait for auth to initialize
 
-    if (user) {
-      hydrateOfflineDb();
+    if (userId) {
+      if (hydrationUserIdRef.current !== userId) {
+        hydrateOfflineDb();
+      }
     } else {
       // No user (logged out or landing page) - no hydration needed
+      hydrationUserIdRef.current = null;
       setIsHydrating(false);
     }
-  }, [user, loading, hydrateOfflineDb]);
+  }, [userId, loading, hydrateOfflineDb]);
 
   const clearPasswordRecovery = () => {
     setIsPasswordRecovery(false);

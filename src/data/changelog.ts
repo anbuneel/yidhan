@@ -8,6 +8,13 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.8.1',
+    date: '2026-01-22',
+    changes: [
+      { type: 'fix', text: 'App no longer shows loading spinner when returning from another tab' },
+    ],
+  },
+  {
     version: '2.8.0',
     date: '2026-01-20',
     changes: [
