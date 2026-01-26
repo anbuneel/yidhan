@@ -92,26 +92,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [userId]);
 
   useEffect(() => {
-    // Get initial session with timeout to prevent hanging on Android
-    const sessionTimeout = setTimeout(() => {
-      console.warn('getSession timed out after 5s');
+    // Keep auth loading until we receive an auth state change.
+    // Fallback after 5s to avoid hanging on Android WebView edge cases.
+    const authInitTimeout = setTimeout(() => {
+      console.warn('Auth init timed out after 5s');
       setLoading(false);
     }, 5000);
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      clearTimeout(sessionTimeout);
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
     }).catch((error) => {
-      clearTimeout(sessionTimeout);
       console.error('getSession failed:', error);
-      setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        clearTimeout(authInitTimeout);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -123,7 +121,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(authInitTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Hydrate offline DB when user is available, or clear hydrating state if no user

@@ -8,6 +8,13 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.8.3',
+    date: '2026-01-26',
+    changes: [
+      { type: 'fix', text: 'Avoid brief login flicker by waiting for auth state to settle before hiding the loader' },
+    ],
+  },
+  {
     version: '2.8.2',
     date: '2026-01-25',
     changes: [
