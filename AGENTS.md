@@ -455,7 +455,7 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] Sticky formatting toolbar in editor (stays visible while scrolling)
 - [x] Created/edited timestamps displayed below note title
 - [x] Smart cursor focus (title for new notes, end of content for existing, position preserved on tab switch)
-- [x] Slash commands (/date, /time, /now, /divider) for quick inserts
+- [x] Slash commands (/date, /time, /now, /divider, headings, lists, etc.) with visual icons
 - [x] Keyboard shortcut Cmd/Ctrl+N to create new note
 - [x] Public changelog page (version history with categorized changes)
 - [x] Public roadmap page (status-grouped feature plans)
@@ -530,6 +530,9 @@ VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx  # Optional - leave empty t
 - [x] iOS install guide non-Safari detection (shows "Open in Safari" for Chrome/Firefox/Edge)
 - [x] Cross-session editor position restoration (cursor + scroll persisted in localStorage)
 - [x] "Resume where you left off" chip for long notes (shown when reopening with saved position)
+- [x] Gold caret color (cursor matches brand accent for distinctive feel)
+- [x] Refined editor typography (font-weight 400, line-height 1.75, 1em paragraph spacing)
+- [x] Animated placeholder (rotates hints every 30s when editor is empty)
 
 ## Features Not Yet Implemented
 - [ ] Additional OAuth providers (Apple, etc.)

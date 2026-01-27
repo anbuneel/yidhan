@@ -835,6 +835,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
               fontSize: '2.25rem',
               color: 'var(--color-text-primary)',
               letterSpacing: '-0.02em',
+              caretColor: 'var(--color-accent)',
             }}
             rows={1}
           />

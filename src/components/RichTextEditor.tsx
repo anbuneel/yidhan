@@ -6,7 +6,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { SlashCommand } from './SlashCommand';
 import {
   saveCursorPosition as persistCursorPosition,
@@ -18,6 +18,14 @@ import {
 
 // Cursor position persistence constant
 const CURSOR_SAVE_THROTTLE_MS = 2000; // Save cursor position at most every 2 seconds
+
+// Animated placeholder messages (rotate every 30 seconds when empty)
+const PLACEHOLDER_MESSAGES = [
+  'Start writing...',
+  'What\'s on your mind?',
+  'Type / for commands',
+];
+const PLACEHOLDER_ROTATION_MS = 30000; // 30 seconds between rotations
 
 // Module-level cache to store cursor positions by noteId
 // This persists across component remounts (including React StrictMode double-mount)
@@ -77,7 +85,9 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
       },
     }),
     Placeholder.configure({
-      placeholder: 'Start writing... (type / for commands)',
+      placeholder: ' ', // Use space to maintain styling; actual placeholder rendered as React component
+      showOnlyWhenEditable: true,
+      showOnlyCurrent: true,
     }),
     Underline,
     TextAlign.configure({
@@ -108,6 +118,21 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
       },
     },
   });
+
+  // Animated placeholder state
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const isEditorEmpty = editor?.isEmpty ?? true;
+
+  // Rotate placeholder message every 30 seconds when editor is empty
+  useEffect(() => {
+    if (!isEditorEmpty) return;
+
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDER_MESSAGES.length);
+    }, PLACEHOLDER_ROTATION_MS);
+
+    return () => clearInterval(interval);
+  }, [isEditorEmpty]);
 
   // Save cursor position whenever selection changes
   // This allows restoring position when editor remounts (e.g., after tab switch)
@@ -238,8 +263,29 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
   }
 
   return (
-    <div className="rich-text-editor" data-testid="rich-text-editor">
+    <div className="rich-text-editor" data-testid="rich-text-editor" style={{ position: 'relative' }}>
       <EditorContent editor={editor} />
+      {/* Animated placeholder overlay */}
+      {isEditorEmpty && (
+        <div
+          className="animated-placeholder"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            pointerEvents: 'none',
+            fontFamily: 'var(--font-body)',
+            fontSize: '1.2rem',
+            fontWeight: 400,
+            color: 'var(--color-text-tertiary)',
+            opacity: 0.6,
+            transition: 'opacity 0.5s ease-in-out',
+          }}
+        >
+          {PLACEHOLDER_MESSAGES[placeholderIndex]}
+        </div>
+      )}
     </div>
   );
 }

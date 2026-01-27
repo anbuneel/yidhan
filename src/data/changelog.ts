@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.9.0',
+    date: '2026-01-26',
+    changes: [
+      { type: 'improvement', text: 'Gold caret color matches brand accent for a distinctive writing feel' },
+      { type: 'improvement', text: 'Refined typography: bolder text (400 weight) and tighter line-height (1.75) for better readability' },
+      { type: 'feature', text: 'Slash command icons - visual icons for all 13 commands in the / menu' },
+      { type: 'feature', text: 'Animated placeholder - rotating hints when editor is empty (every 30s)' },
+    ],
+  },
+  {
     version: '2.8.3',
     date: '2026-01-26',
     changes: [
