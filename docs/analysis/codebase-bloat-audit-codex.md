@@ -3,7 +3,7 @@
 **Version:** 1.0
 **Last Updated:** 2026-01-27
 **Status:** Complete
-**Author:** Claude (Opus 4.5)
+**Author:** Codex (GPT-5)
 
 ---
 

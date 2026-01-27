@@ -37,7 +37,7 @@ Design analysis and feature exploration (Claude-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [codebase-bloat-audit-claude.md](analysis/codebase-bloat-audit-claude.md) | **NEW** Quick bloat audit focused on maintainability and velocity risks | 2026-01-27 |
+| [codebase-bloat-audit-codex.md](analysis/codebase-bloat-audit-codex.md) | **NEW** Quick bloat audit focused on maintainability and velocity risks | 2026-01-27 |
 | [kintsugi-light-mode-enhancements-claude.md](analysis/kintsugi-light-mode-enhancements-claude.md) | **NEW** Light mode enhancements: grain opacity, shadow warmth, card refinements | 2026-01-26 |
 | [editor-ux-evaluation-claude.md](analysis/editor-ux-evaluation-claude.md) | **NEW** Editor UI/UX evaluation: typography, toolbar, mobile, 15 quick wins | 2026-01-26 |
 | [mobile-implementation-review-claude.md](analysis/mobile-implementation-review-claude.md) | Mobile implementation review: current state 8.5/10, 12 polish opportunities | 2026-01-16 |
