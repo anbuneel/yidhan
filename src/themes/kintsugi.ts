@@ -18,7 +18,7 @@ export const kintsugi: ThemeConfig = {
     bgPrimary: '#EBE8E4',
     bgSecondary: '#E5E2DD',
     bgTertiary: '#D9D5CF',
-    cardBg: 'rgba(253, 250, 242, 0.75)',
+    cardBg: 'rgba(252, 248, 238, 0.80)',
 
     // Typography: Dark sepia, not harsh black
     textPrimary: '#3E3B36',
@@ -46,14 +46,14 @@ export const kintsugi: ThemeConfig = {
     changeFix: '#8B8178',
 
     // Borders and shadows (warm terracotta-brown tones per Gemini feedback)
-    glassBorder: 'rgba(62, 59, 54, 0.12)',
-    shadowSm: '0 2px 8px rgba(120, 80, 60, 0.10)',
-    shadowMd: '0 20px 40px -10px rgba(120, 80, 60, 0.18)',
-    shadowLg: '0 10px 40px rgba(120, 80, 60, 0.22)',
+    glassBorder: 'rgba(62, 59, 54, 0.18)',
+    shadowSm: '0 2px 8px rgba(120, 80, 60, 0.15)',
+    shadowMd: '0 20px 40px -10px rgba(120, 80, 60, 0.28)',
+    shadowLg: '0 10px 40px rgba(120, 80, 60, 0.32)',
 
     // Effects
-    noiseOpacity: '0.10',
-    noiseFilter: 'sepia(80%) saturate(120%) brightness(0.95)', // Warm paper tint
+    noiseOpacity: '0.18',
+    noiseFilter: 'sepia(65%) saturate(140%) brightness(0.93)', // Warmer, more defined grain
   },
 };
 

@@ -37,7 +37,9 @@ Design analysis and feature exploration (Claude-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [mobile-implementation-review-claude.md](analysis/mobile-implementation-review-claude.md) | **NEW** Mobile implementation review: current state 8.5/10, 12 polish opportunities | 2026-01-16 |
+| [kintsugi-light-mode-enhancements-claude.md](analysis/kintsugi-light-mode-enhancements-claude.md) | **NEW** Light mode enhancements: grain opacity, shadow warmth, card refinements | 2026-01-26 |
+| [editor-ux-evaluation-claude.md](analysis/editor-ux-evaluation-claude.md) | **NEW** Editor UI/UX evaluation: typography, toolbar, mobile, 15 quick wins | 2026-01-26 |
+| [mobile-implementation-review-claude.md](analysis/mobile-implementation-review-claude.md) | Mobile implementation review: current state 8.5/10, 12 polish opportunities | 2026-01-16 |
 | [quiet-intelligence-features-claude.md](analysis/quiet-intelligence-features-claude.md) | "Quiet Intelligence" AI features: 12 unique scenarios for reflective AI | 2026-01-14 |
 | [subscription-architecture-claude.md](analysis/subscription-architecture-claude.md) | **NEW** Subscription & feature gating architecture (Bloom tier, payments, webhooks) | 2026-01-14 |
 | [yidhan-brand-evaluation-claude.md](analysis/yidhan-brand-evaluation-claude.md) | Yidhan rebrand evaluation: philosophical alignment, typography, taglines, SEO | 2026-01-12 |
@@ -229,4 +231,4 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 
 ---
 
-*Last updated: 2026-01-16 (Mobile implementation review added)*
+*Last updated: 2026-01-26 (Editor UX evaluation + Kintsugi light mode enhancements added)*

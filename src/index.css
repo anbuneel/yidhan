@@ -14,7 +14,7 @@
   --color-bg-primary: #EBE8E4;
   --color-bg-secondary: #E5E2DD;
   --color-bg-tertiary: #D9D5CF;
-  --color-card-bg: rgba(253, 250, 242, 0.75);
+  --color-card-bg: rgba(252, 248, 238, 0.80);
   --color-text-primary: #3E3B36;
   --color-text-secondary: #6B6862;
   --color-text-tertiary: #8F8C86;
@@ -32,12 +32,12 @@
   --color-status-exploring: #8B8178;
   --color-change-improvement: #87A878;
   --color-change-fix: #8B8178;
-  --glass-border: rgba(62, 59, 54, 0.12);
-  --shadow-sm: 0 2px 8px rgba(120, 80, 60, 0.10);
-  --shadow-md: 0 20px 40px -10px rgba(120, 80, 60, 0.18);
-  --shadow-lg: 0 10px 40px rgba(120, 80, 60, 0.22);
-  --noise-opacity: 0.10;
-  --noise-filter: sepia(80%) saturate(120%) brightness(0.95);
+  --glass-border: rgba(62, 59, 54, 0.18);
+  --shadow-sm: 0 2px 8px rgba(120, 80, 60, 0.15);
+  --shadow-md: 0 20px 40px -10px rgba(120, 80, 60, 0.28);
+  --shadow-lg: 0 10px 40px rgba(120, 80, 60, 0.32);
+  --noise-opacity: 0.18;
+  --noise-filter: sepia(65%) saturate(140%) brightness(0.93);
 }
 
 /* Dark Theme: Midnight - Deep forest green with antique gold accents */
