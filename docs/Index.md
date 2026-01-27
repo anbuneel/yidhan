@@ -143,6 +143,7 @@ Point-in-time codebase state captures.
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [codebase-snapshot-2026-01-27-claude.md](codebase-snapshot/codebase-snapshot-2026-01-27-claude.md) | **NEW** Codebase size and structure snapshot | 2026-01-27 |
 | [codebase-snapshot-claude.md](codebase-snapshot/codebase-snapshot-claude.md) | Architecture, metrics, and timeline snapshots | 2025-12-28 |
 
 ---
@@ -231,4 +232,4 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 
 ---
 
-*Last updated: 2026-01-26 (Editor UX evaluation + Kintsugi light mode enhancements added)*
+*Last updated: 2026-01-27 (Codebase snapshot added)*
