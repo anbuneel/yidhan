@@ -258,7 +258,11 @@ export async function searchNotes(query: string): Promise<Note[]> {
     return fetchNotes();
   }
 
-  const searchTerm = `%${query}%`;
+  // Sanitize query to prevent PostgREST filter injection
+  // Remove double quotes to prevent breaking out of the quoted string
+  const sanitizedQuery = query.replace(/"/g, '');
+
+  const searchTerm = `%${sanitizedQuery}%`;
 
   const { data, error } = await supabase
     .from('notes')
@@ -270,7 +274,8 @@ export async function searchNotes(query: string): Promise<Note[]> {
       )
     `)
     .is('deleted_at', null)
-    .or(`title.ilike.${searchTerm},content.ilike.${searchTerm}`)
+    // Wrap values in double quotes to handle special chars like commas in PostgREST syntax
+    .or(`title.ilike."${searchTerm}",content.ilike."${searchTerm}"`)
     .order('pinned', { ascending: false })
     .order('updated_at', { ascending: false });
 

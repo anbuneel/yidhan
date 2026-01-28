@@ -596,7 +596,7 @@ describe('notes service', () => {
 
       const result = await searchNotes('test');
 
-      expect(mockBuilder.or).toHaveBeenCalledWith('title.ilike.%test%,content.ilike.%test%');
+      expect(mockBuilder.or).toHaveBeenCalledWith('title.ilike."%test%",content.ilike."%test%"');
       expect(result).toHaveLength(1);
     });
 
