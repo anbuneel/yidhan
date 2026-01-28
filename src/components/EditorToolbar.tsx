@@ -22,6 +22,7 @@ function ToolbarButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
+      aria-label={title}
       className={`
         w-8 h-8
         flex items-center justify-center
