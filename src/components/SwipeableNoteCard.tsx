@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, memo } from 'react';
 import { useDrag } from '@use-gesture/react';
 import { useSpring, animated, config } from '@react-spring/web';
 import type { Note } from '../types';
@@ -28,7 +28,7 @@ const DELETE_ANIMATION_DELAY = 150; // Delay before API call (snappy feel)
  * - Spring physics for native feel
  * - Haptic feedback at thresholds
  */
-export function SwipeableNoteCard({
+function SwipeableNoteCardBase({
   note,
   onClick,
   onDelete,
@@ -269,3 +269,13 @@ export function SwipeableNoteCard({
     </div>
   );
 }
+
+export const SwipeableNoteCard = memo(SwipeableNoteCardBase, (prev, next) => {
+  // Optimization: Only re-render if note, disabled state, or layout mode changes.
+  // Ignoring unstable handlers to prevent unnecessary re-renders.
+  return (
+    prev.note === next.note &&
+    prev.disabled === next.disabled &&
+    prev.isCompact === next.isCompact
+  );
+});

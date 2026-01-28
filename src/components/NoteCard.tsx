@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import type { Note } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
@@ -12,7 +12,7 @@ interface NoteCardProps {
   isCompact?: boolean;
 }
 
-export function NoteCard({ note, onClick, onDelete, onTogglePin, isCompact = false }: NoteCardProps) {
+function NoteCardBase({ note, onClick, onDelete, onTogglePin, isCompact = false }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Extract plain text preview for compact mode (no HTML escaping - React handles it)
@@ -257,3 +257,14 @@ export function NoteCard({ note, onClick, onDelete, onTogglePin, isCompact = fal
     </article>
   );
 }
+
+export const NoteCard = memo(NoteCardBase, (prev, next) => {
+  // Optimization: Only re-render if the note object reference changes or layout mode changes.
+  // We intentionally ignore handler props (onClick, onDelete, onTogglePin) because they are often
+  // recreated on every render in parent components but their functional intent remains stable.
+  // This prevents O(N) re-renders when a single note is updated or when the list re-renders.
+  return (
+    prev.note === next.note &&
+    prev.isCompact === next.isCompact
+  );
+});
