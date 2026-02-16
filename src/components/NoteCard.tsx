@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState, memo, useMemo } from 'react';
 import type { Note } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
@@ -16,11 +16,23 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Extract plain text preview for compact mode (no HTML escaping - React handles it)
-  const compactPreview = (() => {
+  const compactPreview = useMemo(() => {
     if (!isCompact) return '';
-    const text = htmlToPlainText(note.content);
+    // Optimizing rendering performance: truncate content before expensive HTML parsing
+    // We only display ~80 characters, so processing 1000 characters is more than enough
+    const truncated = note.content.length > 1000 ? note.content.slice(0, 1000) : note.content;
+    const text = htmlToPlainText(truncated);
     return text.slice(0, 80) + (text.length > 80 ? '...' : '');
-  })();
+  }, [note.content, isCompact]);
+
+  // Sanitize HTML for full preview, memoized to prevent re-sanitization on every render
+  const fullPreview = useMemo(() => {
+    if (isCompact) return '';
+    // Optimizing rendering performance: limit content to 2000 chars for preview
+    // This prevents main thread blocking when rendering large notes in the list view
+    const truncated = note.content.length > 2000 ? note.content.slice(0, 2000) : note.content;
+    return sanitizeHtml(truncated);
+  }, [note.content, isCompact]);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -180,7 +192,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         /* Preview - Rendered HTML content (sanitized to prevent XSS) */
         <div
           className="note-card-preview flex-1 overflow-hidden"
-          dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
+          dangerouslySetInnerHTML={{ __html: fullPreview }}
         />
       )}
 
