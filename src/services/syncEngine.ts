@@ -354,14 +354,21 @@ async function processTagOperation(
         return true;
       }
 
-      const { data: created, error } = await supabase.from('tags').insert({
+      const { data: created, error: createError } = await supabase.from('tags').insert({
         id: tagId,
         user_id: userId,
         name: data.name as string,
         color: data.color as string,
-      }).select().single();
+      }).select().maybeSingle();
 
-      if (error) throw error;
+      if (createError) throw createError;
+      if (!created) {
+        // Insert returned no row — unexpected but not retryable.
+        // Delete local tag to prevent stuck-pending state.
+        const db = getOfflineDb(userId);
+        await db.tags.delete(tagId);
+        return true;
+      }
       // Use server-generated created_at (or updated_at when available)
       const createdRecord = created as Record<string, unknown>;
       const serverTime = createdRecord.updated_at
@@ -372,7 +379,7 @@ async function processTagOperation(
     }
 
     case 'update': {
-      const { data: updated, error } = await supabase
+      const { data: updated, error: updateError } = await supabase
         .from('tags')
         .update({
           name: data.name as string,
@@ -380,9 +387,17 @@ async function processTagOperation(
         })
         .eq('id', tagId)
         .select()
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+      if (!updated) {
+        // Tag was deleted on server — remove local copy to prevent
+        // stuck-pending state. Membership cleanup only removes 'synced'
+        // tags, so we must handle 'pending' orphans here.
+        const db = getOfflineDb(userId);
+        await db.tags.delete(tagId);
+        return true;
+      }
       // Use server timestamp — updated_at when available, else created_at
       const updatedRecord = updated as Record<string, unknown>;
       const serverTime = updatedRecord.updated_at
