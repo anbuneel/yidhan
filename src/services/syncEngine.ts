@@ -736,7 +736,8 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
     const result = await fetchAllPaginated(() =>
       supabase.from('tags').select('*').gt('updated_at', new Date(lastTagSync).toISOString())
     );
-    if (result.error && (result.error.message.includes('42703') || result.error.message.includes('updated_at'))) {
+    const errCode = (result.error as Error & { code?: string })?.code;
+    if (result.error && (errCode === '42703' || result.error.message.includes('updated_at'))) {
       // Fall back to full tag pull — column doesn't exist yet
       const fallback = await fetchAllPaginated(() => supabase.from('tags').select('*'));
       tagPullData = fallback.data;

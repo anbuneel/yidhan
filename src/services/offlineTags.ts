@@ -21,6 +21,7 @@ function localTagToTag(localTag: LocalTag): Tag {
     name: localTag.name,
     color: localTag.color as TagColor,
     createdAt: new Date(localTag.createdAt),
+    updatedAt: localTag.serverUpdatedAt ? new Date(localTag.serverUpdatedAt) : undefined,
   };
 }
 

@@ -449,7 +449,11 @@ function App() {
         `yidhan-nav-${userId}`,
         JSON.stringify({ view, selectedNoteId })
       );
-    } else {
+    } else if (!pendingNavRestoreRef.current) {
+      // Only clear when no restore is pending — Stage 1 sets selectedNoteId
+      // before Stage 2 sets view='editor', creating a window where
+      // view='library' + selectedNoteId. Clearing here would erase state
+      // before Stage 2 completes (fatal on mobile app-switch/kill).
       sessionStorage.removeItem(`yidhan-nav-${userId}`);
     }
   }, [view, selectedNoteId, userId]);
