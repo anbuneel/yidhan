@@ -37,6 +37,9 @@ nul
 .claude/
 tmpclaude-*
 
+# Jules AI bot files
+.jules/
+
 # Cursor editor
 .cursor/
 
