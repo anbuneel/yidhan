@@ -673,3 +673,59 @@ Post-implementation:
 | Banner vs ConflictModal confusion | Well-defined precedence: banner = pre-save (React state), ConflictModal = post-save (sync engine). Cannot overlap. |
 | False "Synced" on unrelated sync cycles | Gated on note-specific `syncStatus` field, not global timestamp |
 | Tags missing `updated_at` | Schema migration adds column with backfill from `created_at` |
+
+---
+
+## Retrospective: Why Sync Was Bigger Than Expected
+
+**Added:** 2026-02-17, after all 3 phases were implemented and reviewed.
+
+### The Illusion of Simplicity
+
+The starting position felt strong: Supabase (with realtime), IndexedDB via Dexie, an existing sync queue, and offline CRUD operations already in place. The expectation was "wire the pieces together better." The reality was 7 commits, 3 SQL migrations, 20+ files touched, and 3 rounds of Codex review — each surfacing real issues the implementation missed.
+
+### What Made Each Phase Expand
+
+**Phase 1 (Critical Data Pipeline)** — "Push pending changes, pull remote changes" sounds like a weekend project. But immediately you hit:
+- **Idempotency**: What if a create is retried and the note already exists on the server? Need `.maybeSingle()` checks and graceful handling.
+- **Pagination**: A user with 5,000 notes can't pull them in one Supabase query. Required `fetchAllPaginated` helper with mid-pagination error handling.
+- **Partial failure**: Notes pull succeeds but tags pull fails. The outcome can't be "success" or "failure" — needed a `partial` state with granular error tracking (`pullErrors` array distinguishing data vs. membership failures).
+- **Membership reconciliation**: A note deleted on device B still exists on device A's IndexedDB. Need server-authoritative delete detection — but can't trust a partial membership list (mid-pagination failure would cause false deletes).
+
+**Phase 2 (React to Remote Changes)** — "Subscribe to Supabase realtime" sounds trivial. But:
+- **Self-echo suppression**: Your own save comes back through the subscription. Without filtering via `pendingMutations` tracking, every save triggers a "remote update" banner on the same device that saved.
+- **Dirty editor detection**: A remote change arrives while the user is mid-sentence. Silent replacement loses their work. Need to distinguish clean editors (silent update) from dirty editors (show banner with "Keep mine" / "Load changes").
+- **Optimistic update races**: `handleNoteUpdate` does an optimistic `setNotes()`, then the async save completes, then the realtime echo arrives — three state updates in rapid succession. Had to consolidate to prevent false "Updated on another device" banners.
+
+**Phase 3 (Server Timestamps & Synced UX)** — "Use server timestamps instead of `Date.now()`" sounds like a find-and-replace. But:
+- Can't just *read* server timestamps — must stop *writing* client timestamps across every push path (4 locations across 3 files, one of which Codex found that we missed).
+- Requires server-side `BEFORE UPDATE` triggers on both notes and tags tables (2 SQL migrations) — because you can't trust any client not to send a skewed timestamp.
+- Sync cursor computation had to change: only consider `synced` entries (pending/conflict entries may have client-poisoned timestamps).
+- Dexie schema migration (v2 → v3) needed to reset corrupted cursors from the pre-server-timestamp era.
+- The "Synced" indicator required threading `syncStatus` through 4 layers: IndexedDB → offlineNotes → App.tsx state → Editor component.
+
+**Then each Codex review round found issues the previous phase introduced**, creating a fix commit after every feature commit. Phase 1's review found self-ignore gaps. Phase 2's review found false banner triggers. Phase 3's review found the remaining client clock paths and missing test coverage.
+
+### The Underlying Pattern
+
+**The happy path is 10% of the work.** "Push up, pull down" takes a day. The other 90% is answering: *What happens when things go wrong, happen out of order, happen simultaneously, or happen on a device whose clock is 5 minutes fast?*
+
+Every edge case in sync is a **combination** of independent variables:
+- Online vs. offline
+- Clean editor vs. dirty editor
+- Single device vs. multi-device
+- Accurate clock vs. skewed clock
+- First sync vs. incremental sync
+- Complete pull vs. partial pull (mid-pagination failure)
+
+These combinations multiply. A 6-variable matrix with just 2 states each produces 64 scenarios. Not all are meaningful, but enough are to fill the edge-case table above with 20+ entries.
+
+### Type Change Ripple Effect
+
+A recurring cost multiplier was **type changes rippling through every layer**. Adding `updatedAt` to the `Tag` interface (1 line) touched: the type definition, 2 duplicate `toTag()` converters, `dbTagToLocal()`, `upsertTagFromServer()`, 2 test factories, 4 inline mock objects, and 1 test assertion. One field → 8 files.
+
+This is inherent to sync systems because data contracts are shared across the entire stack: types → DB types → service converters → offline storage → sync engine → React hooks → components → test factories → test assertions. A contract change at any layer propagates to all others.
+
+### Key Takeaway
+
+Sync looks like plumbing but is actually distributed systems. This is why major apps (Notion, Linear, Figma) have entire teams dedicated to sync — and why most note apps just require you to be online. The architecture is now solid: server-authoritative timestamps, conflict detection with user-facing resolution, partial failure handling, and graceful offline degradation. Future features (collaborative editing, real-time cursors) build on this foundation rather than fighting it.
