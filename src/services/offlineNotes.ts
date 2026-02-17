@@ -70,11 +70,7 @@ function dbNoteToLocal(dbNote: DbNote, userId: string): LocalNote {
 
 // Convert DB Tag to LocalTag
 function dbTagToLocal(dbTag: DbTag, userId: string): LocalTag {
-  // Use server timestamp (updated_at if available, else created_at) for cursor consistency
-  const tagRecord = dbTag as Record<string, unknown>;
-  const serverTime = tagRecord.updated_at
-    ? new Date(tagRecord.updated_at as string).getTime()
-    : new Date(dbTag.created_at).getTime();
+  const serverTime = new Date(dbTag.updated_at).getTime();
   return {
     id: dbTag.id,
     userId,
@@ -920,8 +916,8 @@ export async function upsertTagFromServer(
   tag: Tag
 ): Promise<void> {
   const db = getOfflineDb(userId);
-  // Use server-origin timestamp to avoid clock skew (createdAt comes from server)
-  const serverTime = tag.createdAt.getTime();
+  // Use updatedAt when available (post-migration), fall back to createdAt (server-origin)
+  const serverTime = (tag.updatedAt ?? tag.createdAt).getTime();
 
   const existing = await db.tags.get(tag.id);
 

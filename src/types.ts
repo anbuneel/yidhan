@@ -3,6 +3,7 @@ export interface Tag {
   name: string;
   color: TagColor;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export interface Note {

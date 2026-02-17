@@ -466,3 +466,4 @@ SQL migrations are stored in `supabase/migrations/`:
 - `add_shared_note_public_access.sql` - RLS policy for unauthenticated shared note viewing
 - `add_faded_notes_cleanup_cron.sql` - Cron job for auto-deleting expired faded notes (requires Pro plan)
 - `add_tags_updated_at.sql` - Add updated_at column to tags table for incremental sync
+- `add_notes_updated_at_trigger.sql` - Server-side trigger enforcing updated_at on notes (clock-skew prevention)

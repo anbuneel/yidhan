@@ -263,7 +263,7 @@ async function processNoteOperation(
         .update({
           title: data.title as string,
           content: data.content as string,
-          updated_at: new Date().toISOString(),
+          // updated_at is set by server-side trigger (notes_updated_at_trigger)
         })
         .eq('id', noteId)
         .select()

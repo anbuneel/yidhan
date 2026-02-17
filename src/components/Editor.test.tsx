@@ -508,6 +508,85 @@ describe('Editor', () => {
     });
   });
 
+  describe('synced indicator (3A)', () => {
+    it('shows "Synced" when noteSyncStatus transitions from pending to synced', async () => {
+      const { rerender } = render(
+        <Editor {...defaultProps} noteSyncStatus="pending" />
+      );
+
+      // Transition to synced
+      rerender(<Editor {...defaultProps} noteSyncStatus="synced" />);
+
+      expect(screen.getByText('Synced')).toBeInTheDocument();
+    });
+
+    it('does not show "Synced" if noteSyncStatus was already synced (no transition)', async () => {
+      const { rerender } = render(
+        <Editor {...defaultProps} noteSyncStatus="synced" />
+      );
+
+      // Re-render with same status — no transition
+      rerender(<Editor {...defaultProps} noteSyncStatus="synced" />);
+
+      // Should not show synced indicator (no pending→synced transition occurred)
+      expect(screen.queryByText('Synced')).not.toBeInTheDocument();
+    });
+
+    it('does not show "Synced" during active save (saveStatus is saving)', async () => {
+      // Start with a save in progress
+      let resolveSave: () => void;
+      const savePromise = new Promise<void>((resolve) => {
+        resolveSave = resolve;
+      });
+      const onUpdate = vi.fn().mockReturnValue(savePromise);
+
+      const { rerender } = render(
+        <Editor {...defaultProps} onUpdate={onUpdate} noteSyncStatus="pending" />
+      );
+
+      // Trigger a save to put editor in 'saving' state
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'Changed' } });
+
+      await act(async () => {
+        vi.advanceTimersByTime(800);
+      });
+
+      expect(screen.getByText('Saving...')).toBeInTheDocument();
+
+      // Now transition sync status — should NOT override the 'Saving...' indicator
+      rerender(
+        <Editor {...defaultProps} onUpdate={onUpdate} noteSyncStatus="synced" />
+      );
+
+      // Still showing Saving... not Synced
+      expect(screen.getByText('Saving...')).toBeInTheDocument();
+      expect(screen.queryByText('Synced')).not.toBeInTheDocument();
+
+      // Cleanup
+      await act(async () => {
+        resolveSave!();
+      });
+    });
+
+    it('auto-hides "Synced" indicator after 2 seconds', async () => {
+      const { rerender } = render(
+        <Editor {...defaultProps} noteSyncStatus="pending" />
+      );
+
+      rerender(<Editor {...defaultProps} noteSyncStatus="synced" />);
+
+      expect(screen.getByText('Synced')).toBeInTheDocument();
+
+      // Advance 2 seconds
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      expect(screen.queryByText('Synced')).not.toBeInTheDocument();
+    });
+  });
+
   describe('tag creation', () => {
     it('calls onCreateTag when create tag clicked', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });

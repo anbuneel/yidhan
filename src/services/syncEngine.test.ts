@@ -224,3 +224,52 @@ describe('mapSyncOutcome', () => {
     expect(mapSyncOutcome(result)).toBe('partial');
   });
 });
+
+describe('server timestamp authority', () => {
+  // These tests document the contract that push paths must NOT send client
+  // timestamps. The server-side trigger (notes_updated_at_trigger) is the
+  // sole authority. We verify the source code does not contain client-time
+  // assignments in note update payloads.
+
+  it('syncEngine processNoteMutation update path does not send updated_at', async () => {
+    // Read the source and verify no client timestamp in the update payload.
+    // This is a static assertion — if someone adds `updated_at: new Date()`
+    // back, this test should fail.
+    const { readFileSync } = await import('fs');
+    const { resolve } = await import('path');
+    const source = readFileSync(
+      resolve(__dirname, './syncEngine.ts'),
+      'utf-8'
+    );
+
+    // Find the update case payload (between .update({ and }) for notes)
+    // The pattern: .update({ ... updated_at: new Date() ... })
+    // Should NOT match because we removed it.
+    const updatePayloadPattern = /\.update\(\{[^}]*updated_at:\s*new Date\(\)/s;
+    expect(source).not.toMatch(updatePayloadPattern);
+  });
+
+  it('notes.ts updateNote does not send updated_at', async () => {
+    const { readFileSync } = await import('fs');
+    const { resolve } = await import('path');
+    const source = readFileSync(
+      resolve(__dirname, './notes.ts'),
+      'utf-8'
+    );
+
+    const updatePayloadPattern = /\.update\(\{[^}]*updated_at:\s*new Date\(\)/s;
+    expect(source).not.toMatch(updatePayloadPattern);
+  });
+
+  it('useSyncEngine resolveConflict does not send updated_at', async () => {
+    const { readFileSync } = await import('fs');
+    const { resolve } = await import('path');
+    const source = readFileSync(
+      resolve(__dirname, '../hooks/useSyncEngine.ts'),
+      'utf-8'
+    );
+
+    const updatePayloadPattern = /\.update\(\{[^}]*updated_at:\s*new Date\(\)/s;
+    expect(source).not.toMatch(updatePayloadPattern);
+  });
+});

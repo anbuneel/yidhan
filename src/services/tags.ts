@@ -30,6 +30,7 @@ function toTag(dbTag: DbTag): Tag {
     name: dbTag.name,
     color: dbTag.color as TagColor,
     createdAt: new Date(dbTag.created_at),
+    updatedAt: new Date(dbTag.updated_at),
   };
 }
 

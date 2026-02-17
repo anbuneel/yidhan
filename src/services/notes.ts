@@ -12,6 +12,7 @@ function toTag(dbTag: DbTag): Tag {
     name: dbTag.name,
     color: dbTag.color as TagColor,
     createdAt: new Date(dbTag.created_at),
+    updatedAt: new Date(dbTag.updated_at),
   };
 }
 
@@ -199,7 +200,7 @@ export async function updateNote(note: Note): Promise<Note> {
     .update({
       title: validatedTitle,
       content: sanitizeHtml(note.content),
-      updated_at: new Date().toISOString(),
+      // updated_at is set by server-side trigger (notes_updated_at_trigger)
     })
     .eq('id', note.id)
     .select()

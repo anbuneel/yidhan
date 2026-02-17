@@ -307,7 +307,7 @@ export async function resolveConflict(
           .update({
             title: localNote.title,
             content: localNote.content,
-            updated_at: new Date().toISOString(),
+            // updated_at is set by server-side trigger (notes_updated_at_trigger)
           })
           .eq('id', localNote.id)
           .select('updated_at')

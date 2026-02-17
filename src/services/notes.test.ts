@@ -143,7 +143,7 @@ describe('notes service', () => {
         {
           ...createDbNote({ id: '1', title: 'Note 1' }),
           note_tags: [
-            { tags: { id: 't1', name: 'Work', color: 'terracotta', created_at: '2024-01-01T00:00:00Z' } },
+            { tags: { id: 't1', name: 'Work', color: 'terracotta', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' } },
           ],
         },
       ];
@@ -171,14 +171,14 @@ describe('notes service', () => {
         {
           ...createDbNote({ id: '1' }),
           note_tags: [
-            { tags: { id: 't1', name: 'Work', color: 'terracotta', created_at: '2024-01-01T00:00:00Z' } },
-            { tags: { id: 't2', name: 'Important', color: 'gold', created_at: '2024-01-01T00:00:00Z' } },
+            { tags: { id: 't1', name: 'Work', color: 'terracotta', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' } },
+            { tags: { id: 't2', name: 'Important', color: 'gold', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' } },
           ],
         },
         {
           ...createDbNote({ id: '2' }),
           note_tags: [
-            { tags: { id: 't1', name: 'Work', color: 'terracotta', created_at: '2024-01-01T00:00:00Z' } },
+            { tags: { id: 't1', name: 'Work', color: 'terracotta', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' } },
           ],
         },
       ];
@@ -409,7 +409,7 @@ describe('notes service', () => {
       expect(result.tags).toEqual(tags);
     });
 
-    it('sets updated_at to current time', async () => {
+    it('does not send updated_at (server trigger handles it)', async () => {
       const note = createMockNote();
       const dbNote = createDbNote();
       const mockBuilder = {
@@ -422,9 +422,8 @@ describe('notes service', () => {
 
       await updateNote(note);
 
-      expect(mockBuilder.update).toHaveBeenCalledWith(
-        expect.objectContaining({ updated_at: expect.any(String) })
-      );
+      const payload = mockBuilder.update.mock.calls[0][0];
+      expect(payload).not.toHaveProperty('updated_at');
     });
 
     it('throws error when update fails', async () => {

@@ -165,6 +165,7 @@ export function createMockTag(overrides: Partial<Tag> = {}): Tag {
     name: 'Test Tag',
     color: 'terracotta' as TagColor,
     createdAt: new Date('2024-01-01T12:00:00'),
+    updatedAt: new Date('2024-01-01T12:00:00'),
     ...overrides,
   };
 }
