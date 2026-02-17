@@ -47,13 +47,16 @@ function createDbTag(overrides: Partial<{
   name: string;
   color: string;
   created_at: string;
+  updated_at: string;
 }> = {}) {
+  const created = overrides.created_at ?? '2024-01-01T12:00:00.000Z';
   return {
     id: 'db-tag-id',
     user_id: 'user-123',
     name: 'Test Tag',
     color: 'terracotta',
-    created_at: '2024-01-01T12:00:00.000Z',
+    created_at: created,
+    updated_at: overrides.updated_at ?? created,
     ...overrides,
   };
 }
@@ -119,6 +122,7 @@ describe('tags service', () => {
         name: 'Work',
         color: 'forest',
         createdAt: new Date('2024-06-15T10:30:00.000Z'),
+        updatedAt: new Date('2024-06-15T10:30:00.000Z'),
       });
     });
 

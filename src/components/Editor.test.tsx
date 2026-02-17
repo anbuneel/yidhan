@@ -189,7 +189,7 @@ describe('Editor', () => {
   });
 
   describe('auto-save', () => {
-    it('triggers save after 1.5 seconds of inactivity', async () => {
+    it('triggers save after 800ms of inactivity', async () => {
       const onUpdate = vi.fn().mockResolvedValue(undefined);
       render(<Editor {...defaultProps} onUpdate={onUpdate} />);
 
@@ -199,9 +199,9 @@ describe('Editor', () => {
       // Should not save immediately
       expect(onUpdate).not.toHaveBeenCalled();
 
-      // Fast-forward 1.5 seconds
+      // Fast-forward 800ms
       await act(async () => {
-        vi.advanceTimersByTime(1500);
+        vi.advanceTimersByTime(800);
       });
 
       expect(onUpdate).toHaveBeenCalledWith(
@@ -218,23 +218,23 @@ describe('Editor', () => {
       // First change
       fireEvent.change(titleInput, { target: { value: 'First' } });
 
-      // Wait 1 second
+      // Wait 500ms (within debounce)
       await act(async () => {
-        vi.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(500);
       });
 
       // Second change - should reset timer
       fireEvent.change(titleInput, { target: { value: 'Second' } });
 
-      // Wait another 1 second (should not save yet - timer was reset)
+      // Wait another 500ms (should not save yet - timer was reset, only 500ms of 800ms)
       await act(async () => {
-        vi.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(500);
       });
       expect(onUpdate).not.toHaveBeenCalled();
 
-      // Wait remaining time
+      // Wait remaining time (300ms to reach 800ms from last change)
       await act(async () => {
-        vi.advanceTimersByTime(500);
+        vi.advanceTimersByTime(300);
       });
       expect(onUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Second' })
@@ -508,6 +508,85 @@ describe('Editor', () => {
     });
   });
 
+  describe('synced indicator (3A)', () => {
+    it('shows "Synced" when noteSyncStatus transitions from pending to synced', async () => {
+      const { rerender } = render(
+        <Editor {...defaultProps} noteSyncStatus="pending" />
+      );
+
+      // Transition to synced
+      rerender(<Editor {...defaultProps} noteSyncStatus="synced" />);
+
+      expect(screen.getByText('Synced')).toBeInTheDocument();
+    });
+
+    it('does not show "Synced" if noteSyncStatus was already synced (no transition)', async () => {
+      const { rerender } = render(
+        <Editor {...defaultProps} noteSyncStatus="synced" />
+      );
+
+      // Re-render with same status — no transition
+      rerender(<Editor {...defaultProps} noteSyncStatus="synced" />);
+
+      // Should not show synced indicator (no pending→synced transition occurred)
+      expect(screen.queryByText('Synced')).not.toBeInTheDocument();
+    });
+
+    it('does not show "Synced" during active save (saveStatus is saving)', async () => {
+      // Start with a save in progress
+      let resolveSave: () => void;
+      const savePromise = new Promise<void>((resolve) => {
+        resolveSave = resolve;
+      });
+      const onUpdate = vi.fn().mockReturnValue(savePromise);
+
+      const { rerender } = render(
+        <Editor {...defaultProps} onUpdate={onUpdate} noteSyncStatus="pending" />
+      );
+
+      // Trigger a save to put editor in 'saving' state
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'Changed' } });
+
+      await act(async () => {
+        vi.advanceTimersByTime(800);
+      });
+
+      expect(screen.getByText('Saving...')).toBeInTheDocument();
+
+      // Now transition sync status — should NOT override the 'Saving...' indicator
+      rerender(
+        <Editor {...defaultProps} onUpdate={onUpdate} noteSyncStatus="synced" />
+      );
+
+      // Still showing Saving... not Synced
+      expect(screen.getByText('Saving...')).toBeInTheDocument();
+      expect(screen.queryByText('Synced')).not.toBeInTheDocument();
+
+      // Cleanup
+      await act(async () => {
+        resolveSave!();
+      });
+    });
+
+    it('auto-hides "Synced" indicator after 2 seconds', async () => {
+      const { rerender } = render(
+        <Editor {...defaultProps} noteSyncStatus="pending" />
+      );
+
+      rerender(<Editor {...defaultProps} noteSyncStatus="synced" />);
+
+      expect(screen.getByText('Synced')).toBeInTheDocument();
+
+      // Advance 2 seconds
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      expect(screen.queryByText('Synced')).not.toBeInTheDocument();
+    });
+  });
+
   describe('tag creation', () => {
     it('calls onCreateTag when create tag clicked', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
@@ -517,6 +596,180 @@ describe('Editor', () => {
       await user.click(screen.getByText('Create Tag'));
 
       expect(onCreateTag).toHaveBeenCalled();
+    });
+  });
+
+  describe('remote update detection (2B)', () => {
+    it('silently updates editor when remote change arrives on clean editor', async () => {
+      const { rerender } = render(<Editor {...defaultProps} />);
+
+      // Verify initial state
+      expect(screen.getByDisplayValue('Test Note')).toBeInTheDocument();
+
+      // Simulate remote change arriving via prop update (clean editor — no local edits)
+      const updatedNote = createMockNote({
+        id: 'note-123',
+        title: 'Remote Title',
+        content: '<p>Remote content</p>',
+        tags: [createMockTag({ id: 'tag-1', name: 'Work' })],
+      });
+      rerender(<Editor {...defaultProps} note={updatedNote} />);
+
+      // Should silently update — no banner shown
+      expect(screen.queryByText('Updated on another device')).not.toBeInTheDocument();
+      expect(screen.getByDisplayValue('Remote Title')).toBeInTheDocument();
+    });
+
+    it('shows banner when remote change arrives on dirty editor', async () => {
+      const onUpdate = vi.fn().mockResolvedValue(undefined);
+      const { rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      // Make a local edit (dirty the editor)
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'My Local Edit' } });
+
+      // Simulate remote change arriving via prop update
+      const updatedNote = createMockNote({
+        id: 'note-123',
+        title: 'Remote Title',
+        content: '<p>Remote content</p>',
+        tags: [createMockTag({ id: 'tag-1', name: 'Work' })],
+      });
+      rerender(<Editor {...defaultProps} note={updatedNote} onUpdate={onUpdate} />);
+
+      // Should show the conflict banner
+      expect(screen.getByText('Updated on another device')).toBeInTheDocument();
+      expect(screen.getByText('Keep mine')).toBeInTheDocument();
+      expect(screen.getByText('Load changes')).toBeInTheDocument();
+    });
+
+    it('does not show banner for self-echo (own save returning via props)', async () => {
+      const onUpdate = vi.fn().mockResolvedValue(undefined);
+      const { rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      // Make a local edit
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'My Edit' } });
+
+      // Trigger auto-save
+      await act(async () => {
+        vi.advanceTimersByTime(800);
+      });
+
+      // Wait for the save to complete (updates lastSaved refs)
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(onUpdate).toHaveBeenCalled();
+
+      // Now simulate the note prop updating to match what we just saved (self-echo)
+      const echoedNote = createMockNote({
+        id: 'note-123',
+        title: 'My Edit',
+        content: '<p>Test content</p>',
+        tags: [createMockTag({ id: 'tag-1', name: 'Work' })],
+      });
+      rerender(<Editor {...defaultProps} note={echoedNote} onUpdate={onUpdate} />);
+
+      // Should NOT show the banner — it's our own save echoing back
+      expect(screen.queryByText('Updated on another device')).not.toBeInTheDocument();
+    });
+
+    it('"Load changes" applies remote content and dismisses banner', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onUpdate = vi.fn().mockResolvedValue(undefined);
+      const { rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      // Dirty the editor
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'My Local Edit' } });
+
+      // Remote change arrives
+      const updatedNote = createMockNote({
+        id: 'note-123',
+        title: 'Remote Title',
+        content: '<p>Remote content</p>',
+        tags: [createMockTag({ id: 'tag-1', name: 'Work' })],
+      });
+      rerender(<Editor {...defaultProps} note={updatedNote} onUpdate={onUpdate} />);
+
+      // Click "Load changes"
+      await user.click(screen.getByText('Load changes'));
+
+      // Banner should be gone, title should be remote
+      expect(screen.queryByText('Updated on another device')).not.toBeInTheDocument();
+      expect(screen.getByDisplayValue('Remote Title')).toBeInTheDocument();
+    });
+
+    it('"Keep mine" dismisses banner and prevents reappearance', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onUpdate = vi.fn().mockResolvedValue(undefined);
+      const { rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      // Dirty the editor
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'My Local Edit' } });
+
+      // Remote change arrives
+      const remoteNote = createMockNote({
+        id: 'note-123',
+        title: 'Remote Title',
+        content: '<p>Remote content</p>',
+        tags: [createMockTag({ id: 'tag-1', name: 'Work' })],
+      });
+      rerender(<Editor {...defaultProps} note={remoteNote} onUpdate={onUpdate} />);
+      expect(screen.getByText('Updated on another device')).toBeInTheDocument();
+
+      // Click "Keep mine"
+      await user.click(screen.getByText('Keep mine'));
+
+      // Banner should be gone, local edit should remain
+      expect(screen.queryByText('Updated on another device')).not.toBeInTheDocument();
+      expect(screen.getByDisplayValue('My Local Edit')).toBeInTheDocument();
+
+      // Simulate another rehydration with the SAME remote content
+      // (e.g., sync pulls remote changes again)
+      rerender(<Editor {...defaultProps} note={remoteNote} onUpdate={onUpdate} />);
+
+      // Banner should NOT reappear — this version was already dismissed
+      expect(screen.queryByText('Updated on another device')).not.toBeInTheDocument();
+    });
+
+    it('does not show false banner during own save (optimistic update race)', async () => {
+      // This tests the fix for finding #2: the optimistic setNotes() in
+      // handleNoteUpdate can trigger a re-render before lastSaved refs
+      // were updated. The fix moves ref updates before the async call.
+      const onUpdate = vi.fn().mockImplementation(async (updatedNote: unknown) => {
+        // Simulate what handleNoteUpdate does: nothing observable here,
+        // but the key is that onUpdate is async
+        await Promise.resolve();
+        return updatedNote;
+      });
+
+      const { rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      // Make a local edit
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'Saving This' } });
+
+      // Trigger auto-save
+      await act(async () => {
+        vi.advanceTimersByTime(800);
+      });
+
+      // Simulate the optimistic update arriving as a prop change
+      // WHILE the save is still in flight
+      const optimisticNote = createMockNote({
+        id: 'note-123',
+        title: 'Saving This',
+        content: '<p>Test content</p>',
+        tags: [createMockTag({ id: 'tag-1', name: 'Work' })],
+      });
+      rerender(<Editor {...defaultProps} note={optimisticNote} onUpdate={onUpdate} />);
+
+      // Should NOT show the banner — this is our own save, not a remote update
+      expect(screen.queryByText('Updated on another device')).not.toBeInTheDocument();
     });
   });
 });

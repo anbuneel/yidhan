@@ -133,9 +133,47 @@ function App() {
   // Network connectivity monitoring
   useNetworkStatus();
 
+  // Rehydrate React state after sync pulls in remote changes (2A)
+  // This is safe because the Editor maintains its own local state —
+  // no risk of blowing away in-flight edits.
+  const handleSyncComplete = useCallback(async () => {
+    const uid = user?.id;
+    if (!uid) return;
+    try {
+      const refreshedNotes = await fetchNotesOffline(uid);
+      setNotes(refreshedNotes);
+      const refreshedTags = await fetchTagsOffline(uid);
+      setTags(refreshedTags);
+    } catch (error) {
+      console.error('Failed to rehydrate after sync:', error);
+    }
+  }, [user?.id]);
+
   // Sync engine for offline support
-  const { conflicts, removeConflict } = useSyncEngine();
+  const { conflicts, removeConflict, triggerSync } = useSyncEngine(handleSyncComplete);
   const [activeConflict, setActiveConflict] = useState<typeof conflicts[0] | null>(null);
+
+  // Coalesced sync trigger: after a save, wait 2s then trigger sync.
+  // Reset on each save to prevent flooding during rapid typing.
+  const coalescedSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggerCoalescedSync = useCallback(() => {
+    if (coalescedSyncTimeoutRef.current) {
+      clearTimeout(coalescedSyncTimeoutRef.current);
+    }
+    coalescedSyncTimeoutRef.current = setTimeout(() => {
+      coalescedSyncTimeoutRef.current = null;
+      triggerSync();
+    }, 2000);
+  }, [triggerSync]);
+
+  // Clean up coalesced sync timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (coalescedSyncTimeoutRef.current) {
+        clearTimeout(coalescedSyncTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // View transitions for smooth navigation
   const { startTransition } = useViewTransition();
@@ -206,6 +244,10 @@ function App() {
   const appLoaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [view, setView] = useState<ViewMode>('library');
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  // Ref for selectedNoteId — used in realtime handlers to avoid re-creating
+  // the Supabase channel subscription every time a note is opened/closed (2F)
+  const selectedNoteIdRef = useRef<string | null>(null);
+  selectedNoteIdRef.current = selectedNoteId; // Keep in sync on every render
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('yidhan-theme');
     // Validate that saved theme is a valid Theme value
@@ -317,6 +359,12 @@ function App() {
     return window.location.pathname === '/demo';
   });
 
+  // Navigation state persistence (2E) — survives page refresh within same tab
+  const pendingNavRestoreRef = useRef<{ view: ViewMode; selectedNoteId: string | null } | null>(null);
+  // Track previous userId so we can distinguish initial null (auth hydrating)
+  // from sign-out (userId transitions non-null → null)
+  const prevUserIdRef = useRef<string | undefined>(undefined);
+
   // Debounce timer refs
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -372,12 +420,64 @@ function App() {
     setHydrationBypassed(false);
   }, [userId]);
 
+  // Restore navigation state from sessionStorage on mount (2E)
+  // Stage 1: Set selectedNoteId immediately so it's ready when notes load.
+  // View switch is deferred to stage 2 (after notes load) to avoid flicker.
+  useEffect(() => {
+    if (!userId) return;
+
+    try {
+      const saved = sessionStorage.getItem(`yidhan-nav-${userId}`);
+      if (!saved) return;
+
+      const parsed = JSON.parse(saved);
+      const validViews: ViewMode[] = ['library', 'editor', 'changelog', 'roadmap', 'faded'];
+
+      if (parsed?.selectedNoteId && validViews.includes(parsed.view)) {
+        pendingNavRestoreRef.current = parsed;
+        setSelectedNoteId(parsed.selectedNoteId);
+      }
+    } catch {
+      // Ignore invalid JSON
+    }
+  }, [userId]);
+
+  // Save navigation state to sessionStorage (2E)
+  // Only persist editor view with a selected note — library is the safe default
+  useEffect(() => {
+    if (!userId) return;
+    if (view === 'editor' && selectedNoteId) {
+      sessionStorage.setItem(
+        `yidhan-nav-${userId}`,
+        JSON.stringify({ view, selectedNoteId })
+      );
+    } else if (!pendingNavRestoreRef.current) {
+      // Only clear when no restore is pending — Stage 1 sets selectedNoteId
+      // before Stage 2 sets view='editor', creating a window where
+      // view='library' + selectedNoteId. Clearing here would erase state
+      // before Stage 2 completes (fatal on mobile app-switch/kill).
+      sessionStorage.removeItem(`yidhan-nav-${userId}`);
+    }
+  }, [view, selectedNoteId, userId]);
+
   useEffect(() => {
     if (!userId) {
       setNotes([]);
       setLoading(false);
+
+      // Only clear navigation state on actual sign-out (userId went non-null → null),
+      // NOT on initial load when userId starts as null during auth hydration (2E fix)
+      if (prevUserIdRef.current) {
+        // Clear all yidhan-nav-* keys
+        Array.from({ length: sessionStorage.length }, (_, i) => sessionStorage.key(i))
+          .filter(key => key?.startsWith('yidhan-nav-'))
+          .forEach(key => key && sessionStorage.removeItem(key));
+      }
+
+      prevUserIdRef.current = undefined;
       return;
     }
+    prevUserIdRef.current = userId;
 
     // Don't fetch until hydration is complete (first-time users need server data)
     // UNLESS we've already waited too long (failsafe for Android WebView hangs)
@@ -397,9 +497,28 @@ function App() {
 
     setLoading(true);
     fetchNotesOffline(userId)
-      .then(setNotes)
+      .then((loadedNotes) => {
+        setNotes(loadedNotes);
+
+        // Stage 2 of nav restore (2E): validate that the saved note still exists,
+        // then switch to the saved view. If the note was deleted, fall back to library.
+        const pending = pendingNavRestoreRef.current;
+        if (pending?.selectedNoteId) {
+          const noteExists = loadedNotes.some(n => n.id === pending.selectedNoteId);
+          if (noteExists) {
+            setView(pending.view);
+          } else {
+            // Note was deleted since last session
+            setSelectedNoteId(null);
+            sessionStorage.removeItem(`yidhan-nav-${userId}`);
+          }
+        }
+      })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        pendingNavRestoreRef.current = null;
+        setLoading(false);
+      });
 
     // Subscribe to real-time changes (also write to IndexedDB to keep IDB in sync)
     const unsubscribe = subscribeToNotes(
@@ -412,7 +531,8 @@ function App() {
           // Avoid duplicates
           if (prev.some((n) => n.id === newNote.id)) return prev;
           // New notes from real-time don't have tags; they'll be fetched on next full load
-          return [newNote, ...prev];
+          // Set syncStatus: 'synced' since this note came from the server
+          return [{ ...newNote, syncStatus: 'synced' as const }, ...prev];
         });
       },
       (updatedNote) => {
@@ -424,7 +544,7 @@ function App() {
           // Remove from active notes and update faded count
           setNotes((prev) => prev.filter((n) => n.id !== updatedNote.id));
           setFadedNotesCount((prev) => prev + 1);
-          if (selectedNoteId === updatedNote.id) {
+          if (selectedNoteIdRef.current === updatedNote.id) {
             setView('library');
             setSelectedNoteId(null);
           }
@@ -436,18 +556,19 @@ function App() {
         setNotes((prev) => {
           const existingNote = prev.find((n) => n.id === updatedNote.id);
           if (existingNote) {
-            // Note exists, update it preserving tags
+            // Note exists, update it preserving tags and local-only fields
             return prev.map((n) => {
               if (n.id === updatedNote.id) {
-                return { ...updatedNote, tags: n.tags };
+                return { ...updatedNote, tags: n.tags, syncStatus: n.syncStatus };
               }
               return n;
             });
           } else {
             // Note doesn't exist in active list (was restored from faded)
             // Add it back (tags will be empty, will refresh on next full load)
+            // Set syncStatus: 'synced' since this came from the server
             setFadedNotesCount((prev) => Math.max(0, prev - 1));
-            return [updatedNote, ...prev];
+            return [{ ...updatedNote, syncStatus: 'synced' as const }, ...prev];
           }
         });
       },
@@ -456,7 +577,7 @@ function App() {
         deleteNoteFromServer(userId, deletedId).catch(console.error);
 
         setNotes((prev) => prev.filter((n) => n.id !== deletedId));
-        if (selectedNoteId === deletedId) {
+        if (selectedNoteIdRef.current === deletedId) {
           setView('library');
           setSelectedNoteId(null);
         }
@@ -464,7 +585,9 @@ function App() {
     );
 
     return () => unsubscribe();
-  }, [userId, selectedNoteId, isHydrating, hydrationBypassed]);
+  }, [userId, isHydrating, hydrationBypassed]);
+  // Note: selectedNoteId removed from deps (2F) — using selectedNoteIdRef instead
+  // to prevent Supabase channel unsubscribe/resubscribe on every note selection
 
   // Migrate demo content from landing page to user's first note
   // Dependency: userId (string) instead of user (object) because:
@@ -746,14 +869,18 @@ function App() {
     const previousNote = notes.find((n) => n.id === updatedNote.id);
 
     // Update local state immediately for responsiveness (optimistic update)
+    // Set syncStatus: 'pending' so the pending→synced transition is observable (3A)
     setNotes((prev) =>
-      prev.map((n) => (n.id === updatedNote.id ? updatedNote : n))
+      prev.map((n) => (n.id === updatedNote.id ? { ...updatedNote, syncStatus: 'pending' as const } : n))
     );
 
     try {
       // Save to IndexedDB (immediate, works offline)
       // Sync engine will push to server when online
       await updateNoteOffline(user.id, updatedNote);
+
+      // Trigger coalesced sync (2s after last save) to push changes promptly
+      triggerCoalescedSync();
     } catch (error) {
       console.error('Note save failed:', error);
 
@@ -772,7 +899,7 @@ function App() {
       // Re-throw so Editor can show error state
       throw error;
     }
-  }, [user, notes]);
+  }, [user, notes, triggerCoalescedSync]);
 
   // Soft delete a note (move to Faded Notes)
   // Returns true on success, false on failure (for UI recovery in swipe gestures)
@@ -947,19 +1074,47 @@ function App() {
     setActiveConflict(null);
   };
 
-  // Pull-to-refresh handler - refreshes notes from IndexedDB/server
+  // Pull-to-refresh handler - syncs with server first, then rehydrates state
   const handleRefresh = useCallback(async () => {
     if (!user) return;
 
     try {
+      // Sync with server first (push + pull)
+      const { outcome } = await triggerSync();
+
+      // Rehydrate React state from IndexedDB (now has fresh server data)
       const refreshedNotes = await fetchNotesOffline(user.id);
       setNotes(refreshedNotes);
-      toast.success('Notes refreshed', { duration: 1500, icon: '🔄' });
+      const refreshedTags = await fetchTagsOffline(user.id);
+      setTags(refreshedTags);
+
+      // Show outcome-specific feedback
+      switch (outcome) {
+        case 'ok':
+          toast.success('Notes refreshed', { duration: 1500 });
+          break;
+        case 'partial':
+          toast('Refreshed, but some changes couldn\u2019t sync', {
+            duration: 3000,
+            icon: '\u26A0\uFE0F',
+          });
+          break;
+        case 'offline':
+          toast('You\u2019re offline. Showing local notes.', {
+            duration: 2000,
+          });
+          break;
+        case 'error':
+          toast.error('Couldn\u2019t reach server. Showing local notes.', {
+            duration: 3000,
+          });
+          break;
+      }
     } catch (error) {
       console.error('Refresh failed:', error);
       toast.error('Failed to refresh notes');
     }
-  }, [user]);
+  }, [user, triggerSync]);
 
   // Tag filter handlers
   const handleTagToggle = (tagId: string) => {
@@ -1752,6 +1907,7 @@ function App() {
               theme={theme}
               onThemeToggle={handleThemeToggle}
               onSettingsClick={() => setShowSettingsModal(true)}
+              noteSyncStatus={selectedNote.syncStatus}
             />
           </Suspense>
         </ErrorBoundary>

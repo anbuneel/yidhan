@@ -3,6 +3,7 @@ export interface Tag {
   name: string;
   color: TagColor;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export interface Note {
@@ -14,6 +15,7 @@ export interface Note {
   tags: Tag[];
   pinned: boolean;
   deletedAt?: Date | null;
+  syncStatus?: 'synced' | 'pending' | 'conflict';
 }
 
 export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded';

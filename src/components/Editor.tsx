@@ -41,11 +41,12 @@ interface EditorProps {
   onThemeToggle: () => void;
   onSettingsClick: () => void;
   isDemo?: boolean; // Hide share functionality in demo mode
+  noteSyncStatus?: 'synced' | 'pending' | 'conflict'; // Note-specific sync status (3A)
 }
 
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'copied' | 'error';
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'synced' | 'copied' | 'error';
 
-export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false }: EditorProps) {
+export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus }: EditorProps) {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -76,6 +77,18 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   const inFlightSaveRef = useRef<Promise<void> | null>(null);
   const [currentNoteId, setCurrentNoteId] = useState(note.id);
 
+  // Remote update tracking (2B): detect when the note prop changes from
+  // another device's sync, distinguish from our own save echoing back
+  const lastSavedTitleRef = useRef(note.title);
+  const lastSavedContentRef = useRef(note.content);
+  const [remoteUpdate, setRemoteUpdate] = useState<{
+    title: string;
+    content: string;
+  } | null>(null);
+  // Track the last dismissed remote version so the detection effect
+  // doesn't re-show the banner after the next sync rehydration
+  const dismissedRemoteRef = useRef<{ title: string; content: string } | null>(null);
+
   // Reset local state when switching to a different note
   useEffect(() => {
     if (currentNoteId !== note.id) {
@@ -85,6 +98,11 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       setCurrentNoteId(note.id);
       setTitle(note.title);
       setContent(note.content);
+      // Update lastSaved refs for the new note (2B)
+      lastSavedTitleRef.current = note.title;
+      lastSavedContentRef.current = note.content;
+      setRemoteUpdate(null);
+      dismissedRemoteRef.current = null;
       // Reset resume chip and scroll save for new note
       setShowResumeChip(false);
       setSavedScrollPosition(null);
@@ -94,6 +112,48 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.id]);
+
+  // Detect remote updates to the currently open note (2B)
+  // When the note prop changes (from sync rehydration) while the same note is open:
+  // - Self-echo: incoming matches what we last saved → ignore
+  // - Clean editor: no unsaved changes → silently update local state
+  // - Dirty editor: user has unsaved changes → show "Updated on another device" banner
+  useEffect(() => {
+    // Only watch for changes when the note ID hasn't changed (same note open)
+    if (note.id !== currentNoteId) return;
+
+    // Check if the prop actually changed
+    const propTitleChanged = note.title !== lastSavedTitleRef.current;
+    const propContentChanged = note.content !== lastSavedContentRef.current;
+    if (!propTitleChanged && !propContentChanged) return;
+
+    // Skip if this is a version the user already dismissed via "Keep mine"
+    if (
+      dismissedRemoteRef.current &&
+      note.title === dismissedRemoteRef.current.title &&
+      note.content === dismissedRemoteRef.current.content
+    ) return;
+
+    // Check if the local editor has unsaved changes
+    const hasUnsavedChanges =
+      title !== lastSavedTitleRef.current ||
+      content !== lastSavedContentRef.current;
+
+    if (hasUnsavedChanges) {
+      // Dirty editor: show banner to let user choose
+      setRemoteUpdate({ title: note.title, content: note.content });
+    } else {
+      // Clean editor: silently update local state
+      setTitle(note.title);
+      setContent(note.content);
+      lastSavedTitleRef.current = note.title;
+      lastSavedContentRef.current = note.content;
+      if (editor) {
+        editor.commands.setContent(note.content, { emitUpdate: false });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note.title, note.content, note.id]);
 
   // Load saved scroll position and show Resume chip if far from top
   useEffect(() => {
@@ -184,6 +244,15 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
     setSaveStatus('saving');
 
+    // Update lastSaved refs BEFORE the async call (2B fix).
+    // The optimistic setNotes() inside onUpdate triggers a React re-render;
+    // if refs still have old values, the remote-detection effect would
+    // misclassify our own save as a remote update and show a false banner.
+    const prevSavedTitle = lastSavedTitleRef.current;
+    const prevSavedContent = lastSavedContentRef.current;
+    lastSavedTitleRef.current = title;
+    lastSavedContentRef.current = content;
+
     // Create and track the save promise
     const savePromise = (async () => {
       try {
@@ -194,7 +263,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
           updatedAt: new Date(),
         });
 
-        // Save succeeded - show success state
+        // Show success state
         setSaveStatus('saved');
 
         // Hide indicator after 2 seconds
@@ -202,6 +271,11 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
           setSaveStatus('idle');
         }, 2000);
       } catch {
+        // Revert refs so the detection effect correctly identifies
+        // the state as "unsaved changes" after a failed save
+        lastSavedTitleRef.current = prevSavedTitle;
+        lastSavedContentRef.current = prevSavedContent;
+
         // Save failed after retries - show error state
         setSaveStatus('error');
 
@@ -229,15 +303,65 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       clearTimeout(autoSaveTimeoutRef.current);
     }
 
-    // Schedule auto-save after 1.5 seconds of inactivity
+    // Schedule auto-save after 800ms of inactivity (reduced from 1.5s for faster sync)
     autoSaveTimeoutRef.current = setTimeout(() => {
       performSave();
-    }, 1500);
+    }, 800);
 
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
+    };
+  }, [title, content, note.title, note.content, performSave]);
+
+  // Flush pending auto-save on visibility change / page hide.
+  // When user switches apps on mobile, the pending debounce timer may never fire.
+  // This ensures edits are saved to IndexedDB before the page becomes hidden.
+  const flushingRef = useRef(false);
+  useEffect(() => {
+    const flush = async () => {
+      // Guard: prevent double-dispatch if both visibilitychange and pagehide fire
+      if (flushingRef.current) return;
+      flushingRef.current = true;
+
+      try {
+        // Cancel the debounce timer
+        if (autoSaveTimeoutRef.current) {
+          clearTimeout(autoSaveTimeoutRef.current);
+          autoSaveTimeoutRef.current = null;
+        }
+
+        // Await any in-flight save before starting a new one
+        if (inFlightSaveRef.current) {
+          await inFlightSaveRef.current;
+        }
+
+        // Only save if there are unsaved changes
+        if (title !== note.title || content !== note.content) {
+          await performSave();
+        }
+      } finally {
+        flushingRef.current = false;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flush();
+      }
+    };
+
+    const handlePageHide = () => {
+      flush();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
     };
   }, [title, content, note.title, note.content, performSave]);
 
@@ -282,6 +406,31 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     };
   }, []);
 
+  // Note-specific sync indicator (3A): when this note transitions from 'pending'
+  // to 'synced', briefly show the "Synced" cloud-check status.
+  // Only fires when the editor is in 'saved' or 'idle' state to avoid interrupting
+  // active save indicators.
+  const prevSyncStatusRef = useRef(noteSyncStatus);
+  useEffect(() => {
+    const prev = prevSyncStatusRef.current;
+    prevSyncStatusRef.current = noteSyncStatus;
+
+    if (
+      prev === 'pending' &&
+      noteSyncStatus === 'synced' &&
+      (saveStatus === 'saved' || saveStatus === 'idle')
+    ) {
+      // Clear any existing indicator timeouts
+      if (savePhaseTimeoutRef.current) clearTimeout(savePhaseTimeoutRef.current);
+      if (hideIndicatorTimeoutRef.current) clearTimeout(hideIndicatorTimeoutRef.current);
+
+      setSaveStatus('synced');
+      hideIndicatorTimeoutRef.current = setTimeout(() => {
+        setSaveStatus('idle');
+      }, 2000);
+    }
+  }, [noteSyncStatus, saveStatus]);
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setTitle(e.target.value);
     // Auto-resize
@@ -301,6 +450,26 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       // Focus will move to the editor naturally
     }
   };
+
+  // Remote update banner handlers (2B)
+  const handleLoadRemoteChanges = useCallback(() => {
+    if (!remoteUpdate) return;
+    setTitle(remoteUpdate.title);
+    setContent(remoteUpdate.content);
+    lastSavedTitleRef.current = remoteUpdate.title;
+    lastSavedContentRef.current = remoteUpdate.content;
+    if (editor) {
+      editor.commands.setContent(remoteUpdate.content, { emitUpdate: false });
+    }
+    setRemoteUpdate(null);
+  }, [remoteUpdate, editor]);
+
+  const handleKeepMine = useCallback(() => {
+    if (remoteUpdate) {
+      dismissedRemoteRef.current = remoteUpdate;
+    }
+    setRemoteUpdate(null);
+  }, [remoteUpdate]);
 
   // Check if note has meaningful content (not just empty HTML)
   // Uses current content state, not note.content prop, to handle unsaved changes
@@ -386,6 +555,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
         return { color: 'var(--color-accent)', background: 'var(--color-accent-glow)' };
       case 'error':
         return { color: 'var(--color-error)', background: 'var(--color-error-light)' };
+      case 'synced':
+        return { color: 'var(--color-accent)', background: 'var(--color-accent-glow)' };
       default:
         return { color: 'var(--color-success)', background: 'var(--color-success-glow)' };
     }
@@ -540,6 +711,15 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
               Saved
+            </>
+          )}
+          {saveStatus === 'synced' && (
+            <>
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12.5l2 2 4-4" />
+              </svg>
+              Synced
             </>
           )}
         </span>
@@ -805,6 +985,86 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
             </svg>
             Resume where you left off
           </button>
+        </div>
+      )}
+
+      {/* Remote update banner (2B) — shown when another device updates this note
+           while the editor has unsaved local changes */}
+      {remoteUpdate && (
+        <div
+          className="max-w-[800px] mx-auto px-4 sm:px-10"
+          role="alert"
+        >
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg animate-fade-in"
+            style={{
+              background: 'var(--color-accent-glow)',
+              border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)',
+            }}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <svg
+                className="w-4 h-4 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                style={{ color: 'var(--color-accent)' }}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                />
+              </svg>
+              <span
+                className="text-sm truncate"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-text-primary)',
+                }}
+              >
+                Updated on another device
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleKeepMine}
+                className="text-xs px-3 py-1.5 rounded-md transition-colors duration-200"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-text-secondary)',
+                  background: 'transparent',
+                  border: '1px solid var(--glass-border)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-text-secondary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--glass-border)';
+                }}
+              >
+                Keep mine
+              </button>
+              <button
+                onClick={handleLoadRemoteChanges}
+                className="text-xs px-3 py-1.5 rounded-md transition-colors duration-200"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-bg-primary)',
+                  background: 'var(--color-accent)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.85';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                Load changes
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

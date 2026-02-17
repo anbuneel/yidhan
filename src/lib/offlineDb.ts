@@ -79,6 +79,11 @@ export interface ConflictRecord {
   detectedAt: number;
 }
 
+// Sentinel value for lastSyncedAt after migration: forces full re-pull
+// while keeping conflict detection active (truthy, so the `lastSyncedAt`
+// guard in processNoteOperation still fires).
+export const MIGRATION_SYNC_SENTINEL = 1;
+
 // Yidhan offline database
 // NOTE: Database name kept as 'zenote-offline-*' for backwards compatibility
 // Existing users' data would be lost if renamed without migration
@@ -112,6 +117,26 @@ class YidhanDB extends Dexie {
       noteTags: '[noteId+tagId], noteId, tagId, syncStatus',
       syncQueue: '++id, clientMutationId, entityType, entityId, createdAt',
       conflicts: '++id, entityType, entityId, detectedAt',
+    });
+
+    // v3: One-time sync cursor migration (Phase 3C)
+    // Reset lastSyncedAt to force full re-pull with server timestamps.
+    // Uses 1 (not 0) so conflict detection remains active — the truthy check
+    // at processNoteOperation guards against silent overwrites on first edit.
+    // Pending/conflict entries keep their cursors for safe conflict detection.
+    this.version(3).stores({
+      notes: 'id, userId, syncStatus, deletedAt, pinned, updatedAt',
+      tags: 'id, name, syncStatus',
+      noteTags: '[noteId+tagId], noteId, tagId, syncStatus',
+      syncQueue: '++id, clientMutationId, entityType, entityId, createdAt',
+      conflicts: '++id, entityType, entityId, detectedAt',
+    }).upgrade(async (tx) => {
+      await tx.table('notes')
+        .where('syncStatus').equals('synced')
+        .modify({ lastSyncedAt: MIGRATION_SYNC_SENTINEL });
+      await tx.table('tags')
+        .where('syncStatus').equals('synced')
+        .modify({ lastSyncedAt: MIGRATION_SYNC_SENTINEL });
     });
   }
 }
@@ -160,26 +185,15 @@ export async function hasOfflineDb(userId: string): Promise<boolean> {
   const TIMEOUT_MS = 3000; // 3 second timeout
 
   try {
-    // Wrap Dexie.getDatabaseNames() with timeout - can hang on Android WebView
-    const getDatabaseNamesWithTimeout = (): Promise<string[]> => {
-      return new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error('getDatabaseNames timeout'));
-        }, TIMEOUT_MS);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('getDatabaseNames timeout')), TIMEOUT_MS)
+    );
 
-        Dexie.getDatabaseNames()
-          .then((names) => {
-            clearTimeout(timeoutId);
-            resolve(names);
-          })
-          .catch((err) => {
-            clearTimeout(timeoutId);
-            reject(err);
-          });
-      });
-    };
+    const databases = await Promise.race([
+      Dexie.getDatabaseNames(),
+      timeoutPromise
+    ]);
 
-    const databases = await getDatabaseNamesWithTimeout();
     return databases.includes(dbName);
   } catch (error) {
     // If getDatabaseNames hangs or fails, assume DB doesn't exist

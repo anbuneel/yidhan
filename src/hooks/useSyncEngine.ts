@@ -13,13 +13,23 @@ import {
   fullSync,
   setConflictHandler,
   isSyncInProgress,
+  clearSyncState,
   type SyncResult,
   type ConflictInfo,
+  type FullSyncResult,
+  type PullError,
 } from '../services/syncEngine';
 import { getPendingSyncCount } from '../services/offlineNotes';
 
 // On native platforms, always attempt sync (let API calls fail naturally)
 const isNative = Capacitor.isNativePlatform();
+
+export type SyncOutcome = 'ok' | 'partial' | 'offline' | 'error';
+
+export interface TriggerSyncResult {
+  outcome: SyncOutcome;
+  result?: FullSyncResult;
+}
 
 export interface SyncState {
   /** Whether a sync is currently in progress */
@@ -32,16 +42,50 @@ export interface SyncState {
   lastSyncAt: Date | null;
   /** Any unresolved conflicts */
   conflicts: ConflictInfo[];
-  /** Trigger a manual sync */
-  triggerSync: () => Promise<void>;
+  /** Trigger a manual sync, returns outcome */
+  triggerSync: () => Promise<TriggerSyncResult>;
   /** Remove a conflict after resolution */
   removeConflict: (entityId: string) => void;
 }
 
 /**
+ * Map a FullSyncResult to a SyncOutcome.
+ *
+ * Deterministic mapping based on unique failed entities in data pulls only.
+ * Membership-query failures map to 'partial' (not 'error') since they only
+ * affect reconciliation, not data freshness.
+ *
+ * Key: even when both entities report data errors, if partial data was
+ * applied (mid-pagination success), we classify as 'partial' not 'error'.
+ */
+export function mapSyncOutcome(result: FullSyncResult): SyncOutcome {
+  const failedDataEntities = new Set(
+    result.pullErrors
+      .filter((e: PullError) => e.operation === 'data')
+      .map((e: PullError) => e.entity)
+  );
+  const hasMembershipErrors = result.pullErrors.some(
+    (e: PullError) => e.operation === 'membership'
+  );
+  const totalPulled = result.pulled.notes + result.pulled.tags;
+
+  // Both note and tag DATA pulls failed AND zero data was actually applied
+  if (failedDataEntities.size === 2 && totalPulled === 0) return 'error';
+
+  // Some failures (data errors with partial data, push failures, or membership issues)
+  if (failedDataEntities.size > 0 || result.failed > 0 || hasMembershipErrors) {
+    return 'partial';
+  }
+
+  return 'ok';
+}
+
+/**
  * Hook that manages the sync engine lifecycle
  */
-export function useSyncEngine(): SyncState {
+export function useSyncEngine(
+  onSyncComplete?: (result: FullSyncResult) => void
+): SyncState {
   const { user, isHydrating } = useAuth();
   const { isOnline, onReconnect } = useNetworkStatus();
 
@@ -54,32 +98,84 @@ export function useSyncEngine(): SyncState {
   // Track if we're mounted
   const mountedRef = useRef(true);
 
-  // Sync function
-  const doSync = useCallback(async () => {
+  // Stable ref for onSyncComplete to avoid re-creating doSync on every render
+  const onSyncCompleteRef = useRef(onSyncComplete);
+  onSyncCompleteRef.current = onSyncComplete;
+
+  // Re-run latch: when triggerSync is called while a sync is in progress,
+  // set this flag. After doSync completes, if the latch is set, run again.
+  // Binary (not counter) to avoid runaway re-runs.
+  const syncRequestedWhileRunningRef = useRef(false);
+
+  // Track the in-flight sync promise so callers can await it
+  const activeSyncPromiseRef = useRef<Promise<TriggerSyncResult> | null>(null);
+
+  // Core sync function — returns TriggerSyncResult
+  const doSync = useCallback(async (): Promise<TriggerSyncResult> => {
     // On native platforms, always try to sync (network detection is unreliable)
     // On web, respect the isOnline status
-    if (!user || isHydrating || (!isNative && !isOnline)) return;
-    if (isSyncInProgress()) return;
+    if (!user || isHydrating || (!isNative && !isOnline)) {
+      return { outcome: 'offline' };
+    }
+    if (isSyncInProgress()) {
+      // Signal re-run after current sync completes
+      syncRequestedWhileRunningRef.current = true;
+      // Await the in-flight sync so callers get the actual result
+      // (prevents handleRefresh from showing false "Notes refreshed")
+      if (activeSyncPromiseRef.current) {
+        return activeSyncPromiseRef.current;
+      }
+      return { outcome: 'ok' };
+    }
 
     setIsSyncing(true);
-    try {
-      const result = await fullSync(user.id);
-      if (mountedRef.current) {
-        setLastResult(result);
-        setLastSyncAt(new Date());
 
-        // Refresh pending count
-        const count = await getPendingSyncCount(user.id);
-        setPendingCount(count);
+    // Store the promise so concurrent callers can await the same sync
+    const syncExecution = (async (): Promise<TriggerSyncResult> => {
+      try {
+        const result = await fullSync(user.id);
+        if (mountedRef.current) {
+          setLastResult(result);
+          setLastSyncAt(new Date());
 
+          // Refresh pending count
+          const count = await getPendingSyncCount(user.id);
+          setPendingCount(count);
+
+          // Conditional rehydration: only call when sync had meaningful changes
+          if (result.processed > 0 || result.conflicts > 0 ||
+              result.pulled.notes > 0 || result.pulled.tags > 0 ||
+              result.deleted.notes > 0 || result.deleted.tags > 0) {
+            onSyncCompleteRef.current?.(result);
+          }
+        }
+
+        const outcome = mapSyncOutcome(result);
+        return { outcome, result };
+      } catch (error) {
+        console.error('Sync failed:', error);
+        return { outcome: 'error' };
+      } finally {
+        activeSyncPromiseRef.current = null;
+        if (mountedRef.current) {
+          setIsSyncing(false);
+        }
+
+        // Check re-run latch: if sync was requested during this run, run again
+        if (syncRequestedWhileRunningRef.current) {
+          syncRequestedWhileRunningRef.current = false;
+          // Use setTimeout to avoid stack overflow and allow React to update
+          setTimeout(() => {
+            if (mountedRef.current) {
+              doSync();
+            }
+          }, 100);
+        }
       }
-    } catch (error) {
-      console.error('Sync failed:', error);
-    } finally {
-      if (mountedRef.current) {
-        setIsSyncing(false);
-      }
-    }
+    })();
+
+    activeSyncPromiseRef.current = syncExecution;
+    return syncExecution;
   }, [user, isHydrating, isOnline]);
 
   // Register conflict handler
@@ -113,7 +209,8 @@ export function useSyncEngine(): SyncState {
     }
   }, [user, isHydrating, isOnline, doSync]);
 
-  // Periodic sync every 30 seconds while online (or always on native)
+  // Periodic sync every 60 seconds while online (or always on native)
+  // Relaxed from 30s since saves now trigger immediate sync — interval is a safety net
   useEffect(() => {
     if (!user || (!isNative && !isOnline)) return;
 
@@ -121,7 +218,7 @@ export function useSyncEngine(): SyncState {
       if (!isSyncInProgress()) {
         doSync();
       }
-    }, 30000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [user, isOnline, doSync]);
@@ -149,11 +246,20 @@ export function useSyncEngine(): SyncState {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Cleanup on unmount
+  // Clear sync state on logout (user → null). The hook lives at the App
+  // root which never unmounts, so we react to `user` becoming null instead.
+  useEffect(() => {
+    if (!user) {
+      clearSyncState();
+    }
+  }, [user]);
+
+  // Track mounted state for safe state updates
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      clearSyncState();
     };
   }, []);
 
@@ -207,14 +313,16 @@ export async function resolveConflict(
 
       if (navigator.onLine) {
         // Try to push directly when online
-        const { error } = await supabase
+        const { data: pushed, error } = await supabase
           .from('notes')
           .update({
             title: localNote.title,
             content: localNote.content,
-            updated_at: new Date().toISOString(),
+            // updated_at is set by server-side trigger (notes_updated_at_trigger)
           })
-          .eq('id', localNote.id);
+          .eq('id', localNote.id)
+          .select('updated_at')
+          .single();
 
         if (error) {
           // Queue for retry if server update failed
@@ -226,11 +334,12 @@ export async function resolveConflict(
             syncStatus: 'pending',
           });
         } else {
-          // Mark as synced
+          // Mark as synced using server timestamp to avoid clock skew
+          const serverTime = new Date(pushed.updated_at).getTime();
           await db.notes.update(localNote.id, {
             syncStatus: 'synced',
-            lastSyncedAt: Date.now(),
-            serverUpdatedAt: Date.now(),
+            lastSyncedAt: serverTime,
+            serverUpdatedAt: serverTime,
           });
         }
       } else {
@@ -247,7 +356,8 @@ export async function resolveConflict(
     }
 
     case 'server': {
-      // Apply server version locally
+      // Apply server version locally — use server timestamp for all fields
+      const serverTime = new Date(serverNote.updated_at).getTime();
       await db.notes.update(serverNote.id, {
         title: serverNote.title,
         content: serverNote.content,
@@ -255,11 +365,11 @@ export async function resolveConflict(
         deletedAt: serverNote.deleted_at
           ? new Date(serverNote.deleted_at).getTime()
           : null,
-        updatedAt: new Date(serverNote.updated_at).getTime(),
+        updatedAt: serverTime,
         syncStatus: 'synced',
-        lastSyncedAt: Date.now(),
-        serverUpdatedAt: new Date(serverNote.updated_at).getTime(),
-        localUpdatedAt: new Date(serverNote.updated_at).getTime(),
+        lastSyncedAt: serverTime,
+        serverUpdatedAt: serverTime,
+        localUpdatedAt: serverTime,
       });
       break;
     }
@@ -294,7 +404,8 @@ export async function resolveConflict(
         pinned: false,
       });
 
-      // Update original with server version
+      // Update original with server version — use server timestamp for sync cursor
+      const serverUpdatedTime = new Date(serverNote.updated_at).getTime();
       await db.notes.update(serverNote.id, {
         title: serverNote.title,
         content: serverNote.content,
@@ -302,11 +413,11 @@ export async function resolveConflict(
         deletedAt: serverNote.deleted_at
           ? new Date(serverNote.deleted_at).getTime()
           : null,
-        updatedAt: new Date(serverNote.updated_at).getTime(),
+        updatedAt: serverUpdatedTime,
         syncStatus: 'synced',
-        lastSyncedAt: now,
-        serverUpdatedAt: new Date(serverNote.updated_at).getTime(),
-        localUpdatedAt: new Date(serverNote.updated_at).getTime(),
+        lastSyncedAt: serverUpdatedTime,
+        serverUpdatedAt: serverUpdatedTime,
+        localUpdatedAt: serverUpdatedTime,
       });
       break;
     }

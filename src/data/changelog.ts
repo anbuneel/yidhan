@@ -8,6 +8,21 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.11.0',
+    date: '2026-02-16',
+    changes: [
+      { type: 'feature', text: 'Cross-device sync: edits now reach other devices in ~3 seconds (down from ~32s)' },
+      { type: 'feature', text: 'Note-specific "Synced" indicator confirms when your note reaches the cloud' },
+      { type: 'feature', text: 'Remote update banner: see when another device edits the same note, choose to load or keep' },
+      { type: 'improvement', text: 'Pull-to-refresh now syncs with server and shows honest status feedback' },
+      { type: 'improvement', text: 'Page refresh preserves your place in the editor instead of dumping to library' },
+      { type: 'improvement', text: 'Auto-save debounce reduced from 1.5s to 800ms for faster save cycles' },
+      { type: 'fix', text: 'Mobile app-switching no longer loses unsaved edits (visibility flush)' },
+      { type: 'fix', text: 'Server timestamp standardization prevents clock-skew sync issues across devices' },
+      { type: 'fix', text: 'One-time sync cursor migration fixes legacy skewed timestamps' },
+    ],
+  },
+  {
     version: '2.10.1',
     date: '2026-02-12',
     changes: [
