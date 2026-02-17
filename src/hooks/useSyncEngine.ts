@@ -53,8 +53,11 @@ export interface SyncState {
  * Deterministic mapping based on unique failed entities in data pulls only.
  * Membership-query failures map to 'partial' (not 'error') since they only
  * affect reconciliation, not data freshness.
+ *
+ * Key: even when both entities report data errors, if partial data was
+ * applied (mid-pagination success), we classify as 'partial' not 'error'.
  */
-function mapSyncOutcome(result: FullSyncResult): SyncOutcome {
+export function mapSyncOutcome(result: FullSyncResult): SyncOutcome {
   const failedDataEntities = new Set(
     result.pullErrors
       .filter((e: PullError) => e.operation === 'data')
@@ -63,12 +66,13 @@ function mapSyncOutcome(result: FullSyncResult): SyncOutcome {
   const hasMembershipErrors = result.pullErrors.some(
     (e: PullError) => e.operation === 'membership'
   );
+  const totalPulled = result.pulled.notes + result.pulled.tags;
 
-  // Both note and tag DATA pulls failed — no useful data fetched
-  if (failedDataEntities.size === 2) return 'error';
+  // Both note and tag DATA pulls failed AND zero data was actually applied
+  if (failedDataEntities.size === 2 && totalPulled === 0) return 'error';
 
-  // Some failures (one data pull, push failures, or membership issues)
-  if (failedDataEntities.size === 1 || result.failed > 0 || hasMembershipErrors) {
+  // Some failures (data errors with partial data, push failures, or membership issues)
+  if (failedDataEntities.size > 0 || result.failed > 0 || hasMembershipErrors) {
     return 'partial';
   }
 

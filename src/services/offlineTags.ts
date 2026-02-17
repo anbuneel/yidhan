@@ -213,18 +213,23 @@ export async function deleteTagOffline(
 /**
  * Mark a tag as synced after successful server sync
  */
+/**
+ * Mark a tag as synced after successful server sync.
+ * Uses the server's timestamp for lastSyncedAt to keep the cursor
+ * in the same time domain as the incremental pull query (updated_at / created_at).
+ */
 export async function markTagSynced(
   userId: string,
   tagId: string,
   serverUpdatedAt: Date
 ): Promise<void> {
   const db = getOfflineDb(userId);
-  const now = Date.now();
+  const serverTime = serverUpdatedAt.getTime();
 
   await db.tags.update(tagId, {
     syncStatus: 'synced',
-    lastSyncedAt: now,
-    serverUpdatedAt: serverUpdatedAt.getTime(),
+    lastSyncedAt: serverTime,
+    serverUpdatedAt: serverTime,
   });
 }
 

@@ -344,38 +344,51 @@ async function processTagOperation(
       // Check if tag already exists (idempotency)
       const { data: existing } = await supabase
         .from('tags')
-        .select('id')
+        .select('id, created_at')
         .eq('id', tagId)
         .maybeSingle();
 
       if (existing) {
-        await markTagSynced(userId, tagId, new Date());
+        // Use server timestamp for cursor consistency
+        await markTagSynced(userId, tagId, new Date(existing.created_at));
         return true;
       }
 
-      const { error } = await supabase.from('tags').insert({
+      const { data: created, error } = await supabase.from('tags').insert({
         id: tagId,
         user_id: userId,
         name: data.name as string,
         color: data.color as string,
-      });
+      }).select().single();
 
       if (error) throw error;
-      await markTagSynced(userId, tagId, new Date());
+      // Use server-generated created_at (or updated_at when available)
+      const createdRecord = created as Record<string, unknown>;
+      const serverTime = createdRecord.updated_at
+        ? new Date(createdRecord.updated_at as string)
+        : new Date(created.created_at);
+      await markTagSynced(userId, tagId, serverTime);
       return true;
     }
 
     case 'update': {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('tags')
         .update({
           name: data.name as string,
           color: data.color as string,
         })
-        .eq('id', tagId);
+        .eq('id', tagId)
+        .select()
+        .single();
 
       if (error) throw error;
-      await markTagSynced(userId, tagId, new Date());
+      // Use server timestamp — updated_at when available, else created_at
+      const updatedRecord = updated as Record<string, unknown>;
+      const serverTime = updatedRecord.updated_at
+        ? new Date(updatedRecord.updated_at as string)
+        : new Date(updated.created_at);
+      await markTagSynced(userId, tagId, serverTime);
       return true;
     }
 
@@ -726,15 +739,21 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
       continue;
     }
 
+    // Use updated_at for cursor when available, fall back to created_at.
+    // This keeps the cursor in the same time domain as the incremental query.
+    const tagRecord = serverTag as Record<string, unknown>;
+    const serverTimestamp = tagRecord.updated_at
+      ? new Date(tagRecord.updated_at as string).getTime()
+      : new Date(serverTag.created_at).getTime();
+
     // Only count as "pulled" if data actually differs
-    const serverCreatedAt = new Date(serverTag.created_at).getTime();
     if (localTag &&
         localTag.name === serverTag.name &&
         localTag.color === serverTag.color) {
       // No actual change — still update sync cursor but don't count
       await db.tags.update(serverTag.id, {
-        lastSyncedAt: serverCreatedAt,
-        serverUpdatedAt: serverCreatedAt,
+        lastSyncedAt: serverTimestamp,
+        serverUpdatedAt: serverTimestamp,
       });
       continue;
     }
@@ -744,11 +763,11 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
       userId,
       name: serverTag.name,
       color: serverTag.color,
-      createdAt: serverCreatedAt,
+      createdAt: new Date(serverTag.created_at).getTime(),
       syncStatus: 'synced',
-      lastSyncedAt: serverCreatedAt,
-      serverUpdatedAt: serverCreatedAt,
-      localUpdatedAt: serverCreatedAt,
+      lastSyncedAt: serverTimestamp,
+      serverUpdatedAt: serverTimestamp,
+      localUpdatedAt: serverTimestamp,
     });
     pulledTags++;
   }
