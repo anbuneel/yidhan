@@ -185,26 +185,15 @@ export async function hasOfflineDb(userId: string): Promise<boolean> {
   const TIMEOUT_MS = 3000; // 3 second timeout
 
   try {
-    // Wrap Dexie.getDatabaseNames() with timeout - can hang on Android WebView
-    const getDatabaseNamesWithTimeout = (): Promise<string[]> => {
-      return new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error('getDatabaseNames timeout'));
-        }, TIMEOUT_MS);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('getDatabaseNames timeout')), TIMEOUT_MS)
+    );
 
-        Dexie.getDatabaseNames()
-          .then((names) => {
-            clearTimeout(timeoutId);
-            resolve(names);
-          })
-          .catch((err) => {
-            clearTimeout(timeoutId);
-            reject(err);
-          });
-      });
-    };
+    const databases = await Promise.race([
+      Dexie.getDatabaseNames(),
+      timeoutPromise
+    ]);
 
-    const databases = await getDatabaseNamesWithTimeout();
     return databases.includes(dbName);
   } catch (error) {
     // If getDatabaseNames hangs or fails, assume DB doesn't exist

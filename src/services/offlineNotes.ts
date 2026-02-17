@@ -206,14 +206,12 @@ export async function fetchNotesOffline(
   const db = getOfflineDb(userId);
 
   // Get all notes and filter in JS - Dexie null indexing is unreliable
-  const allNotes = await db.notes.toArray();
-  const notes = allNotes.filter((n) => n.deletedAt === null);
-
-  // Sort: pinned first, then by updatedAt descending
-  notes.sort((a, b) => {
-    if (a.pinned !== b.pinned) return b.pinned ? 1 : -1;
-    return b.updatedAt - a.updatedAt;
-  });
+  const notes = (await db.notes.toArray())
+    .filter((n) => n.deletedAt === null)
+    .sort((a, b) => {
+      if (a.pinned !== b.pinned) return b.pinned ? 1 : -1;
+      return b.updatedAt - a.updatedAt;
+    });
 
   // Get all tags for these notes
   const noteIds = notes.map((n) => n.id);
@@ -262,13 +260,11 @@ export async function fetchTagsOffline(userId: string): Promise<Tag[]> {
 export async function fetchFadedNotesOffline(userId: string): Promise<Note[]> {
   const db = getOfflineDb(userId);
 
-  // Get all soft-deleted notes
-  const notes = await db.notes
+  // Get all soft-deleted notes, sorted by deletedAt descending (most recently deleted first)
+  const notes = (await db.notes
     .filter((n) => n.deletedAt !== null)
-    .toArray();
-
-  // Sort by deletedAt descending (most recently deleted first)
-  notes.sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+    .toArray())
+    .sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
 
   // Get tags for these notes (same as above)
   const noteIds = notes.map((n) => n.id);
@@ -303,20 +299,18 @@ export async function searchNotesOffline(userId: string, query: string): Promise
   const db = getOfflineDb(userId);
   const searchLower = query.toLowerCase();
 
-  // Get all active notes and filter by search term
-  const notes = await db.notes
+  // Get all active notes, filter by search term, and sort
+  const notes = (await db.notes
     .filter((n) =>
       n.deletedAt === null &&
       (n.title.toLowerCase().includes(searchLower) ||
        n.content.toLowerCase().includes(searchLower))
     )
-    .toArray();
-
-  // Sort: pinned first, then by updatedAt descending
-  notes.sort((a, b) => {
-    if (a.pinned !== b.pinned) return b.pinned ? 1 : -1;
-    return b.updatedAt - a.updatedAt;
-  });
+    .toArray())
+    .sort((a, b) => {
+      if (a.pinned !== b.pinned) return b.pinned ? 1 : -1;
+      return b.updatedAt - a.updatedAt;
+    });
 
   // Get tags (same pattern as above)
   const noteIds = notes.map((n) => n.id);
@@ -797,9 +791,9 @@ export async function removeSyncQueueEntry(
   const db = getOfflineDb(userId);
   if (typeof entryId === 'number') {
     await db.syncQueue.delete(entryId);
-    return;
+  } else {
+    await db.syncQueue.where('clientMutationId').equals(clientMutationId).delete();
   }
-  await db.syncQueue.where('clientMutationId').equals(clientMutationId).delete();
 }
 
 /**
@@ -858,8 +852,11 @@ export async function upsertNoteFromServer(
 
   if (existing) {
     // Only update if server version is newer (or if local has no pending changes)
-    if (existing.syncStatus === 'synced' || !existing.localUpdatedAt ||
-        serverTime > existing.localUpdatedAt) {
+    const shouldUpdate = existing.syncStatus === 'synced' ||
+                        !existing.localUpdatedAt ||
+                        serverTime > existing.localUpdatedAt;
+
+    if (shouldUpdate) {
       await db.notes.update(note.id, {
         title: note.title,
         content: note.content,
@@ -922,17 +919,14 @@ export async function upsertTagFromServer(
 
   const existing = await db.tags.get(tag.id);
 
-  if (existing) {
-    // Only update if not pending local changes
-    if (existing.syncStatus === 'synced') {
-      await db.tags.update(tag.id, {
-        name: tag.name,
-        color: tag.color,
-        lastSyncedAt: serverTime,
-        serverUpdatedAt: serverTime,
-      });
-    }
-  } else {
+  if (existing?.syncStatus === 'synced') {
+    await db.tags.update(tag.id, {
+      name: tag.name,
+      color: tag.color,
+      lastSyncedAt: serverTime,
+      serverUpdatedAt: serverTime,
+    });
+  } else if (!existing) {
     // New tag from server
     const localTag: LocalTag = {
       id: tag.id,

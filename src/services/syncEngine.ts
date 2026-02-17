@@ -19,7 +19,6 @@ import {
   markNoteSynced,
 } from './offlineNotes';
 import { markTagSynced } from './offlineTags';
-import type { DbTag } from '../types/database';
 
 // Lazy check for native platform (avoids issues at module initialization)
 let _isNative: boolean | null = null;
@@ -363,14 +362,14 @@ async function processTagOperation(
         return true;
       }
 
-      const { data: created, error: createError } = await supabase.from('tags').insert({
+      const { data: created, error } = await supabase.from('tags').insert({
         id: tagId,
         user_id: userId,
         name: data.name as string,
         color: data.color as string,
       }).select().maybeSingle();
 
-      if (createError) throw createError;
+      if (error) throw error;
       if (!created) {
         // Insert returned no row — unexpected but not retryable.
         // Delete local tag to prevent stuck-pending state.
@@ -388,7 +387,7 @@ async function processTagOperation(
     }
 
     case 'update': {
-      const { data: updated, error: updateError } = await supabase
+      const { data: updated, error } = await supabase
         .from('tags')
         .update({
           name: data.name as string,
@@ -398,7 +397,7 @@ async function processTagOperation(
         .select()
         .maybeSingle();
 
-      if (updateError) throw updateError;
+      if (error) throw error;
       if (!updated) {
         // Tag was deleted on server — remove local copy to prevent
         // stuck-pending state. Membership cleanup only removes 'synced'
@@ -507,12 +506,12 @@ async function updateRetryCount(
   const db = getOfflineDb(userId);
   if (typeof entry.id === 'number') {
     await db.syncQueue.update(entry.id, { retryCount });
-    return;
+  } else {
+    await db.syncQueue
+      .where('clientMutationId')
+      .equals(entry.clientMutationId)
+      .modify({ retryCount });
   }
-  await db.syncQueue
-    .where('clientMutationId')
-    .equals(entry.clientMutationId)
-    .modify({ retryCount });
 }
 
 /**
@@ -728,30 +727,20 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
   const lastTagSync = Math.max(...syncedTags.map(t => t.lastSyncedAt || 0), 0);
 
   // Try incremental tag pull first; fall back to full pull if column doesn't exist
-  let tagPullData: DbTag[] = [];
-  let tagPullError: Error | null = null;
+  let tagResult = lastTagSync > 0
+    ? await fetchAllPaginated(() =>
+        supabase.from('tags').select('*').gt('updated_at', new Date(lastTagSync).toISOString())
+      )
+    : await fetchAllPaginated(() => supabase.from('tags').select('*'));
 
-  if (lastTagSync > 0) {
-    // Attempt incremental pull (will fail with 42703 if updated_at column doesn't exist yet)
-    const result = await fetchAllPaginated(() =>
-      supabase.from('tags').select('*').gt('updated_at', new Date(lastTagSync).toISOString())
-    );
-    const errCode = (result.error as Error & { code?: string })?.code;
-    if (result.error && (errCode === '42703' || result.error.message.includes('updated_at'))) {
-      // Fall back to full tag pull — column doesn't exist yet
-      const fallback = await fetchAllPaginated(() => supabase.from('tags').select('*'));
-      tagPullData = fallback.data;
-      tagPullError = fallback.error;
-    } else {
-      tagPullData = result.data;
-      tagPullError = result.error;
-    }
-  } else {
-    // Full pull (first sync or post-migration)
-    const result = await fetchAllPaginated(() => supabase.from('tags').select('*'));
-    tagPullData = result.data;
-    tagPullError = result.error;
+  // Fall back to full pull if updated_at column doesn't exist (42703 error)
+  const errCode = (tagResult.error as Error & { code?: string })?.code;
+  if (tagResult.error && (errCode === '42703' || tagResult.error.message.includes('updated_at'))) {
+    tagResult = await fetchAllPaginated(() => supabase.from('tags').select('*'));
   }
+
+  const tagPullData = tagResult.data;
+  const tagPullError = tagResult.error;
 
   if (tagPullError) {
     console.error('Error pulling remote tags:', tagPullError);
@@ -763,9 +752,7 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
     const localTag = localTags.find(t => t.id === serverTag.id);
 
     // Skip if local has pending changes
-    if (localTag && localTag.syncStatus === 'pending') {
-      continue;
-    }
+    if (localTag?.syncStatus === 'pending') continue;
 
     // Use updated_at for cursor when available, fall back to created_at.
     // This keeps the cursor in the same time domain as the incremental query.
@@ -775,9 +762,9 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
       : new Date(serverTag.created_at).getTime();
 
     // Only count as "pulled" if data actually differs
-    if (localTag &&
-        localTag.name === serverTag.name &&
-        localTag.color === serverTag.color) {
+    const hasChanges = !localTag || localTag.name !== serverTag.name || localTag.color !== serverTag.color;
+
+    if (!hasChanges) {
       // No actual change — still update sync cursor but don't count
       await db.tags.update(serverTag.id, {
         lastSyncedAt: serverTimestamp,

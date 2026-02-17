@@ -425,15 +425,17 @@ function App() {
   // View switch is deferred to stage 2 (after notes load) to avoid flicker.
   useEffect(() => {
     if (!userId) return;
+
     try {
       const saved = sessionStorage.getItem(`yidhan-nav-${userId}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const validViews: ViewMode[] = ['library', 'editor', 'changelog', 'roadmap', 'faded'];
-        if (parsed?.selectedNoteId && validViews.includes(parsed.view)) {
-          pendingNavRestoreRef.current = parsed;
-          setSelectedNoteId(parsed.selectedNoteId);
-        }
+      if (!saved) return;
+
+      const parsed = JSON.parse(saved);
+      const validViews: ViewMode[] = ['library', 'editor', 'changelog', 'roadmap', 'faded'];
+
+      if (parsed?.selectedNoteId && validViews.includes(parsed.view)) {
+        pendingNavRestoreRef.current = parsed;
+        setSelectedNoteId(parsed.selectedNoteId);
       }
     } catch {
       // Ignore invalid JSON
@@ -462,16 +464,16 @@ function App() {
     if (!userId) {
       setNotes([]);
       setLoading(false);
+
       // Only clear navigation state on actual sign-out (userId went non-null → null),
       // NOT on initial load when userId starts as null during auth hydration (2E fix)
       if (prevUserIdRef.current) {
-        for (let i = sessionStorage.length - 1; i >= 0; i--) {
-          const key = sessionStorage.key(i);
-          if (key?.startsWith('yidhan-nav-')) {
-            sessionStorage.removeItem(key);
-          }
-        }
+        // Clear all yidhan-nav-* keys
+        Array.from({ length: sessionStorage.length }, (_, i) => sessionStorage.key(i))
+          .filter(key => key?.startsWith('yidhan-nav-'))
+          .forEach(key => key && sessionStorage.removeItem(key));
       }
+
       prevUserIdRef.current = undefined;
       return;
     }
@@ -502,7 +504,8 @@ function App() {
         // then switch to the saved view. If the note was deleted, fall back to library.
         const pending = pendingNavRestoreRef.current;
         if (pending?.selectedNoteId) {
-          if (loadedNotes.some(n => n.id === pending.selectedNoteId)) {
+          const noteExists = loadedNotes.some(n => n.id === pending.selectedNoteId);
+          if (noteExists) {
             setView(pending.view);
           } else {
             // Note was deleted since last session
