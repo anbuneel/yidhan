@@ -189,7 +189,7 @@ describe('Editor', () => {
   });
 
   describe('auto-save', () => {
-    it('triggers save after 1.5 seconds of inactivity', async () => {
+    it('triggers save after 800ms of inactivity', async () => {
       const onUpdate = vi.fn().mockResolvedValue(undefined);
       render(<Editor {...defaultProps} onUpdate={onUpdate} />);
 
@@ -199,9 +199,9 @@ describe('Editor', () => {
       // Should not save immediately
       expect(onUpdate).not.toHaveBeenCalled();
 
-      // Fast-forward 1.5 seconds
+      // Fast-forward 800ms
       await act(async () => {
-        vi.advanceTimersByTime(1500);
+        vi.advanceTimersByTime(800);
       });
 
       expect(onUpdate).toHaveBeenCalledWith(
@@ -218,23 +218,23 @@ describe('Editor', () => {
       // First change
       fireEvent.change(titleInput, { target: { value: 'First' } });
 
-      // Wait 1 second
+      // Wait 500ms (within debounce)
       await act(async () => {
-        vi.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(500);
       });
 
       // Second change - should reset timer
       fireEvent.change(titleInput, { target: { value: 'Second' } });
 
-      // Wait another 1 second (should not save yet - timer was reset)
+      // Wait another 500ms (should not save yet - timer was reset, only 500ms of 800ms)
       await act(async () => {
-        vi.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(500);
       });
       expect(onUpdate).not.toHaveBeenCalled();
 
-      // Wait remaining time
+      // Wait remaining time (300ms to reach 800ms from last change)
       await act(async () => {
-        vi.advanceTimersByTime(500);
+        vi.advanceTimersByTime(300);
       });
       expect(onUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Second' })

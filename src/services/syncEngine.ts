@@ -6,7 +6,7 @@
  */
 
 import { Capacitor } from '@capacitor/core';
-import { supabase } from '../lib/supabase';
+import { supabase, fetchAllPaginated } from '../lib/supabase';
 import {
   getOfflineDb,
   type SyncQueueEntry,
@@ -19,6 +19,7 @@ import {
   markNoteSynced,
 } from './offlineNotes';
 import { markTagSynced } from './offlineTags';
+import type { DbTag } from '../types/database';
 
 // Lazy check for native platform (avoids issues at module initialization)
 let _isNative: boolean | null = null;
@@ -73,6 +74,23 @@ export interface ConflictInfo {
   entityId: string;
   localVersion: LocalNote | LocalTag;
   serverVersion: unknown;
+}
+
+export interface PullError {
+  entity: 'notes' | 'tags';
+  operation: 'data' | 'membership';
+  error: Error;
+}
+
+export interface PullResult {
+  pulledNotes: number;
+  pulledTags: number;
+  errors: PullError[];
+}
+
+export interface FullSyncResult extends SyncResult {
+  pulled: { notes: number; tags: number };
+  pullErrors: PullError[];
 }
 
 // Callbacks for conflict handling (set by App.tsx)
@@ -582,50 +600,49 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
 
 /**
  * Pull remote changes and apply to IndexedDB
- * Called before processing queue to get latest server state
+ * Called before processing queue to get latest server state.
+ *
+ * Returns PullResult with counts of pulled entities and any errors.
+ * Both entity pulls (notes, tags) run independently — a notes error
+ * does not prevent the tag pull from executing.
  */
-export async function pullRemoteChanges(userId: string): Promise<void> {
+export async function pullRemoteChanges(userId: string): Promise<PullResult> {
   const db = getOfflineDb(userId);
+  const errors: PullError[] = [];
+  let pulledNotes = 0;
+  let pulledTags = 0;
 
-  // Get the most recent lastSyncedAt from our local notes
-  const notes = await db.notes.toArray();
-  const lastSync = Math.max(
-    ...notes.map((n) => n.lastSyncedAt || 0),
-    0
-  );
+  // Compute pull cursor from synced entries only (pending/conflict may have skewed timestamps)
+  const allNotes = await db.notes.toArray();
+  const syncedNotes = allNotes.filter(n => n.syncStatus === 'synced');
+  const lastSync = Math.max(...syncedNotes.map(n => n.lastSyncedAt || 0), 0);
 
-  // If we've never synced, skip (initial hydration handles this)
-  if (lastSync === 0) {
-    return;
-  }
-
-  // Fetch notes updated after our last sync
-  const { data: updatedNotes, error: notesError } = await supabase
-    .from('notes')
-    .select('*')
-    .gt('updated_at', new Date(lastSync).toISOString());
+  // --- Note data pull (always runs, no early return) ---
+  // Full pull when lastSync is 0 (empty DB, post-migration, or failed hydration);
+  // incremental pull otherwise.
+  const { data: updatedNotes, error: notesError } = await fetchAllPaginated(() => {
+    const q = supabase.from('notes').select('*');
+    return lastSync > 0
+      ? q.gt('updated_at', new Date(lastSync).toISOString())
+      : q;
+  });
 
   if (notesError) {
     console.error('Error pulling remote notes:', notesError);
-    return;
+    errors.push({ entity: 'notes', operation: 'data', error: notesError });
   }
 
-  // Apply updates to local DB (skip notes with pending changes)
-  for (const serverNote of updatedNotes || []) {
+  // Always process whatever data was fetched (even partial on mid-pagination error)
+  for (const serverNote of updatedNotes) {
     const localNote = await db.notes.get(serverNote.id);
 
-    // Skip if local has pending changes
-    if (localNote && localNote.syncStatus === 'pending') {
+    // Skip if local has pending or conflict changes
+    if (localNote && (localNote.syncStatus === 'pending' || localNote.syncStatus === 'conflict')) {
       continue;
     }
 
-    // Skip if local has conflict
-    if (localNote && localNote.syncStatus === 'conflict') {
-      continue;
-    }
-
-    // Update local with server version
-    const now = Date.now();
+    // Use server timestamp for lastSyncedAt (not Date.now())
+    const serverTime = new Date(serverNote.updated_at).getTime();
     await db.notes.put({
       id: serverNote.id,
       userId,
@@ -636,68 +653,143 @@ export async function pullRemoteChanges(userId: string): Promise<void> {
         ? new Date(serverNote.deleted_at).getTime()
         : null,
       createdAt: new Date(serverNote.created_at).getTime(),
-      updatedAt: new Date(serverNote.updated_at).getTime(),
+      updatedAt: serverTime,
       syncStatus: 'synced',
-      lastSyncedAt: now,
-      serverUpdatedAt: new Date(serverNote.updated_at).getTime(),
-      localUpdatedAt: new Date(serverNote.updated_at).getTime(),
+      lastSyncedAt: serverTime,
+      serverUpdatedAt: serverTime,
+      localUpdatedAt: serverTime,
     });
+    pulledNotes++;
   }
 
-  // Similarly for tags
-  const { data: updatedTags, error: tagsError } = await supabase
-    .from('tags')
-    .select('*');
+  // --- Note membership query (deletion reconciliation for hard-deleted notes) ---
+  const { data: allNoteIds, error: noteMembershipError } = await fetchAllPaginated<{ id: string }>(() =>
+    supabase.from('notes').select('id')
+  );
 
-  if (tagsError) {
-    console.error('Error pulling remote tags:', tagsError);
-    return;
+  if (noteMembershipError) {
+    errors.push({ entity: 'notes', operation: 'membership', error: noteMembershipError });
+    // Do NOT run deletion reconciliation — incomplete ID set would cause false deletes
+  } else {
+    const serverNoteIds = new Set(allNoteIds.map(n => n.id));
+    const localNotesForDeletion = await db.notes.toArray();
+    for (const localNote of localNotesForDeletion) {
+      if (!serverNoteIds.has(localNote.id) && localNote.syncStatus === 'synced') {
+        await db.notes.delete(localNote.id);
+      }
+    }
   }
 
-  // Sync tags (last-write-wins, simpler than notes)
+  // --- Tag data pull (always runs regardless of notes outcome) ---
+  // Tags currently lack updated_at, so fetch all (full pull).
+  // When tags.updated_at migration lands, this will become incremental.
   const localTags = await db.tags.toArray();
+  const syncedTags = localTags.filter(t => t.syncStatus === 'synced');
+  const lastTagSync = Math.max(...syncedTags.map(t => t.lastSyncedAt || 0), 0);
 
-  for (const serverTag of updatedTags || []) {
-    const localTag = localTags.find((t) => t.id === serverTag.id);
+  // Try incremental tag pull first; fall back to full pull if column doesn't exist
+  let tagPullData: DbTag[] = [];
+  let tagPullError: Error | null = null;
+
+  if (lastTagSync > 0) {
+    // Attempt incremental pull (will fail with 42703 if updated_at column doesn't exist yet)
+    const result = await fetchAllPaginated(() =>
+      supabase.from('tags').select('*').gt('updated_at', new Date(lastTagSync).toISOString())
+    );
+    if (result.error && (result.error.message.includes('42703') || result.error.message.includes('updated_at'))) {
+      // Fall back to full tag pull — column doesn't exist yet
+      const fallback = await fetchAllPaginated(() => supabase.from('tags').select('*'));
+      tagPullData = fallback.data;
+      tagPullError = fallback.error;
+    } else {
+      tagPullData = result.data;
+      tagPullError = result.error;
+    }
+  } else {
+    // Full pull (first sync or post-migration)
+    const result = await fetchAllPaginated(() => supabase.from('tags').select('*'));
+    tagPullData = result.data;
+    tagPullError = result.error;
+  }
+
+  if (tagPullError) {
+    console.error('Error pulling remote tags:', tagPullError);
+    errors.push({ entity: 'tags', operation: 'data', error: tagPullError });
+  }
+
+  // Process fetched tags — only count actually-changed tags
+  for (const serverTag of tagPullData || []) {
+    const localTag = localTags.find(t => t.id === serverTag.id);
 
     // Skip if local has pending changes
     if (localTag && localTag.syncStatus === 'pending') {
       continue;
     }
 
-    const now = Date.now();
+    // Only count as "pulled" if data actually differs
+    const serverCreatedAt = new Date(serverTag.created_at).getTime();
+    if (localTag &&
+        localTag.name === serverTag.name &&
+        localTag.color === serverTag.color) {
+      // No actual change — still update sync cursor but don't count
+      await db.tags.update(serverTag.id, {
+        lastSyncedAt: serverCreatedAt,
+        serverUpdatedAt: serverCreatedAt,
+      });
+      continue;
+    }
+
     await db.tags.put({
       id: serverTag.id,
       userId,
       name: serverTag.name,
       color: serverTag.color,
-      createdAt: new Date(serverTag.created_at).getTime(),
+      createdAt: serverCreatedAt,
       syncStatus: 'synced',
-      lastSyncedAt: now,
-      serverUpdatedAt: now,
-      localUpdatedAt: now,
+      lastSyncedAt: serverCreatedAt,
+      serverUpdatedAt: serverCreatedAt,
+      localUpdatedAt: serverCreatedAt,
     });
+    pulledTags++;
   }
 
-  // Handle deleted tags (tags on server but not in our pending creates)
-  const serverTagIds = new Set((updatedTags || []).map((t) => t.id));
-  for (const localTag of localTags) {
-    if (!serverTagIds.has(localTag.id) && localTag.syncStatus === 'synced') {
-      // Tag was deleted on server
-      await db.tags.delete(localTag.id);
+  // --- Tag membership query (deletion detection) ---
+  const { data: allTagIds, error: tagMembershipError } = await fetchAllPaginated<{ id: string }>(() =>
+    supabase.from('tags').select('id')
+  );
+
+  if (tagMembershipError) {
+    errors.push({ entity: 'tags', operation: 'membership', error: tagMembershipError });
+    // Do NOT run deletion — incomplete ID set would cause false deletes
+  } else {
+    const serverTagIds = new Set(allTagIds.map(t => t.id));
+    const currentLocalTags = await db.tags.toArray();
+    for (const localTag of currentLocalTags) {
+      if (!serverTagIds.has(localTag.id) && localTag.syncStatus === 'synced') {
+        await db.tags.delete(localTag.id);
+      }
     }
   }
+
+  return { pulledNotes, pulledTags, errors };
 }
 
 /**
- * Full sync: pull then push
+ * Full sync: pull remote changes then push local queue.
+ * Returns FullSyncResult with both pull and push outcomes.
  */
-export async function fullSync(userId: string): Promise<SyncResult> {
+export async function fullSync(userId: string): Promise<FullSyncResult> {
   // Pull first to get latest server state
-  await pullRemoteChanges(userId);
+  const pullResult = await pullRemoteChanges(userId);
 
   // Then process our queue
-  return processQueue(userId);
+  const pushResult = await processQueue(userId);
+
+  return {
+    ...pushResult,
+    pulled: { notes: pullResult.pulledNotes, tags: pullResult.pulledTags },
+    pullErrors: pullResult.errors,
+  };
 }
 
 /**

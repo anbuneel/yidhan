@@ -229,15 +229,65 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       clearTimeout(autoSaveTimeoutRef.current);
     }
 
-    // Schedule auto-save after 1.5 seconds of inactivity
+    // Schedule auto-save after 800ms of inactivity (reduced from 1.5s for faster sync)
     autoSaveTimeoutRef.current = setTimeout(() => {
       performSave();
-    }, 1500);
+    }, 800);
 
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
+    };
+  }, [title, content, note.title, note.content, performSave]);
+
+  // Flush pending auto-save on visibility change / page hide.
+  // When user switches apps on mobile, the pending debounce timer may never fire.
+  // This ensures edits are saved to IndexedDB before the page becomes hidden.
+  const flushingRef = useRef(false);
+  useEffect(() => {
+    const flush = async () => {
+      // Guard: prevent double-dispatch if both visibilitychange and pagehide fire
+      if (flushingRef.current) return;
+      flushingRef.current = true;
+
+      try {
+        // Cancel the debounce timer
+        if (autoSaveTimeoutRef.current) {
+          clearTimeout(autoSaveTimeoutRef.current);
+          autoSaveTimeoutRef.current = null;
+        }
+
+        // Await any in-flight save before starting a new one
+        if (inFlightSaveRef.current) {
+          await inFlightSaveRef.current;
+        }
+
+        // Only save if there are unsaved changes
+        if (title !== note.title || content !== note.content) {
+          await performSave();
+        }
+      } finally {
+        flushingRef.current = false;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flush();
+      }
+    };
+
+    const handlePageHide = () => {
+      flush();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
     };
   }, [title, content, note.title, note.content, performSave]);
 

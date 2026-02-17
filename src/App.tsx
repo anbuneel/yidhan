@@ -134,8 +134,30 @@ function App() {
   useNetworkStatus();
 
   // Sync engine for offline support
-  const { conflicts, removeConflict } = useSyncEngine();
+  const { conflicts, removeConflict, triggerSync } = useSyncEngine();
   const [activeConflict, setActiveConflict] = useState<typeof conflicts[0] | null>(null);
+
+  // Coalesced sync trigger: after a save, wait 2s then trigger sync.
+  // Reset on each save to prevent flooding during rapid typing.
+  const coalescedSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggerCoalescedSync = useCallback(() => {
+    if (coalescedSyncTimeoutRef.current) {
+      clearTimeout(coalescedSyncTimeoutRef.current);
+    }
+    coalescedSyncTimeoutRef.current = setTimeout(() => {
+      coalescedSyncTimeoutRef.current = null;
+      triggerSync();
+    }, 2000);
+  }, [triggerSync]);
+
+  // Clean up coalesced sync timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (coalescedSyncTimeoutRef.current) {
+        clearTimeout(coalescedSyncTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // View transitions for smooth navigation
   const { startTransition } = useViewTransition();
@@ -754,6 +776,9 @@ function App() {
       // Save to IndexedDB (immediate, works offline)
       // Sync engine will push to server when online
       await updateNoteOffline(user.id, updatedNote);
+
+      // Trigger coalesced sync (2s after last save) to push changes promptly
+      triggerCoalescedSync();
     } catch (error) {
       console.error('Note save failed:', error);
 
@@ -772,7 +797,7 @@ function App() {
       // Re-throw so Editor can show error state
       throw error;
     }
-  }, [user, notes]);
+  }, [user, notes, triggerCoalescedSync]);
 
   // Soft delete a note (move to Faded Notes)
   // Returns true on success, false on failure (for UI recovery in swipe gestures)
@@ -947,19 +972,47 @@ function App() {
     setActiveConflict(null);
   };
 
-  // Pull-to-refresh handler - refreshes notes from IndexedDB/server
+  // Pull-to-refresh handler - syncs with server first, then rehydrates state
   const handleRefresh = useCallback(async () => {
     if (!user) return;
 
     try {
+      // Sync with server first (push + pull)
+      const { outcome } = await triggerSync();
+
+      // Rehydrate React state from IndexedDB (now has fresh server data)
       const refreshedNotes = await fetchNotesOffline(user.id);
       setNotes(refreshedNotes);
-      toast.success('Notes refreshed', { duration: 1500, icon: '🔄' });
+      const refreshedTags = await fetchTagsOffline(user.id);
+      setTags(refreshedTags);
+
+      // Show outcome-specific feedback
+      switch (outcome) {
+        case 'ok':
+          toast.success('Notes refreshed', { duration: 1500 });
+          break;
+        case 'partial':
+          toast('Refreshed, but some changes couldn\u2019t sync', {
+            duration: 3000,
+            icon: '\u26A0\uFE0F',
+          });
+          break;
+        case 'offline':
+          toast('You\u2019re offline. Showing local notes.', {
+            duration: 2000,
+          });
+          break;
+        case 'error':
+          toast.error('Couldn\u2019t reach server. Showing local notes.', {
+            duration: 3000,
+          });
+          break;
+      }
     } catch (error) {
       console.error('Refresh failed:', error);
       toast.error('Failed to refresh notes');
     }
-  }, [user]);
+  }, [user, triggerSync]);
 
   // Tag filter handlers
   const handleTagToggle = (tagId: string) => {
