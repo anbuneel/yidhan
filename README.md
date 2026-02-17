@@ -19,15 +19,15 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Tag Management** - Create, edit, and delete tags with a beautiful color picker
 - **Beautiful Design** - Warm, paper-like aesthetics with asymmetric "wabi-sabi" card corners
 - **Light & Dark Themes** - Kintsugi (warm light) and Midnight (forest green dark) themes
-- **Cloud Sync** - Notes sync across devices via Supabase
-- **Real-time Updates** - Changes appear instantly across tabs and devices
+- **Cross-Device Sync** - Notes sync across devices in ~3 seconds with incremental pull, server-authoritative timestamps, and pagination
+- **Real-time Updates** - Changes appear instantly across tabs and devices with self-echo suppression
 - **Export/Import** - Backup notes to JSON or Markdown, restore from backups
 - **Rich Card Previews** - Note cards show formatted content (lists, bold, etc.)
 - **Quick Delete** - Delete notes directly from card view with confirmation
 - **Personalized Avatar** - Profile shows your initials from name or email
 - **Settings Page** - Update display name, change password, toggle theme
 - **Password Reset** - Forgot password flow with email recovery
-- **Smart Auto-save** - Auto-saves 1.5s after you stop typing with "Saving..." → "Saved ✓" indicator
+- **Smart Auto-save** - Auto-saves 800ms after you stop typing with "Saving..." → "Saved ✓" → "Synced" indicator
 - **Google Sign-In** - Quick authentication via Google OAuth
 - **Secure** - User authentication with row-level security
 - **Error Boundary** - Graceful error handling with user-friendly recovery UI

@@ -75,14 +75,14 @@ src/
 ├── contexts/
 │   └── AuthContext.tsx    # Auth state management (login, signup, Google OAuth, password reset, profile, offboarding)
 ├── lib/
-│   ├── supabase.ts        # Supabase client instance
-│   └── offlineDb.ts       # Dexie IndexedDB schema for offline storage
+│   ├── supabase.ts        # Supabase client instance + fetchAllPaginated helper
+│   └── offlineDb.ts       # Dexie IndexedDB schema for offline storage (v3 with sync cursor migration)
 ├── services/
 │   ├── notes.ts           # CRUD operations for notes (with tags)
 │   ├── tags.ts            # CRUD operations for tags
-│   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue
+│   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue + realtime upserts
 │   ├── offlineTags.ts     # Offline-aware tag operations
-│   ├── syncEngine.ts      # Queue processor, conflict detection, sync
+│   ├── syncEngine.ts      # Queue processor, conflict detection, incremental pull/push sync
 │   ├── demoStorage.ts     # localStorage operations for demo mode (no auth required)
 │   └── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, note creation)
 ├── types/
@@ -375,7 +375,11 @@ content...
 
 ## Notes
 - Content is stored as HTML (from Tiptap's `getHTML()`)
-- Notes sync in real-time via Supabase subscriptions
+- Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase
+- Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps
+- Server-side `notes_updated_at_trigger` prevents client clock skew issues
+- Self-echo suppression via `pendingMutations` set prevents realtime re-applying own changes
+- Realtime subscriptions update IndexedDB + React state for cross-device changes
 - All note/tag operations are scoped to authenticated user via RLS
 - Tags support many-to-many relationship with notes
 - Tag filtering uses AND logic (notes must have ALL selected tags)
