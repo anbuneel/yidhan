@@ -243,6 +243,15 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
     setSaveStatus('saving');
 
+    // Update lastSaved refs BEFORE the async call (2B fix).
+    // The optimistic setNotes() inside onUpdate triggers a React re-render;
+    // if refs still have old values, the remote-detection effect would
+    // misclassify our own save as a remote update and show a false banner.
+    const prevSavedTitle = lastSavedTitleRef.current;
+    const prevSavedContent = lastSavedContentRef.current;
+    lastSavedTitleRef.current = title;
+    lastSavedContentRef.current = content;
+
     // Create and track the save promise
     const savePromise = (async () => {
       try {
@@ -253,10 +262,6 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
           updatedAt: new Date(),
         });
 
-        // Save succeeded — update lastSaved refs (2B) for self-echo detection
-        lastSavedTitleRef.current = title;
-        lastSavedContentRef.current = content;
-
         // Show success state
         setSaveStatus('saved');
 
@@ -265,6 +270,11 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
           setSaveStatus('idle');
         }, 2000);
       } catch {
+        // Revert refs so the detection effect correctly identifies
+        // the state as "unsaved changes" after a failed save
+        lastSavedTitleRef.current = prevSavedTitle;
+        lastSavedContentRef.current = prevSavedContent;
+
         // Save failed after retries - show error state
         setSaveStatus('error');
 

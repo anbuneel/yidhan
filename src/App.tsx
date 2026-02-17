@@ -361,6 +361,9 @@ function App() {
 
   // Navigation state persistence (2E) — survives page refresh within same tab
   const pendingNavRestoreRef = useRef<{ view: ViewMode; selectedNoteId: string | null } | null>(null);
+  // Track previous userId so we can distinguish initial null (auth hydrating)
+  // from sign-out (userId transitions non-null → null)
+  const prevUserIdRef = useRef<string | undefined>(undefined);
 
   // Debounce timer refs
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -455,16 +458,20 @@ function App() {
     if (!userId) {
       setNotes([]);
       setLoading(false);
-      // Clear navigation state on sign-out (2E)
-      // sessionStorage is tab-scoped, so clearing all yidhan-nav-* keys is safe
-      for (let i = sessionStorage.length - 1; i >= 0; i--) {
-        const key = sessionStorage.key(i);
-        if (key?.startsWith('yidhan-nav-')) {
-          sessionStorage.removeItem(key);
+      // Only clear navigation state on actual sign-out (userId went non-null → null),
+      // NOT on initial load when userId starts as null during auth hydration (2E fix)
+      if (prevUserIdRef.current) {
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i);
+          if (key?.startsWith('yidhan-nav-')) {
+            sessionStorage.removeItem(key);
+          }
         }
       }
+      prevUserIdRef.current = undefined;
       return;
     }
+    prevUserIdRef.current = userId;
 
     // Don't fetch until hydration is complete (first-time users need server data)
     // UNLESS we've already waited too long (failsafe for Android WebView hangs)
