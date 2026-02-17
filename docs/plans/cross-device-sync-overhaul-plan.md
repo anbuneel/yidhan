@@ -1,8 +1,8 @@
 # Cross-Device Sync UX Overhaul
 
-**Version:** 12.0
-**Last Updated:** 2026-02-16
-**Status:** Final — Codex approved with all review findings addressed (v12)
+**Version:** 13.0
+**Last Updated:** 2026-02-17
+**Status:** Complete — Merged as PR #120 (squash commit `aca6000` on main, v2.11.0)
 **Author:** Claude (Opus 4.6)
 
 ---
