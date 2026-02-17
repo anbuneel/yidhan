@@ -510,10 +510,12 @@ function App() {
             sessionStorage.removeItem(`yidhan-nav-${userId}`);
           }
         }
-        pendingNavRestoreRef.current = null;
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        pendingNavRestoreRef.current = null;
+        setLoading(false);
+      });
 
     // Subscribe to real-time changes (also write to IndexedDB to keep IDB in sync)
     const unsubscribe = subscribeToNotes(
