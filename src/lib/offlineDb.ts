@@ -79,6 +79,11 @@ export interface ConflictRecord {
   detectedAt: number;
 }
 
+// Sentinel value for lastSyncedAt after migration: forces full re-pull
+// while keeping conflict detection active (truthy, so the `lastSyncedAt`
+// guard in processNoteOperation still fires).
+export const MIGRATION_SYNC_SENTINEL = 1;
+
 // Yidhan offline database
 // NOTE: Database name kept as 'zenote-offline-*' for backwards compatibility
 // Existing users' data would be lost if renamed without migration
@@ -128,10 +133,10 @@ class YidhanDB extends Dexie {
     }).upgrade(async (tx) => {
       await tx.table('notes')
         .where('syncStatus').equals('synced')
-        .modify({ lastSyncedAt: 1 });
+        .modify({ lastSyncedAt: MIGRATION_SYNC_SENTINEL });
       await tx.table('tags')
         .where('syncStatus').equals('synced')
-        .modify({ lastSyncedAt: 1 });
+        .modify({ lastSyncedAt: MIGRATION_SYNC_SENTINEL });
     });
   }
 }

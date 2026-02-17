@@ -13,6 +13,7 @@ import {
   fullSync,
   setConflictHandler,
   isSyncInProgress,
+  clearSyncState,
   type SyncResult,
   type ConflictInfo,
   type FullSyncResult,
@@ -245,11 +246,12 @@ export function useSyncEngine(
     return () => clearInterval(interval);
   }, [user]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount — stop in-flight sync operations and clear state
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      clearSyncState();
     };
   }, []);
 

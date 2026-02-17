@@ -467,3 +467,4 @@ SQL migrations are stored in `supabase/migrations/`:
 - `add_faded_notes_cleanup_cron.sql` - Cron job for auto-deleting expired faded notes (requires Pro plan)
 - `add_tags_updated_at.sql` - Add updated_at column to tags table for incremental sync
 - `add_notes_updated_at_trigger.sql` - Server-side trigger enforcing updated_at on notes (clock-skew prevention)
+- `add_sync_indexes.sql` - Composite indexes on (user_id, updated_at) for incremental sync queries
