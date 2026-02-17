@@ -34,6 +34,7 @@ function localNoteToNote(localNote: LocalNote, tags: Tag[] = []): Note {
     tags,
     pinned: localNote.pinned,
     deletedAt: localNote.deletedAt ? new Date(localNote.deletedAt) : null,
+    syncStatus: localNote.syncStatus,
   };
 }
 
