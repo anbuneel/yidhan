@@ -938,7 +938,7 @@ export async function upsertTagFromServer(
       userId,
       name: tag.name,
       color: tag.color,
-      createdAt: serverTime,
+      createdAt: tag.createdAt.getTime(),
       syncStatus: 'synced',
       lastSyncedAt: serverTime,
       serverUpdatedAt: serverTime,

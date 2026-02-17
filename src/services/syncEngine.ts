@@ -85,11 +85,14 @@ export interface PullError {
 export interface PullResult {
   pulledNotes: number;
   pulledTags: number;
+  deletedNotes: number;
+  deletedTags: number;
   errors: PullError[];
 }
 
 export interface FullSyncResult extends SyncResult {
   pulled: { notes: number; tags: number };
+  deleted: { notes: number; tags: number };
   pullErrors: PullError[];
 }
 
@@ -645,6 +648,8 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
   const errors: PullError[] = [];
   let pulledNotes = 0;
   let pulledTags = 0;
+  let deletedNotes = 0;
+  let deletedTags = 0;
 
   // Compute pull cursor from synced entries only (pending/conflict may have skewed timestamps)
   const allNotes = await db.notes.toArray();
@@ -710,6 +715,7 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
     for (const localNote of localNotesForDeletion) {
       if (!serverNoteIds.has(localNote.id) && localNote.syncStatus === 'synced') {
         await db.notes.delete(localNote.id);
+        deletedNotes++;
       }
     }
   }
@@ -807,11 +813,12 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
     for (const localTag of currentLocalTags) {
       if (!serverTagIds.has(localTag.id) && localTag.syncStatus === 'synced') {
         await db.tags.delete(localTag.id);
+        deletedTags++;
       }
     }
   }
 
-  return { pulledNotes, pulledTags, errors };
+  return { pulledNotes, pulledTags, deletedNotes, deletedTags, errors };
 }
 
 /**
@@ -828,6 +835,7 @@ export async function fullSync(userId: string): Promise<FullSyncResult> {
   return {
     ...pushResult,
     pulled: { notes: pullResult.pulledNotes, tags: pullResult.pulledTags },
+    deleted: { notes: pullResult.deletedNotes, tags: pullResult.deletedTags },
     pullErrors: pullResult.errors,
   };
 }

@@ -143,7 +143,8 @@ export function useSyncEngine(
 
           // Conditional rehydration: only call when sync had meaningful changes
           if (result.processed > 0 || result.conflicts > 0 ||
-              result.pulled.notes > 0 || result.pulled.tags > 0) {
+              result.pulled.notes > 0 || result.pulled.tags > 0 ||
+              result.deleted.notes > 0 || result.deleted.tags > 0) {
             onSyncCompleteRef.current?.(result);
           }
         }

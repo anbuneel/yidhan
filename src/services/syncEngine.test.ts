@@ -18,6 +18,7 @@ function buildResult(overrides: Partial<FullSyncResult> = {}): FullSyncResult {
     conflicts: 0,
     errors: [],
     pulled: { notes: 0, tags: 0 },
+    deleted: { notes: 0, tags: 0 },
     pullErrors: [],
     ...overrides,
   };

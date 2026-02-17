@@ -115,7 +115,9 @@ class YidhanDB extends Dexie {
     });
 
     // v3: One-time sync cursor migration (Phase 3C)
-    // Reset lastSyncedAt to 0 on synced entries to fix legacy client-time skew.
+    // Reset lastSyncedAt to force full re-pull with server timestamps.
+    // Uses 1 (not 0) so conflict detection remains active — the truthy check
+    // at processNoteOperation guards against silent overwrites on first edit.
     // Pending/conflict entries keep their cursors for safe conflict detection.
     this.version(3).stores({
       notes: 'id, userId, syncStatus, deletedAt, pinned, updatedAt',
@@ -126,10 +128,10 @@ class YidhanDB extends Dexie {
     }).upgrade(async (tx) => {
       await tx.table('notes')
         .where('syncStatus').equals('synced')
-        .modify({ lastSyncedAt: 0 });
+        .modify({ lastSyncedAt: 1 });
       await tx.table('tags')
         .where('syncStatus').equals('synced')
-        .modify({ lastSyncedAt: 0 });
+        .modify({ lastSyncedAt: 1 });
     });
   }
 }
