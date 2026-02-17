@@ -246,7 +246,15 @@ export function useSyncEngine(
     return () => clearInterval(interval);
   }, [user]);
 
-  // Cleanup on unmount — stop in-flight sync operations and clear state
+  // Clear sync state on logout (user → null). The hook lives at the App
+  // root which never unmounts, so we react to `user` becoming null instead.
+  useEffect(() => {
+    if (!user) {
+      clearSyncState();
+    }
+  }, [user]);
+
+  // Track mounted state for safe state updates
   useEffect(() => {
     mountedRef.current = true;
     return () => {
