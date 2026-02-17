@@ -442,7 +442,7 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Note titles:** Sanitized with DOMPurify to prevent XSS
 
 ### Sanitization Functions (`src/utils/sanitize.ts`)
-- `sanitizeHtml(html)` - Sanitize rich HTML content (allows safe tags)
+- `sanitizeHtml(html)` - Sanitize rich HTML content (allows safe tags), adds `rel="noopener noreferrer"` to external links
 - `sanitizeText(text)` - Strip HTML and escape special characters
 - `escapeHtml(text)` - Escape HTML special characters only
 
