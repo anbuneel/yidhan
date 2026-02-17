@@ -297,6 +297,20 @@ describe('ChapteredLibrary', () => {
         block: 'start',
       });
     });
+
+    it('uses a single IntersectionObserver for all chapters', () => {
+      const observerSpy = vi.spyOn(window, 'IntersectionObserver');
+      render(<ChapteredLibrary {...defaultProps} notes={mockNotes} />);
+
+      expect(observerSpy).toHaveBeenCalledTimes(1);
+
+      // Verify observe was called for each chapter
+      // We need to access the mock instance returned by the constructor
+      const observerInstance = observerSpy.mock.results[0].value;
+
+      // There are 2 chapters in mockChapters (pinned and thisWeek)
+      expect(observerInstance.observe).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('chapter grouping', () => {
