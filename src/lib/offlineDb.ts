@@ -113,6 +113,24 @@ class YidhanDB extends Dexie {
       syncQueue: '++id, clientMutationId, entityType, entityId, createdAt',
       conflicts: '++id, entityType, entityId, detectedAt',
     });
+
+    // v3: One-time sync cursor migration (Phase 3C)
+    // Reset lastSyncedAt to 0 on synced entries to fix legacy client-time skew.
+    // Pending/conflict entries keep their cursors for safe conflict detection.
+    this.version(3).stores({
+      notes: 'id, userId, syncStatus, deletedAt, pinned, updatedAt',
+      tags: 'id, name, syncStatus',
+      noteTags: '[noteId+tagId], noteId, tagId, syncStatus',
+      syncQueue: '++id, clientMutationId, entityType, entityId, createdAt',
+      conflicts: '++id, entityType, entityId, detectedAt',
+    }).upgrade(async (tx) => {
+      await tx.table('notes')
+        .where('syncStatus').equals('synced')
+        .modify({ lastSyncedAt: 0 });
+      await tx.table('tags')
+        .where('syncStatus').equals('synced')
+        .modify({ lastSyncedAt: 0 });
+    });
   }
 }
 

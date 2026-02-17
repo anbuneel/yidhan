@@ -41,11 +41,12 @@ interface EditorProps {
   onThemeToggle: () => void;
   onSettingsClick: () => void;
   isDemo?: boolean; // Hide share functionality in demo mode
+  noteSyncStatus?: 'synced' | 'pending' | 'conflict'; // Note-specific sync status (3A)
 }
 
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'copied' | 'error';
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'synced' | 'copied' | 'error';
 
-export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false }: EditorProps) {
+export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus }: EditorProps) {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -405,6 +406,31 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     };
   }, []);
 
+  // Note-specific sync indicator (3A): when this note transitions from 'pending'
+  // to 'synced', briefly show the "Synced" cloud-check status.
+  // Only fires when the editor is in 'saved' or 'idle' state to avoid interrupting
+  // active save indicators.
+  const prevSyncStatusRef = useRef(noteSyncStatus);
+  useEffect(() => {
+    const prev = prevSyncStatusRef.current;
+    prevSyncStatusRef.current = noteSyncStatus;
+
+    if (
+      prev === 'pending' &&
+      noteSyncStatus === 'synced' &&
+      (saveStatus === 'saved' || saveStatus === 'idle')
+    ) {
+      // Clear any existing indicator timeouts
+      if (savePhaseTimeoutRef.current) clearTimeout(savePhaseTimeoutRef.current);
+      if (hideIndicatorTimeoutRef.current) clearTimeout(hideIndicatorTimeoutRef.current);
+
+      setSaveStatus('synced');
+      hideIndicatorTimeoutRef.current = setTimeout(() => {
+        setSaveStatus('idle');
+      }, 2000);
+    }
+  }, [noteSyncStatus, saveStatus]);
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setTitle(e.target.value);
     // Auto-resize
@@ -529,6 +555,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
         return { color: 'var(--color-accent)', background: 'var(--color-accent-glow)' };
       case 'error':
         return { color: 'var(--color-error)', background: 'var(--color-error-light)' };
+      case 'synced':
+        return { color: 'var(--color-accent)', background: 'var(--color-accent-glow)' };
       default:
         return { color: 'var(--color-success)', background: 'var(--color-success-glow)' };
     }
@@ -683,6 +711,15 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
               Saved
+            </>
+          )}
+          {saveStatus === 'synced' && (
+            <>
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12.5l2 2 4-4" />
+              </svg>
+              Synced
             </>
           )}
         </span>

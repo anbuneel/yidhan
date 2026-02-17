@@ -21,7 +21,7 @@ src/
 ├── components/
 │   ├── Auth.tsx           # Login/signup/Google OAuth/password reset UI (supports modal mode)
 │   ├── ChangelogPage.tsx  # Version history page with categorized changes
-│   ├── Editor.tsx         # Note editor with rich text + tag selector + save indicator
+│   ├── Editor.tsx         # Note editor with rich text + tag selector + save/sync indicator
 │   ├── EditorToolbar.tsx  # Formatting toolbar for rich text editor (sticky in header zone)
 │   ├── ErrorBoundary.tsx  # Error boundary with chunk error detection (deployment handling)
 │   ├── Footer.tsx         # Minimal footer with changelog/roadmap/shortcuts/GitHub links
@@ -465,3 +465,4 @@ SQL migrations are stored in `supabase/migrations/`:
 - `add_note_shares.sql` - Add note_shares table for "Share as Letter" feature
 - `add_shared_note_public_access.sql` - RLS policy for unauthenticated shared note viewing
 - `add_faded_notes_cleanup_cron.sql` - Cron job for auto-deleting expired faded notes (requires Pro plan)
+- `add_tags_updated_at.sql` - Add updated_at column to tags table for incremental sync

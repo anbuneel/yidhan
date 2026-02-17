@@ -50,7 +50,8 @@ function localTagToTag(localTag: LocalTag): Tag {
 
 // Convert DB Note to LocalNote
 function dbNoteToLocal(dbNote: DbNote, userId: string): LocalNote {
-  const now = Date.now();
+  // Use server timestamp for lastSyncedAt to avoid clock skew issues
+  const serverTime = new Date(dbNote.updated_at).getTime();
   return {
     id: dbNote.id,
     userId,
@@ -59,17 +60,21 @@ function dbNoteToLocal(dbNote: DbNote, userId: string): LocalNote {
     pinned: dbNote.pinned ?? false,
     deletedAt: dbNote.deleted_at ? new Date(dbNote.deleted_at).getTime() : null,
     createdAt: new Date(dbNote.created_at).getTime(),
-    updatedAt: new Date(dbNote.updated_at).getTime(),
+    updatedAt: serverTime,
     syncStatus: 'synced',
-    lastSyncedAt: now,
-    serverUpdatedAt: new Date(dbNote.updated_at).getTime(),
-    localUpdatedAt: new Date(dbNote.updated_at).getTime(),
+    lastSyncedAt: serverTime,
+    serverUpdatedAt: serverTime,
+    localUpdatedAt: serverTime,
   };
 }
 
 // Convert DB Tag to LocalTag
 function dbTagToLocal(dbTag: DbTag, userId: string): LocalTag {
-  const now = Date.now();
+  // Use server timestamp (updated_at if available, else created_at) for cursor consistency
+  const tagRecord = dbTag as Record<string, unknown>;
+  const serverTime = tagRecord.updated_at
+    ? new Date(tagRecord.updated_at as string).getTime()
+    : new Date(dbTag.created_at).getTime();
   return {
     id: dbTag.id,
     userId,
@@ -77,9 +82,9 @@ function dbTagToLocal(dbTag: DbTag, userId: string): LocalTag {
     color: dbTag.color,
     createdAt: new Date(dbTag.created_at).getTime(),
     syncStatus: 'synced',
-    lastSyncedAt: now,
-    serverUpdatedAt: now,
-    localUpdatedAt: now,
+    lastSyncedAt: serverTime,
+    serverUpdatedAt: serverTime,
+    localUpdatedAt: serverTime,
   };
 }
 
@@ -915,7 +920,8 @@ export async function upsertTagFromServer(
   tag: Tag
 ): Promise<void> {
   const db = getOfflineDb(userId);
-  const now = Date.now();
+  // Use server-origin timestamp to avoid clock skew (createdAt comes from server)
+  const serverTime = tag.createdAt.getTime();
 
   const existing = await db.tags.get(tag.id);
 
@@ -925,8 +931,8 @@ export async function upsertTagFromServer(
       await db.tags.update(tag.id, {
         name: tag.name,
         color: tag.color,
-        lastSyncedAt: now,
-        serverUpdatedAt: now,
+        lastSyncedAt: serverTime,
+        serverUpdatedAt: serverTime,
       });
     }
   } else {
@@ -936,11 +942,11 @@ export async function upsertTagFromServer(
       userId,
       name: tag.name,
       color: tag.color,
-      createdAt: tag.createdAt.getTime(),
+      createdAt: serverTime,
       syncStatus: 'synced',
-      lastSyncedAt: now,
-      serverUpdatedAt: now,
-      localUpdatedAt: now,
+      lastSyncedAt: serverTime,
+      serverUpdatedAt: serverTime,
+      localUpdatedAt: serverTime,
     };
     await db.tags.add(localTag);
   }

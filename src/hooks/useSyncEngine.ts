@@ -302,14 +302,16 @@ export async function resolveConflict(
 
       if (navigator.onLine) {
         // Try to push directly when online
-        const { error } = await supabase
+        const { data: pushed, error } = await supabase
           .from('notes')
           .update({
             title: localNote.title,
             content: localNote.content,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', localNote.id);
+          .eq('id', localNote.id)
+          .select('updated_at')
+          .single();
 
         if (error) {
           // Queue for retry if server update failed
@@ -321,11 +323,12 @@ export async function resolveConflict(
             syncStatus: 'pending',
           });
         } else {
-          // Mark as synced
+          // Mark as synced using server timestamp to avoid clock skew
+          const serverTime = new Date(pushed.updated_at).getTime();
           await db.notes.update(localNote.id, {
             syncStatus: 'synced',
-            lastSyncedAt: Date.now(),
-            serverUpdatedAt: Date.now(),
+            lastSyncedAt: serverTime,
+            serverUpdatedAt: serverTime,
           });
         }
       } else {
@@ -342,7 +345,8 @@ export async function resolveConflict(
     }
 
     case 'server': {
-      // Apply server version locally
+      // Apply server version locally — use server timestamp for all fields
+      const serverTime = new Date(serverNote.updated_at).getTime();
       await db.notes.update(serverNote.id, {
         title: serverNote.title,
         content: serverNote.content,
@@ -350,11 +354,11 @@ export async function resolveConflict(
         deletedAt: serverNote.deleted_at
           ? new Date(serverNote.deleted_at).getTime()
           : null,
-        updatedAt: new Date(serverNote.updated_at).getTime(),
+        updatedAt: serverTime,
         syncStatus: 'synced',
-        lastSyncedAt: Date.now(),
-        serverUpdatedAt: new Date(serverNote.updated_at).getTime(),
-        localUpdatedAt: new Date(serverNote.updated_at).getTime(),
+        lastSyncedAt: serverTime,
+        serverUpdatedAt: serverTime,
+        localUpdatedAt: serverTime,
       });
       break;
     }
@@ -389,7 +393,8 @@ export async function resolveConflict(
         pinned: false,
       });
 
-      // Update original with server version
+      // Update original with server version — use server timestamp for sync cursor
+      const serverUpdatedTime = new Date(serverNote.updated_at).getTime();
       await db.notes.update(serverNote.id, {
         title: serverNote.title,
         content: serverNote.content,
@@ -397,11 +402,11 @@ export async function resolveConflict(
         deletedAt: serverNote.deleted_at
           ? new Date(serverNote.deleted_at).getTime()
           : null,
-        updatedAt: new Date(serverNote.updated_at).getTime(),
+        updatedAt: serverUpdatedTime,
         syncStatus: 'synced',
-        lastSyncedAt: now,
-        serverUpdatedAt: new Date(serverNote.updated_at).getTime(),
-        localUpdatedAt: new Date(serverNote.updated_at).getTime(),
+        lastSyncedAt: serverUpdatedTime,
+        serverUpdatedAt: serverUpdatedTime,
+        localUpdatedAt: serverUpdatedTime,
       });
       break;
     }

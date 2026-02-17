@@ -188,13 +188,13 @@ async function processNoteOperation(
       // Check if note already exists on server (idempotency)
       const { data: existing } = await supabase
         .from('notes')
-        .select('id')
+        .select('id, updated_at')
         .eq('id', noteId)
         .maybeSingle();
 
       if (existing) {
-        // Already created, mark as synced
-        await markNoteSynced(userId, noteId, new Date());
+        // Already created, mark as synced using server timestamp
+        await markNoteSynced(userId, noteId, new Date(existing.updated_at));
         return true;
       }
 
@@ -275,13 +275,15 @@ async function processNoteOperation(
     }
 
     case 'soft_delete': {
-      const { error } = await supabase
+      const { data: softDeleted, error } = await supabase
         .from('notes')
         .update({ deleted_at: data.deletedAt as string })
-        .eq('id', noteId);
+        .eq('id', noteId)
+        .select('updated_at')
+        .single();
 
       if (error) throw error;
-      await markNoteSynced(userId, noteId, new Date());
+      await markNoteSynced(userId, noteId, new Date(softDeleted.updated_at));
       return true;
     }
 
@@ -344,13 +346,17 @@ async function processTagOperation(
       // Check if tag already exists (idempotency)
       const { data: existing } = await supabase
         .from('tags')
-        .select('id, created_at')
+        .select('id, created_at, updated_at')
         .eq('id', tagId)
         .maybeSingle();
 
       if (existing) {
-        // Use server timestamp for cursor consistency
-        await markTagSynced(userId, tagId, new Date(existing.created_at));
+        // Use server timestamp for cursor consistency (updated_at when available)
+        const existingRecord = existing as Record<string, unknown>;
+        const serverTime = existingRecord.updated_at
+          ? new Date(existingRecord.updated_at as string)
+          : new Date(existing.created_at);
+        await markTagSynced(userId, tagId, serverTime);
         return true;
       }
 

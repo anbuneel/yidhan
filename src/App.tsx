@@ -860,8 +860,9 @@ function App() {
     const previousNote = notes.find((n) => n.id === updatedNote.id);
 
     // Update local state immediately for responsiveness (optimistic update)
+    // Set syncStatus: 'pending' so the pending→synced transition is observable (3A)
     setNotes((prev) =>
-      prev.map((n) => (n.id === updatedNote.id ? updatedNote : n))
+      prev.map((n) => (n.id === updatedNote.id ? { ...updatedNote, syncStatus: 'pending' as const } : n))
     );
 
     try {
@@ -1897,6 +1898,7 @@ function App() {
               theme={theme}
               onThemeToggle={handleThemeToggle}
               onSettingsClick={() => setShowSettingsModal(true)}
+              noteSyncStatus={selectedNote.syncStatus}
             />
           </Suspense>
         </ErrorBoundary>
