@@ -552,7 +552,8 @@ export async function deleteNoteShare(noteId: string): Promise<void> {
 export async function fetchSharedNote(token: string): Promise<Note | null> {
   // Use secure RPC to fetch shared note and tags in one go
   // This prevents enumeration of share tokens via public table access
-  const { data, error } = await supabase.rpc('get_shared_note', { token });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in generated types until migration is run
+  const { data, error } = await (supabase.rpc as any)('get_shared_note', { token });
 
   if (error) {
     console.error('Error fetching shared note:', error);
@@ -564,13 +565,23 @@ export async function fetchSharedNote(token: string): Promise<Note | null> {
   }
 
   // Parse JSON result to Note object
-  // The RPC returns dates as strings, so we need to convert them
-  const noteData = data as any;
+  // The RPC returns dates as ISO strings, so we need to convert them
+  interface SharedNoteRpc {
+    id: string;
+    title: string;
+    content: string;
+    createdAt: string;
+    updatedAt: string;
+    pinned: boolean;
+    deletedAt: string | null;
+    tags: Array<{ id: string; name: string; color: string; createdAt: string }>;
+  }
+  const noteData = data as SharedNoteRpc;
 
-  const tags = (noteData.tags || []).map((tag: any) => ({
+  const tags = (noteData.tags || []).map((tag) => ({
     id: tag.id,
     name: tag.name,
-    color: tag.color,
+    color: tag.color as TagColor,
     createdAt: new Date(tag.createdAt),
   }));
 

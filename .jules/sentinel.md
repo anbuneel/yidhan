@@ -1,4 +1,0 @@
-## 2024-05-21 - [CRITICAL] Shared Notes Enumeration via Public SELECT
-**Vulnerability:** The `note_shares` table allowed public SELECT access (`USING (true)`), enabling attackers to enumerate all valid share tokens. Additionally, the `notes` table allowed public access to any note with a valid share token (`USING (EXISTS ...)`), enabling enumeration of shared note content without knowing the token.
-**Learning:** Supabase RLS policies that use `USING (true)` or `EXISTS` conditions on public tables can inadvertently expose the entire dataset if not carefully scoped. "Security through obscurity" of tokens fails if the table holding them is enumerable.
-**Prevention:** Use `SECURITY DEFINER` RPC functions for token-based access to sensitive resources. Revoke public SELECT permissions on the underlying tables and rely solely on the RPC to validate tokens and return specific data.
