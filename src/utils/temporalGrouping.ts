@@ -35,11 +35,24 @@ export function getChapterLabel(key: ChapterKey): string {
 /**
  * Determine which temporal chapter a date belongs to based on how long ago it was
  * Note: This does not return 'pinned' - pinned status is determined by note.pinned flag
+ *
+ * @param date The date to categorize
+ * @param referenceTime Optional timestamp for "start of today" to avoid recalculating it
  */
-export function getChapterForDate(date: Date): Exclude<ChapterKey, 'pinned'> {
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const diffMs = startOfToday.getTime() - new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+export function getChapterForDate(date: Date, referenceTime?: number): Exclude<ChapterKey, 'pinned'> {
+  let startOfTodayTime = referenceTime;
+
+  // Calculate start of today if not provided (backward compatibility)
+  if (startOfTodayTime === undefined) {
+    const now = new Date();
+    startOfTodayTime = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  }
+
+  // Calculate start of the date's day
+  // We need to use local time boundaries consistent with startOfTodayTime
+  const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+  const diffMs = startOfTodayTime - dateStart;
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   // This Week: 0-7 days (today through 7 days ago)
@@ -72,19 +85,25 @@ export function getChapterForDate(date: Date): Exclude<ChapterKey, 'pinned'> {
  * Returns only chapters that have notes (honest presence)
  */
 export function groupNotesByChapter(notes: Note[]): ChapterGroup[] {
-  // Separate pinned notes from unpinned
-  const pinnedNotes = notes.filter((note) => note.pinned);
-  const unpinnedNotes = notes.filter((note) => !note.pinned);
+  // Pre-calculate start of today to avoid doing it for every note
+  const now = new Date();
+  const startOfTodayTime = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+  const pinnedNotes: Note[] = [];
 
   // Initialize map with empty arrays for each temporal chapter
   const chapterMap = new Map<ChapterKey, Note[]>();
   TEMPORAL_CHAPTER_ORDER.forEach((key) => chapterMap.set(key, []));
 
-  // Sort unpinned notes into temporal chapters based on updatedAt
-  unpinnedNotes.forEach((note) => {
-    const chapterKey = getChapterForDate(note.updatedAt);
-    chapterMap.get(chapterKey)?.push(note);
-  });
+  // Single pass through notes to separate pinned and categorize unpinned
+  for (const note of notes) {
+    if (note.pinned) {
+      pinnedNotes.push(note);
+    } else {
+      const chapterKey = getChapterForDate(note.updatedAt, startOfTodayTime);
+      chapterMap.get(chapterKey)?.push(note);
+    }
+  }
 
   // Build result array, starting with pinned if any exist
   const chapters: ChapterGroup[] = [];

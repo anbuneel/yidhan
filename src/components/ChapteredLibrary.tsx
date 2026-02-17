@@ -56,15 +56,11 @@ export function ChapteredLibrary({
   // Detect mobile for gesture hint
   const isMobile = useMobileDetect();
 
-  // Sort notes by most recent (pinned handling is done in groupNotesByChapter)
-  const sortedNotes = useMemo(() => {
-    return [...notes].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-  }, [notes]);
-
   // Group notes by chapter (pinned notes get their own chapter first)
+  // Assumes notes are already sorted by date (handled in App.tsx)
   const chapters = useMemo(() => {
-    return groupNotesByChapter(sortedNotes);
-  }, [sortedNotes]);
+    return groupNotesByChapter(notes);
+  }, [notes]);
 
   // Get default expansion state based on total note count
   const defaultExpansion = useMemo(() => {

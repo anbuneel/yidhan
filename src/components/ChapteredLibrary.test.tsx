@@ -314,7 +314,7 @@ describe('ChapteredLibrary', () => {
   });
 
   describe('chapter grouping', () => {
-    it('calls groupNotesByChapter with sorted notes', () => {
+    it('calls groupNotesByChapter with notes as provided', () => {
       const olderNote = createMockNote({
         id: 'old',
         updatedAt: new Date('2024-01-01'),
@@ -334,13 +334,13 @@ describe('ChapteredLibrary', () => {
         archive: false,
       });
 
+      // Pass notes sorted (as App.tsx would provide them)
       render(
-        <ChapteredLibrary {...defaultProps} notes={[olderNote, newerNote]} />
+        <ChapteredLibrary {...defaultProps} notes={[newerNote, olderNote]} />
       );
 
       expect(temporalGrouping.groupNotesByChapter).toHaveBeenCalled();
       const callArg = vi.mocked(temporalGrouping.groupNotesByChapter).mock.calls[0][0];
-      // Notes should be sorted newest first
       expect(callArg[0].id).toBe('new');
       expect(callArg[1].id).toBe('old');
     });
