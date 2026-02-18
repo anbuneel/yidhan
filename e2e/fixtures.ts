@@ -112,15 +112,6 @@ export async function goToLibrary(page: Page): Promise<void> {
 }
 
 /**
- * Open a note by title
- */
-export async function openNote(page: Page, title: string): Promise<void> {
-  // Note cards have role="button" (they're clickable articles)
-  await page.locator('article').filter({ hasText: title }).click();
-  await expect(page.getByTestId('note-editor')).toBeVisible();
-}
-
-/**
  * Delete a note from the library view
  */
 export async function deleteNoteFromLibrary(page: Page, title: string): Promise<void> {
@@ -216,26 +207,3 @@ export async function toggleTheme(page: Page): Promise<void> {
   await page.getByTestId('theme-toggle').click();
 }
 
-/**
- * Wait for toast message
- */
-export async function expectToast(page: Page, message: string | RegExp): Promise<void> {
-  await expect(page.getByText(message)).toBeVisible({ timeout: 5000 });
-}
-
-/**
- * Get note count in library
- */
-export async function getNoteCount(page: Page): Promise<number> {
-  // Note cards are <article> elements
-  const notes = page.locator('article');
-  return await notes.count();
-}
-
-/**
- * Check if note exists in library
- */
-export async function noteExists(page: Page, title: string): Promise<boolean> {
-  const noteCard = page.locator('article').filter({ hasText: title });
-  return await noteCard.isVisible();
-}

@@ -9,7 +9,6 @@ import type { Note, Tag } from '../types';
 import {
   getDemoDataForMigration,
   clearDemoState,
-  hasDemoState,
 } from './demoStorage';
 import { fetchTagsOffline } from './offlineTags';
 import { createTagOffline } from './offlineTags';
@@ -117,8 +116,3 @@ export async function migrateDemoToAccount(
     noteCount: demoNotes.length,
   };
 }
-
-/**
- * Check if there's demo data to migrate
- */
-export { hasDemoState };

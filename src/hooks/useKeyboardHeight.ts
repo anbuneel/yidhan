@@ -80,13 +80,3 @@ export function useKeyboardHeight(): number {
   return keyboardHeight;
 }
 
-/**
- * Simple boolean check for whether the keyboard is likely open.
- * Uses a threshold to avoid false positives from address bar changes.
- */
-export function useKeyboardVisible(): boolean {
-  const height = useKeyboardHeight();
-  // Keyboard is "visible" if it takes up more than 150px
-  // (typical mobile keyboards are 250-350px)
-  return height > 150;
-}

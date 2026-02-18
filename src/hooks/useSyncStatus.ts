@@ -85,17 +85,3 @@ export function useSyncStatus(): SyncStatus {
     refresh,
   };
 }
-
-/**
- * Check if a specific note has pending changes
- */
-export async function hasNotePendingChanges(
-  userId: string,
-  noteId: string
-): Promise<boolean> {
-  const { getOfflineDb } = await import('../lib/offlineDb');
-  const db = getOfflineDb(userId);
-
-  const note = await db.notes.get(noteId);
-  return note?.syncStatus === 'pending';
-}

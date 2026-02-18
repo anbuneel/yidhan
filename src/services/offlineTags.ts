@@ -234,14 +234,3 @@ export async function markTagSynced(
   });
 }
 
-/**
- * Get a tag by ID from offline database
- */
-export async function getTagOffline(
-  userId: string,
-  tagId: string
-): Promise<Tag | null> {
-  const db = getOfflineDb(userId);
-  const tag = await db.tags.get(tagId);
-  return tag ? localTagToTag(tag) : null;
-}

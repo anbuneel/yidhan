@@ -106,14 +106,3 @@ export function lazyWithRetry<T extends AnyComponent>(
   });
 }
 
-/**
- * Preload a lazy component without rendering it
- * Useful for preloading on hover or when navigation is likely
- */
-export function preloadComponent(
-  importFn: () => Promise<{ default: AnyComponent }>
-): void {
-  importFn().catch(() => {
-    // Silently ignore preload failures - will be handled when actually needed
-  });
-}

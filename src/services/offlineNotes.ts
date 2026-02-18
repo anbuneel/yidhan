@@ -335,23 +335,6 @@ export async function searchNotesOffline(userId: string, query: string): Promise
 }
 
 /**
- * Get a single note by ID from IndexedDB
- */
-export async function getNoteOffline(userId: string, noteId: string): Promise<Note | null> {
-  const db = getOfflineDb(userId);
-  const note = await db.notes.get(noteId);
-
-  if (!note) return null;
-
-  // Get tags for this note
-  const noteTags = await db.noteTags.where('noteId').equals(noteId).toArray();
-  const tagIds = noteTags.map((nt) => nt.tagId);
-  const tags = tagIds.length > 0 ? await db.tags.where('id').anyOf(tagIds).toArray() : [];
-
-  return localNoteToNote(note, tags.map(localTagToTag));
-}
-
-/**
  * Count faded notes in IndexedDB
  */
 export async function countFadedNotesOffline(userId: string): Promise<number> {
