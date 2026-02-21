@@ -1086,7 +1086,7 @@ describe('notes service', () => {
       expect(result).toBeNull();
     });
 
-    it('returns null on share fetch error', async () => {
+    it('throws on share fetch error', async () => {
       const mockBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -1094,9 +1094,28 @@ describe('notes service', () => {
       };
       mockSupabaseFrom(mockBuilder);
 
-      const result = await fetchSharedNote('token');
+      await expect(fetchSharedNote('token')).rejects.toThrow('Fetch error');
+    });
 
-      expect(result).toBeNull();
+    it('throws on note fetch error', async () => {
+      const shareData = { note_id: 'note-123', expires_at: null };
+      const shareBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: shareData, error: null }),
+      };
+      const noteBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: new Error('Note fetch error') }),
+      };
+
+      vi.mocked(supabase.from)
+        .mockReturnValueOnce(shareBuilder)
+        .mockReturnValueOnce(noteBuilder);
+
+      await expect(fetchSharedNote('valid-token')).rejects.toThrow('Note fetch error');
     });
   });
 });

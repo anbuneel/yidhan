@@ -202,7 +202,8 @@ test.describe('Share as Letter', () => {
 
       // Open in anonymous context
       const browser = page.context().browser();
-      const anonymousContext = await browser!.newContext();
+      if (!browser) throw new Error('Browser instance not available');
+      const anonymousContext = await browser.newContext();
       const anonymousPage = await anonymousContext.newPage();
 
       try {

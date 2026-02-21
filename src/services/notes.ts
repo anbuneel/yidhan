@@ -560,7 +560,7 @@ export async function fetchSharedNote(token: string): Promise<Note | null> {
 
   if (shareError) {
     console.error('Error fetching share:', shareError);
-    return null;
+    throw shareError;
   }
 
   if (!shareData) {
@@ -588,7 +588,7 @@ export async function fetchSharedNote(token: string): Promise<Note | null> {
 
   if (noteError) {
     console.error('Error fetching shared note:', noteError);
-    return null;
+    throw noteError;
   }
 
   if (!noteData) {

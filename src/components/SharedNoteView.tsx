@@ -40,7 +40,8 @@ export function SharedNoteView({
           setLoadingState('expired');
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('SharedNoteView: failed to load shared note', { token, error });
         if (isMounted) {
           setLoadingState('error');
         }

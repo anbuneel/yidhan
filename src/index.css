@@ -663,7 +663,11 @@ body::before {
 .rich-text-editor .ProseMirror.shared-note-content {
   min-height: auto;
   caret-color: auto;
-  outline: none;
+}
+
+/* Disable interactive elements in read-only shared view */
+.rich-text-editor .ProseMirror.shared-note-content input[type="checkbox"] {
+  pointer-events: none;
 }
 
 /* Note Card Preview - Scaled down rich text */
