@@ -251,15 +251,17 @@ export function SharedNoteView({
           />
 
           {/* Content */}
-          <div
-            className="rich-text-editor prose"
-            style={{
-              fontFamily: 'var(--font-body)',
-              color: 'var(--color-text-primary)',
-              lineHeight: 1.8,
-            }}
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(note?.content || '') }}
-          />
+          <div className="rich-text-editor">
+            <div
+              className="ProseMirror shared-note-content"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-primary)',
+                lineHeight: 1.8,
+              }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(note?.content || '') }}
+            />
+          </div>
 
           {/* Footer attribution */}
           <footer

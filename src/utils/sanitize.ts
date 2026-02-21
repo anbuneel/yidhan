@@ -19,7 +19,7 @@ export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
       // Text formatting
-      'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
+      'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre', 'mark',
       // Headings
       'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
       // Lists (including task list elements)

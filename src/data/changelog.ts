@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '2.11.1',
+    date: '2026-02-21',
+    changes: [
+      { type: 'fix', text: 'Shared notes ("Share as Letter") now preserve all rich text formatting (headings, lists, blockquotes, code blocks, task lists)' },
+      { type: 'fix', text: 'Highlighted text (<mark>) no longer stripped from notes by HTML sanitizer' },
+    ],
+  },
+  {
     version: '2.11.0',
     date: '2026-02-16',
     changes: [

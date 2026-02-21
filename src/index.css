@@ -659,6 +659,13 @@ body::before {
   margin-bottom: 0.25rem;
 }
 
+/* Shared Note View - Override editor-only properties for read-only display */
+.rich-text-editor .ProseMirror.shared-note-content {
+  min-height: auto;
+  caret-color: auto;
+  outline: none;
+}
+
 /* Note Card Preview - Scaled down rich text */
 .note-card-preview {
   font-family: var(--font-body);
