@@ -77,7 +77,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
           here. They're yours to keep.
           <br />
           <br />
-          Create a free account and your words will travel with you everywhere.
+          Create a free account to encrypt and sync your notes across devices.
         </p>
 
         {/* Primary CTA */}

@@ -93,6 +93,17 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 The distraction-free note-taking app. No folders, no clutter.
                 Just your thoughts, beautifully organized.
               </p>
+              <p
+                className="text-sm mb-6 md:mb-8"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-accent)',
+                  letterSpacing: '0.05em',
+                  opacity: 0.85,
+                }}
+              >
+                End-to-end encrypted. Your thoughts belong only to you.
+              </p>
 
               {/* CTA Group */}
               <div className="flex flex-col gap-3">
@@ -147,7 +158,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                   borderTop: '1px dashed var(--glass-border)',
                 }}
               >
-                {['Open source', 'Works offline', 'Your data stays yours'].map((signal) => (
+                {['Open source', 'Works offline', 'End-to-end encrypted'].map((signal) => (
                   <div
                     key={signal}
                     className="landing-trust-signal flex items-center gap-2 text-sm"

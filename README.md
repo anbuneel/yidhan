@@ -11,16 +11,17 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 
 ## Features
 
+- **End-to-End Encryption** - Note titles and content encrypted client-side with AES-256-GCM before reaching the server; passphrase-derived keys via Argon2id stay in memory only
+- **Rich Text Editor** - Format your notes with bold, italic, headers, lists, quotes, code blocks, and task lists with checkboxes
+- **Cross-Device Sync** - Notes sync across devices in ~3 seconds with incremental pull, server-authoritative timestamps, and pagination
+- **Real-time Updates** - Changes appear instantly across tabs and devices with self-echo suppression
+- **Beautiful Design** - Warm, paper-like aesthetics with asymmetric "wabi-sabi" card corners
+- **Light & Dark Themes** - Kintsugi (warm light) and Midnight (forest green dark) themes
+- **Tag Organization** - Organize notes with colorful tags and filter by multiple tags
+- **Tag Management** - Create, edit, and delete tags with a beautiful color picker
 - **Landing Page** - Split-screen design with sample note cards and "Explore" link to full Practice Space
 - **Practice Space** - Full-featured demo at `/demo` without signup; notes persist in localStorage
 - **Seamless Onboarding** - Demo content auto-saves after signup, email confirmation with resend options
-- **Rich Text Editor** - Format your notes with bold, italic, headers, lists, quotes, code blocks, and task lists with checkboxes
-- **Tag Organization** - Organize notes with colorful tags and filter by multiple tags
-- **Tag Management** - Create, edit, and delete tags with a beautiful color picker
-- **Beautiful Design** - Warm, paper-like aesthetics with asymmetric "wabi-sabi" card corners
-- **Light & Dark Themes** - Kintsugi (warm light) and Midnight (forest green dark) themes
-- **Cross-Device Sync** - Notes sync across devices in ~3 seconds with incremental pull, server-authoritative timestamps, and pagination
-- **Real-time Updates** - Changes appear instantly across tabs and devices with self-echo suppression
 - **Export/Import** - Backup notes to JSON or Markdown, restore from backups
 - **Rich Card Previews** - Note cards show formatted content (lists, bold, etc.)
 - **Quick Delete** - Delete notes directly from card view with confirmation
@@ -29,7 +30,6 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Password Reset** - Forgot password flow with email recovery
 - **Smart Auto-save** - Auto-saves 800ms after you stop typing with "Saving..." → "Saved ✓" → "Synced" indicator
 - **Google Sign-In** - Quick authentication via Google OAuth
-- **End-to-End Encryption** - Note titles and content encrypted client-side with AES-256-GCM before reaching the server; passphrase-derived keys via Argon2id stay in memory only
 - **Secure** - User authentication with row-level security
 - **Error Boundary** - Graceful error handling with user-friendly recovery UI
 - **Welcome Note** - New users receive a helpful onboarding note automatically
