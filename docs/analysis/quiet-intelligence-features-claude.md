@@ -1,9 +1,9 @@
 # Quiet Intelligence: AI Feature Analysis for Yidhan
 
-**Version:** 1.3
-**Last Updated:** 2026-01-14
+**Version:** 1.4
+**Last Updated:** 2026-02-22
 **Status:** Living Document (with finalized extensible architecture)
-**Author:** Claude (Opus 4.5)
+**Author:** Claude (Opus 4.5, updated by Opus 4.6)
 
 ---
 
@@ -571,7 +571,7 @@ If they choose "Take a breath" → Simple 60-second breathing exercise or nature
 | Decision | Options | Recommendation |
 |----------|---------|----------------|
 | Embedding model | OpenAI, Cohere, local | OpenAI text-embedding-3-small (cost-effective) |
-| Processing | Real-time vs batch | Batch (nightly job) for most features |
+| Processing | Real-time vs batch | Client-side on load/save (E2EE requires client processing; server can't read encrypted notes) |
 | Storage | Embeddings in Supabase | pgvector extension for similarity search |
 | Email | SendGrid, Resend, Postmark | Resend (developer-friendly, good deliverability) |
 | LLM for synthesis | GPT-4, Claude, Gemini | Claude (aligns with calm, thoughtful tone) |
@@ -580,7 +580,7 @@ If they choose "Take a breath" → Simple 60-second breathing exercise or nature
 
 | Concern | Mitigation |
 |---------|------------|
-| Note content sent to AI | Process embeddings locally where possible; clear data retention policy |
+| Note content sent to AI | With E2EE, content never leaves the client unless user opts in to Tier 2/3 features. Embedding vectors are non-reversible. LLM calls are transient (no server storage). |
 | Emotional analysis | Strictly opt-in; no data shared externally; user can view/delete analysis |
 | Pattern detection | All insights derived from user's own notes; no cross-user analysis |
 | Email digests | User controls frequency; one-click unsubscribe; no tracking pixels |
@@ -1260,13 +1260,15 @@ The architecture is designed to scale from regex (Phase 1) to LLM-powered featur
 
 ### Privacy Tiers
 
-The architecture supports three privacy tiers for future extensibility:
+The architecture supports three privacy tiers for future extensibility.
+
+> **E2EE update (v1.4):** All tiers now process client-side. See [E2EE Compatibility section](#e2ee-compatibility-v14) for the revised architecture.
 
 | Tier | Processing | Privacy Exposure | Cost | Features |
 |------|-----------|------------------|------|----------|
-| **Tier 1** | Regex/SQL (server-side) | None — data stays in Supabase | Free | Quiet Tasks, Quiet Questions |
-| Tier 2 | Embeddings | Medium — vectors sent to API | ~$0.0001/note | Resonance Threads |
-| Tier 3 | LLM | High — content sent to LLM | ~$0.01/note | Daily Whisper, Weekly Digest |
+| **Tier 1** | Client-side regex (post-decrypt) | Low — extracted task strings stored server-side | Free | Quiet Tasks, Quiet Questions |
+| Tier 2 | Client → embedding API → Supabase | Low — non-reversible vectors stored | ~$0.0001/note | Resonance Threads |
+| Tier 3 | Client → LLM API (transient) | Transient — nothing stored server-side | ~$0.01/note | Daily Whisper, Weekly Digest |
 
 **Phase 1 implements Tier 1 only** — users get Quiet Tasks without any third-party data sharing.
 
@@ -1274,7 +1276,7 @@ The architecture supports three privacy tiers for future extensibility:
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| **Processing location** | Server-side (database trigger) | Notes already on Supabase — no additional privacy exposure. Always in sync, zero client load. |
+| **Processing location** | Client-side (post-decrypt) | With E2EE, server can't read notes. Client runs regex after `decryptNote()` and upserts results to `note_tasks`. (Pre-E2EE plan was server-side DB trigger.) |
 | **When to extract** | On note save (via trigger) | Tasks extracted immediately when note is saved. No batch job needed. |
 | **Storage** | Supabase `note_tasks` table | Enables cross-device sync and future email digest feature. |
 | **LLM usage** | Start with regex only | Regex handles 80% of patterns. Graduate to LLM (Tier 3) for advanced features later. |
@@ -1358,12 +1360,77 @@ These questions are deferred to future iterations:
 
 ---
 
+## E2EE Compatibility (v1.4)
+
+### The Problem
+
+This document was written before the [E2EE implementation plan](../plans/e2ee-implementation-plan.md) was designed. The original architecture assumes the server can read note content — database triggers running regex on plaintext (Tier 1), server-side embedding APIs (Tier 2), and LLM batch jobs (Tier 3). With E2EE, the server never sees readable content, which breaks all three tiers as originally designed.
+
+### The Solution: Client-Side Processing
+
+Notes are already decrypted in the browser (React state holds plaintext after passphrase unlock). All intelligence processing moves to the client:
+
+| Tier | Original (server-side) | With E2EE (client-side) |
+|------|----------------------|------------------------|
+| **Tier 1** — Regex | DB trigger `extract_tasks_from_note()` | JS regex runs after `decryptNote()`, upserts to `note_tasks` |
+| **Tier 2** — Embeddings | Server sends content to embedding API | Client sends decrypted content to embedding API, stores vectors |
+| **Tier 3** — LLM | Server batch job sends content to LLM | Client sends decrypted content to LLM API on demand |
+
+### What Changes Per Feature
+
+| Feature | Original Processing | E2EE-Compatible Processing | Impact |
+|---------|--------------------|-----------------------------|--------|
+| Daily Whisper | Server batch: topic modeling | Client: topic extraction on load, LLM call for quote matching | Must be online + unlocked |
+| Weekly Digest Email | Server cron: overnight batch | Client-triggered: user taps "Generate digest" while app is open | No longer automatic overnight |
+| Resonance Threads | Server: nightly embedding + clustering | Client: embed on save, store vectors in Supabase (non-reversible) | Vectors build incrementally |
+| Quiet Reminder | Server trigger: regex intent extraction | Client: regex after decrypt, upsert to `note_tasks` | Minimal change |
+| Quiet Questions | Server trigger: regex extraction | Client: regex after decrypt | Minimal change |
+| Quiet Tasks | Server trigger: regex extraction | Client: regex after decrypt, upsert to `note_tasks` | Minimal change |
+
+### Key Principles
+
+1. **Derived data is not raw content.** Extracted tasks ("Call Mom"), topic labels ("presentations"), and embedding vectors are metadata — they don't expose full note content. These can live server-side unencrypted for features like cross-device sync and email digests.
+
+2. **User consent gates the boundary.** When a user enables Quiet Intelligence, they understand that derived insights (task strings, topic labels, vectors) are stored server-side. The opt-in UX must clearly communicate this. Full note content is never stored server-side.
+
+3. **Embedding vectors are not reversible.** Storing `text-embedding-3-small` vectors in pgvector doesn't leak note content. The server can run similarity queries on vectors without ever seeing plaintext. This is the same approach used by privacy-focused apps like Standard Notes.
+
+4. **Processing only happens while unlocked.** Unlike the original batch-job model, client-side processing requires the app to be open and the vault unlocked. For most features this is natural (user opens app → tasks extracted → whisper shown). The weekly digest is the main casualty — it becomes user-triggered rather than automatic.
+
+### Revised Privacy Tiers
+
+| Tier | Processing | What the server sees | Privacy | Features |
+|------|-----------|---------------------|---------|----------|
+| **Tier 1** | Client-side regex | Extracted task strings (opt-in) | High — only short metadata | Quiet Tasks, Quiet Reminder, Quiet Questions |
+| **Tier 2** | Client → embedding API → Supabase | Embedding vectors (not reversible) | High — vectors only | Resonance Threads, Seasonal Echo |
+| **Tier 3** | Client → LLM API (transient) | Nothing stored server-side | Very high — transient only | Daily Whisper, Weekly Digest, Convergence |
+
+### What Doesn't Change
+
+- **All 12 features remain viable.** None are blocked by E2EE.
+- **Free tier features still work.** Tier 1 regex is lightweight client-side JS.
+- **Bloom tier features still work.** User-consented API calls from the client.
+- **The UX is identical.** Users see the same whispers, threads, and tasks. The processing just happens in a different place.
+
+### One Trade-Off: Weekly Digest Email
+
+The original design had a server cron job generating digests overnight. With E2EE, the server can't read notes to build the digest. Two options:
+
+1. **Client-triggered digest** — User taps "Send my weekly digest" while the app is open. The client generates it and sends via API.
+2. **Derived-data digest** — Server builds the email from Tier 1/2 metadata (extracted tasks, topic labels, vectors) without needing full note content. Less rich but fully automatic.
+
+Option 2 is likely sufficient — the digest's value comes from surfacing tasks and patterns, not quoting full notes.
+
+---
+
 ## Related Documents
 
 - [Competitive Growth Plan](../active/competitive-growth-plan-claude.md) — Original AI strategy discussion
 - [Strategic Viability Review](../active/strategic-viability-review-claude.md) — Competitive positioning
 - [Monetization Philosophy](../active/monetization-philosophy.md) — Pricing approach
 - [PRD](../prd.md) — Product requirements
+- [E2EE Implementation Plan v1.4](../plans/e2ee-implementation-plan.md) — Encryption plan that affects processing architecture
+- [Encryption Capability Analysis v3.2](encryption-capability-analysis-claude.md) — E2EE design decisions
 
 ---
 
