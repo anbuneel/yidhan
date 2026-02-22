@@ -627,6 +627,26 @@ function App() {
   // Note: selectedNoteId removed from deps (2F) — using selectedNoteIdRef instead
   // to prevent Supabase channel unsubscribe/resubscribe on every note selection
 
+  // Re-fetch notes when encryption keys become available (vault unlock).
+  // Separate from the main fetch effect to avoid resubscribing realtime channels.
+  // The main effect runs with keys=null (showing empty notes from IDB),
+  // then this effect re-fetches with decryption once the user enters their passphrase.
+  const hasRefetchedForKeysRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!userId || !keys) {
+      hasRefetchedForKeysRef.current = null;
+      return;
+    }
+    // Only re-fetch once per userId+keys combination
+    const keyId = `${userId}`;
+    if (hasRefetchedForKeysRef.current === keyId) return;
+    hasRefetchedForKeysRef.current = keyId;
+
+    fetchDecryptedNotes(userId, keys)
+      .then(setNotes)
+      .catch(console.error);
+  }, [userId, keys]);
+
   // Migrate demo content from landing page to user's first note
   // Dependency: userId (string) instead of user (object) because:
   // 1. Using the full user object would cause unnecessary re-runs on any user property change
@@ -636,36 +656,39 @@ function App() {
     if (!userId || hasMigratedDemoContent.current) return;
 
     const demoContent = localStorage.getItem(DEMO_STORAGE_KEY);
-    if (demoContent?.trim()) {
+    if (!demoContent?.trim()) {
       hasMigratedDemoContent.current = true;
-
-      // Create note with demo content (sanitize and wrap plain text in paragraph tags for Tiptap)
-      const sanitized = sanitizeText(demoContent);
-      const htmlContent = `<p>${sanitized.replace(/\n/g, '</p><p>')}</p>`;
-      const createNote = keys
-        ? createEncryptedNote(userId, 'My first note', htmlContent, keys)
-        : createNoteOffline(userId, 'My first note', htmlContent);
-      createNote
-        .then((newNote) => {
-          // Clear demo content from localStorage
-          localStorage.removeItem(DEMO_STORAGE_KEY);
-          // Show toast notification
-          toast.success('Your demo note has been saved!');
-          // Add to notes list
-          setNotes((prev) => [newNote, ...prev]);
-          // Open the note in editor
-          setSelectedNoteId(newNote.id);
-          setView('editor');
-        })
-        .catch((error: unknown) => {
-          console.error('Failed to migrate demo content:', error);
-          // Reset flag so user can try again
-          hasMigratedDemoContent.current = false;
-        });
-    } else {
-      hasMigratedDemoContent.current = true;
+      return;
     }
-  }, [userId]);
+
+    // Wait for encryption keys before creating note.
+    // Without this guard, the fallback to createNoteOffline would create
+    // a plaintext note before the passphrase gate renders.
+    if (!keys) return;
+
+    hasMigratedDemoContent.current = true;
+
+    // Create note with demo content (sanitize and wrap plain text in paragraph tags for Tiptap)
+    const sanitized = sanitizeText(demoContent);
+    const htmlContent = `<p>${sanitized.replace(/\n/g, '</p><p>')}</p>`;
+    createEncryptedNote(userId, 'My first note', htmlContent, keys)
+      .then((newNote) => {
+        // Clear demo content from localStorage
+        localStorage.removeItem(DEMO_STORAGE_KEY);
+        // Show toast notification
+        toast.success('Your demo note has been saved!');
+        // Add to notes list
+        setNotes((prev) => [newNote, ...prev]);
+        // Open the note in editor
+        setSelectedNoteId(newNote.id);
+        setView('editor');
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to migrate demo content:', error);
+        // Reset flag so user can try again
+        hasMigratedDemoContent.current = false;
+      });
+  }, [userId, keys]);
 
   // Migrate demo notes to authenticated user's account
   // IMPORTANT: Must wait for hydration to complete to avoid:
@@ -717,14 +740,17 @@ function App() {
     if (!userId || !sharedData) return;
     // Prevent duplicate note creation (race condition in Strict Mode)
     if (isCreatingNoteFromShare.current) return;
+
+    // Wait for encryption keys before creating note.
+    // Without this guard, the fallback would create a plaintext note
+    // before the passphrase gate renders.
+    if (!keys) return;
+
     isCreatingNoteFromShare.current = true;
 
     const { title, content } = formatSharedContent(sharedData);
 
-    const createShareNote = keys
-      ? createEncryptedNote(userId, title, content, keys)
-      : createNoteOffline(userId, title, content);
-    createShareNote
+    createEncryptedNote(userId, title, content, keys)
       .then((newNote) => {
         clearSharedData();
         trackNoteCreated();
@@ -743,7 +769,7 @@ function App() {
         // Reset flag to allow future share-target launches in same session
         isCreatingNoteFromShare.current = false;
       });
-  }, [userId, sharedData, clearSharedData, trackNoteCreated, startTransition]);
+  }, [userId, sharedData, keys, clearSharedData, trackNoteCreated, startTransition]);
 
   // Fetch tags when user is authenticated and hydration is complete
   useEffect(() => {
@@ -1106,7 +1132,7 @@ function App() {
     if (!activeConflict || !user) return;
 
     try {
-      await resolveConflict(user.id, activeConflict, choice);
+      await resolveConflict(user.id, activeConflict, choice, keys ?? undefined);
       removeConflict(activeConflict.entityId);
 
       // Refresh notes from IndexedDB after conflict resolution

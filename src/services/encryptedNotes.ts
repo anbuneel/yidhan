@@ -252,12 +252,20 @@ export async function fetchDecryptedNotes(
   );
 
   const decrypted: Note[] = [];
+  let failedCount = 0;
   for (const result of results) {
     if (result.status === 'fulfilled') {
       decrypted.push(result.value);
     } else {
+      failedCount++;
       console.error('Failed to decrypt note:', result.reason);
     }
+  }
+
+  if (failedCount > 0) {
+    console.warn(
+      `Decryption summary: ${decrypted.length} succeeded, ${failedCount} failed out of ${notes.length} total`
+    );
   }
 
   return decrypted;
@@ -278,12 +286,20 @@ export async function fetchDecryptedFadedNotes(
   );
 
   const decrypted: Note[] = [];
+  let failedCount = 0;
   for (const result of results) {
     if (result.status === 'fulfilled') {
       decrypted.push(result.value);
     } else {
+      failedCount++;
       console.error('Failed to decrypt faded note:', result.reason);
     }
+  }
+
+  if (failedCount > 0) {
+    console.warn(
+      `Faded notes decryption: ${decrypted.length} succeeded, ${failedCount} failed out of ${notes.length} total`
+    );
   }
 
   return decrypted;

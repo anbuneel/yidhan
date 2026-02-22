@@ -44,6 +44,20 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
   // Auto-lock: if the current user doesn't match the user who unlocked,
   // the keys are invalid. This is a derived value — no effect needed.
   const currentUserId = user?.id ?? null;
+
+  // Clear keyState when user signs out or switches accounts.
+  // Uses React's "adjusting state during render" pattern (not an effect)
+  // to avoid cascading renders while still dereferencing CryptoKey objects.
+  // Without this, same-user re-login in the same SPA session would match
+  // keyState.userId and expose keys without requiring the passphrase.
+  // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevUserId, setPrevUserId] = useState<string | null>(null);
+  if (prevUserId !== currentUserId) {
+    setPrevUserId(currentUserId);
+    if (!currentUserId && keyState.keys !== null) {
+      setKeyState({ keys: null, userId: null });
+    }
+  }
   const keys = useMemo(() => {
     if (keyState.userId === null || keyState.userId !== currentUserId) {
       return null;

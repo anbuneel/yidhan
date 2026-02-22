@@ -280,12 +280,19 @@ export function useSyncEngine(
 }
 
 /**
- * Resolve a conflict by choosing a version
+ * Resolve a conflict by choosing a version.
+ *
+ * E2EE-aware: for encrypted notes, pushes encrypted fields (not empty
+ * plaintext title/content) and preserves encryption metadata through
+ * all resolution paths. The optional `keys` parameter is required for
+ * the "both" path on encrypted notes (re-encrypts the copy with a new
+ * noteId so AAD is correct).
  */
 export async function resolveConflict(
   userId: string,
   conflict: ConflictInfo,
-  choice: 'local' | 'server' | 'both'
+  choice: 'local' | 'server' | 'both',
+  keys?: import('../lib/encryption').DerivedKeys
 ): Promise<void> {
   const { getOfflineDb } = await import('../lib/offlineDb');
   const { supabase } = await import('../lib/supabase');
@@ -304,32 +311,46 @@ export async function resolveConflict(
     deleted_at: string | null;
     created_at: string;
     updated_at: string;
+    encrypted_payload: string | null;
+    encryption_iv: string | null;
+    encryption_version: number | null;
+    content_hash: string | null;
   };
+
+  const isEncrypted = Boolean(localNote.encryptedPayload);
 
   switch (choice) {
     case 'local': {
-      // Push local version to server (or queue if offline)
+      // Push local version to server (or queue if offline).
+      // For encrypted notes, push encrypted fields instead of empty plaintext.
       const { queueSyncOperation } = await import('../services/offlineNotes');
+
+      const pushPayload = isEncrypted
+        ? {
+            title: '' as string,
+            content: '' as string,
+            encrypted_payload: localNote.encryptedPayload,
+            encryption_iv: localNote.encryptionIv,
+            encryption_version: localNote.encryptionVersion,
+            content_hash: localNote.contentHash,
+          }
+        : {
+            title: localNote.title,
+            content: localNote.content,
+          };
 
       if (navigator.onLine) {
         // Try to push directly when online
         const { data: pushed, error } = await supabase
           .from('notes')
-          .update({
-            title: localNote.title,
-            content: localNote.content,
-            // updated_at is set by server-side trigger (notes_updated_at_trigger)
-          })
+          .update(pushPayload)
           .eq('id', localNote.id)
           .select('updated_at')
           .single();
 
         if (error) {
           // Queue for retry if server update failed
-          await queueSyncOperation(userId, 'update', 'note', localNote.id, {
-            title: localNote.title,
-            content: localNote.content,
-          });
+          await queueSyncOperation(userId, 'update', 'note', localNote.id, pushPayload);
           await db.notes.update(localNote.id, {
             syncStatus: 'pending',
           });
@@ -344,10 +365,7 @@ export async function resolveConflict(
         }
       } else {
         // Queue for sync when back online
-        await queueSyncOperation(userId, 'update', 'note', localNote.id, {
-          title: localNote.title,
-          content: localNote.content,
-        });
+        await queueSyncOperation(userId, 'update', 'note', localNote.id, pushPayload);
         await db.notes.update(localNote.id, {
           syncStatus: 'pending',
         });
@@ -356,7 +374,7 @@ export async function resolveConflict(
     }
 
     case 'server': {
-      // Apply server version locally — use server timestamp for all fields
+      // Apply server version locally — include encrypted fields from server
       const serverTime = new Date(serverNote.updated_at).getTime();
       await db.notes.update(serverNote.id, {
         title: serverNote.title,
@@ -370,6 +388,10 @@ export async function resolveConflict(
         lastSyncedAt: serverTime,
         serverUpdatedAt: serverTime,
         localUpdatedAt: serverTime,
+        encryptedPayload: serverNote.encrypted_payload ?? null,
+        encryptionIv: serverNote.encryption_iv ?? null,
+        encryptionVersion: serverNote.encryption_version ?? null,
+        contentHash: serverNote.content_hash ?? null,
       });
       break;
     }
@@ -379,36 +401,79 @@ export async function resolveConflict(
       const { queueSyncOperation } = await import('../services/offlineNotes');
       const newNoteId = crypto.randomUUID();
       const now = Date.now();
-      const copyTitle = `${localNote.title} (copy)`;
 
-      // Create new note with local content in IndexedDB
-      await db.notes.add({
-        id: newNoteId,
-        userId,
-        title: copyTitle,
-        content: localNote.content,
-        pinned: false,
-        deletedAt: null,
-        createdAt: now,
-        updatedAt: now,
-        syncStatus: 'pending',
-        lastSyncedAt: null,
-        serverUpdatedAt: null,
-        localUpdatedAt: now,
-        encryptedPayload: localNote.encryptedPayload ?? null,
-        encryptionIv: localNote.encryptionIv ?? null,
-        encryptionVersion: localNote.encryptionVersion ?? null,
-        contentHash: localNote.contentHash ?? null,
-      });
+      if (isEncrypted && keys) {
+        // Encrypted note: decrypt local content, re-encrypt with new noteId
+        // (AAD includes noteId, so a raw copy would fail decryption)
+        const { decryptNote, encryptNote } = await import('../lib/encryption');
+        const { title, content } = await decryptNote(
+          localNote.id, userId,
+          { ciphertext: localNote.encryptedPayload!, iv: localNote.encryptionIv! },
+          keys.encryptionKey
+        );
+        const reEncrypted = await encryptNote(
+          newNoteId, userId, `${title} (copy)`, content, keys
+        );
 
-      // Queue the create operation for sync (works both online and offline)
-      await queueSyncOperation(userId, 'create', 'note', newNoteId, {
-        title: copyTitle,
-        content: localNote.content,
-        pinned: false,
-      });
+        await db.notes.add({
+          id: newNoteId,
+          userId,
+          title: '',
+          content: '',
+          pinned: false,
+          deletedAt: null,
+          createdAt: now,
+          updatedAt: now,
+          syncStatus: 'pending',
+          lastSyncedAt: null,
+          serverUpdatedAt: null,
+          localUpdatedAt: now,
+          encryptedPayload: reEncrypted.ciphertext,
+          encryptionIv: reEncrypted.iv,
+          encryptionVersion: reEncrypted.version,
+          contentHash: reEncrypted.contentHash,
+        });
 
-      // Update original with server version — use server timestamp for sync cursor
+        await queueSyncOperation(userId, 'create', 'note', newNoteId, {
+          title: '',
+          content: '',
+          pinned: false,
+          encrypted_payload: reEncrypted.ciphertext,
+          encryption_iv: reEncrypted.iv,
+          encryption_version: reEncrypted.version,
+          content_hash: reEncrypted.contentHash,
+        });
+      } else {
+        // Unencrypted note: copy plaintext directly
+        const copyTitle = `${localNote.title} (copy)`;
+
+        await db.notes.add({
+          id: newNoteId,
+          userId,
+          title: copyTitle,
+          content: localNote.content,
+          pinned: false,
+          deletedAt: null,
+          createdAt: now,
+          updatedAt: now,
+          syncStatus: 'pending',
+          lastSyncedAt: null,
+          serverUpdatedAt: null,
+          localUpdatedAt: now,
+          encryptedPayload: null,
+          encryptionIv: null,
+          encryptionVersion: null,
+          contentHash: null,
+        });
+
+        await queueSyncOperation(userId, 'create', 'note', newNoteId, {
+          title: copyTitle,
+          content: localNote.content,
+          pinned: false,
+        });
+      }
+
+      // Update original with server version (including encrypted fields)
       const serverUpdatedTime = new Date(serverNote.updated_at).getTime();
       await db.notes.update(serverNote.id, {
         title: serverNote.title,
@@ -422,6 +487,10 @@ export async function resolveConflict(
         lastSyncedAt: serverUpdatedTime,
         serverUpdatedAt: serverUpdatedTime,
         localUpdatedAt: serverUpdatedTime,
+        encryptedPayload: serverNote.encrypted_payload ?? null,
+        encryptionIv: serverNote.encryption_iv ?? null,
+        encryptionVersion: serverNote.encryption_version ?? null,
+        contentHash: serverNote.content_hash ?? null,
       });
       break;
     }
