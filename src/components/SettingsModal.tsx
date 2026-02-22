@@ -10,12 +10,13 @@ interface SettingsModalProps {
   theme: Theme;
   onThemeToggle: () => void;
   onLetGoClick: () => void;
+  onMigrateClick?: () => void;
   sessionSettings: UseSessionSettingsResult;
 }
 
 type SettingsTab = 'profile' | 'password' | 'security';
 
-export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, sessionSettings }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, onMigrateClick, sessionSettings }: SettingsModalProps) {
   const { user, updateProfile, updatePassword, verifyPassword } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
 
@@ -644,6 +645,47 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   </p>
                 )}
               </div>
+
+              {/* Encrypt existing notes — navigate to migration page */}
+              {onMigrateClick && (
+                <div className="mb-5">
+                  <button
+                    onClick={() => {
+                      onClose();
+                      onMigrateClick();
+                    }}
+                    className="
+                      w-full py-3
+                      rounded-lg
+                      text-sm font-medium
+                      transition-all duration-200
+                    "
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      background: 'var(--color-bg-secondary)',
+                      border: '1px solid var(--glass-border)',
+                      color: 'var(--color-text-primary)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--color-accent)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--glass-border)';
+                    }}
+                  >
+                    Encrypt existing notes
+                  </button>
+                  <p
+                    className="text-xs mt-1.5"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      color: 'var(--color-text-tertiary)',
+                    }}
+                  >
+                    Migrate any unencrypted notes to end-to-end encryption
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
