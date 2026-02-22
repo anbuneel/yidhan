@@ -8,6 +8,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.0.0',
+    date: '2026-02-22',
+    changes: [
+      { type: 'feature', text: 'End-to-end encryption: note titles and content are encrypted client-side before reaching the server' },
+      { type: 'feature', text: 'Passphrase setup and unlock screens for key management' },
+      { type: 'feature', text: 'One-time migration to encrypt existing plaintext notes (Settings > Security)' },
+      { type: 'improvement', text: 'Conflict resolution now handles encrypted notes across all three paths (keep local, keep server, keep both)' },
+      { type: 'improvement', text: 'Demo-to-account migration creates encrypted notes instead of plaintext' },
+      { type: 'improvement', text: 'Sentry breadcrumb scrubber strips encrypted fields before error reporting' },
+      { type: 'fix', text: 'Keys properly cleared from memory on signout, preventing stale passphrase bypass' },
+    ],
+  },
+  {
     version: '2.11.1',
     date: '2026-02-21',
     changes: [
