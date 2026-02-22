@@ -28,6 +28,9 @@ const SettingsModal = lazyWithRetry(() => import('./components/SettingsModal').t
 const LettingGoModal = lazyWithRetry(() => import('./components/LettingGoModal').then(module => ({ default: module.LettingGoModal })));
 const KeyboardShortcutsModal = lazyWithRetry(() => import('./components/KeyboardShortcutsModal').then(module => ({ default: module.KeyboardShortcutsModal })));
 import { useAuth } from './contexts/AuthContext';
+import { useEncryption } from './contexts/EncryptionContext';
+import { PassphraseSetup } from './components/PassphraseSetup';
+import { PassphraseUnlock } from './components/PassphraseUnlock';
 import {
   subscribeToNotes,
   cleanupExpiredFadedNotes,
@@ -128,6 +131,7 @@ migrateLocalStorageKeys();
 
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
+  const { isEncryptionSetup, isUnlocked } = useEncryption();
   const appLoadingMessage = 'Preparing your space...';
 
   // Network connectivity monitoring
@@ -1666,6 +1670,15 @@ function App() {
         )}
       </>
     );
+  }
+
+  // E2EE passphrase gate — after auth, before any authenticated view
+  // user is guaranteed non-null at this point (landing page returned above)
+  if (!isEncryptionSetup) {
+    return <PassphraseSetup />;
+  }
+  if (!isUnlocked) {
+    return <PassphraseUnlock />;
   }
 
   // Faded Notes View

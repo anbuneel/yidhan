@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './contexts/AuthContext'
+import { EncryptionProvider } from './contexts/EncryptionContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ReloadPrompt } from './components/ReloadPrompt'
 import { showUpdateBanner } from './utils/updateBanner'
@@ -55,6 +56,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <AuthProvider>
+        <EncryptionProvider>
         <App />
         <ReloadPrompt />
         <Toaster
@@ -83,6 +85,7 @@ createRoot(document.getElementById('root')!).render(
             },
           }}
         />
+      </EncryptionProvider>
       </AuthProvider>
     </ErrorBoundary>
   </StrictMode>,
