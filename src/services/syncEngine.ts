@@ -62,7 +62,11 @@ let isSyncing = false;
 let syncPromise: Promise<SyncResult> | null = null;
 
 // Pause/resume state for E2EE (gate sync during migration or key rotation)
+// Uses a shared Promise so all concurrent waiters resolve when resumed
+// (previous single-resolver pattern caused deadlocks when multiple sync
+// functions called waitForUnpause concurrently).
 let isPaused = false;
+let pausePromise: Promise<void> | null = null;
 let pauseResolve: (() => void) | null = null;
 
 /**
@@ -70,11 +74,16 @@ let pauseResolve: (() => void) | null = null;
  * but new fullSync/pullRemoteChanges/processQueue calls will wait.
  */
 export function pauseSync(): void {
-  isPaused = true;
+  if (!isPaused) {
+    isPaused = true;
+    pausePromise = new Promise<void>((resolve) => {
+      pauseResolve = resolve;
+    });
+  }
 }
 
 /**
- * Resume sync operations. Any calls that were waiting will proceed.
+ * Resume sync operations. All waiting calls will proceed.
  */
 export function resumeSync(): void {
   isPaused = false;
@@ -82,14 +91,13 @@ export function resumeSync(): void {
     pauseResolve();
     pauseResolve = null;
   }
+  pausePromise = null;
 }
 
 /** Wait for sync to be unpaused (returns immediately if not paused) */
 async function waitForUnpause(): Promise<void> {
-  if (!isPaused) return;
-  return new Promise<void>((resolve) => {
-    pauseResolve = resolve;
-  });
+  if (!isPaused || !pausePromise) return;
+  return pausePromise;
 }
 
 export interface SyncResult {

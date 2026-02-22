@@ -65,14 +65,13 @@ export async function migrateExistingNotes(
       batch.map(async (note) => {
         try {
           // Skip if already encrypted (idempotent check)
+          // Note: don't increment completed here — the finally block handles it
           if (
             note.encrypted_payload != null &&
             note.title === '' &&
             note.content === ''
           ) {
             result.skipped++;
-            completed++;
-            onProgress?.(completed, total);
             return;
           }
 

@@ -2,34 +2,50 @@
  * Encrypted Notes Service
  *
  * Wrapper layer between App and offlineNotes.
- * All note reads are decrypted; all writes are encrypted.
+ * All note reads are decrypted; all writes encrypt BEFORE persisting.
  *
- * This module never stores plaintext in the database — title and content
- * in Supabase/IndexedDB are empty strings for encrypted notes.
+ * CRITICAL INVARIANT: Plaintext title/content NEVER touches IndexedDB or the
+ * sync queue. Encryption happens before the first write.
  */
 
 import type { Note, Tag } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
+import type { LocalNote } from '../lib/offlineDb';
 import { encryptNote, decryptNote } from '../lib/encryption';
 import {
-  createNoteOffline,
-  updateNoteOffline,
   fetchNotesOffline,
   fetchFadedNotesOffline,
-  createNotesBatchOffline,
+  queueSyncOperation,
 } from './offlineNotes';
 import { getOfflineDb } from '../lib/offlineDb';
+import { validateNoteTitle, validateNoteContentLength } from '../utils/validation';
+import { sanitizeHtml } from '../utils/sanitize';
 
 /**
  * Decrypt a single note in-place if it has encrypted fields.
  * Returns the note with plaintext title and content.
+ *
+ * Throws on partial encryption state (payload without IV or vice versa)
+ * to surface data corruption immediately rather than silently returning
+ * an empty note.
  */
 async function decryptNoteIfNeeded(
   note: Note,
   userId: string,
   keys: DerivedKeys
 ): Promise<Note> {
-  if (!note.encryptedPayload || !note.encryptionIv) {
+  const hasPayload = Boolean(note.encryptedPayload);
+  const hasIv = Boolean(note.encryptionIv);
+
+  // Detect partial encryption state — this should never happen
+  if (hasPayload !== hasIv) {
+    throw new Error(
+      `Note ${note.id} has corrupted encryption state: ` +
+      `payload=${hasPayload}, iv=${hasIv}`
+    );
+  }
+
+  if (!hasPayload) {
     // Not encrypted — return as-is (legacy note or already decrypted)
     return note;
   }
@@ -37,7 +53,7 @@ async function decryptNoteIfNeeded(
   const { title, content } = await decryptNote(
     note.id,
     userId,
-    { ciphertext: note.encryptedPayload, iv: note.encryptionIv },
+    { ciphertext: note.encryptedPayload!, iv: note.encryptionIv! },
     keys.encryptionKey
   );
 
@@ -46,7 +62,9 @@ async function decryptNoteIfNeeded(
 
 /**
  * Create a new encrypted note.
- * Encrypts title/content, writes encrypted payload to IndexedDB, and queues for sync.
+ *
+ * Encrypts title/content BEFORE writing to IndexedDB — no plaintext window.
+ * The note in IndexedDB and sync queue only ever contains ciphertext.
  */
 export async function createEncryptedNote(
   userId: string,
@@ -54,43 +72,62 @@ export async function createEncryptedNote(
   content: string,
   keys: DerivedKeys
 ): Promise<Note> {
-  // Create the note first (gets an ID)
-  const note = await createNoteOffline(userId, title, content);
+  // Validate and sanitize (same checks as createNoteOffline)
+  const validatedTitle = validateNoteTitle(title);
+  validateNoteContentLength(content);
+  const sanitizedContent = sanitizeHtml(content);
 
-  // Encrypt the note
-  const encrypted = await encryptNote(note.id, userId, title, content, keys);
-
-  // Update the local note with encrypted fields and clear plaintext
   const db = getOfflineDb(userId);
-  await db.notes.update(note.id, {
+  const now = Date.now();
+  const noteId = crypto.randomUUID();
+
+  // Encrypt BEFORE any write — no plaintext touches storage
+  const encrypted = await encryptNote(noteId, userId, validatedTitle, sanitizedContent, keys);
+
+  // Write to IndexedDB with empty title/content and encrypted fields
+  const localNote: LocalNote = {
+    id: noteId,
+    userId,
     title: '',
     content: '',
+    pinned: false,
+    deletedAt: null,
+    createdAt: now,
+    updatedAt: now,
+    syncStatus: 'pending',
+    lastSyncedAt: null,
+    serverUpdatedAt: null,
+    localUpdatedAt: now,
     encryptedPayload: encrypted.ciphertext,
     encryptionIv: encrypted.iv,
     encryptionVersion: encrypted.version,
     contentHash: encrypted.contentHash,
+  };
+
+  await db.notes.add(localNote);
+
+  // Queue sync with encrypted payload (never plaintext)
+  await queueSyncOperation(userId, 'create', 'note', noteId, {
+    title: '',
+    content: '',
+    pinned: false,
+    encrypted_payload: encrypted.ciphertext,
+    encryption_iv: encrypted.iv,
+    encryption_version: encrypted.version,
+    content_hash: encrypted.contentHash,
   });
 
-  // Update the queued sync operation payload to use encrypted fields
-  const queueEntry = await db.syncQueue
-    .where('entityId').equals(note.id)
-    .first();
-  if (queueEntry?.id != null) {
-    await db.syncQueue.update(queueEntry.id, {
-      payload: {
-        title: '',
-        content: '',
-        encrypted_payload: encrypted.ciphertext,
-        encryption_iv: encrypted.iv,
-        encryption_version: encrypted.version,
-        content_hash: encrypted.contentHash,
-      },
-    });
-  }
-
-  // Return the decrypted note to the caller (React state holds plaintext)
+  // Return decrypted note for React state (UI needs plaintext)
   return {
-    ...note,
+    id: noteId,
+    title: validatedTitle,
+    content: sanitizedContent,
+    createdAt: new Date(now),
+    updatedAt: new Date(now),
+    tags: [],
+    pinned: false,
+    deletedAt: null,
+    syncStatus: 'pending',
     encryptedPayload: encrypted.ciphertext,
     encryptionIv: encrypted.iv,
     encryptionVersion: encrypted.version,
@@ -100,7 +137,9 @@ export async function createEncryptedNote(
 
 /**
  * Update an existing encrypted note.
- * Encrypts the new title/content, updates IndexedDB, and queues for sync.
+ *
+ * Encrypts the new title/content BEFORE writing to IndexedDB.
+ * Updates IDB and sync queue atomically with encrypted fields.
  */
 export async function updateEncryptedNote(
   userId: string,
@@ -109,61 +148,57 @@ export async function updateEncryptedNote(
   content: string,
   keys: DerivedKeys
 ): Promise<Note> {
-  // Encrypt new content
-  const encrypted = await encryptNote(noteId, userId, title, content, keys);
+  // Validate and sanitize
+  const validatedTitle = validateNoteTitle(title);
+  validateNoteContentLength(content);
+  const sanitizedContent = sanitizeHtml(content);
+
+  // Encrypt BEFORE any write
+  const encrypted = await encryptNote(noteId, userId, validatedTitle, sanitizedContent, keys);
 
   const db = getOfflineDb(userId);
+  const now = Date.now();
 
-  // Get the existing note to construct a proper Note object for updateNoteOffline
+  // Get existing note to preserve sync tracking fields
   const existing = await db.notes.get(noteId);
   if (!existing) {
     throw new Error(`Note ${noteId} not found in offline database`);
   }
 
-  // Update via offlineNotes first (handles sync queue, validation, etc.)
-  const note = await updateNoteOffline(userId, {
-    id: noteId,
-    title,
-    content,
-    createdAt: new Date(existing.createdAt),
-    updatedAt: new Date(existing.updatedAt),
-    tags: [],
-    pinned: existing.pinned,
-    deletedAt: existing.deletedAt ? new Date(existing.deletedAt) : null,
-  });
+  // Update IndexedDB: empty title/content + encrypted fields in single operation
   await db.notes.update(noteId, {
     title: '',
     content: '',
+    updatedAt: now,
+    localUpdatedAt: now,
+    syncStatus: existing.syncStatus === 'synced' ? 'pending' : existing.syncStatus,
     encryptedPayload: encrypted.ciphertext,
     encryptionIv: encrypted.iv,
     encryptionVersion: encrypted.version,
     contentHash: encrypted.contentHash,
   });
 
-  // Update the queued sync operation payload
-  const queueEntry = await db.syncQueue
-    .where('entityId').equals(noteId)
-    .last();
-  if (queueEntry?.id != null) {
-    const existingPayload = queueEntry.payload as Record<string, unknown> | undefined;
-    await db.syncQueue.update(queueEntry.id, {
-      payload: {
-        ...existingPayload,
-        title: '',
-        content: '',
-        encrypted_payload: encrypted.ciphertext,
-        encryption_iv: encrypted.iv,
-        encryption_version: encrypted.version,
-        content_hash: encrypted.contentHash,
-      },
-    });
-  }
+  // Queue sync with encrypted payload (compaction removes previous updates)
+  await queueSyncOperation(userId, 'update', 'note', noteId, {
+    title: '',
+    content: '',
+    encrypted_payload: encrypted.ciphertext,
+    encryption_iv: encrypted.iv,
+    encryption_version: encrypted.version,
+    content_hash: encrypted.contentHash,
+  });
 
   // Return decrypted note for React state
   return {
-    ...note,
-    title,
-    content,
+    id: noteId,
+    title: validatedTitle,
+    content: sanitizedContent,
+    createdAt: new Date(existing.createdAt),
+    updatedAt: new Date(now),
+    tags: [],
+    pinned: existing.pinned,
+    deletedAt: existing.deletedAt ? new Date(existing.deletedAt) : null,
+    syncStatus: 'pending',
     encryptedPayload: encrypted.ciphertext,
     encryptionIv: encrypted.iv,
     encryptionVersion: encrypted.version,
@@ -212,8 +247,6 @@ export async function searchDecryptedNotes(
   query: string,
   keys: DerivedKeys
 ): Promise<Note[]> {
-  // First try to search using the offline search (works for unencrypted notes)
-  // For encrypted notes, we need to decrypt all and search in memory
   const allNotes = await fetchDecryptedNotes(userId, keys);
 
   if (!query.trim()) return allNotes;
@@ -239,6 +272,9 @@ export async function decryptNoteFromServer(
 
 /**
  * Batch create encrypted notes (for import).
+ *
+ * Each note is encrypted BEFORE writing to IndexedDB.
+ * Uses index-based correlation (not content matching) to avoid mismatches.
  */
 export async function createEncryptedNotesBatch(
   userId: string,
@@ -252,57 +288,79 @@ export async function createEncryptedNotesBatch(
   keys: DerivedKeys,
   onProgress?: (completed: number, total: number) => void
 ): Promise<Note[]> {
-  // Create notes via the batch function first
-  const createdNotes = await createNotesBatchOffline(
-    userId,
-    notesData,
-    onProgress
-  );
-
-  // Encrypt each note and update in IndexedDB
   const db = getOfflineDb(userId);
+  const now = Date.now();
   const encryptedNotes: Note[] = [];
 
-  for (const note of createdNotes) {
-    const originalData = notesData.find(
-      (d) => d.title === note.title || d.content === note.content
-    ) ?? { title: note.title, content: note.content };
+  const BATCH_SIZE = 50;
+  for (let i = 0; i < notesData.length; i += BATCH_SIZE) {
+    const batch = notesData.slice(i, i + BATCH_SIZE);
 
-    const encrypted = await encryptNote(note.id, userId, originalData.title, originalData.content, keys);
+    for (const noteData of batch) {
+      const validatedTitle = validateNoteTitle(noteData.title);
+      validateNoteContentLength(noteData.content);
+      const sanitizedContent = sanitizeHtml(noteData.content);
 
-    await db.notes.update(note.id, {
-      title: '',
-      content: '',
-      encryptedPayload: encrypted.ciphertext,
-      encryptionIv: encrypted.iv,
-      encryptionVersion: encrypted.version,
-      contentHash: encrypted.contentHash,
-    });
+      const noteId = crypto.randomUUID();
+      const createdAt = noteData.createdAt?.getTime() ?? now;
+      const updatedAt = noteData.updatedAt?.getTime() ?? now;
 
-    // Update queued sync payload
-    const queueEntry = await db.syncQueue
-      .where('entityId').equals(note.id)
-      .first();
-    if (queueEntry?.id != null) {
-      await db.syncQueue.update(queueEntry.id, {
-        payload: {
-          title: '',
-          content: '',
-          encrypted_payload: encrypted.ciphertext,
-          encryption_iv: encrypted.iv,
-          encryption_version: encrypted.version,
-          content_hash: encrypted.contentHash,
-        },
+      // Encrypt BEFORE writing
+      const encrypted = await encryptNote(noteId, userId, validatedTitle, sanitizedContent, keys);
+
+      const localNote: LocalNote = {
+        id: noteId,
+        userId,
+        title: '',
+        content: '',
+        pinned: false,
+        deletedAt: null,
+        createdAt,
+        updatedAt,
+        syncStatus: 'pending',
+        lastSyncedAt: null,
+        serverUpdatedAt: null,
+        localUpdatedAt: now,
+        encryptedPayload: encrypted.ciphertext,
+        encryptionIv: encrypted.iv,
+        encryptionVersion: encrypted.version,
+        contentHash: encrypted.contentHash,
+      };
+
+      await db.notes.add(localNote);
+
+      await queueSyncOperation(userId, 'create', 'note', noteId, {
+        title: '',
+        content: '',
+        pinned: false,
+        createdAt: new Date(createdAt).toISOString(),
+        updatedAt: new Date(updatedAt).toISOString(),
+        encrypted_payload: encrypted.ciphertext,
+        encryption_iv: encrypted.iv,
+        encryption_version: encrypted.version,
+        content_hash: encrypted.contentHash,
+      });
+
+      encryptedNotes.push({
+        id: noteId,
+        title: validatedTitle,
+        content: sanitizedContent,
+        createdAt: new Date(createdAt),
+        updatedAt: new Date(updatedAt),
+        tags: [],
+        pinned: false,
+        deletedAt: null,
+        syncStatus: 'pending',
+        encryptedPayload: encrypted.ciphertext,
+        encryptionIv: encrypted.iv,
+        encryptionVersion: encrypted.version,
+        contentHash: encrypted.contentHash,
       });
     }
 
-    encryptedNotes.push({
-      ...note,
-      encryptedPayload: encrypted.ciphertext,
-      encryptionIv: encrypted.iv,
-      encryptionVersion: encrypted.version,
-      contentHash: encrypted.contentHash,
-    });
+    if (onProgress) {
+      onProgress(Math.min(i + batch.length, notesData.length), notesData.length);
+    }
   }
 
   return encryptedNotes;

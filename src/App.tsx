@@ -141,6 +141,10 @@ migrateLocalStorageKeys();
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
   const { keys, isEncryptionSetup, isUnlocked } = useEncryption();
+  // Ref for encryption keys — used in realtime handlers to avoid stale closures
+  // when the vault is locked/unlocked (avoids resubscribing Supabase channels)
+  const keysRef = useRef(keys);
+  keysRef.current = keys;
   const appLoadingMessage = 'Preparing your space...';
 
   // Network connectivity monitoring
@@ -540,9 +544,9 @@ function App() {
 
     // Subscribe to real-time changes (also write to IndexedDB to keep IDB in sync)
     // For E2EE, decrypt notes from the server before updating React state
-    // Note: `keys` is captured from the outer scope at subscription time
-    const currentKeys = keys;
+    // Uses keysRef to always read the latest keys (avoids stale closure on lock/unlock)
     const maybeDecrypt = async (note: Note): Promise<Note> => {
+      const currentKeys = keysRef.current;
       if (currentKeys) {
         return decryptNoteFromServer(note, userId, currentKeys);
       }
