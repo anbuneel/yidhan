@@ -29,6 +29,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Password Reset** - Forgot password flow with email recovery
 - **Smart Auto-save** - Auto-saves 800ms after you stop typing with "Saving..." → "Saved ✓" → "Synced" indicator
 - **Google Sign-In** - Quick authentication via Google OAuth
+- **End-to-End Encryption** - Note titles and content encrypted client-side with AES-256-GCM before reaching the server; passphrase-derived keys via Argon2id stay in memory only
 - **Secure** - User authentication with row-level security
 - **Error Boundary** - Graceful error handling with user-friendly recovery UI
 - **Welcome Note** - New users receive a helpful onboarding note automatically
