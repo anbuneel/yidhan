@@ -28,6 +28,10 @@ const RESUME_SCROLL_THRESHOLD_PX = 400; // Show resume chip if scrolled > 400px
 const RESUME_CHIP_MIN_VISIBLE_MS = 2000; // Keep chip visible for at least 2 seconds
 const SCROLL_SAVE_THROTTLE_MS = 1000; // Save scroll position at most every 1 second
 
+// E2EE: Sharing is disabled while end-to-end encryption is active.
+// The share code is preserved but gated behind this flag.
+const sharingEnabled = false;
+
 interface EditorProps {
   note: Note;
   tags: Tag[];
@@ -811,8 +815,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
               Copy with formatting
             </button>
 
-            {/* Share option - hidden in demo mode */}
-            {!isDemo && (
+            {/* Share option - hidden in demo mode and when E2EE is active */}
+            {sharingEnabled && !isDemo && (
               <>
                 {/* Divider */}
                 <div
@@ -1290,8 +1294,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
         </div>
       )}
 
-      {/* Share Modal - only rendered in authenticated mode */}
-      {!isDemo && (
+      {/* Share Modal - only rendered in authenticated mode when sharing is enabled */}
+      {sharingEnabled && !isDemo && (
         <ShareModal
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
