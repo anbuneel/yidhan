@@ -62,6 +62,7 @@ import {
   searchDecryptedNotes,
   fetchDecryptedFadedNotes,
   decryptNoteFromServer,
+  createEncryptedNotesBatch,
 } from './services/encryptedNotes';
 import {
   fetchTagsOffline,
@@ -1369,14 +1370,13 @@ function App() {
           };
         });
 
-        // Batch insert notes with progress callback (offline-first)
-        const createdNotes = await createNotesBatchOffline(
-          user.id,
-          notesToImport,
-          (completed, total) => {
-            setImportProgress({ isImporting: true, current: completed, total, phase: 'importing' });
-          }
-        );
+        // Batch insert notes with progress callback (encrypted if keys available)
+        const progressCb = (completed: number, total: number) => {
+          setImportProgress({ isImporting: true, current: completed, total, phase: 'importing' });
+        };
+        const createdNotes = keys
+          ? await createEncryptedNotesBatch(user.id, notesToImport, keys, progressCb)
+          : await createNotesBatchOffline(user.id, notesToImport, progressCb);
 
         // Add tags to notes (this still needs to be sequential due to junction table)
         setImportProgress({ isImporting: true, current: 0, total: createdNotes.length, phase: 'finalizing' });
@@ -1439,14 +1439,13 @@ function App() {
             };
           });
 
-          // Batch insert notes with progress callback (offline-first)
-          const createdNotes = await createNotesBatchOffline(
-            user.id,
-            notesToImport,
-            (completed, total) => {
-              setImportProgress({ isImporting: true, current: completed, total, phase: 'importing' });
-            }
-          );
+          // Batch insert notes with progress callback (encrypted if keys available)
+          const mdProgressCb = (completed: number, total: number) => {
+            setImportProgress({ isImporting: true, current: completed, total, phase: 'importing' });
+          };
+          const createdNotes = keys
+            ? await createEncryptedNotesBatch(user.id, notesToImport, keys, mdProgressCb)
+            : await createNotesBatchOffline(user.id, notesToImport, mdProgressCb);
 
           // Add tags to notes if any tags were present
           if (tagMap.size > 0) {
@@ -1518,8 +1517,10 @@ function App() {
           // Convert markdown to HTML and sanitize
           const htmlContent = sanitizeHtml(markdownToHtml(noteContent));
 
-          // Create the note
-          const newNote = await createNoteOffline(user.id, title, htmlContent);
+          // Create the note (encrypted if keys available)
+          const newNote = keys
+            ? await createEncryptedNote(user.id, title, htmlContent, keys)
+            : await createNoteOffline(user.id, title, htmlContent);
 
           // Add tags to the note
           for (const tagName of noteTags) {
@@ -1550,7 +1551,7 @@ function App() {
     } finally {
       setImportProgress(null);
     }
-  }, [user, tags]);
+  }, [user, tags, keys]);
 
   // Show loading while checking auth or fetching notes
   if (showAppLoader) {
