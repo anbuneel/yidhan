@@ -15,6 +15,7 @@ const RoadmapPage = lazyWithRetry(() => import('./components/RoadmapPage').then(
 const FadedNotesView = lazyWithRetry(() => import('./components/FadedNotesView').then(module => ({ default: module.FadedNotesView })));
 const SharedNoteView = lazyWithRetry(() => import('./components/SharedNoteView').then(module => ({ default: module.SharedNoteView })));
 const DemoPage = lazyWithRetry(() => import('./pages/DemoPage').then(module => ({ default: module.DemoPage })));
+const MigrationPage = lazyWithRetry(() => import('./pages/MigrationPage').then(module => ({ default: module.MigrationPage })));
 
 import { TagFilterBar } from './components/TagFilterBar';
 import { WelcomeBackPrompt } from './components/WelcomeBackPrompt';
@@ -445,7 +446,7 @@ function App() {
       if (!saved) return;
 
       const parsed = JSON.parse(saved);
-      const validViews: ViewMode[] = ['library', 'editor', 'changelog', 'roadmap', 'faded'];
+      const validViews: ViewMode[] = ['library', 'editor', 'changelog', 'roadmap', 'faded', 'migrate'];
 
       if (parsed?.selectedNoteId && validViews.includes(parsed.view)) {
         pendingNavRestoreRef.current = parsed;
@@ -1728,6 +1729,27 @@ function App() {
   }
   if (!isUnlocked) {
     return <PassphraseUnlock />;
+  }
+
+  // E2EE Migration Page (temporary — for encrypting existing plaintext notes)
+  if (view === 'migrate') {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback message="Loading migration..." />}>
+          <MigrationPage
+            notes={notes}
+            tags={tags}
+            onBack={() => startTransition(() => setView('library'))}
+            onMigrationComplete={async () => {
+              if (user && keys) {
+                const refreshed = await fetchDecryptedNotes(user.id, keys);
+                setNotes(refreshed);
+              }
+            }}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    );
   }
 
   // Faded Notes View
