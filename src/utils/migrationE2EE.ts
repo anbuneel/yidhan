@@ -28,6 +28,60 @@ export interface MigrationResult {
   errors: Array<{ noteId: string; error: string }>;
 }
 
+/**
+ * Rewrite any pending sync queue entries that contain plaintext note payloads.
+ *
+ * Without this, resumeSync() after migration would push stale plaintext
+ * from old queue entries back to Supabase, overwriting the encrypted data
+ * that migration just wrote. This closes the queue-coordination hole
+ * identified in code review (Codex R3).
+ */
+async function encryptPendingSyncQueue(
+  userId: string,
+  keys: DerivedKeys
+): Promise<void> {
+  const db = getOfflineDb(userId);
+  const allEntries = await db.syncQueue.toArray();
+
+  for (const entry of allEntries) {
+    if (entry.entityType !== 'note') continue;
+    if (entry.operation !== 'create' && entry.operation !== 'update') continue;
+
+    const payload = entry.payload as Record<string, unknown>;
+
+    // Skip entries that are already encrypted (from encryptedNotes.ts path)
+    if (payload.encrypted_payload !== undefined) continue;
+
+    // Skip entries without plaintext to encrypt (soft_delete, pin, etc.)
+    const title = payload.title as string | undefined;
+    const content = payload.content as string | undefined;
+    if (title === undefined && content === undefined) continue;
+
+    // Read the local note to get its current content for encryption.
+    // For 'update' entries, the payload may only contain title/content
+    // but we need the noteId for AAD.
+    const noteId = entry.entityId;
+    const plainTitle = (title ?? '') as string;
+    const plainContent = (content ?? '') as string;
+
+    const encrypted = await encryptNote(noteId, userId, plainTitle, plainContent, keys);
+
+    // Rewrite the payload with encrypted fields, clear plaintext.
+    // Spread preserves other fields (e.g. pinned for creates, createdAt, etc.)
+    const encryptedPayload: Record<string, unknown> = {
+      ...payload,
+      title: '',
+      content: '',
+      encrypted_payload: encrypted.ciphertext,
+      encryption_iv: encrypted.iv,
+      encryption_version: encrypted.version,
+      content_hash: encrypted.contentHash,
+    };
+
+    await db.syncQueue.update(entry.id!, { payload: encryptedPayload });
+  }
+}
+
 export async function migrateExistingNotes(
   userId: string,
   keys: DerivedKeys,
@@ -39,6 +93,11 @@ export async function migrateExistingNotes(
     failed: 0,
     errors: [],
   };
+
+  // CRITICAL: Encrypt any pending sync queue entries BEFORE touching Supabase.
+  // Without this, resumeSync() would push stale plaintext from old queue
+  // entries, overwriting the encrypted data we're about to write.
+  await encryptPendingSyncQueue(userId, keys);
 
   // Fetch all notes from Supabase (including soft-deleted)
   const { data: allNotes, error: fetchError } = await supabase
