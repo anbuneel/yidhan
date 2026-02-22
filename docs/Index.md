@@ -86,7 +86,7 @@ Security reviews and analysis.
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [encryption-capability-analysis-claude.md](analysis/encryption-capability-analysis-claude.md) | E2EE encryption options and recommendations | 2026-01-09 |
+| [encryption-capability-analysis-claude.md](analysis/encryption-capability-analysis-claude.md) | E2EE encryption capability analysis v3.2 (Codex peer-reviewed) | 2026-02-21 |
 | [zenote-comprehensive-review-Codex.md](reviews/zenote-comprehensive-review-Codex.md) | Comprehensive security/code review by Codex | 2025-12-28 |
 | [share-token-security-analysis-claude.md](analysis/share-token-security-analysis-claude.md) | Share link token security verification | 2025-12-28 |
 | [api-retry-logic-analysis-claude.md](analysis/api-retry-logic-analysis-claude.md) | API retry and error handling analysis | 2025-12-28 |
@@ -100,6 +100,7 @@ External reviews and audits.
 | Document | Description | Date |
 |----------|-------------|------|
 | [landing-page-design-review-claude.md](reviews/landing-page-design-review-claude.md) | Landing page UI/UX and conversion optimization review | 2026-01-09 |
+| [plan-review-8beb39e6.md](reviews/plan-review-8beb39e6.md) | **NEW** E2EE implementation plan peer review (5 rounds, Codex approved) | 2026-02-21 |
 | [zenote-comprehensive-review-Codex.md](reviews/zenote-comprehensive-review-Codex.md) | Architecture, design, and code review (Codex) | 2025-12-28 |
 | [zenote-ui-ux-review.md](reviews/zenote-ui-ux-review.md) | UI/UX review (Gemini) | 2025-12-22 |
 | [2025-12-22-code-quality-review.md](reviews/code-review/2025-12-22-code-quality-review.md) | Code quality review | 2025-12-22 |
@@ -113,6 +114,7 @@ Currently in-progress implementation plans and follow-ups.
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [e2ee-implementation-plan.md](plans/e2ee-implementation-plan.md) | **NEW** E2EE implementation plan v1.4 (Codex peer-reviewed, approved) | 2026-02-21 |
 | [yidhan-rebrand-plan.md](plans/yidhan-rebrand-plan.md) | **NEW** Yidhan rebrand implementation plan (128 files, 7 phases) | 2026-01-12 |
 | [quiet-tasks-implementation-plan.md](plans/quiet-tasks-implementation-plan.md) | **NEW** Quiet Tasks feature (surface buried tasks/intentions, 6 phases) | 2026-01-14 |
 | [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) | Full mobile/iOS overhaul (requires macOS, 9-13 weeks) | 2026-01-10 |
@@ -233,4 +235,4 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 
 ---
 
-*Last updated: 2026-01-27 (Codebase snapshot added)*
+*Last updated: 2026-02-21 (E2EE implementation plan + peer review added)*
