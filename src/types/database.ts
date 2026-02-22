@@ -11,6 +11,10 @@ export type Database = {
           updated_at: string;
           pinned: boolean;
           deleted_at: string | null;
+          encrypted_payload: string | null;
+          encryption_iv: string | null;
+          encryption_version: number | null;
+          content_hash: string | null;
         };
         Insert: {
           id?: string;
@@ -21,6 +25,10 @@ export type Database = {
           updated_at?: string;
           pinned?: boolean;
           deleted_at?: string | null;
+          encrypted_payload?: string | null;
+          encryption_iv?: string | null;
+          encryption_version?: number | null;
+          content_hash?: string | null;
         };
         Update: {
           id?: string;
@@ -31,6 +39,10 @@ export type Database = {
           updated_at?: string;
           pinned?: boolean;
           deleted_at?: string | null;
+          encrypted_payload?: string | null;
+          encryption_iv?: string | null;
+          encryption_version?: number | null;
+          content_hash?: string | null;
         };
         Relationships: [
           {

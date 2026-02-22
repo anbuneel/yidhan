@@ -32,6 +32,11 @@ export interface LocalNote {
   lastSyncedAt: number | null; // Last successful sync timestamp
   serverUpdatedAt: number | null; // Server's updated_at from last sync
   localUpdatedAt: number; // Local modification timestamp
+  // E2EE fields (null for unencrypted/legacy notes)
+  encryptedPayload: string | null;
+  encryptionIv: string | null;
+  encryptionVersion: number | null;
+  contentHash: string | null;
 }
 
 // Local tag with sync tracking
@@ -137,6 +142,25 @@ class YidhanDB extends Dexie {
       await tx.table('tags')
         .where('syncStatus').equals('synced')
         .modify({ lastSyncedAt: MIGRATION_SYNC_SENTINEL });
+    });
+
+    // v4: E2EE encryption fields on notes
+    // Additive change — new fields default to null for existing notes.
+    // Same indexes (encryption fields don't need indexing).
+    this.version(4).stores({
+      notes: 'id, userId, syncStatus, deletedAt, pinned, updatedAt',
+      tags: 'id, name, syncStatus',
+      noteTags: '[noteId+tagId], noteId, tagId, syncStatus',
+      syncQueue: '++id, clientMutationId, entityType, entityId, createdAt',
+      conflicts: '++id, entityType, entityId, detectedAt',
+    }).upgrade(async (tx) => {
+      // Set encryption fields to null for all existing notes
+      await tx.table('notes').toCollection().modify({
+        encryptedPayload: null,
+        encryptionIv: null,
+        encryptionVersion: null,
+        contentHash: null,
+      });
     });
   }
 }

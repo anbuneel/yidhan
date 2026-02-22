@@ -6,13 +6,15 @@
  */
 
 import type { Note, Tag } from '../types';
+import type { DerivedKeys } from '../lib/encryption';
 import {
   getDemoDataForMigration,
   clearDemoState,
 } from './demoStorage';
 import { fetchTagsOffline } from './offlineTags';
 import { createTagOffline } from './offlineTags';
-import { createNoteOffline, addTagToNoteOffline } from './offlineNotes';
+import { addTagToNoteOffline } from './offlineNotes';
+import { createEncryptedNote } from './encryptedNotes';
 import { sanitizeHtml } from '../utils/sanitize';
 
 // ============================================================================
@@ -38,15 +40,17 @@ export interface MigrationResult {
  * This function:
  * 1. Fetches existing tags from IndexedDB (avoids race condition with state)
  * 2. Creates new tags or maps demo tags to existing ones
- * 3. Creates notes with proper tag relationships
+ * 3. Creates notes with proper tag relationships (encrypted via E2EE)
  * 4. Clears demo state after successful migration
  *
  * @param userId - The authenticated user's ID
+ * @param keys - Encryption keys (required — caller must ensure vault is unlocked)
  * @returns Migration result with notes and tags for UI state updates
  * @throws Error if migration fails (demo state is NOT cleared on error)
  */
 export async function migrateDemoToAccount(
-  userId: string
+  userId: string,
+  keys: DerivedKeys
 ): Promise<MigrationResult> {
   // Get demo data (includes edited welcome note if applicable)
   const { notes: demoNotes, tags: demoTags } = getDemoDataForMigration();
@@ -80,14 +84,15 @@ export async function migrateDemoToAccount(
     }
   }
 
-  // Create notes with populated tag objects
+  // Create notes with populated tag objects — encrypted via E2EE
   const migratedNotes: Note[] = [];
 
   for (const demoNote of demoNotes) {
-    const newNote = await createNoteOffline(
+    const newNote = await createEncryptedNote(
       userId,
       demoNote.title,
-      sanitizeHtml(demoNote.content)
+      sanitizeHtml(demoNote.content),
+      keys
     );
 
     // Collect tag objects for this note

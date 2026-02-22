@@ -21,7 +21,9 @@ src/
 ├── components/
 │   ├── Auth.tsx           # Login/signup/Google OAuth/password reset UI (supports modal mode)
 │   ├── ChangelogPage.tsx  # Version history page with categorized changes
-│   ├── Editor.tsx         # Note editor with rich text + tag selector + save/sync indicator
+│   ├── Editor.tsx         # Note editor with rich text + tag selector + save/sync indicator (share disabled for E2EE)
+│   ├── PassphraseSetup.tsx # First-time E2EE passphrase setup screen
+│   ├── PassphraseUnlock.tsx # Returning user E2EE unlock screen
 │   ├── EditorToolbar.tsx  # Formatting toolbar for rich text editor (sticky in header zone)
 │   ├── ErrorBoundary.tsx  # Error boundary with chunk error detection (deployment handling)
 │   ├── Footer.tsx         # Minimal footer with changelog/roadmap/shortcuts/GitHub links
@@ -48,7 +50,7 @@ src/
 │   ├── ReloadPrompt.tsx   # PWA service worker update prompt (non-disruptive refresh banner)
 │   ├── RichTextEditor.tsx # Tiptap editor content wrapper (toolbar extracted to EditorToolbar)
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
-│   ├── SettingsModal.tsx  # Settings modal (profile, password, security tab, theme, offboarding)
+│   ├── SettingsModal.tsx  # Settings modal (profile, password, security tab, theme, offboarding, E2EE migration)
 │   ├── SlashCommand.tsx   # Tiptap slash command extension (/, timestamps, dividers)
 │   ├── ReAuthModal.tsx    # Re-authentication modal for sensitive actions (step-up auth)
 │   ├── TagBadge.tsx       # Small tag badge for note cards
@@ -68,23 +70,29 @@ src/
 │       └── InvitationModal.tsx    # Soft signup prompt ("A Gentle Invitation")
 ├── pages/
 │   ├── DemoPage.tsx       # Full-featured demo experience at /demo route
-│   └── LogoTestPage.tsx   # Logo preview page for testing across themes
+│   ├── LogoTestPage.tsx   # Logo preview page for testing across themes
+│   └── MigrationPage.tsx  # E2EE migration UI (encrypt existing plaintext notes)
 ├── data/
 │   ├── changelog.ts       # Version history data
 │   └── roadmap.ts         # Roadmap items with status
 ├── contexts/
-│   └── AuthContext.tsx    # Auth state management (login, signup, Google OAuth, password reset, profile, offboarding)
+│   ├── AuthContext.tsx    # Auth state management (login, signup, Google OAuth, password reset, profile, offboarding)
+│   └── EncryptionContext.tsx # E2EE key management (derive, unlock, lock, memory-only key storage)
 ├── lib/
+│   ├── encryption.ts      # Core E2EE crypto: Argon2id + AES-256-GCM + HMAC-SHA-256
+│   ├── __tests__/
+│   │   └── encryption.test.ts # 12 crypto unit tests (roundtrip, tamper, wrong key/AAD)
 │   ├── supabase.ts        # Supabase client instance + fetchAllPaginated helper
-│   └── offlineDb.ts       # Dexie IndexedDB schema for offline storage (v3 with sync cursor migration)
+│   └── offlineDb.ts       # Dexie IndexedDB schema for offline storage (v4 with encryption fields)
 ├── services/
 │   ├── notes.ts           # CRUD operations for notes (with tags)
 │   ├── tags.ts            # CRUD operations for tags
 │   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue + realtime upserts
 │   ├── offlineTags.ts     # Offline-aware tag operations
-│   ├── syncEngine.ts      # Queue processor, conflict detection, incremental pull/push sync
+│   ├── encryptedNotes.ts  # Encrypt/decrypt wrapper over offlineNotes (E2EE service layer)
+│   ├── syncEngine.ts      # Queue processor, HMAC conflict detection, encrypted push/pull sync
 │   ├── demoStorage.ts     # localStorage operations for demo mode (no auth required)
-│   └── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, note creation)
+│   └── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, encrypted note creation)
 ├── types/
 │   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares) with full schema
 ├── hooks/
@@ -108,6 +116,7 @@ src/
 │   ├── sanitize.ts        # HTML/text sanitization (XSS prevention)
 │   ├── temporalGrouping.ts # Group notes by time (Pinned, This Week, Last Week, etc.)
 │   ├── updateBanner.ts    # Persistent update banner for chunk errors / app version updates
+│   ├── migrationE2EE.ts   # One-time plaintext → E2EE migration script
 │   ├── validation.ts      # Note title/content validation and length limits
 │   └── withRetry.ts       # Retry utility with exponential backoff and error discrimination
 ├── themes/
@@ -119,11 +128,11 @@ src/
 │   └── mori.ts            # Dark theme: Mori (proposed)
 ├── test/
 │   └── setup.ts           # Vitest test setup
-├── App.tsx                # Main app component with state management
+├── App.tsx                # Main app component with state management (passphrase gate, encrypted note calls)
 ├── App.css                # Additional app styles
 ├── index.css              # Design system + Tiptap styles
-├── types.ts               # App types (Note, Tag, Theme, ViewMode, TagColor)
-└── main.tsx               # Entry point with AuthProvider and ErrorBoundary
+├── types.ts               # App types (Note, Tag, Theme, ViewMode, TagColor) + encryption fields
+└── main.tsx               # Entry point with AuthProvider, EncryptionProvider, Sentry breadcrumb scrubbing
 
 e2e/
 ├── fixtures.ts            # Playwright test fixtures and helpers
@@ -346,7 +355,7 @@ See `src/data/changelog.ts` for full feature history. See `src/data/roadmap.ts` 
 - Soft-delete (Faded Notes) functions are in `src/services/notes.ts`
 - Share as Letter functions are in `src/services/notes.ts`
 - Demo/Practice Space (`/demo`): `src/services/demoStorage.ts`, `src/hooks/useDemoState.ts`, `src/pages/DemoPage.tsx`
-- Demo-to-account migration runs on signup in `App.tsx` via `createNotesBatch()`
+- Demo-to-account migration runs on signup in `App.tsx` via `migrateDemoToAccount()` (creates encrypted notes)
 
 ## UI Layout
 
@@ -371,11 +380,13 @@ content...
 
 ## Key Component Locations
 - **Auth:** `src/contexts/AuthContext.tsx` (login, signup, OAuth, offboarding, password reset)
-- **Settings:** `src/components/SettingsModal.tsx` (profile, password, security tabs + offboarding link)
+- **Encryption:** `src/contexts/EncryptionContext.tsx` (key derivation, unlock/lock, memory-only key storage)
+- **Settings:** `src/components/SettingsModal.tsx` (profile, password, security tabs + offboarding link + E2EE migration)
 
 ## Notes
-- Content is stored as HTML (from Tiptap's `getHTML()`)
-- Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase
+- Content is stored as HTML (from Tiptap's `getHTML()`), encrypted client-side before storage
+- **E2EE**: Title + content encrypted as JSON blob using AES-256-GCM with AAD (`noteId:userId`). Tags remain plaintext. Keys derived from passphrase via Argon2id (`hash-wasm` WASM). Keys stored in memory only (React state), cleared on signout/timeout/refresh.
+- Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase (all payloads encrypted)
 - Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps
 - Server-side `notes_updated_at_trigger` prevents client clock skew issues
 - Self-echo suppression via `pendingMutations` set prevents realtime re-applying own changes
@@ -451,6 +462,18 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - Technical error messages are mapped to user-friendly messages
 - Generic fallback for unrecognized errors
 
+### End-to-End Encryption (E2EE)
+- **Key derivation:** Argon2id via `hash-wasm` (parallelism=1, iterations=3, memory=64MB, hashLength=64)
+- **Encryption:** AES-256-GCM with AAD (`noteId:userId`) prevents note-swapping attacks
+- **Conflict detection:** HMAC-SHA-256 content hash replaces plaintext comparison in sync engine
+- **Key storage:** Memory only (React state in `EncryptionContext`), never persisted to disk
+- **What's encrypted:** Title + content as JSON blob in `encrypted_payload`
+- **What's NOT encrypted:** Tags (plaintext), metadata (timestamps, pinned)
+- **Salt + key-check:** Stored in Supabase `user_metadata` for passphrase verification
+- **Sentry:** Breadcrumb scrubber strips encrypted fields before sending to Sentry
+- **Share as Letter:** Disabled while E2EE is active (cannot share encrypted content)
+- Migration: Settings > Security > "Encrypt existing notes" for one-time plaintext → E2EE migration
+
 ### Password Policy
 - Minimum 8 characters (enforced in Auth.tsx and SettingsModal.tsx)
 
@@ -472,3 +495,6 @@ SQL migrations are stored in `supabase/migrations/`:
 - `add_tags_updated_at.sql` - Add updated_at column to tags table for incremental sync
 - `add_notes_updated_at_trigger.sql` - Server-side trigger enforcing updated_at on notes (clock-skew prevention)
 - `add_updated_at_indexes.sql` - Composite indexes on (user_id, updated_at) for incremental sync queries
+- `expire_shares_for_e2ee.sql` - Delete all share links (E2EE prerequisite)
+- `disable_welcome_note_trigger.sql` - Remove server-side welcome note trigger (replaced by client-side encrypted welcome)
+- `add_encryption_columns.sql` - Add encrypted_payload, encryption_iv, encryption_version, content_hash columns

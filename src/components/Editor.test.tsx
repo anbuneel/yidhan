@@ -300,7 +300,8 @@ describe('Editor', () => {
 
       expect(screen.getByText('Copy as text')).toBeInTheDocument();
       expect(screen.getByText('Copy with formatting')).toBeInTheDocument();
-      expect(screen.getByText('Share as Letter')).toBeInTheDocument();
+      // Share as Letter is hidden while E2EE is active (sharingEnabled = false)
+      expect(screen.queryByText('Share as Letter')).not.toBeInTheDocument();
       expect(screen.getByText('Download (.md)')).toBeInTheDocument();
       expect(screen.getByText('Download (.json)')).toBeInTheDocument();
     });
@@ -347,14 +348,14 @@ describe('Editor', () => {
       expect(exportImport.downloadFile).toHaveBeenCalled();
     });
 
-    it('opens share modal', async () => {
+    it('share option is hidden when E2EE sharing is disabled', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Editor {...defaultProps} />);
 
       await user.click(screen.getByLabelText('Export note'));
-      await user.click(screen.getByText('Share as Letter'));
 
-      expect(screen.getByTestId('share-modal')).toBeInTheDocument();
+      // Share as Letter should not be visible while sharingEnabled = false
+      expect(screen.queryByText('Share as Letter')).not.toBeInTheDocument();
     });
 
     it('closes export menu when clicking outside', async () => {

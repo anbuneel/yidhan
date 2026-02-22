@@ -15,6 +15,7 @@ const RoadmapPage = lazyWithRetry(() => import('./components/RoadmapPage').then(
 const FadedNotesView = lazyWithRetry(() => import('./components/FadedNotesView').then(module => ({ default: module.FadedNotesView })));
 const SharedNoteView = lazyWithRetry(() => import('./components/SharedNoteView').then(module => ({ default: module.SharedNoteView })));
 const DemoPage = lazyWithRetry(() => import('./pages/DemoPage').then(module => ({ default: module.DemoPage })));
+const MigrationPage = lazyWithRetry(() => import('./pages/MigrationPage').then(module => ({ default: module.MigrationPage })));
 
 import { TagFilterBar } from './components/TagFilterBar';
 import { WelcomeBackPrompt } from './components/WelcomeBackPrompt';
@@ -28,6 +29,9 @@ const SettingsModal = lazyWithRetry(() => import('./components/SettingsModal').t
 const LettingGoModal = lazyWithRetry(() => import('./components/LettingGoModal').then(module => ({ default: module.LettingGoModal })));
 const KeyboardShortcutsModal = lazyWithRetry(() => import('./components/KeyboardShortcutsModal').then(module => ({ default: module.KeyboardShortcutsModal })));
 import { useAuth } from './contexts/AuthContext';
+import { useEncryption } from './contexts/EncryptionContext';
+import { PassphraseSetup } from './components/PassphraseSetup';
+import { PassphraseUnlock } from './components/PassphraseUnlock';
 import {
   subscribeToNotes,
   cleanupExpiredFadedNotes,
@@ -38,7 +42,6 @@ import {
   fetchNotesOffline,
   createNoteOffline,
   createNotesBatchOffline,
-  updateNoteOffline,
   searchNotesOffline,
   toggleNotePinOffline,
   softDeleteNoteOffline,
@@ -53,6 +56,15 @@ import {
   upsertTagFromServer,
   deleteTagFromServer,
 } from './services/offlineNotes';
+import {
+  createEncryptedNote,
+  updateEncryptedNote,
+  fetchDecryptedNotes,
+  searchDecryptedNotes,
+  fetchDecryptedFadedNotes,
+  decryptNoteFromServer,
+  createEncryptedNotesBatch,
+} from './services/encryptedNotes';
 import {
   fetchTagsOffline,
   createTagOffline,
@@ -128,6 +140,11 @@ migrateLocalStorageKeys();
 
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
+  const { keys, isEncryptionSetup, isUnlocked } = useEncryption();
+  // Ref for encryption keys — used in realtime handlers to avoid stale closures
+  // when the vault is locked/unlocked (avoids resubscribing Supabase channels)
+  const keysRef = useRef(keys);
+  keysRef.current = keys;
   const appLoadingMessage = 'Preparing your space...';
 
   // Network connectivity monitoring
@@ -140,14 +157,16 @@ function App() {
     const uid = user?.id;
     if (!uid) return;
     try {
-      const refreshedNotes = await fetchNotesOffline(uid);
+      const refreshedNotes = keys
+        ? await fetchDecryptedNotes(uid, keys)
+        : await fetchNotesOffline(uid);
       setNotes(refreshedNotes);
       const refreshedTags = await fetchTagsOffline(uid);
       setTags(refreshedTags);
     } catch (error) {
       console.error('Failed to rehydrate after sync:', error);
     }
-  }, [user?.id]);
+  }, [user?.id, keys]);
 
   // Sync engine for offline support
   const { conflicts, removeConflict, triggerSync } = useSyncEngine(handleSyncComplete);
@@ -431,7 +450,7 @@ function App() {
       if (!saved) return;
 
       const parsed = JSON.parse(saved);
-      const validViews: ViewMode[] = ['library', 'editor', 'changelog', 'roadmap', 'faded'];
+      const validViews: ViewMode[] = ['library', 'editor', 'changelog', 'roadmap', 'faded', 'migrate'];
 
       if (parsed?.selectedNoteId && validViews.includes(parsed.view)) {
         pendingNavRestoreRef.current = parsed;
@@ -496,7 +515,10 @@ function App() {
     }
 
     setLoading(true);
-    fetchNotesOffline(userId)
+    const fetchNotes = keys
+      ? fetchDecryptedNotes(userId, keys)
+      : fetchNotesOffline(userId);
+    fetchNotes
       .then((loadedNotes) => {
         setNotes(loadedNotes);
 
@@ -521,19 +543,32 @@ function App() {
       });
 
     // Subscribe to real-time changes (also write to IndexedDB to keep IDB in sync)
+    // For E2EE, decrypt notes from the server before updating React state
+    // Uses keysRef to always read the latest keys (avoids stale closure on lock/unlock)
+    const maybeDecrypt = async (note: Note): Promise<Note> => {
+      const currentKeys = keysRef.current;
+      if (currentKeys) {
+        return decryptNoteFromServer(note, userId, currentKeys);
+      }
+      return note;
+    };
+
     const unsubscribe = subscribeToNotes(
       userId,
       (newNote) => {
         // Write to IndexedDB first
         upsertNoteFromServer(userId, newNote).catch(console.error);
 
-        setNotes((prev) => {
-          // Avoid duplicates
-          if (prev.some((n) => n.id === newNote.id)) return prev;
-          // New notes from real-time don't have tags; they'll be fetched on next full load
-          // Set syncStatus: 'synced' since this note came from the server
-          return [{ ...newNote, syncStatus: 'synced' as const }, ...prev];
-        });
+        // Decrypt and update React state
+        maybeDecrypt(newNote).then((decrypted) => {
+          setNotes((prev) => {
+            // Avoid duplicates
+            if (prev.some((n) => n.id === decrypted.id)) return prev;
+            // New notes from real-time don't have tags; they'll be fetched on next full load
+            // Set syncStatus: 'synced' since this note came from the server
+            return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
+          });
+        }).catch(console.error);
       },
       (updatedNote) => {
         // Write to IndexedDB first
@@ -551,26 +586,29 @@ function App() {
           return;
         }
 
-        // Check if this is a restore (note no longer has deletedAt)
-        // This handles notes restored from another tab
-        setNotes((prev) => {
-          const existingNote = prev.find((n) => n.id === updatedNote.id);
-          if (existingNote) {
-            // Note exists, update it preserving tags and local-only fields
-            return prev.map((n) => {
-              if (n.id === updatedNote.id) {
-                return { ...updatedNote, tags: n.tags, syncStatus: n.syncStatus };
-              }
-              return n;
-            });
-          } else {
-            // Note doesn't exist in active list (was restored from faded)
-            // Add it back (tags will be empty, will refresh on next full load)
-            // Set syncStatus: 'synced' since this came from the server
-            setFadedNotesCount((prev) => Math.max(0, prev - 1));
-            return [{ ...updatedNote, syncStatus: 'synced' as const }, ...prev];
-          }
-        });
+        // Decrypt and update React state
+        maybeDecrypt(updatedNote).then((decrypted) => {
+          // Check if this is a restore (note no longer has deletedAt)
+          // This handles notes restored from another tab
+          setNotes((prev) => {
+            const existingNote = prev.find((n) => n.id === decrypted.id);
+            if (existingNote) {
+              // Note exists, update it preserving tags and local-only fields
+              return prev.map((n) => {
+                if (n.id === decrypted.id) {
+                  return { ...decrypted, tags: n.tags, syncStatus: n.syncStatus };
+                }
+                return n;
+              });
+            } else {
+              // Note doesn't exist in active list (was restored from faded)
+              // Add it back (tags will be empty, will refresh on next full load)
+              // Set syncStatus: 'synced' since this came from the server
+              setFadedNotesCount((prev) => Math.max(0, prev - 1));
+              return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
+            }
+          });
+        }).catch(console.error);
       },
       (deletedId) => {
         // Remove from IndexedDB
@@ -589,6 +627,26 @@ function App() {
   // Note: selectedNoteId removed from deps (2F) — using selectedNoteIdRef instead
   // to prevent Supabase channel unsubscribe/resubscribe on every note selection
 
+  // Re-fetch notes when encryption keys become available (vault unlock).
+  // Separate from the main fetch effect to avoid resubscribing realtime channels.
+  // The main effect runs with keys=null (showing empty notes from IDB),
+  // then this effect re-fetches with decryption once the user enters their passphrase.
+  const hasRefetchedForKeysRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!userId || !keys) {
+      hasRefetchedForKeysRef.current = null;
+      return;
+    }
+    // Only re-fetch once per userId+keys combination
+    const keyId = `${userId}`;
+    if (hasRefetchedForKeysRef.current === keyId) return;
+    hasRefetchedForKeysRef.current = keyId;
+
+    fetchDecryptedNotes(userId, keys)
+      .then(setNotes)
+      .catch(console.error);
+  }, [userId, keys]);
+
   // Migrate demo content from landing page to user's first note
   // Dependency: userId (string) instead of user (object) because:
   // 1. Using the full user object would cause unnecessary re-runs on any user property change
@@ -598,33 +656,39 @@ function App() {
     if (!userId || hasMigratedDemoContent.current) return;
 
     const demoContent = localStorage.getItem(DEMO_STORAGE_KEY);
-    if (demoContent?.trim()) {
+    if (!demoContent?.trim()) {
       hasMigratedDemoContent.current = true;
-
-      // Create note with demo content (sanitize and wrap plain text in paragraph tags for Tiptap)
-      const sanitized = sanitizeText(demoContent);
-      const htmlContent = `<p>${sanitized.replace(/\n/g, '</p><p>')}</p>`;
-      createNoteOffline(userId, 'My first note', htmlContent)
-        .then((newNote) => {
-          // Clear demo content from localStorage
-          localStorage.removeItem(DEMO_STORAGE_KEY);
-          // Show toast notification
-          toast.success('Your demo note has been saved!');
-          // Add to notes list
-          setNotes((prev) => [newNote, ...prev]);
-          // Open the note in editor
-          setSelectedNoteId(newNote.id);
-          setView('editor');
-        })
-        .catch((error: unknown) => {
-          console.error('Failed to migrate demo content:', error);
-          // Reset flag so user can try again
-          hasMigratedDemoContent.current = false;
-        });
-    } else {
-      hasMigratedDemoContent.current = true;
+      return;
     }
-  }, [userId]);
+
+    // Wait for encryption keys before creating note.
+    // Without this guard, the fallback to createNoteOffline would create
+    // a plaintext note before the passphrase gate renders.
+    if (!keys) return;
+
+    hasMigratedDemoContent.current = true;
+
+    // Create note with demo content (sanitize and wrap plain text in paragraph tags for Tiptap)
+    const sanitized = sanitizeText(demoContent);
+    const htmlContent = `<p>${sanitized.replace(/\n/g, '</p><p>')}</p>`;
+    createEncryptedNote(userId, 'My first note', htmlContent, keys)
+      .then((newNote) => {
+        // Clear demo content from localStorage
+        localStorage.removeItem(DEMO_STORAGE_KEY);
+        // Show toast notification
+        toast.success('Your demo note has been saved!');
+        // Add to notes list
+        setNotes((prev) => [newNote, ...prev]);
+        // Open the note in editor
+        setSelectedNoteId(newNote.id);
+        setView('editor');
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to migrate demo content:', error);
+        // Reset flag so user can try again
+        hasMigratedDemoContent.current = false;
+      });
+  }, [userId, keys]);
 
   // Migrate demo notes to authenticated user's account
   // IMPORTANT: Must wait for hydration to complete to avoid:
@@ -635,6 +699,10 @@ function App() {
     // Gate on hydration complete to avoid race conditions
     if (isHydrating) return;
     if (!userId || hasMigratedDemoNotes.current) return;
+
+    // Wait for encryption keys before migrating — without this,
+    // migrateDemoToAccount would create plaintext notes via createNoteOffline
+    if (!keys) return;
 
     // Check if user has demo notes to migrate
     if (!hasDemoState()) {
@@ -647,7 +715,7 @@ function App() {
     // Migrate demo data asynchronously
     (async () => {
       try {
-        const { migratedNotes, newTags, noteCount } = await migrateDemoToAccount(userId);
+        const { migratedNotes, newTags, noteCount } = await migrateDemoToAccount(userId, keys);
 
         if (noteCount === 0) return;
 
@@ -669,18 +737,24 @@ function App() {
         hasMigratedDemoNotes.current = false;
       }
     })();
-  }, [userId, isHydrating]);
+  }, [userId, isHydrating, keys]);
 
   // Handle Share Target data for authenticated users
   useEffect(() => {
     if (!userId || !sharedData) return;
     // Prevent duplicate note creation (race condition in Strict Mode)
     if (isCreatingNoteFromShare.current) return;
+
+    // Wait for encryption keys before creating note.
+    // Without this guard, the fallback would create a plaintext note
+    // before the passphrase gate renders.
+    if (!keys) return;
+
     isCreatingNoteFromShare.current = true;
 
     const { title, content } = formatSharedContent(sharedData);
 
-    createNoteOffline(userId, title, content)
+    createEncryptedNote(userId, title, content, keys)
       .then((newNote) => {
         clearSharedData();
         trackNoteCreated();
@@ -699,7 +773,7 @@ function App() {
         // Reset flag to allow future share-target launches in same session
         isCreatingNoteFromShare.current = false;
       });
-  }, [userId, sharedData, clearSharedData, trackNoteCreated, startTransition]);
+  }, [userId, sharedData, keys, clearSharedData, trackNoteCreated, startTransition]);
 
   // Fetch tags when user is authenticated and hydration is complete
   useEffect(() => {
@@ -808,8 +882,12 @@ function App() {
 
   const handleNewNote = useCallback(async () => {
     if (!user) return;
+    if (!keys) {
+      toast.error('Please unlock your vault first');
+      return;
+    }
     try {
-      const newNote = await createNoteOffline(user.id);
+      const newNote = await createEncryptedNote(user.id, '', '', keys);
       trackNoteCreated(); // Track for install prompt engagement
       startTransition(() => {
         setNotes((prev) => [newNote, ...prev]);
@@ -819,7 +897,7 @@ function App() {
     } catch (error) {
       console.error('Failed to create note:', error);
     }
-  }, [user, startTransition, trackNoteCreated]);
+  }, [user, keys, startTransition, trackNoteCreated]);
 
   // Keyboard shortcut: Cmd/Ctrl + N to create new note
   useEffect(() => {
@@ -864,6 +942,10 @@ function App() {
   // Returns a Promise so Editor can track save status accurately
   const handleNoteUpdate = useCallback(async (updatedNote: Note): Promise<void> => {
     if (!user) return;
+    if (!keys) {
+      toast.error('Vault is locked — changes cannot be saved');
+      return;
+    }
 
     // Store previous state for potential rollback
     const previousNote = notes.find((n) => n.id === updatedNote.id);
@@ -875,9 +957,9 @@ function App() {
     );
 
     try {
-      // Save to IndexedDB (immediate, works offline)
-      // Sync engine will push to server when online
-      await updateNoteOffline(user.id, updatedNote);
+      // Encrypt and save to IndexedDB (immediate, works offline)
+      // Sync engine will push encrypted payload to server when online
+      await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
 
       // Trigger coalesced sync (2s after last save) to push changes promptly
       triggerCoalescedSync();
@@ -899,7 +981,7 @@ function App() {
       // Re-throw so Editor can show error state
       throw error;
     }
-  }, [user, notes, triggerCoalescedSync]);
+  }, [user, keys, notes, triggerCoalescedSync]);
 
   // Soft delete a note (move to Faded Notes)
   // Returns true on success, false on failure (for UI recovery in swipe gestures)
@@ -1014,7 +1096,9 @@ function App() {
     });
     setFadedNotesLoading(true);
     try {
-      const faded = await fetchFadedNotesOffline(user.id);
+      const faded = keys
+        ? await fetchDecryptedFadedNotes(user.id, keys)
+        : await fetchFadedNotesOffline(user.id);
       setFadedNotes(faded);
     } catch (error) {
       console.error('Failed to fetch faded notes:', error);
@@ -1052,11 +1136,13 @@ function App() {
     if (!activeConflict || !user) return;
 
     try {
-      await resolveConflict(user.id, activeConflict, choice);
+      await resolveConflict(user.id, activeConflict, choice, keys ?? undefined);
       removeConflict(activeConflict.entityId);
 
       // Refresh notes from IndexedDB after conflict resolution
-      const refreshedNotes = await fetchNotesOffline(user.id);
+      const refreshedNotes = keys
+        ? await fetchDecryptedNotes(user.id, keys)
+        : await fetchNotesOffline(user.id);
       setNotes(refreshedNotes);
     } catch (error) {
       console.error('Failed to resolve conflict:', error);
@@ -1083,7 +1169,9 @@ function App() {
       const { outcome } = await triggerSync();
 
       // Rehydrate React state from IndexedDB (now has fresh server data)
-      const refreshedNotes = await fetchNotesOffline(user.id);
+      const refreshedNotes = keys
+        ? await fetchDecryptedNotes(user.id, keys)
+        : await fetchNotesOffline(user.id);
       setNotes(refreshedNotes);
       const refreshedTags = await fetchTagsOffline(user.id);
       setTags(refreshedTags);
@@ -1114,7 +1202,7 @@ function App() {
       console.error('Refresh failed:', error);
       toast.error('Failed to refresh notes');
     }
-  }, [user, triggerSync]);
+  }, [user, triggerSync, keys]);
 
   // Tag filter handlers
   const handleTagToggle = (tagId: string) => {
@@ -1249,7 +1337,9 @@ function App() {
       }
 
       try {
-        const results = await searchNotesOffline(user.id, query);
+        const results = keys
+          ? await searchDecryptedNotes(user.id, query, keys)
+          : await searchNotesOffline(user.id, query);
         setSearchResults(results);
       } catch (error) {
         console.error('Search failed:', error);
@@ -1258,7 +1348,7 @@ function App() {
         setIsSearching(false);
       }
     }, 300);
-  }, [user]);
+  }, [user, keys]);
 
   // Export to JSON
   const handleExportJSON = useCallback(() => {
@@ -1323,14 +1413,13 @@ function App() {
           };
         });
 
-        // Batch insert notes with progress callback (offline-first)
-        const createdNotes = await createNotesBatchOffline(
-          user.id,
-          notesToImport,
-          (completed, total) => {
-            setImportProgress({ isImporting: true, current: completed, total, phase: 'importing' });
-          }
-        );
+        // Batch insert notes with progress callback (encrypted if keys available)
+        const progressCb = (completed: number, total: number) => {
+          setImportProgress({ isImporting: true, current: completed, total, phase: 'importing' });
+        };
+        const createdNotes = keys
+          ? await createEncryptedNotesBatch(user.id, notesToImport, keys, progressCb)
+          : await createNotesBatchOffline(user.id, notesToImport, progressCb);
 
         // Add tags to notes (this still needs to be sequential due to junction table)
         setImportProgress({ isImporting: true, current: 0, total: createdNotes.length, phase: 'finalizing' });
@@ -1349,7 +1438,9 @@ function App() {
         toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
 
         // Refresh notes from IndexedDB
-        const refreshedNotes = await fetchNotesOffline(user.id);
+        const refreshedNotes = keys
+          ? await fetchDecryptedNotes(user.id, keys)
+          : await fetchNotesOffline(user.id);
         setNotes(refreshedNotes);
 
       } else if (isMarkdown) {
@@ -1391,14 +1482,13 @@ function App() {
             };
           });
 
-          // Batch insert notes with progress callback (offline-first)
-          const createdNotes = await createNotesBatchOffline(
-            user.id,
-            notesToImport,
-            (completed, total) => {
-              setImportProgress({ isImporting: true, current: completed, total, phase: 'importing' });
-            }
-          );
+          // Batch insert notes with progress callback (encrypted if keys available)
+          const mdProgressCb = (completed: number, total: number) => {
+            setImportProgress({ isImporting: true, current: completed, total, phase: 'importing' });
+          };
+          const createdNotes = keys
+            ? await createEncryptedNotesBatch(user.id, notesToImport, keys, mdProgressCb)
+            : await createNotesBatchOffline(user.id, notesToImport, mdProgressCb);
 
           // Add tags to notes if any tags were present
           if (tagMap.size > 0) {
@@ -1417,8 +1507,10 @@ function App() {
           }
 
           // Refresh notes from IndexedDB
-          const refreshedNotes = await fetchNotesOffline(user.id);
-          setNotes(refreshedNotes);
+          const refreshedNotes2 = keys
+            ? await fetchDecryptedNotes(user.id, keys)
+            : await fetchNotesOffline(user.id);
+          setNotes(refreshedNotes2);
 
           toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
         } else {
@@ -1468,8 +1560,10 @@ function App() {
           // Convert markdown to HTML and sanitize
           const htmlContent = sanitizeHtml(markdownToHtml(noteContent));
 
-          // Create the note
-          const newNote = await createNoteOffline(user.id, title, htmlContent);
+          // Create the note (encrypted if keys available)
+          const newNote = keys
+            ? await createEncryptedNote(user.id, title, htmlContent, keys)
+            : await createNoteOffline(user.id, title, htmlContent);
 
           // Add tags to the note
           for (const tagName of noteTags) {
@@ -1480,8 +1574,10 @@ function App() {
           }
 
           // Refresh from IndexedDB to get the note with tags
-          const refreshedNotes = await fetchNotesOffline(user.id);
-          setNotes(refreshedNotes);
+          const refreshedNotesAll = keys
+            ? await fetchDecryptedNotes(user.id, keys)
+            : await fetchNotesOffline(user.id);
+          setNotes(refreshedNotesAll);
 
           toast.success(`Imported "${title}"`);
         }
@@ -1498,7 +1594,7 @@ function App() {
     } finally {
       setImportProgress(null);
     }
-  }, [user, tags]);
+  }, [user, tags, keys]);
 
   // Show loading while checking auth or fetching notes
   if (showAppLoader) {
@@ -1668,6 +1764,36 @@ function App() {
     );
   }
 
+  // E2EE passphrase gate — after auth, before any authenticated view
+  // user is guaranteed non-null at this point (landing page returned above)
+  if (!isEncryptionSetup) {
+    return <PassphraseSetup />;
+  }
+  if (!isUnlocked) {
+    return <PassphraseUnlock />;
+  }
+
+  // E2EE Migration Page (temporary — for encrypting existing plaintext notes)
+  if (view === 'migrate') {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback message="Loading migration..." />}>
+          <MigrationPage
+            notes={notes}
+            tags={tags}
+            onBack={() => startTransition(() => setView('library'))}
+            onMigrationComplete={async () => {
+              if (user && keys) {
+                const refreshed = await fetchDecryptedNotes(user.id, keys);
+                setNotes(refreshed);
+              }
+            }}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
   // Faded Notes View
   if (view === 'faded') {
     return (
@@ -1756,6 +1882,7 @@ function App() {
                 theme={theme}
                 onThemeToggle={handleThemeToggle}
                 onLetGoClick={() => setShowLettingGoModal(true)}
+                onMigrateClick={() => startTransition(() => setView('migrate'))}
                 sessionSettings={sessionSettings}
               />
             </Suspense>

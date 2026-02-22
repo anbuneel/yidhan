@@ -27,6 +27,10 @@ function toNote(dbNote: DbNote, tags: Tag[] = []): Note {
     tags,
     pinned: dbNote.pinned ?? false,
     deletedAt: dbNote.deleted_at ? new Date(dbNote.deleted_at) : null,
+    encryptedPayload: dbNote.encrypted_payload,
+    encryptionIv: dbNote.encryption_iv,
+    encryptionVersion: dbNote.encryption_version,
+    contentHash: dbNote.content_hash,
   };
 }
 
