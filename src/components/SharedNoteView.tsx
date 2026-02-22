@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Note, Theme } from '../types';
 import { fetchSharedNote } from '../services/notes';
 import { sanitizeHtml } from '../utils/sanitize';
@@ -26,6 +26,17 @@ export function SharedNoteView({
 }: SharedNoteViewProps) {
   const [note, setNote] = useState<Note | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>('loading');
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Disable task list checkboxes in read-only shared view (CSS alone can't block keyboard)
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((cb) => {
+        cb.disabled = true;
+        cb.tabIndex = -1;
+      });
+    }
+  }, [note]);
 
   useEffect(() => {
     let isMounted = true;
@@ -40,7 +51,8 @@ export function SharedNoteView({
           setLoadingState('expired');
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('SharedNoteView: failed to load shared note', error);
         if (isMounted) {
           setLoadingState('error');
         }
@@ -251,15 +263,18 @@ export function SharedNoteView({
           />
 
           {/* Content */}
-          <div
-            className="rich-text-editor prose"
-            style={{
-              fontFamily: 'var(--font-body)',
-              color: 'var(--color-text-primary)',
-              lineHeight: 1.8,
-            }}
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(note?.content || '') }}
-          />
+          <div className="rich-text-editor">
+            <div
+              ref={contentRef}
+              className="ProseMirror shared-note-content"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-primary)',
+                lineHeight: 1.8,
+              }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(note?.content || '') }}
+            />
+          </div>
 
           {/* Footer attribution */}
           <footer

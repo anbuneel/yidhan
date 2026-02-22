@@ -162,6 +162,67 @@ test.describe('Share as Letter', () => {
       }
     });
 
+    test('shared note preserves rich text formatting', async ({ page, authenticatedPage }) => {
+      const noteTitle = `Rich Format Share ${Date.now()}`;
+
+      // Create note
+      await createNote(authenticatedPage, noteTitle);
+
+      // Add rich text content via Tiptap markdown shortcuts
+      const editor = authenticatedPage.getByTestId('rich-text-editor');
+      await editor.click();
+
+      // Type a heading (Tiptap input rule: "# " at line start → H1)
+      await authenticatedPage.keyboard.type('# A Test Heading');
+      await authenticatedPage.keyboard.press('Enter');
+
+      // Type a bullet list item (Tiptap input rule: "- " at line start → bullet)
+      await authenticatedPage.keyboard.type('- First bullet point');
+      await authenticatedPage.keyboard.press('Enter');
+      // Exit list with double Enter
+      await authenticatedPage.keyboard.press('Enter');
+
+      // Type a blockquote (Tiptap input rule: "> " at line start → blockquote)
+      await authenticatedPage.keyboard.type('> A notable quote');
+      await authenticatedPage.keyboard.press('Enter');
+
+      // Wait for auto-save
+      await expect(authenticatedPage.getByText(/saved/i)).toBeVisible({ timeout: 5000 });
+
+      // Share the note
+      await authenticatedPage.getByRole('button', { name: /share/i }).click();
+      await authenticatedPage.getByRole('button', { name: /create.*link|share/i }).click();
+
+      // Get share URL
+      await expect(authenticatedPage.getByText(/\?s=/i)).toBeVisible();
+      const shareInput = authenticatedPage.locator('input[readonly]').first();
+      const shareUrl = await shareInput.inputValue();
+      const url = new URL(shareUrl);
+      const sharePath = `${url.pathname}${url.search}`;
+
+      // Open in anonymous context
+      const browser = page.context().browser();
+      if (!browser) throw new Error('Browser instance not available');
+      const anonymousContext = await browser.newContext();
+      const anonymousPage = await anonymousContext.newPage();
+
+      try {
+        await anonymousPage.goto(sharePath);
+        await expect(anonymousPage.getByText(noteTitle)).toBeVisible({ timeout: 10000 });
+
+        // Verify the content is wrapped in .ProseMirror for CSS styling
+        const proseMirrorWrapper = anonymousPage.locator('.rich-text-editor .ProseMirror');
+        await expect(proseMirrorWrapper).toBeVisible();
+
+        // Verify rich text elements are preserved in the DOM
+        await expect(proseMirrorWrapper.locator('h1')).toBeVisible();
+        await expect(proseMirrorWrapper.locator('ul li')).toBeVisible();
+        await expect(proseMirrorWrapper.locator('blockquote')).toBeVisible();
+      } finally {
+        await anonymousContext.close();
+      }
+    });
+
     test('shows faded message for invalid share token', async ({ page }) => {
       // Navigate to a fake/invalid share link
       await page.goto('/?s=invalidtoken12345678901234567890');
