@@ -700,6 +700,10 @@ function App() {
     if (isHydrating) return;
     if (!userId || hasMigratedDemoNotes.current) return;
 
+    // Wait for encryption keys before migrating — without this,
+    // migrateDemoToAccount would create plaintext notes via createNoteOffline
+    if (!keys) return;
+
     // Check if user has demo notes to migrate
     if (!hasDemoState()) {
       hasMigratedDemoNotes.current = true;
@@ -711,7 +715,7 @@ function App() {
     // Migrate demo data asynchronously
     (async () => {
       try {
-        const { migratedNotes, newTags, noteCount } = await migrateDemoToAccount(userId);
+        const { migratedNotes, newTags, noteCount } = await migrateDemoToAccount(userId, keys);
 
         if (noteCount === 0) return;
 
@@ -733,7 +737,7 @@ function App() {
         hasMigratedDemoNotes.current = false;
       }
     })();
-  }, [userId, isHydrating]);
+  }, [userId, isHydrating, keys]);
 
   // Handle Share Target data for authenticated users
   useEffect(() => {
@@ -1198,7 +1202,7 @@ function App() {
       console.error('Refresh failed:', error);
       toast.error('Failed to refresh notes');
     }
-  }, [user, triggerSync]);
+  }, [user, triggerSync, keys]);
 
   // Tag filter handlers
   const handleTagToggle = (tagId: string) => {
@@ -1344,7 +1348,7 @@ function App() {
         setIsSearching(false);
       }
     }, 300);
-  }, [user]);
+  }, [user, keys]);
 
   // Export to JSON
   const handleExportJSON = useCallback(() => {
@@ -1878,6 +1882,7 @@ function App() {
                 theme={theme}
                 onThemeToggle={handleThemeToggle}
                 onLetGoClick={() => setShowLettingGoModal(true)}
+                onMigrateClick={() => startTransition(() => setView('migrate'))}
                 sessionSettings={sessionSettings}
               />
             </Suspense>
