@@ -11,8 +11,8 @@ interface EncryptionContextType {
   isUnlocked: boolean;
   /** Whether encryption has been set up (salt exists in user_metadata) */
   isEncryptionSetup: boolean;
-  /** Set up passphrase for the first time */
-  setupPassphrase: (passphrase: string) => Promise<void>;
+  /** Set up passphrase for the first time. Returns derived keys for immediate use. */
+  setupPassphrase: (passphrase: string) => Promise<DerivedKeys>;
   /** Unlock with existing passphrase */
   unlockWithPassphrase: (passphrase: string) => Promise<boolean>;
   /** Clear keys from memory */
@@ -50,7 +50,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
    * Set up encryption for the first time.
    * Derives keys from passphrase, stores salt + key-check in user_metadata.
    */
-  const setupPassphrase = useCallback(async (passphrase: string) => {
+  const setupPassphrase = useCallback(async (passphrase: string): Promise<DerivedKeys> => {
     if (!user) throw new Error('Must be logged in to set up encryption');
 
     // Derive keys with a new random salt
@@ -83,6 +83,8 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
     // Keep keys in memory, tagged with the current user
     setKeyState({ keys: derivedKeys, userId: user.id });
+
+    return derivedKeys;
   }, [user]);
 
   /**
