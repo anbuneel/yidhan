@@ -851,7 +851,11 @@ function App() {
   };
 
   const handleNewNote = useCallback(async () => {
-    if (!user || !keys) return;
+    if (!user) return;
+    if (!keys) {
+      toast.error('Please unlock your vault first');
+      return;
+    }
     try {
       const newNote = await createEncryptedNote(user.id, '', '', keys);
       trackNoteCreated(); // Track for install prompt engagement
@@ -907,7 +911,11 @@ function App() {
   // Writes to IndexedDB immediately, queues for sync
   // Returns a Promise so Editor can track save status accurately
   const handleNoteUpdate = useCallback(async (updatedNote: Note): Promise<void> => {
-    if (!user || !keys) return;
+    if (!user) return;
+    if (!keys) {
+      toast.error('Vault is locked — changes cannot be saved');
+      return;
+    }
 
     // Store previous state for potential rollback
     const previousNote = notes.find((n) => n.id === updatedNote.id);

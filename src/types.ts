@@ -16,7 +16,9 @@ export interface Note {
   pinned: boolean;
   deletedAt?: Date | null;
   syncStatus?: 'synced' | 'pending' | 'conflict';
-  // E2EE fields (optional — null for unencrypted/legacy notes)
+  // E2EE fields — all-or-nothing: either all are set (encrypted note)
+  // or all are null/undefined (unencrypted/legacy note).
+  // Using `| null` (not `| undefined`) to match Supabase row shape.
   encryptedPayload?: string | null;
   encryptionIv?: string | null;
   encryptionVersion?: number | null;

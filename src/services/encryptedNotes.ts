@@ -10,14 +10,13 @@
 
 import type { Note, Tag } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
-import type { LocalNote } from '../lib/offlineDb';
+import type { LocalNote, SyncQueueEntry } from '../lib/offlineDb';
 import { encryptNote, decryptNote } from '../lib/encryption';
 import {
   fetchNotesOffline,
   fetchFadedNotesOffline,
-  queueSyncOperation,
 } from './offlineNotes';
-import { getOfflineDb } from '../lib/offlineDb';
+import { getOfflineDb, generateMutationId } from '../lib/offlineDb';
 import { validateNoteTitle, validateNoteContentLength } from '../utils/validation';
 import { sanitizeHtml } from '../utils/sanitize';
 
@@ -84,7 +83,8 @@ export async function createEncryptedNote(
   // Encrypt BEFORE any write — no plaintext touches storage
   const encrypted = await encryptNote(noteId, userId, validatedTitle, sanitizedContent, keys);
 
-  // Write to IndexedDB with empty title/content and encrypted fields
+  // Write note + sync queue entry in a single Dexie transaction.
+  // If the app crashes between writes, either both or neither are persisted.
   const localNote: LocalNote = {
     id: noteId,
     userId,
@@ -104,17 +104,27 @@ export async function createEncryptedNote(
     contentHash: encrypted.contentHash,
   };
 
-  await db.notes.add(localNote);
+  const syncEntry: SyncQueueEntry = {
+    clientMutationId: generateMutationId(),
+    operation: 'create',
+    entityType: 'note',
+    entityId: noteId,
+    payload: {
+      title: '',
+      content: '',
+      pinned: false,
+      encrypted_payload: encrypted.ciphertext,
+      encryption_iv: encrypted.iv,
+      encryption_version: encrypted.version,
+      content_hash: encrypted.contentHash,
+    },
+    createdAt: now,
+    retryCount: 0,
+  };
 
-  // Queue sync with encrypted payload (never plaintext)
-  await queueSyncOperation(userId, 'create', 'note', noteId, {
-    title: '',
-    content: '',
-    pinned: false,
-    encrypted_payload: encrypted.ciphertext,
-    encryption_iv: encrypted.iv,
-    encryption_version: encrypted.version,
-    content_hash: encrypted.contentHash,
+  await db.transaction('rw', db.notes, db.syncQueue, async () => {
+    await db.notes.add(localNote);
+    await db.syncQueue.add(syncEntry);
   });
 
   // Return decrypted note for React state (UI needs plaintext)
@@ -165,27 +175,46 @@ export async function updateEncryptedNote(
     throw new Error(`Note ${noteId} not found in offline database`);
   }
 
-  // Update IndexedDB: empty title/content + encrypted fields in single operation
-  await db.notes.update(noteId, {
-    title: '',
-    content: '',
-    updatedAt: now,
-    localUpdatedAt: now,
-    syncStatus: existing.syncStatus === 'synced' ? 'pending' : existing.syncStatus,
-    encryptedPayload: encrypted.ciphertext,
-    encryptionIv: encrypted.iv,
-    encryptionVersion: encrypted.version,
-    contentHash: encrypted.contentHash,
-  });
+  // Update note + sync queue in a single Dexie transaction.
+  // Compacts previous pending updates to same entity.
+  const syncEntry: SyncQueueEntry = {
+    clientMutationId: generateMutationId(),
+    operation: 'update',
+    entityType: 'note',
+    entityId: noteId,
+    payload: {
+      title: '',
+      content: '',
+      encrypted_payload: encrypted.ciphertext,
+      encryption_iv: encrypted.iv,
+      encryption_version: encrypted.version,
+      content_hash: encrypted.contentHash,
+    },
+    createdAt: now,
+    retryCount: 0,
+  };
 
-  // Queue sync with encrypted payload (compaction removes previous updates)
-  await queueSyncOperation(userId, 'update', 'note', noteId, {
-    title: '',
-    content: '',
-    encrypted_payload: encrypted.ciphertext,
-    encryption_iv: encrypted.iv,
-    encryption_version: encrypted.version,
-    content_hash: encrypted.contentHash,
+  await db.transaction('rw', db.notes, db.syncQueue, async () => {
+    await db.notes.update(noteId, {
+      title: '',
+      content: '',
+      updatedAt: now,
+      localUpdatedAt: now,
+      syncStatus: existing.syncStatus === 'synced' ? 'pending' : existing.syncStatus,
+      encryptedPayload: encrypted.ciphertext,
+      encryptionIv: encrypted.iv,
+      encryptionVersion: encrypted.version,
+      contentHash: encrypted.contentHash,
+    });
+
+    // Compact: remove previous pending updates to same note
+    await db.syncQueue
+      .where('entityId')
+      .equals(noteId)
+      .and((e) => e.operation === 'update' && e.entityType === 'note')
+      .delete();
+
+    await db.syncQueue.add(syncEntry);
   });
 
   // Return decrypted note for React state
@@ -208,6 +237,9 @@ export async function updateEncryptedNote(
 
 /**
  * Fetch all notes and decrypt them.
+ *
+ * Uses Promise.allSettled so one corrupted note doesn't block access
+ * to the rest. Failed notes are logged and excluded from the result.
  */
 export async function fetchDecryptedNotes(
   userId: string,
@@ -215,15 +247,25 @@ export async function fetchDecryptedNotes(
 ): Promise<Note[]> {
   const notes = await fetchNotesOffline(userId);
 
-  const decrypted = await Promise.all(
+  const results = await Promise.allSettled(
     notes.map((note) => decryptNoteIfNeeded(note, userId, keys))
   );
+
+  const decrypted: Note[] = [];
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      decrypted.push(result.value);
+    } else {
+      console.error('Failed to decrypt note:', result.reason);
+    }
+  }
 
   return decrypted;
 }
 
 /**
  * Fetch faded (soft-deleted) notes and decrypt them.
+ * Same resilience pattern as fetchDecryptedNotes — corrupted notes are skipped.
  */
 export async function fetchDecryptedFadedNotes(
   userId: string,
@@ -231,9 +273,18 @@ export async function fetchDecryptedFadedNotes(
 ): Promise<Note[]> {
   const notes = await fetchFadedNotesOffline(userId);
 
-  const decrypted = await Promise.all(
+  const results = await Promise.allSettled(
     notes.map((note) => decryptNoteIfNeeded(note, userId, keys))
   );
+
+  const decrypted: Note[] = [];
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      decrypted.push(result.value);
+    } else {
+      console.error('Failed to decrypt faded note:', result.reason);
+    }
+  }
 
   return decrypted;
 }
@@ -327,18 +378,29 @@ export async function createEncryptedNotesBatch(
         contentHash: encrypted.contentHash,
       };
 
-      await db.notes.add(localNote);
+      const syncEntry: SyncQueueEntry = {
+        clientMutationId: generateMutationId(),
+        operation: 'create',
+        entityType: 'note',
+        entityId: noteId,
+        payload: {
+          title: '',
+          content: '',
+          pinned: false,
+          createdAt: new Date(createdAt).toISOString(),
+          updatedAt: new Date(updatedAt).toISOString(),
+          encrypted_payload: encrypted.ciphertext,
+          encryption_iv: encrypted.iv,
+          encryption_version: encrypted.version,
+          content_hash: encrypted.contentHash,
+        },
+        createdAt: now,
+        retryCount: 0,
+      };
 
-      await queueSyncOperation(userId, 'create', 'note', noteId, {
-        title: '',
-        content: '',
-        pinned: false,
-        createdAt: new Date(createdAt).toISOString(),
-        updatedAt: new Date(updatedAt).toISOString(),
-        encrypted_payload: encrypted.ciphertext,
-        encryption_iv: encrypted.iv,
-        encryption_version: encrypted.version,
-        content_hash: encrypted.contentHash,
+      await db.transaction('rw', db.notes, db.syncQueue, async () => {
+        await db.notes.add(localNote);
+        await db.syncQueue.add(syncEntry);
       });
 
       encryptedNotes.push({

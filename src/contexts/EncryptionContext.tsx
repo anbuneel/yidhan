@@ -21,7 +21,13 @@ interface EncryptionContextType {
 
 const EncryptionContext = createContext<EncryptionContextType | undefined>(undefined);
 
-// Store keys alongside the userId they belong to, so a user change auto-locks
+// Store keys alongside the userId they belong to, so a user change auto-locks.
+//
+// Deliberate v1 omission: no auto-lock timeout for the encryption vault.
+// The app already has session timeout (useSessionTimeout) which signs the user
+// out after inactivity, clearing keys via signOut → keyState reset. A separate
+// vault lock timer would be redundant for a single-user v1. Revisit if the app
+// gets multi-user or shared-device support.
 interface KeyState {
   keys: DerivedKeys | null;
   userId: string | null;
@@ -67,7 +73,8 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     }
     saltBase64 = btoa(saltBase64);
 
-    // Store in user_metadata
+    // Store in user_metadata — MUST succeed before we hold keys in memory.
+    // If this fails, the salt is lost and keys would be unusable on next unlock.
     const { error } = await supabase.auth.updateUser({
       data: {
         encryption_salt: saltBase64,
@@ -78,10 +85,18 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     });
 
     if (error) {
+      // Do NOT set keyState — metadata wasn't persisted, so the salt is lost.
+      // On next login the user would see "set up passphrase" again.
       throw new Error(`Failed to save encryption settings: ${error.message}`);
     }
 
-    // Keep keys in memory, tagged with the current user
+    // Verify the metadata was actually persisted by re-reading user
+    const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+    if (!refreshedUser?.user_metadata?.encryption_salt) {
+      throw new Error('Encryption settings were not persisted. Please try again.');
+    }
+
+    // Metadata confirmed — safe to hold keys in memory
     setKeyState({ keys: derivedKeys, userId: user.id });
 
     return derivedKeys;

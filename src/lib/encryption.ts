@@ -17,6 +17,21 @@
 import { argon2id } from 'hash-wasm';
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+/** Encryption schema version. Increment when changing cipher, KDF, or serialization. */
+export const ENCRYPTION_VERSION = 1;
+
+/** Argon2id parameters — changing these invalidates existing derived keys. */
+export const ARGON2_PARAMS = {
+  parallelism: 1,
+  iterations: 3,
+  memorySize: 65536, // 64 MB
+  hashLength: 64,    // 32 bytes encryption key + 32 bytes HMAC key
+} as const;
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -79,10 +94,10 @@ export async function deriveKeys(
   const hashHex = await argon2id({
     password: passphrase,
     salt: keySalt,
-    parallelism: 1,
-    iterations: 3,
-    memorySize: 65536, // 64 MB
-    hashLength: 64,
+    parallelism: ARGON2_PARAMS.parallelism,
+    iterations: ARGON2_PARAMS.iterations,
+    memorySize: ARGON2_PARAMS.memorySize,
+    hashLength: ARGON2_PARAMS.hashLength,
     outputType: 'hex',
   });
 
@@ -161,7 +176,7 @@ export async function encryptNote(
     ciphertext: toBase64(new Uint8Array(ciphertextBuffer)),
     iv: toBase64(iv),
     contentHash,
-    version: 1,
+    version: ENCRYPTION_VERSION,
   };
 }
 

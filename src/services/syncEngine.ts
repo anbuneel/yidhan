@@ -277,9 +277,14 @@ async function processNoteOperation(
         if (serverUpdatedAt > localNote.lastSyncedAt) {
           // Safety check: compare actual content before triggering conflict
           // If content is identical, no real conflict - just timestamp drift
-          // For E2EE notes, compare content_hash instead of plaintext
-          const contentIdentical = localNote.contentHash && serverNote.content_hash
-            ? serverNote.content_hash === localNote.contentHash
+          // For E2EE notes, compare content_hash instead of plaintext.
+          // Fallback to plaintext comparison ONLY for unencrypted notes —
+          // encrypted notes always have empty title/content in storage,
+          // so plaintext comparison would always return true (false negative).
+          const isEncrypted = Boolean(localNote.contentHash || serverNote.content_hash);
+          const contentIdentical = isEncrypted
+            ? (localNote.contentHash != null && serverNote.content_hash != null &&
+               serverNote.content_hash === localNote.contentHash)
             : serverNote.title === localNote.title &&
               serverNote.content === localNote.content;
 

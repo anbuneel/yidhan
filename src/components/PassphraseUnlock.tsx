@@ -25,8 +25,10 @@ export function PassphraseUnlock() {
         setError('Incorrect passphrase. Please try again.');
         setPassphrase('');
       }
-    } catch {
-      setError('An error occurred. Please try again.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      console.error('Passphrase unlock failed:', err);
+      setError(`Unlock failed: ${message}`);
     } finally {
       setIsSubmitting(false);
     }

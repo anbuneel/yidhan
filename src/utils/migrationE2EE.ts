@@ -17,6 +17,7 @@
 import { supabase } from '../lib/supabase';
 import type { DerivedKeys } from '../lib/encryption';
 import { encryptNote, decryptNote } from '../lib/encryption';
+import { getOfflineDb } from '../lib/offlineDb';
 
 const BATCH_SIZE = 10;
 
@@ -125,7 +126,7 @@ export async function migrateExistingNotes(
             throw new Error('Verification mismatch: decrypted content does not match original');
           }
 
-          // Verified — clear plaintext
+          // Verified — clear plaintext in Supabase
           const { error: clearError } = await supabase
             .from('notes')
             .update({ title: '', content: '' })
@@ -135,6 +136,19 @@ export async function migrateExistingNotes(
           if (clearError) {
             throw new Error(`Failed to clear plaintext: ${clearError.message}`);
           }
+
+          // Also update IndexedDB so local state matches server
+          // Without this, a refresh before the next sync pull would
+          // still show plaintext in IDB.
+          const db = getOfflineDb(userId);
+          await db.notes.update(note.id, {
+            title: '',
+            content: '',
+            encryptedPayload: encrypted.ciphertext,
+            encryptionIv: encrypted.iv,
+            encryptionVersion: encrypted.version,
+            contentHash: encrypted.contentHash,
+          });
 
           result.migrated++;
         } catch (err) {
