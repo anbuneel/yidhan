@@ -35,6 +35,10 @@ function localNoteToNote(localNote: LocalNote, tags: Tag[] = []): Note {
     pinned: localNote.pinned,
     deletedAt: localNote.deletedAt ? new Date(localNote.deletedAt) : null,
     syncStatus: localNote.syncStatus,
+    encryptedPayload: localNote.encryptedPayload,
+    encryptionIv: localNote.encryptionIv,
+    encryptionVersion: localNote.encryptionVersion,
+    contentHash: localNote.contentHash,
   };
 }
 

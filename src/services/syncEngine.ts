@@ -61,6 +61,37 @@ const pendingTimeouts = new Set<ReturnType<typeof setTimeout>>();
 let isSyncing = false;
 let syncPromise: Promise<SyncResult> | null = null;
 
+// Pause/resume state for E2EE (gate sync during migration or key rotation)
+let isPaused = false;
+let pauseResolve: (() => void) | null = null;
+
+/**
+ * Pause sync operations. Any in-flight sync will complete,
+ * but new fullSync/pullRemoteChanges/processQueue calls will wait.
+ */
+export function pauseSync(): void {
+  isPaused = true;
+}
+
+/**
+ * Resume sync operations. Any calls that were waiting will proceed.
+ */
+export function resumeSync(): void {
+  isPaused = false;
+  if (pauseResolve) {
+    pauseResolve();
+    pauseResolve = null;
+  }
+}
+
+/** Wait for sync to be unpaused (returns immediately if not paused) */
+async function waitForUnpause(): Promise<void> {
+  if (!isPaused) return;
+  return new Promise<void>((resolve) => {
+    pauseResolve = resolve;
+  });
+}
+
 export interface SyncResult {
   processed: number;
   failed: number;
@@ -205,9 +236,13 @@ async function processNoteOperation(
         .insert({
           id: noteId,
           user_id: userId,
-          title: data.title as string,
-          content: data.content as string,
-          pinned: data.pinned as boolean,
+          title: (data.title as string) ?? '',
+          content: (data.content as string) ?? '',
+          pinned: (data.pinned as boolean) ?? false,
+          encrypted_payload: (data.encrypted_payload as string | null) ?? null,
+          encryption_iv: (data.encryption_iv as string | null) ?? null,
+          encryption_version: (data.encryption_version as number | null) ?? null,
+          content_hash: (data.content_hash as string | null) ?? null,
         })
         .select()
         .single();
@@ -234,9 +269,11 @@ async function processNoteOperation(
         if (serverUpdatedAt > localNote.lastSyncedAt) {
           // Safety check: compare actual content before triggering conflict
           // If content is identical, no real conflict - just timestamp drift
-          const contentIdentical =
-            serverNote.title === localNote.title &&
-            serverNote.content === localNote.content;
+          // For E2EE notes, compare content_hash instead of plaintext
+          const contentIdentical = localNote.contentHash && serverNote.content_hash
+            ? serverNote.content_hash === localNote.contentHash
+            : serverNote.title === localNote.title &&
+              serverNote.content === localNote.content;
 
           if (contentIdentical) {
             // No actual conflict - update lastSyncedAt to server time and continue
@@ -260,13 +297,22 @@ async function processNoteOperation(
         }
       }
 
+      // Build the update payload — include encrypted fields when present
+      const updatePayload: Record<string, unknown> = {
+        title: data.title as string,
+        content: data.content as string,
+        // updated_at is set by server-side trigger (notes_updated_at_trigger)
+      };
+      if (data.encrypted_payload !== undefined) {
+        updatePayload.encrypted_payload = data.encrypted_payload;
+        updatePayload.encryption_iv = data.encryption_iv;
+        updatePayload.encryption_version = data.encryption_version;
+        updatePayload.content_hash = data.content_hash;
+      }
+
       const { data: updated, error } = await supabase
         .from('notes')
-        .update({
-          title: data.title as string,
-          content: data.content as string,
-          // updated_at is set by server-side trigger (notes_updated_at_trigger)
-        })
+        .update(updatePayload)
         .eq('id', noteId)
         .select()
         .single();
@@ -519,6 +565,9 @@ async function updateRetryCount(
  * Called when coming back online or periodically
  */
 export async function processQueue(userId: string): Promise<SyncResult> {
+  // Wait if sync is paused (E2EE migration, key rotation)
+  await waitForUnpause();
+
   // Prevent concurrent syncs
   if (isSyncing && syncPromise) {
     return syncPromise;
@@ -643,6 +692,9 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
  * does not prevent the tag pull from executing.
  */
 export async function pullRemoteChanges(userId: string): Promise<PullResult> {
+  // Wait if sync is paused (E2EE migration, key rotation)
+  await waitForUnpause();
+
   const db = getOfflineDb(userId);
   const errors: PullError[] = [];
   let pulledNotes = 0;
@@ -818,6 +870,9 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
  * Returns FullSyncResult with both pull and push outcomes.
  */
 export async function fullSync(userId: string): Promise<FullSyncResult> {
+  // Wait if sync is paused (E2EE migration, key rotation)
+  await waitForUnpause();
+
   // Pull first to get latest server state
   const pullResult = await pullRemoteChanges(userId);
 

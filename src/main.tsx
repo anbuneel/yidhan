@@ -49,6 +49,28 @@ if (sentryDsn) {
     // Session replay sample rate (10% of sessions, 100% on error)
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
+    // E2EE: Strip note title/content from error reports
+    beforeSend(event) {
+      if (event.extra) {
+        delete event.extra.title
+        delete event.extra.content
+        delete event.extra.noteTitle
+        delete event.extra.noteContent
+      }
+      // Scrub breadcrumb data that might contain note content
+      if (event.breadcrumbs) {
+        event.breadcrumbs = event.breadcrumbs.map(bc => {
+          if (bc.data) {
+            delete bc.data.title
+            delete bc.data.content
+            delete bc.data.noteTitle
+            delete bc.data.noteContent
+          }
+          return bc
+        })
+      }
+      return event
+    },
   })
 }
 

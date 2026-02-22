@@ -41,7 +41,6 @@ import {
   fetchNotesOffline,
   createNoteOffline,
   createNotesBatchOffline,
-  updateNoteOffline,
   searchNotesOffline,
   toggleNotePinOffline,
   softDeleteNoteOffline,
@@ -56,6 +55,14 @@ import {
   upsertTagFromServer,
   deleteTagFromServer,
 } from './services/offlineNotes';
+import {
+  createEncryptedNote,
+  updateEncryptedNote,
+  fetchDecryptedNotes,
+  searchDecryptedNotes,
+  fetchDecryptedFadedNotes,
+  decryptNoteFromServer,
+} from './services/encryptedNotes';
 import {
   fetchTagsOffline,
   createTagOffline,
@@ -131,7 +138,7 @@ migrateLocalStorageKeys();
 
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
-  const { isEncryptionSetup, isUnlocked } = useEncryption();
+  const { keys, isEncryptionSetup, isUnlocked } = useEncryption();
   const appLoadingMessage = 'Preparing your space...';
 
   // Network connectivity monitoring
@@ -144,14 +151,16 @@ function App() {
     const uid = user?.id;
     if (!uid) return;
     try {
-      const refreshedNotes = await fetchNotesOffline(uid);
+      const refreshedNotes = keys
+        ? await fetchDecryptedNotes(uid, keys)
+        : await fetchNotesOffline(uid);
       setNotes(refreshedNotes);
       const refreshedTags = await fetchTagsOffline(uid);
       setTags(refreshedTags);
     } catch (error) {
       console.error('Failed to rehydrate after sync:', error);
     }
-  }, [user?.id]);
+  }, [user?.id, keys]);
 
   // Sync engine for offline support
   const { conflicts, removeConflict, triggerSync } = useSyncEngine(handleSyncComplete);
@@ -500,7 +509,10 @@ function App() {
     }
 
     setLoading(true);
-    fetchNotesOffline(userId)
+    const fetchNotes = keys
+      ? fetchDecryptedNotes(userId, keys)
+      : fetchNotesOffline(userId);
+    fetchNotes
       .then((loadedNotes) => {
         setNotes(loadedNotes);
 
@@ -525,19 +537,32 @@ function App() {
       });
 
     // Subscribe to real-time changes (also write to IndexedDB to keep IDB in sync)
+    // For E2EE, decrypt notes from the server before updating React state
+    // Note: `keys` is captured from the outer scope at subscription time
+    const currentKeys = keys;
+    const maybeDecrypt = async (note: Note): Promise<Note> => {
+      if (currentKeys) {
+        return decryptNoteFromServer(note, userId, currentKeys);
+      }
+      return note;
+    };
+
     const unsubscribe = subscribeToNotes(
       userId,
       (newNote) => {
         // Write to IndexedDB first
         upsertNoteFromServer(userId, newNote).catch(console.error);
 
-        setNotes((prev) => {
-          // Avoid duplicates
-          if (prev.some((n) => n.id === newNote.id)) return prev;
-          // New notes from real-time don't have tags; they'll be fetched on next full load
-          // Set syncStatus: 'synced' since this note came from the server
-          return [{ ...newNote, syncStatus: 'synced' as const }, ...prev];
-        });
+        // Decrypt and update React state
+        maybeDecrypt(newNote).then((decrypted) => {
+          setNotes((prev) => {
+            // Avoid duplicates
+            if (prev.some((n) => n.id === decrypted.id)) return prev;
+            // New notes from real-time don't have tags; they'll be fetched on next full load
+            // Set syncStatus: 'synced' since this note came from the server
+            return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
+          });
+        }).catch(console.error);
       },
       (updatedNote) => {
         // Write to IndexedDB first
@@ -555,26 +580,29 @@ function App() {
           return;
         }
 
-        // Check if this is a restore (note no longer has deletedAt)
-        // This handles notes restored from another tab
-        setNotes((prev) => {
-          const existingNote = prev.find((n) => n.id === updatedNote.id);
-          if (existingNote) {
-            // Note exists, update it preserving tags and local-only fields
-            return prev.map((n) => {
-              if (n.id === updatedNote.id) {
-                return { ...updatedNote, tags: n.tags, syncStatus: n.syncStatus };
-              }
-              return n;
-            });
-          } else {
-            // Note doesn't exist in active list (was restored from faded)
-            // Add it back (tags will be empty, will refresh on next full load)
-            // Set syncStatus: 'synced' since this came from the server
-            setFadedNotesCount((prev) => Math.max(0, prev - 1));
-            return [{ ...updatedNote, syncStatus: 'synced' as const }, ...prev];
-          }
-        });
+        // Decrypt and update React state
+        maybeDecrypt(updatedNote).then((decrypted) => {
+          // Check if this is a restore (note no longer has deletedAt)
+          // This handles notes restored from another tab
+          setNotes((prev) => {
+            const existingNote = prev.find((n) => n.id === decrypted.id);
+            if (existingNote) {
+              // Note exists, update it preserving tags and local-only fields
+              return prev.map((n) => {
+                if (n.id === decrypted.id) {
+                  return { ...decrypted, tags: n.tags, syncStatus: n.syncStatus };
+                }
+                return n;
+              });
+            } else {
+              // Note doesn't exist in active list (was restored from faded)
+              // Add it back (tags will be empty, will refresh on next full load)
+              // Set syncStatus: 'synced' since this came from the server
+              setFadedNotesCount((prev) => Math.max(0, prev - 1));
+              return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
+            }
+          });
+        }).catch(console.error);
       },
       (deletedId) => {
         // Remove from IndexedDB
@@ -608,7 +636,10 @@ function App() {
       // Create note with demo content (sanitize and wrap plain text in paragraph tags for Tiptap)
       const sanitized = sanitizeText(demoContent);
       const htmlContent = `<p>${sanitized.replace(/\n/g, '</p><p>')}</p>`;
-      createNoteOffline(userId, 'My first note', htmlContent)
+      const createNote = keys
+        ? createEncryptedNote(userId, 'My first note', htmlContent, keys)
+        : createNoteOffline(userId, 'My first note', htmlContent);
+      createNote
         .then((newNote) => {
           // Clear demo content from localStorage
           localStorage.removeItem(DEMO_STORAGE_KEY);
@@ -684,7 +715,10 @@ function App() {
 
     const { title, content } = formatSharedContent(sharedData);
 
-    createNoteOffline(userId, title, content)
+    const createShareNote = keys
+      ? createEncryptedNote(userId, title, content, keys)
+      : createNoteOffline(userId, title, content);
+    createShareNote
       .then((newNote) => {
         clearSharedData();
         trackNoteCreated();
@@ -811,9 +845,9 @@ function App() {
   };
 
   const handleNewNote = useCallback(async () => {
-    if (!user) return;
+    if (!user || !keys) return;
     try {
-      const newNote = await createNoteOffline(user.id);
+      const newNote = await createEncryptedNote(user.id, '', '', keys);
       trackNoteCreated(); // Track for install prompt engagement
       startTransition(() => {
         setNotes((prev) => [newNote, ...prev]);
@@ -823,7 +857,7 @@ function App() {
     } catch (error) {
       console.error('Failed to create note:', error);
     }
-  }, [user, startTransition, trackNoteCreated]);
+  }, [user, keys, startTransition, trackNoteCreated]);
 
   // Keyboard shortcut: Cmd/Ctrl + N to create new note
   useEffect(() => {
@@ -867,7 +901,7 @@ function App() {
   // Writes to IndexedDB immediately, queues for sync
   // Returns a Promise so Editor can track save status accurately
   const handleNoteUpdate = useCallback(async (updatedNote: Note): Promise<void> => {
-    if (!user) return;
+    if (!user || !keys) return;
 
     // Store previous state for potential rollback
     const previousNote = notes.find((n) => n.id === updatedNote.id);
@@ -879,9 +913,9 @@ function App() {
     );
 
     try {
-      // Save to IndexedDB (immediate, works offline)
-      // Sync engine will push to server when online
-      await updateNoteOffline(user.id, updatedNote);
+      // Encrypt and save to IndexedDB (immediate, works offline)
+      // Sync engine will push encrypted payload to server when online
+      await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
 
       // Trigger coalesced sync (2s after last save) to push changes promptly
       triggerCoalescedSync();
@@ -903,7 +937,7 @@ function App() {
       // Re-throw so Editor can show error state
       throw error;
     }
-  }, [user, notes, triggerCoalescedSync]);
+  }, [user, keys, notes, triggerCoalescedSync]);
 
   // Soft delete a note (move to Faded Notes)
   // Returns true on success, false on failure (for UI recovery in swipe gestures)
@@ -1018,7 +1052,9 @@ function App() {
     });
     setFadedNotesLoading(true);
     try {
-      const faded = await fetchFadedNotesOffline(user.id);
+      const faded = keys
+        ? await fetchDecryptedFadedNotes(user.id, keys)
+        : await fetchFadedNotesOffline(user.id);
       setFadedNotes(faded);
     } catch (error) {
       console.error('Failed to fetch faded notes:', error);
@@ -1060,7 +1096,9 @@ function App() {
       removeConflict(activeConflict.entityId);
 
       // Refresh notes from IndexedDB after conflict resolution
-      const refreshedNotes = await fetchNotesOffline(user.id);
+      const refreshedNotes = keys
+        ? await fetchDecryptedNotes(user.id, keys)
+        : await fetchNotesOffline(user.id);
       setNotes(refreshedNotes);
     } catch (error) {
       console.error('Failed to resolve conflict:', error);
@@ -1087,7 +1125,9 @@ function App() {
       const { outcome } = await triggerSync();
 
       // Rehydrate React state from IndexedDB (now has fresh server data)
-      const refreshedNotes = await fetchNotesOffline(user.id);
+      const refreshedNotes = keys
+        ? await fetchDecryptedNotes(user.id, keys)
+        : await fetchNotesOffline(user.id);
       setNotes(refreshedNotes);
       const refreshedTags = await fetchTagsOffline(user.id);
       setTags(refreshedTags);
@@ -1253,7 +1293,9 @@ function App() {
       }
 
       try {
-        const results = await searchNotesOffline(user.id, query);
+        const results = keys
+          ? await searchDecryptedNotes(user.id, query, keys)
+          : await searchNotesOffline(user.id, query);
         setSearchResults(results);
       } catch (error) {
         console.error('Search failed:', error);
@@ -1353,7 +1395,9 @@ function App() {
         toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
 
         // Refresh notes from IndexedDB
-        const refreshedNotes = await fetchNotesOffline(user.id);
+        const refreshedNotes = keys
+          ? await fetchDecryptedNotes(user.id, keys)
+          : await fetchNotesOffline(user.id);
         setNotes(refreshedNotes);
 
       } else if (isMarkdown) {
@@ -1421,8 +1465,10 @@ function App() {
           }
 
           // Refresh notes from IndexedDB
-          const refreshedNotes = await fetchNotesOffline(user.id);
-          setNotes(refreshedNotes);
+          const refreshedNotes2 = keys
+            ? await fetchDecryptedNotes(user.id, keys)
+            : await fetchNotesOffline(user.id);
+          setNotes(refreshedNotes2);
 
           toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
         } else {
@@ -1484,8 +1530,10 @@ function App() {
           }
 
           // Refresh from IndexedDB to get the note with tags
-          const refreshedNotes = await fetchNotesOffline(user.id);
-          setNotes(refreshedNotes);
+          const refreshedNotesAll = keys
+            ? await fetchDecryptedNotes(user.id, keys)
+            : await fetchNotesOffline(user.id);
+          setNotes(refreshedNotesAll);
 
           toast.success(`Imported "${title}"`);
         }
