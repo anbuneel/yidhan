@@ -16,6 +16,11 @@ export interface Note {
   pinned: boolean;
   deletedAt?: Date | null;
   syncStatus?: 'synced' | 'pending' | 'conflict';
+  // E2EE fields (optional — null for unencrypted/legacy notes)
+  encryptedPayload?: string | null;
+  encryptionIv?: string | null;
+  encryptionVersion?: number | null;
+  contentHash?: string | null;
 }
 
 export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded';

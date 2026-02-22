@@ -696,6 +696,10 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
       lastSyncedAt: serverTime,
       serverUpdatedAt: serverTime,
       localUpdatedAt: serverTime,
+      encryptedPayload: serverNote.encrypted_payload ?? null,
+      encryptionIv: serverNote.encryption_iv ?? null,
+      encryptionVersion: serverNote.encryption_version ?? null,
+      contentHash: serverNote.content_hash ?? null,
     });
     pulledNotes++;
   }

@@ -66,6 +66,10 @@ function dbNoteToLocal(dbNote: DbNote, userId: string): LocalNote {
     lastSyncedAt: serverTime,
     serverUpdatedAt: serverTime,
     localUpdatedAt: serverTime,
+    encryptedPayload: dbNote.encrypted_payload ?? null,
+    encryptionIv: dbNote.encryption_iv ?? null,
+    encryptionVersion: dbNote.encryption_version ?? null,
+    contentHash: dbNote.content_hash ?? null,
   };
 }
 
@@ -424,6 +428,10 @@ export async function createNoteOffline(
     lastSyncedAt: null,
     serverUpdatedAt: null,
     localUpdatedAt: now,
+    encryptedPayload: null,
+    encryptionIv: null,
+    encryptionVersion: null,
+    contentHash: null,
   };
 
   // Write to IndexedDB
@@ -486,6 +494,10 @@ export async function createNotesBatchOffline(
         lastSyncedAt: null,
         serverUpdatedAt: null,
         localUpdatedAt: now,
+        encryptedPayload: null,
+        encryptionIv: null,
+        encryptionVersion: null,
+        contentHash: null,
       };
     });
 
@@ -849,6 +861,10 @@ export async function upsertNoteFromServer(
         serverUpdatedAt: serverTime,
         syncStatus: existing.syncStatus === 'pending' ? 'pending' : 'synced',
         lastSyncedAt: serverTime,
+        encryptedPayload: note.encryptedPayload ?? null,
+        encryptionIv: note.encryptionIv ?? null,
+        encryptionVersion: note.encryptionVersion ?? null,
+        contentHash: note.contentHash ?? null,
       });
     }
   } else {
@@ -866,6 +882,10 @@ export async function upsertNoteFromServer(
       lastSyncedAt: serverTime,
       serverUpdatedAt: serverTime,
       localUpdatedAt: serverTime,
+      encryptedPayload: note.encryptedPayload ?? null,
+      encryptionIv: note.encryptionIv ?? null,
+      encryptionVersion: note.encryptionVersion ?? null,
+      contentHash: note.contentHash ?? null,
     };
     await db.notes.add(localNote);
   }

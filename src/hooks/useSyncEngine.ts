@@ -395,6 +395,10 @@ export async function resolveConflict(
         lastSyncedAt: null,
         serverUpdatedAt: null,
         localUpdatedAt: now,
+        encryptedPayload: localNote.encryptedPayload ?? null,
+        encryptionIv: localNote.encryptionIv ?? null,
+        encryptionVersion: localNote.encryptionVersion ?? null,
+        contentHash: localNote.contentHash ?? null,
       });
 
       // Queue the create operation for sync (works both online and offline)
