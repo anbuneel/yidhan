@@ -186,9 +186,9 @@ export async function decryptNote(
   const aad = textEncoder.encode(`${noteId}:${userId}`);
 
   const plaintextBuffer = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: ivBytes.buffer as ArrayBuffer, additionalData: aad },
+    { name: 'AES-GCM', iv: new Uint8Array(ivBytes), additionalData: aad },
     encryptionKey,
-    ciphertextBytes.buffer as ArrayBuffer
+    new Uint8Array(ciphertextBytes)
   );
 
   const plaintext = textDecoder.decode(plaintextBuffer);
@@ -268,9 +268,9 @@ export async function verifyKeyCheck(
     const ivBytes = fromBase64(keyCheckIv);
 
     const plaintextBuffer = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: ivBytes.buffer as ArrayBuffer },
+      { name: 'AES-GCM', iv: new Uint8Array(ivBytes) },
       encryptionKey,
-      ciphertextBytes.buffer as ArrayBuffer
+      new Uint8Array(ciphertextBytes)
     );
 
     const plaintext = textDecoder.decode(plaintextBuffer);
