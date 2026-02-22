@@ -191,3 +191,12 @@ Codex confirmation:
 | # | Finding | Rationale |
 |---|---------|-----------|
 | R1-12 | Two-stage additive rollout with encryption_enabled flag | Unnecessary complexity for 1 user with ~50 notes. Pre-migration backup provides the rollback path. User confirmed. |
+
+---
+
+## Related Documents
+
+| Document | Description |
+|----------|-------------|
+| [E2EE Implementation Plan v1.4](../plans/e2ee-implementation-plan.md) | The plan reviewed in this document |
+| [Encryption Capability Analysis v3.2](../analysis/encryption-capability-analysis-claude.md) | The analysis that informed the plan |

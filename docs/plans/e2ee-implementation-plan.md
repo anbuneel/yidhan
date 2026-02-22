@@ -4,10 +4,12 @@
 **Last Updated:** 2026-02-21
 **Status:** Approved (5-round Codex peer review)
 **Author:** Claude (Opus 4.6)
+**Analysis:** [Encryption Capability Analysis v3.2](../analysis/encryption-capability-analysis-claude.md)
+**Review:** [Plan Review 8beb39e6](../reviews/plan-review-8beb39e6.md) — 5 rounds, 26 findings, approved
 
 ---
 
-> **Original Prompt:** "Can we implement this capability now?" — referring to the E2EE encryption capability analyzed in `docs/analysis/encryption-capability-analysis-claude.md` (v3.2, approved after 3-round Codex peer review).
+> **Original Prompt:** "Can we implement this capability now?" — referring to the E2EE encryption capability analyzed in the [analysis doc](../analysis/encryption-capability-analysis-claude.md) (v3.2, approved after 3-round Codex peer review).
 
 ---
 

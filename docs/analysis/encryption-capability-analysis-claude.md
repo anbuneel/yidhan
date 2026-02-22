@@ -938,4 +938,9 @@ When ready to implement:
 
 ---
 
-*This analysis is ready for implementation planning. Next step: create a detailed implementation plan in `docs/plans/`.*
+## Related Documents
+
+| Document | Description |
+|----------|-------------|
+| [E2EE Implementation Plan v1.4](../plans/e2ee-implementation-plan.md) | Implementation plan based on this analysis (approved after 5-round Codex peer review) |
+| [Plan Review 8beb39e6](../reviews/plan-review-8beb39e6.md) | Full audit trail of the 5-round adversarial review (26 findings) |
