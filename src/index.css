@@ -666,8 +666,14 @@ body::before {
 }
 
 /* Disable interactive elements in read-only shared view */
+.rich-text-editor .ProseMirror.shared-note-content ul[data-type="taskList"] label,
 .rich-text-editor .ProseMirror.shared-note-content input[type="checkbox"] {
   pointer-events: none;
+  user-select: none;
+}
+
+.rich-text-editor .ProseMirror.shared-note-content input[type="checkbox"] {
+  opacity: 0.7;
 }
 
 /* Note Card Preview - Scaled down rich text */

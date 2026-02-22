@@ -549,7 +549,8 @@ export async function deleteNoteShare(noteId: string): Promise<void> {
 }
 
 // Fetch a shared note by token (public, no auth required)
-// Returns null if token is invalid or expired
+// Returns null if token is invalid, expired, or note is deleted
+// Throws on database/network errors (caller should catch and show error state)
 export async function fetchSharedNote(token: string): Promise<Note | null> {
   // First, validate the share token and check expiration
   const { data: shareData, error: shareError } = await supabase

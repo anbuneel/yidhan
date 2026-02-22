@@ -41,7 +41,7 @@ export function SharedNoteView({
         }
       })
       .catch((error) => {
-        console.error('SharedNoteView: failed to load shared note', { token, error });
+        console.error('SharedNoteView: failed to load shared note', error);
         if (isMounted) {
           setLoadingState('error');
         }
