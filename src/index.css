@@ -662,7 +662,7 @@ body::before {
 /* Shared Note View - Override editor-only properties for read-only display */
 .rich-text-editor .ProseMirror.shared-note-content {
   min-height: auto;
-  caret-color: auto;
+  caret-color: transparent;
 }
 
 /* Disable interactive elements in read-only shared view */

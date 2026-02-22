@@ -13,6 +13,7 @@ export const changelog: ChangelogEntry[] = [
     changes: [
       { type: 'fix', text: 'Shared notes ("Share as Letter") now preserve all rich text formatting (headings, lists, blockquotes, code blocks, task lists)' },
       { type: 'fix', text: 'Highlighted text (<mark>) no longer stripped from notes by HTML sanitizer' },
+      { type: 'fix', text: 'Shared notes now show proper error message for network/database failures instead of misleading "faded note" message' },
     ],
   },
   {

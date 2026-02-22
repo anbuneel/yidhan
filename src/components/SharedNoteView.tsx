@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Note, Theme } from '../types';
 import { fetchSharedNote } from '../services/notes';
 import { sanitizeHtml } from '../utils/sanitize';
@@ -26,6 +26,17 @@ export function SharedNoteView({
 }: SharedNoteViewProps) {
   const [note, setNote] = useState<Note | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>('loading');
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Disable task list checkboxes in read-only shared view (CSS alone can't block keyboard)
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((cb) => {
+        cb.disabled = true;
+        cb.tabIndex = -1;
+      });
+    }
+  }, [note]);
 
   useEffect(() => {
     let isMounted = true;
@@ -254,6 +265,7 @@ export function SharedNoteView({
           {/* Content */}
           <div className="rich-text-editor">
             <div
+              ref={contentRef}
               className="ProseMirror shared-note-content"
               style={{
                 fontFamily: 'var(--font-body)',
