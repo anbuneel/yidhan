@@ -387,7 +387,7 @@ content...
 
 ## Notes
 - Content is stored as HTML (from Tiptap's `getHTML()`), encrypted client-side before storage
-- **E2EE**: Title + content encrypted as JSON blob using AES-256-GCM with AAD (`noteId:userId`). Tags remain plaintext. Keys derived from passphrase via Argon2id (`hash-wasm` WASM). Keys stored in memory only (React state), cleared on signout/timeout/refresh.
+- **E2EE**: Title + content encrypted as JSON blob using AES-256-GCM with AAD (`noteId:userId`). Tags remain plaintext. Keys derived from passphrase via Argon2id (`hash-wasm` WASM). Keys held in React state + sessionStorage (survives refresh, cleared on tab close/signout/vault lock).
 - Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase (all payloads encrypted)
 - Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps
 - Server-side `notes_updated_at_trigger` prevents client clock skew issues

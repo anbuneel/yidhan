@@ -100,7 +100,8 @@ External reviews and audits.
 | Document | Description | Date |
 |----------|-------------|------|
 | [landing-page-design-review-claude.md](reviews/landing-page-design-review-claude.md) | Landing page UI/UX and conversion optimization review | 2026-01-09 |
-| [plan-review-8beb39e6.md](reviews/plan-review-8beb39e6.md) | **NEW** E2EE implementation plan peer review (5 rounds, Codex approved) | 2026-02-21 |
+| [code-review-b7e2f41d.md](reviews/code-review-b7e2f41d.md) | **NEW** Vault unlock UX code review (3 agents, 2 rounds, converged) | 2026-02-23 |
+| [plan-review-8beb39e6.md](reviews/plan-review-8beb39e6.md) | E2EE implementation plan peer review (5 rounds, Codex approved) | 2026-02-21 |
 | [zenote-comprehensive-review-Codex.md](reviews/zenote-comprehensive-review-Codex.md) | Architecture, design, and code review (Codex) | 2025-12-28 |
 | [zenote-ui-ux-review.md](reviews/zenote-ui-ux-review.md) | UI/UX review (Gemini) | 2025-12-22 |
 | [2025-12-22-code-quality-review.md](reviews/code-review/2025-12-22-code-quality-review.md) | Code quality review | 2025-12-22 |
@@ -114,7 +115,7 @@ Currently in-progress implementation plans and follow-ups.
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [vault-unlock-ux-implementation-plan.md](plans/vault-unlock-ux-implementation-plan.md) | **NEW** Vault unlock UX plan (session unlock, auto-lock, remember browser rollout) | 2026-02-23 |
+| [vault-unlock-ux-implementation-plan.md](plans/vault-unlock-ux-implementation-plan.md) | Vault unlock UX plan — **Phase 1 complete** (session persist, auto-lock, lock button) | 2026-02-23 |
 | [e2ee-implementation-plan.md](plans/e2ee-implementation-plan.md) | **NEW** E2EE implementation plan v1.4 (Codex peer-reviewed, approved) | 2026-02-21 |
 | [yidhan-rebrand-plan.md](plans/yidhan-rebrand-plan.md) | **NEW** Yidhan rebrand implementation plan (128 files, 7 phases) | 2026-01-12 |
 | [quiet-tasks-implementation-plan.md](plans/quiet-tasks-implementation-plan.md) | **NEW** Quiet Tasks feature (surface buried tasks/intentions, 6 phases) | 2026-01-14 |
@@ -201,23 +202,23 @@ Early planning and analysis documents (kept for reference).
 - **PWA Native Feel: ✅ 100% Complete** (see [pwa-native-feel-plan.md](plans/pwa-native-feel-plan.md))
 - Mobile readiness: 9/10 (improved from 8.5/10)
 - Android Capacitor: ✅ Working | iOS Capacitor: ⏳ Pending setup
-- 491 unit tests + 42 E2E tests passing
+- 587 unit tests + 42 E2E tests passing
 - Bundle size: 555KB main + 416KB editor (gesture libraries added)
 
-**Recently Completed (v2.3.0):**
-- [x] 🍎 iOS Safari install guide (visual 3-step tutorial)
-- [x] 🖼️ Apple splash screens (14 device-specific launch images)
-- [x] 👆 Swipe gestures (swipe left = delete, right = pin/unpin)
-- [x] 🔄 Pull-to-refresh (sync notes on mobile)
-- [x] ✨ iOS spring animations (bouncy, native-feeling transitions)
-- [x] 🎭 Card entrance stagger animation
+**Recently Completed (v3.1.0):**
+- [x] Vault session persistence (passphrase survives page refresh)
+- [x] Lock vault button (Settings > Security)
+- [x] Auto-lock timer (Off / 15 min / 60 min idle timeout)
 
-**Previously Completed:**
+**Previously Completed (v3.0.0):**
+- [x] End-to-end encryption (E2EE) with Argon2id + AES-256-GCM
+- [x] Passphrase setup/unlock, encrypted sync, E2EE migration
+
+**Previously Completed (v2.x):**
 - [x] Practice Space (/demo) - full-featured demo without signup
 - [x] Offline editing with IndexedDB and sync queue
-- [x] View Transitions API for smooth navigation
-- [x] Share Target API (receive shared content)
-- [x] Custom install prompt with engagement tracking
+- [x] iOS Safari install guide, swipe gestures, pull-to-refresh
+- [x] View Transitions API, Share Target API, custom install prompt
 
 **Next Steps (requires macOS):**
 See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full native iOS features:
@@ -236,4 +237,4 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 
 ---
 
-*Last updated: 2026-02-23 (Vault unlock UX implementation plan added)*
+*Last updated: 2026-02-23 (Vault unlock UX Phase 1 merged — PR #128)*
