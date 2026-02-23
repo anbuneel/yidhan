@@ -572,7 +572,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                             color: 'var(--color-text-tertiary)',
                           }}
                         >
-                          Keys are stored in memory for this session only.
+                          Keys are held for this browser session and cleared when you close the tab.
                         </p>
                       )}
                     </div>
@@ -617,7 +617,10 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                     <select
                       value={String(vaultSettings.settings.autoLockMinutes)}
                       onChange={(e) => {
-                        vaultSettings.setAutoLockMinutes(parseInt(e.target.value, 10) as 0 | 15 | 60);
+                        const parsed = parseInt(e.target.value, 10);
+                        if (parsed === 0 || parsed === 15 || parsed === 60) {
+                          vaultSettings.setAutoLockMinutes(parsed);
+                        }
                       }}
                       className="
                         w-full px-4 py-3

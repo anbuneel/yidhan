@@ -36,7 +36,8 @@ function loadSettings(userId: string): VaultSettings {
       autoLockMinutes: parseAutoLockMinutes(localStorage.getItem(storageKey(userId, 'auto-lock-minutes'))),
       rememberBrowser: localStorage.getItem(storageKey(userId, 'remember-browser')) === 'true',
     };
-  } catch {
+  } catch (err) {
+    console.warn('[useVaultSettings] Failed to load vault settings, using defaults:', err);
     return DEFAULTS;
   }
 }
@@ -50,12 +51,19 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
     userId ? loadSettings(userId) : DEFAULTS
   );
 
+  // Re-read settings when userId changes (adjusting state during render pattern)
+  const [prevUserId, setPrevUserId] = useState<string | null>(userId);
+  if (prevUserId !== userId) {
+    setPrevUserId(userId);
+    setSettings(userId ? loadSettings(userId) : DEFAULTS);
+  }
+
   const setAutoLockMinutes = useCallback((minutes: 0 | 15 | 60) => {
     setSettings((prev) => ({ ...prev, autoLockMinutes: minutes }));
     if (userId) {
       try {
         localStorage.setItem(storageKey(userId, 'auto-lock-minutes'), String(minutes));
-      } catch { /* localStorage full or unavailable */ }
+      } catch (err) { console.warn('[useVaultSettings] Failed to persist auto-lock setting:', err); }
     }
   }, [userId]);
 
@@ -64,7 +72,7 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
     if (userId) {
       try {
         localStorage.setItem(storageKey(userId, 'remember-browser'), String(enabled));
-      } catch { /* localStorage full or unavailable */ }
+      } catch (err) { console.warn('[useVaultSettings] Failed to persist remember-browser setting:', err); }
     }
   }, [userId]);
 

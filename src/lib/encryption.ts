@@ -51,6 +51,7 @@ export interface DerivedKeys {
 
 /** Serialized key material for sessionStorage persistence */
 export interface SessionKeyBlob {
+  version: 1;       // blob schema version
   encKey: string;   // base64
   hashKey: string;  // base64
   salt: string;     // base64
@@ -259,6 +260,7 @@ export async function computeContentHash(
  */
 export function exportSessionKeys(keys: DerivedKeys): SessionKeyBlob {
   return {
+    version: 1,
     encKey: toBase64(keys.rawEncryptionKey),
     hashKey: toBase64(keys.rawHashKey),
     salt: toBase64(keys.salt),
@@ -270,9 +272,15 @@ export function exportSessionKeys(keys: DerivedKeys): SessionKeyBlob {
  * Re-imports raw bytes as non-extractable CryptoKeys.
  */
 export async function importSessionKeys(blob: SessionKeyBlob): Promise<DerivedKeys> {
+  if (blob.version !== 1) throw new Error(`Unsupported session blob version: ${blob.version}`);
+
   const rawEncryptionKey = fromBase64(blob.encKey);
   const rawHashKey = fromBase64(blob.hashKey);
   const salt = fromBase64(blob.salt);
+
+  if (rawEncryptionKey.length !== 32) throw new Error(`Invalid encryption key length: expected 32, got ${rawEncryptionKey.length}`);
+  if (rawHashKey.length !== 32) throw new Error(`Invalid HMAC key length: expected 32, got ${rawHashKey.length}`);
+  if (salt.length !== 16) throw new Error(`Invalid salt length: expected 16, got ${salt.length}`);
 
   const encryptionKey = await importAesKey(rawEncryptionKey);
   const hashKey = await importHmacKey(rawHashKey);

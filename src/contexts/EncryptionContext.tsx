@@ -31,7 +31,9 @@ function persistSession(userId: string, keys: DerivedKeys): void {
   try {
     const blob = exportSessionKeys(keys);
     sessionStorage.setItem(sessionKey(userId), JSON.stringify(blob));
-  } catch { /* sessionStorage unavailable or full */ }
+  } catch (err) {
+    console.warn('[EncryptionContext] Failed to persist vault session — refresh will require passphrase:', err);
+  }
 }
 
 /** Clear session key material */
@@ -39,7 +41,9 @@ function clearSession(userId: string | null): void {
   if (!userId) return;
   try {
     sessionStorage.removeItem(sessionKey(userId));
-  } catch { /* sessionStorage unavailable */ }
+  } catch (err) {
+    console.error('[EncryptionContext] Failed to clear vault session from sessionStorage:', err);
+  }
 }
 
 /** Try to restore keys from sessionStorage */
@@ -58,10 +62,10 @@ async function restoreSession(userId: string): Promise<DerivedKeys | null> {
 }
 
 // Store keys alongside the userId they belong to, so a user change auto-locks.
-interface KeyState {
-  keys: DerivedKeys | null;
-  userId: string | null;
-}
+// Discriminated union prevents invalid states (e.g. keys without userId).
+type KeyState =
+  | { keys: null; userId: null }
+  | { keys: DerivedKeys; userId: string };
 
 export function EncryptionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
