@@ -82,6 +82,20 @@ function fromBase64(base64: string): Uint8Array {
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
+// TS 5.9 narrows Uint8Array to Uint8Array<ArrayBufferLike> which is not
+// assignable to BufferSource. At runtime, crypto.subtle.importKey accepts
+// Uint8Array directly. Cast through BufferSource to satisfy the type checker.
+
+/** Import raw bytes as a non-extractable AES-256-GCM CryptoKey */
+async function importAesKey(raw: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', raw as BufferSource, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+
+/** Import raw bytes as a non-extractable HMAC-SHA-256 CryptoKey */
+async function importHmacKey(raw: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', raw as BufferSource, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+
 // ============================================================================
 // Key Derivation
 // ============================================================================
@@ -121,22 +135,9 @@ export async function deriveKeys(
   const encKeyRaw = hashBytes.slice(0, 32);
   const hmacKeyRaw = hashBytes.slice(32, 64);
 
-  // Import as CryptoKeys
-  const encryptionKey = await crypto.subtle.importKey(
-    'raw',
-    encKeyRaw,
-    { name: 'AES-GCM' },
-    false,
-    ['encrypt', 'decrypt']
-  );
-
-  const hashKey = await crypto.subtle.importKey(
-    'raw',
-    hmacKeyRaw,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign', 'verify']
-  );
+  // Import as non-extractable CryptoKeys
+  const encryptionKey = await importAesKey(encKeyRaw);
+  const hashKey = await importHmacKey(hmacKeyRaw);
 
   return { encryptionKey, hashKey, salt: keySalt, rawEncryptionKey: encKeyRaw, rawHashKey: hmacKeyRaw };
 }
@@ -268,21 +269,8 @@ export async function importSessionKeys(blob: SessionKeyBlob): Promise<DerivedKe
   const rawHashKey = fromBase64(blob.hashKey);
   const salt = fromBase64(blob.salt);
 
-  const encryptionKey = await crypto.subtle.importKey(
-    'raw',
-    (rawEncryptionKey.buffer as ArrayBuffer).slice(rawEncryptionKey.byteOffset, rawEncryptionKey.byteOffset + rawEncryptionKey.byteLength),
-    { name: 'AES-GCM' },
-    false,
-    ['encrypt', 'decrypt']
-  );
-
-  const hashKey = await crypto.subtle.importKey(
-    'raw',
-    (rawHashKey.buffer as ArrayBuffer).slice(rawHashKey.byteOffset, rawHashKey.byteOffset + rawHashKey.byteLength),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign', 'verify']
-  );
+  const encryptionKey = await importAesKey(rawEncryptionKey);
+  const hashKey = await importHmacKey(rawHashKey);
 
   return { encryptionKey, hashKey, salt, rawEncryptionKey, rawHashKey };
 }

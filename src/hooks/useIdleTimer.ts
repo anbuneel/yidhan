@@ -44,23 +44,21 @@ export function useIdleTimer({ minutes, onIdle, enabled }: UseIdleTimerOptions):
       return;
     }
 
-    const events = ['mousedown', 'keydown', 'touchstart'] as const;
+    const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'touchstart'] as const;
 
-    const handleActivity = () => resetTimer();
-
-    events.forEach((event) => {
-      window.addEventListener(event, handleActivity, { passive: true });
+    ACTIVITY_EVENTS.forEach((event) => {
+      window.addEventListener(event, resetTimer, { passive: true });
     });
-    window.addEventListener('scroll', handleActivity, { passive: true, capture: true });
+    window.addEventListener('scroll', resetTimer, { passive: true, capture: true });
 
-    // Start the timer
+    // Start the initial timer
     resetTimer();
 
     return () => {
-      events.forEach((event) => {
-        window.removeEventListener(event, handleActivity);
+      ACTIVITY_EVENTS.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
       });
-      window.removeEventListener('scroll', handleActivity, { capture: true });
+      window.removeEventListener('scroll', resetTimer, { capture: true });
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }

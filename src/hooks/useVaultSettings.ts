@@ -20,13 +20,21 @@ function storageKey(userId: string, key: string): string {
   return `yidhan-${userId}-vault-${key}`;
 }
 
+const VALID_AUTO_LOCK = [0, 15, 60] as const;
+
+function parseAutoLockMinutes(value: string | null): 0 | 15 | 60 {
+  if (!value) return DEFAULTS.autoLockMinutes;
+  const parsed = parseInt(value, 10);
+  return VALID_AUTO_LOCK.includes(parsed as 0 | 15 | 60)
+    ? (parsed as 0 | 15 | 60)
+    : DEFAULTS.autoLockMinutes;
+}
+
 function loadSettings(userId: string): VaultSettings {
   try {
-    const autoLock = localStorage.getItem(storageKey(userId, 'auto-lock-minutes'));
-    const remember = localStorage.getItem(storageKey(userId, 'remember-browser'));
     return {
-      autoLockMinutes: autoLock ? (parseInt(autoLock, 10) as 0 | 15 | 60) : DEFAULTS.autoLockMinutes,
-      rememberBrowser: remember ? remember === 'true' : DEFAULTS.rememberBrowser,
+      autoLockMinutes: parseAutoLockMinutes(localStorage.getItem(storageKey(userId, 'auto-lock-minutes'))),
+      rememberBrowser: localStorage.getItem(storageKey(userId, 'remember-browser')) === 'true',
     };
   } catch {
     return DEFAULTS;

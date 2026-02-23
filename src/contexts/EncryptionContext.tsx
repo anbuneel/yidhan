@@ -35,12 +35,11 @@ function persistSession(userId: string, keys: DerivedKeys): void {
 }
 
 /** Clear session key material */
-function clearSession(userId?: string | null): void {
+function clearSession(userId: string | null): void {
+  if (!userId) return;
   try {
-    if (userId) {
-      sessionStorage.removeItem(sessionKey(userId));
-    }
-  } catch { /* ignore */ }
+    sessionStorage.removeItem(sessionKey(userId));
+  } catch { /* sessionStorage unavailable */ }
 }
 
 /** Try to restore keys from sessionStorage */
