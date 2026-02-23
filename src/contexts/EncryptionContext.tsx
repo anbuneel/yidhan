@@ -79,8 +79,11 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
   const [prevUserId, setPrevUserId] = useState<string | null>(null);
   if (prevUserId !== currentUserId) {
     setPrevUserId(currentUserId);
-    if (!currentUserId && keyState.keys !== null) {
-      clearSession(keyState.userId);
+    // Clear keys when user signs out OR switches to a different user
+    if (prevUserId && keyState.keys !== null) {
+      keyState.keys.rawEncryptionKey.fill(0);
+      keyState.keys.rawHashKey.fill(0);
+      clearSession(prevUserId);
       setKeyState({ keys: null, userId: null });
     }
   }
@@ -99,6 +102,9 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       if (restored) {
         setKeyState({ keys: restored, userId: currentUserId });
       }
+    }).catch((err) => {
+      console.warn('[EncryptionContext] Session restore failed, passphrase required:', err);
+      clearSession(currentUserId);
     });
   }, [currentUserId, isEncryptionSetup, keyState.keys]);
 
@@ -199,9 +205,13 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
    * Lock the vault — clear keys from memory and sessionStorage.
    */
   const lockVault = useCallback(() => {
+    if (keyState.keys) {
+      keyState.keys.rawEncryptionKey.fill(0);
+      keyState.keys.rawHashKey.fill(0);
+    }
     clearSession(keyState.userId);
     setKeyState({ keys: null, userId: null });
-  }, [keyState.userId]);
+  }, [keyState.userId, keyState.keys]);
 
   return (
     <EncryptionContext.Provider value={{

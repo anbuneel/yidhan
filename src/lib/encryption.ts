@@ -39,7 +39,12 @@ export interface DerivedKeys {
   encryptionKey: CryptoKey;  // AES-256-GCM
   hashKey: CryptoKey;        // HMAC-SHA-256
   salt: Uint8Array;          // 16-byte random salt
-  /** Raw key bytes for session persistence (never sent to server) */
+  /**
+   * Raw key bytes for sessionStorage persistence (never sent to server).
+   * SECURITY: These are extractable, which reduces XSS resistance compared to
+   * non-extractable CryptoKeys. This is the cost of surviving page refresh.
+   * Zero these with .fill(0) when locking the vault.
+   */
   rawEncryptionKey: Uint8Array;  // 32 bytes
   rawHashKey: Uint8Array;        // 32 bytes
 }
