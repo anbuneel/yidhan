@@ -39,6 +39,22 @@ export interface DerivedKeys {
   encryptionKey: CryptoKey;  // AES-256-GCM
   hashKey: CryptoKey;        // HMAC-SHA-256
   salt: Uint8Array;          // 16-byte random salt
+  /**
+   * Raw key bytes for sessionStorage persistence (never sent to server).
+   * SECURITY: These are extractable, which reduces XSS resistance compared to
+   * non-extractable CryptoKeys. This is the cost of surviving page refresh.
+   * Zero these with .fill(0) when locking the vault.
+   */
+  rawEncryptionKey: Uint8Array;  // 32 bytes
+  rawHashKey: Uint8Array;        // 32 bytes
+}
+
+/** Serialized key material for sessionStorage persistence */
+export interface SessionKeyBlob {
+  version: 1;       // blob schema version
+  encKey: string;   // base64
+  hashKey: string;  // base64
+  salt: string;     // base64
 }
 
 export interface EncryptedNote {
@@ -71,6 +87,20 @@ function fromBase64(base64: string): Uint8Array {
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
+
+// TS 5.9 narrows Uint8Array to Uint8Array<ArrayBufferLike> which is not
+// assignable to BufferSource. At runtime, crypto.subtle.importKey accepts
+// Uint8Array directly. Cast through BufferSource to satisfy the type checker.
+
+/** Import raw bytes as a non-extractable AES-256-GCM CryptoKey */
+async function importAesKey(raw: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', raw as BufferSource, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+
+/** Import raw bytes as a non-extractable HMAC-SHA-256 CryptoKey */
+async function importHmacKey(raw: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', raw as BufferSource, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
 
 // ============================================================================
 // Key Derivation
@@ -111,24 +141,11 @@ export async function deriveKeys(
   const encKeyRaw = hashBytes.slice(0, 32);
   const hmacKeyRaw = hashBytes.slice(32, 64);
 
-  // Import as CryptoKeys
-  const encryptionKey = await crypto.subtle.importKey(
-    'raw',
-    encKeyRaw,
-    { name: 'AES-GCM' },
-    false,
-    ['encrypt', 'decrypt']
-  );
+  // Import as non-extractable CryptoKeys
+  const encryptionKey = await importAesKey(encKeyRaw);
+  const hashKey = await importHmacKey(hmacKeyRaw);
 
-  const hashKey = await crypto.subtle.importKey(
-    'raw',
-    hmacKeyRaw,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign', 'verify']
-  );
-
-  return { encryptionKey, hashKey, salt: keySalt };
+  return { encryptionKey, hashKey, salt: keySalt, rawEncryptionKey: encKeyRaw, rawHashKey: hmacKeyRaw };
 }
 
 // ============================================================================
@@ -231,6 +248,44 @@ export async function computeContentHash(
   const data = textEncoder.encode(JSON.stringify({ title, content }));
   const signature = await crypto.subtle.sign('HMAC', hashKey, data);
   return toBase64(new Uint8Array(signature));
+}
+
+// ============================================================================
+// Session Key Persistence (sessionStorage export/import)
+// ============================================================================
+
+/**
+ * Export derived keys to a serializable blob for sessionStorage.
+ * Uses raw key bytes cached at derive time (keys remain non-extractable).
+ */
+export function exportSessionKeys(keys: DerivedKeys): SessionKeyBlob {
+  return {
+    version: 1,
+    encKey: toBase64(keys.rawEncryptionKey),
+    hashKey: toBase64(keys.rawHashKey),
+    salt: toBase64(keys.salt),
+  };
+}
+
+/**
+ * Import keys from a session blob back into DerivedKeys.
+ * Re-imports raw bytes as non-extractable CryptoKeys.
+ */
+export async function importSessionKeys(blob: SessionKeyBlob): Promise<DerivedKeys> {
+  if (blob.version !== 1) throw new Error(`Unsupported session blob version: ${blob.version}`);
+
+  const rawEncryptionKey = fromBase64(blob.encKey);
+  const rawHashKey = fromBase64(blob.hashKey);
+  const salt = fromBase64(blob.salt);
+
+  if (rawEncryptionKey.length !== 32) throw new Error(`Invalid encryption key length: expected 32, got ${rawEncryptionKey.length}`);
+  if (rawHashKey.length !== 32) throw new Error(`Invalid HMAC key length: expected 32, got ${rawHashKey.length}`);
+  if (salt.length !== 16) throw new Error(`Invalid salt length: expected 16, got ${salt.length}`);
+
+  const encryptionKey = await importAesKey(rawEncryptionKey);
+  const hashKey = await importHmacKey(rawHashKey);
+
+  return { encryptionKey, hashKey, salt, rawEncryptionKey, rawHashKey };
 }
 
 // ============================================================================

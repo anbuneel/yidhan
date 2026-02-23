@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.1.0',
+    date: '2026-02-23',
+    changes: [
+      { type: 'feature', text: 'Vault session persistence: passphrase survives page refresh (cleared on tab close)' },
+      { type: 'feature', text: 'Lock vault: manually lock your encryption vault from Settings > Security' },
+      { type: 'feature', text: 'Auto-lock timer: automatically lock vault after 15 or 60 minutes of inactivity' },
+    ],
+  },
+  {
     version: '3.0.0',
     date: '2026-02-22',
     changes: [

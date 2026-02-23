@@ -25,6 +25,8 @@ import {
   computeContentHash,
   createKeyCheck,
   verifyKeyCheck,
+  exportSessionKeys,
+  importSessionKeys,
 } from '../encryption';
 
 // Fixed test salt for deterministic key derivation
@@ -176,6 +178,65 @@ describe('encryption', () => {
       const hash2 = await computeContentHash('title B', 'content', keys.hashKey);
 
       expect(hash1).not.toBe(hash2);
+    });
+  });
+
+  describe('exportSessionKeys / importSessionKeys', () => {
+    it('round-trip: imported keys can decrypt what original keys encrypted', async () => {
+      const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
+      const blob = exportSessionKeys(keys);
+      const restored = await importSessionKeys(blob);
+
+      const encrypted = await encryptNote(TEST_NOTE_ID, TEST_USER_ID, 'Secret Title', '<p>Secret</p>', keys);
+      const decrypted = await decryptNote(TEST_NOTE_ID, TEST_USER_ID, encrypted, restored.encryptionKey);
+
+      expect(decrypted.title).toBe('Secret Title');
+      expect(decrypted.content).toBe('<p>Secret</p>');
+    });
+
+    it('round-trip: restored HMAC matches original', async () => {
+      const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
+      const blob = exportSessionKeys(keys);
+      const restored = await importSessionKeys(blob);
+
+      const hash1 = await computeContentHash('title', 'content', keys.hashKey);
+      const hash2 = await computeContentHash('title', 'content', restored.hashKey);
+
+      expect(hash1).toBe(hash2);
+    });
+
+    it('preserves raw key bytes and salt', async () => {
+      const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
+      const blob = exportSessionKeys(keys);
+      const restored = await importSessionKeys(blob);
+
+      expect(restored.rawEncryptionKey).toEqual(keys.rawEncryptionKey);
+      expect(restored.rawHashKey).toEqual(keys.rawHashKey);
+      expect(restored.salt).toEqual(keys.salt);
+    });
+
+    it('blob includes version field', async () => {
+      const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
+      const blob = exportSessionKeys(keys);
+
+      expect(blob.version).toBe(1);
+    });
+
+    it('rejects blob with wrong version', async () => {
+      const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
+      const blob = exportSessionKeys(keys);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (blob as any).version = 2;
+
+      await expect(importSessionKeys(blob)).rejects.toThrow('Unsupported session blob version');
+    });
+
+    it('rejects blob with wrong key length', async () => {
+      const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
+      const blob = exportSessionKeys(keys);
+      blob.encKey = btoa('short'); // 5 bytes, not 32
+
+      await expect(importSessionKeys(blob)).rejects.toThrow('Invalid encryption key length');
     });
   });
 
