@@ -83,11 +83,14 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
   const [prevUserId, setPrevUserId] = useState<string | null>(null);
   if (prevUserId !== currentUserId) {
     setPrevUserId(currentUserId);
-    // Clear keys when user signs out OR switches to a different user
-    if (prevUserId && keyState.keys !== null) {
+    // Always clear sessionStorage for the old user (even if in-memory keys are
+    // null — an in-flight restore may not have completed yet).
+    if (prevUserId) {
+      clearSession(prevUserId);
+    }
+    if (keyState.keys !== null) {
       keyState.keys.rawEncryptionKey.fill(0);
       keyState.keys.rawHashKey.fill(0);
-      clearSession(prevUserId);
       setKeyState({ keys: null, userId: null });
     }
   }
@@ -102,14 +105,19 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     if (sessionRestoreAttemptedRef.current === currentUserId) return;
     sessionRestoreAttemptedRef.current = currentUserId;
 
+    let cancelled = false;
     restoreSession(currentUserId).then((restored) => {
-      if (restored) {
-        setKeyState({ keys: restored, userId: currentUserId });
+      if (restored && !cancelled) {
+        // Guard: only set keys if this effect hasn't been superseded
+        setKeyState((prev) => prev.keys !== null ? prev : { keys: restored, userId: currentUserId });
       }
     }).catch((err) => {
-      console.warn('[EncryptionContext] Session restore failed, passphrase required:', err);
-      clearSession(currentUserId);
+      if (!cancelled) {
+        console.warn('[EncryptionContext] Session restore failed, passphrase required:', err);
+        clearSession(currentUserId);
+      }
     });
+    return () => { cancelled = true; };
   }, [currentUserId, isEncryptionSetup, keyState.keys]);
 
   const keys = useMemo(() => {
