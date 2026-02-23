@@ -1,8 +1,8 @@
-import { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
-import type { DerivedKeys } from '../lib/encryption';
-import { deriveKeys, createKeyCheck, verifyKeyCheck } from '../lib/encryption';
+import type { DerivedKeys, SessionKeyBlob } from '../lib/encryption';
+import { deriveKeys, createKeyCheck, verifyKeyCheck, exportSessionKeys, importSessionKeys } from '../lib/encryption';
 
 interface EncryptionContextType {
   /** Derived encryption keys (null when locked) */
@@ -15,19 +15,50 @@ interface EncryptionContextType {
   setupPassphrase: (passphrase: string) => Promise<DerivedKeys>;
   /** Unlock with existing passphrase */
   unlockWithPassphrase: (passphrase: string) => Promise<boolean>;
-  /** Clear keys from memory */
+  /** Clear keys from memory and sessionStorage */
   lockVault: () => void;
 }
 
 const EncryptionContext = createContext<EncryptionContextType | undefined>(undefined);
 
+// sessionStorage key, namespaced per user
+function sessionKey(userId: string): string {
+  return `yidhan-${userId}-vault-session`;
+}
+
+/** Persist key material to sessionStorage (survives refresh, clears on tab close) */
+function persistSession(userId: string, keys: DerivedKeys): void {
+  try {
+    const blob = exportSessionKeys(keys);
+    sessionStorage.setItem(sessionKey(userId), JSON.stringify(blob));
+  } catch { /* sessionStorage unavailable or full */ }
+}
+
+/** Clear session key material */
+function clearSession(userId?: string | null): void {
+  try {
+    if (userId) {
+      sessionStorage.removeItem(sessionKey(userId));
+    }
+  } catch { /* ignore */ }
+}
+
+/** Try to restore keys from sessionStorage */
+async function restoreSession(userId: string): Promise<DerivedKeys | null> {
+  try {
+    const raw = sessionStorage.getItem(sessionKey(userId));
+    if (!raw) return null;
+    const blob: SessionKeyBlob = JSON.parse(raw);
+    if (!blob.encKey || !blob.hashKey || !blob.salt) return null;
+    return await importSessionKeys(blob);
+  } catch {
+    // Corrupted or invalid blob — clear it
+    clearSession(userId);
+    return null;
+  }
+}
+
 // Store keys alongside the userId they belong to, so a user change auto-locks.
-//
-// Deliberate v1 omission: no auto-lock timeout for the encryption vault.
-// The app already has session timeout (useSessionTimeout) which signs the user
-// out after inactivity, clearing keys via signOut → keyState reset. A separate
-// vault lock timer would be redundant for a single-user v1. Revisit if the app
-// gets multi-user or shared-device support.
 interface KeyState {
   keys: DerivedKeys | null;
   userId: string | null;
@@ -36,28 +67,42 @@ interface KeyState {
 export function EncryptionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [keyState, setKeyState] = useState<KeyState>({ keys: null, userId: null });
+  const sessionRestoreAttemptedRef = useRef<string | null>(null);
 
   // Determine if encryption is set up by checking user_metadata
   const encryptionSalt = user?.user_metadata?.encryption_salt as string | undefined;
   const isEncryptionSetup = Boolean(encryptionSalt);
 
-  // Auto-lock: if the current user doesn't match the user who unlocked,
-  // the keys are invalid. This is a derived value — no effect needed.
   const currentUserId = user?.id ?? null;
 
   // Clear keyState when user signs out or switches accounts.
-  // Uses React's "adjusting state during render" pattern (not an effect)
-  // to avoid cascading renders while still dereferencing CryptoKey objects.
-  // Without this, same-user re-login in the same SPA session would match
-  // keyState.userId and expose keys without requiring the passphrase.
-  // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  // Uses React's "adjusting state during render" pattern (not an effect).
   const [prevUserId, setPrevUserId] = useState<string | null>(null);
   if (prevUserId !== currentUserId) {
     setPrevUserId(currentUserId);
     if (!currentUserId && keyState.keys !== null) {
+      clearSession(keyState.userId);
       setKeyState({ keys: null, userId: null });
     }
   }
+
+  // Attempt to restore keys from sessionStorage on mount/user change
+  useEffect(() => {
+    if (!currentUserId || !isEncryptionSetup || keyState.keys !== null) {
+      return;
+    }
+
+    // Only attempt restore once per userId
+    if (sessionRestoreAttemptedRef.current === currentUserId) return;
+    sessionRestoreAttemptedRef.current = currentUserId;
+
+    restoreSession(currentUserId).then((restored) => {
+      if (restored) {
+        setKeyState({ keys: restored, userId: currentUserId });
+      }
+    });
+  }, [currentUserId, isEncryptionSetup, keyState.keys]);
+
   const keys = useMemo(() => {
     if (keyState.userId === null || keyState.userId !== currentUserId) {
       return null;
@@ -88,7 +133,6 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     saltBase64 = btoa(saltBase64);
 
     // Store in user_metadata — MUST succeed before we hold keys in memory.
-    // If this fails, the salt is lost and keys would be unusable on next unlock.
     const { error } = await supabase.auth.updateUser({
       data: {
         encryption_salt: saltBase64,
@@ -99,8 +143,6 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     });
 
     if (error) {
-      // Do NOT set keyState — metadata wasn't persisted, so the salt is lost.
-      // On next login the user would see "set up passphrase" again.
       throw new Error(`Failed to save encryption settings: ${error.message}`);
     }
 
@@ -110,8 +152,9 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       throw new Error('Encryption settings were not persisted. Please try again.');
     }
 
-    // Metadata confirmed — safe to hold keys in memory
+    // Metadata confirmed — safe to hold keys in memory and persist to session
     setKeyState({ keys: derivedKeys, userId: user.id });
+    persistSession(user.id, derivedKeys);
 
     return derivedKeys;
   }, [user]);
@@ -146,6 +189,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
     if (isValid) {
       setKeyState({ keys: derivedKeys, userId: user.id });
+      persistSession(user.id, derivedKeys);
       return true;
     }
 
@@ -153,11 +197,12 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
   }, [user, encryptionSalt]);
 
   /**
-   * Lock the vault — clear keys from memory.
+   * Lock the vault — clear keys from memory and sessionStorage.
    */
   const lockVault = useCallback(() => {
+    clearSession(keyState.userId);
     setKeyState({ keys: null, userId: null });
-  }, []);
+  }, [keyState.userId]);
 
   return (
     <EncryptionContext.Provider value={{

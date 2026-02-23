@@ -39,6 +39,16 @@ export interface DerivedKeys {
   encryptionKey: CryptoKey;  // AES-256-GCM
   hashKey: CryptoKey;        // HMAC-SHA-256
   salt: Uint8Array;          // 16-byte random salt
+  /** Raw key bytes for session persistence (never sent to server) */
+  rawEncryptionKey: Uint8Array;  // 32 bytes
+  rawHashKey: Uint8Array;        // 32 bytes
+}
+
+/** Serialized key material for sessionStorage persistence */
+export interface SessionKeyBlob {
+  encKey: string;   // base64
+  hashKey: string;  // base64
+  salt: string;     // base64
 }
 
 export interface EncryptedNote {
@@ -128,7 +138,7 @@ export async function deriveKeys(
     ['sign', 'verify']
   );
 
-  return { encryptionKey, hashKey, salt: keySalt };
+  return { encryptionKey, hashKey, salt: keySalt, rawEncryptionKey: encKeyRaw, rawHashKey: hmacKeyRaw };
 }
 
 // ============================================================================
@@ -231,6 +241,50 @@ export async function computeContentHash(
   const data = textEncoder.encode(JSON.stringify({ title, content }));
   const signature = await crypto.subtle.sign('HMAC', hashKey, data);
   return toBase64(new Uint8Array(signature));
+}
+
+// ============================================================================
+// Session Key Persistence (sessionStorage export/import)
+// ============================================================================
+
+/**
+ * Export derived keys to a serializable blob for sessionStorage.
+ * Uses raw key bytes cached at derive time (keys remain non-extractable).
+ */
+export function exportSessionKeys(keys: DerivedKeys): SessionKeyBlob {
+  return {
+    encKey: toBase64(keys.rawEncryptionKey),
+    hashKey: toBase64(keys.rawHashKey),
+    salt: toBase64(keys.salt),
+  };
+}
+
+/**
+ * Import keys from a session blob back into DerivedKeys.
+ * Re-imports raw bytes as non-extractable CryptoKeys.
+ */
+export async function importSessionKeys(blob: SessionKeyBlob): Promise<DerivedKeys> {
+  const rawEncryptionKey = fromBase64(blob.encKey);
+  const rawHashKey = fromBase64(blob.hashKey);
+  const salt = fromBase64(blob.salt);
+
+  const encryptionKey = await crypto.subtle.importKey(
+    'raw',
+    (rawEncryptionKey.buffer as ArrayBuffer).slice(rawEncryptionKey.byteOffset, rawEncryptionKey.byteOffset + rawEncryptionKey.byteLength),
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt', 'decrypt']
+  );
+
+  const hashKey = await crypto.subtle.importKey(
+    'raw',
+    (rawHashKey.buffer as ArrayBuffer).slice(rawHashKey.byteOffset, rawHashKey.byteOffset + rawHashKey.byteLength),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify']
+  );
+
+  return { encryptionKey, hashKey, salt, rawEncryptionKey, rawHashKey };
 }
 
 // ============================================================================

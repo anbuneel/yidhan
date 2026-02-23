@@ -92,6 +92,8 @@ import { useInstallPrompt } from './hooks/useInstallPrompt';
 import { useShareTarget, formatSharedContent } from './hooks/useShareTarget';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { useSessionSettings } from './hooks/useSessionSettings';
+import { useVaultSettings } from './hooks/useVaultSettings';
+import { useIdleTimer } from './hooks/useIdleTimer';
 import { ConflictModal } from './components/ConflictModal';
 import { InstallPrompt } from './components/InstallPrompt';
 import { IOSInstallGuide } from './components/IOSInstallGuide';
@@ -140,7 +142,7 @@ migrateLocalStorageKeys();
 
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
-  const { keys, isEncryptionSetup, isUnlocked } = useEncryption();
+  const { keys, isEncryptionSetup, isUnlocked, lockVault } = useEncryption();
   // Ref for encryption keys — used in realtime handlers to avoid stale closures
   // when the vault is locked/unlocked (avoids resubscribing Supabase channels)
   const keysRef = useRef(keys);
@@ -233,6 +235,27 @@ function App() {
       });
     },
     enabled: Boolean(user),
+  });
+
+  // Vault settings (auto-lock, per-user)
+  const vaultSettings = useVaultSettings(user?.id ?? null);
+
+  // Vault auto-lock timer (separate from session timeout)
+  useIdleTimer({
+    minutes: vaultSettings.settings.autoLockMinutes,
+    onIdle: () => {
+      lockVault();
+      toast('Vault locked after inactivity', {
+        icon: '🔒',
+        duration: 3000,
+        style: {
+          background: 'var(--color-bg-secondary)',
+          color: 'var(--color-text-primary)',
+          border: '1px solid var(--glass-border)',
+        },
+      });
+    },
+    enabled: Boolean(user) && isEncryptionSetup && isUnlocked,
   });
 
   // Handle session timeout modal actions
@@ -1884,6 +1907,9 @@ function App() {
                 onLetGoClick={() => setShowLettingGoModal(true)}
                 onMigrateClick={() => startTransition(() => setView('migrate'))}
                 sessionSettings={sessionSettings}
+                vaultSettings={vaultSettings}
+                isVaultUnlocked={isUnlocked}
+                onLockVault={lockVault}
               />
             </Suspense>
           </ErrorBoundary>

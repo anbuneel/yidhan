@@ -114,6 +114,7 @@ Currently in-progress implementation plans and follow-ups.
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [vault-unlock-ux-implementation-plan.md](plans/vault-unlock-ux-implementation-plan.md) | **NEW** Vault unlock UX plan (session unlock, auto-lock, remember browser rollout) | 2026-02-23 |
 | [e2ee-implementation-plan.md](plans/e2ee-implementation-plan.md) | **NEW** E2EE implementation plan v1.4 (Codex peer-reviewed, approved) | 2026-02-21 |
 | [yidhan-rebrand-plan.md](plans/yidhan-rebrand-plan.md) | **NEW** Yidhan rebrand implementation plan (128 files, 7 phases) | 2026-01-12 |
 | [quiet-tasks-implementation-plan.md](plans/quiet-tasks-implementation-plan.md) | **NEW** Quiet Tasks feature (surface buried tasks/intentions, 6 phases) | 2026-01-14 |
@@ -235,4 +236,4 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 
 ---
 
-*Last updated: 2026-02-21 (E2EE implementation plan + peer review added)*
+*Last updated: 2026-02-23 (Vault unlock UX implementation plan added)*

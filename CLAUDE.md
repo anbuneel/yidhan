@@ -107,7 +107,9 @@ src/
 │   ├── useMobileDetect.ts   # Touch device detection (useMobileDetect, useTouchCapable)
 │   ├── useSessionTimeout.ts # Session inactivity monitor (configurable timeout with warning)
 │   ├── useSessionSettings.ts # Session timeout & trusted device settings (per-user localStorage)
-│   └── useKeyboardHeight.ts # Visual Viewport API for keyboard height tracking
+│   ├── useKeyboardHeight.ts # Visual Viewport API for keyboard height tracking
+│   ├── useVaultSettings.ts  # Per-user vault settings (auto-lock minutes, remember browser)
+│   └── useIdleTimer.ts      # Simple idle timer hook (fires onIdle after N minutes of inactivity)
 ├── utils/
 │   ├── editorPosition.ts  # Cross-session cursor/scroll position persistence (localStorage)
 │   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
@@ -466,7 +468,8 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Key derivation:** Argon2id via `hash-wasm` (parallelism=1, iterations=3, memory=64MB, hashLength=64)
 - **Encryption:** AES-256-GCM with AAD (`noteId:userId`) prevents note-swapping attacks
 - **Conflict detection:** HMAC-SHA-256 content hash replaces plaintext comparison in sync engine
-- **Key storage:** Memory only (React state in `EncryptionContext`), never persisted to disk
+- **Key storage:** React state in `EncryptionContext` + sessionStorage for tab-refresh persistence (raw key bytes exported/imported via `exportSessionKeys`/`importSessionKeys`)
+- **Vault lock:** Manual lock button + configurable auto-lock timer (0/15/60 min idle). Lock clears keys from memory and sessionStorage.
 - **What's encrypted:** Title + content as JSON blob in `encrypted_payload`
 - **What's NOT encrypted:** Tags (plaintext), metadata (timestamps, pinned)
 - **Salt + key-check:** Stored in Supabase `user_metadata` for passphrase verification

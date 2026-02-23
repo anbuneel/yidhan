@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomSheet } from './BottomSheet';
 import type { UseSessionSettingsResult } from '../hooks/useSessionSettings';
+import type { UseVaultSettingsResult } from '../hooks/useVaultSettings';
 import type { Theme } from '../types';
 
 interface SettingsModalProps {
@@ -12,11 +13,14 @@ interface SettingsModalProps {
   onLetGoClick: () => void;
   onMigrateClick?: () => void;
   sessionSettings: UseSessionSettingsResult;
+  vaultSettings?: UseVaultSettingsResult;
+  isVaultUnlocked?: boolean;
+  onLockVault?: () => void;
 }
 
 type SettingsTab = 'profile' | 'password' | 'security';
 
-export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, onMigrateClick, sessionSettings }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, onMigrateClick, sessionSettings, vaultSettings, isVaultUnlocked, onLockVault }: SettingsModalProps) {
   const { user, updateProfile, updatePassword, verifyPassword } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
 
@@ -529,8 +533,128 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   color: 'var(--color-text-secondary)',
                 }}
               >
-                Manage your session and device trust settings.
+                Manage your vault, session, and device trust settings.
               </p>
+
+              {/* Encryption Vault */}
+              {vaultSettings && (
+                <div
+                  className="mb-6 pb-5"
+                  style={{ borderBottom: '1px solid var(--glass-border)' }}
+                >
+                  <h3
+                    className="text-sm font-medium mb-3"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      color: 'var(--color-text-primary)',
+                    }}
+                  >
+                    Encryption Vault
+                  </h3>
+
+                  {/* Vault Status */}
+                  <div className="mb-4 flex items-center justify-between">
+                    <div>
+                      <span
+                        className="text-sm"
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          color: isVaultUnlocked ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+                        }}
+                      >
+                        {isVaultUnlocked ? 'Vault is unlocked' : 'Vault is locked'}
+                      </span>
+                      {isVaultUnlocked && (
+                        <p
+                          className="text-xs mt-0.5"
+                          style={{
+                            fontFamily: 'var(--font-body)',
+                            color: 'var(--color-text-tertiary)',
+                          }}
+                        >
+                          Keys are stored in memory for this session only.
+                        </p>
+                      )}
+                    </div>
+                    {isVaultUnlocked && onLockVault && (
+                      <button
+                        onClick={onLockVault}
+                        className="
+                          px-3 py-1.5
+                          rounded-lg
+                          text-xs font-medium
+                          transition-all duration-200
+                        "
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          background: 'var(--color-bg-secondary)',
+                          border: '1px solid var(--glass-border)',
+                          color: 'var(--color-text-secondary)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--color-accent)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--glass-border)';
+                        }}
+                      >
+                        Lock vault now
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Vault Auto-Lock */}
+                  <div>
+                    <label
+                      className="block text-sm mb-2"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      Vault auto-lock after inactivity
+                    </label>
+                    <select
+                      value={String(vaultSettings.settings.autoLockMinutes)}
+                      onChange={(e) => {
+                        vaultSettings.setAutoLockMinutes(parseInt(e.target.value, 10) as 0 | 15 | 60);
+                      }}
+                      className="
+                        w-full px-4 py-3
+                        rounded-lg
+                        outline-none
+                        transition-all duration-200
+                        cursor-pointer
+                      "
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        background: 'var(--color-bg-secondary)',
+                        border: '1px solid var(--glass-border)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-accent)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--glass-border)';
+                      }}
+                    >
+                      <option value="0">Off</option>
+                      <option value="15">15 minutes</option>
+                      <option value="60">60 minutes</option>
+                    </select>
+                    <p
+                      className="text-xs mt-1.5"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--color-text-tertiary)',
+                      }}
+                    >
+                      Locks the vault when idle. You&apos;ll need your passphrase to unlock again.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Session Timeout */}
               <div className="mb-5">
