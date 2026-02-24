@@ -60,6 +60,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid var(--glass-border)',
+        borderTop: '2px solid var(--color-accent-muted)',
         borderRadius: 'var(--radius-card)',
         boxShadow: isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)',
         transitionTimingFunction: 'var(--spring-bounce)',
@@ -77,25 +78,13 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = isCompact ? 'translateY(-3px)' : 'translateY(-6px)';
+        e.currentTarget.style.borderTopColor = 'var(--color-accent)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.borderTopColor = 'var(--color-accent-muted)';
       }}
     >
-      {/* Accent line - animates on hover (hidden in compact mode) */}
-      {!isCompact && (
-        <div
-          className="
-            absolute top-0 left-0 w-full h-[2px]
-            bg-[var(--color-accent)]
-            opacity-50
-            origin-left
-            transition-transform duration-500 ease-out
-            scale-x-0
-            group-hover:scale-x-100
-          "
-        />
-      )}
 
       {/* Pin button - top-right corner (only in full mode) */}
       {!isCompact && (

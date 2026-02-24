@@ -51,8 +51,8 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
       className="min-h-screen flex flex-col md:flex-row overflow-hidden"
       style={{ background: 'var(--color-bg-primary)' }}
     >
-      {/* Left Panel - Hero (true 50% split on desktop) */}
-      <section className="w-full md:w-1/2 flex flex-col" style={{ background: 'var(--color-bg-primary)' }}>
+      {/* Left Panel - Hero (45/55 asymmetric split on desktop) */}
+      <section className="w-full md:w-[45%] flex flex-col" style={{ background: 'var(--color-bg-primary)' }}>
         {/* Left Header */}
         <header className="h-16 px-6 md:px-8 lg:px-12 flex items-center shrink-0">
           <span
@@ -72,7 +72,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
         <div className="flex-1 flex items-center px-6 md:px-8 lg:px-12 py-8 md:py-0">
             <div className="max-w-lg">
               <h2
-                className="text-3xl md:text-4xl lg:text-[3.25rem] font-light leading-[1.1] mb-4 md:mb-6"
+                className="text-3xl md:text-4xl lg:text-[3.25rem] font-light leading-[1.1] mb-4 md:mb-6 landing-reveal"
                 style={{
                   fontFamily: 'var(--font-display)',
                   color: 'var(--color-text-primary)',
@@ -82,7 +82,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 A quiet space<br />for your notes.
               </h2>
               <p
-                className="text-base lg:text-lg mb-8 md:mb-10 max-w-sm"
+                className="text-base lg:text-lg mb-8 md:mb-10 max-w-sm landing-reveal landing-reveal-1"
                 style={{
                   fontFamily: 'var(--font-body)',
                   color: 'var(--color-text-secondary)',
@@ -94,7 +94,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 Just your thoughts, beautifully organized.
               </p>
               <p
-                className="text-sm mb-6 md:mb-8"
+                className="text-sm mb-6 md:mb-8 landing-reveal landing-reveal-2"
                 style={{
                   fontFamily: 'var(--font-body)',
                   color: 'var(--color-accent)',
@@ -106,12 +106,12 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
               </p>
 
               {/* CTA Group */}
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 landing-reveal landing-reveal-3">
                 {/* Primary CTA */}
                 <div className="flex items-center gap-4">
                   <button
                     onClick={onStartWriting}
-                    className="landing-cta-button px-8 py-3.5 rounded-lg text-base font-medium transition-all duration-300 touch-press"
+                    className="landing-cta-button focus-ring px-8 py-3.5 rounded-lg text-base font-medium transition-all duration-300 touch-press"
                     style={{
                       fontFamily: 'var(--font-body)',
                     }}
@@ -134,7 +134,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                   {/* Explore without signing up - low commitment, shown first */}
                   <a
                     href="/demo"
-                    className="landing-secondary-cta text-sm transition-all duration-200 inline-flex items-center gap-1 w-fit"
+                    className="landing-secondary-cta focus-ring text-sm transition-all duration-200 inline-flex items-center gap-1 w-fit"
                   >
                     or explore first
                     <span className="landing-secondary-cta-arrow" aria-hidden="true">→</span>
@@ -143,7 +143,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                   {/* Returning user - Sign In (mobile only, desktop has header button) */}
                   <button
                     onClick={onSignIn}
-                    className="md:hidden landing-secondary-cta text-sm transition-all duration-200 inline-flex items-center gap-1 w-fit"
+                    className="md:hidden landing-secondary-cta focus-ring text-sm transition-all duration-200 inline-flex items-center gap-1 w-fit"
                   >
                     Already have an account?
                     <span className="font-medium" style={{ color: 'var(--color-accent)' }}>Sign in</span>
@@ -153,7 +153,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
 
               {/* Trust Signals */}
               <div
-                className="mt-8 pt-6 flex flex-col gap-2"
+                className="mt-8 pt-6 flex flex-col gap-3 landing-reveal landing-reveal-4"
                 style={{
                   borderTop: '1px dashed var(--glass-border)',
                 }}
@@ -171,7 +171,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
 
               {/* Footer links - integrated into left panel */}
               <nav
-                className="mt-12 md:mt-16 flex items-center gap-2 text-sm flex-wrap"
+                className="mt-12 md:mt-16 flex items-center gap-2 text-sm flex-wrap landing-reveal landing-reveal-4"
                 style={{
                   fontFamily: 'var(--font-body)',
                   color: 'var(--color-text-tertiary)',
@@ -179,14 +179,14 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
               >
                 <button
                   onClick={onChangelogClick}
-                  className="landing-nav-link hover:underline transition-colors duration-200"
+                  className="landing-nav-link focus-ring hover:underline transition-colors duration-200"
                 >
                   Changelog
                 </button>
                 <span aria-hidden="true">·</span>
                 <button
                   onClick={onRoadmapClick}
-                  className="landing-nav-link hover:underline transition-colors duration-200"
+                  className="landing-nav-link focus-ring hover:underline transition-colors duration-200"
                 >
                   Roadmap
                 </button>
@@ -195,7 +195,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                   href="https://github.com/anbuneel/zenote"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="landing-nav-link hover:underline transition-colors duration-200"
+                  className="landing-nav-link focus-ring hover:underline transition-colors duration-200"
                 >
                   GitHub
                 </a>
@@ -204,7 +204,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                     <span aria-hidden="true">·</span>
                     <button
                       onClick={triggerInstall}
-                      className="landing-nav-link hover:underline transition-colors duration-200 flex items-center gap-1.5"
+                      className="landing-nav-link focus-ring hover:underline transition-colors duration-200 flex items-center gap-1.5"
                     >
                       <svg
                         className="w-3.5 h-3.5"
@@ -229,27 +229,28 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
           </div>
         </section>
 
-      {/* Right Panel - Static Showcase (true 50% split on desktop) */}
+      {/* Right Panel - Showcase (55% asymmetric split on desktop) */}
       <section
-        className="w-full md:w-1/2 flex flex-col relative"
+        className="w-full md:w-[55%] flex flex-col relative"
         style={{
-          background: 'var(--color-bg-secondary)',
+          background: 'var(--color-bg-tertiary)',
         }}
       >
-        {/* Subtle divider line - desktop only */}
+        {/* Soft gradient seam - desktop only */}
         <div
-          className="hidden md:block absolute left-0 top-0 bottom-0 w-px"
+          className="hidden md:block absolute left-0 top-0 bottom-0 w-5 -translate-x-1/2"
           style={{
-            background: 'linear-gradient(to bottom, transparent, var(--glass-border) 20%, var(--glass-border) 80%, transparent)',
+            background: 'linear-gradient(to right, var(--color-bg-primary), var(--color-bg-tertiary))',
+            opacity: 0.8,
           }}
         />
 
         {/* Right Header */}
-        <header className="h-16 px-6 md:px-10 flex items-center justify-end shrink-0">
+        <header className="h-16 px-6 md:px-10 flex items-center justify-end gap-3 shrink-0">
           {/* Theme Toggle */}
           <button
             onClick={onThemeToggle}
-            className="landing-theme-toggle w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300"
+            className="landing-theme-toggle focus-ring w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300"
             aria-label="Toggle theme"
           >
             {theme === 'light' ? (
@@ -266,7 +267,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
           {/* Sign In - Outlined button for returning users */}
           <button
             onClick={onSignIn}
-            className="landing-signin-btn px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 touch-press-light"
+            className="landing-signin-btn focus-ring px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 touch-press-light"
           >
             Sign In
           </button>
@@ -281,14 +282,11 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 style={{
                   background: 'var(--color-card-bg)',
                   border: '1px solid var(--glass-border)',
+                  borderTop: '2px solid var(--color-accent-muted)',
                   borderRadius: 'var(--radius-card)',
                   boxShadow: 'var(--shadow-sm)',
                 }}
               >
-                <div
-                  className="absolute top-0 left-0 w-full h-[2px]"
-                  style={{ background: 'var(--color-accent)', opacity: 0.5 }}
-                />
                 <h3
                   className="text-lg font-semibold mb-2"
                   style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
@@ -321,83 +319,145 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 </div>
               </article>
 
-              {/* Sample Cards Grid - Desktop only (matches NoteCard sizing) */}
+              {/* Sample Cards - Desktop only: two staggered flex columns */}
               <div
-                className="hidden md:grid grid-cols-2"
+                className="hidden md:flex"
                 style={{ gap: '20px' }}
               >
-                {SAMPLE_NOTES.map((note, index) => (
-                  <article
-                    key={index}
-                    className="p-6 pb-5 relative overflow-hidden flex flex-col showcase-card"
-                    style={{
-                      background: 'var(--color-card-bg)',
-                      backdropFilter: 'blur(20px)',
-                      WebkitBackdropFilter: 'blur(20px)',
-                      border: '1px solid var(--glass-border)',
-                      borderTop: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : undefined,
-                      borderRadius: 'var(--radius-card)',
-                      boxShadow: 'var(--shadow-md)',
-                      minHeight: '200px',
-                      maxHeight: '300px',
-                      animationDelay: `${0.1 + index * 0.1}s`,
-                    }}
-                  >
-                    {/* Accent line */}
-                    <div
-                      className="absolute top-0 left-0 w-full h-[2px]"
-                      style={{
-                        background: 'var(--color-accent)',
-                        opacity: 0.5,
-                      }}
-                    />
-
-                    {/* Title */}
-                    <h3
-                      className="text-base font-semibold line-clamp-1 mb-2 leading-tight"
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        color: 'var(--color-text-primary)',
-                      }}
-                    >
-                      {note.title}
-                    </h3>
-
-                    {/* Content Preview - Safe: hardcoded sample data, not user input */}
-                    <div
-                      className="note-card-preview text-sm leading-relaxed flex-1 overflow-hidden"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text-secondary)',
-                      }}
-                      dangerouslySetInnerHTML={{ __html: note.content }}
-                    />
-
-                    {/* Footer: Tag + Timestamp */}
-                    <div className="flex items-center justify-between mt-auto pt-4">
-                      <span
-                        className="text-xs px-2 py-1 rounded"
+                {/* Left column */}
+                <div className="flex-1 flex flex-col" style={{ gap: '20px' }}>
+                  {[SAMPLE_NOTES[0], SAMPLE_NOTES[2]].map((note, i) => {
+                    const originalIndex = i === 0 ? 0 : 2;
+                    return (
+                      <article
+                        key={originalIndex}
+                        className="p-6 pb-5 relative overflow-hidden flex flex-col showcase-card"
                         style={{
-                          fontFamily: 'var(--font-body)',
-                          background: `${TAG_COLORS[note.tag.color]}15`,
-                          color: TAG_COLORS[note.tag.color],
-                          fontWeight: 500,
+                          background: 'var(--color-card-bg)',
+                          backdropFilter: 'blur(20px)',
+                          WebkitBackdropFilter: 'blur(20px)',
+                          border: '1px solid var(--glass-border)',
+                          borderTop: `2px solid var(--color-accent-muted)`,
+                          borderRadius: 'var(--radius-card)',
+                          boxShadow: 'var(--shadow-md)',
+                          minHeight: '180px',
+                          animationDelay: `${0.1 + originalIndex * 0.1}s`,
                         }}
                       >
-                        {note.tag.name}
-                      </span>
-                      <span
-                        className="text-[0.65rem] uppercase tracking-[0.1em] font-medium"
+                        <h3
+                          className="text-base font-semibold line-clamp-1 mb-2 leading-tight"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            color: 'var(--color-text-primary)',
+                          }}
+                        >
+                          {note.title}
+                        </h3>
+
+                        {/* Safe: hardcoded sample data, not user input */}
+                        <div
+                          className="note-card-preview text-sm leading-relaxed flex-1 overflow-hidden"
+                          style={{
+                            fontFamily: 'var(--font-body)',
+                            color: 'var(--color-text-secondary)',
+                          }}
+                          dangerouslySetInnerHTML={{ __html: note.content }}
+                        />
+
+                        <div className="flex items-center justify-between mt-auto pt-4">
+                          <span
+                            className="text-xs px-2 py-1 rounded"
+                            style={{
+                              fontFamily: 'var(--font-body)',
+                              background: `${TAG_COLORS[note.tag.color]}15`,
+                              color: TAG_COLORS[note.tag.color],
+                              fontWeight: 500,
+                            }}
+                          >
+                            {note.tag.name}
+                          </span>
+                          <span
+                            className="text-[0.65rem] uppercase tracking-[0.1em] font-medium"
+                            style={{
+                              fontFamily: 'var(--font-body)',
+                              color: 'var(--color-text-tertiary)',
+                            }}
+                          >
+                            {note.time}
+                          </span>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+
+                {/* Right column - staggered down for wabi-sabi asymmetry */}
+                <div className="flex-1 flex flex-col" style={{ gap: '20px', paddingTop: '48px' }}>
+                  {[SAMPLE_NOTES[1], SAMPLE_NOTES[3]].map((note, i) => {
+                    const originalIndex = i === 0 ? 1 : 3;
+                    return (
+                      <article
+                        key={originalIndex}
+                        className="p-6 pb-5 relative overflow-hidden flex flex-col showcase-card"
                         style={{
-                          fontFamily: 'var(--font-body)',
-                          color: 'var(--color-text-tertiary)',
+                          background: 'var(--color-card-bg)',
+                          backdropFilter: 'blur(20px)',
+                          WebkitBackdropFilter: 'blur(20px)',
+                          border: '1px solid var(--glass-border)',
+                          borderTop: `2px solid var(--color-accent-muted)`,
+                          borderRadius: 'var(--radius-card)',
+                          boxShadow: 'var(--shadow-md)',
+                          minHeight: '180px',
+                          animationDelay: `${0.1 + originalIndex * 0.1}s`,
                         }}
                       >
-                        {note.time}
-                      </span>
-                    </div>
-                  </article>
-                ))}
+
+                        <h3
+                          className="text-base font-semibold line-clamp-1 mb-2 leading-tight"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            color: 'var(--color-text-primary)',
+                          }}
+                        >
+                          {note.title}
+                        </h3>
+
+                        {/* Safe: hardcoded sample data, not user input */}
+                        <div
+                          className="note-card-preview text-sm leading-relaxed flex-1 overflow-hidden"
+                          style={{
+                            fontFamily: 'var(--font-body)',
+                            color: 'var(--color-text-secondary)',
+                          }}
+                          dangerouslySetInnerHTML={{ __html: note.content }}
+                        />
+
+                        <div className="flex items-center justify-between mt-auto pt-4">
+                          <span
+                            className="text-xs px-2 py-1 rounded"
+                            style={{
+                              fontFamily: 'var(--font-body)',
+                              background: `${TAG_COLORS[note.tag.color]}15`,
+                              color: TAG_COLORS[note.tag.color],
+                              fontWeight: 500,
+                            }}
+                          >
+                            {note.tag.name}
+                          </span>
+                          <span
+                            className="text-[0.65rem] uppercase tracking-[0.1em] font-medium"
+                            style={{
+                              fontFamily: 'var(--font-body)',
+                              color: 'var(--color-text-tertiary)',
+                            }}
+                          >
+                            {note.time}
+                          </span>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
@@ -406,12 +466,12 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
       {/* Styles */}
       <style>{`
         .landing-cta-button {
-          background: var(--color-accent);
-          color: #fff;
+          background: var(--color-cta-bg);
+          color: var(--color-cta-text);
           box-shadow: 0 4px 20px var(--color-accent-glow);
         }
         .landing-cta-button:hover {
-          background: var(--color-accent-hover);
+          background: var(--color-cta-bg-hover);
           transform: translateY(-2px);
           box-shadow: 0 8px 30px var(--color-accent-glow);
         }
@@ -464,8 +524,33 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
           color: var(--color-accent);
           font-size: 0.7rem;
         }
+        /* Left panel entrance choreography */
+        .landing-reveal {
+          animation: landing-fade-up 0.6s var(--ease-smooth) backwards;
+        }
+        .landing-reveal-1 { animation-delay: 0.1s; }
+        .landing-reveal-2 { animation-delay: 0.2s; }
+        .landing-reveal-3 { animation-delay: 0.3s; }
+        .landing-reveal-4 { animation-delay: 0.4s; }
+        @keyframes landing-fade-up {
+          from {
+            opacity: 0;
+            transform: translateY(12px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        /* Card reveal (staggered via inline animationDelay) */
         .showcase-card {
           animation: card-reveal 0.8s ease-out backwards;
+          transition: transform 0.3s var(--ease-smooth), box-shadow 0.3s var(--ease-smooth);
+        }
+        .showcase-card:hover {
+          transform: translateY(-3px);
+          box-shadow: var(--shadow-lg);
         }
         @keyframes card-reveal {
           from {
@@ -477,6 +562,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
             transform: translateY(0);
           }
         }
+
       `}</style>
     </div>
   );
