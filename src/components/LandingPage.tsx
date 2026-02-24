@@ -43,10 +43,10 @@ const SAMPLE_NOTES: Array<{
   },
 ];
 
+/** Showcase card for the landing page right panel. Depends on `.showcase-card` styles in the <style> block below. */
 function ShowcaseCard({ note, index }: { note: typeof SAMPLE_NOTES[number]; index: number }) {
   return (
     <article
-      key={index}
       className="p-6 pb-5 relative overflow-hidden flex flex-col showcase-card"
       style={{
         background: 'var(--color-card-bg)',
@@ -371,7 +371,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 </div>
               </article>
 
-              {/* Sample Cards - Desktop only: two staggered flex columns */}
+              {/* Sample Cards - Desktop only: two staggered flex columns (requires exactly 4 SAMPLE_NOTES) */}
               <div
                 className="hidden md:flex"
                 style={{ gap: '20px' }}
