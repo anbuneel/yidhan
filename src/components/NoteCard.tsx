@@ -60,7 +60,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid var(--glass-border)',
-        borderTop: '2px solid var(--color-accent-muted)',
+        ...(isCompact ? {} : { borderTop: '2px solid var(--color-accent-muted)' }),
         borderRadius: 'var(--radius-card)',
         boxShadow: isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)',
         transitionTimingFunction: 'var(--spring-bounce)',
@@ -78,11 +78,11 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = isCompact ? 'translateY(-3px)' : 'translateY(-6px)';
-        e.currentTarget.style.borderTopColor = 'var(--color-accent)';
+        if (!isCompact) e.currentTarget.style.borderTopColor = 'var(--color-accent)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.borderTopColor = 'var(--color-accent-muted)';
+        if (!isCompact) e.currentTarget.style.borderTopColor = 'var(--color-accent-muted)';
       }}
     >
 

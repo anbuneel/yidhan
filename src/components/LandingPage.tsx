@@ -43,6 +43,58 @@ const SAMPLE_NOTES: Array<{
   },
 ];
 
+function ShowcaseCard({ note, index }: { note: typeof SAMPLE_NOTES[number]; index: number }) {
+  return (
+    <article
+      key={index}
+      className="p-6 pb-5 relative overflow-hidden flex flex-col showcase-card"
+      style={{
+        background: 'var(--color-card-bg)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid var(--glass-border)',
+        borderTop: '2px solid var(--color-accent-muted)',
+        borderRadius: 'var(--radius-card)',
+        boxShadow: 'var(--shadow-md)',
+        minHeight: '180px',
+        animationDelay: `${0.1 + index * 0.1}s`,
+      }}
+    >
+      <h3
+        className="text-base font-semibold line-clamp-1 mb-2 leading-tight"
+        style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
+      >
+        {note.title}
+      </h3>
+      {/* Safe: hardcoded sample data, not user input */}
+      <div
+        className="note-card-preview text-sm leading-relaxed flex-1 overflow-hidden"
+        style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)' }}
+        dangerouslySetInnerHTML={{ __html: note.content }}
+      />
+      <div className="flex items-center justify-between mt-auto pt-4">
+        <span
+          className="text-xs px-2 py-1 rounded"
+          style={{
+            fontFamily: 'var(--font-body)',
+            background: `${TAG_COLORS[note.tag.color]}15`,
+            color: TAG_COLORS[note.tag.color],
+            fontWeight: 500,
+          }}
+        >
+          {note.tag.name}
+        </span>
+        <span
+          className="text-[0.65rem] uppercase tracking-[0.1em] font-medium"
+          style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-tertiary)' }}
+        >
+          {note.time}
+        </span>
+      </div>
+    </article>
+  );
+}
+
 export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, onChangelogClick, onRoadmapClick }: LandingPageProps) {
   const { isInstallable, isInstalled, triggerInstall } = useInstallPrompt();
 
@@ -326,137 +378,16 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
               >
                 {/* Left column */}
                 <div className="flex-1 flex flex-col" style={{ gap: '20px' }}>
-                  {[SAMPLE_NOTES[0], SAMPLE_NOTES[2]].map((note, i) => {
-                    const originalIndex = i === 0 ? 0 : 2;
-                    return (
-                      <article
-                        key={originalIndex}
-                        className="p-6 pb-5 relative overflow-hidden flex flex-col showcase-card"
-                        style={{
-                          background: 'var(--color-card-bg)',
-                          backdropFilter: 'blur(20px)',
-                          WebkitBackdropFilter: 'blur(20px)',
-                          border: '1px solid var(--glass-border)',
-                          borderTop: `2px solid var(--color-accent-muted)`,
-                          borderRadius: 'var(--radius-card)',
-                          boxShadow: 'var(--shadow-md)',
-                          minHeight: '180px',
-                          animationDelay: `${0.1 + originalIndex * 0.1}s`,
-                        }}
-                      >
-                        <h3
-                          className="text-base font-semibold line-clamp-1 mb-2 leading-tight"
-                          style={{
-                            fontFamily: 'var(--font-display)',
-                            color: 'var(--color-text-primary)',
-                          }}
-                        >
-                          {note.title}
-                        </h3>
-
-                        {/* Safe: hardcoded sample data, not user input */}
-                        <div
-                          className="note-card-preview text-sm leading-relaxed flex-1 overflow-hidden"
-                          style={{
-                            fontFamily: 'var(--font-body)',
-                            color: 'var(--color-text-secondary)',
-                          }}
-                          dangerouslySetInnerHTML={{ __html: note.content }}
-                        />
-
-                        <div className="flex items-center justify-between mt-auto pt-4">
-                          <span
-                            className="text-xs px-2 py-1 rounded"
-                            style={{
-                              fontFamily: 'var(--font-body)',
-                              background: `${TAG_COLORS[note.tag.color]}15`,
-                              color: TAG_COLORS[note.tag.color],
-                              fontWeight: 500,
-                            }}
-                          >
-                            {note.tag.name}
-                          </span>
-                          <span
-                            className="text-[0.65rem] uppercase tracking-[0.1em] font-medium"
-                            style={{
-                              fontFamily: 'var(--font-body)',
-                              color: 'var(--color-text-tertiary)',
-                            }}
-                          >
-                            {note.time}
-                          </span>
-                        </div>
-                      </article>
-                    );
-                  })}
+                  {[0, 2].map((idx) => (
+                    <ShowcaseCard key={idx} note={SAMPLE_NOTES[idx]} index={idx} />
+                  ))}
                 </div>
 
                 {/* Right column - staggered down for wabi-sabi asymmetry */}
                 <div className="flex-1 flex flex-col" style={{ gap: '20px', paddingTop: '48px' }}>
-                  {[SAMPLE_NOTES[1], SAMPLE_NOTES[3]].map((note, i) => {
-                    const originalIndex = i === 0 ? 1 : 3;
-                    return (
-                      <article
-                        key={originalIndex}
-                        className="p-6 pb-5 relative overflow-hidden flex flex-col showcase-card"
-                        style={{
-                          background: 'var(--color-card-bg)',
-                          backdropFilter: 'blur(20px)',
-                          WebkitBackdropFilter: 'blur(20px)',
-                          border: '1px solid var(--glass-border)',
-                          borderTop: `2px solid var(--color-accent-muted)`,
-                          borderRadius: 'var(--radius-card)',
-                          boxShadow: 'var(--shadow-md)',
-                          minHeight: '180px',
-                          animationDelay: `${0.1 + originalIndex * 0.1}s`,
-                        }}
-                      >
-
-                        <h3
-                          className="text-base font-semibold line-clamp-1 mb-2 leading-tight"
-                          style={{
-                            fontFamily: 'var(--font-display)',
-                            color: 'var(--color-text-primary)',
-                          }}
-                        >
-                          {note.title}
-                        </h3>
-
-                        {/* Safe: hardcoded sample data, not user input */}
-                        <div
-                          className="note-card-preview text-sm leading-relaxed flex-1 overflow-hidden"
-                          style={{
-                            fontFamily: 'var(--font-body)',
-                            color: 'var(--color-text-secondary)',
-                          }}
-                          dangerouslySetInnerHTML={{ __html: note.content }}
-                        />
-
-                        <div className="flex items-center justify-between mt-auto pt-4">
-                          <span
-                            className="text-xs px-2 py-1 rounded"
-                            style={{
-                              fontFamily: 'var(--font-body)',
-                              background: `${TAG_COLORS[note.tag.color]}15`,
-                              color: TAG_COLORS[note.tag.color],
-                              fontWeight: 500,
-                            }}
-                          >
-                            {note.tag.name}
-                          </span>
-                          <span
-                            className="text-[0.65rem] uppercase tracking-[0.1em] font-medium"
-                            style={{
-                              fontFamily: 'var(--font-body)',
-                              color: 'var(--color-text-tertiary)',
-                            }}
-                          >
-                            {note.time}
-                          </span>
-                        </div>
-                      </article>
-                    );
-                  })}
+                  {[1, 3].map((idx) => (
+                    <ShowcaseCard key={idx} note={SAMPLE_NOTES[idx]} index={idx} />
+                  ))}
                 </div>
               </div>
             </div>
@@ -532,6 +463,10 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
         .landing-reveal-2 { animation-delay: 0.2s; }
         .landing-reveal-3 { animation-delay: 0.3s; }
         .landing-reveal-4 { animation-delay: 0.4s; }
+        @media (prefers-reduced-motion: reduce) {
+          .landing-reveal { animation: none; }
+          .showcase-card { animation: none; }
+        }
         @keyframes landing-fade-up {
           from {
             opacity: 0;

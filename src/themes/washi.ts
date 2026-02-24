@@ -35,7 +35,7 @@ export const washi: ThemeConfig = {
 
     // CTA button (matches accent — good contrast on light bg)
     ctaBg: '#8B4513',
-    ctaBgHover: '#A0522D',
+    ctaBgHover: '#6E360F',
     ctaText: '#fff',
 
     // Semantic
