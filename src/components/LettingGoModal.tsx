@@ -402,7 +402,9 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '1';
+                if (!isLoading) {
+                  e.currentTarget.style.opacity = '1';
+                }
               }}
             >
               {isLoading ? 'Letting go...' : 'Let go'}
