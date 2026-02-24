@@ -8,6 +8,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.2.0',
+    date: '2026-02-24',
+    changes: [
+      { type: 'feature', text: 'Elevated landing page with 45/55 asymmetric split, staggered two-column card showcase, and entrance choreography' },
+      { type: 'feature', text: 'CTA button accessibility tokens (ctaBg/ctaText) ensuring WCAG AA contrast across all four themes' },
+      { type: 'improvement', text: 'Note cards now display a subtle accent border-top with color transition on hover' },
+      { type: 'improvement', text: 'Landing page respects prefers-reduced-motion with animation: none override' },
+      { type: 'fix', text: 'Fixed CTA button contrast ratios: Kintsugi 5.44:1, Washi 7.10:1, Midnight 4.62:1, Mori 4.72:1' },
+    ],
+  },
+  {
     version: '3.1.0',
     date: '2026-02-23',
     changes: [

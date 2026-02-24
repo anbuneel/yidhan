@@ -314,6 +314,12 @@ Defined in `src/index.css`. Use `--color-*` for colors, `--font-display`/`--font
 Key convention: `--radius-card: 2px 24px 4px 24px` (asymmetric wabi-sabi corners).
 Tag colors: terracotta, gold, forest, stone, indigo, clay, sage, plum.
 
+### CTA Button Tokens
+Primary action buttons MUST use `--color-cta-bg` / `--color-cta-text` (not `--color-accent` with `#fff`).
+The accent color fails WCAG AA contrast with white text in 3 of 4 themes.
+Defined in each theme's `ctaBg`, `ctaBgHover`, `ctaText` fields and mapped to CSS variables.
+Verified contrast ratios: Kintsugi 5.44:1, Washi 7.10:1, Midnight 4.62:1, Mori 4.72:1.
+
 ## Database Schema
 See `docs/technical-spec.md` for full schema (notes, tags, note_tags, note_shares). Types in `src/types/database.ts`.
 RLS enabled on all tables — users can only access their own data.

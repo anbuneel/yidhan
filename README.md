@@ -19,7 +19,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Light & Dark Themes** - Kintsugi (warm light) and Midnight (forest green dark) themes
 - **Tag Organization** - Organize notes with colorful tags and filter by multiple tags
 - **Tag Management** - Create, edit, and delete tags with a beautiful color picker
-- **Landing Page** - Split-screen design with sample note cards and "Explore" link to full Practice Space
+- **Landing Page** - Asymmetric 45/55 split with staggered card showcase, entrance choreography, and accessible CTA tokens
 - **Practice Space** - Full-featured demo at `/demo` without signup; notes persist in localStorage
 - **Seamless Onboarding** - Demo content auto-saves after signup, email confirmation with resend options
 - **Export/Import** - Backup notes to JSON or Markdown, restore from backups
