@@ -35,8 +35,8 @@ export function showUpdateBanner(): void {
   const button = document.createElement('button');
   button.textContent = 'Refresh to continue';
   button.style.cssText = `
-    background: var(--color-accent);
-    color: #fff;
+    background: var(--color-cta-bg);
+    color: var(--color-cta-text);
     border: none;
     padding: 6px 16px;
     border-radius: 6px;

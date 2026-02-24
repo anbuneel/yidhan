@@ -501,17 +501,17 @@ function DemoHeader({
           className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200"
           style={{
             fontFamily: 'var(--font-body)',
-            background: 'var(--color-accent)',
-            color: '#fff',
+            background: 'var(--color-cta-bg)',
+            color: 'var(--color-cta-text)',
             border: 'none',
             cursor: 'pointer',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--color-accent-hover)';
+            e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
             e.currentTarget.style.transform = 'translateY(-1px)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--color-accent)';
+            e.currentTarget.style.background = 'var(--color-cta-bg)';
             e.currentTarget.style.transform = 'translateY(0)';
           }}
         >

@@ -89,8 +89,8 @@ export function ReloadPrompt() {
           onClick={handleUpdate}
           className="px-3 py-1.5 text-sm font-medium rounded transition-colors duration-200"
           style={{
-            background: 'var(--color-accent)',
-            color: '#fff',
+            background: 'var(--color-cta-bg)',
+            color: 'var(--color-cta-text)',
           }}
         >
           Refresh

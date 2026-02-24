@@ -86,19 +86,19 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
           className="w-full py-3.5 px-6 rounded-lg text-base font-medium transition-all duration-300"
           style={{
             fontFamily: 'var(--font-body)',
-            background: 'var(--color-accent)',
-            color: '#fff',
+            background: 'var(--color-cta-bg)',
+            color: 'var(--color-cta-text)',
             border: 'none',
             cursor: 'pointer',
             boxShadow: '0 4px 16px var(--color-accent-glow)',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--color-accent-hover)';
+            e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
             e.currentTarget.style.transform = 'translateY(-2px)';
             e.currentTarget.style.boxShadow = '0 8px 24px var(--color-accent-glow)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--color-accent)';
+            e.currentTarget.style.background = 'var(--color-cta-bg)';
             e.currentTarget.style.transform = 'translateY(0)';
             e.currentTarget.style.boxShadow = '0 4px 16px var(--color-accent-glow)';
           }}

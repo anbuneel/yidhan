@@ -445,16 +445,16 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 className="w-full py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50"
                 style={{
                   fontFamily: 'var(--font-body)',
-                  background: 'var(--color-accent)',
-                  color: '#fff',
+                  background: 'var(--color-cta-bg)',
+                  color: 'var(--color-cta-text)',
                 }}
                 onMouseEnter={(e) => {
                   if (!loading && resendCooldown === 0) {
-                    e.currentTarget.style.background = 'var(--color-accent-hover)';
+                    e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--color-accent)';
+                  e.currentTarget.style.background = 'var(--color-cta-bg)';
                 }}
               >
                 {loading && 'Sending...'}
@@ -724,16 +724,16 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             "
             style={{
               fontFamily: 'var(--font-body)',
-              background: 'var(--color-accent)',
-              color: '#fff',
+              background: 'var(--color-cta-bg)',
+              color: 'var(--color-cta-text)',
             }}
             onMouseEnter={(e) => {
               if (!loading) {
-                e.currentTarget.style.background = 'var(--color-accent-hover)';
+                e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
               }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--color-accent)';
+              e.currentTarget.style.background = 'var(--color-cta-bg)';
             }}
           >
             {loading ? (

@@ -199,16 +199,16 @@ export function ChapteredLibrary({
                   className="px-6 py-3 rounded-lg font-medium transition-all duration-300 mb-4 touch-press"
                   style={{
                     fontFamily: 'var(--font-body)',
-                    background: 'var(--color-accent)',
-                    color: '#fff',
+                    background: 'var(--color-cta-bg)',
+                    color: 'var(--color-cta-text)',
                     boxShadow: '0 4px 20px var(--color-accent-glow)',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--color-accent-hover)';
+                    e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
                     e.currentTarget.style.transform = 'translateY(-2px)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'var(--color-accent)';
+                    e.currentTarget.style.background = 'var(--color-cta-bg)';
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >

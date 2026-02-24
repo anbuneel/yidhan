@@ -338,16 +338,16 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               "
               style={{
                 fontFamily: 'var(--font-body)',
-                background: 'var(--color-accent)',
-                color: '#fff',
+                background: 'var(--color-cta-bg)',
+                color: 'var(--color-cta-text)',
               }}
               onMouseEnter={(e) => {
                 if (!isExportingFull) {
-                  e.currentTarget.style.background = 'var(--color-accent-hover)';
+                  e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-accent)';
+                e.currentTarget.style.background = 'var(--color-cta-bg)';
               }}
             >
               {isExportingFull ? 'Preparing...' : 'Full Backup (includes share links)'}
@@ -393,16 +393,16 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               "
               style={{
                 fontFamily: 'var(--font-body)',
-                background: 'var(--color-accent)',
-                color: '#fff',
+                background: 'var(--color-cta-bg)',
+                color: 'var(--color-cta-text)',
               }}
               onMouseEnter={(e) => {
                 if (!isLoading) {
-                  e.currentTarget.style.background = 'var(--color-accent-hover)';
+                  e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-accent)';
+                e.currentTarget.style.background = 'var(--color-cta-bg)';
               }}
             >
               {isLoading ? 'Letting go...' : 'Let go'}

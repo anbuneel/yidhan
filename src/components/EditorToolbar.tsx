@@ -31,8 +31,8 @@ function ToolbarButton({
         disabled:opacity-30
       `}
       style={{
-        background: isActive ? 'var(--color-accent)' : 'transparent',
-        color: isActive ? '#fff' : 'var(--color-text-secondary)',
+        background: isActive ? 'var(--color-cta-bg)' : 'transparent',
+        color: isActive ? 'var(--color-cta-text)' : 'var(--color-text-secondary)',
       }}
       onMouseEnter={(e) => {
         if (!isActive && !disabled) {
