@@ -23,6 +23,11 @@ export interface ThemeColors {
   accentGlow: string;
   accentMuted: string;
 
+  // CTA button (separate from accent for accessibility)
+  ctaBg: string;
+  ctaBgHover: string;
+  ctaText: string;
+
   // Semantic colors
   destructive: string;
   success: string;
@@ -72,6 +77,9 @@ export function themeToCssVariables(theme: ThemeColors): Record<string, string> 
     '--color-accent-hover': theme.accentHover,
     '--color-accent-glow': theme.accentGlow,
     '--color-accent-muted': theme.accentMuted,
+    '--color-cta-bg': theme.ctaBg,
+    '--color-cta-bg-hover': theme.ctaBgHover,
+    '--color-cta-text': theme.ctaText,
     '--color-destructive': theme.destructive,
     '--color-success': theme.success,
     '--color-success-glow': theme.successGlow,
