@@ -13,7 +13,6 @@ Core product documentation.
 | [prd.md](prd.md) | Product Requirements Document (features, personas, user flows) | 2025-12-29 |
 | [technical-spec.md](technical-spec.md) | Technical architecture and implementation details | 2025-12-29 |
 | [ui-layout.md](ui-layout.md) | ASCII diagrams of all UI components and layouts | 2025-12-29 |
-| [user-guide-notes.md](user-guide-notes.md) | User-facing feature documentation notes | 2025-12-26 |
 
 ---
 
@@ -126,6 +125,17 @@ Currently in-progress implementation plans and follow-ups.
 | [capacitor-implementation-plan.md](plans/capacitor-implementation-plan.md) | Capacitor setup guide (Android done, iOS pending) | 2026-01-09 |
 | [pwa-enhancements-plan.md](plans/pwa-enhancements-plan.md) | PWA enhancements (Share Target, Install Prompt) - **COMPLETE** | 2026-01-08 |
 | [onboarding-ux-followup.md](active/onboarding-ux-followup.md) | Onboarding improvements follow-up items | 2025-12-24 |
+
+---
+
+## Reference
+
+User-facing behavior specs and feature guides.
+
+| Document | Description | Date |
+|----------|-------------|------|
+| [e2ee-user-experience-claude.md](reference/e2ee-user-experience-claude.md) | **NEW** E2EE user experience: setup, unlock, vault locking, migration, edge cases | 2026-02-24 |
+| [user-guide-notes.md](reference/user-guide-notes.md) | User-facing feature docs: shortcuts, slash commands, export, faded notes | 2025-12-26 |
 
 ---
 

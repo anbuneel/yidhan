@@ -1,4 +1,4 @@
-# Zenote User Guide Notes
+# Yidhan User Guide Notes
 
 This document collects information for a future user guide. These are explanations and tips that would be helpful for users.
 
@@ -6,7 +6,7 @@ This document collects information for a future user guide. These are explanatio
 
 ## Copy to Clipboard Options
 
-Zenote offers two ways to copy a note from the editor (via the export menu or `Cmd/Ctrl+Shift+C`):
+Yidhan offers two ways to copy a note from the editor (via the export menu or `Cmd/Ctrl+Shift+C`):
 
 ### Copy as text (plain text)
 **Best for:** Email, Slack, text fields, anywhere

@@ -295,6 +295,7 @@ When using the `frontend-design` skill, follow the AI-Generated Documentation St
 See [docs/Index.md](docs/Index.md) for the full documentation index.
 
 **Placement guidelines for new docs:**
+- **reference/**: User-facing behavior specs and feature guides
 - **analysis/**: AI-authored design analysis (`*-claude.md`)
 - **archive/plans/**: Implementation plans after feature is complete
 - **archive/planning/**: Old planning docs, tech comparisons
