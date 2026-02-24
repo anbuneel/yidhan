@@ -393,16 +393,16 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               "
               style={{
                 fontFamily: 'var(--font-body)',
-                background: 'var(--color-cta-bg)',
-                color: 'var(--color-cta-text)',
+                background: 'var(--color-destructive)',
+                color: 'var(--color-bg-primary)',
               }}
               onMouseEnter={(e) => {
                 if (!isLoading) {
-                  e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
+                  e.currentTarget.style.opacity = '0.85';
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-cta-bg)';
+                e.currentTarget.style.opacity = '1';
               }}
             >
               {isLoading ? 'Letting go...' : 'Let go'}
