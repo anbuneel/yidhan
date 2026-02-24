@@ -22,6 +22,7 @@ export interface ThemeColors {
   accentHover: string;
   accentGlow: string;
   accentMuted: string;
+  onAccent: string; // Contrast-safe text color for accent surfaces (non-CTA)
 
   // CTA button (separate from accent for accessibility)
   ctaBg: string;
@@ -77,6 +78,7 @@ export function themeToCssVariables(theme: ThemeColors): Record<string, string> 
     '--color-accent-hover': theme.accentHover,
     '--color-accent-glow': theme.accentGlow,
     '--color-accent-muted': theme.accentMuted,
+    '--color-on-accent': theme.onAccent,
     '--color-cta-bg': theme.ctaBg,
     '--color-cta-bg-hover': theme.ctaBgHover,
     '--color-cta-text': theme.ctaText,

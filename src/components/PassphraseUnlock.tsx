@@ -103,8 +103,8 @@ export function PassphraseUnlock() {
             disabled={!passphrase || isSubmitting}
             className="w-full py-2 text-sm transition-opacity"
             style={{
-              background: 'var(--color-accent)',
-              color: '#fff',
+              background: 'var(--color-cta-bg)',
+              color: 'var(--color-cta-text)',
               borderRadius: '2px 12px 4px 12px',
               fontFamily: 'var(--font-body)',
               fontWeight: 500,

@@ -32,7 +32,7 @@ function ToolbarButton({
       `}
       style={{
         background: isActive ? 'var(--color-accent)' : 'transparent',
-        color: isActive ? '#fff' : 'var(--color-text-secondary)',
+        color: isActive ? 'var(--color-on-accent)' : 'var(--color-text-secondary)',
       }}
       onMouseEnter={(e) => {
         if (!isActive && !disabled) {

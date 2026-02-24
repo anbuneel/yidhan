@@ -166,8 +166,8 @@ export function MigrationPage({ notes, tags, onBack, onMigrationComplete }: Migr
               disabled={!backupConfirmed || isMigrating || !keys}
               className="w-full px-4 py-3 text-sm font-medium transition-opacity"
               style={{
-                background: 'var(--color-accent)',
-                color: '#fff',
+                background: 'var(--color-cta-bg)',
+                color: 'var(--color-cta-text)',
                 borderRadius: '2px 12px 4px 12px',
                 border: 'none',
                 fontFamily: 'var(--font-body)',
@@ -258,8 +258,8 @@ export function MigrationPage({ notes, tags, onBack, onMigrationComplete }: Migr
               onClick={onBack}
               className="w-full px-4 py-3 text-sm font-medium"
               style={{
-                background: 'var(--color-accent)',
-                color: '#fff',
+                background: 'var(--color-cta-bg)',
+                color: 'var(--color-cta-text)',
                 borderRadius: '2px 12px 4px 12px',
                 border: 'none',
                 fontFamily: 'var(--font-body)',

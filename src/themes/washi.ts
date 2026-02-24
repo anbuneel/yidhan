@@ -32,6 +32,7 @@ export const washi: ThemeConfig = {
     accentHover: '#A0522D',
     accentGlow: 'rgba(139, 69, 19, 0.2)',
     accentMuted: 'rgba(139, 69, 19, 0.7)',
+    onAccent: '#fff', // 7.10:1
 
     // CTA button (matches accent — good contrast on light bg)
     ctaBg: '#8B4513',
