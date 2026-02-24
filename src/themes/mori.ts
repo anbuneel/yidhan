@@ -32,6 +32,7 @@ export const mori: ThemeConfig = {
     accentHover: '#D9B972',
     accentGlow: 'rgba(201, 169, 98, 0.2)',
     accentMuted: 'rgba(201, 169, 98, 0.6)',
+    onAccent: '#1C2118', // 7.29:1
 
     // CTA button (darker gold for WCAG AA contrast with white text — 4.72:1)
     ctaBg: '#857230',

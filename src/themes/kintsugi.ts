@@ -30,6 +30,7 @@ export const kintsugi: ThemeConfig = {
     accentHover: '#A84828',
     accentGlow: 'rgba(194, 86, 52, 0.2)',
     accentMuted: 'rgba(194, 86, 52, 0.7)',
+    onAccent: '#fff', // 4.49:1 — best achievable on #C25634
 
     // CTA button (darker terracotta for WCAG AA contrast with white text — 5.44:1)
     ctaBg: '#B04A2C',
