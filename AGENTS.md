@@ -320,6 +320,15 @@ The accent color fails WCAG AA contrast with white text in 3 of 4 themes.
 Defined in each theme's `ctaBg`, `ctaBgHover`, `ctaText` fields and mapped to CSS variables.
 Verified contrast ratios: Kintsugi 5.44:1, Washi 7.10:1, Midnight 4.62:1, Mori 4.72:1.
 
+### Button/Accent Token Taxonomy
+Three semantic categories — never mix them:
+- **CTA** (`--color-cta-bg`/`--color-cta-text`): Positive primary actions (Save, Submit, Create, Stay)
+- **Destructive** (`--color-destructive` + `var(--color-bg-primary)` text): Irreversible danger (Delete, Let go)
+- **On-accent** (`--color-accent` bg + `--color-on-accent` text): Toggle/active indicators (toolbar bold/italic/H1)
+
+`onAccent` is per-theme: `#fff` in light themes, dark bg-primary in dark themes.
+Kintsugi `onAccent` is 4.49:1 (best achievable on `#C25634` — documented intentional tradeoff).
+
 ## Database Schema
 See `docs/technical-spec.md` for full schema (notes, tags, note_tags, note_shares). Types in `src/types/database.ts`.
 RLS enabled on all tables — users can only access their own data.

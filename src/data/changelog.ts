@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.2.1',
+    date: '2026-02-24',
+    changes: [
+      { type: 'fix', text: 'All primary action buttons now use WCAG AA contrast-safe CTA tokens across all four themes (16 files)' },
+      { type: 'fix', text: 'Account deletion "Let go" button now uses distinct destructive styling instead of CTA tokens' },
+      { type: 'improvement', text: 'New --color-on-accent token for toolbar active state, adapts per theme (white in light, dark in dark)' },
+    ],
+  },
+  {
     version: '3.2.0',
     date: '2026-02-24',
     changes: [
