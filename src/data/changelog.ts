@@ -8,6 +8,13 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.2.2',
+    date: '2026-02-24',
+    changes: [
+      { type: 'fix', text: 'E2EE migration no longer clobbers note timestamps — original updated_at preserved via RPC' },
+    ],
+  },
+  {
     version: '3.2.1',
     date: '2026-02-24',
     changes: [

@@ -12,6 +12,7 @@
  * 5. Verify by reading back and decrypting
  * 6. If verified: clear plaintext (title/content → '')
  * 7. If verification fails: skip, preserve plaintext
+ * 8. After all notes: restore original updated_at via RPC (bypass trigger)
  */
 
 import { supabase } from '../lib/supabase';
@@ -99,10 +100,12 @@ export async function migrateExistingNotes(
   // entries, overwriting the encrypted data we're about to write.
   await encryptPendingSyncQueue(userId, keys);
 
-  // Fetch all notes from Supabase (including soft-deleted)
+  // Fetch all notes from Supabase (including soft-deleted).
+  // Include updated_at so we can restore original timestamps after migration
+  // (the server-side notes_updated_at_trigger overwrites updated_at on every UPDATE).
   const { data: allNotes, error: fetchError } = await supabase
     .from('notes')
-    .select('id, title, content, encrypted_payload, encryption_iv')
+    .select('id, title, content, encrypted_payload, encryption_iv, updated_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: true });
 
@@ -116,6 +119,10 @@ export async function migrateExistingNotes(
 
   const total = allNotes.length;
   let completed = 0;
+
+  // Collect original timestamps for migrated notes so we can restore them
+  // after the migration loop (the server trigger clobbers updated_at on UPDATE).
+  const timestampsToRestore: Array<{ id: string; updated_at: string }> = [];
 
   // Process in batches of BATCH_SIZE
   for (let i = 0; i < allNotes.length; i += BATCH_SIZE) {
@@ -196,9 +203,8 @@ export async function migrateExistingNotes(
             throw new Error(`Failed to clear plaintext: ${clearError.message}`);
           }
 
-          // Also update IndexedDB so local state matches server
-          // Without this, a refresh before the next sync pull would
-          // still show plaintext in IDB.
+          // Also update IndexedDB so local state matches server.
+          // Preserve the original updatedAt so temporal chapters aren't disrupted.
           const db = getOfflineDb(userId);
           await db.notes.update(note.id, {
             title: '',
@@ -207,9 +213,11 @@ export async function migrateExistingNotes(
             encryptionIv: encrypted.iv,
             encryptionVersion: encrypted.version,
             contentHash: encrypted.contentHash,
+            updatedAt: new Date(note.updated_at).getTime(),
           });
 
           result.migrated++;
+          timestampsToRestore.push({ id: note.id, updated_at: note.updated_at });
         } catch (err) {
           result.failed++;
           result.errors.push({
@@ -222,6 +230,22 @@ export async function migrateExistingNotes(
         }
       })
     );
+  }
+
+  // Restore original updated_at timestamps in Supabase.
+  // The notes_updated_at_trigger overwrote them during the UPDATE calls above.
+  // The RPC uses session_replication_role to bypass the trigger safely.
+  if (timestampsToRestore.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: restoreError } = await (supabase.rpc as any)('restore_note_timestamps', {
+      note_timestamps: timestampsToRestore,
+    });
+
+    if (restoreError) {
+      // Non-fatal: notes are encrypted but timestamps are wrong.
+      // User can fix manually via SQL if needed.
+      console.warn('Failed to restore note timestamps:', restoreError.message);
+    }
   }
 
   return result;

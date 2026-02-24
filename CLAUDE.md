@@ -517,3 +517,4 @@ SQL migrations are stored in `supabase/migrations/`:
 - `expire_shares_for_e2ee.sql` - Delete all share links (E2EE prerequisite)
 - `disable_welcome_note_trigger.sql` - Remove server-side welcome note trigger (replaced by client-side encrypted welcome)
 - `add_encryption_columns.sql` - Add encrypted_payload, encryption_iv, encryption_version, content_hash columns
+- `add_restore_timestamps_rpc.sql` - RPC to restore note timestamps after E2EE migration (bypasses updated_at trigger)
