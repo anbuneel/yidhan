@@ -31,9 +31,9 @@ export const kintsugi: ThemeConfig = {
     accentGlow: 'rgba(194, 86, 52, 0.2)',
     accentMuted: 'rgba(194, 86, 52, 0.7)',
 
-    // CTA button (matches accent in light theme — good contrast on light bg)
-    ctaBg: '#C25634',
-    ctaBgHover: '#A84828',
+    // CTA button (darker terracotta for WCAG AA contrast with white text — 5.44:1)
+    ctaBg: '#B04A2C',
+    ctaBgHover: '#963F24',
     ctaText: '#fff',
 
     // Semantic

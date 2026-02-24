@@ -438,9 +438,9 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
           border: 1px solid var(--glass-border);
         }
         .landing-signin-btn:hover {
-          color: #fff;
-          background: var(--color-accent);
-          border-color: var(--color-accent);
+          color: var(--color-cta-text);
+          background: var(--color-cta-bg);
+          border-color: var(--color-cta-bg);
         }
         .landing-nav-link {
           color: inherit;
