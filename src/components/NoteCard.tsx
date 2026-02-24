@@ -85,7 +85,6 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         if (!isCompact) e.currentTarget.style.borderTopColor = 'var(--color-accent-muted)';
       }}
     >
-
       {/* Pin button - top-right corner (only in full mode) */}
       {!isCompact && (
         <button

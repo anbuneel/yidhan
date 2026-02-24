@@ -294,6 +294,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
           style={{
             background: 'linear-gradient(to right, var(--color-bg-primary), var(--color-bg-tertiary))',
             opacity: 0.8,
+            pointerEvents: 'none',
           }}
         />
 
@@ -428,7 +429,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
         }
         .landing-theme-toggle:hover {
           color: var(--color-accent);
-          background: var(--color-bg-tertiary);
+          background: var(--color-bg-secondary);
         }
         .landing-signin-btn {
           font-family: var(--font-body);

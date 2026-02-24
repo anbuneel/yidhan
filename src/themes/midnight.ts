@@ -31,9 +31,9 @@ export const midnight: ThemeConfig = {
     accentGlow: 'rgba(212, 175, 55, 0.15)',
     accentMuted: 'rgba(212, 175, 55, 0.6)',
 
-    // CTA button (darker gold for WCAG AA contrast with white text — 4.6:1)
-    ctaBg: '#A08520',
-    ctaBgHover: '#8A7319',
+    // CTA button (darker gold for WCAG AA contrast with white text — 4.62:1)
+    ctaBg: '#8A7319',
+    ctaBgHover: '#756112',
     ctaText: '#fff',
 
     // Semantic
