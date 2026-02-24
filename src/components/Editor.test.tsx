@@ -381,8 +381,8 @@ describe('Editor', () => {
       render(<Editor {...defaultProps} onBack={onBack} />);
 
       // Find the Yidhan button in header
-      const zenoteButtons = screen.getAllByText('Yidhan');
-      await user.click(zenoteButtons[0]);
+      const yidhanButtons = screen.getAllByText('Yidhan');
+      await user.click(yidhanButtons[0]);
 
       expect(onBack).toHaveBeenCalled();
     });

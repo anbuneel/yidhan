@@ -128,12 +128,12 @@ function migrateLocalStorageKeys(): void {
   });
 
   // Also migrate sessionStorage
-  const sessionKey = 'zenote-chunk-reload-attempted';
-  const newSessionKey = 'yidhan-chunk-reload-attempted';
-  const sessionValue = sessionStorage.getItem(sessionKey);
-  if (sessionValue !== null && sessionStorage.getItem(newSessionKey) === null) {
-    sessionStorage.setItem(newSessionKey, sessionValue);
-    sessionStorage.removeItem(sessionKey);
+  const oldSessionKey = 'zenote-chunk-reload-attempted';
+  const sessionKey = 'yidhan-chunk-reload-attempted';
+  const sessionValue = sessionStorage.getItem(oldSessionKey);
+  if (sessionValue !== null && sessionStorage.getItem(sessionKey) === null) {
+    sessionStorage.setItem(sessionKey, sessionValue);
+    sessionStorage.removeItem(oldSessionKey);
   }
 }
 

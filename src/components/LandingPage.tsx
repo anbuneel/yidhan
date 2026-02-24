@@ -244,7 +244,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 </button>
                 <span aria-hidden="true">·</span>
                 <a
-                  href="https://github.com/anbuneel/zenote"
+                  href="https://github.com/anbuneel/yidhan"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="landing-nav-link focus-ring hover:underline transition-colors duration-200"

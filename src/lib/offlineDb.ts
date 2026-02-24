@@ -90,8 +90,6 @@ export interface ConflictRecord {
 export const MIGRATION_SYNC_SENTINEL = 1;
 
 // Yidhan offline database
-// NOTE: Database name kept as 'zenote-offline-*' for backwards compatibility
-// Existing users' data would be lost if renamed without migration
 class YidhanDB extends Dexie {
   notes!: Table<LocalNote, string>;
   tags!: Table<LocalTag, string>;
@@ -101,7 +99,7 @@ class YidhanDB extends Dexie {
 
   constructor(userId: string) {
     // Per-user database naming for isolation
-    super(`zenote-offline-${userId}`);
+    super(`yidhan-offline-${userId}`);
 
     this.version(1).stores({
       // Notes indexed by id, userId, and sync status
@@ -205,7 +203,7 @@ export async function clearOfflineDb(): Promise<void> {
  * Includes timeout protection for Android WebView where indexedDB.databases() can hang
  */
 export async function hasOfflineDb(userId: string): Promise<boolean> {
-  const dbName = `zenote-offline-${userId}`;
+  const dbName = `yidhan-offline-${userId}`;
   const TIMEOUT_MS = 3000; // 3 second timeout
 
   try {

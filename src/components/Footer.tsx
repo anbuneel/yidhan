@@ -42,7 +42,7 @@ export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick }: F
         )}
         <span aria-hidden="true">·</span>
         <a
-          href="https://github.com/anbuneel/zenote"
+          href="https://github.com/anbuneel/yidhan"
           target="_blank"
           rel="noopener noreferrer"
           className="footer-link hover:underline transition-colors duration-200"
