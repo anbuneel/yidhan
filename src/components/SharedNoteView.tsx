@@ -259,7 +259,7 @@ export function SharedNoteView({
           {/* Divider */}
           <div
             className="w-24 h-px mb-8"
-            style={{ background: 'var(--color-text-tertiary)', opacity: 0.3 }}
+            style={{ background: 'var(--glass-border)' }}
           />
 
           {/* Content */}

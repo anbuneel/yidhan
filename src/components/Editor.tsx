@@ -1277,7 +1277,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                 "
                 style={{
                   fontFamily: 'var(--font-body)',
-                  color: 'var(--color-bg-primary)',
+                  color: 'var(--color-destructive-text)',
                   background: 'var(--color-destructive)',
                 }}
                 onMouseEnter={(e) => {

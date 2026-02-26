@@ -86,7 +86,7 @@ export class ErrorBoundary extends Component<Props, State> {
               style={{
                 background: isChunkError
                   ? 'var(--color-accent-glow, rgba(212, 175, 55, 0.15))'
-                  : 'rgba(220, 38, 38, 0.1)',
+                  : 'var(--color-error-light, rgba(220, 38, 38, 0.1))',
               }}
             >
               {isChunkError ? (
@@ -109,7 +109,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <svg
                   className="w-6 h-6"
                   fill="none"
-                  stroke="#DC2626"
+                  stroke="var(--color-error, #DC2626)"
                   viewBox="0 0 24 24"
                 >
                   <path

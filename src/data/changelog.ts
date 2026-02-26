@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.2.4',
+    date: '2026-02-25',
+    changes: [
+      { type: 'fix', text: 'Destructive buttons now meet WCAG AA contrast in all themes via new --color-destructive-text token' },
+      { type: 'fix', text: 'ErrorBoundary, SharedNoteView, ChangelogPage, and RoadmapPage now use theme tokens instead of hardcoded colors' },
+    ],
+  },
+  {
     version: '3.2.3',
     date: '2026-02-25',
     changes: [

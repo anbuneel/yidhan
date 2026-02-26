@@ -31,6 +31,7 @@ export interface ThemeColors {
 
   // Semantic colors
   destructive: string;
+  destructiveText: string; // Contrast-safe text color for destructive surfaces
   success: string;
   successGlow: string;
   error: string;
@@ -83,6 +84,7 @@ export function themeToCssVariables(theme: ThemeColors): Record<string, string> 
     '--color-cta-bg-hover': theme.ctaBgHover,
     '--color-cta-text': theme.ctaText,
     '--color-destructive': theme.destructive,
+    '--color-destructive-text': theme.destructiveText,
     '--color-success': theme.success,
     '--color-success-glow': theme.successGlow,
     '--color-error': theme.error,

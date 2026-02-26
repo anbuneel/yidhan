@@ -324,7 +324,7 @@ Verified contrast ratios: Kintsugi 5.44:1, Washi 7.10:1, Midnight 4.62:1, Mori 4
 ### Button/Accent Token Taxonomy
 Three semantic categories — never mix them:
 - **CTA** (`--color-cta-bg`/`--color-cta-text`): Positive primary actions (Save, Submit, Create, Stay)
-- **Destructive** (`--color-destructive` + `var(--color-bg-primary)` text): Irreversible danger (Delete, Let go)
+- **Destructive** (`--color-destructive` bg + `--color-destructive-text` text): Irreversible danger (Delete, Let go)
 - **On-accent** (`--color-accent` bg + `--color-on-accent` text): Toggle/active indicators (toolbar bold/italic/H1)
 
 `onAccent` is per-theme: `#fff` in light themes, dark bg-primary in dark themes.

@@ -41,6 +41,7 @@ export const washi: ThemeConfig = {
 
     // Semantic
     destructive: '#9B3D2B',
+    destructiveText: '#fff', // 8.98:1 on #9B3D2B
     success: '#4A6741',
     successGlow: 'rgba(74, 103, 65, 0.15)',
     error: '#DC2626',

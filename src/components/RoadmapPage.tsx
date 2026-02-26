@@ -96,7 +96,7 @@ export function RoadmapPage({ theme, onThemeToggle, onSignIn, onLogoClick, onCha
                           backdropFilter: 'blur(20px)',
                           WebkitBackdropFilter: 'blur(20px)',
                           border: '1px solid var(--glass-border)',
-                          borderTop: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : undefined,
+                          borderTop: '1px solid var(--glass-border)',
                           borderRadius: 'var(--radius-card)',
                           boxShadow: 'var(--shadow-sm)',
                         }}

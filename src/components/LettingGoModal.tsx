@@ -394,7 +394,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               style={{
                 fontFamily: 'var(--font-body)',
                 background: 'var(--color-destructive)',
-                color: 'var(--color-bg-primary)',
+                color: 'var(--color-destructive-text)',
               }}
               onMouseEnter={(e) => {
                 if (!isLoading) {

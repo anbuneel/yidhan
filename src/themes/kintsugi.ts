@@ -39,6 +39,7 @@ export const kintsugi: ThemeConfig = {
 
     // Semantic
     destructive: '#B54A32',
+    destructiveText: '#fff', // 7.09:1 on #B54A32
     success: '#3D7A4A',
     successGlow: 'rgba(61, 122, 74, 0.15)',
     error: '#DC2626',

@@ -39,6 +39,7 @@ export const midnight: ThemeConfig = {
 
     // Semantic
     destructive: '#EF4444',
+    destructiveText: '#050A06', // 5.30:1 on #EF4444
     success: '#4CAF50',
     successGlow: 'rgba(76, 175, 80, 0.2)',
     error: '#EF4444',

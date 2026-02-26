@@ -41,6 +41,7 @@ export const mori: ThemeConfig = {
 
     // Semantic
     destructive: '#D4715E',
+    destructiveText: '#181D18', // 5.15:1 on #D4715E
     success: '#5A9E5F',
     successGlow: 'rgba(90, 158, 95, 0.2)',
     error: '#EF4444',
