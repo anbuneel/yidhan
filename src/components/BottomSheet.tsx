@@ -216,8 +216,11 @@ export function BottomSheet({
     <>
       {/* Backdrop */}
       <animated.div
-        className="fixed inset-0 z-50 modal-backdrop"
+        className="fixed inset-0 z-50"
         style={{
+          background: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
           opacity: backdropOpacity,
           pointerEvents: isOpen ? 'auto' : 'none',
         }}
