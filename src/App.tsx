@@ -1044,8 +1044,8 @@ function App() {
               }}
               className="px-2 py-1 text-sm font-medium rounded transition-colors"
               style={{
-                background: 'var(--color-accent)',
-                color: 'var(--color-bg-primary)',
+                background: 'var(--color-cta-bg)',
+                color: 'var(--color-cta-text)',
               }}
             >
               Undo

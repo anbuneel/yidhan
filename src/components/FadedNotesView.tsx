@@ -250,8 +250,8 @@ export function FadedNotesView({
                 "
                 style={{
                   fontFamily: 'var(--font-body)',
-                  color: 'var(--color-bg-primary)',
-                  background: 'var(--color-accent)',
+                  color: 'var(--color-cta-text)',
+                  background: 'var(--color-cta-bg)',
                 }}
               >
                 Release All

@@ -239,8 +239,8 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
           className="w-full py-3 rounded-xl text-sm font-medium transition-all duration-200 touch-press"
           style={{
             fontFamily: 'var(--font-body)',
-            background: 'var(--color-accent)',
-            color: 'var(--color-bg-primary)',
+            background: 'var(--color-cta-bg)',
+            color: 'var(--color-cta-text)',
           }}
         >
           Got it

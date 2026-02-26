@@ -204,14 +204,14 @@ export function SharedNoteView({
               "
               style={{
                 fontFamily: 'var(--font-body)',
-                color: 'var(--color-bg-primary)',
-                background: 'var(--color-accent)',
+                color: 'var(--color-cta-text)',
+                background: 'var(--color-cta-bg)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--color-accent-hover)';
+                e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-accent)';
+                e.currentTarget.style.background = 'var(--color-cta-bg)';
               }}
             >
               Go to Yidhan

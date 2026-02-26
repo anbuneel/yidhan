@@ -136,8 +136,8 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
         className="w-full mt-4 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 hover:opacity-90"
         style={{
           fontFamily: 'var(--font-body)',
-          background: 'var(--color-accent)',
-          color: 'var(--color-bg-primary)',
+          background: 'var(--color-cta-bg)',
+          color: 'var(--color-cta-text)',
         }}
       >
         {isInstalling ? (
@@ -145,7 +145,7 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
             <span
               className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
               style={{
-                borderColor: 'var(--color-bg-primary)',
+                borderColor: 'var(--color-cta-text)',
                 borderTopColor: 'transparent',
               }}
             />

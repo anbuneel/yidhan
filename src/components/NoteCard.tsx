@@ -226,7 +226,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = 'var(--color-destructive)';
-              e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
+              e.currentTarget.style.background = 'var(--color-error-light)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = 'var(--color-text-tertiary)';

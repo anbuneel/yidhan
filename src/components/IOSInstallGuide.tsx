@@ -218,8 +218,8 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
                   }}
                   className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 hover:scale-105 active:scale-95"
                   style={{
-                    background: 'var(--color-accent)',
-                    color: 'var(--color-bg-primary)',
+                    background: 'var(--color-cta-bg)',
+                    color: 'var(--color-cta-text)',
                     fontFamily: 'var(--font-body)',
                   }}
                 >

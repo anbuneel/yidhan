@@ -214,7 +214,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.color = 'var(--color-destructive)';
-            e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
+            e.currentTarget.style.background = 'var(--color-error-light)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.color = 'var(--color-text-tertiary)';
@@ -301,8 +301,8 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
               "
               style={{
                 fontFamily: 'var(--font-body)',
-                color: 'var(--color-bg-primary)',
-                background: 'var(--color-accent)',
+                color: 'var(--color-cta-text)',
+                background: 'var(--color-cta-bg)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.opacity = '0.9';

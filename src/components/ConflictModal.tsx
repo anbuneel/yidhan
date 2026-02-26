@@ -210,13 +210,13 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               style={{
                 fontFamily: 'var(--font-body)',
                 background: resolvedChoice === 'local' ? 'var(--color-accent)' : 'transparent',
-                color: resolvedChoice === 'local' ? 'var(--color-bg-primary)' : 'var(--color-accent)',
+                color: resolvedChoice === 'local' ? 'var(--color-on-accent)' : 'var(--color-accent)',
                 border: '1px solid var(--color-accent)',
               }}
               onMouseEnter={(e) => {
                 if (!isResolving && resolvedChoice !== 'local') {
                   e.currentTarget.style.background = 'var(--color-accent)';
-                  e.currentTarget.style.color = 'var(--color-bg-primary)';
+                  e.currentTarget.style.color = 'var(--color-on-accent)';
                 }
               }}
               onMouseLeave={(e) => {
@@ -231,7 +231,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                 <span className="flex items-center justify-center gap-2">
                   <span
                     className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
-                    style={{ borderColor: 'var(--color-bg-primary)', borderTopColor: 'transparent' }}
+                    style={{ borderColor: 'var(--color-on-accent)', borderTopColor: 'transparent' }}
                   />
                   Keeping...
                 </span>
@@ -296,13 +296,13 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               style={{
                 fontFamily: 'var(--font-body)',
                 background: resolvedChoice === 'server' ? 'var(--color-accent)' : 'transparent',
-                color: resolvedChoice === 'server' ? 'var(--color-bg-primary)' : 'var(--color-accent)',
+                color: resolvedChoice === 'server' ? 'var(--color-on-accent)' : 'var(--color-accent)',
                 border: '1px solid var(--color-accent)',
               }}
               onMouseEnter={(e) => {
                 if (!isResolving && resolvedChoice !== 'server') {
                   e.currentTarget.style.background = 'var(--color-accent)';
-                  e.currentTarget.style.color = 'var(--color-bg-primary)';
+                  e.currentTarget.style.color = 'var(--color-on-accent)';
                 }
               }}
               onMouseLeave={(e) => {
@@ -317,7 +317,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                 <span className="flex items-center justify-center gap-2">
                   <span
                     className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
-                    style={{ borderColor: 'var(--color-bg-primary)', borderTopColor: 'transparent' }}
+                    style={{ borderColor: 'var(--color-on-accent)', borderTopColor: 'transparent' }}
                   />
                   Keeping...
                 </span>
@@ -341,7 +341,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
             "
             style={{
               fontFamily: 'var(--font-body)',
-              color: resolvedChoice === 'both' ? 'var(--color-bg-primary)' : 'var(--color-text-secondary)',
+              color: resolvedChoice === 'both' ? 'var(--color-on-accent)' : 'var(--color-text-secondary)',
               background: resolvedChoice === 'both' ? 'var(--color-accent)' : 'transparent',
               border: '1px solid var(--glass-border)',
             }}
@@ -361,7 +361,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               <span className="flex items-center justify-center gap-2">
                 <span
                   className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
-                  style={{ borderColor: 'var(--color-bg-primary)', borderTopColor: 'transparent' }}
+                  style={{ borderColor: 'var(--color-on-accent)', borderTopColor: 'transparent' }}
                 />
                 Creating copy...
               </span>

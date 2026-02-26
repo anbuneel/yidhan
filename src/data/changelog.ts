@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.2.3',
+    date: '2026-02-25',
+    changes: [
+      { type: 'fix', text: 'Unified all remaining action buttons to CTA tokens for consistent WCAG AA contrast across all themes (17 files, ~35 edits)' },
+      { type: 'fix', text: 'Toggle/indicator buttons now use --color-on-accent for proper theme-adaptive text (ConflictModal, ShareModal, HeaderShell)' },
+      { type: 'fix', text: 'Replaced 6+ hardcoded hex colors with theme tokens (SwipeableNoteCard gradients, checkbox checkmarks, destructive hover states)' },
+    ],
+  },
+  {
     version: '3.2.2',
     date: '2026-02-24',
     changes: [

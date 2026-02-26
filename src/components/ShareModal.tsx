@@ -240,7 +240,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                           : 'var(--color-bg-secondary)',
                       color:
                         selectedExpiration === option.value
-                          ? 'var(--color-bg-primary)'
+                          ? 'var(--color-on-accent)'
                           : 'var(--color-text-primary)',
                       border: '1px solid var(--glass-border)',
                     }}
@@ -266,22 +266,22 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
               "
               style={{
                 fontFamily: 'var(--font-body)',
-                color: 'var(--color-bg-primary)',
-                background: 'var(--color-accent)',
+                color: 'var(--color-cta-text)',
+                background: 'var(--color-cta-bg)',
               }}
               onMouseEnter={(e) => {
                 if (!isCreating) {
-                  e.currentTarget.style.background = 'var(--color-accent-hover)';
+                  e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-accent)';
+                e.currentTarget.style.background = 'var(--color-cta-bg)';
               }}
             >
               {isCreating && (
                 <span
                   className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
-                  style={{ borderColor: 'var(--color-bg-primary)', borderTopColor: 'transparent' }}
+                  style={{ borderColor: 'var(--color-cta-text)', borderTopColor: 'transparent' }}
                 />
               )}
               {isCreating ? 'Creating...' : 'Create Share Link'}
@@ -365,8 +365,8 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                   "
                   style={{
                     fontFamily: 'var(--font-body)',
-                    background: copied ? 'var(--color-success)' : 'var(--color-accent)',
-                    color: 'var(--color-bg-primary)',
+                    background: copied ? 'var(--color-success)' : 'var(--color-cta-bg)',
+                    color: 'var(--color-cta-text)',
                   }}
                 >
                   {copied ? 'Copied!' : 'Copy'}
@@ -404,7 +404,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                           : 'var(--color-bg-secondary)',
                       color:
                         selectedExpiration === option.value
-                          ? 'var(--color-bg-primary)'
+                          ? 'var(--color-on-accent)'
                           : 'var(--color-text-primary)',
                       border: '1px solid var(--glass-border)',
                     }}
@@ -434,7 +434,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                 }}
                 onMouseEnter={(e) => {
                   if (!isRevoking) {
-                    e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
+                    e.currentTarget.style.background = 'var(--color-error-light)';
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -459,14 +459,14 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                 "
                 style={{
                   fontFamily: 'var(--font-body)',
-                  color: 'var(--color-bg-primary)',
-                  background: 'var(--color-accent)',
+                  color: 'var(--color-cta-text)',
+                  background: 'var(--color-cta-bg)',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--color-accent-hover)';
+                  e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--color-accent)';
+                  e.currentTarget.style.background = 'var(--color-cta-bg)';
                 }}
               >
                 Done

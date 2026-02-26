@@ -198,8 +198,8 @@ export function Header({
         touch-press
       "
       style={{
-        background: 'var(--color-accent)',
-        color: 'var(--color-bg-primary)',
+        background: 'var(--color-cta-bg)',
+        color: 'var(--color-cta-text)',
         boxShadow: '0 4px 20px var(--color-accent-glow)',
         fontFamily: 'var(--font-body)',
       }}

@@ -203,7 +203,7 @@ export function HeaderShell({
               "
               style={{
                 background: 'var(--color-accent)',
-                color: 'var(--color-bg-primary)',
+                color: 'var(--color-on-accent)',
               }}
               aria-label="Profile menu"
               aria-expanded={isProfileMenuOpen}

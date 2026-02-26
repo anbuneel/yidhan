@@ -284,7 +284,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
                 }}
                 onMouseEnter={(e) => {
                   if (!isLoading) {
-                    e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
+                    e.currentTarget.style.background = 'var(--color-error-light)';
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -345,22 +345,22 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
                 "
                 style={{
                   fontFamily: 'var(--font-body)',
-                  color: 'var(--color-bg-primary)',
-                  background: 'var(--color-accent)',
+                  color: 'var(--color-cta-text)',
+                  background: 'var(--color-cta-bg)',
                 }}
                 onMouseEnter={(e) => {
                   if (!isLoading) {
-                    e.currentTarget.style.background = 'var(--color-accent-hover)';
+                    e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--color-accent)';
+                  e.currentTarget.style.background = 'var(--color-cta-bg)';
                 }}
               >
                 {isSaving && (
                   <span
                     className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
-                    style={{ borderColor: 'var(--color-bg-primary)', borderTopColor: 'transparent' }}
+                    style={{ borderColor: 'var(--color-cta-text)', borderTopColor: 'transparent' }}
                   />
                 )}
                 {isSaving

@@ -919,8 +919,8 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                   className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                   style={{
                     fontFamily: 'var(--font-body)',
-                    color: 'var(--color-bg-primary)',
-                    background: 'var(--color-accent)',
+                    color: 'var(--color-cta-text)',
+                    background: 'var(--color-cta-bg)',
                   }}
                 >
                   Discard

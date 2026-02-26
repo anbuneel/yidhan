@@ -196,14 +196,14 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
         className="absolute inset-y-0 right-0 flex items-center justify-end pr-6 pointer-events-none"
         style={{
           opacity: deleteOpacity,
-          background: 'linear-gradient(to left, #dc2626, #ef4444)',
+          background: 'linear-gradient(to left, var(--color-destructive), var(--color-error))',
           borderRadius: 'var(--radius-card)',
           width: '100%',
         }}
       >
         <animated.div
-          style={{ transform: deleteScale.to((s) => `scale(${s})`) }}
-          className="flex flex-col items-center text-white"
+          style={{ transform: deleteScale.to((s) => `scale(${s})`), color: 'var(--color-cta-text)' }}
+          className="flex flex-col items-center"
         >
           <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -223,15 +223,15 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
         style={{
           opacity: pinOpacity,
           background: note.pinned
-            ? 'linear-gradient(to right, #6b7280, #9ca3af)' // Gray for unpin
-            : 'linear-gradient(to right, var(--color-accent), #e6c547)', // Gold for pin
+            ? 'linear-gradient(to right, var(--color-text-tertiary), var(--color-text-secondary))' // Gray for unpin
+            : 'linear-gradient(to right, var(--color-accent), var(--color-accent-hover))', // Gold for pin
           borderRadius: 'var(--radius-card)',
           width: '100%',
         }}
       >
         <animated.div
-          style={{ transform: pinScale.to((s) => `scale(${s})`) }}
-          className="flex flex-col items-center text-white"
+          style={{ transform: pinScale.to((s) => `scale(${s})`), color: 'var(--color-on-accent)' }}
+          className="flex flex-col items-center"
         >
           <svg
             className="w-7 h-7"

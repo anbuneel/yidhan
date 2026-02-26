@@ -913,7 +913,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
         style={{ color: 'var(--color-text-tertiary)' }}
         onMouseEnter={(e) => {
           e.currentTarget.style.color = 'var(--color-destructive)';
-          e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
+          e.currentTarget.style.background = 'var(--color-error-light)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.color = 'var(--color-text-tertiary)';
@@ -1055,8 +1055,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                 className="text-xs px-3 py-1.5 rounded-md transition-colors duration-200"
                 style={{
                   fontFamily: 'var(--font-body)',
-                  color: 'var(--color-bg-primary)',
-                  background: 'var(--color-accent)',
+                  color: 'var(--color-cta-text)',
+                  background: 'var(--color-cta-bg)',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.opacity = '0.85';
@@ -1277,7 +1277,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                 "
                 style={{
                   fontFamily: 'var(--font-body)',
-                  color: '#fff',
+                  color: 'var(--color-bg-primary)',
                   background: 'var(--color-destructive)',
                 }}
                 onMouseEnter={(e) => {
