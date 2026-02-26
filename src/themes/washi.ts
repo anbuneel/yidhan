@@ -55,7 +55,7 @@ export const washi: ThemeConfig = {
     changeFix: '#8B8178',
 
     // Borders and shadows (warm sepia tones)
-    glassBorder: 'rgba(61, 54, 48, 0.1)',
+    glassBorder: 'rgba(61, 54, 48, 0.18)',
     shadowSm: '0 2px 8px rgba(61, 54, 48, 0.06)',
     shadowMd: '0 20px 40px -10px rgba(61, 54, 48, 0.12)',
     shadowLg: '0 10px 40px rgba(61, 54, 48, 0.15)',

@@ -100,8 +100,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+      className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
       onClick={isLoading ? undefined : onClose}
     >
       <div

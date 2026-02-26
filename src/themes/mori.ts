@@ -25,7 +25,7 @@ export const mori: ThemeConfig = {
     // Typography: Moonlight on paper
     textPrimary: '#E6E3DC',
     textSecondary: '#9A9890',
-    textTertiary: '#5E5E58',
+    textTertiary: '#757570',
 
     // Accent: Antique gold - aged kintsugi
     accent: '#C9A962',
@@ -55,7 +55,7 @@ export const mori: ThemeConfig = {
     changeFix: '#9A9890',
 
     // Borders and shadows (forest shadow)
-    glassBorder: 'rgba(201, 169, 98, 0.12)',
+    glassBorder: 'rgba(201, 169, 98, 0.20)',
     shadowSm: '0 2px 8px rgba(0, 0, 0, 0.25)',
     shadowMd: '0 10px 40px -10px rgba(0, 0, 0, 0.45)',
     shadowLg: '0 20px 50px -10px rgba(0, 0, 0, 0.55)',

@@ -182,12 +182,8 @@ export function FadedNotesView({
           className="
             fixed inset-0 z-50
             flex items-center justify-center
-            p-4
+            p-4 modal-backdrop
           "
-          style={{
-            background: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(4px)',
-          }}
           onClick={() => setShowEmptyConfirm(false)}
         >
           <div

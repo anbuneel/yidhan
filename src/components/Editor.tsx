@@ -1202,8 +1202,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+          className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
           onClick={() => setShowDeleteConfirm(false)}
         >
           <div

@@ -11,7 +11,6 @@ interface SettingsModalProps {
   theme: Theme;
   onThemeToggle: () => void;
   onLetGoClick: () => void;
-  onMigrateClick?: () => void;
   sessionSettings: UseSessionSettingsResult;
   vaultSettings?: UseVaultSettingsResult;
   isVaultUnlocked?: boolean;
@@ -20,7 +19,7 @@ interface SettingsModalProps {
 
 type SettingsTab = 'profile' | 'password' | 'security';
 
-export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, onMigrateClick, sessionSettings, vaultSettings, isVaultUnlocked, onLockVault }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, sessionSettings, vaultSettings, isVaultUnlocked, onLockVault }: SettingsModalProps) {
   const { user, updateProfile, updatePassword, verifyPassword } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
 
@@ -348,6 +347,45 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
               >
                 {profileLoading ? 'Saving...' : 'Save Profile'}
               </button>
+
+              {/* Let go section - offboarding link */}
+              <div
+                className="mt-8 pt-6 text-center"
+                style={{ borderTop: '1px solid var(--glass-border)' }}
+              >
+                <p
+                  className="text-sm mb-2"
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    color: 'var(--color-text-tertiary)',
+                  }}
+                >
+                  Ready to move on?
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onLetGoClick();
+                  }}
+                  className="text-sm transition-colors duration-200"
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    color: 'var(--color-text-tertiary)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = 'var(--color-text-secondary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'var(--color-text-tertiary)';
+                  }}
+                >
+                  Let go of Yidhan →
+                </button>
+              </div>
             </form>
           )}
 
@@ -559,7 +597,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         className="text-sm"
                         style={{
                           fontFamily: 'var(--font-body)',
-                          color: isVaultUnlocked ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+                          color: isVaultUnlocked ? 'var(--color-text-secondary)' : 'var(--color-success)',
                         }}
                       >
                         {isVaultUnlocked ? 'Vault is unlocked' : 'Vault is locked'}
@@ -612,7 +650,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         color: 'var(--color-text-secondary)',
                       }}
                     >
-                      Vault auto-lock after inactivity
+                      Vault auto-lock
                     </label>
                     <select
                       value={String(vaultSettings.settings.autoLockMinutes)}
@@ -623,7 +661,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         }
                       }}
                       className="
-                        w-full px-4 py-3
+                        w-full px-4 py-2
                         rounded-lg
                         outline-none
                         transition-all duration-200
@@ -659,133 +697,41 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 </div>
               )}
 
-              {/* Session Timeout */}
-              <div className="mb-5">
-                <label
-                  className="block text-sm mb-2"
+              {/* Session & Trust */}
+              <div>
+                <h3
+                  className="text-sm font-medium mb-3"
                   style={{
                     fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-secondary)',
-                  }}
-                >
-                  Auto-lock after inactivity
-                </label>
-                <select
-                  value={sessionSettings.settings.timeoutMinutes === null ? 'null' : String(sessionSettings.settings.timeoutMinutes)}
-                  onChange={(e) => {
-                    const value = e.target.value === 'null' ? null : parseInt(e.target.value, 10);
-                    sessionSettings.setTimeoutMinutes(value);
-                  }}
-                  className="
-                    w-full px-4 py-3
-                    rounded-lg
-                    outline-none
-                    transition-all duration-200
-                    cursor-pointer
-                  "
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    background: 'var(--color-bg-secondary)',
-                    border: '1px solid var(--glass-border)',
                     color: 'var(--color-text-primary)',
                   }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-accent)';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--glass-border)';
-                  }}
                 >
-                  {sessionSettings.availableTimeoutOptions.map((option) => (
-                    <option key={option.value === null ? 'null' : option.value} value={option.value === null ? 'null' : option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <p
-                  className="text-xs mt-1.5"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-tertiary)',
-                  }}
-                >
-                  How long before you're signed out when inactive
-                </p>
-              </div>
+                  Session & Trust
+                </h3>
 
-              {/* Trusted Device Toggle */}
-              <div className="mb-5">
-                <label
-                  className="flex items-center justify-between cursor-pointer"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-primary)',
-                  }}
-                >
-                  <div>
-                    <span className="block text-sm">This is a trusted device</span>
-                    <span
-                      className="block text-xs mt-1"
-                      style={{ color: 'var(--color-text-tertiary)' }}
-                    >
-                      Extends session to 14 days. Only use on personal devices.
-                    </span>
-                  </div>
-                  <div
-                    className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer"
-                    style={{
-                      background: sessionSettings.settings.isTrustedDevice
-                        ? 'var(--color-accent)'
-                        : 'var(--color-bg-tertiary)',
-                    }}
-                    onClick={sessionSettings.toggleTrustedDevice}
-                    role="switch"
-                    aria-checked={sessionSettings.settings.isTrustedDevice}
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        sessionSettings.toggleTrustedDevice();
-                      }
-                    }}
-                  >
-                    <div
-                      className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
-                      style={{
-                        transform: sessionSettings.settings.isTrustedDevice
-                          ? 'translateX(26px)'
-                          : 'translateX(2px)',
-                      }}
-                    />
-                  </div>
-                </label>
-                {sessionSettings.settings.isTrustedDevice && sessionSettings.settings.trustedAt && (
-                  <p
-                    className="text-xs mt-2"
+                {/* Session Timeout */}
+                <div className="mb-5">
+                  <label
+                    className="block text-sm mb-2"
                     style={{
                       fontFamily: 'var(--font-body)',
-                      color: 'var(--color-text-tertiary)',
+                      color: 'var(--color-text-secondary)',
                     }}
                   >
-                    Trusted since {new Date(sessionSettings.settings.trustedAt).toLocaleDateString()}
-                    {' '}(expires after 90 days)
-                  </p>
-                )}
-              </div>
-
-              {/* Encrypt existing notes — navigate to migration page */}
-              {onMigrateClick && (
-                <div className="mb-5">
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onMigrateClick();
+                    Session timeout
+                  </label>
+                  <select
+                    value={sessionSettings.settings.timeoutMinutes === null ? 'null' : String(sessionSettings.settings.timeoutMinutes)}
+                    onChange={(e) => {
+                      const value = e.target.value === 'null' ? null : parseInt(e.target.value, 10);
+                      sessionSettings.setTimeoutMinutes(value);
                     }}
                     className="
-                      w-full py-3
+                      w-full px-4 py-2
                       rounded-lg
-                      text-sm font-medium
+                      outline-none
                       transition-all duration-200
+                      cursor-pointer
                     "
                     style={{
                       fontFamily: 'var(--font-body)',
@@ -793,15 +739,19 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       border: '1px solid var(--glass-border)',
                       color: 'var(--color-text-primary)',
                     }}
-                    onMouseEnter={(e) => {
+                    onFocus={(e) => {
                       e.currentTarget.style.borderColor = 'var(--color-accent)';
                     }}
-                    onMouseLeave={(e) => {
+                    onBlur={(e) => {
                       e.currentTarget.style.borderColor = 'var(--glass-border)';
                     }}
                   >
-                    Encrypt existing notes
-                  </button>
+                    {sessionSettings.availableTimeoutOptions.map((option) => (
+                      <option key={option.value === null ? 'null' : option.value} value={option.value === null ? 'null' : option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                   <p
                     className="text-xs mt-1.5"
                     style={{
@@ -809,50 +759,74 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       color: 'var(--color-text-tertiary)',
                     }}
                   >
-                    Migrate any unencrypted notes to end-to-end encryption
+                    How long before you're signed out when inactive
                   </p>
                 </div>
-              )}
+
+                {/* Trusted Device Toggle */}
+                <div className="mb-5">
+                  <label
+                    className="flex items-center justify-between cursor-pointer"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      color: 'var(--color-text-primary)',
+                    }}
+                  >
+                    <div>
+                      <span className="block text-sm">This is a trusted device</span>
+                      <span
+                        className="block text-xs mt-1"
+                        style={{ color: 'var(--color-text-tertiary)' }}
+                      >
+                        Extends session to 14 days. Only use on personal devices.
+                      </span>
+                    </div>
+                    <div
+                      className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer"
+                      style={{
+                        background: sessionSettings.settings.isTrustedDevice
+                          ? 'var(--color-accent)'
+                          : 'var(--color-bg-tertiary)',
+                      }}
+                      onClick={sessionSettings.toggleTrustedDevice}
+                      role="switch"
+                      aria-checked={sessionSettings.settings.isTrustedDevice}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          sessionSettings.toggleTrustedDevice();
+                        }
+                      }}
+                    >
+                      <div
+                        className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
+                        style={{
+                          transform: sessionSettings.settings.isTrustedDevice
+                            ? 'translateX(26px)'
+                            : 'translateX(2px)',
+                        }}
+                      />
+                    </div>
+                  </label>
+                  {sessionSettings.settings.isTrustedDevice && sessionSettings.settings.trustedAt && (
+                    <p
+                      className="text-xs mt-2"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--color-text-tertiary)',
+                      }}
+                    >
+                      Trusted since {new Date(sessionSettings.settings.trustedAt).toLocaleDateString()}
+                      {' '}(expires after 90 days)
+                    </p>
+                  )}
+                </div>
+              </div>
+
             </div>
           )}
 
-          {/* Let go section - offboarding link */}
-          <div
-            className="mt-8 pt-6 text-center"
-            style={{ borderTop: '1px solid var(--glass-border)' }}
-          >
-            <p
-              className="text-sm mb-2"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-tertiary)',
-              }}
-            >
-              Ready to move on?
-            </p>
-            <button
-              onClick={() => {
-                onClose();
-                onLetGoClick();
-              }}
-              className="text-sm transition-colors duration-200"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-tertiary)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--color-text-secondary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--color-text-tertiary)';
-              }}
-            >
-              Let go of Yidhan →
-            </button>
-          </div>
         </div>
     </BottomSheet>
   );

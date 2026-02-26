@@ -37,7 +37,7 @@
   --color-status-exploring: #8B8178;
   --color-change-improvement: #87A878;
   --color-change-fix: #8B8178;
-  --glass-border: rgba(62, 59, 54, 0.18);
+  --glass-border: rgba(62, 59, 54, 0.25);
   --shadow-sm: 0 2px 8px rgba(120, 80, 60, 0.15);
   --shadow-md: 0 20px 40px -10px rgba(120, 80, 60, 0.28);
   --shadow-lg: 0 10px 40px rgba(120, 80, 60, 0.32);
@@ -53,7 +53,7 @@
   --color-card-bg: rgba(20, 30, 20, 0.6);
   --color-text-primary: #EAE6D8;
   --color-text-secondary: #A3ABA3;
-  --color-text-tertiary: #7A867A;
+  --color-text-tertiary: #8E9A8E;
   --color-accent: #D4AF37;
   --color-accent-hover: #E5C44A;
   --color-accent-glow: rgba(212, 175, 55, 0.15);
@@ -73,7 +73,7 @@
   --color-status-exploring: #9A9890;
   --color-change-improvement: #87A878;
   --color-change-fix: #9A9890;
-  --glass-border: rgba(212, 175, 55, 0.15);
+  --glass-border: rgba(212, 175, 55, 0.25);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 20px 50px -10px rgba(0, 0, 0, 0.6);
@@ -147,6 +147,16 @@ body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ============================================
+   MODAL BACKDROP
+   Shared overlay style for all modals/dialogs
+   ============================================ */
+.modal-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* ============================================

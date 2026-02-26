@@ -50,7 +50,7 @@ src/
 │   ├── ReloadPrompt.tsx   # PWA service worker update prompt (non-disruptive refresh banner)
 │   ├── RichTextEditor.tsx # Tiptap editor content wrapper (toolbar extracted to EditorToolbar)
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
-│   ├── SettingsModal.tsx  # Settings modal (profile, password, security tab, theme, offboarding, E2EE migration)
+│   ├── SettingsModal.tsx  # Settings modal (profile, password, security tab, theme, offboarding)
 │   ├── SlashCommand.tsx   # Tiptap slash command extension (/, timestamps, dividers)
 │   ├── ReAuthModal.tsx    # Re-authentication modal for sensitive actions (step-up auth)
 │   ├── TagBadge.tsx       # Small tag badge for note cards
@@ -70,8 +70,7 @@ src/
 │       └── InvitationModal.tsx    # Soft signup prompt ("A Gentle Invitation")
 ├── pages/
 │   ├── DemoPage.tsx       # Full-featured demo experience at /demo route
-│   ├── LogoTestPage.tsx   # Logo preview page for testing across themes
-│   └── MigrationPage.tsx  # E2EE migration UI (encrypt existing plaintext notes)
+│   └── LogoTestPage.tsx   # Logo preview page for testing across themes
 ├── data/
 │   ├── changelog.ts       # Version history data
 │   └── roadmap.ts         # Roadmap items with status
@@ -118,7 +117,6 @@ src/
 │   ├── sanitize.ts        # HTML/text sanitization (XSS prevention)
 │   ├── temporalGrouping.ts # Group notes by time (Pinned, This Week, Last Week, etc.)
 │   ├── updateBanner.ts    # Persistent update banner for chunk errors / app version updates
-│   ├── migrationE2EE.ts   # One-time plaintext → E2EE migration script
 │   ├── validation.ts      # Note title/content validation and length limits
 │   └── withRetry.ts       # Retry utility with exponential backoff and error discrimination
 ├── themes/
@@ -399,7 +397,7 @@ content...
 ## Key Component Locations
 - **Auth:** `src/contexts/AuthContext.tsx` (login, signup, OAuth, offboarding, password reset)
 - **Encryption:** `src/contexts/EncryptionContext.tsx` (key derivation, unlock/lock, memory-only key storage)
-- **Settings:** `src/components/SettingsModal.tsx` (profile, password, security tabs + offboarding link + E2EE migration)
+- **Settings:** `src/components/SettingsModal.tsx` (profile, password, security tabs + offboarding link)
 
 ## Notes
 - Content is stored as HTML (from Tiptap's `getHTML()`), encrypted client-side before storage
@@ -491,7 +489,6 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Salt + key-check:** Stored in Supabase `user_metadata` for passphrase verification
 - **Sentry:** Breadcrumb scrubber strips encrypted fields before sending to Sentry
 - **Share as Letter:** Disabled while E2EE is active (cannot share encrypted content)
-- Migration: Settings > Security > "Encrypt existing notes" for one-time plaintext → E2EE migration
 
 ### Password Policy
 - Minimum 8 characters (enforced in Auth.tsx and SettingsModal.tsx)

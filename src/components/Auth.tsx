@@ -870,8 +870,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         {/* Close confirmation modal */}
         {showCloseConfirm && (
           <div
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-            style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-backdrop"
             onClick={() => setShowCloseConfirm(false)}
           >
             <div
