@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.3.0',
+    date: '2026-02-26',
+    changes: [
+      { type: 'improvement', text: 'Settings Security tab restructured with clear section headings (Encryption Vault, Session & Trust) and distinct labels' },
+      { type: 'improvement', text: 'All modal backdrops now use consistent blur overlay for better visual separation' },
+      { type: 'improvement', text: 'Glass border contrast increased across all four themes for crisper UI boundaries' },
+      { type: 'improvement', text: 'Dark theme helper text contrast improved for better readability' },
+      { type: 'fix', text: 'Removed dead E2EE migration code (MigrationPage, migrationE2EE utility) — clean slate for launch' },
+      { type: 'fix', text: 'Account offboarding link moved to Profile tab only (no longer shown on Security tab)' },
+    ],
+  },
+  {
     version: '3.2.4',
     date: '2026-02-25',
     changes: [

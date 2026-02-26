@@ -313,6 +313,13 @@ Defined in `src/index.css`. Use `--color-*` for colors, `--font-display`/`--font
 Key convention: `--radius-card: 2px 24px 4px 24px` (asymmetric wabi-sabi corners).
 Tag colors: terracotta, gold, forest, stone, indigo, clay, sage, plum.
 
+### Modal Backdrop
+All modals use the shared `.modal-backdrop` CSS class (defined in `src/index.css`) for consistent overlay styling:
+```css
+.modal-backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); }
+```
+**Exception:** `BottomSheet.tsx` mobile path uses inline styles (not the class) because the animated `opacity` spring from react-spring conflicts with `backdrop-filter` compositing on the CSS class.
+
 ### CTA Button Tokens
 Primary action buttons MUST use `--color-cta-bg` / `--color-cta-text` (not `--color-accent` with `#fff`).
 The accent color fails WCAG AA contrast with white text in 3 of 4 themes.
