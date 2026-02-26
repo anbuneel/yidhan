@@ -183,10 +183,9 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
     <div
       className={`
         fixed inset-0 z-50 flex items-center justify-center px-6
-        transition-opacity duration-300
+        transition-opacity duration-300 modal-backdrop
         ${hasAnimatedIn ? 'opacity-100' : 'opacity-0'}
       `}
-      style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
       onClick={handleDismiss}
       role="dialog"
       aria-modal="true"

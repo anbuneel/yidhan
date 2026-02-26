@@ -719,109 +719,109 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                     }}
                   >
                     Session timeout
-                </label>
-                <select
-                  value={sessionSettings.settings.timeoutMinutes === null ? 'null' : String(sessionSettings.settings.timeoutMinutes)}
-                  onChange={(e) => {
-                    const value = e.target.value === 'null' ? null : parseInt(e.target.value, 10);
-                    sessionSettings.setTimeoutMinutes(value);
-                  }}
-                  className="
-                    w-full px-4 py-2
-                    rounded-lg
-                    outline-none
-                    transition-all duration-200
-                    cursor-pointer
-                  "
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    background: 'var(--color-bg-secondary)',
-                    border: '1px solid var(--glass-border)',
-                    color: 'var(--color-text-primary)',
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-accent)';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--glass-border)';
-                  }}
-                >
-                  {sessionSettings.availableTimeoutOptions.map((option) => (
-                    <option key={option.value === null ? 'null' : option.value} value={option.value === null ? 'null' : option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <p
-                  className="text-xs mt-1.5"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-tertiary)',
-                  }}
-                >
-                  How long before you're signed out when inactive
-                </p>
-              </div>
-
-              {/* Trusted Device Toggle */}
-              <div className="mb-5">
-                <label
-                  className="flex items-center justify-between cursor-pointer"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-primary)',
-                  }}
-                >
-                  <div>
-                    <span className="block text-sm">This is a trusted device</span>
-                    <span
-                      className="block text-xs mt-1"
-                      style={{ color: 'var(--color-text-tertiary)' }}
-                    >
-                      Extends session to 14 days. Only use on personal devices.
-                    </span>
-                  </div>
-                  <div
-                    className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer"
-                    style={{
-                      background: sessionSettings.settings.isTrustedDevice
-                        ? 'var(--color-accent)'
-                        : 'var(--color-bg-tertiary)',
+                  </label>
+                  <select
+                    value={sessionSettings.settings.timeoutMinutes === null ? 'null' : String(sessionSettings.settings.timeoutMinutes)}
+                    onChange={(e) => {
+                      const value = e.target.value === 'null' ? null : parseInt(e.target.value, 10);
+                      sessionSettings.setTimeoutMinutes(value);
                     }}
-                    onClick={sessionSettings.toggleTrustedDevice}
-                    role="switch"
-                    aria-checked={sessionSettings.settings.isTrustedDevice}
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        sessionSettings.toggleTrustedDevice();
-                      }
+                    className="
+                      w-full px-4 py-2
+                      rounded-lg
+                      outline-none
+                      transition-all duration-200
+                      cursor-pointer
+                    "
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      background: 'var(--color-bg-secondary)',
+                      border: '1px solid var(--glass-border)',
+                      color: 'var(--color-text-primary)',
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--color-accent)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--glass-border)';
                     }}
                   >
-                    <div
-                      className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
-                      style={{
-                        transform: sessionSettings.settings.isTrustedDevice
-                          ? 'translateX(26px)'
-                          : 'translateX(2px)',
-                      }}
-                    />
-                  </div>
-                </label>
-                {sessionSettings.settings.isTrustedDevice && sessionSettings.settings.trustedAt && (
+                    {sessionSettings.availableTimeoutOptions.map((option) => (
+                      <option key={option.value === null ? 'null' : option.value} value={option.value === null ? 'null' : option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                   <p
-                    className="text-xs mt-2"
+                    className="text-xs mt-1.5"
                     style={{
                       fontFamily: 'var(--font-body)',
                       color: 'var(--color-text-tertiary)',
                     }}
                   >
-                    Trusted since {new Date(sessionSettings.settings.trustedAt).toLocaleDateString()}
-                    {' '}(expires after 90 days)
+                    How long before you're signed out when inactive
                   </p>
-                )}
-              </div>
+                </div>
+
+                {/* Trusted Device Toggle */}
+                <div className="mb-5">
+                  <label
+                    className="flex items-center justify-between cursor-pointer"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      color: 'var(--color-text-primary)',
+                    }}
+                  >
+                    <div>
+                      <span className="block text-sm">This is a trusted device</span>
+                      <span
+                        className="block text-xs mt-1"
+                        style={{ color: 'var(--color-text-tertiary)' }}
+                      >
+                        Extends session to 14 days. Only use on personal devices.
+                      </span>
+                    </div>
+                    <div
+                      className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer"
+                      style={{
+                        background: sessionSettings.settings.isTrustedDevice
+                          ? 'var(--color-accent)'
+                          : 'var(--color-bg-tertiary)',
+                      }}
+                      onClick={sessionSettings.toggleTrustedDevice}
+                      role="switch"
+                      aria-checked={sessionSettings.settings.isTrustedDevice}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          sessionSettings.toggleTrustedDevice();
+                        }
+                      }}
+                    >
+                      <div
+                        className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
+                        style={{
+                          transform: sessionSettings.settings.isTrustedDevice
+                            ? 'translateX(26px)'
+                            : 'translateX(2px)',
+                        }}
+                      />
+                    </div>
+                  </label>
+                  {sessionSettings.settings.isTrustedDevice && sessionSettings.settings.trustedAt && (
+                    <p
+                      className="text-xs mt-2"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--color-text-tertiary)',
+                      }}
+                    >
+                      Trusted since {new Date(sessionSettings.settings.trustedAt).toLocaleDateString()}
+                      {' '}(expires after 90 days)
+                    </p>
+                  )}
+                </div>
               </div>
 
             </div>

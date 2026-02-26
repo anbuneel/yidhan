@@ -94,10 +94,9 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
     <div
       className={`
         fixed inset-0 z-50 flex items-end justify-center
-        transition-all duration-300
+        transition-all duration-300 modal-backdrop
         ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}
       `}
-      style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
       onClick={handleDismiss}
       role="dialog"
       aria-modal="true"

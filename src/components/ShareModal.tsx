@@ -129,8 +129,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+      className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
       onClick={isProcessing ? undefined : onClose}
     >
       <div

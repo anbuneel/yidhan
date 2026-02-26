@@ -168,8 +168,7 @@ export function BottomSheet({
 
     return (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center"
-        style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+        className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
         onClick={onClose}
       >
         <div
@@ -217,11 +216,8 @@ export function BottomSheet({
     <>
       {/* Backdrop */}
       <animated.div
-        className="fixed inset-0 z-50"
+        className="fixed inset-0 z-50 modal-backdrop"
         style={{
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
           opacity: backdropOpacity,
           pointerEvents: isOpen ? 'auto' : 'none',
         }}

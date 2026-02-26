@@ -150,6 +150,16 @@ body {
 }
 
 /* ============================================
+   MODAL BACKDROP
+   Shared overlay style for all modals/dialogs
+   ============================================ */
+.modal-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ============================================
    PWA TOUCH FEEL
    Prevent text selection on interactive elements
    ============================================ */
