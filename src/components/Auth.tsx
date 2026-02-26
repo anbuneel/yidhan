@@ -871,7 +871,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         {showCloseConfirm && (
           <div
             className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-            style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+            style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
             onClick={() => setShowCloseConfirm(false)}
           >
             <div

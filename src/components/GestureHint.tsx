@@ -186,7 +186,7 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
         transition-opacity duration-300
         ${hasAnimatedIn ? 'opacity-100' : 'opacity-0'}
       `}
-      style={{ background: 'rgba(0, 0, 0, 0.6)' }}
+      style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
       onClick={handleDismiss}
       role="dialog"
       aria-modal="true"

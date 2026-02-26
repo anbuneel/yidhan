@@ -1203,7 +1203,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       {showDeleteConfirm && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+          style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
           onClick={() => setShowDeleteConfirm(false)}
         >
           <div

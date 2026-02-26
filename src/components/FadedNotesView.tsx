@@ -185,8 +185,9 @@ export function FadedNotesView({
             p-4
           "
           style={{
-            background: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(4px)',
+            background: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
           }}
           onClick={() => setShowEmptyConfirm(false)}
         >

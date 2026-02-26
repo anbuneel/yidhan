@@ -25,7 +25,7 @@ export interface Note {
   contentHash?: string | null;
 }
 
-export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded' | 'migrate';
+export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded';
 
 export interface NoteShare {
   id: string;

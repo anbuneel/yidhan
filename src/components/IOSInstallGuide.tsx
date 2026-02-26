@@ -97,7 +97,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
         transition-all duration-300
         ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}
       `}
-      style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+      style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
       onClick={handleDismiss}
       role="dialog"
       aria-modal="true"

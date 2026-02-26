@@ -103,7 +103,7 @@ export function ReAuthModal({
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center px-4"
-      style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+      style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
       onClick={onCancel}
     >
       <div
