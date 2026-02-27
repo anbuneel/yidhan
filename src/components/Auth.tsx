@@ -662,10 +662,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                   type="checkbox"
                   checked={keepSignedIn}
                   onChange={(e) => setKeepSignedIn(e.target.checked)}
-                  className="w-4 h-4 rounded cursor-pointer"
-                  style={{
-                    accentColor: 'var(--color-accent)',
-                  }}
+                  className="form-checkbox"
                 />
                 <span className="text-sm">Keep me signed in</span>
               </label>
@@ -726,6 +723,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               fontFamily: 'var(--font-body)',
               background: 'var(--color-cta-bg)',
               color: 'var(--color-cta-text)',
+              boxShadow: '0 4px 20px var(--color-accent-glow)',
             }}
             onMouseEnter={(e) => {
               if (!loading) {

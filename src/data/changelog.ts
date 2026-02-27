@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.3.1',
+    date: '2026-02-27',
+    changes: [
+      { type: 'improvement', text: 'Dark mode CTA buttons now use vibrant gold with dark text instead of dull olive (WCAG AAA contrast)' },
+      { type: 'improvement', text: 'Checkboxes unified across editor, card previews, and forms with consistent sizing and tick marks' },
+    ],
+  },
+  {
     version: '3.3.0',
     date: '2026-02-26',
     changes: [

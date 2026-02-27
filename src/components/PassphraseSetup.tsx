@@ -176,8 +176,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
               type="checkbox"
               checked={acknowledged}
               onChange={(e) => setAcknowledged(e.target.checked)}
-              className="mt-0.5"
-              style={{ accentColor: 'var(--color-accent)' }}
+              className="form-checkbox mt-0.5"
             />
             <span className="text-xs leading-relaxed">
               I understand that if I forget this passphrase, my notes cannot be recovered.

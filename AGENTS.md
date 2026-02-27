@@ -322,9 +322,10 @@ All modals use the shared `.modal-backdrop` CSS class (defined in `src/index.css
 
 ### CTA Button Tokens
 Primary action buttons MUST use `--color-cta-bg` / `--color-cta-text` (not `--color-accent` with `#fff`).
-The accent color fails WCAG AA contrast with white text in 3 of 4 themes.
 Defined in each theme's `ctaBg`, `ctaBgHover`, `ctaText` fields and mapped to CSS variables.
-Verified contrast ratios: Kintsugi 5.44:1, Washi 7.10:1, Midnight 4.62:1, Mori 4.72:1.
+**Dark themes use polarity-flipped CTAs:** bright gold background + dark text (not darkened gold + white).
+This prevents the "gold luminance trap" where darkening gold for white-text contrast produces dull olive tones.
+Verified contrast ratios: Kintsugi 5.44:1, Washi 7.10:1, Midnight 8.55:1, Mori 7.29:1 (all exceed AA, dark themes exceed AAA).
 
 ### Button/Accent Token Taxonomy
 Three semantic categories — never mix them:

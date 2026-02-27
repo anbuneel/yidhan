@@ -183,14 +183,14 @@ export class ErrorBoundary extends Component<Props, State> {
               className="px-6 py-3 rounded-lg font-medium transition-all duration-200"
               style={{
                 fontFamily: 'var(--font-body, Inter, sans-serif)',
-                background: 'var(--color-cta-bg, #8A7319)',
-                color: 'var(--color-cta-text, #fff)',
+                background: 'var(--color-cta-bg, #D4AF37)',
+                color: 'var(--color-cta-text, #16161F)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--color-cta-bg-hover, #756112)';
+                e.currentTarget.style.background = 'var(--color-cta-bg-hover, #E5C44A)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-cta-bg, #8A7319)';
+                e.currentTarget.style.background = 'var(--color-cta-bg, #D4AF37)';
               }}
             >
               {isChunkError ? 'Refresh to Update' : 'Refresh Page'}
