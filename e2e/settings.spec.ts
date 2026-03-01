@@ -1,17 +1,16 @@
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { test, expect, openSettings, closeModal, toggleTheme } from './fixtures';
 
 /**
  * Skip test if the password tab is not visible (OAuth users don't have one).
  * Opens settings and clicks into the password tab.
  */
-async function requirePasswordTab(page: Page): Promise<Locator> {
+async function requirePasswordTab(page: Page): Promise<void> {
   await openSettings(page);
   const passwordTab = page.getByRole('tab', { name: /password/i });
   const isEmailUser = await passwordTab.isVisible().catch(() => false);
   test.skip(!isEmailUser, 'Test user is OAuth — password tab not available');
   await passwordTab.click();
-  return passwordTab;
 }
 
 test.describe('Settings', () => {
@@ -125,11 +124,12 @@ test.describe('Settings', () => {
       // Toggle to the opposite theme
       await toggleTheme(page);
       const toggledTheme = await html.getAttribute('data-theme');
+      expect(toggledTheme).toBeTruthy();
       expect(toggledTheme).not.toBe(initialTheme);
 
       // Reload and verify the toggled theme persisted
       await page.reload();
-      await expect(html).toHaveAttribute('data-theme', toggledTheme!);
+      await expect(html).toHaveAttribute('data-theme', toggledTheme as string);
 
       // Restore original theme to avoid polluting other tests
       await toggleTheme(page);

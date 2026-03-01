@@ -110,10 +110,10 @@ export default defineConfig({
       thresholds: {
         // Global floor — ratchet up as Phase 1-3 tests land
         // Baseline (2026-03-01): lines 53.4, branches 48.3, functions 55.4, statements 54.4
-        lines: 50,
-        branches: 45,
-        functions: 52,
-        statements: 51,
+        lines: 52,
+        branches: 46,
+        functions: 53,
+        statements: 52,
       },
     },
   },
