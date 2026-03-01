@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.4.1',
+    date: '2026-03-01',
+    changes: [
+      { type: 'improvement', text: 'CI now enforces Vitest coverage thresholds — coverage regressions block PRs automatically' },
+      { type: 'fix', text: 'Fixed 9 weak E2E assertions that could pass vacuously (broken selectors, missing assertions, conditional skips)' },
+      { type: 'improvement', text: 'Coverage scoped to runtime source files for accurate reporting (~26% true baseline established)' },
+    ],
+  },
+  {
     version: '3.4.0',
     date: '2026-02-28',
     changes: [

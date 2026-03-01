@@ -39,8 +39,8 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Network Detection** - Alerts when you go offline or come back online
 - **Error Monitoring** - Optional Sentry integration with privacy-aware session replay
 - **Resilient Saves** - Auto-retry with exponential backoff, smart error handling (4xx fail fast, 5xx/network retry)
-- **Test Coverage** - Comprehensive tests with Vitest, React Testing Library, and Playwright E2E tests
-- **CI/CD Pipeline** - Automated testing and builds via GitHub Actions
+- **Test Coverage** - Comprehensive tests with Vitest (coverage thresholds enforced in CI), React Testing Library, and Playwright E2E tests
+- **CI/CD Pipeline** - Automated testing, coverage enforcement, and builds via GitHub Actions
 - **Code Splitting** - Lazy-loaded editor for faster initial page loads
 - **Sticky Toolbar** - Formatting toolbar stays visible while scrolling long notes
 - **Slash Commands** - Type `/` for quick formatting: headings, lists, quotes, code blocks, timestamps, and more
@@ -207,6 +207,7 @@ create index note_tags_tag_id_idx on note_tags(tag_id);
 | `npm run typecheck` | Type check without emitting |
 | `npm run test` | Run tests in watch mode |
 | `npm run test:run` | Run tests once |
+| `npm run test:coverage` | Run tests with coverage report and threshold enforcement |
 | `npm run check` | **Run before committing** - Full CI check (typecheck + lint + test + build) |
 | `npm run e2e` | Run Playwright E2E tests |
 | `npm run e2e:ui` | Open Playwright UI for interactive testing |
