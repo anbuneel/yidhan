@@ -1,13 +1,16 @@
 import { useState, useCallback } from 'react';
 
+const VALID_AUTO_LOCK = [0, 15, 60] as const;
+type AutoLockMinutes = (typeof VALID_AUTO_LOCK)[number];
+
 export interface VaultSettings {
-  autoLockMinutes: 0 | 15 | 60;
+  autoLockMinutes: AutoLockMinutes;
   rememberBrowser: boolean;
 }
 
 export interface UseVaultSettingsResult {
   settings: VaultSettings;
-  setAutoLockMinutes: (minutes: 0 | 15 | 60) => void;
+  setAutoLockMinutes: (minutes: AutoLockMinutes) => void;
   setRememberBrowser: (enabled: boolean) => void;
 }
 
@@ -20,13 +23,11 @@ function storageKey(userId: string, key: string): string {
   return `yidhan-${userId}-vault-${key}`;
 }
 
-const VALID_AUTO_LOCK = [0, 15, 60] as const;
-
-function parseAutoLockMinutes(value: string | null): 0 | 15 | 60 {
+function parseAutoLockMinutes(value: string | null): AutoLockMinutes {
   if (!value) return DEFAULTS.autoLockMinutes;
   const parsed = parseInt(value, 10);
-  return VALID_AUTO_LOCK.includes(parsed as 0 | 15 | 60)
-    ? (parsed as 0 | 15 | 60)
+  return VALID_AUTO_LOCK.includes(parsed as AutoLockMinutes)
+    ? (parsed as AutoLockMinutes)
     : DEFAULTS.autoLockMinutes;
 }
 
@@ -58,7 +59,7 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
     setSettings(userId ? loadSettings(userId) : DEFAULTS);
   }
 
-  const setAutoLockMinutes = useCallback((minutes: 0 | 15 | 60) => {
+  const setAutoLockMinutes = useCallback((minutes: AutoLockMinutes) => {
     setSettings((prev) => ({ ...prev, autoLockMinutes: minutes }));
     if (userId) {
       try {
@@ -72,6 +73,11 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
     if (userId) {
       try {
         localStorage.setItem(storageKey(userId, 'remember-browser'), String(enabled));
+        // When disabling, immediately clear any persisted vault keys.
+        // Key must match localKey() in EncryptionContext.tsx
+        if (!enabled) {
+          localStorage.removeItem(storageKey(userId, 'persisted-keys'));
+        }
       } catch (err) { console.warn('[useVaultSettings] Failed to persist remember-browser setting:', err); }
     }
   }, [userId]);
