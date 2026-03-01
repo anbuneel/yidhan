@@ -15,11 +15,12 @@ interface SettingsModalProps {
   vaultSettings?: UseVaultSettingsResult;
   isVaultUnlocked?: boolean;
   onLockVault?: () => void;
+  onPersistToLocal?: () => void;
 }
 
 type SettingsTab = 'profile' | 'password' | 'security';
 
-export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, sessionSettings, vaultSettings, isVaultUnlocked, onLockVault }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, sessionSettings, vaultSettings, isVaultUnlocked, onLockVault, onPersistToLocal }: SettingsModalProps) {
   const { user, updateProfile, updatePassword, verifyPassword } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
 
@@ -610,7 +611,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                             color: 'var(--color-text-tertiary)',
                           }}
                         >
-                          Keys are held for this browser session and cleared when you close the tab.
+                          {vaultSettings?.settings.rememberBrowser
+                            ? 'Keys are remembered on this browser. Lock manually or sign out to clear.'
+                            : 'Keys are held for this browser session and cleared when you close the tab.'}
                         </p>
                       )}
                     </div>
@@ -691,8 +694,68 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         color: 'var(--color-text-tertiary)',
                       }}
                     >
-                      Locks the vault when idle. You&apos;ll need your passphrase to unlock again.
+                      {vaultSettings.settings.rememberBrowser
+                        ? 'Locks the vault when idle. Keys stay remembered \u2014 no passphrase needed.'
+                        : 'Locks the vault when idle. You\u2019ll need your passphrase to unlock again.'}
                     </p>
+                  </div>
+
+                  {/* Remember This Browser Toggle */}
+                  <div className="mt-4">
+                    <label
+                      className="flex items-center justify-between cursor-pointer"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                    >
+                      <div>
+                        <span className="block text-sm">Remember this browser</span>
+                        <span
+                          className="block text-xs mt-1"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          Stay unlocked across sessions. Only use on personal devices.
+                        </span>
+                      </div>
+                      <div
+                        className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer"
+                        style={{
+                          background: vaultSettings.settings.rememberBrowser
+                            ? 'var(--color-accent)'
+                            : 'var(--color-bg-tertiary)',
+                        }}
+                        onClick={() => {
+                          const newValue = !vaultSettings.settings.rememberBrowser;
+                          vaultSettings.setRememberBrowser(newValue);
+                          if (newValue && onPersistToLocal) {
+                            onPersistToLocal();
+                          }
+                        }}
+                        role="switch"
+                        aria-checked={vaultSettings.settings.rememberBrowser}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            const newValue = !vaultSettings.settings.rememberBrowser;
+                            vaultSettings.setRememberBrowser(newValue);
+                            if (newValue && onPersistToLocal) {
+                              onPersistToLocal();
+                            }
+                          }
+                        }}
+                      >
+                        <div
+                          className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
+                          style={{
+                            transform: vaultSettings.settings.rememberBrowser
+                              ? 'translateX(26px)'
+                              : 'translateX(2px)',
+                          }}
+                        />
+                      </div>
+                    </label>
                   </div>
                 </div>
               )}

@@ -141,7 +141,7 @@ migrateLocalStorageKeys();
 
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
-  const { keys, isEncryptionSetup, isUnlocked, lockVault } = useEncryption();
+  const { keys, isEncryptionSetup, isUnlocked, lockVault, persistToLocal } = useEncryption();
   // Ref for encryption keys — used in realtime handlers to avoid stale closures
   // when the vault is locked/unlocked (avoids resubscribing Supabase channels)
   const keysRef = useRef(keys);
@@ -243,7 +243,7 @@ function App() {
   useIdleTimer({
     minutes: vaultSettings.settings.autoLockMinutes,
     onIdle: () => {
-      lockVault();
+      lockVault('auto-lock');
       toast('Vault locked after inactivity', {
         icon: '🔒',
         duration: 3000,
@@ -1886,7 +1886,8 @@ function App() {
                 sessionSettings={sessionSettings}
                 vaultSettings={vaultSettings}
                 isVaultUnlocked={isUnlocked}
-                onLockVault={lockVault}
+                onLockVault={() => lockVault('manual')}
+                onPersistToLocal={persistToLocal}
               />
             </Suspense>
           </ErrorBoundary>

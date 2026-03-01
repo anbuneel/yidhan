@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.4.0',
+    date: '2026-02-28',
+    changes: [
+      { type: 'feature', text: 'Remember this browser — opt-in persistent vault unlock across browser sessions (no passphrase re-entry)' },
+      { type: 'improvement', text: 'Auto-lock now clears keys from memory while preserving remembered browser state for seamless return' },
+      { type: 'improvement', text: 'Restored keys verified against key-check to detect stale keys after passphrase changes' },
+    ],
+  },
+  {
     version: '3.3.1',
     date: '2026-02-27',
     changes: [

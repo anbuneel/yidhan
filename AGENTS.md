@@ -490,8 +490,9 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Key derivation:** Argon2id via `hash-wasm` (parallelism=1, iterations=3, memory=64MB, hashLength=64)
 - **Encryption:** AES-256-GCM with AAD (`noteId:userId`) prevents note-swapping attacks
 - **Conflict detection:** HMAC-SHA-256 content hash replaces plaintext comparison in sync engine
-- **Key storage:** React state in `EncryptionContext` + sessionStorage for tab-refresh persistence (raw key bytes exported/imported via `exportSessionKeys`/`importSessionKeys`)
-- **Vault lock:** Manual lock button + configurable auto-lock timer (0/15/60 min idle). Lock clears keys from memory and sessionStorage.
+- **Key storage:** React state in `EncryptionContext` + sessionStorage for tab-refresh persistence (raw key bytes exported/imported via `exportSessionKeys`/`importSessionKeys`). Optional localStorage persistence via "Remember this browser" (opt-in, default off).
+- **Remember this browser:** When enabled, persists `SessionKeyBlob` in localStorage (survives browser restarts). Keys verified against `encryption_key_check` on restore to detect stale keys after passphrase change. Activity-gated restore after auto-lock (keys stay out of memory during idle). Cleared on manual lock, sign-out, or user switch.
+- **Vault lock:** Manual lock button + configurable auto-lock timer (0/15/60 min idle). Lock reason differentiates behavior: `auto-lock` preserves localStorage (silent re-unlock on user return), `manual`/`sign-out` clears all storage.
 - **What's encrypted:** Title + content as JSON blob in `encrypted_payload`
 - **What's NOT encrypted:** Tags (plaintext), metadata (timestamps, pinned)
 - **Salt + key-check:** Stored in Supabase `user_metadata` for passphrase verification

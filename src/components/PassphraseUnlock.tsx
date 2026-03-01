@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useEncryption } from '../contexts/EncryptionContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useVaultSettings } from '../hooks/useVaultSettings';
 
 export function PassphraseUnlock() {
   const { unlockWithPassphrase } = useEncryption();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const vaultSettings = useVaultSettings(user?.id ?? null);
   const [passphrase, setPassphrase] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,6 +93,25 @@ export function PassphraseUnlock() {
               }}
             />
           </div>
+
+          {/* Remember this browser checkbox */}
+          <label
+            className="flex items-center gap-2 cursor-pointer select-none"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            <input
+              type="checkbox"
+              checked={vaultSettings.settings.rememberBrowser}
+              onChange={(e) => vaultSettings.setRememberBrowser(e.target.checked)}
+              style={{ accentColor: 'var(--color-accent)' }}
+            />
+            <span
+              className="text-xs leading-relaxed"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >
+              Remember this browser
+            </span>
+          </label>
 
           {error && (
             <p className="text-xs" style={{ color: 'var(--color-destructive)' }}>
