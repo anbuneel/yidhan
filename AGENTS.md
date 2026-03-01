@@ -49,7 +49,7 @@ src/
 │   ├── SharedNoteView.tsx # Public read-only view for shared notes
 │   ├── SyncIndicator.tsx  # Subtle offline/sync status indicator
 │   ├── ConflictModal.tsx  # "Two Paths" conflict resolution modal
-│   ├── ConflictModal.test.tsx # 15 tests: rendering, resolution buttons, escape, backdrop
+│   ├── ConflictModal.test.tsx # 17 tests: rendering, resolution buttons, escape, backdrop, error recovery
 │   ├── ReloadPrompt.tsx   # PWA service worker update prompt (non-disruptive refresh banner)
 │   ├── RichTextEditor.tsx # Tiptap editor content wrapper (toolbar extracted to EditorToolbar)
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
@@ -115,10 +115,10 @@ src/
 │   ├── useSessionTimeout.ts # Session inactivity monitor (configurable timeout with warning)
 │   ├── useSessionTimeout.test.ts # 13 tests: timeout, warning, activity reset, cleanup
 │   ├── useSessionSettings.ts # Session timeout & trusted device settings (per-user localStorage)
-│   ├── useSessionSettings.test.ts # 20 tests: localStorage persistence, 90-day TTL, effective timeout
+│   ├── useSessionSettings.test.ts # 24 tests: localStorage persistence, 90-day TTL, effective timeout
 │   ├── useKeyboardHeight.ts # Visual Viewport API for keyboard height tracking
 │   ├── useVaultSettings.ts  # Per-user vault settings (auto-lock minutes, remember browser)
-│   ├── useVaultSettings.test.ts # 12 tests: defaults, persistence, user switching, key cleanup
+│   ├── useVaultSettings.test.ts # 11 tests: defaults, persistence, user switching, key cleanup
 │   ├── useIdleTimer.ts      # Simple idle timer hook (fires onIdle after N minutes of inactivity)
 │   └── useIdleTimer.test.ts # 9 tests: timer fire, disable, activity reset, cleanup
 ├── utils/

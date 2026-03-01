@@ -117,6 +117,7 @@ describe('PassphraseSetup', () => {
   });
 
   it('should still complete if welcome note creation fails', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const mockKeys = { encryptionKey: {}, hashKey: {}, salt: new Uint8Array(16) };
     mockSetupPassphrase.mockResolvedValue(mockKeys);
     mockCreateEncryptedNote.mockRejectedValue(new Error('DB error'));
@@ -132,7 +133,9 @@ describe('PassphraseSetup', () => {
 
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to create welcome note');
     });
+    consoleSpy.mockRestore();
   });
 
   it('should show error if setupPassphrase fails', async () => {

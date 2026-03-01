@@ -39,6 +39,7 @@ describe('validateNoteTitle', () => {
     const result = validateNoteTitle(xss);
     expect(result).not.toContain('<img');
     expect(result).not.toContain('onerror');
+    expect(result).toContain('Note');
   });
 
   it('should allow plain text at the limit', () => {

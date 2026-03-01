@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PassphraseUnlock } from './PassphraseUnlock';
 
@@ -113,6 +113,7 @@ describe('PassphraseUnlock', () => {
   });
 
   it('should show error when unlock throws', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockUnlockWithPassphrase.mockRejectedValue(new Error('Crypto error'));
     const user = userEvent.setup();
 
@@ -123,7 +124,9 @@ describe('PassphraseUnlock', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Unlock failed: Crypto error')).toBeInTheDocument();
+      expect(consoleSpy).toHaveBeenCalled();
     });
+    consoleSpy.mockRestore();
   });
 
   it('should show submitting state during unlock', async () => {
@@ -144,10 +147,11 @@ describe('PassphraseUnlock', () => {
 
     // Type then clear to bypass the disabled button, then force-submit
     // the form directly to exercise the handleSubmit validation guard
-    const form = screen.getByLabelText('Passphrase').closest('form')!;
+    const form = screen.getByLabelText('Passphrase').closest('form');
+    expect(form).not.toBeNull();
     await user.type(screen.getByLabelText('Passphrase'), 'a');
     await user.clear(screen.getByLabelText('Passphrase'));
-    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    fireEvent.submit(form!);
 
     await waitFor(() => {
       expect(screen.getByText('Please enter your passphrase')).toBeInTheDocument();

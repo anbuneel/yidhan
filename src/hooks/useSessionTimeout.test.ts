@@ -67,6 +67,10 @@ describe('useSessionTimeout', () => {
     act(() => { vi.advanceTimersByTime(8 * 60 * 1000); });
     expect(result.current.isWarning).toBe(true);
     expect(result.current.minutesRemaining).toBe(2);
+
+    // Advance 1 minute — countdown should decrement to 1
+    act(() => { vi.advanceTimersByTime(60 * 1000); });
+    expect(result.current.minutesRemaining).toBe(1);
   });
 
   it('should not fire when disabled', async () => {

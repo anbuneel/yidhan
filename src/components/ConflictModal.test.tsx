@@ -216,9 +216,11 @@ describe('ConflictModal', () => {
   });
 
   it('should show "Untitled" for notes with empty titles', () => {
-    const conflict = createMockConflict();
-    (conflict.localVersion as { title: string }).title = '';
-    (conflict.serverVersion as { title: string }).title = '';
+    const base = createMockConflict();
+    const conflict = createMockConflict({
+      localVersion: { ...base.localVersion, title: '' },
+      serverVersion: { ...(base.serverVersion as Record<string, unknown>), title: '' },
+    });
 
     render(
       <ConflictModal conflict={conflict} onResolve={defaultProps.onResolve} onDismiss={defaultProps.onDismiss} />
@@ -226,5 +228,22 @@ describe('ConflictModal', () => {
 
     const untitledLabels = screen.getAllByText('Untitled');
     expect(untitledLabels).toHaveLength(2);
+  });
+
+  it('should reset buttons and log error when onResolve rejects', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onResolve = vi.fn().mockRejectedValue(new Error('Sync failed'));
+    const user = userEvent.setup();
+
+    render(<ConflictModal {...defaultProps} onResolve={onResolve} />);
+
+    await user.click(screen.getByRole('button', { name: 'Keep local version' }));
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to resolve conflict:', expect.any(Error));
+      expect(screen.getByRole('button', { name: 'Keep local version' })).not.toBeDisabled();
+    });
+
+    consoleSpy.mockRestore();
   });
 });
