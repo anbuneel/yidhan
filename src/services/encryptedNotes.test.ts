@@ -311,6 +311,10 @@ describe('encryptedNotes', () => {
 
       // Decryption with wrong key should fail — note skipped
       expect(notes).toHaveLength(0);
+      expect(consoleSpy).toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('0 succeeded'),
+      );
 
       consoleSpy.mockRestore();
       warnSpy.mockRestore();

@@ -25,24 +25,21 @@ beforeAll(() => {
   }
 });
 
-// Mock Supabase before importing offlineNotes (it imports supabase at module level)
+// Mock Supabase before importing offlineNotes (it imports supabase at module level).
+// The mock throws by default — offline-only tests should never hit Supabase.
+// Tests that exercise server paths (e.g. hydrateFromServer) must override per-test.
 vi.mock('../lib/supabase', () => ({
   supabase: {
-    from: vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    from: vi.fn().mockImplementation((table: string) => {
+      throw new Error(`Unexpected Supabase call to table "${table}" in offline-only test`);
     }),
   },
+  // fetchAllPaginated is a safety net — returns empty data to prevent unintended
+  // server fetches. Override in tests that exercise hydrateFromServer.
   fetchAllPaginated: vi.fn().mockResolvedValue({ data: [], error: null }),
 }));
 
-import { getOfflineDb } from '../lib/offlineDb';
+import { getOfflineDb, type LocalTag } from '../lib/offlineDb';
 
 const TEST_USER_ID = 'test-user-offline-notes';
 
@@ -50,7 +47,7 @@ const TEST_USER_ID = 'test-user-offline-notes';
 async function seedTag(id: string, name: string, color: string): Promise<void> {
   const db = getOfflineDb(TEST_USER_ID);
   const now = Date.now();
-  await db.tags.add({
+  const tag: LocalTag = {
     id,
     userId: TEST_USER_ID,
     name,
@@ -60,7 +57,8 @@ async function seedTag(id: string, name: string, color: string): Promise<void> {
     lastSyncedAt: now,
     serverUpdatedAt: now,
     localUpdatedAt: now,
-  });
+  };
+  await db.tags.add(tag);
 }
 
 describe('offlineNotes', () => {

@@ -6,7 +6,7 @@
  * Existing tests (22): pure-logic state management, mapSyncOutcome,
  * and server timestamp authority assertions.
  *
- * New behavior tests (18): processQueue with mocked Supabase,
+ * New behavior tests (20): processQueue with mocked Supabase,
  * pauseSync/resumeSync gating, conflict detection, pullRemoteChanges
  * with IndexedDB integration.
  */
