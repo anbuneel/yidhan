@@ -54,12 +54,12 @@ test.describe('Notes', () => {
     });
 
     test('shows empty state when no notes', async ({ authenticatedPage: page }) => {
-      // This test assumes a clean state - may need setup
-      // Just verify the empty state UI elements exist
+      // This test depends on the account having no notes — skip explicitly if notes exist
       const emptyState = page.getByText(/your notes await|no notes/i);
-      if (await emptyState.isVisible()) {
-        await expect(page.getByRole('button', { name: /create.*first.*note/i })).toBeVisible();
-      }
+      const hasEmptyState = await emptyState.isVisible().catch(() => false);
+      test.skip(!hasEmptyState, 'Account has existing notes — cannot test empty state');
+
+      await expect(page.getByRole('button', { name: /create.*first.*note/i })).toBeVisible();
     });
   });
 
@@ -263,11 +263,16 @@ test.describe('Notes', () => {
       await noteCard.hover();
       await noteCard.getByRole('button', { name: /pin/i }).click();
 
+      // Verify pinned section appears
+      await expect(page.getByTestId('library-view').getByText(/pinned/i).first()).toBeVisible();
+
       // Then unpin
       await noteCard.hover();
       await noteCard.getByRole('button', { name: /unpin|pin/i }).click();
 
-      // Note should no longer be pinned (check pin icon state)
+      // Note should no longer be in a pinned section
+      // Wait briefly for UI to update, then verify the note card no longer shows a pin indicator
+      await expect(noteCard.getByRole('button', { name: /unpin/i })).not.toBeVisible({ timeout: 3000 });
     });
   });
 

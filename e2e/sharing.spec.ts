@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { createNote } from './fixtures';
+import { createNote, createTag } from './fixtures';
 
 test.describe('Share as Letter', () => {
   test.describe('Share Creation', () => {
@@ -238,20 +238,18 @@ test.describe('Share as Letter', () => {
     test('shared note displays tags correctly', async ({ page, authenticatedPage }) => {
       const noteTitle = `Tagged Share ${Date.now()}`;
       const noteContent = 'Note with tags for sharing';
+      const tagName = `ShareTag${Date.now()}`;
+
+      // Create a tag to guarantee one exists
+      await createTag(authenticatedPage, tagName);
 
       // Create note
       await createNote(authenticatedPage, noteTitle, noteContent);
 
-      // Add a tag to the note (via tag selector in editor)
-      const tagSelector = authenticatedPage.getByRole('button', { name: /add tag|tags/i });
-      if (await tagSelector.isVisible()) {
-        await tagSelector.click();
-        // Select first available tag or create one
-        const existingTag = authenticatedPage.locator('[role="menuitem"]').first();
-        if (await existingTag.isVisible()) {
-          await existingTag.click();
-        }
-      }
+      // Assign the tag to the note
+      await authenticatedPage.getByRole('button', { name: /add tag|tags/i }).click();
+      await authenticatedPage.getByRole('option', { name: new RegExp(tagName, 'i') }).click();
+      await authenticatedPage.keyboard.press('Escape');
 
       // Wait for save
       await expect(authenticatedPage.getByText(/saved/i)).toBeVisible({ timeout: 5000 });
@@ -275,9 +273,12 @@ test.describe('Share as Letter', () => {
       try {
         await anonymousPage.goto(sharePath);
 
-        // Should see the note
+        // Should see the note title and content
         await expect(anonymousPage.getByText(noteTitle)).toBeVisible({ timeout: 10000 });
         await expect(anonymousPage.getByText(noteContent)).toBeVisible();
+
+        // Should see the tag displayed on the shared note
+        await expect(anonymousPage.getByText(tagName)).toBeVisible();
       } finally {
         await anonymousContext.close();
       }

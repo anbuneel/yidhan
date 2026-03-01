@@ -160,17 +160,18 @@ test.describe('Tags', () => {
     });
 
     test('filters clear search when activated', async ({ authenticatedPage: page }) => {
+      // Create a tag to guarantee a filter button exists
+      const tagName = `FilterClear${Date.now()}`;
+      await createTag(page, tagName);
+
       // Search for something
       await page.getByPlaceholder(/search/i).fill('test');
 
-      // Click a tag filter
-      const tagButton = page.getByRole('button').filter({ hasText: /tag/i }).first();
-      if (await tagButton.isVisible()) {
-        await tagButton.click();
+      // Click the tag filter — this should clear the search
+      await filterByTag(page, tagName);
 
-        // Search should be cleared
-        await expect(page.getByPlaceholder(/search/i)).toHaveValue('');
-      }
+      // Search should be cleared
+      await expect(page.getByPlaceholder(/search/i)).toHaveValue('');
     });
   });
 
@@ -209,13 +210,18 @@ test.describe('Tags', () => {
       await page.getByRole('button', { name: /add tag|tags/i }).click();
       await page.getByRole('option', { name: new RegExp(tagName, 'i') }).click();
 
+      // Verify tag was added
+      await expect(page.getByText(tagName)).toBeVisible();
+
       // Remove tag (click again to deselect)
       await page.getByRole('button', { name: /add tag|tags/i }).click();
       await page.getByRole('option', { name: new RegExp(tagName, 'i') }).click();
 
-      // Tag should be removed from note
-      // Close selector first
+      // Close selector
       await page.keyboard.press('Escape');
+
+      // Tag badge should no longer appear on the note
+      await expect(page.locator('[data-testid="note-editor"]').getByText(tagName)).not.toBeVisible({ timeout: 3000 });
     });
   });
 });

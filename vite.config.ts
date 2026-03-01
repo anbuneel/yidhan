@@ -103,5 +103,18 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     // Use vmThreads pool to avoid "failed to find runner" bug on Windows
     pool: 'vmThreads',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary', 'lcov'],
+      reportsDirectory: './coverage',
+      thresholds: {
+        // Global floor — ratchet up as Phase 1-3 tests land
+        // Baseline (2026-03-01): lines 53.4, branches 48.3, functions 55.4, statements 54.4
+        lines: 50,
+        branches: 45,
+        functions: 52,
+        statements: 51,
+      },
+    },
   },
 })
