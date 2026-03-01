@@ -117,11 +117,12 @@ export default defineConfig({
       reportsDirectory: './coverage',
       thresholds: {
         // Global floor — ratchet up as Phase 1-3 tests land
-        // Baseline (2026-03-01, scoped): lines 26.6, branches 23.6, functions 23.1, statements 25.6
-        lines: 25,
-        branches: 22,
-        functions: 21,
-        statements: 24,
+        // Phase 0 baseline (2026-03-01): lines 26.6, branches 23.6, functions 23.1, statements 25.6
+        // Phase 1 ratchet (2026-03-01): lines 35.3, branches 30.5, functions 29.0, statements 34.0
+        lines: 34,
+        branches: 29,
+        functions: 27,
+        statements: 33,
       },
     },
   },

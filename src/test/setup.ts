@@ -1,6 +1,16 @@
 import '@testing-library/jest-dom/vitest';
 import { vi, beforeEach, afterEach } from 'vitest';
+import { webcrypto } from 'node:crypto';
 import { resetIdCounter } from './factories';
+
+// jsdom doesn't provide crypto.subtle — polyfill from Node.js
+if (!globalThis.crypto?.subtle) {
+  Object.defineProperty(globalThis, 'crypto', {
+    value: webcrypto,
+    writable: true,
+    configurable: true,
+  });
+}
 
 /**
  * Global test setup
