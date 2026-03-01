@@ -12,8 +12,6 @@ import userEvent from '@testing-library/user-event';
 import { ConflictModal } from './ConflictModal';
 import type { ConflictInfo } from '../services/syncEngine';
 
-// DOMPurify is used directly (no mock needed — jsdom provides DOM)
-
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -31,7 +29,7 @@ function createMockConflict(overrides: Partial<ConflictInfo> = {}): ConflictInfo
       deletedAt: null,
       createdAt: Date.now() - 86400000,
       updatedAt: Date.now() - 3600000,
-      syncStatus: 'pending' as const,
+      syncStatus: 'pending',
       lastSyncedAt: null,
       serverUpdatedAt: null,
       localUpdatedAt: Date.now() - 3600000,
@@ -180,7 +178,7 @@ describe('ConflictModal', () => {
     expect(onDismiss).not.toHaveBeenCalled();
   });
 
-  it('should dismiss on backdrop click', async () => {
+  it('should dismiss on backdrop click', () => {
     const onDismiss = vi.fn();
     render(<ConflictModal {...defaultProps} onDismiss={onDismiss} />);
 
@@ -191,7 +189,7 @@ describe('ConflictModal', () => {
     expect(onDismiss).toHaveBeenCalled();
   });
 
-  it('should NOT dismiss when clicking inside the modal content', async () => {
+  it('should NOT dismiss when clicking inside the modal content', () => {
     const onDismiss = vi.fn();
     render(<ConflictModal {...defaultProps} onDismiss={onDismiss} />);
 

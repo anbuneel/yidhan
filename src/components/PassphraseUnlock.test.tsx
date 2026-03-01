@@ -142,15 +142,11 @@ describe('PassphraseUnlock', () => {
     const user = userEvent.setup();
     render(<PassphraseUnlock />);
 
-    // The button is disabled, but let's test the handleSubmit guard
-    // by directly submitting the form
+    // Type then clear to bypass the disabled button, then force-submit
+    // the form directly to exercise the handleSubmit validation guard
     const form = screen.getByLabelText('Passphrase').closest('form')!;
     await user.type(screen.getByLabelText('Passphrase'), 'a');
-    // Clear it to make it empty
     await user.clear(screen.getByLabelText('Passphrase'));
-
-    // Force submit via enter on the form — button will be disabled
-    // so we check the validation path by manually triggering
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     await waitFor(() => {

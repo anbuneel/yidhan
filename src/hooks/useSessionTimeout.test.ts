@@ -10,6 +10,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSessionTimeout } from './useSessionTimeout';
 
+/** Flush the queueMicrotask that initializes the timeout */
+async function flushMicrotasks(): Promise<void> {
+  await act(async () => { await Promise.resolve(); });
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
 });
@@ -25,8 +30,7 @@ describe('useSessionTimeout', () => {
       useSessionTimeout({ timeoutMinutes: 10, warningMinutes: 2, onTimeout, enabled: true })
     );
 
-    // Flush the queueMicrotask that initializes the timeout
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     // Advance past full timeout
     act(() => { vi.advanceTimersByTime(10 * 60 * 1000); });
@@ -40,7 +44,7 @@ describe('useSessionTimeout', () => {
       useSessionTimeout({ timeoutMinutes: 10, warningMinutes: 2, onWarning, onTimeout, enabled: true })
     );
 
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     // Advance to warning period (10 - 2 = 8 minutes)
     act(() => { vi.advanceTimersByTime(8 * 60 * 1000); });
@@ -54,7 +58,7 @@ describe('useSessionTimeout', () => {
       useSessionTimeout({ timeoutMinutes: 10, warningMinutes: 2, onWarning, enabled: true })
     );
 
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     expect(result.current.isWarning).toBe(false);
     expect(result.current.minutesRemaining).toBeNull();
@@ -72,7 +76,7 @@ describe('useSessionTimeout', () => {
       useSessionTimeout({ timeoutMinutes: 5, onWarning, onTimeout, enabled: false })
     );
 
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     act(() => { vi.advanceTimersByTime(30 * 60 * 1000); });
     expect(onWarning).not.toHaveBeenCalled();
@@ -85,7 +89,7 @@ describe('useSessionTimeout', () => {
       useSessionTimeout({ timeoutMinutes: null, onTimeout, enabled: true })
     );
 
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     act(() => { vi.advanceTimersByTime(60 * 60 * 1000); });
     expect(onTimeout).not.toHaveBeenCalled();
@@ -98,7 +102,7 @@ describe('useSessionTimeout', () => {
       useSessionTimeout({ timeoutMinutes: 10, warningMinutes: 2, onWarning, onTimeout, enabled: true })
     );
 
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     // Advance 7 minutes (just before 8 minute warning threshold)
     act(() => { vi.advanceTimersByTime(7 * 60 * 1000); });
@@ -118,7 +122,7 @@ describe('useSessionTimeout', () => {
       useSessionTimeout({ timeoutMinutes: 10, warningMinutes: 2, onWarning, enabled: true })
     );
 
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     // Enter warning period
     act(() => { vi.advanceTimersByTime(8 * 60 * 1000); });
@@ -136,7 +140,7 @@ describe('useSessionTimeout', () => {
       useSessionTimeout({ timeoutMinutes: 10, warningMinutes: 2, onWarning, onTimeout, enabled: true })
     );
 
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     // Enter warning period
     act(() => { vi.advanceTimersByTime(8 * 60 * 1000); });
@@ -158,7 +162,7 @@ describe('useSessionTimeout', () => {
       useSessionTimeout({ timeoutMinutes: 5, onTimeout, enabled: true })
     );
 
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     unmount();
 
@@ -173,13 +177,13 @@ describe('useSessionTimeout', () => {
       { initialProps: { enabled: true } }
     );
 
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     act(() => { vi.advanceTimersByTime(2 * 60 * 1000); });
     rerender({ enabled: false });
 
     // Flush the microtask from the disabled effect
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     act(() => { vi.advanceTimersByTime(30 * 60 * 1000); });
     expect(onTimeout).not.toHaveBeenCalled();
@@ -193,7 +197,7 @@ describe('useSessionTimeout', () => {
       { initialProps: { onTimeout: onTimeout1 } }
     );
 
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     rerender({ onTimeout: onTimeout2 });
 
@@ -205,7 +209,7 @@ describe('useSessionTimeout', () => {
   it('should use defaults when no options provided', async () => {
     const { result } = renderHook(() => useSessionTimeout());
 
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     expect(result.current.isWarning).toBe(false);
     expect(result.current.minutesRemaining).toBeNull();
@@ -218,7 +222,7 @@ describe('useSessionTimeout', () => {
       useSessionTimeout({ timeoutMinutes: 10, warningMinutes: 2, onWarning, enabled: true })
     );
 
-    await act(async () => { await Promise.resolve(); });
+    await flushMicrotasks();
 
     // Advance 7 minutes
     act(() => { vi.advanceTimersByTime(7 * 60 * 1000); });

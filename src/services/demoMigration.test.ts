@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock all dependencies before importing
+// Mock functions (vi.mock calls are hoisted above imports by Vitest)
 const mockGetDemoDataForMigration = vi.fn();
 const mockClearDemoState = vi.fn();
 const mockFetchTagsOffline = vi.fn();

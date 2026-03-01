@@ -18,7 +18,7 @@ describe('validateNoteTitle', () => {
     expect(validateNoteTitle('')).toBe('');
   });
 
-  it('should return empty string for null-ish input', () => {
+  it('should return empty string for nullish input', () => {
     expect(validateNoteTitle(undefined as unknown as string)).toBe('');
   });
 
@@ -77,7 +77,7 @@ describe('validateNoteContentLength', () => {
     expect(() => validateNoteContentLength('')).not.toThrow();
   });
 
-  it('should not throw for null-ish content', () => {
+  it('should not throw for nullish content', () => {
     expect(() => validateNoteContentLength(undefined as unknown as string)).not.toThrow();
   });
 
