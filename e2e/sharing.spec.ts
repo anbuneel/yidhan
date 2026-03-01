@@ -247,7 +247,7 @@ test.describe('Share as Letter', () => {
 
       // Assign the tag to the note
       await authenticatedPage.getByRole('button', { name: /add tag|tags/i }).click();
-      await authenticatedPage.getByRole('option', { name: new RegExp(tagName, 'i') }).click();
+      await authenticatedPage.getByRole('button', { name: new RegExp(tagName, 'i') }).click();
       await authenticatedPage.keyboard.press('Escape');
 
       // Wait for save

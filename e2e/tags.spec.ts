@@ -165,13 +165,13 @@ test.describe('Tags', () => {
       await createTag(page, tagName);
 
       // Search for something
-      await page.getByPlaceholder(/search/i).fill('test');
+      await page.getByPlaceholder(/search/i).first().fill('test');
 
       // Click the tag filter — this should clear the search
       await filterByTag(page, tagName);
 
       // Search should be cleared
-      await expect(page.getByPlaceholder(/search/i)).toHaveValue('');
+      await expect(page.getByPlaceholder(/search/i).first()).toHaveValue('');
     });
   });
 
@@ -208,14 +208,14 @@ test.describe('Tags', () => {
 
       // Add tag
       await page.getByRole('button', { name: /add tag|tags/i }).click();
-      await page.getByRole('option', { name: new RegExp(tagName, 'i') }).click();
+      await page.getByRole('button', { name: new RegExp(tagName, 'i') }).click();
 
       // Verify tag was added
       await expect(page.getByText(tagName)).toBeVisible();
 
       // Remove tag (click again to deselect)
       await page.getByRole('button', { name: /add tag|tags/i }).click();
-      await page.getByRole('option', { name: new RegExp(tagName, 'i') }).click();
+      await page.getByRole('button', { name: new RegExp(tagName, 'i') }).click();
 
       // Close selector
       await page.keyboard.press('Escape');
