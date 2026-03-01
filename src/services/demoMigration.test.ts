@@ -45,6 +45,7 @@ const TEST_USER = 'user-123';
 const MOCK_KEYS = { encryptionKey: {}, hashKey: {}, salt: new Uint8Array(16) } as unknown as DerivedKeys;
 
 beforeEach(() => {
+  // resetAllMocks (not clearAllMocks): each test re-configures mock return values from scratch
   vi.resetAllMocks();
 });
 

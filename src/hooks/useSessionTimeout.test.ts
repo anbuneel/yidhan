@@ -220,7 +220,7 @@ describe('useSessionTimeout', () => {
     expect(result.current.resetTimeout).toBeInstanceOf(Function);
   });
 
-  it('should reset on touchstart and scroll activity', async () => {
+  it('should reset on touchstart activity', async () => {
     const onWarning = vi.fn();
     renderHook(() =>
       useSessionTimeout({ timeoutMinutes: 10, warningMinutes: 2, onWarning, enabled: true })

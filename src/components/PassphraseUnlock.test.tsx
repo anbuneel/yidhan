@@ -174,4 +174,12 @@ describe('PassphraseUnlock', () => {
     expect(screen.getByText('Remember this browser')).toBeInTheDocument();
     expect(screen.getByText('Only use on personal devices')).toBeInTheDocument();
   });
+
+  it('should call setRememberBrowser when checkbox is toggled', async () => {
+    const user = userEvent.setup();
+    render(<PassphraseUnlock />);
+
+    await user.click(screen.getByRole('checkbox'));
+    expect(mockSetRememberBrowser).toHaveBeenCalledWith(true);
+  });
 });
