@@ -206,16 +206,22 @@ test.describe('Tags', () => {
       await page.getByRole('button', { name: /new note/i }).click();
       await page.getByPlaceholder(/untitled/i).fill(noteTitle);
 
-      // Add tag
+      // Add tag — open selector, click tag in dropdown
       await page.getByRole('button', { name: /add tag|tags/i }).click();
       await page.getByRole('button', { name: new RegExp(tagName, 'i') }).click();
+
+      // Close dropdown so we can verify the tag badge independently
+      await page.keyboard.press('Escape');
 
       // Verify tag was added
       await expect(page.getByText(tagName)).toBeVisible();
 
-      // Remove tag (click again to deselect)
-      await page.getByRole('button', { name: /add tag|tags/i }).click();
+      // Remove tag — reopen selector (trigger now shows tag name; dropdown is
+      // conditionally rendered, so only the trigger matches at this point)
       await page.getByRole('button', { name: new RegExp(tagName, 'i') }).click();
+      // Dropdown is now open — two buttons match the tag name (trigger + item).
+      // The dropdown item is last in DOM order.
+      await page.getByRole('button', { name: new RegExp(tagName, 'i') }).last().click();
 
       // Close selector
       await page.keyboard.press('Escape');
