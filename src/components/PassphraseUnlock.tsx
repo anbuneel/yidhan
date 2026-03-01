@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useVaultSettings } from '../hooks/useVaultSettings';
 
 export function PassphraseUnlock() {
-  const { unlockWithPassphrase } = useEncryption();
+  const { unlockWithPassphrase, lockVault } = useEncryption();
   const { user, signOut } = useAuth();
   const vaultSettings = useVaultSettings(user?.id ?? null);
   const [passphrase, setPassphrase] = useState('');
@@ -147,7 +147,7 @@ export function PassphraseUnlock() {
 
           <button
             type="button"
-            onClick={() => signOut()}
+            onClick={() => { lockVault('sign-out'); signOut(); }}
             className="w-full py-2 text-xs transition-opacity hover:opacity-80"
             style={{
               background: 'transparent',

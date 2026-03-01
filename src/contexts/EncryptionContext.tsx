@@ -341,6 +341,10 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       persistLocal(user.id, derivedKeys);
     }
 
+    // Mark restore as attempted so auto-lock doesn't trigger immediate re-restore
+    // via the restore useEffect (which checks this ref before attempting)
+    sessionRestoreAttemptedRef.current = user.id;
+
     return derivedKeys;
   }, [user]);
 
@@ -378,6 +382,8 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       if (isRememberBrowserEnabled(user.id)) {
         persistLocal(user.id, derivedKeys);
       }
+      // Mark restore as attempted so auto-lock doesn't trigger immediate re-restore
+      sessionRestoreAttemptedRef.current = user.id;
       return true;
     }
 
@@ -396,17 +402,21 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       keyState.keys.rawEncryptionKey.fill(0);
       keyState.keys.rawHashKey.fill(0);
     }
-    clearSession(keyState.userId);
+    // Use currentUserId (from auth) instead of keyState.userId for storage cleanup.
+    // After auto-lock, keyState.userId is null but currentUserId still holds the
+    // authenticated user's ID — ensuring sign-out from locked state clears localStorage.
+    const effectiveUserId = currentUserId ?? keyState.userId;
+    clearSession(effectiveUserId);
     if (reason === 'auto-lock') {
       // Preserve localStorage — activity gate will restore on user return
       autoLockedRef.current = true;
     } else {
       // Manual lock or sign-out — clear everything
-      clearLocal(keyState.userId);
+      clearLocal(effectiveUserId);
       autoLockedRef.current = false;
     }
     setKeyState({ keys: null, userId: null });
-  }, [keyState.userId, keyState.keys]);
+  }, [currentUserId, keyState.userId, keyState.keys]);
 
   /**
    * Persist current in-memory keys to localStorage.
