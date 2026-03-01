@@ -270,8 +270,7 @@ test.describe('Notes', () => {
       await noteCard.hover();
       await noteCard.getByRole('button', { name: /unpin|pin/i }).click();
 
-      // Note should no longer be in a pinned section
-      // Wait briefly for UI to update, then verify the note card no longer shows a pin indicator
+      // Unpin button should disappear from the note card
       await expect(noteCard.getByRole('button', { name: /unpin/i })).not.toBeVisible({ timeout: 3000 });
     });
   });

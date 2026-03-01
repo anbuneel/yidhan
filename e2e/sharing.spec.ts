@@ -1,5 +1,4 @@
-import { test, expect } from './fixtures';
-import { createNote, createTag } from './fixtures';
+import { test, expect, createNote, createTag } from './fixtures';
 
 test.describe('Share as Letter', () => {
   test.describe('Share Creation', () => {

@@ -1,5 +1,18 @@
-import { test, expect } from './fixtures';
-import { openSettings, closeModal, toggleTheme } from './fixtures';
+import type { Locator, Page } from '@playwright/test';
+import { test, expect, openSettings, closeModal, toggleTheme } from './fixtures';
+
+/**
+ * Skip test if the password tab is not visible (OAuth users don't have one).
+ * Opens settings and clicks into the password tab.
+ */
+async function requirePasswordTab(page: Page): Promise<Locator> {
+  await openSettings(page);
+  const passwordTab = page.getByRole('tab', { name: /password/i });
+  const isEmailUser = await passwordTab.isVisible().catch(() => false);
+  test.skip(!isEmailUser, 'Test user is OAuth — password tab not available');
+  await passwordTab.click();
+  return passwordTab;
+}
 
 test.describe('Settings', () => {
   test.describe('Settings Modal', () => {
@@ -62,49 +75,28 @@ test.describe('Settings', () => {
 
   test.describe('Password Settings', () => {
     test('shows password tab for email users', async ({ authenticatedPage: page }) => {
-      await openSettings(page);
+      await requirePasswordTab(page);
 
-      const passwordTab = page.getByRole('tab', { name: /password/i });
-      const isEmailUser = await passwordTab.isVisible().catch(() => false);
-      test.skip(!isEmailUser, 'Test user is OAuth — password tab not available');
-
-      await passwordTab.click();
       await expect(page.getByLabel(/new password/i)).toBeVisible();
       await expect(page.getByLabel(/confirm password/i)).toBeVisible();
     });
 
     test('validates password length', async ({ authenticatedPage: page }) => {
-      await openSettings(page);
+      await requirePasswordTab(page);
 
-      const passwordTab = page.getByRole('tab', { name: /password/i });
-      const isEmailUser = await passwordTab.isVisible().catch(() => false);
-      test.skip(!isEmailUser, 'Test user is OAuth — password tab not available');
-
-      await passwordTab.click();
-
-      // Enter short password
       await page.getByLabel(/new password/i).fill('short');
       await page.getByRole('button', { name: /update.*password/i }).click();
 
-      // Should show error
       await expect(page.getByText(/8 characters/i)).toBeVisible();
     });
 
     test('validates password match', async ({ authenticatedPage: page }) => {
-      await openSettings(page);
+      await requirePasswordTab(page);
 
-      const passwordTab = page.getByRole('tab', { name: /password/i });
-      const isEmailUser = await passwordTab.isVisible().catch(() => false);
-      test.skip(!isEmailUser, 'Test user is OAuth — password tab not available');
-
-      await passwordTab.click();
-
-      // Enter mismatched passwords
       await page.getByLabel(/new password/i).fill('password123');
       await page.getByLabel(/confirm password/i).fill('different123');
       await page.getByRole('button', { name: /update.*password/i }).click();
 
-      // Should show error
       await expect(page.getByText(/match/i)).toBeVisible();
     });
   });
