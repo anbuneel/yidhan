@@ -23,7 +23,9 @@ src/
 │   ├── ChangelogPage.tsx  # Version history page with categorized changes
 │   ├── Editor.tsx         # Note editor with rich text + tag selector + save/sync indicator (share disabled for E2EE)
 │   ├── PassphraseSetup.tsx # First-time E2EE passphrase setup screen
+│   ├── PassphraseSetup.test.tsx # 10 tests: form validation, setup flow, welcome note, error states
 │   ├── PassphraseUnlock.tsx # Returning user E2EE unlock screen
+│   ├── PassphraseUnlock.test.tsx # 11 tests: unlock flow, error states, sign-out, remember browser
 │   ├── EditorToolbar.tsx  # Formatting toolbar for rich text editor (sticky in header zone)
 │   ├── ErrorBoundary.tsx  # Error boundary with chunk error detection (deployment handling)
 │   ├── Footer.tsx         # Minimal footer with changelog/roadmap/shortcuts/GitHub links
@@ -47,6 +49,7 @@ src/
 │   ├── SharedNoteView.tsx # Public read-only view for shared notes
 │   ├── SyncIndicator.tsx  # Subtle offline/sync status indicator
 │   ├── ConflictModal.tsx  # "Two Paths" conflict resolution modal
+│   ├── ConflictModal.test.tsx # 15 tests: rendering, resolution buttons, escape, backdrop
 │   ├── ReloadPrompt.tsx   # PWA service worker update prompt (non-disruptive refresh banner)
 │   ├── RichTextEditor.tsx # Tiptap editor content wrapper (toolbar extracted to EditorToolbar)
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
@@ -95,7 +98,8 @@ src/
 │   ├── syncEngine.ts      # Queue processor, HMAC conflict detection, encrypted push/pull sync
 │   ├── syncEngine.test.ts # 42 tests: processQueue, pause/resume, conflict, pull, fullSync
 │   ├── demoStorage.ts     # localStorage operations for demo mode (no auth required)
-│   └── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, encrypted note creation)
+│   ├── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, encrypted note creation)
+│   └── demoMigration.test.ts # 9 tests: empty state, encrypted notes, tag dedup, sanitization
 ├── types/
 │   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares) with full schema
 ├── hooks/
@@ -109,10 +113,14 @@ src/
 │   ├── useSoftPrompt.ts     # Soft prompt trigger logic (note count + time thresholds)
 │   ├── useMobileDetect.ts   # Touch device detection (useMobileDetect, useTouchCapable)
 │   ├── useSessionTimeout.ts # Session inactivity monitor (configurable timeout with warning)
+│   ├── useSessionTimeout.test.ts # 13 tests: timeout, warning, activity reset, cleanup
 │   ├── useSessionSettings.ts # Session timeout & trusted device settings (per-user localStorage)
+│   ├── useSessionSettings.test.ts # 20 tests: localStorage persistence, 90-day TTL, effective timeout
 │   ├── useKeyboardHeight.ts # Visual Viewport API for keyboard height tracking
 │   ├── useVaultSettings.ts  # Per-user vault settings (auto-lock minutes, remember browser)
-│   └── useIdleTimer.ts      # Simple idle timer hook (fires onIdle after N minutes of inactivity)
+│   ├── useVaultSettings.test.ts # 12 tests: defaults, persistence, user switching, key cleanup
+│   ├── useIdleTimer.ts      # Simple idle timer hook (fires onIdle after N minutes of inactivity)
+│   └── useIdleTimer.test.ts # 9 tests: timer fire, disable, activity reset, cleanup
 ├── utils/
 │   ├── editorPosition.ts  # Cross-session cursor/scroll position persistence (localStorage)
 │   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
@@ -122,6 +130,7 @@ src/
 │   ├── temporalGrouping.ts # Group notes by time (Pinned, This Week, Last Week, etc.)
 │   ├── updateBanner.ts    # Persistent update banner for chunk errors / app version updates
 │   ├── validation.ts      # Note title/content validation and length limits
+│   ├── validation.test.ts # 17 tests: title sanitization, XSS, length limits, unicode
 │   └── withRetry.ts       # Retry utility with exponential backoff and error discrimination
 ├── themes/
 │   ├── index.ts           # Theme exports and utilities

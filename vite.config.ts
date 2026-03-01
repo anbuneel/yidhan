@@ -119,10 +119,11 @@ export default defineConfig({
         // Global floor — ratchet up as Phase 1-3 tests land
         // Phase 0 baseline (2026-03-01): lines 26.6, branches 23.6, functions 23.1, statements 25.6
         // Phase 1 ratchet (2026-03-01): lines 35.3, branches 30.5, functions 29.0, statements 34.0
-        lines: 34,
-        branches: 29,
-        functions: 27,
-        statements: 33,
+        // Phase 2-3 ratchet (2026-03-01): lines 41.0, branches 36.6, functions 33.8, statements 39.6
+        lines: 40,
+        branches: 35,
+        functions: 32,
+        statements: 38,
       },
     },
   },
