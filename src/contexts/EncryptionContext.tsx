@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase';
 import type { DerivedKeys, SessionKeyBlob } from '../lib/encryption';
 import { deriveKeys, createKeyCheck, verifyKeyCheck, exportSessionKeys, importSessionKeys } from '../lib/encryption';
 
+export type LockReason = 'auto-lock' | 'manual' | 'sign-out';
+
 interface EncryptionContextType {
   /** Derived encryption keys (null when locked) */
   keys: DerivedKeys | null;
@@ -16,7 +18,7 @@ interface EncryptionContextType {
   /** Unlock with existing passphrase */
   unlockWithPassphrase: (passphrase: string) => Promise<boolean>;
   /** Clear keys from memory. Reason controls what storage is cleared. */
-  lockVault: (reason?: 'auto-lock' | 'manual' | 'sign-out') => void;
+  lockVault: (reason?: LockReason) => void;
   /** Persist current in-memory keys to localStorage (when enabling remember-browser while unlocked) */
   persistToLocal: () => void;
 }
@@ -56,8 +58,8 @@ async function restoreSession(userId: string): Promise<DerivedKeys | null> {
     const blob: SessionKeyBlob = JSON.parse(raw);
     if (!blob.encKey || !blob.hashKey || !blob.salt) return null;
     return await importSessionKeys(blob);
-  } catch {
-    // Corrupted or invalid blob — clear it
+  } catch (err) {
+    console.warn('[EncryptionContext] Session restore blob corrupted, clearing:', err);
     clearSession(userId);
     return null;
   }
@@ -71,12 +73,14 @@ function localKey(userId: string): string {
   return `yidhan-${userId}-vault-persisted-keys`;
 }
 
-/** Read the rememberBrowser setting directly from localStorage (avoids circular context dependency with useVaultSettings) */
+/** Read the rememberBrowser setting directly from localStorage (avoids circular context dependency with useVaultSettings).
+ *  Key format must match storageKey(userId, 'remember-browser') in useVaultSettings.ts */
 function isRememberBrowserEnabled(userId: string | null): boolean {
   if (!userId) return false;
   try {
     return localStorage.getItem(`yidhan-${userId}-vault-remember-browser`) === 'true';
-  } catch {
+  } catch (err) {
+    console.warn('[EncryptionContext] Failed to read remember-browser setting:', err);
     return false;
   }
 }
@@ -91,13 +95,15 @@ function persistLocal(userId: string, keys: DerivedKeys): void {
   }
 }
 
-/** Clear persisted key material from localStorage */
+/** Clear persisted key material from localStorage.
+ *  SECURITY: If this fails, raw encryption key material remains in localStorage.
+ *  Callers should be aware that clearing is best-effort. */
 function clearLocal(userId: string | null): void {
   if (!userId) return;
   try {
     localStorage.removeItem(localKey(userId));
   } catch (err) {
-    console.error('[EncryptionContext] Failed to clear vault keys from localStorage:', err);
+    console.error('[EncryptionContext] SECURITY: Failed to clear vault keys from localStorage — key material may persist:', err);
   }
 }
 
@@ -109,7 +115,8 @@ async function restoreLocal(userId: string): Promise<DerivedKeys | null> {
     const blob: SessionKeyBlob = JSON.parse(raw);
     if (!blob.encKey || !blob.hashKey || !blob.salt) return null;
     return await importSessionKeys(blob);
-  } catch {
+  } catch (err) {
+    console.warn('[EncryptionContext] localStorage restore blob corrupted, clearing:', err);
     clearLocal(userId);
     return null;
   }
@@ -188,6 +195,11 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
               clearLocal(currentUserId);
               restored = null;
             }
+          } else if (restored) {
+            // Key-check metadata missing — cannot verify integrity, require manual passphrase
+            console.warn('[EncryptionContext] Cannot verify localStorage keys: key-check metadata missing');
+            clearLocal(currentUserId);
+            restored = null;
           }
 
           // If restored from localStorage, re-populate sessionStorage for this tab
@@ -229,7 +241,10 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
       try {
         const restored = await restoreLocal(currentUserId);
-        if (!restored) return;
+        if (!restored) {
+          console.warn('[EncryptionContext] Activity-gated restore: no keys found in localStorage, passphrase required');
+          return;
+        }
 
         // Verify against key-check
         if (keyCheck && keyCheckIv) {
@@ -238,6 +253,11 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
             clearLocal(currentUserId);
             return;
           }
+        } else {
+          // Key-check metadata missing — cannot verify integrity, require manual passphrase
+          console.warn('[EncryptionContext] Activity-gated restore: key-check metadata missing, refusing unverified keys');
+          clearLocal(currentUserId);
+          return;
         }
 
         // Valid — repopulate sessionStorage and unlock
@@ -371,7 +391,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
    *   - 'manual': clear everything (user explicitly locked)
    *   - 'sign-out': clear everything (security boundary)
    */
-  const lockVault = useCallback((reason: 'auto-lock' | 'manual' | 'sign-out' = 'manual') => {
+  const lockVault = useCallback((reason: LockReason = 'manual') => {
     if (keyState.keys) {
       keyState.keys.rawEncryptionKey.fill(0);
       keyState.keys.rawHashKey.fill(0);

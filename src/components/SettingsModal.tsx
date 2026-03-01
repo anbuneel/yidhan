@@ -709,8 +709,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
 
                   {/* Remember This Browser Toggle */}
                   <div className="mt-4">
-                    <label
+                    <div
                       className="flex items-center justify-between cursor-pointer"
+                      onClick={handleRememberBrowserToggle}
                       style={{
                         fontFamily: 'var(--font-body)',
                         color: 'var(--color-text-primary)',
@@ -726,15 +727,15 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         </span>
                       </div>
                       <div
-                        className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer"
+                        className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer shrink-0 ml-4"
                         style={{
                           background: vaultSettings.settings.rememberBrowser
                             ? 'var(--color-accent)'
                             : 'var(--color-bg-tertiary)',
                         }}
-                        onClick={handleRememberBrowserToggle}
                         role="switch"
                         aria-checked={vaultSettings.settings.rememberBrowser}
+                        aria-label="Remember this browser"
                         tabIndex={0}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
@@ -752,7 +753,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                           }}
                         />
                       </div>
-                    </label>
+                    </div>
                   </div>
                 </div>
               )}
@@ -825,8 +826,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
 
                 {/* Trusted Device Toggle */}
                 <div className="mb-5">
-                  <label
+                  <div
                     className="flex items-center justify-between cursor-pointer"
+                    onClick={sessionSettings.toggleTrustedDevice}
                     style={{
                       fontFamily: 'var(--font-body)',
                       color: 'var(--color-text-primary)',
@@ -842,15 +844,15 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       </span>
                     </div>
                     <div
-                      className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer"
+                      className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer shrink-0 ml-4"
                       style={{
                         background: sessionSettings.settings.isTrustedDevice
                           ? 'var(--color-accent)'
                           : 'var(--color-bg-tertiary)',
                       }}
-                      onClick={sessionSettings.toggleTrustedDevice}
                       role="switch"
                       aria-checked={sessionSettings.settings.isTrustedDevice}
+                      aria-label="This is a trusted device"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
@@ -868,7 +870,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         }}
                       />
                     </div>
-                  </label>
+                  </div>
                   {sessionSettings.settings.isTrustedDevice && sessionSettings.settings.trustedAt && (
                     <p
                       className="text-xs mt-2"

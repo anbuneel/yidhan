@@ -94,7 +94,9 @@ export function PassphraseUnlock() {
             />
           </div>
 
-          {/* Remember this browser checkbox */}
+          {/* Remember this browser checkbox.
+              Setting is written to localStorage synchronously so that unlockWithPassphrase()
+              (which reads isRememberBrowserEnabled() from localStorage) sees the updated value. */}
           <label
             className="flex items-center gap-2 cursor-pointer select-none"
             style={{ color: 'var(--color-text-secondary)' }}
@@ -110,6 +112,12 @@ export function PassphraseUnlock() {
               style={{ fontFamily: 'var(--font-body)' }}
             >
               Remember this browser
+              <span
+                className="block text-xs mt-0.5"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
+                Only use on personal devices
+              </span>
             </span>
           </label>
 

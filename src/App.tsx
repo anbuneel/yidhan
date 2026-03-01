@@ -222,6 +222,7 @@ function App() {
     onWarning: () => setShowSessionTimeoutModal(true),
     onTimeout: async () => {
       setShowSessionTimeoutModal(false);
+      lockVault('sign-out');
       await signOut();
       toast('Your session has faded. Please sign in again.', {
         icon: '〇',
@@ -266,6 +267,7 @@ function App() {
 
   const handleSessionSignOut = async () => {
     setShowSessionTimeoutModal(false);
+    lockVault('sign-out');
     await signOut();
   };
 
