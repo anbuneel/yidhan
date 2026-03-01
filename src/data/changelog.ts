@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.4.2',
+    date: '2026-03-01',
+    changes: [
+      { type: 'improvement', text: 'Added ~100 unit tests covering the offline/encrypted data pipeline (encryptedNotes, offlineNotes, offlineTags, syncEngine)' },
+      { type: 'improvement', text: 'Coverage thresholds ratcheted to lines 34%, branches 29%, functions 27%, statements 33%' },
+      { type: 'improvement', text: 'Web Crypto polyfill centralized in shared test setup for all test files' },
+    ],
+  },
+  {
     version: '3.4.1',
     date: '2026-03-01',
     changes: [

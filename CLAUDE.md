@@ -87,9 +87,13 @@ src/
 │   ├── notes.ts           # CRUD operations for notes (with tags)
 │   ├── tags.ts            # CRUD operations for tags
 │   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue + realtime upserts
+│   ├── offlineNotes.test.ts # 37 tests: offline CRUD, sync queue, server upsert
 │   ├── offlineTags.ts     # Offline-aware tag operations
+│   ├── offlineTags.test.ts  # 18 tests: create/update/delete, dedup, queue compaction
 │   ├── encryptedNotes.ts  # Encrypt/decrypt wrapper over offlineNotes (E2EE service layer)
+│   ├── encryptedNotes.test.ts # 25 tests: roundtrip, batch, key mismatch, AAD binding
 │   ├── syncEngine.ts      # Queue processor, HMAC conflict detection, encrypted push/pull sync
+│   ├── syncEngine.test.ts # 42 tests: processQueue, pause/resume, conflict, pull, fullSync
 │   ├── demoStorage.ts     # localStorage operations for demo mode (no auth required)
 │   └── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, encrypted note creation)
 ├── types/
@@ -127,7 +131,7 @@ src/
 │   ├── washi.ts           # Light theme: Washi (proposed)
 │   └── mori.ts            # Dark theme: Mori (proposed)
 ├── test/
-│   └── setup.ts           # Vitest test setup
+│   └── setup.ts           # Vitest test setup (localStorage/sessionStorage mocks, Web Crypto polyfill)
 ├── App.tsx                # Main app component with state management (passphrase gate, encrypted note calls)
 ├── App.css                # Additional app styles
 ├── index.css              # Design system + Tiptap styles
