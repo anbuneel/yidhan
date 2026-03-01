@@ -7,21 +7,9 @@
  */
 
 import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import { webcrypto } from 'node:crypto';
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import Dexie from 'dexie';
 import { getOfflineDb } from '../lib/offlineDb';
-
-// jsdom doesn't provide crypto.subtle — polyfill from Node.js
-beforeAll(() => {
-  if (!globalThis.crypto?.subtle) {
-    Object.defineProperty(globalThis, 'crypto', {
-      value: webcrypto,
-      writable: true,
-      configurable: true,
-    });
-  }
-});
 
 const TEST_USER_ID = 'test-user-offline-tags';
 

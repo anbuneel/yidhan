@@ -81,7 +81,8 @@ const TEST_USER_ID = 'test-user-sync';
 /** Reset sync state, mocks, and navigator.onLine for behavior tests */
 function resetSyncTestState(): void {
   clearSyncState();
-  vi.clearAllMocks();
+  vi.resetAllMocks();
+  entryIdCounter = 0;
   Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
 }
 
@@ -105,10 +106,12 @@ function buildChain(result: { data?: unknown; error?: unknown } = {}) {
   return chain;
 }
 
+let entryIdCounter = 0;
+
 /** Build a SyncQueueEntry for testing */
 function buildEntry(overrides: Partial<SyncQueueEntry> = {}): SyncQueueEntry {
   return {
-    id: 1,
+    id: ++entryIdCounter,
     clientMutationId: 'mut-' + Math.random().toString(36).slice(2, 8),
     operation: 'create',
     entityType: 'note',
@@ -218,15 +221,13 @@ describe('syncEngine', () => {
   });
 
   describe('timeout cleanup', () => {
-    it('should clear pending timeouts on clearSyncState', () => {
-      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
-
-      clearSyncState();
-      clearSyncState();
-
-      expect(clearTimeoutSpy).toBeDefined();
-
-      clearTimeoutSpy.mockRestore();
+    it('should safely handle clearSyncState when no timeouts are pending', () => {
+      // clearSyncState iterates pendingTimeouts and calls clearTimeout for each.
+      // When no sync has run, pendingTimeouts is empty — verify no-throw behavior.
+      expect(() => {
+        clearSyncState();
+        clearSyncState(); // idempotent — safe to call multiple times
+      }).not.toThrow();
     });
   });
 });

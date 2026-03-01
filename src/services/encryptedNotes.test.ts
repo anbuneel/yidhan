@@ -9,22 +9,10 @@
  */
 
 import 'fake-indexeddb/auto';
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } from 'vitest';
-import { webcrypto } from 'node:crypto';
+import { describe, it, expect, vi, beforeEach, afterAll, afterEach } from 'vitest';
 import Dexie from 'dexie';
 import type { DerivedKeys } from '../lib/encryption';
 import { getOfflineDb } from '../lib/offlineDb';
-
-// jsdom doesn't provide crypto.subtle — polyfill from Node.js
-beforeAll(() => {
-  if (!globalThis.crypto?.subtle) {
-    Object.defineProperty(globalThis, 'crypto', {
-      value: webcrypto,
-      writable: true,
-      configurable: true,
-    });
-  }
-});
 
 // Helper: derive real crypto keys for testing (lightweight, no Argon2id)
 async function deriveTestKeys(): Promise<DerivedKeys> {
@@ -33,10 +21,10 @@ async function deriveTestKeys(): Promise<DerivedKeys> {
   const rawHash = c.getRandomValues(new Uint8Array(32));
   const salt = c.getRandomValues(new Uint8Array(16));
 
-  const encryptionKey = await crypto.subtle.importKey(
+  const encryptionKey = await c.subtle.importKey(
     'raw', rawEnc, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']
   );
-  const hashKey = await crypto.subtle.importKey(
+  const hashKey = await c.subtle.importKey(
     'raw', rawHash, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
   );
 

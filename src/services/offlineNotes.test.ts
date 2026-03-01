@@ -10,20 +10,8 @@
  */
 
 import 'fake-indexeddb/auto';
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
-import { webcrypto } from 'node:crypto';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import Dexie from 'dexie';
-
-// jsdom doesn't provide crypto.subtle — polyfill from Node.js
-beforeAll(() => {
-  if (!globalThis.crypto?.subtle) {
-    Object.defineProperty(globalThis, 'crypto', {
-      value: webcrypto,
-      writable: true,
-      configurable: true,
-    });
-  }
-});
 
 // Mock Supabase before importing offlineNotes (it imports supabase at module level).
 // The mock throws by default — offline-only tests should never hit Supabase.
@@ -626,7 +614,7 @@ describe('offlineNotes', () => {
       expect(stored!.pinned).toBe(true);
     });
 
-    it('should NOT overwrite local note with pending changes', async () => {
+    it('should preserve pending syncStatus when server version is newer', async () => {
       const { createNoteOffline, upsertNoteFromServer } = await import('./offlineNotes');
 
       const local = await createNoteOffline(TEST_USER_ID, 'My Edit', '<p>Edited</p>');
@@ -647,9 +635,12 @@ describe('offlineNotes', () => {
       const db = getOfflineDb(TEST_USER_ID);
       const stored = await db.notes.get(local.id);
 
-      // Local pending changes should be preserved — syncStatus stays pending
-      // (upsertNoteFromServer preserves pending status even if it updates data)
+      // Server data is written (title/content updated) because server timestamp
+      // is newer than local. But syncStatus stays 'pending' so the sync queue
+      // will still push the local version when processQueue runs next.
       expect(stored!.syncStatus).toBe('pending');
+      expect(stored!.title).toBe('Server Override');
+      expect(stored!.content).toBe('<p>Override</p>');
     });
 
     it('should not create sync queue entries (server → local path)', async () => {
