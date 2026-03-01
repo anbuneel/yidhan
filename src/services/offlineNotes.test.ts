@@ -46,6 +46,23 @@ import { getOfflineDb } from '../lib/offlineDb';
 
 const TEST_USER_ID = 'test-user-offline-notes';
 
+/** Seed a synced tag in IndexedDB with minimal boilerplate */
+async function seedTag(id: string, name: string, color: string): Promise<void> {
+  const db = getOfflineDb(TEST_USER_ID);
+  const now = Date.now();
+  await db.tags.add({
+    id,
+    userId: TEST_USER_ID,
+    name,
+    color,
+    createdAt: now,
+    syncStatus: 'synced',
+    lastSyncedAt: now,
+    serverUpdatedAt: now,
+    localUpdatedAt: now,
+  });
+}
+
 describe('offlineNotes', () => {
   beforeEach(async () => {
     const db = getOfflineDb(TEST_USER_ID);
@@ -353,19 +370,8 @@ describe('offlineNotes', () => {
 
       const note = await createNoteOffline(TEST_USER_ID, 'Tagged', '<p>T</p>');
 
-      // Manually add tag and association in IDB
       const db = getOfflineDb(TEST_USER_ID);
-      await db.tags.add({
-        id: 'tag-fetch-1',
-        userId: TEST_USER_ID,
-        name: 'Important',
-        color: 'terracotta',
-        createdAt: Date.now(),
-        syncStatus: 'synced',
-        lastSyncedAt: Date.now(),
-        serverUpdatedAt: Date.now(),
-        localUpdatedAt: Date.now(),
-      });
+      await seedTag('tag-fetch-1', 'Important', 'terracotta');
       await db.noteTags.add({
         noteId: note.id,
         tagId: 'tag-fetch-1',
@@ -385,12 +391,8 @@ describe('offlineNotes', () => {
       const note1 = await createNoteOffline(TEST_USER_ID, 'HasBoth', '<p>B</p>');
       const note2 = await createNoteOffline(TEST_USER_ID, 'HasOne', '<p>O</p>');
 
-      // Add two tags
-      const db = getOfflineDb(TEST_USER_ID);
-      await db.tags.bulkAdd([
-        { id: 'tf-a', userId: TEST_USER_ID, name: 'A', color: 'gold', createdAt: Date.now(), syncStatus: 'synced', lastSyncedAt: Date.now(), serverUpdatedAt: Date.now(), localUpdatedAt: Date.now() },
-        { id: 'tf-b', userId: TEST_USER_ID, name: 'B', color: 'forest', createdAt: Date.now(), syncStatus: 'synced', lastSyncedAt: Date.now(), serverUpdatedAt: Date.now(), localUpdatedAt: Date.now() },
-      ]);
+      await seedTag('tf-a', 'A', 'gold');
+      await seedTag('tf-b', 'B', 'forest');
 
       await addTagToNoteOffline(TEST_USER_ID, note1.id, 'tf-a');
       await addTagToNoteOffline(TEST_USER_ID, note1.id, 'tf-b');
@@ -475,21 +477,10 @@ describe('offlineNotes', () => {
 
       const note = await createNoteOffline(TEST_USER_ID, 'Tagged', '<p>T</p>');
 
-      const db = getOfflineDb(TEST_USER_ID);
-      await db.tags.add({
-        id: 'tag-assoc-1',
-        userId: TEST_USER_ID,
-        name: 'Work',
-        color: 'indigo',
-        createdAt: Date.now(),
-        syncStatus: 'synced',
-        lastSyncedAt: Date.now(),
-        serverUpdatedAt: Date.now(),
-        localUpdatedAt: Date.now(),
-      });
-
+      await seedTag('tag-assoc-1', 'Work', 'indigo');
       await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-assoc-1');
 
+      const db = getOfflineDb(TEST_USER_ID);
       const associations = await db.noteTags.where('noteId').equals(note.id).toArray();
       expect(associations).toHaveLength(1);
       expect(associations[0].tagId).toBe('tag-assoc-1');
@@ -500,22 +491,12 @@ describe('offlineNotes', () => {
 
       const note = await createNoteOffline(TEST_USER_ID, 'Note', '<p>N</p>');
 
+      await seedTag('tag-dup-1', 'Dup', 'stone');
+
+      await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-dup-1');
+      await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-dup-1');
+
       const db = getOfflineDb(TEST_USER_ID);
-      await db.tags.add({
-        id: 'tag-dup-1',
-        userId: TEST_USER_ID,
-        name: 'Dup',
-        color: 'stone',
-        createdAt: Date.now(),
-        syncStatus: 'synced',
-        lastSyncedAt: Date.now(),
-        serverUpdatedAt: Date.now(),
-        localUpdatedAt: Date.now(),
-      });
-
-      await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-dup-1');
-      await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-dup-1');
-
       const associations = await db.noteTags.where('noteId').equals(note.id).toArray();
       expect(associations).toHaveLength(1);
     });
@@ -525,21 +506,10 @@ describe('offlineNotes', () => {
 
       const note = await createNoteOffline(TEST_USER_ID, 'N', '<p>N</p>');
 
-      const db = getOfflineDb(TEST_USER_ID);
-      await db.tags.add({
-        id: 'tag-q-1',
-        userId: TEST_USER_ID,
-        name: 'Q',
-        color: 'sage',
-        createdAt: Date.now(),
-        syncStatus: 'synced',
-        lastSyncedAt: Date.now(),
-        serverUpdatedAt: Date.now(),
-        localUpdatedAt: Date.now(),
-      });
-
+      await seedTag('tag-q-1', 'Q', 'sage');
       await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-q-1');
 
+      const db = getOfflineDb(TEST_USER_ID);
       const queue = await db.syncQueue.toArray();
       const addTagOps = queue.filter((e) => e.operation === 'add_tag');
       expect(addTagOps).toHaveLength(1);
@@ -552,22 +522,12 @@ describe('offlineNotes', () => {
 
       const note = await createNoteOffline(TEST_USER_ID, 'N', '<p>N</p>');
 
-      const db = getOfflineDb(TEST_USER_ID);
-      await db.tags.add({
-        id: 'tag-rm-1',
-        userId: TEST_USER_ID,
-        name: 'Remove',
-        color: 'plum',
-        createdAt: Date.now(),
-        syncStatus: 'synced',
-        lastSyncedAt: Date.now(),
-        serverUpdatedAt: Date.now(),
-        localUpdatedAt: Date.now(),
-      });
+      await seedTag('tag-rm-1', 'Remove', 'plum');
 
       await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-rm-1');
       await removeTagFromNoteOffline(TEST_USER_ID, note.id, 'tag-rm-1');
 
+      const db = getOfflineDb(TEST_USER_ID);
       const associations = await db.noteTags.where('noteId').equals(note.id).toArray();
       expect(associations).toHaveLength(0);
 
@@ -587,19 +547,7 @@ describe('offlineNotes', () => {
 
       const note = await createNoteOffline(TEST_USER_ID, 'N', '<p>N</p>');
 
-      const db = getOfflineDb(TEST_USER_ID);
-      await db.tags.add({
-        id: 'tag-order-1',
-        userId: TEST_USER_ID,
-        name: 'Order',
-        color: 'clay',
-        createdAt: Date.now(),
-        syncStatus: 'synced',
-        lastSyncedAt: Date.now(),
-        serverUpdatedAt: Date.now(),
-        localUpdatedAt: Date.now(),
-      });
-
+      await seedTag('tag-order-1', 'Order', 'clay');
       await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-order-1');
 
       const queue = await getPendingSyncQueue(TEST_USER_ID);
@@ -684,7 +632,6 @@ describe('offlineNotes', () => {
       const { createNoteOffline, upsertNoteFromServer } = await import('./offlineNotes');
 
       const local = await createNoteOffline(TEST_USER_ID, 'My Edit', '<p>Edited</p>');
-      // Note: createNoteOffline sets syncStatus to 'pending'
 
       const serverNote = {
         id: local.id,

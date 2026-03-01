@@ -15,7 +15,7 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import Dexie from 'dexie';
 
-// --- Hoisted mock functions (created before vi.mock factories execute) ---
+// Hoisted mock functions (created before vi.mock factories execute)
 const {
   mockFrom,
   mockFetchAllPaginated,
@@ -32,7 +32,7 @@ const {
   mockMarkTagSynced: vi.fn(),
 }));
 
-// --- Module-level mocks ---
+// Module-level mocks
 vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: () => false },
 }));
@@ -52,7 +52,7 @@ vi.mock('./offlineTags', () => ({
   markTagSynced: (...args: unknown[]) => mockMarkTagSynced(...args),
 }));
 
-// --- Imports (after mocks so syncEngine receives mocked dependencies) ---
+// Imports (after mocks so syncEngine receives mocked dependencies)
 import {
   isPendingMutation,
   addPendingMutation,
@@ -77,6 +77,21 @@ import { getOfflineDb, type SyncQueueEntry } from '../lib/offlineDb';
 // ──────────────────────────────────────────────────
 
 const TEST_USER_ID = 'test-user-sync';
+
+/** Reset sync state, mocks, and navigator.onLine for behavior tests */
+function resetSyncTestState(): void {
+  clearSyncState();
+  vi.clearAllMocks();
+  Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+}
+
+/** Clear all IDB tables used by sync behavior tests */
+async function clearTestDb(...tables: ('notes' | 'tags' | 'noteTags' | 'syncQueue')[]): Promise<void> {
+  const db = getOfflineDb(TEST_USER_ID);
+  for (const table of tables) {
+    await db[table].clear();
+  }
+}
 
 /** Build a chainable mock simulating supabase.from(table).method()...terminal() */
 function buildChain(result: { data?: unknown; error?: unknown } = {}) {
@@ -113,7 +128,6 @@ function buildEntry(overrides: Partial<SyncQueueEntry> = {}): SyncQueueEntry {
   };
 }
 
-// --- Helper: build a FullSyncResult with sensible defaults ---
 function buildResult(overrides: Partial<FullSyncResult> = {}): FullSyncResult {
   return {
     processed: 0,
@@ -134,10 +148,6 @@ function dataError(entity: 'notes' | 'tags', msg = 'fetch failed'): PullError {
 function membershipError(entity: 'notes' | 'tags', msg = 'membership failed'): PullError {
   return { entity, operation: 'membership', error: new Error(msg) };
 }
-
-// ══════════════════════════════════════════════════
-// EXISTING TESTS (22 cases — unchanged)
-// ══════════════════════════════════════════════════
 
 describe('syncEngine', () => {
   beforeEach(() => {
@@ -222,7 +232,7 @@ describe('syncEngine', () => {
 });
 
 describe('mapSyncOutcome', () => {
-  // --- Happy path ---
+  // Happy path
   it('returns "ok" when no errors and no failures', () => {
     const result = buildResult({ pulled: { notes: 5, tags: 2 } });
     expect(mapSyncOutcome(result)).toBe('ok');
@@ -233,7 +243,7 @@ describe('mapSyncOutcome', () => {
     expect(mapSyncOutcome(result)).toBe('ok');
   });
 
-  // --- Full error (both entity data pulls fail with zero data) ---
+  // Full error (both entity data pulls fail with zero data)
   it('returns "error" when both notes and tags data pulls fail with zero data', () => {
     const result = buildResult({
       pullErrors: [dataError('notes'), dataError('tags')],
@@ -242,7 +252,7 @@ describe('mapSyncOutcome', () => {
     expect(mapSyncOutcome(result)).toBe('error');
   });
 
-  // --- Partial success: both data errors but some data was applied ---
+  // Partial success: both data errors but some data was applied
   it('returns "partial" when both data pulls error but some notes were applied', () => {
     const result = buildResult({
       pullErrors: [dataError('notes'), dataError('tags')],
@@ -259,7 +269,7 @@ describe('mapSyncOutcome', () => {
     expect(mapSyncOutcome(result)).toBe('partial');
   });
 
-  // --- Single entity data pull failure ---
+  // Single entity data pull failure
   it('returns "partial" when only notes data pull fails', () => {
     const result = buildResult({
       pullErrors: [dataError('notes')],
@@ -276,7 +286,7 @@ describe('mapSyncOutcome', () => {
     expect(mapSyncOutcome(result)).toBe('partial');
   });
 
-  // --- Push failures ---
+  // Push failures
   it('returns "partial" when push has failures but pull succeeded', () => {
     const result = buildResult({
       failed: 2,
@@ -285,7 +295,7 @@ describe('mapSyncOutcome', () => {
     expect(mapSyncOutcome(result)).toBe('partial');
   });
 
-  // --- Membership query failures ---
+  // Membership query failures
   it('returns "partial" when only membership queries fail', () => {
     const result = buildResult({
       pullErrors: [membershipError('notes')],
@@ -311,7 +321,7 @@ describe('mapSyncOutcome', () => {
     expect(mapSyncOutcome(result)).toBe('partial');
   });
 
-  // --- Mixed errors ---
+  // Mixed errors
   it('returns "partial" when data error + membership error on different entities', () => {
     const result = buildResult({
       pullErrors: [dataError('notes'), membershipError('tags')],
@@ -320,7 +330,7 @@ describe('mapSyncOutcome', () => {
     expect(mapSyncOutcome(result)).toBe('partial');
   });
 
-  // --- Pagination partial: mid-pagination error with applied data ---
+  // Pagination partial: mid-pagination error with applied data
   it('returns "partial" for mid-pagination failure on both entities with partial data', () => {
     const result = buildResult({
       pullErrors: [
@@ -382,21 +392,12 @@ describe('server timestamp authority', () => {
   });
 });
 
-// ══════════════════════════════════════════════════
-// NEW BEHAVIOR TESTS (18 cases)
-// ══════════════════════════════════════════════════
-
 describe('processQueue behavior', () => {
-  beforeEach(() => {
-    clearSyncState();
-    vi.clearAllMocks();
-    // Ensure we're "online" for most tests
-    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
-  });
+  beforeEach(() => resetSyncTestState());
 
   afterEach(() => {
     clearSyncState();
-    resumeSync(); // clean up pause state if any test set it
+    resumeSync();
     Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
   });
 
@@ -686,11 +687,7 @@ describe('processQueue behavior', () => {
 });
 
 describe('pauseSync / resumeSync', () => {
-  beforeEach(() => {
-    clearSyncState();
-    vi.clearAllMocks();
-    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
-  });
+  beforeEach(() => resetSyncTestState());
 
   afterEach(() => {
     clearSyncState();
@@ -749,20 +746,13 @@ describe('pauseSync / resumeSync', () => {
 
 describe('conflict detection via processQueue', () => {
   beforeEach(async () => {
-    clearSyncState();
-    vi.clearAllMocks();
-    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
-
-    const db = getOfflineDb(TEST_USER_ID);
-    await db.notes.clear();
-    await db.syncQueue.clear();
+    resetSyncTestState();
+    await clearTestDb('notes', 'syncQueue');
   });
 
   afterEach(async () => {
     clearSyncState();
-    const db = getOfflineDb(TEST_USER_ID);
-    await db.notes.clear();
-    await db.syncQueue.clear();
+    await clearTestDb('notes', 'syncQueue');
   });
 
   it('should trigger conflict handler when HMAC content_hash differs', async () => {
@@ -917,25 +907,14 @@ describe('conflict detection via processQueue', () => {
 
 describe('pullRemoteChanges behavior', () => {
   beforeEach(async () => {
-    clearSyncState();
-    vi.clearAllMocks();
-    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
-
-    const db = getOfflineDb(TEST_USER_ID);
-    await db.notes.clear();
-    await db.tags.clear();
-    await db.noteTags.clear();
-    await db.syncQueue.clear();
+    resetSyncTestState();
+    await clearTestDb('notes', 'tags', 'noteTags', 'syncQueue');
   });
 
   afterEach(async () => {
     clearSyncState();
     resumeSync();
-    const db = getOfflineDb(TEST_USER_ID);
-    await db.notes.clear();
-    await db.tags.clear();
-    await db.noteTags.clear();
-    await db.syncQueue.clear();
+    await clearTestDb('notes', 'tags', 'noteTags', 'syncQueue');
   });
 
   it('should apply pulled notes to IndexedDB', async () => {
@@ -1096,23 +1075,14 @@ describe('pullRemoteChanges behavior', () => {
 
 describe('fullSync', () => {
   beforeEach(async () => {
-    clearSyncState();
-    vi.clearAllMocks();
-    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
-
-    const db = getOfflineDb(TEST_USER_ID);
-    await db.notes.clear();
-    await db.tags.clear();
-    await db.syncQueue.clear();
+    resetSyncTestState();
+    await clearTestDb('notes', 'tags', 'syncQueue');
   });
 
   afterEach(async () => {
     clearSyncState();
     resumeSync();
-    const db = getOfflineDb(TEST_USER_ID);
-    await db.notes.clear();
-    await db.tags.clear();
-    await db.syncQueue.clear();
+    await clearTestDb('notes', 'tags', 'syncQueue');
   });
 
   it('should combine pull and push results', async () => {

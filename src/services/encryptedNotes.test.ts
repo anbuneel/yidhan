@@ -43,11 +43,6 @@ async function deriveTestKeys(): Promise<DerivedKeys> {
   return { encryptionKey, hashKey, salt, rawEncryptionKey: rawEnc, rawHashKey: rawHash };
 }
 
-// Derive a DIFFERENT key set (for wrong-key tests)
-async function deriveDifferentKeys(): Promise<DerivedKeys> {
-  return deriveTestKeys(); // Random keys → guaranteed different
-}
-
 const TEST_USER_ID = 'test-user-encrypted';
 
 describe('encryptedNotes', () => {
@@ -297,7 +292,6 @@ describe('encryptedNotes', () => {
       expect(consoleSpy).toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining('1 failed'),
-        // No need to match exact string
       );
 
       consoleSpy.mockRestore();
@@ -309,7 +303,7 @@ describe('encryptedNotes', () => {
 
       await createEncryptedNote(TEST_USER_ID, 'Secret', '<p>Secret</p>', keys);
 
-      const wrongKeys = await deriveDifferentKeys();
+      const wrongKeys = await deriveTestKeys();
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
