@@ -11,7 +11,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 
 ## Features
 
-- **End-to-End Encryption** - Note titles and content encrypted client-side with AES-256-GCM before reaching the server; passphrase-derived keys via Argon2id stay in memory only
+- **End-to-End Encryption** - Note titles and content encrypted client-side with AES-256-GCM before reaching the server; passphrase-derived keys via Argon2id with optional "Remember this browser" persistence
 - **Rich Text Editor** - Format your notes with bold, italic, headers, lists, quotes, code blocks, and task lists with checkboxes
 - **Cross-Device Sync** - Notes sync across devices in ~3 seconds with incremental pull, server-authoritative timestamps, and pagination
 - **Real-time Updates** - Changes appear instantly across tabs and devices with self-echo suppression
