@@ -25,7 +25,7 @@ src/
 │   ├── PassphraseSetup.tsx # First-time E2EE passphrase setup screen
 │   ├── PassphraseSetup.test.tsx # 10 tests: form validation, setup flow, welcome note, error states
 │   ├── PassphraseUnlock.tsx # Returning user E2EE unlock screen
-│   ├── PassphraseUnlock.test.tsx # 11 tests: unlock flow, error states, sign-out, remember browser
+│   ├── PassphraseUnlock.test.tsx # 12 tests: unlock flow, error states, sign-out, remember browser
 │   ├── EditorToolbar.tsx  # Formatting toolbar for rich text editor (sticky in header zone)
 │   ├── ErrorBoundary.tsx  # Error boundary with chunk error detection (deployment handling)
 │   ├── Footer.tsx         # Minimal footer with changelog/roadmap/shortcuts/GitHub links
