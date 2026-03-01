@@ -1,5 +1,17 @@
-import { test, expect } from './fixtures';
-import { openSettings, closeModal, toggleTheme } from './fixtures';
+import type { Page } from '@playwright/test';
+import { test, expect, openSettings, closeModal, toggleTheme } from './fixtures';
+
+/**
+ * Skip test if the password tab is not visible (OAuth users don't have one).
+ * Opens settings and clicks into the password tab.
+ */
+async function requirePasswordTab(page: Page): Promise<void> {
+  await openSettings(page);
+  const passwordTab = page.getByRole('tab', { name: /password/i });
+  const isEmailUser = await passwordTab.isVisible().catch(() => false);
+  test.skip(!isEmailUser, 'Test user is OAuth — password tab not available');
+  await passwordTab.click();
+}
 
 test.describe('Settings', () => {
   test.describe('Settings Modal', () => {
@@ -62,53 +74,29 @@ test.describe('Settings', () => {
 
   test.describe('Password Settings', () => {
     test('shows password tab for email users', async ({ authenticatedPage: page }) => {
-      await openSettings(page);
+      await requirePasswordTab(page);
 
-      // Click password tab
-      const passwordTab = page.getByRole('tab', { name: /password/i });
-
-      // May not be visible for OAuth users
-      if (await passwordTab.isVisible()) {
-        await passwordTab.click();
-
-        await expect(page.getByLabel(/new password/i)).toBeVisible();
-        await expect(page.getByLabel(/confirm password/i)).toBeVisible();
-      }
+      await expect(page.getByLabel(/new password/i)).toBeVisible();
+      await expect(page.getByLabel(/confirm password/i)).toBeVisible();
     });
 
     test('validates password length', async ({ authenticatedPage: page }) => {
-      await openSettings(page);
+      await requirePasswordTab(page);
 
-      const passwordTab = page.getByRole('tab', { name: /password/i });
+      await page.getByLabel(/new password/i).fill('short');
+      await page.getByRole('button', { name: /update.*password/i }).click();
 
-      if (await passwordTab.isVisible()) {
-        await passwordTab.click();
-
-        // Enter short password
-        await page.getByLabel(/new password/i).fill('short');
-        await page.getByRole('button', { name: /update.*password/i }).click();
-
-        // Should show error
-        await expect(page.getByText(/8 characters/i)).toBeVisible();
-      }
+      await expect(page.getByText(/8 characters/i)).toBeVisible();
     });
 
     test('validates password match', async ({ authenticatedPage: page }) => {
-      await openSettings(page);
+      await requirePasswordTab(page);
 
-      const passwordTab = page.getByRole('tab', { name: /password/i });
+      await page.getByLabel(/new password/i).fill('password123');
+      await page.getByLabel(/confirm password/i).fill('different123');
+      await page.getByRole('button', { name: /update.*password/i }).click();
 
-      if (await passwordTab.isVisible()) {
-        await passwordTab.click();
-
-        // Enter mismatched passwords
-        await page.getByLabel(/new password/i).fill('password123');
-        await page.getByLabel(/confirm password/i).fill('different123');
-        await page.getByRole('button', { name: /update.*password/i }).click();
-
-        // Should show error
-        await expect(page.getByText(/match/i)).toBeVisible();
-      }
+      await expect(page.getByText(/match/i)).toBeVisible();
     });
   });
 
@@ -131,18 +119,20 @@ test.describe('Settings', () => {
 
     test('persists theme preference', async ({ authenticatedPage: page }) => {
       const html = page.locator('html');
+      const initialTheme = await html.getAttribute('data-theme');
 
-      // Set to light theme
-      const currentTheme = await html.getAttribute('data-theme');
-      if (currentTheme === 'dark') {
-        await toggleTheme(page);
-      }
+      // Toggle to the opposite theme
+      await toggleTheme(page);
+      const toggledTheme = await html.getAttribute('data-theme');
+      expect(toggledTheme).toBeTruthy();
+      expect(toggledTheme).not.toBe(initialTheme);
 
-      // Reload page
+      // Reload and verify the toggled theme persisted
       await page.reload();
+      await expect(html).toHaveAttribute('data-theme', toggledTheme as string);
 
-      // Theme should persist
-      await expect(html).toHaveAttribute('data-theme', 'light');
+      // Restore original theme to avoid polluting other tests
+      await toggleTheme(page);
     });
   });
 

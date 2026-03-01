@@ -46,6 +46,9 @@ tmpclaude-*
 # Cursor editor
 .cursor/
 
+# Test coverage
+/coverage/
+
 # Playwright
 /test-results/
 /playwright-report/
