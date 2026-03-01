@@ -203,11 +203,14 @@ git push
 ```
 
 ### CI Pipeline
-The `check` script runs the same steps as GitHub Actions CI:
+The `check` script runs the core CI steps locally (fast, no coverage):
 1. `typecheck` - TypeScript type checking
 2. `lint` - ESLint
-3. `test:run` - Vitest tests
+3. `test:run` - Vitest tests (no coverage)
 4. `build` - Production build
+
+GitHub Actions CI additionally enforces coverage thresholds via `test:coverage`.
+Run `npm run test:coverage` locally to check thresholds before pushing.
 
 ## Documentation Updates
 
