@@ -233,14 +233,20 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     const keyCheck = user?.user_metadata?.encryption_key_check as string | undefined;
     const keyCheckIv = user?.user_metadata?.encryption_key_check_iv as string | undefined;
 
+    // Abort flag prevents a race where mousedown fires handleActivity (async)
+    // and then click fires lockVault('sign-out') synchronously — the in-flight
+    // restore could complete after sign-out, re-populating keys.
+    let aborted = false;
+
     const handleActivity = async () => {
       // autoLockedRef guards against re-entry from a concurrent visibilitychange
       if (!autoLockedRef.current) return;
       autoLockedRef.current = false;
-      cleanup();
+      detachListeners();
 
       try {
         const restored = await restoreLocal(currentUserId);
+        if (aborted) return;
         if (!restored) {
           console.warn('[EncryptionContext] Activity-gated restore: no keys found in localStorage, passphrase required');
           return;
@@ -249,6 +255,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
         // Verify against key-check
         if (keyCheck && keyCheckIv) {
           const isValid = await verifyKeyCheck(restored.encryptionKey, keyCheck, keyCheckIv);
+          if (aborted) return;
           if (!isValid) {
             clearLocal(currentUserId);
             return;
@@ -261,9 +268,11 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
         }
 
         // Valid — repopulate sessionStorage and unlock
+        if (aborted) return;
         persistSession(currentUserId, restored);
         setKeyState((prev) => prev.keys !== null ? prev : { keys: restored, userId: currentUserId });
       } catch (err) {
+        if (aborted) return;
         console.warn('[EncryptionContext] Activity-gated restore failed:', err);
         clearLocal(currentUserId);
       }
@@ -277,12 +286,15 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     events.forEach((e) => document.addEventListener(e, handleActivity, { once: true }));
     document.addEventListener('visibilitychange', onVisibility);
 
-    function cleanup() {
+    function detachListeners() {
       events.forEach((e) => document.removeEventListener(e, handleActivity));
       document.removeEventListener('visibilitychange', onVisibility);
     }
 
-    return cleanup;
+    return () => {
+      aborted = true;
+      detachListeners();
+    };
   }, [currentUserId, isEncryptionSetup, keyState.keys, user?.user_metadata?.encryption_key_check, user?.user_metadata?.encryption_key_check_iv]);
 
   const keys = useMemo(() => {
