@@ -67,7 +67,7 @@ async function restoreSession(userId: string): Promise<DerivedKeys | null> {
 // localStorage persistence (survives browser restarts when "Remember" is on)
 // ============================================================================
 
-function persistedKey(userId: string): string {
+function localKey(userId: string): string {
   return `yidhan-${userId}-vault-persisted-keys`;
 }
 
@@ -85,7 +85,7 @@ function isRememberBrowserEnabled(userId: string | null): boolean {
 function persistLocal(userId: string, keys: DerivedKeys): void {
   try {
     const blob = exportSessionKeys(keys);
-    localStorage.setItem(persistedKey(userId), JSON.stringify(blob));
+    localStorage.setItem(localKey(userId), JSON.stringify(blob));
   } catch (err) {
     console.warn('[EncryptionContext] Failed to persist vault keys to localStorage:', err);
   }
@@ -95,7 +95,7 @@ function persistLocal(userId: string, keys: DerivedKeys): void {
 function clearLocal(userId: string | null): void {
   if (!userId) return;
   try {
-    localStorage.removeItem(persistedKey(userId));
+    localStorage.removeItem(localKey(userId));
   } catch (err) {
     console.error('[EncryptionContext] Failed to clear vault keys from localStorage:', err);
   }
@@ -104,7 +104,7 @@ function clearLocal(userId: string | null): void {
 /** Try to restore keys from localStorage */
 async function restoreLocal(userId: string): Promise<DerivedKeys | null> {
   try {
-    const raw = localStorage.getItem(persistedKey(userId));
+    const raw = localStorage.getItem(localKey(userId));
     if (!raw) return null;
     const blob: SessionKeyBlob = JSON.parse(raw);
     if (!blob.encKey || !blob.hashKey || !blob.salt) return null;
@@ -152,7 +152,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     }
   }
 
-  // Reset auto-lock state when user changes (can't update refs during render)
+  // Reset auto-lock state when user changes (refs must not be mutated during render)
   useEffect(() => {
     autoLockedRef.current = false;
   }, [currentUserId]);
@@ -221,10 +221,9 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     const keyCheck = user?.user_metadata?.encryption_key_check as string | undefined;
     const keyCheckIv = user?.user_metadata?.encryption_key_check_iv as string | undefined;
 
-    let cleaned = false;
-
     const handleActivity = async () => {
-      if (cleaned || !autoLockedRef.current) return;
+      // autoLockedRef guards against re-entry from a concurrent visibilitychange
+      if (!autoLockedRef.current) return;
       autoLockedRef.current = false;
       cleanup();
 
@@ -250,18 +249,17 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       }
     };
 
-    const events = ['mousedown', 'keydown', 'touchstart'] as const;
-    const handleVisibility = () => {
+    const onVisibility = () => {
       if (document.visibilityState === 'visible') handleActivity();
     };
 
+    const events = ['mousedown', 'keydown', 'touchstart'] as const;
     events.forEach((e) => document.addEventListener(e, handleActivity, { once: true }));
-    document.addEventListener('visibilitychange', handleVisibility);
+    document.addEventListener('visibilitychange', onVisibility);
 
     function cleanup() {
-      cleaned = true;
       events.forEach((e) => document.removeEventListener(e, handleActivity));
-      document.removeEventListener('visibilitychange', handleVisibility);
+      document.removeEventListener('visibilitychange', onVisibility);
     }
 
     return cleanup;

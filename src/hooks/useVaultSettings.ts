@@ -74,7 +74,7 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
         localStorage.setItem(storageKey(userId, 'remember-browser'), String(enabled));
         // When disabling, immediately clear any persisted vault keys
         if (!enabled) {
-          localStorage.removeItem(`yidhan-${userId}-vault-persisted-keys`);
+          localStorage.removeItem(storageKey(userId, 'persisted-keys'));
         }
       } catch (err) { console.warn('[useVaultSettings] Failed to persist remember-browser setting:', err); }
     }

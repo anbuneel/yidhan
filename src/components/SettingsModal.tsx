@@ -55,6 +55,13 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
     }
   }, [isOpen, user]);
 
+  function handleRememberBrowserToggle() {
+    if (!vaultSettings) return;
+    const newValue = !vaultSettings.settings.rememberBrowser;
+    vaultSettings.setRememberBrowser(newValue);
+    if (newValue) onPersistToLocal?.();
+  }
+
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileMessage(null);
@@ -725,24 +732,14 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                             ? 'var(--color-accent)'
                             : 'var(--color-bg-tertiary)',
                         }}
-                        onClick={() => {
-                          const newValue = !vaultSettings.settings.rememberBrowser;
-                          vaultSettings.setRememberBrowser(newValue);
-                          if (newValue && onPersistToLocal) {
-                            onPersistToLocal();
-                          }
-                        }}
+                        onClick={handleRememberBrowserToggle}
                         role="switch"
                         aria-checked={vaultSettings.settings.rememberBrowser}
                         tabIndex={0}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            const newValue = !vaultSettings.settings.rememberBrowser;
-                            vaultSettings.setRememberBrowser(newValue);
-                            if (newValue && onPersistToLocal) {
-                              onPersistToLocal();
-                            }
+                            handleRememberBrowserToggle();
                           }
                         }}
                       >
