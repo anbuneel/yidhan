@@ -1,11 +1,12 @@
 ﻿# Testing Coverage Audit â€” Yidhan
 
-**Version:** 1.3
+**Version:** 1.4
 **Last Updated:** 2026-03-01
 **Status:** Living Document
 **Author:** Claude (Opus 4.6)
 **Reviewed By:** Codex (GPT-5)
 **Merged By:** Claude (Opus 4.6)
+**Post-Implementation Assessment:** Codex (GPT-5.3)
 
 ---
 
@@ -37,12 +38,14 @@
 
 ### Remaining Items (Pre-Launch)
 
-| # | Item | Phase | Planned Cases | Notes |
-|---|------|-------|---------------|-------|
-| 1 | `EncryptionContext.tsx` — key lifecycle tests | 2b | 8-10 | Key derivation, lock/unlock, stale key detection |
-| 2 | `AuthContext.tsx` — sensitive action gating | 2b | 5-8 | Step-up auth, OAuth state differences |
-| 3 | E2E import roundtrip (`setInputFiles`) | 3 | 2-3 | Real file upload flow |
-| 4 | Playwright smoke job in CI | 0 | — | E2E still only runs locally |
+| # | Item | Phase | Planned Cases | Notes | Codex Finding |
+|---|------|-------|---------------|-------|---------------|
+| 1 | `EncryptionContext.tsx` — key lifecycle tests | 2b | 8-10 | Key derivation, lock/unlock, stale key detection | #4 |
+| 2 | `AuthContext.tsx` — sensitive action gating | 2b | 5-8 | Step-up auth, OAuth state differences | #4 |
+| 3 | E2E import roundtrip (`setInputFiles`) | 3 | 2-3 | Real file upload flow | #3 |
+| 4 | Playwright smoke job in CI | 0 | — | E2E still only runs locally | #1 |
+| 5 | Auth E2E credential-guard hardening | 0 | — | Prevent silent skip when env creds missing | #2 |
+| 6 | Orchestration-layer smoke tests | 4 | 5-10 | `App.tsx`, `SettingsModal`, `SessionTimeoutModal`, `ReAuthModal` wiring | #4 (new) |
 
 ### Deferred Review Findings
 
@@ -512,3 +515,52 @@ Codex re-validated at ~594 test cases vs original estimate of ~622. The differen
 - Updated **Projected Outcomes** table with actual results alongside projections.
 - Updated **Test Files** inventory with 12 new test files added during implementation.
 - Added implementation notes explaining deviations from plan (ratcheting thresholds vs fixed 65%, per-directory thresholds not adopted).
+
+### Document Updates in v1.4
+
+- Added **Post-Implementation Assessment** by Codex (GPT-5.3) with risk-ranked findings, improvements, and bottom-line summary.
+
+---
+
+## Post-Implementation Assessment — Codex (GPT-5.3)
+
+Independent post-implementation review of testing coverage after Phases 0-3 merged to `main`.
+
+### Findings (Highest Risk First)
+
+| # | Risk | Finding | References |
+|---|------|---------|------------|
+| 1 | **High** | E2E is still not a CI gate. CI runs unit coverage only (`npm run test:coverage`) and has no Playwright job. | `ci.yml:64` |
+| 2 | **High** | Critical auth E2E can silently skip when credentials are missing, reducing regression signal on login/logout/session flows. | `fixtures.ts:29`, `auth.spec.ts:5` |
+| 3 | **Medium** | Import E2E remains partial — tests stop at menu visibility/dialog trigger and explicitly skip real upload/roundtrip. | `export-import.spec.ts:108`, `export-import.spec.ts:126` |
+| 4 | **Medium** | Orchestration-layer coverage is still weak relative to risk. App/contexts/UI security wrappers are largely uncovered with no direct tests. | `App.tsx`, `AuthContext.tsx`, `EncryptionContext.tsx`, `useSyncEngine.ts`, `SettingsModal.tsx`, `SessionTimeoutModal.tsx`, `ReAuthModal.tsx` |
+| 5 | **Low** | Minor hygiene: one suite is still intentionally skipped. | `useShareTarget.test.ts:7` |
+
+### What Improved
+
+- **Unit/integration suite is much stronger:** 35 files, 816 tests (809 passed, 7 skipped).
+- **Coverage now clears configured thresholds** (`vite.config.ts:118`):
+  - Statements 39.66% (threshold 38%)
+  - Branches 36.66% (threshold 35%)
+  - Functions 33.85% (threshold 32%)
+  - Lines 41.14% (threshold 40%)
+- **High-risk services are now substantially covered:**
+  - `encryptedNotes.ts` ~96.7%
+  - `offlineTags.ts` ~96.7%
+  - `offlineNotes.ts` ~65.6%
+  - `syncEngine.ts` ~66.1%
+- **Session/vault hooks and E2EE entry components improved significantly:** `useSessionTimeout`, `useSessionSettings`, `useVaultSettings`, `useIdleTimer`, `PassphraseSetup`, `PassphraseUnlock`, `ConflictModal`.
+
+### Bottom Line
+
+> This is a clear step up from the earlier baseline, especially for offline/sync/E2EE service-level safety. Remaining risk is now mostly at the integration boundary (App/context wiring + CI E2E gate + true import E2E).
+
+### Correlation with Remaining Items
+
+| Codex Finding | Maps To | Status |
+|---------------|---------|--------|
+| #1 — E2E not a CI gate | Remaining Item #4 (Playwright smoke job) | Known gap, deferred to Phase 4 |
+| #2 — Auth E2E silent skip | Phase 0 E2E hardening | Partially addressed in PR #142; credential provisioning is environment-dependent |
+| #3 — Import E2E partial | Remaining Item #3 (E2E import roundtrip) | Known gap, planned |
+| #4 — Orchestration-layer weak | Remaining Items #1-2 (EncryptionContext, AuthContext) | Partially planned; App.tsx, SettingsModal, SessionTimeoutModal, ReAuthModal are new additions |
+| #5 — Skipped suite | Known | `useShareTarget` requires Share Target API not available in test environment |
