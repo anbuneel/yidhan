@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.4.3',
+    date: '2026-03-01',
+    changes: [
+      { type: 'improvement', text: 'Added ~120 tests across validation, demo migration, hooks (idle timer, session timeout, vault/session settings), and components (PassphraseSetup, PassphraseUnlock, ConflictModal)' },
+      { type: 'improvement', text: 'Coverage thresholds ratcheted to lines 40%, branches 35%, functions 32%, statements 38%' },
+    ],
+  },
+  {
     version: '3.4.2',
     date: '2026-03-01',
     changes: [
