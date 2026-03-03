@@ -825,8 +825,14 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                 />
 
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setShowExportMenu(false);
+                    // Flush any unsaved edits so ShareModal encrypts the latest content
+                    if (autoSaveTimeoutRef.current) {
+                      clearTimeout(autoSaveTimeoutRef.current);
+                      autoSaveTimeoutRef.current = null;
+                    }
+                    await performSave();
                     setShowShareModal(true);
                   }}
                   className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"

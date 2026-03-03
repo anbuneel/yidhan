@@ -62,19 +62,22 @@ if (sentryDsn) {
         delete event.extra.noteContent
       }
       // Strip URL fragments (may contain share decryption keys)
+      // Also scrub /s/<token> path segments — token is a capability credential
+      const scrubSharePath = (url: string) =>
+        url.replace(/#.*$/, '').replace(/\/s\/[A-Za-z0-9_-]{16,}(\/[^?#]*)?/, '/s/[REDACTED]')
       if (event.request?.url) {
-        event.request.url = event.request.url.replace(/#.*$/, '')
+        event.request.url = scrubSharePath(event.request.url)
       }
-      // Strip fragments from stack frame filenames (defense in depth)
+      // Strip fragments and share tokens from stack frame filenames (defense in depth)
       if (event.exception?.values) {
         event.exception.values.forEach(ex => {
           ex.stacktrace?.frames?.forEach(frame => {
-            if (frame.filename) frame.filename = frame.filename.replace(/#.*$/, '')
-            if (frame.abs_path) frame.abs_path = frame.abs_path.replace(/#.*$/, '')
+            if (frame.filename) frame.filename = scrubSharePath(frame.filename)
+            if (frame.abs_path) frame.abs_path = scrubSharePath(frame.abs_path)
           })
         })
       }
-      // Scrub breadcrumb data that might contain note content or URL fragments
+      // Scrub breadcrumb data that might contain note content or share URLs
       if (event.breadcrumbs) {
         event.breadcrumbs = event.breadcrumbs.map(bc => {
           if (bc.data) {
@@ -82,10 +85,10 @@ if (sentryDsn) {
             delete bc.data.content
             delete bc.data.noteTitle
             delete bc.data.noteContent
-            // Strip URL fragments from navigation breadcrumbs
-            if (typeof bc.data.url === 'string') bc.data.url = bc.data.url.replace(/#.*$/, '')
-            if (typeof bc.data.from === 'string') bc.data.from = bc.data.from.replace(/#.*$/, '')
-            if (typeof bc.data.to === 'string') bc.data.to = bc.data.to.replace(/#.*$/, '')
+            // Strip share tokens and URL fragments from navigation breadcrumbs
+            if (typeof bc.data.url === 'string') bc.data.url = scrubSharePath(bc.data.url)
+            if (typeof bc.data.from === 'string') bc.data.from = scrubSharePath(bc.data.from)
+            if (typeof bc.data.to === 'string') bc.data.to = scrubSharePath(bc.data.to)
           }
           return bc
         })
