@@ -11,7 +11,12 @@ vi.mock('../services/notes', () => ({
   getNoteShare: vi.fn(),
   createNoteShare: vi.fn(),
   updateNoteShareExpiration: vi.fn(),
-  deleteNoteShare: vi.fn(),
+  revokeNoteShare: vi.fn(),
+}));
+
+// Mock the encryption module (toBase64Url for URL generation)
+vi.mock('../lib/encryption', () => ({
+  toBase64Url: vi.fn((bytes: Uint8Array) => 'mock-base64url-key-' + bytes.length),
 }));
 
 // Mock react-hot-toast
@@ -76,7 +81,7 @@ describe('ShareModal', () => {
       expect(screen.getByText('Link expires in')).toBeInTheDocument();
     });
 
-    it('shows share link UI when share exists', async () => {
+    it('shows key-not-recoverable message when existing share found', async () => {
       const existingShare = createMockNoteShare({
         noteId: mockNote.id,
         shareToken: 'abc123',
@@ -86,16 +91,14 @@ describe('ShareModal', () => {
       render(<ShareModal {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Share link')).toBeInTheDocument();
+        expect(screen.getByText(/complete link was shown when created/)).toBeInTheDocument();
       });
-      expect(screen.getByDisplayValue(/\?s=abc123/)).toBeInTheDocument();
-      expect(screen.getByText('Copy')).toBeInTheDocument();
-      expect(screen.getByText('Revoke Link')).toBeInTheDocument();
+      expect(screen.getByText('Revoke & Re-create')).toBeInTheDocument();
     });
   });
 
   describe('creating share', () => {
-    it('shows all expiration options', async () => {
+    it('shows expiration options (no Never)', async () => {
       render(<ShareModal {...defaultProps} />);
 
       await waitFor(() => {
@@ -103,13 +106,18 @@ describe('ShareModal', () => {
       });
       expect(screen.getByText('7 days')).toBeInTheDocument();
       expect(screen.getByText('30 days')).toBeInTheDocument();
-      expect(screen.getByText('Never')).toBeInTheDocument();
+      // "Never" option removed for E2EE sharing
+      expect(screen.queryByText('Never')).not.toBeInTheDocument();
     });
 
     it('creates share with selected expiration', async () => {
       const user = userEvent.setup();
       const newShare = createMockNoteShare({ shareToken: 'new-token' });
-      vi.mocked(notesService.createNoteShare).mockResolvedValue(newShare);
+      const mockShareKey = new Uint8Array(32);
+      vi.mocked(notesService.createNoteShare).mockResolvedValue({
+        share: newShare,
+        shareKey: mockShareKey,
+      });
 
       render(<ShareModal {...defaultProps} />);
 
@@ -125,15 +133,41 @@ describe('ShareModal', () => {
         expect(notesService.createNoteShare).toHaveBeenCalledWith(
           mockNote.id,
           'user-123',
+          mockNote,
           30
         );
       });
     });
 
+    it('shows encrypted share link after creation', async () => {
+      const user = userEvent.setup();
+      const newShare = createMockNoteShare({ shareToken: 'new-token' });
+      const mockShareKey = new Uint8Array(32);
+      vi.mocked(notesService.createNoteShare).mockResolvedValue({
+        share: newShare,
+        shareKey: mockShareKey,
+      });
+
+      render(<ShareModal {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Create Share Link')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText('Create Share Link'));
+
+      await waitFor(() => {
+        // Should show the share link with /s/ path format and #k= fragment
+        expect(screen.getByText('Encrypted share link')).toBeInTheDocument();
+        const input = screen.getByDisplayValue(/\/s\/new-token/);
+        expect(input).toBeInTheDocument();
+      });
+    });
+
     it('shows loading state while creating', async () => {
       const user = userEvent.setup();
-      let resolveCreate: (share: ReturnType<typeof createMockNoteShare>) => void;
-      const createPromise = new Promise<ReturnType<typeof createMockNoteShare>>((resolve) => {
+      let resolveCreate: (result: { share: ReturnType<typeof createMockNoteShare>; shareKey: Uint8Array }) => void;
+      const createPromise = new Promise<{ share: ReturnType<typeof createMockNoteShare>; shareKey: Uint8Array }>((resolve) => {
         resolveCreate = resolve;
       });
       vi.mocked(notesService.createNoteShare).mockReturnValue(createPromise);
@@ -146,13 +180,13 @@ describe('ShareModal', () => {
 
       await user.click(screen.getByText('Create Share Link'));
 
-      expect(screen.getByText('Creating...')).toBeInTheDocument();
+      expect(screen.getByText('Encrypting...')).toBeInTheDocument();
 
       // Resolve the promise
-      resolveCreate!(createMockNoteShare({ shareToken: 'test' }));
+      resolveCreate!({ share: createMockNoteShare({ shareToken: 'test' }), shareKey: new Uint8Array(32) });
 
       await waitFor(() => {
-        expect(screen.queryByText('Creating...')).not.toBeInTheDocument();
+        expect(screen.queryByText('Encrypting...')).not.toBeInTheDocument();
       });
     });
 
@@ -172,181 +206,85 @@ describe('ShareModal', () => {
         expect(toast.error).toHaveBeenCalledWith('Failed to create share link');
       });
     });
-  });
 
-  describe('existing share operations', () => {
-    const existingShare = createMockNoteShare({
-      noteId: mockNote.id,
-      shareToken: 'existing-token',
-    });
-
-    beforeEach(() => {
-      vi.mocked(notesService.getNoteShare).mockResolvedValue(existingShare);
-    });
-
-    it('copies link to clipboard', async () => {
-      const user = userEvent.setup();
-      const writeTextSpy = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
-
+    it('includes slug toggle checkbox', async () => {
       render(<ShareModal {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Copy')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByText('Copy'));
-
-      await waitFor(() => {
-        expect(writeTextSpy).toHaveBeenCalledWith(
-          expect.stringContaining('?s=existing-token')
-        );
-      });
-      expect(toast.success).toHaveBeenCalledWith('Link copied to clipboard');
-
-      writeTextSpy.mockRestore();
-    });
-
-    it('shows "Copied!" feedback after copy', async () => {
-      const user = userEvent.setup();
-      vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
-
-      render(<ShareModal {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Copy')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByText('Copy'));
-
-      expect(screen.getByText('Copied!')).toBeInTheDocument();
-    });
-
-    it('shows error toast when copy fails', async () => {
-      const user = userEvent.setup();
-      vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('Clipboard error'));
-
-      render(<ShareModal {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Copy')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByText('Copy'));
-
-      await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to copy link');
-      });
-    });
-
-    it('updates expiration on existing share', async () => {
-      const user = userEvent.setup();
-      const updatedShare = createMockNoteShare({ shareToken: 'existing-token' });
-      vi.mocked(notesService.updateNoteShareExpiration).mockResolvedValue(updatedShare);
-
-      render(<ShareModal {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Expires in')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByText('1 day'));
-
-      await waitFor(() => {
-        expect(notesService.updateNoteShareExpiration).toHaveBeenCalledWith(
-          mockNote.id,
-          1
-        );
-      });
-    });
-
-    it('shows error toast on expiration update failure', async () => {
-      const user = userEvent.setup();
-      vi.mocked(notesService.updateNoteShareExpiration).mockRejectedValue(
-        new Error('Update failed')
-      );
-
-      render(<ShareModal {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Expires in')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByText('1 day'));
-
-      await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update expiration');
+        expect(screen.getByText('Include note title in link')).toBeInTheDocument();
       });
     });
   });
 
   describe('revoking share', () => {
-    const existingShare = createMockNoteShare({
-      noteId: mockNote.id,
-      shareToken: 'to-revoke',
-    });
-
-    beforeEach(() => {
-      vi.mocked(notesService.getNoteShare).mockResolvedValue(existingShare);
-    });
-
-    it('revokes share and closes modal', async () => {
+    it('revokes existing share from key-not-recoverable view', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
-      vi.mocked(notesService.deleteNoteShare).mockResolvedValue(undefined);
+      const existingShare = createMockNoteShare({ noteId: mockNote.id, shareToken: 'to-revoke' });
+      vi.mocked(notesService.getNoteShare).mockResolvedValue(existingShare);
+      vi.mocked(notesService.revokeNoteShare).mockResolvedValue(undefined);
 
       render(<ShareModal {...defaultProps} onClose={onClose} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Revoke Link')).toBeInTheDocument();
+        expect(screen.getByText('Revoke & Re-create')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('Revoke Link'));
+      await user.click(screen.getByText('Revoke & Re-create'));
 
       await waitFor(() => {
-        expect(notesService.deleteNoteShare).toHaveBeenCalledWith(mockNote.id);
+        expect(notesService.revokeNoteShare).toHaveBeenCalledWith(mockNote.id);
         expect(toast.success).toHaveBeenCalledWith('Share link revoked');
         expect(onClose).toHaveBeenCalled();
       });
     });
 
-    it('shows loading state while revoking', async () => {
+    it('revokes share from just-created view', async () => {
       const user = userEvent.setup();
-      let resolveRevoke: () => void;
-      const revokePromise = new Promise<void>((resolve) => {
-        resolveRevoke = resolve;
+      const onClose = vi.fn();
+      const newShare = createMockNoteShare({ shareToken: 'just-created' });
+      vi.mocked(notesService.createNoteShare).mockResolvedValue({
+        share: newShare,
+        shareKey: new Uint8Array(32),
       });
-      vi.mocked(notesService.deleteNoteShare).mockReturnValue(revokePromise);
+      vi.mocked(notesService.revokeNoteShare).mockResolvedValue(undefined);
 
-      render(<ShareModal {...defaultProps} />);
+      render(<ShareModal {...defaultProps} onClose={onClose} />);
 
+      // Create a share first
+      await waitFor(() => {
+        expect(screen.getByText('Create Share Link')).toBeInTheDocument();
+      });
+      await user.click(screen.getByText('Create Share Link'));
+
+      // Now revoke it
       await waitFor(() => {
         expect(screen.getByText('Revoke Link')).toBeInTheDocument();
       });
-
       await user.click(screen.getByText('Revoke Link'));
 
-      expect(screen.getByText('Revoking...')).toBeInTheDocument();
-
-      resolveRevoke!();
-
       await waitFor(() => {
-        expect(screen.queryByText('Revoking...')).not.toBeInTheDocument();
+        expect(notesService.revokeNoteShare).toHaveBeenCalledWith(mockNote.id);
+        expect(toast.success).toHaveBeenCalledWith('Share link revoked');
+        expect(onClose).toHaveBeenCalled();
       });
     });
 
     it('shows error toast on revoke failure', async () => {
       const user = userEvent.setup();
-      vi.mocked(notesService.deleteNoteShare).mockRejectedValue(
+      const existingShare = createMockNoteShare({ noteId: mockNote.id, shareToken: 'to-revoke' });
+      vi.mocked(notesService.getNoteShare).mockResolvedValue(existingShare);
+      vi.mocked(notesService.revokeNoteShare).mockRejectedValue(
         new Error('Revoke failed')
       );
 
       render(<ShareModal {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Revoke Link')).toBeInTheDocument();
+        expect(screen.getByText('Revoke & Re-create')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('Revoke Link'));
+      await user.click(screen.getByText('Revoke & Re-create'));
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith('Failed to revoke share link');
@@ -384,23 +322,6 @@ describe('ShareModal', () => {
       if (backdrop) {
         fireEvent.click(backdrop);
       }
-
-      expect(onClose).toHaveBeenCalled();
-    });
-
-    it('closes when Done button is clicked', async () => {
-      const user = userEvent.setup();
-      const onClose = vi.fn();
-      const existingShare = createMockNoteShare({ shareToken: 'test' });
-      vi.mocked(notesService.getNoteShare).mockResolvedValue(existingShare);
-
-      render(<ShareModal {...defaultProps} onClose={onClose} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Done')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByText('Done'));
 
       expect(onClose).toHaveBeenCalled();
     });

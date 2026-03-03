@@ -28,9 +28,9 @@ const RESUME_SCROLL_THRESHOLD_PX = 400; // Show resume chip if scrolled > 400px
 const RESUME_CHIP_MIN_VISIBLE_MS = 2000; // Keep chip visible for at least 2 seconds
 const SCROLL_SAVE_THROTTLE_MS = 1000; // Save scroll position at most every 1 second
 
-// E2EE: Sharing is disabled while end-to-end encryption is active.
-// The share code is preserved but gated behind this flag.
-const sharingEnabled = false;
+// E2EE sharing re-enabled: shares are encrypted client-side with per-share random keys.
+// The decryption key lives in the URL fragment and never reaches the server.
+const sharingEnabled = true;
 
 interface EditorProps {
   note: Note;

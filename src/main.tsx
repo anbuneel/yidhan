@@ -30,26 +30,30 @@ window.addEventListener('unhandledrejection', (event) => {
 
 // Initialize Sentry for error monitoring (only in production with DSN configured)
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN
+const isSharedRoute = window.location.pathname.startsWith('/s/')
 if (sentryDsn) {
   Sentry.init({
     dsn: sentryDsn,
     environment: import.meta.env.MODE,
     integrations: [
       Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration({
+      // Disable session replay entirely on shared note routes to prevent
+      // capturing decrypted content (title, tags, note body) in replays
+      ...(!isSharedRoute ? [Sentry.replayIntegration({
         // Mask note content in session replays for privacy
         maskAllInputs: true,
         blockAllMedia: false,
         // Block sensitive content selectors
         block: ['.rich-text-editor', '.ProseMirror', '[data-sensitive]'],
-      }),
+      })] : []),
     ],
     // Performance monitoring sample rate (10% of transactions)
     tracesSampleRate: 0.1,
     // Session replay sample rate (10% of sessions, 100% on error)
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
-    // E2EE: Strip note title/content from error reports
+    // Disabled on shared routes (replay integration not loaded)
+    replaysSessionSampleRate: isSharedRoute ? 0 : 0.1,
+    replaysOnErrorSampleRate: isSharedRoute ? 0 : 1.0,
+    // E2EE: Strip note title/content and URL fragments from error reports
     beforeSend(event) {
       if (event.extra) {
         delete event.extra.title
@@ -57,7 +61,11 @@ if (sentryDsn) {
         delete event.extra.noteTitle
         delete event.extra.noteContent
       }
-      // Scrub breadcrumb data that might contain note content
+      // Strip URL fragments (may contain share decryption keys)
+      if (event.request?.url) {
+        event.request.url = event.request.url.replace(/#.*$/, '')
+      }
+      // Scrub breadcrumb data that might contain note content or URL fragments
       if (event.breadcrumbs) {
         event.breadcrumbs = event.breadcrumbs.map(bc => {
           if (bc.data) {
@@ -65,6 +73,10 @@ if (sentryDsn) {
             delete bc.data.content
             delete bc.data.noteTitle
             delete bc.data.noteContent
+            // Strip URL fragments from navigation breadcrumbs
+            if (typeof bc.data.url === 'string') bc.data.url = bc.data.url.replace(/#.*$/, '')
+            if (typeof bc.data.from === 'string') bc.data.from = bc.data.from.replace(/#.*$/, '')
+            if (typeof bc.data.to === 'string') bc.data.to = bc.data.to.replace(/#.*$/, '')
           }
           return bc
         })

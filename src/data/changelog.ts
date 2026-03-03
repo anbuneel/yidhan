@@ -8,6 +8,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.5.0',
+    date: '2026-03-02',
+    changes: [
+      { type: 'feature', text: 'E2EE Share as Letter — share notes via encrypted capability links (per-note AES-256-GCM key in URL fragment, server never sees plaintext)' },
+      { type: 'feature', text: 'New URL format: /s/<token>/<slug>#k=<key> with Vercel rewrites and security headers (no-store, no-referrer)' },
+      { type: 'improvement', text: 'Soft-delete revocation model (revoked_at) replaces hard deletion for share links' },
+      { type: 'improvement', text: 'Sentry replay disabled on shared note routes; URL fragments stripped from all telemetry events' },
+      { type: 'improvement', text: 'Added 26 share encryption tests (base64url, token/key gen, encrypt/decrypt roundtrip, AAD binding, tamper detection)' },
+    ],
+  },
+  {
     version: '3.4.3',
     date: '2026-03-01',
     changes: [

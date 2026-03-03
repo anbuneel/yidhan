@@ -6,6 +6,7 @@ import { ChapteredLibrary } from './components/ChapteredLibrary';
 import { Auth } from './components/Auth';
 import { LandingPage } from './components/LandingPage';
 import { sanitizeText } from './utils/sanitize';
+import { fromBase64Url } from './lib/encryption';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 
 // Lazy load heavy components with smart retry (auto-reloads on chunk errors when safe)
@@ -391,11 +392,27 @@ function App() {
   const [fadedNotesCount, setFadedNotesCount] = useState(0);
   const [fadedNotesLoading, setFadedNotesLoading] = useState(false);
 
-  // Share token state (for viewing shared notes)
-  const [shareToken, setShareToken] = useState<string | null>(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('s');
+  // Share route state (for viewing E2EE shared notes)
+  // URL format: /s/<22-char-token>/<optional-slug>#k=<43-char-base64url-key>
+  const [shareRoute, setShareRoute] = useState<{ token: string; shareKey: Uint8Array } | null>(() => {
+    const match = window.location.pathname.match(/^\/s\/([A-Za-z0-9_-]{22})(?:\/|$)/);
+    if (!match) return null;
+    const token = match[1];
+    const keyMatch = window.location.hash.match(/^#k=([A-Za-z0-9_-]{43})$/);
+    if (!keyMatch) return { token, shareKey: new Uint8Array(0) }; // missing key → "incomplete"
+    try {
+      const shareKey = fromBase64Url(keyMatch[1]);
+      return shareKey.length === 32 ? { token, shareKey } : { token, shareKey: new Uint8Array(0) };
+    } catch { return { token, shareKey: new Uint8Array(0) }; }
   });
+
+  // Defense in depth: clear the URL fragment after reading the share key
+  // Prevents the key from lingering in the address bar or browser history
+  useEffect(() => {
+    if (shareRoute && window.location.hash.startsWith('#k=')) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Demo page state (for /demo route)
   const [isDemo, setIsDemo] = useState<boolean>(() => {
@@ -1639,19 +1656,20 @@ function App() {
     );
   }
 
-  // Show shared note view if share token is present
-  if (shareToken) {
+  // Show shared note view if share route is present
+  if (shareRoute) {
     return (
       <ErrorBoundary>
         <Suspense fallback={<LoadingFallback message="Loading shared note..." />}>
           <SharedNoteView
-            token={shareToken}
+            token={shareRoute.token}
+            shareKey={shareRoute.shareKey}
             theme={theme}
             onThemeToggle={handleThemeToggle}
             onInvalidToken={() => {
               // Clear URL and show landing/library
-              window.history.replaceState({}, '', window.location.pathname);
-              setShareToken(null);
+              window.history.replaceState({}, '', '/');
+              setShareRoute(null);
             }}
             onChangelogClick={() => startTransition(() => setView('changelog'))}
             onRoadmapClick={() => startTransition(() => setView('roadmap'))}

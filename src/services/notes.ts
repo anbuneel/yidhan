@@ -2,6 +2,12 @@ import * as Sentry from '@sentry/react';
 import { supabase } from '../lib/supabase';
 import type { Note, Tag, TagColor, NoteShare } from '../types';
 import type { DbNote, DbTag, DbNoteShare } from '../types/database';
+import type { EncryptedShareData, SharePayload } from '../lib/encryption';
+import {
+  generateShareToken as generateShareTokenCrypto,
+  generateShareKey,
+  encryptSharePayload,
+} from '../lib/encryption';
 import { sanitizeHtml } from '../utils/sanitize';
 import { validateNoteTitle, validateNoteContentLength } from '../utils/validation';
 
@@ -449,7 +455,7 @@ export function subscribeToNotes(
 }
 
 // ============================================
-// Note Sharing Functions ("Share as Letter")
+// Note Sharing Functions ("Share as Letter" — E2EE)
 // ============================================
 
 // Convert database note share to app note share
@@ -461,50 +467,105 @@ function toNoteShare(dbShare: DbNoteShare): NoteShare {
     shareToken: dbShare.share_token,
     expiresAt: dbShare.expires_at ? new Date(dbShare.expires_at) : null,
     createdAt: new Date(dbShare.created_at),
+    revokedAt: dbShare.revoked_at ? new Date(dbShare.revoked_at) : null,
   };
 }
 
-// Generate a secure 32-character token
-function generateShareToken(): string {
-  return crypto.randomUUID().replace(/-/g, '');
-}
-
-// Create a share link for a note
+/**
+ * Create an encrypted share link for a note.
+ * Uses upsert: if a row exists for this note_id (revoked or expired), it's updated
+ * with fresh token, payload, and revoked_at = null. Otherwise a new row is inserted.
+ *
+ * @returns { share, shareKey } — shareKey is ephemeral, only returned once for URL construction
+ */
 export async function createNoteShare(
   noteId: string,
   userId: string,
-  expiresInDays: number | null = 7
-): Promise<NoteShare> {
-  const shareToken = generateShareToken();
-  const expiresAt = expiresInDays
-    ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
-    : null;
+  note: Note,
+  expiresInDays: number = 7
+): Promise<{ share: NoteShare; shareKey: Uint8Array }> {
+  // Cap at 30 days
+  const cappedDays = Math.min(expiresInDays, 30);
+  const expiresAt = new Date(Date.now() + cappedDays * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data, error } = await supabase
+  // Generate per-share random key and token
+  const shareKey = generateShareKey();
+  const token = generateShareTokenCrypto();
+
+  // Build the plaintext payload (snapshot)
+  const payload: SharePayload = {
+    version: 1,
+    title: note.title,
+    content: note.content,
+    tags: note.tags.map(t => ({ name: t.name, color: t.color })),
+    sharedAt: new Date().toISOString(),
+  };
+
+  // Encrypt with AES-256-GCM, AAD = share:<token>:v1
+  const encrypted = await encryptSharePayload(token, shareKey, payload);
+
+  // Check for existing row (revoked or expired) — UNIQUE(note_id) constraint
+  const { data: existing } = await supabase
     .from('note_shares')
-    .insert({
-      note_id: noteId,
-      user_id: userId,
-      share_token: shareToken,
-      expires_at: expiresAt,
-    })
-    .select()
-    .single();
+    .select('id')
+    .eq('note_id', noteId)
+    .maybeSingle();
 
-  if (error) {
-    console.error('Error creating note share:', error);
-    throw error;
+  let data: DbNoteShare;
+  if (existing) {
+    // Upsert: update existing row with fresh share data
+    const { data: updated, error } = await supabase
+      .from('note_shares')
+      .update({
+        share_token: token,
+        encrypted_payload: encrypted.ciphertext,
+        iv: encrypted.iv,
+        encryption_version: encrypted.version,
+        expires_at: expiresAt,
+        revoked_at: null,
+      })
+      .eq('id', existing.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating note share:', error);
+      throw error;
+    }
+    data = updated;
+  } else {
+    // Insert new row
+    const { data: inserted, error } = await supabase
+      .from('note_shares')
+      .insert({
+        note_id: noteId,
+        user_id: userId,
+        share_token: token,
+        encrypted_payload: encrypted.ciphertext,
+        iv: encrypted.iv,
+        encryption_version: encrypted.version,
+        expires_at: expiresAt,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating note share:', error);
+      throw error;
+    }
+    data = inserted;
   }
 
-  return toNoteShare(data);
+  return { share: toNoteShare(data), shareKey };
 }
 
-// Get existing share for a note (if any)
+// Get existing active share for a note (if any — filters revoked and expired)
 export async function getNoteShare(noteId: string): Promise<NoteShare | null> {
   const { data, error } = await supabase
     .from('note_shares')
     .select('*')
     .eq('note_id', noteId)
+    .is('revoked_at', null)
     .maybeSingle();
 
   if (error) {
@@ -512,22 +573,29 @@ export async function getNoteShare(noteId: string): Promise<NoteShare | null> {
     throw error;
   }
 
-  return data ? toNoteShare(data) : null;
+  if (!data) return null;
+
+  // Check if expired client-side (server may not have cleaned up yet)
+  if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    return null;
+  }
+
+  return toNoteShare(data);
 }
 
-// Update share expiration
+// Update share expiration (max 30 days, only active shares)
 export async function updateNoteShareExpiration(
   noteId: string,
-  expiresInDays: number | null
+  expiresInDays: number
 ): Promise<NoteShare> {
-  const expiresAt = expiresInDays
-    ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
-    : null;
+  const cappedDays = Math.min(expiresInDays, 30);
+  const expiresAt = new Date(Date.now() + cappedDays * 24 * 60 * 60 * 1000).toISOString();
 
   const { data, error } = await supabase
     .from('note_shares')
     .update({ expires_at: expiresAt })
     .eq('note_id', noteId)
+    .is('revoked_at', null)
     .select()
     .single();
 
@@ -539,74 +607,48 @@ export async function updateNoteShareExpiration(
   return toNoteShare(data);
 }
 
-// Delete a share (revoke access)
-export async function deleteNoteShare(noteId: string): Promise<void> {
+// Revoke a share (soft-delete — sets revoked_at, does not delete the row)
+export async function revokeNoteShare(noteId: string): Promise<void> {
   const { error } = await supabase
     .from('note_shares')
-    .delete()
-    .eq('note_id', noteId);
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('note_id', noteId)
+    .is('revoked_at', null);
 
   if (error) {
-    console.error('Error deleting note share:', error);
+    console.error('Error revoking note share:', error);
     throw error;
   }
 }
 
-// Fetch a shared note by token (public, no auth required)
-// Returns null if token is invalid, expired, or note is deleted
-// Throws on database/network errors (caller should catch and show error state)
-export async function fetchSharedNote(token: string): Promise<Note | null> {
-  // First, validate the share token and check expiration
-  const { data: shareData, error: shareError } = await supabase
-    .from('note_shares')
-    .select('note_id, expires_at')
-    .eq('share_token', token)
-    .maybeSingle();
+/**
+ * Fetch encrypted share data by token (public, no auth required).
+ * Calls the `fetch_shared_note` RPC function which handles:
+ * - Token validation
+ * - Expiration check
+ * - Revocation check
+ * - Soft-deleted note check (JOIN notes)
+ * Returns null for all error cases (uniform — no enumeration).
+ */
+export async function fetchSharedNote(token: string): Promise<EncryptedShareData | null> {
+  const { data, error } = await supabase
+    .rpc('fetch_shared_note', { share_token_param: token });
 
-  if (shareError) {
-    console.error('Error fetching share:', shareError);
-    throw shareError;
+  if (error) {
+    console.error('Error fetching shared note:', error);
+    throw error;
   }
 
-  if (!shareData) {
-    return null; // Invalid token
+  if (!data || data.length === 0) {
+    return null; // Not found, expired, revoked, or note deleted — uniform
   }
 
-  // Check if share has expired
-  if (shareData.expires_at && new Date(shareData.expires_at) < new Date()) {
-    return null; // Expired
-  }
-
-  // Fetch the note with its tags
-  const { data: noteData, error: noteError } = await supabase
-    .from('notes')
-    .select(`
-      *,
-      note_tags (
-        tag_id,
-        tags (*)
-      )
-    `)
-    .eq('id', shareData.note_id)
-    .is('deleted_at', null) // Don't show soft-deleted notes
-    .maybeSingle();
-
-  if (noteError) {
-    console.error('Error fetching shared note:', noteError);
-    throw noteError;
-  }
-
-  if (!noteData) {
-    return null; // Note not found or deleted
-  }
-
-  // Transform the data
-  const tags = (noteData.note_tags || [])
-    .map((nt: { tags: DbTag | null }) => nt.tags)
-    .filter((tag): tag is DbTag => tag !== null)
-    .map(toTag);
-
-  return toNote(noteData as DbNote, tags);
+  const row = data[0];
+  return {
+    ciphertext: row.encrypted_payload,
+    iv: row.iv,
+    version: row.encryption_version,
+  };
 }
 
 // Share link export interface for full account backup
@@ -618,7 +660,7 @@ export interface NoteShareExport {
   createdAt: string;
 }
 
-// Fetch all share links for the current user (for account backup)
+// Fetch all active share links for the current user (for account backup)
 export async function fetchAllNoteShares(): Promise<NoteShareExport[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
@@ -633,6 +675,7 @@ export async function fetchAllNoteShares(): Promise<NoteShareExport[]> {
       notes!inner(title)
     `)
     .eq('user_id', user.id)
+    .is('revoked_at', null)
     .order('created_at', { ascending: false });
 
   if (error) {

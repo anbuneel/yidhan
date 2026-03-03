@@ -239,6 +239,7 @@ export function createMockNoteShare(overrides: Partial<NoteShare> = {}): NoteSha
     shareToken: 'test-share-token-abc123',
     expiresAt: null,
     createdAt: new Date('2024-01-15T12:00:00'),
+    revokedAt: null,
     ...overrides,
   };
 }

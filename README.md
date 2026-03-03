@@ -54,7 +54,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Install Prompt** - Friendly reminder to install after using the app
 - **Offline Editing** - Notes persist locally with IndexedDB, automatic sync when back online
 - **Conflict Resolution** - "Two Paths" modal for resolving concurrent edits across devices
-- **Share as Letter** - Create temporary, read-only share links for your notes (1 day, 7 days, 30 days, or never expiring)
+- **Share as Letter** - End-to-end encrypted share links with per-note keys; server never sees plaintext (1, 7, or 30 days)
 - **Swipe Gestures** - Swipe left to delete, right to pin/unpin notes (mobile)
 - **Pull-to-Refresh** - Pull down on note list to sync notes (mobile)
 - **iOS Install Guide** - Visual 3-step tutorial for iOS Safari PWA installation

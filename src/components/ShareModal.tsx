@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import type { Note, NoteShare } from '../types';
+import { toBase64Url } from '../lib/encryption';
 import {
   createNoteShare,
   getNoteShare,
   updateNoteShareExpiration,
-  deleteNoteShare,
+  revokeNoteShare,
 } from '../services/notes';
 
 interface ShareModalProps {
@@ -15,30 +16,36 @@ interface ShareModalProps {
   userId: string;
 }
 
-type ExpirationOption = 1 | 7 | 30 | null;
+type ExpirationOption = 1 | 7 | 30;
 
 const EXPIRATION_OPTIONS: { value: ExpirationOption; label: string }[] = [
   { value: 1, label: '1 day' },
   { value: 7, label: '7 days' },
   { value: 30, label: '30 days' },
-  { value: null, label: 'Never' },
 ];
+
+/** Lowercase, hyphenate, truncate to 60 chars — cosmetic URL slug for share links */
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 60)
+    .replace(/-+$/, ''); // trim trailing hyphens
+}
 
 export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
   const [share, setShare] = useState<NoteShare | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [isRevoking, setIsRevoking] = useState(false);
   const [selectedExpiration, setSelectedExpiration] = useState<ExpirationOption>(7);
+  const [includeSlug, setIncludeSlug] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showPrivacyTip, setShowPrivacyTip] = useState(false);
   const privacyTipRef = useRef<HTMLDivElement>(null);
-
-  // Generate share URL
-  const getShareUrl = (token: string) => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/?s=${token}`;
-  };
 
   // Fetch existing share on modal open
   useEffect(() => {
@@ -46,32 +53,41 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
 
     setIsLoading(true);
     setCopied(false);
+    setShareUrl(null);
     getNoteShare(note.id)
       .then((existingShare) => {
         setShare(existingShare);
         if (existingShare?.expiresAt) {
-          // Calculate approximate expiration days from now
           const daysRemaining = Math.ceil(
             (existingShare.expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)
           );
           if (daysRemaining <= 1) setSelectedExpiration(1);
           else if (daysRemaining <= 7) setSelectedExpiration(7);
-          else if (daysRemaining <= 30) setSelectedExpiration(30);
-          else setSelectedExpiration(null);
-        } else if (existingShare) {
-          setSelectedExpiration(null);
+          else setSelectedExpiration(30);
         }
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, [isOpen, note.id]);
 
+  // Build share URL from token + key
+  const buildShareUrl = (token: string, shareKey: Uint8Array) => {
+    const slug = includeSlug ? `/${generateSlug(note.title)}` : '';
+    return `${window.location.origin}/s/${token}${slug}#k=${toBase64Url(shareKey)}`;
+  };
+
   // Create new share
   const handleCreateShare = async () => {
     setIsCreating(true);
     try {
-      const newShare = await createNoteShare(note.id, userId, selectedExpiration);
+      const { share: newShare, shareKey } = await createNoteShare(
+        note.id,
+        userId,
+        note,
+        selectedExpiration
+      );
       setShare(newShare);
+      setShareUrl(buildShareUrl(newShare.shareToken, shareKey));
     } catch (error) {
       console.error('Failed to create share:', error);
       toast.error('Failed to create share link');
@@ -96,9 +112,9 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
 
   // Copy link to clipboard
   const handleCopy = async () => {
-    if (!share) return;
+    if (!shareUrl) return;
     try {
-      await navigator.clipboard.writeText(getShareUrl(share.shareToken));
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       toast.success('Link copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
@@ -107,12 +123,13 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
     }
   };
 
-  // Revoke share
+  // Revoke share (soft-delete)
   const handleRevoke = async () => {
     setIsRevoking(true);
     try {
-      await deleteNoteShare(note.id);
+      await revokeNoteShare(note.id);
       setShare(null);
+      setShareUrl(null);
       toast.success('Share link revoked');
       onClose();
     } catch (error) {
@@ -126,6 +143,8 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
   if (!isOpen) return null;
 
   const isProcessing = isLoading || isCreating || isRevoking;
+  // If a share exists but we don't have the URL (reopened modal), the key is gone
+  const existingShareNoKey = share && !shareUrl;
 
   return (
     <div
@@ -193,7 +212,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
             lineHeight: 1.6,
           }}
         >
-          Create a gentle, read-only view for someone to receive.
+          Create an end-to-end encrypted, read-only view. The decryption key is embedded in the link — only someone with the full link can read it.
         </p>
 
         {/* Loading state */}
@@ -206,7 +225,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
           </div>
         )}
 
-        {/* No share exists - show create button */}
+        {/* No share exists - show create form */}
         {!isLoading && !share && (
           <div className="space-y-6">
             {/* Expiration selector */}
@@ -223,7 +242,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
               <div className="flex gap-2 flex-wrap">
                 {EXPIRATION_OPTIONS.map((option) => (
                   <button
-                    key={option.value ?? 'never'}
+                    key={option.value}
                     onClick={() => setSelectedExpiration(option.value)}
                     className="
                       px-3 py-1.5
@@ -249,6 +268,23 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                 ))}
               </div>
             </div>
+
+            {/* Include title slug toggle */}
+            <label
+              className="flex items-center gap-3 text-sm cursor-pointer"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={includeSlug}
+                onChange={(e) => setIncludeSlug(e.target.checked)}
+                className="w-4 h-4 rounded accent-[var(--color-accent)]"
+              />
+              Include note title in link
+            </label>
 
             {/* Create button */}
             <button
@@ -283,13 +319,13 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                   style={{ borderColor: 'var(--color-cta-text)', borderTopColor: 'transparent' }}
                 />
               )}
-              {isCreating ? 'Creating...' : 'Create Share Link'}
+              {isCreating ? 'Encrypting...' : 'Create Share Link'}
             </button>
           </div>
         )}
 
-        {/* Share exists - show link and options */}
-        {!isLoading && share && (
+        {/* Share exists with URL (just created) - show link */}
+        {!isLoading && share && shareUrl && (
           <div className="space-y-6">
             {/* Share link */}
             <div>
@@ -301,7 +337,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                     color: 'var(--color-text-secondary)',
                   }}
                 >
-                  Share link
+                  Encrypted share link
                 </label>
                 {/* Privacy info icon */}
                 <div className="relative" ref={privacyTipRef}>
@@ -320,7 +356,6 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </button>
-                  {/* Tooltip */}
                   {showPrivacyTip && (
                     <div
                       className="absolute left-0 top-6 z-10 w-64 p-3 rounded-lg shadow-lg text-xs"
@@ -331,7 +366,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                         fontFamily: 'var(--font-body)',
                       }}
                     >
-                      This link may appear in the recipient's browser history. For sensitive content, consider setting an expiration or revoking access after they've read it.
+                      This note is encrypted end-to-end. The decryption key is in the link itself — our server never sees your content. Anyone with the complete link can read it.
                     </div>
                   )}
                 </div>
@@ -345,7 +380,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
               >
                 <input
                   type="text"
-                  value={getShareUrl(share.shareToken)}
+                  value={shareUrl}
                   readOnly
                   className="flex-1 text-sm bg-transparent outline-none truncate"
                   style={{
@@ -387,7 +422,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
               <div className="flex gap-2 flex-wrap">
                 {EXPIRATION_OPTIONS.map((option) => (
                   <button
-                    key={option.value ?? 'never'}
+                    key={option.value}
                     onClick={() => handleExpirationChange(option.value)}
                     className="
                       px-3 py-1.5
@@ -447,6 +482,97 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                   />
                 )}
                 {isRevoking ? 'Revoking...' : 'Revoke Link'}
+              </button>
+              <button
+                onClick={onClose}
+                className="
+                  px-5 py-2.5
+                  rounded-lg
+                  text-sm font-medium
+                  transition-all duration-200
+                "
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-cta-text)',
+                  background: 'var(--color-cta-bg)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--color-cta-bg)';
+                }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Share exists but key is gone (reopened modal) */}
+        {!isLoading && existingShareNoKey && (
+          <div className="space-y-6">
+            <div
+              className="p-4 rounded-lg text-sm"
+              style={{
+                background: 'var(--color-bg-secondary)',
+                border: '1px solid var(--glass-border)',
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-secondary)',
+                lineHeight: 1.6,
+              }}
+            >
+              A share link was created previously. The complete link was shown when created — it cannot be recovered because the decryption key is never stored on the server.
+              <br /><br />
+              To create a new link, revoke the existing one first.
+            </div>
+
+            {/* Expiration info */}
+            {share?.expiresAt && (
+              <p
+                className="text-sm"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-text-tertiary)',
+                }}
+              >
+                Expires: {share.expiresAt.toLocaleDateString()}
+              </p>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center justify-between pt-2">
+              <button
+                onClick={handleRevoke}
+                disabled={isRevoking}
+                className="
+                  px-4 py-2
+                  text-sm font-medium
+                  transition-colors duration-200
+                  rounded-lg
+                  disabled:opacity-50
+                  flex items-center gap-2
+                "
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-destructive)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isRevoking) {
+                    e.currentTarget.style.background = 'var(--color-error-light)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                {isRevoking && (
+                  <span
+                    className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: 'var(--color-destructive)', borderTopColor: 'transparent' }}
+                  />
+                )}
+                {isRevoking ? 'Revoking...' : 'Revoke & Re-create'}
               </button>
               <button
                 onClick={onClose}

@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Note, Theme } from '../types';
+import type { Theme } from '../types';
+import type { SharePayload } from '../lib/encryption';
+import { decryptSharePayload } from '../lib/encryption';
 import { fetchSharedNote } from '../services/notes';
 import { sanitizeHtml } from '../utils/sanitize';
-import { TagBadge } from './TagBadge';
 import { Footer } from './Footer';
 
 interface SharedNoteViewProps {
   token: string;
+  shareKey: Uint8Array;
   theme: Theme;
   onThemeToggle: () => void;
   onInvalidToken: () => void;
@@ -14,19 +16,30 @@ interface SharedNoteViewProps {
   onRoadmapClick: () => void;
 }
 
-type LoadingState = 'loading' | 'success' | 'error' | 'expired';
+type LoadingState = 'loading' | 'decrypting' | 'success' | 'error' | 'expired' | 'incomplete';
 
 export function SharedNoteView({
   token,
+  shareKey,
   theme,
   onThemeToggle,
   onInvalidToken,
   onChangelogClick,
   onRoadmapClick,
 }: SharedNoteViewProps) {
-  const [note, setNote] = useState<Note | null>(null);
-  const [loadingState, setLoadingState] = useState<LoadingState>('loading');
+  const [payload, setPayload] = useState<SharePayload | null>(null);
+  const keyValid = shareKey.length === 32;
+  const [loadingState, setLoadingState] = useState<LoadingState>(keyValid ? 'loading' : 'incomplete');
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Add Referrer-Policy meta tag for shared note pages
+  useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'referrer';
+    meta.content = 'no-referrer';
+    document.head.appendChild(meta);
+    return () => { document.head.removeChild(meta); };
+  }, []);
 
   // Disable task list checkboxes in read-only shared view (CSS alone can't block keyboard)
   useEffect(() => {
@@ -36,19 +49,31 @@ export function SharedNoteView({
         cb.tabIndex = -1;
       });
     }
-  }, [note]);
+  }, [payload]);
 
   useEffect(() => {
+    if (!keyValid) return;
     let isMounted = true;
 
+    // Fetch encrypted payload from server via RPC
     fetchSharedNote(token)
-      .then((fetchedNote) => {
+      .then(async (encryptedData) => {
         if (!isMounted) return;
-        if (fetchedNote) {
-          setNote(fetchedNote);
-          setLoadingState('success');
-        } else {
+        if (!encryptedData) {
           setLoadingState('expired');
+          return;
+        }
+
+        // Decrypt client-side
+        setLoadingState('decrypting');
+        try {
+          const decrypted = await decryptSharePayload(token, shareKey, encryptedData);
+          if (!isMounted) return;
+          setPayload(decrypted);
+          setLoadingState('success');
+        } catch {
+          // Wrong key, tampered data, or AAD mismatch
+          if (isMounted) setLoadingState('incomplete');
         }
       })
       .catch((error) => {
@@ -61,7 +86,7 @@ export function SharedNoteView({
     return () => {
       isMounted = false;
     };
-  }, [token]);
+  }, [token, shareKey, keyValid]);
 
   // Render header (simplified, no auth)
   const renderHeader = () => (
@@ -113,8 +138,8 @@ export function SharedNoteView({
     </header>
   );
 
-  // Loading state
-  if (loadingState === 'loading') {
+  // Loading / decrypting state
+  if (loadingState === 'loading' || loadingState === 'decrypting') {
     return (
       <div
         className="min-h-screen flex flex-col"
@@ -128,10 +153,94 @@ export function SharedNoteView({
               style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
             />
             <p style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}>
-              Loading shared note...
+              {loadingState === 'decrypting' ? 'Unsealing letter...' : 'Loading shared note...'}
             </p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Incomplete link (missing or invalid key)
+  if (loadingState === 'incomplete') {
+    return (
+      <div
+        className="min-h-screen flex flex-col"
+        style={{ background: 'var(--color-bg-primary)' }}
+      >
+        {renderHeader()}
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div
+            className="text-center max-w-md p-8"
+            style={{
+              background: 'var(--color-bg-secondary)',
+              borderRadius: 'var(--radius-card)',
+              border: '1px solid var(--glass-border)',
+            }}
+          >
+            <div
+              className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center"
+              style={{ background: 'var(--color-bg-tertiary)' }}
+            >
+              <svg
+                className="w-8 h-8"
+                style={{ color: 'var(--color-text-tertiary)' }}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                />
+              </svg>
+            </div>
+            <h2
+              className="text-xl font-semibold mb-3"
+              style={{
+                fontFamily: 'var(--font-display)',
+                color: 'var(--color-text-primary)',
+              }}
+            >
+              This link appears incomplete
+            </h2>
+            <p
+              className="mb-6"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-secondary)',
+                lineHeight: 1.6,
+              }}
+            >
+              The full link is needed to read this note. Please ask the sender for the complete link.
+            </p>
+            <button
+              onClick={onInvalidToken}
+              className="
+                px-5 py-2.5
+                rounded-lg
+                text-sm font-medium
+                transition-all duration-200
+              "
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-cta-text)',
+                background: 'var(--color-cta-bg)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--color-cta-bg)';
+              }}
+            >
+              Go to Yidhan
+            </button>
+          </div>
+        </div>
+        <Footer onChangelogClick={onChangelogClick} onRoadmapClick={onRoadmapClick} />
       </div>
     );
   }
@@ -223,7 +332,7 @@ export function SharedNoteView({
     );
   }
 
-  // Success state - display the note
+  // Success state - display the decrypted note
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -244,14 +353,25 @@ export function SharedNoteView({
               lineHeight: 1.2,
             }}
           >
-            {note?.title || 'Untitled'}
+            {payload?.title || 'Untitled'}
           </h1>
 
           {/* Tags */}
-          {note?.tags && note.tags.length > 0 && (
+          {payload?.tags && payload.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-6">
-              {note.tags.map((tag) => (
-                <TagBadge key={tag.id} tag={tag} />
+              {payload.tags.map((tag, idx) => (
+                <span
+                  key={idx}
+                  className="px-2.5 py-0.5 text-xs rounded-full"
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    background: `color-mix(in srgb, var(--tag-${tag.color}, var(--color-accent)) 15%, transparent)`,
+                    color: `var(--tag-${tag.color}, var(--color-accent))`,
+                    border: `1px solid color-mix(in srgb, var(--tag-${tag.color}, var(--color-accent)) 30%, transparent)`,
+                  }}
+                >
+                  {tag.name}
+                </span>
               ))}
             </div>
           )}
@@ -272,7 +392,7 @@ export function SharedNoteView({
                 color: 'var(--color-text-primary)',
                 lineHeight: 1.8,
               }}
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(note?.content || '') }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(payload?.content || '') }}
             />
           </div>
 
