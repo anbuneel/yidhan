@@ -463,7 +463,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** Cap days at MAX_EXPIRATION_DAYS and return an ISO-8601 expiry timestamp */
 function computeExpiresAt(days: number): string {
-  const capped = Math.min(days, MAX_EXPIRATION_DAYS);
+  const capped = Math.max(1, Math.min(MAX_EXPIRATION_DAYS, Math.floor(days)));
   return new Date(Date.now() + capped * MS_PER_DAY).toISOString();
 }
 
@@ -575,7 +575,7 @@ export async function createNoteShare(
           }
           data = updated;
         } else {
-          throw error; // Shouldn't happen — unique violation but no row found
+          throw new Error('Failed to create share link');
         }
       } else {
         console.error('Error creating note share:', error);

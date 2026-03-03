@@ -42,7 +42,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [isRevoking, setIsRevoking] = useState(false);
   const [selectedExpiration, setSelectedExpiration] = useState<ExpirationOption>(7);
-  const [includeSlug, setIncludeSlug] = useState(true);
+  const [includeSlug, setIncludeSlug] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showPrivacyTip, setShowPrivacyTip] = useState(false);
   const privacyTipRef = useRef<HTMLDivElement>(null);
@@ -54,6 +54,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
     setIsLoading(true);
     setCopied(false);
     setShareUrl(null);
+    setShare(null);
     getNoteShare(note.id)
       .then((existingShare) => {
         setShare(existingShare);
