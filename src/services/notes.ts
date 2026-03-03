@@ -520,11 +520,16 @@ export async function createNoteShare(
   };
 
   // Check for existing row (revoked or expired) — UNIQUE(note_id) constraint
-  const { data: existing } = await supabase
+  const { data: existing, error: checkError } = await supabase
     .from('note_shares')
     .select('id')
     .eq('note_id', noteId)
     .maybeSingle();
+
+  if (checkError) {
+    console.error('Error checking existing share:', checkError);
+    throw checkError;
+  }
 
   let data: DbNoteShare;
   if (existing) {
@@ -541,6 +546,7 @@ export async function createNoteShare(
     }
     data = updated;
   } else {
+    // Insert new row — retry as update if unique constraint race condition
     const { data: inserted, error } = await supabase
       .from('note_shares')
       .insert({ note_id: noteId, user_id: userId, ...encryptedFields })
@@ -548,10 +554,36 @@ export async function createNoteShare(
       .single();
 
     if (error) {
-      console.error('Error creating note share:', error);
-      throw error;
+      // Handle race condition: another tab may have inserted between our check and insert
+      if (error.code === '23505') {
+        // Unique violation — retry as update
+        const { data: raced } = await supabase
+          .from('note_shares')
+          .select('id')
+          .eq('note_id', noteId)
+          .maybeSingle();
+        if (raced) {
+          const { data: updated, error: retryError } = await supabase
+            .from('note_shares')
+            .update({ ...encryptedFields, revoked_at: null })
+            .eq('id', raced.id)
+            .select()
+            .single();
+          if (retryError) {
+            console.error('Error updating note share (race retry):', retryError);
+            throw retryError;
+          }
+          data = updated;
+        } else {
+          throw error; // Shouldn't happen — unique violation but no row found
+        }
+      } else {
+        console.error('Error creating note share:', error);
+        throw error;
+      }
+    } else {
+      data = inserted;
     }
-    data = inserted;
   }
 
   return { share: toNoteShare(data), shareKey };
@@ -639,6 +671,11 @@ export async function fetchSharedNote(token: string): Promise<EncryptedShareData
   }
 
   const row = data[0];
+  if (!row.encrypted_payload || !row.iv || row.encryption_version == null) {
+    console.error('fetchSharedNote: RPC returned incomplete data', row);
+    return null;
+  }
+
   return {
     ciphertext: row.encrypted_payload,
     iv: row.iv,

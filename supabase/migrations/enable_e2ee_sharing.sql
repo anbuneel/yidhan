@@ -40,7 +40,8 @@ BEGIN
   JOIN notes n ON n.id = ns.note_id
   WHERE ns.share_token = share_token_param
     AND ns.revoked_at IS NULL
-    AND ns.expires_at > now()
+    AND (ns.expires_at IS NULL OR ns.expires_at > now())
+    AND ns.encrypted_payload IS NOT NULL
     AND n.deleted_at IS NULL;
 END;
 $$;

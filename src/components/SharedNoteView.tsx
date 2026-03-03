@@ -6,6 +6,8 @@ import { fetchSharedNote } from '../services/notes';
 import { sanitizeHtml } from '../utils/sanitize';
 import { Footer } from './Footer';
 
+const VALID_TAG_COLORS = new Set(['terracotta', 'gold', 'forest', 'stone', 'indigo', 'clay', 'sage', 'plum']);
+
 interface SharedNoteViewProps {
   token: string;
   shareKey: Uint8Array;
@@ -32,13 +34,21 @@ export function SharedNoteView({
   const [loadingState, setLoadingState] = useState<LoadingState>(keyValid ? 'loading' : 'incomplete');
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Add Referrer-Policy meta tag for shared note pages
+  // Override Referrer-Policy to no-referrer for shared note pages
   useEffect(() => {
-    const meta = document.createElement('meta');
-    meta.name = 'referrer';
-    meta.content = 'no-referrer';
-    document.head.appendChild(meta);
-    return () => { document.head.removeChild(meta); };
+    const existing = document.querySelector('meta[name="referrer"]');
+    const prev = existing?.getAttribute('content');
+    if (existing) {
+      existing.setAttribute('content', 'no-referrer');
+    } else {
+      const meta = document.createElement('meta');
+      meta.name = 'referrer';
+      meta.content = 'no-referrer';
+      document.head.appendChild(meta);
+    }
+    return () => {
+      if (existing && prev) existing.setAttribute('content', prev);
+    };
   }, []);
 
   // Disable task list checkboxes in read-only shared view (CSS alone can't block keyboard)
@@ -71,8 +81,9 @@ export function SharedNoteView({
           if (!isMounted) return;
           setPayload(decrypted);
           setLoadingState('success');
-        } catch {
+        } catch (error) {
           // Wrong key, tampered data, or AAD mismatch
+          console.error('SharedNoteView: decryption failed', error);
           if (isMounted) setLoadingState('incomplete');
         }
       })
@@ -359,20 +370,23 @@ export function SharedNoteView({
           {/* Tags */}
           {payload?.tags && payload.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-6">
-              {payload.tags.map((tag, idx) => (
-                <span
-                  key={idx}
-                  className="px-2.5 py-0.5 text-xs rounded-full"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    background: `color-mix(in srgb, var(--tag-${tag.color}, var(--color-accent)) 15%, transparent)`,
-                    color: `var(--tag-${tag.color}, var(--color-accent))`,
-                    border: `1px solid color-mix(in srgb, var(--tag-${tag.color}, var(--color-accent)) 30%, transparent)`,
-                  }}
-                >
-                  {tag.name}
-                </span>
-              ))}
+              {payload.tags.map((tag, idx) => {
+                const safeColor = VALID_TAG_COLORS.has(tag.color) ? tag.color : 'stone';
+                return (
+                  <span
+                    key={idx}
+                    className="px-2.5 py-0.5 text-xs rounded-full"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      background: `color-mix(in srgb, var(--tag-${safeColor}, var(--color-accent)) 15%, transparent)`,
+                      color: `var(--tag-${safeColor}, var(--color-accent))`,
+                      border: `1px solid color-mix(in srgb, var(--tag-${safeColor}, var(--color-accent)) 30%, transparent)`,
+                    }}
+                  >
+                    {tag.name}
+                  </span>
+                );
+              })}
             </div>
           )}
 

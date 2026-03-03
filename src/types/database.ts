@@ -135,9 +135,9 @@ export type Database = {
           share_token: string;
           expires_at?: string | null;
           created_at?: string;
-          encrypted_payload?: string;
-          iv?: string;
-          encryption_version?: number;
+          encrypted_payload: string;
+          iv: string;
+          encryption_version: number;
           revoked_at?: string | null;
         };
         Update: {

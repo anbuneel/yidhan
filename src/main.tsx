@@ -65,6 +65,15 @@ if (sentryDsn) {
       if (event.request?.url) {
         event.request.url = event.request.url.replace(/#.*$/, '')
       }
+      // Strip fragments from stack frame filenames (defense in depth)
+      if (event.exception?.values) {
+        event.exception.values.forEach(ex => {
+          ex.stacktrace?.frames?.forEach(frame => {
+            if (frame.filename) frame.filename = frame.filename.replace(/#.*$/, '')
+            if (frame.abs_path) frame.abs_path = frame.abs_path.replace(/#.*$/, '')
+          })
+        })
+      }
       // Scrub breadcrumb data that might contain note content or URL fragments
       if (event.breadcrumbs) {
         event.breadcrumbs = event.breadcrumbs.map(bc => {

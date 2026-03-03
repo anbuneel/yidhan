@@ -389,6 +389,7 @@ export function toBase64Url(bytes: Uint8Array): string {
 export function fromBase64Url(b64url: string): Uint8Array {
   let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
   const pad = b64.length % 4;
+  if (pad === 1) throw new Error('Invalid base64url string: length cannot be 4n+1');
   if (pad === 2) b64 += '==';
   else if (pad === 3) b64 += '=';
   return fromBase64(b64);
@@ -459,6 +460,10 @@ export async function decryptSharePayload(
   shareKeyBytes: Uint8Array,
   encrypted: EncryptedShareData
 ): Promise<SharePayload> {
+  if (encrypted.version !== ENCRYPTION_VERSION) {
+    throw new Error(`Unsupported share encryption version: ${encrypted.version}`);
+  }
+
   const ciphertextBytes = fromBase64(encrypted.ciphertext);
   const ivBytes = fromBase64(encrypted.iv);
   const aad = textEncoder.encode(`share:${token}:v1`);
@@ -471,11 +476,14 @@ export async function decryptSharePayload(
   );
 
   const plaintext = textDecoder.decode(plaintextBuffer);
-  const payload = JSON.parse(plaintext) as SharePayload;
+  const payload = JSON.parse(plaintext);
 
   if (payload.version !== 1) {
     throw new Error(`Unsupported share payload version: ${payload.version}`);
   }
+  if (typeof payload.title !== 'string' || typeof payload.content !== 'string' || !Array.isArray(payload.tags)) {
+    throw new Error('Invalid share payload structure');
+  }
 
-  return payload;
+  return payload as SharePayload;
 }

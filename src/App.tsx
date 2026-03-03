@@ -163,7 +163,8 @@ function parseShareRoute(
     const shareKey = fromBase64Url(keyMatch[1]);
     if (shareKey.length !== 32) return { token, shareKey: EMPTY_SHARE_KEY };
     return { token, shareKey };
-  } catch {
+  } catch (error) {
+    console.warn('Failed to decode share key from URL fragment:', error);
     return { token, shareKey: EMPTY_SHARE_KEY };
   }
 }

@@ -66,7 +66,10 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
           else setSelectedExpiration(30);
         }
       })
-      .catch(console.error)
+      .catch((error) => {
+        console.error('Failed to check existing share:', error);
+        toast.error('Could not load share status');
+      })
       .finally(() => setIsLoading(false));
   }, [isOpen, note.id]);
 
@@ -118,7 +121,8 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
       setCopied(true);
       toast.success('Link copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
-    } catch {
+    } catch (error) {
+      console.error('Failed to copy share link to clipboard:', error);
       toast.error('Failed to copy link');
     }
   };
