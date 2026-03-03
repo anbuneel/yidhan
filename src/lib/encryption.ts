@@ -377,16 +377,17 @@ export async function verifyKeyCheck(
 // URL-safe Base64 (for share links)
 // ============================================================================
 
-/** Convert bytes to URL-safe base64 (RFC 4648 §5): +→-, /→_, no padding */
+/** Convert bytes to URL-safe base64 (RFC 4648 S5): no +, /, or = padding */
 export function toBase64Url(bytes: Uint8Array): string {
-  return toBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return toBase64(bytes)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
 /** Convert URL-safe base64 back to bytes */
 export function fromBase64Url(b64url: string): Uint8Array {
-  // Restore standard base64: -→+, _→/
   let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
-  // Re-add padding
   const pad = b64.length % 4;
   if (pad === 2) b64 += '==';
   else if (pad === 3) b64 += '=';

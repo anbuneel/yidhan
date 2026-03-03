@@ -146,6 +146,66 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
   // If a share exists but we don't have the URL (reopened modal), the key is gone
   const existingShareNoKey = share && !shareUrl;
 
+  // Shared action bar: revoke button (destructive) + done button (CTA)
+  const renderActionBar = (revokeLabel: string) => (
+    <div className="flex items-center justify-between pt-2">
+      <button
+        onClick={handleRevoke}
+        disabled={isRevoking}
+        className="
+          px-4 py-2
+          text-sm font-medium
+          transition-colors duration-200
+          rounded-lg
+          disabled:opacity-50
+          flex items-center gap-2
+        "
+        style={{
+          fontFamily: 'var(--font-body)',
+          color: 'var(--color-destructive)',
+        }}
+        onMouseEnter={(e) => {
+          if (!isRevoking) {
+            e.currentTarget.style.background = 'var(--color-error-light)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+        }}
+      >
+        {isRevoking && (
+          <span
+            className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+            style={{ borderColor: 'var(--color-destructive)', borderTopColor: 'transparent' }}
+          />
+        )}
+        {isRevoking ? 'Revoking...' : revokeLabel}
+      </button>
+      <button
+        onClick={onClose}
+        className="
+          px-5 py-2.5
+          rounded-lg
+          text-sm font-medium
+          transition-all duration-200
+        "
+        style={{
+          fontFamily: 'var(--font-body)',
+          color: 'var(--color-cta-text)',
+          background: 'var(--color-cta-bg)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'var(--color-cta-bg)';
+        }}
+      >
+        Done
+      </button>
+    </div>
+  );
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
@@ -449,63 +509,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-2">
-              <button
-                onClick={handleRevoke}
-                disabled={isRevoking}
-                className="
-                  px-4 py-2
-                  text-sm font-medium
-                  transition-colors duration-200
-                  rounded-lg
-                  disabled:opacity-50
-                  flex items-center gap-2
-                "
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-destructive)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isRevoking) {
-                    e.currentTarget.style.background = 'var(--color-error-light)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                {isRevoking && (
-                  <span
-                    className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
-                    style={{ borderColor: 'var(--color-destructive)', borderTopColor: 'transparent' }}
-                  />
-                )}
-                {isRevoking ? 'Revoking...' : 'Revoke Link'}
-              </button>
-              <button
-                onClick={onClose}
-                className="
-                  px-5 py-2.5
-                  rounded-lg
-                  text-sm font-medium
-                  transition-all duration-200
-                "
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-cta-text)',
-                  background: 'var(--color-cta-bg)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--color-cta-bg)';
-                }}
-              >
-                Done
-              </button>
-            </div>
+            {renderActionBar('Revoke Link')}
           </div>
         )}
 
@@ -540,63 +544,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
               </p>
             )}
 
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-2">
-              <button
-                onClick={handleRevoke}
-                disabled={isRevoking}
-                className="
-                  px-4 py-2
-                  text-sm font-medium
-                  transition-colors duration-200
-                  rounded-lg
-                  disabled:opacity-50
-                  flex items-center gap-2
-                "
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-destructive)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isRevoking) {
-                    e.currentTarget.style.background = 'var(--color-error-light)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                {isRevoking && (
-                  <span
-                    className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
-                    style={{ borderColor: 'var(--color-destructive)', borderTopColor: 'transparent' }}
-                  />
-                )}
-                {isRevoking ? 'Revoking...' : 'Revoke & Re-create'}
-              </button>
-              <button
-                onClick={onClose}
-                className="
-                  px-5 py-2.5
-                  rounded-lg
-                  text-sm font-medium
-                  transition-all duration-200
-                "
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-cta-text)',
-                  background: 'var(--color-cta-bg)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--color-cta-bg)';
-                }}
-              >
-                Done
-              </button>
-            </div>
+            {renderActionBar('Revoke & Re-create')}
           </div>
         )}
       </div>

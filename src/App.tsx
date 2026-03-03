@@ -140,6 +140,34 @@ function migrateLocalStorageKeys(): void {
 // Run migration on module load (before React renders)
 migrateLocalStorageKeys();
 
+/** An empty key signals SharedNoteView to show "incomplete link" state */
+const EMPTY_SHARE_KEY = new Uint8Array(0);
+
+/**
+ * Parse a share route from the current URL.
+ * URL format: /s/<22-char-token>/<optional-slug>#k=<43-char-base64url-key>
+ * Returns null if the URL is not a share route.
+ */
+function parseShareRoute(
+  pathname: string,
+  hash: string
+): { token: string; shareKey: Uint8Array } | null {
+  const tokenMatch = pathname.match(/^\/s\/([A-Za-z0-9_-]{22})(?:\/|$)/);
+  if (!tokenMatch) return null;
+
+  const token = tokenMatch[1];
+  const keyMatch = hash.match(/^#k=([A-Za-z0-9_-]{43})$/);
+  if (!keyMatch) return { token, shareKey: EMPTY_SHARE_KEY };
+
+  try {
+    const shareKey = fromBase64Url(keyMatch[1]);
+    if (shareKey.length !== 32) return { token, shareKey: EMPTY_SHARE_KEY };
+    return { token, shareKey };
+  } catch {
+    return { token, shareKey: EMPTY_SHARE_KEY };
+  }
+}
+
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
   const { keys, isEncryptionSetup, isUnlocked, lockVault, persistToLocal } = useEncryption();
@@ -394,17 +422,9 @@ function App() {
 
   // Share route state (for viewing E2EE shared notes)
   // URL format: /s/<22-char-token>/<optional-slug>#k=<43-char-base64url-key>
-  const [shareRoute, setShareRoute] = useState<{ token: string; shareKey: Uint8Array } | null>(() => {
-    const match = window.location.pathname.match(/^\/s\/([A-Za-z0-9_-]{22})(?:\/|$)/);
-    if (!match) return null;
-    const token = match[1];
-    const keyMatch = window.location.hash.match(/^#k=([A-Za-z0-9_-]{43})$/);
-    if (!keyMatch) return { token, shareKey: new Uint8Array(0) }; // missing key → "incomplete"
-    try {
-      const shareKey = fromBase64Url(keyMatch[1]);
-      return shareKey.length === 32 ? { token, shareKey } : { token, shareKey: new Uint8Array(0) };
-    } catch { return { token, shareKey: new Uint8Array(0) }; }
-  });
+  const [shareRoute, setShareRoute] = useState<{ token: string; shareKey: Uint8Array } | null>(
+    () => parseShareRoute(window.location.pathname, window.location.hash)
+  );
 
   // Defense in depth: clear the URL fragment after reading the share key
   // Prevents the key from lingering in the address bar or browser history
