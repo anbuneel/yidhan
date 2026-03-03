@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    { "source": "/s/:path*", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/s/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, private" },
+        { "key": "Surrogate-Control", "value": "no-store" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://*.ingest.sentry.io; img-src 'self' data:; frame-ancestors 'none'"
+        }
+      ]
+    }
+  ]
+}

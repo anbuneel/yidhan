@@ -21,7 +21,7 @@ src/
 ├── components/
 │   ├── Auth.tsx           # Login/signup/Google OAuth/password reset UI (supports modal mode)
 │   ├── ChangelogPage.tsx  # Version history page with categorized changes
-│   ├── Editor.tsx         # Note editor with rich text + tag selector + save/sync indicator (share disabled for E2EE)
+│   ├── Editor.tsx         # Note editor with rich text + tag selector + save/sync indicator + E2EE sharing
 │   ├── PassphraseSetup.tsx # First-time E2EE passphrase setup screen
 │   ├── PassphraseSetup.test.tsx # 10 tests: form validation, setup flow, welcome note, error states
 │   ├── PassphraseUnlock.tsx # Returning user E2EE unlock screen
@@ -45,8 +45,9 @@ src/
 │   ├── LoadingFallback.tsx # Shared loading spinner for Suspense boundaries
 │   ├── Logo.tsx           # SVG logo image component (public asset reference)
 │   ├── NoteCard.tsx       # Individual note card with tag badges
-│   ├── ShareModal.tsx     # Modal for creating/managing share links
-│   ├── SharedNoteView.tsx # Public read-only view for shared notes
+│   ├── ShareModal.tsx     # Modal for creating/managing E2EE share links (capability-link model)
+│   ├── ShareModal.test.tsx # 18 tests: rendering, create flow, revoke, modal interactions
+│   ├── SharedNoteView.tsx # Public read-only view with client-side decryption for shared notes
 │   ├── SyncIndicator.tsx  # Subtle offline/sync status indicator
 │   ├── ConflictModal.tsx  # "Two Paths" conflict resolution modal
 │   ├── ConflictModal.test.tsx # 17 tests: rendering, resolution buttons, escape, backdrop, error recovery
@@ -81,13 +82,15 @@ src/
 │   ├── AuthContext.tsx    # Auth state management (login, signup, Google OAuth, password reset, profile, offboarding)
 │   └── EncryptionContext.tsx # E2EE key management (derive, unlock, lock, memory-only key storage)
 ├── lib/
-│   ├── encryption.ts      # Core E2EE crypto: Argon2id + AES-256-GCM + HMAC-SHA-256
+│   ├── encryption.ts      # Core E2EE crypto: Argon2id + AES-256-GCM + HMAC-SHA-256 + share encryption
 │   ├── __tests__/
-│   │   └── encryption.test.ts # 12 crypto unit tests (roundtrip, tamper, wrong key/AAD)
+│   │   ├── encryption.test.ts # 12 crypto unit tests (roundtrip, tamper, wrong key/AAD)
+│   │   └── shareEncryption.test.ts # 26 tests: base64url, token/key gen, encrypt/decrypt roundtrip, AAD
 │   ├── supabase.ts        # Supabase client instance + fetchAllPaginated helper
 │   └── offlineDb.ts       # Dexie IndexedDB schema for offline storage (v4 with encryption fields)
 ├── services/
-│   ├── notes.ts           # CRUD operations for notes (with tags)
+│   ├── notes.ts           # CRUD operations for notes (with tags) + E2EE share functions
+│   ├── notes.test.ts      # 64 tests: CRUD, search, soft-delete, share encryption, RPC
 │   ├── tags.ts            # CRUD operations for tags
 │   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue + realtime upserts
 │   ├── offlineNotes.test.ts # 37 tests: offline CRUD, sync queue, server upsert
@@ -101,7 +104,7 @@ src/
 │   ├── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, encrypted note creation)
 │   └── demoMigration.test.ts # 9 tests: empty state, encrypted notes, tag dedup, sanitization
 ├── types/
-│   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares) with full schema
+│   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares, fetch_shared_note RPC)
 ├── hooks/
 │   ├── useNetworkStatus.ts # Network connectivity monitoring (singleton pattern)
 │   ├── useSyncEngine.ts    # Sync engine React integration, conflict resolution
@@ -393,7 +396,7 @@ See `src/data/changelog.ts` for full feature history. See `src/data/roadmap.ts` 
 
 ### Soft-delete, sharing, and demo mode
 - Soft-delete (Faded Notes) functions are in `src/services/notes.ts`
-- Share as Letter functions are in `src/services/notes.ts`
+- Share as Letter (E2EE) functions are in `src/services/notes.ts` — uses capability-link model with per-share keys
 - Demo/Practice Space (`/demo`): `src/services/demoStorage.ts`, `src/hooks/useDemoState.ts`, `src/pages/DemoPage.tsx`
 - Demo-to-account migration runs on signup in `App.tsx` via `migrateDemoToAccount()` (creates encrypted notes)
 
@@ -513,7 +516,7 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **What's NOT encrypted:** Tags (plaintext), metadata (timestamps, pinned)
 - **Salt + key-check:** Stored in Supabase `user_metadata` for passphrase verification
 - **Sentry:** Breadcrumb scrubber strips encrypted fields before sending to Sentry
-- **Share as Letter:** Disabled while E2EE is active (cannot share encrypted content)
+- **Share as Letter:** E2EE-compatible sharing via capability links. Per-share random AES-256-GCM key in URL fragment (`#k=<base64url>`). Server stores only ciphertext via `fetch_shared_note` RPC. Max 30-day TTL, soft-delete revocation. URL format: `/s/<token>/<slug>#k=<key>`
 
 ### Password Policy
 - Minimum 8 characters (enforced in Auth.tsx and SettingsModal.tsx)
@@ -537,6 +540,7 @@ SQL migrations are stored in `supabase/migrations/`:
 - `add_notes_updated_at_trigger.sql` - Server-side trigger enforcing updated_at on notes (clock-skew prevention)
 - `add_updated_at_indexes.sql` - Composite indexes on (user_id, updated_at) for incremental sync queries
 - `expire_shares_for_e2ee.sql` - Delete all share links (E2EE prerequisite)
+- `enable_e2ee_sharing.sql` - Re-enable sharing with E2EE: encrypted_payload, iv, encryption_version, revoked_at columns + fetch_shared_note RPC
 - `disable_welcome_note_trigger.sql` - Remove server-side welcome note trigger (replaced by client-side encrypted welcome)
 - `add_encryption_columns.sql` - Add encrypted_payload, encryption_iv, encryption_version, content_hash columns
 - `add_restore_timestamps_rpc.sql` - RPC to restore note timestamps after E2EE migration (bypasses updated_at trigger)

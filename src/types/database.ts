@@ -123,6 +123,10 @@ export type Database = {
           share_token: string;
           expires_at: string | null;
           created_at: string;
+          encrypted_payload: string | null;
+          iv: string | null;
+          encryption_version: number;
+          revoked_at: string | null;
         };
         Insert: {
           id?: string;
@@ -131,6 +135,10 @@ export type Database = {
           share_token: string;
           expires_at?: string | null;
           created_at?: string;
+          encrypted_payload: string;
+          iv: string;
+          encryption_version: number;
+          revoked_at?: string | null;
         };
         Update: {
           id?: string;
@@ -139,6 +147,10 @@ export type Database = {
           share_token?: string;
           expires_at?: string | null;
           created_at?: string;
+          encrypted_payload?: string;
+          iv?: string;
+          encryption_version?: number;
+          revoked_at?: string | null;
         };
         Relationships: [
           {
@@ -160,7 +172,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      fetch_shared_note: {
+        Args: { share_token_param: string };
+        Returns: Array<{
+          encrypted_payload: string;
+          iv: string;
+          encryption_version: number;
+        }>;
+      };
     };
     Enums: {
       [_ in never]: never;

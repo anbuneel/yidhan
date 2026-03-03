@@ -11,6 +11,12 @@
  * - Title + content encrypted as a single JSON blob
  * - HMAC-SHA-256 content hash for conflict detection
  *
+ * Share encryption model:
+ * - Per-share random 32-byte AES-256-GCM key (never reuses vault keys)
+ * - Key delivered via URL fragment (#k=<base64url>) — never reaches the server
+ * - AAD = `share:<token>:v1` (binds ciphertext to specific share, prevents swap/replay)
+ * - Payload: { version, title, content, tags, sharedAt }
+ *
  * All binary data is stored/transmitted as base64 strings.
  */
 
@@ -64,11 +70,27 @@ export interface EncryptedNote {
   version: number;      // encryption schema version (1)
 }
 
+/** Plaintext payload encrypted inside a share link */
+export interface SharePayload {
+  version: 1;
+  title: string;
+  content: string;
+  tags: Array<{ name: string; color: string }>;
+  sharedAt: string; // ISO 8601
+}
+
+/** Encrypted share data stored in the database */
+export interface EncryptedShareData {
+  ciphertext: string; // base64 (standard — consistent with existing DB storage)
+  iv: string;         // base64 (12-byte nonce)
+  version: number;    // encryption schema version (1)
+}
+
 // ============================================================================
 // Helpers
 // ============================================================================
 
-function toBase64(bytes: Uint8Array): string {
+export function toBase64(bytes: Uint8Array): string {
   let binary = '';
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
@@ -76,7 +98,7 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-function fromBase64(base64: string): Uint8Array {
+export function fromBase64(base64: string): Uint8Array {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
@@ -349,4 +371,119 @@ export async function verifyKeyCheck(
     // Decryption failed — wrong key
     return false;
   }
+}
+
+// ============================================================================
+// URL-safe Base64 (for share links)
+// ============================================================================
+
+/** Convert bytes to URL-safe base64 (RFC 4648 S5): no +, /, or = padding */
+export function toBase64Url(bytes: Uint8Array): string {
+  return toBase64(bytes)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+/** Convert URL-safe base64 back to bytes */
+export function fromBase64Url(b64url: string): Uint8Array {
+  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = b64.length % 4;
+  if (pad === 1) throw new Error('Invalid base64url string: length cannot be 4n+1');
+  if (pad === 2) b64 += '==';
+  else if (pad === 3) b64 += '=';
+  return fromBase64(b64);
+}
+
+// ============================================================================
+// Share Encryption (capability-link model)
+// ============================================================================
+
+/**
+ * Generate a share token: 16 random bytes → 22-char base64url (128-bit entropy).
+ * Used as the server-side lookup key for the encrypted share payload.
+ */
+export function generateShareToken(): string {
+  return toBase64Url(crypto.getRandomValues(new Uint8Array(16)));
+}
+
+/**
+ * Generate a random 32-byte share key.
+ * This key is ephemeral — it exists only in the URL fragment and the sharer's clipboard.
+ */
+export function generateShareKey(): Uint8Array {
+  return crypto.getRandomValues(new Uint8Array(32));
+}
+
+/**
+ * Encrypt a share payload with a per-share random key.
+ *
+ * @param token - Share token (used in AAD to bind ciphertext to this share)
+ * @param shareKey - 32-byte random AES key
+ * @param payload - Plaintext share payload (title, content, tags, sharedAt)
+ * @returns EncryptedShareData with ciphertext, IV, and version
+ */
+export async function encryptSharePayload(
+  token: string,
+  shareKey: Uint8Array,
+  payload: SharePayload
+): Promise<EncryptedShareData> {
+  const plaintextBytes = textEncoder.encode(JSON.stringify(payload));
+  const aad = textEncoder.encode(`share:${token}:v1`);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+
+  const key = await importAesKey(shareKey);
+  const ciphertextBuffer = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv, additionalData: aad },
+    key,
+    plaintextBytes
+  );
+
+  return {
+    ciphertext: toBase64(new Uint8Array(ciphertextBuffer)),
+    iv: toBase64(iv),
+    version: ENCRYPTION_VERSION,
+  };
+}
+
+/**
+ * Decrypt a share payload using the key from the URL fragment.
+ *
+ * @param token - Share token (used to reconstruct AAD)
+ * @param shareKeyBytes - 32-byte AES key from the URL fragment
+ * @param encrypted - Encrypted share data from the server
+ * @returns Decrypted SharePayload
+ * @throws Error if decryption fails (wrong key, tampered data, wrong token)
+ */
+export async function decryptSharePayload(
+  token: string,
+  shareKeyBytes: Uint8Array,
+  encrypted: EncryptedShareData
+): Promise<SharePayload> {
+  if (encrypted.version !== ENCRYPTION_VERSION) {
+    throw new Error(`Unsupported share encryption version: ${encrypted.version}`);
+  }
+
+  const ciphertextBytes = fromBase64(encrypted.ciphertext);
+  const ivBytes = fromBase64(encrypted.iv);
+  const aad = textEncoder.encode(`share:${token}:v1`);
+
+  const key = await importAesKey(shareKeyBytes);
+  const plaintextBuffer = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: new Uint8Array(ivBytes), additionalData: aad },
+    key,
+    new Uint8Array(ciphertextBytes)
+  );
+
+  const plaintext = textDecoder.decode(plaintextBuffer);
+  const payload = JSON.parse(plaintext);
+
+  if (payload.version !== 1) {
+    throw new Error(`Unsupported share payload version: ${payload.version}`);
+  }
+  if (typeof payload.title !== 'string' || typeof payload.content !== 'string' || !Array.isArray(payload.tags)) {
+    throw new Error('Invalid share payload structure');
+  }
+
+  return payload as SharePayload;
 }

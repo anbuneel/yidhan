@@ -34,6 +34,7 @@ export interface NoteShare {
   shareToken: string;
   expiresAt: Date | null;
   createdAt: Date;
+  revokedAt: Date | null;
 }
 export type Theme = 'light' | 'dark';
 

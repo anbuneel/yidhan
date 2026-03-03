@@ -31,7 +31,7 @@ export default defineConfig({
         globIgnores: ['**/yidhan-logo.svg'],
         // Serve index.html for all navigation requests (full offline-first)
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/share\//],
+        navigateFallbackDenylist: [/^\/api/, /^\/share\//, /^\/s\//],
         runtimeCaching: [
           {
             // Cache Google Fonts stylesheets
