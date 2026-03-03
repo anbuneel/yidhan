@@ -62,6 +62,12 @@ export const roadmap: RoadmapItem[] = [
     description: 'Native iOS and Android apps on the App Store and Play Store for system integrations like widgets and Siri.',
     status: 'exploring',
   },
+  {
+    id: '10',
+    title: 'Live Shared Letters',
+    description: 'Shared letters that stay in sync with the original note — edits reflect automatically for anyone with the link.',
+    status: 'exploring',
+  },
 ];
 
 export const statusLabels: Record<RoadmapStatus, string> = {

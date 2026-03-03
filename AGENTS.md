@@ -454,6 +454,7 @@ content...
 ### Production (Vercel)
 - **URL:** https://yidhan.vercel.app
 - **Host:** Vercel (auto-deploys from `main` branch)
+- **Config:** `vercel.json` — rewrites for `/s/*` share routes, security headers (CSP, Cache-Control, Referrer-Policy) on shared note pages
 - **Environment Variables:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SENTRY_DSN` (optional)
 
 ### Supabase Auth Configuration (for OAuth)
