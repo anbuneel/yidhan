@@ -1149,12 +1149,12 @@ body::before {
    ============================================ */
 
 .focus-mode-target {
+  /* Exit: layout expands immediately, then opacity fades in */
   transition: opacity 300ms ease,
-    max-height 0ms ease 300ms,
-    margin 0ms ease 300ms,
-    padding 0ms ease 300ms,
-    border 0ms ease 300ms,
-    overflow 0ms ease 300ms;
+    max-height 0ms ease 0ms,
+    margin 0ms ease 0ms,
+    padding 0ms ease 0ms,
+    overflow 0ms ease 0ms;
 }
 
 .focus-mode-active .focus-mode-target {
@@ -1166,12 +1166,12 @@ body::before {
   padding-top: 0;
   padding-bottom: 0;
   border: none;
+  /* Entry: opacity fades out first, then layout collapses after */
   transition: opacity 300ms ease,
-    max-height 0ms ease 0ms,
-    margin 0ms ease 0ms,
-    padding 0ms ease 0ms,
-    border 0ms ease 0ms,
-    overflow 0ms ease 0ms;
+    max-height 0ms ease 300ms,
+    margin 0ms ease 300ms,
+    padding 0ms ease 300ms,
+    overflow 0ms ease 300ms;
 }
 
 /* Un-stick header and toolbar so they scroll away */

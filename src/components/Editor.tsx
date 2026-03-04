@@ -630,6 +630,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
   // Triple-tap on mobile writing area toggles focus mode
   // Only counts stationary taps (movement < 10px), ignoring scrolls and drags
+  // Ignores taps on interactive elements (buttons, dropdowns) to prevent accidental triggers
   const handleTapEnd = useCallback((e: React.TouchEvent) => {
     const start = touchStartRef.current;
     if (!start) return;
@@ -641,6 +642,10 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
     // Ignore if touch moved (scroll/drag, not a tap)
     if (dx > 10 || dy > 10) return;
+
+    // Ignore taps on interactive child elements (TagSelector, toolbar, footer links)
+    const target = e.target as HTMLElement;
+    if (target.closest('button, select, input, [role="menu"], [role="listbox"]')) return;
 
     tapCountRef.current += 1;
     if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
@@ -1274,7 +1279,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
       {/* Focus Mode indicator pill + screen reader announcement */}
       <div role="status" aria-live="polite" className="sr-only">
-        {isFocusMode ? 'Focus mode on' : ''}
+        {isFocusMode ? 'Focus mode on' : 'Focus mode off'}
       </div>
       {isFocusMode && (
         <button
