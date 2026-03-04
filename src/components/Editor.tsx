@@ -9,6 +9,7 @@ import { formatShortDate, formatRelativeTime } from '../utils/formatTime';
 import { HeaderShell } from './HeaderShell';
 import { WhisperBack } from './WhisperBack';
 import { useMobileDetect } from '../hooks/useMobileDetect';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import {
   exportNoteToMarkdown,
   exportNoteToJSON,
@@ -64,11 +65,13 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const isMobile = useMobileDetect();
+  useKeyboardHeight(); // Sets --keyboard-height CSS var for bottom toolbar positioning
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const tapCountRef = useRef(0);
   const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const throttledScrollSaveRef = useRef<ThrottledSave | null>(null);
   // Store pending scroll save data (captured at scroll time, not timer execution time)
@@ -380,7 +383,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       // Cmd/Ctrl+Shift+F: toggle focus mode
-      if (e.key === 'f' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+      if (e.key.toLowerCase() === 'f' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
         e.preventDefault();
         setIsFocusMode((prev) => !prev);
         return;
@@ -619,8 +622,26 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     };
   }, [showExportMenu]);
 
+  // Track touch start position to distinguish taps from scrolls
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }, []);
+
   // Triple-tap on mobile writing area toggles focus mode
-  const handleTripleTap = useCallback(() => {
+  // Only counts stationary taps (movement < 10px), ignoring scrolls and drags
+  const handleTapEnd = useCallback((e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    if (!start) return;
+
+    const touch = e.changedTouches[0];
+    const dx = Math.abs(touch.clientX - start.x);
+    const dy = Math.abs(touch.clientY - start.y);
+    touchStartRef.current = null;
+
+    // Ignore if touch moved (scroll/drag, not a tap)
+    if (dx > 10 || dy > 10) return;
+
     tapCountRef.current += 1;
     if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
 
@@ -1114,7 +1135,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       )}
 
       {/* Editor Content */}
-      <main onTouchEnd={handleTripleTap}>
+      <main onTouchStart={handleTouchStart} onTouchEnd={handleTapEnd}>
         <div className="max-w-[800px] mx-auto px-4 sm:px-10 pt-2 pb-40 editor-writing-area">
           {/* Title */}
           <textarea
@@ -1128,7 +1149,6 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
               w-full
               font-semibold
               bg-transparent
-              border-none
               outline-none
               resize-none
               overflow-hidden
@@ -1256,10 +1276,10 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
           onClick={() => setIsFocusMode(false)}
           className="focus-mode-indicator"
           aria-label="Exit focus mode"
-          title="Exit focus mode (Esc)"
+          title={isMobile ? 'Exit focus mode (tap)' : 'Exit focus mode (Esc)'}
         >
           <span className="focus-mode-indicator-dot" />
-          Focus · Esc
+          {isMobile ? 'Focus · tap to exit' : 'Focus · Esc'}
         </button>
       )}
 

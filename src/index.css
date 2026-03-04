@@ -1081,6 +1081,7 @@ body::before {
 
 /* Title separator — a subtle accent line under the title */
 .editor-title {
+  border: none;
   border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
   padding-bottom: 0.5rem;
 }
@@ -1147,12 +1148,12 @@ body::before {
    ============================================ */
 
 .focus-mode-target {
-  transition: opacity 300ms ease, max-height 300ms ease;
-  overflow: hidden;
+  transition: opacity 300ms ease;
 }
 
 .focus-mode-active .focus-mode-target {
   opacity: 0;
+  overflow: hidden;
   max-height: 0 !important;
   pointer-events: none;
   margin: 0;
@@ -1240,7 +1241,7 @@ body::before {
 /* Mobile adjustments for focus indicator */
 @media (max-width: 640px) {
   .focus-mode-indicator {
-    bottom: 72px; /* Above bottom toolbar */
+    bottom: 24px; /* Bottom toolbar is hidden in focus mode */
     right: 16px;
     font-size: 0.7rem;
     padding: 5px 12px;
@@ -1255,7 +1256,7 @@ body::before {
 
 .editor-toolbar-bottom {
   position: fixed;
-  bottom: 0;
+  bottom: var(--keyboard-height, 0px);
   left: 0;
   right: 0;
   z-index: 30;
@@ -1264,6 +1265,7 @@ body::before {
   background: var(--color-bg-primary);
   border-top: 1px solid var(--glass-border);
   backdrop-filter: blur(12px);
+  transition: bottom 100ms ease;
 }
 
 /* ============================================

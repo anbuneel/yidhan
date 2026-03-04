@@ -1,6 +1,5 @@
 import type { Editor } from '@tiptap/react';
 import { useState, useRef, useEffect } from 'react';
-import { useMobileDetect } from '../hooks/useMobileDetect';
 
 interface ToolbarButtonProps {
   onClick: () => void;
@@ -154,7 +153,6 @@ interface EditorToolbarProps {
 }
 
 export function EditorToolbar({ editor, variant = 'inline' }: EditorToolbarProps) {
-  const isMobile = useMobileDetect();
 
   if (!editor) {
     return (
@@ -395,47 +393,6 @@ export function EditorToolbar({ editor, variant = 'inline' }: EditorToolbarProps
           {UnderlineButton}
           {StrikeButton}
           {HighlightButton}
-          {NumberedListButton}
-          {QuoteButton}
-          {CodeBlockButton}
-          {HorizontalRuleButton}
-        </OverflowMenu>
-      </div>
-    );
-  }
-
-  // Mobile inline layout (legacy path — bottom variant is preferred on mobile)
-  if (isMobile) {
-    return (
-      <div
-        className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg"
-        style={{
-          background: 'var(--color-bg-secondary)',
-          border: '1px solid var(--glass-border)',
-        }}
-      >
-        {BoldButton}
-        {ItalicButton}
-
-        <ToolbarDivider />
-
-        {BulletListButton}
-        {TaskListButton}
-
-        <ToolbarDivider />
-
-        {UndoButton}
-        {RedoButton}
-
-        <ToolbarDivider />
-
-        <OverflowMenu>
-          {UnderlineButton}
-          {StrikeButton}
-          {HighlightButton}
-          {H1Button}
-          {H2Button}
-          {H3Button}
           {NumberedListButton}
           {QuoteButton}
           {CodeBlockButton}
