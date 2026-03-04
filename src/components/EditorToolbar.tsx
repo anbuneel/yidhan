@@ -59,12 +59,13 @@ function ToolbarDivider() {
   );
 }
 
-// Overflow menu for mobile toolbar
+// Overflow menu for toolbar (supports upward/downward opening)
 interface OverflowMenuProps {
   children: React.ReactNode;
+  direction?: 'down' | 'up';
 }
 
-function OverflowMenu({ children }: OverflowMenuProps) {
+function OverflowMenu({ children, direction = 'down' }: OverflowMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -82,6 +83,10 @@ function OverflowMenu({ children }: OverflowMenuProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
+  const positionStyle = direction === 'up'
+    ? { bottom: '100%', marginBottom: '8px' }
+    : { top: '100%', marginTop: '4px' };
+
   return (
     <div className="relative" ref={menuRef}>
       <ToolbarButton
@@ -97,11 +102,14 @@ function OverflowMenu({ children }: OverflowMenuProps) {
       </ToolbarButton>
       {isOpen && (
         <div
-          className="absolute right-0 top-full mt-1 p-1.5 rounded-lg z-50 flex flex-wrap gap-0.5"
+          className="absolute right-0 p-1.5 rounded-lg z-50 flex flex-wrap gap-0.5"
           style={{
+            ...positionStyle,
             background: 'var(--color-bg-secondary)',
             border: '1px solid var(--glass-border)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            boxShadow: direction === 'up'
+              ? '0 -4px 12px rgba(0,0,0,0.15)'
+              : '0 4px 12px rgba(0,0,0,0.15)',
             minWidth: '200px',
             maxWidth: '280px',
           }}
@@ -114,11 +122,41 @@ function OverflowMenu({ children }: OverflowMenuProps) {
   );
 }
 
-interface EditorToolbarProps {
-  editor: Editor | null;
+// Heading cycle button: ¶ → H1 → H2 → H3 → ¶
+function HeadingCycleButton({ editor }: { editor: Editor }) {
+  const getLabel = () => {
+    if (editor.isActive('heading', { level: 1 })) return 'H1';
+    if (editor.isActive('heading', { level: 2 })) return 'H2';
+    if (editor.isActive('heading', { level: 3 })) return 'H3';
+    return '¶';
+  };
+
+  const cycleHeading = () => {
+    if (editor.isActive('heading', { level: 1 })) {
+      editor.chain().focus().toggleHeading({ level: 2 }).run();
+    } else if (editor.isActive('heading', { level: 2 })) {
+      editor.chain().focus().toggleHeading({ level: 3 }).run();
+    } else if (editor.isActive('heading', { level: 3 })) {
+      editor.chain().focus().setParagraph().run();
+    } else {
+      editor.chain().focus().toggleHeading({ level: 1 }).run();
+    }
+  };
+
+  const isActive = editor.isActive('heading');
+  return (
+    <ToolbarButton onClick={cycleHeading} isActive={isActive} title="Cycle heading level">
+      <span className="text-xs font-bold">{getLabel()}</span>
+    </ToolbarButton>
+  );
 }
 
-export function EditorToolbar({ editor }: EditorToolbarProps) {
+interface EditorToolbarProps {
+  editor: Editor | null;
+  variant?: 'inline' | 'bottom';
+}
+
+export function EditorToolbar({ editor, variant = 'inline' }: EditorToolbarProps) {
   const isMobile = useMobileDetect();
 
   if (!editor) {
@@ -326,7 +364,50 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     </ToolbarButton>
   );
 
-  // Mobile layout: Essential tools + overflow menu
+  // Bottom toolbar variant: compact bar for thumb zone
+  if (variant === 'bottom') {
+    return (
+      <div
+        className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg"
+        style={{
+          background: 'var(--color-bg-secondary)',
+          border: '1px solid var(--glass-border)',
+        }}
+      >
+        {BoldButton}
+        {ItalicButton}
+
+        <ToolbarDivider />
+
+        <HeadingCycleButton editor={editor} />
+
+        <ToolbarDivider />
+
+        {BulletListButton}
+        {TaskListButton}
+
+        <ToolbarDivider />
+
+        {UndoButton}
+        {RedoButton}
+
+        <ToolbarDivider />
+
+        {/* Overflow opens upward from bottom toolbar */}
+        <OverflowMenu direction="up">
+          {UnderlineButton}
+          {StrikeButton}
+          {HighlightButton}
+          {NumberedListButton}
+          {QuoteButton}
+          {CodeBlockButton}
+          {HorizontalRuleButton}
+        </OverflowMenu>
+      </div>
+    );
+  }
+
+  // Mobile inline layout (fallback, used if not bottom variant)
   if (isMobile) {
     return (
       <div
@@ -336,37 +417,29 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
           border: '1px solid var(--glass-border)',
         }}
       >
-        {/* Essential text formatting */}
         {BoldButton}
         {ItalicButton}
 
         <ToolbarDivider />
 
-        {/* Essential lists */}
         {BulletListButton}
         {TaskListButton}
 
         <ToolbarDivider />
 
-        {/* Undo/Redo */}
         {UndoButton}
         {RedoButton}
 
         <ToolbarDivider />
 
-        {/* Overflow menu with remaining tools */}
         <OverflowMenu>
-          {/* Text styles */}
           {UnderlineButton}
           {StrikeButton}
           {HighlightButton}
-          {/* Headings */}
           {H1Button}
           {H2Button}
           {H3Button}
-          {/* Lists */}
           {NumberedListButton}
-          {/* Block elements */}
           {QuoteButton}
           {CodeBlockButton}
           {HorizontalRuleButton}

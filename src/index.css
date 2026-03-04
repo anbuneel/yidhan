@@ -1041,6 +1041,51 @@ body::before {
   -webkit-overflow-scrolling: touch;
 }
 
+/* ============================================
+   SUBTLE PAGE PRESENCE — "Manuscript Glow"
+   Gives the writing canvas atmosphere and spatial
+   identity. A soft radial glow makes the page feel
+   like a surface rather than a void.
+   ============================================ */
+
+/* Writing area gets a soft radial glow to feel like a lit surface */
+.editor-writing-area {
+  position: relative;
+}
+
+.editor-writing-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120%;
+  height: 600px;
+  pointer-events: none;
+  z-index: 0;
+  /* Light theme: warm amber glow */
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 0%,
+    rgba(194, 86, 52, 0.04) 0%,
+    transparent 70%
+  );
+}
+
+[data-theme="dark"] .editor-writing-area::before {
+  /* Dark theme: golden candlelight glow */
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 0%,
+    rgba(212, 175, 55, 0.035) 0%,
+    transparent 70%
+  );
+}
+
+/* Title separator — a subtle accent line under the title */
+.editor-title {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+  padding-bottom: 0.5rem;
+}
+
 /* Sticky Editor Zone */
 .editor-sticky-zone {
   position: sticky;
@@ -1093,6 +1138,139 @@ body::before {
     padding-left: 2.5rem;
     padding-right: 2.5rem;
   }
+}
+
+/* ============================================
+   FOCUS MODE
+   Strips editor chrome for distraction-free writing.
+   Uses parent-class strategy: .focus-mode-active on scroll
+   container triggers descendant .focus-mode-target to fade out.
+   ============================================ */
+
+/* Elements that hide in focus mode */
+.focus-mode-target {
+  transition: opacity 300ms ease, max-height 300ms ease;
+  overflow: hidden;
+}
+
+/* When focus mode is active, hide all targets */
+.focus-mode-active .focus-mode-target {
+  opacity: 0;
+  max-height: 0 !important;
+  pointer-events: none;
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border: none;
+}
+
+/* Un-stick the header so it scrolls away instead of hovering */
+.focus-mode-active .editor-sticky-zone {
+  position: relative;
+}
+
+/* Un-stick the toolbar */
+.focus-mode-active .editor-toolbar-sticky {
+  position: relative;
+}
+
+/* Subtle vignette overlay in focus mode */
+.focus-mode-active::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 50%,
+    transparent 60%,
+    rgba(0, 0, 0, 0.06) 100%
+  );
+  transition: opacity 300ms ease;
+}
+
+[data-theme="dark"] .focus-mode-active::after {
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 50%,
+    transparent 60%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+}
+
+/* Focus mode indicator pill */
+.focus-mode-indicator {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  color: var(--color-text-tertiary);
+  background: color-mix(in srgb, var(--color-bg-secondary) 80%, transparent);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 200ms ease, color 200ms ease;
+  opacity: 0.7;
+  animation: focus-indicator-fade-in 600ms ease forwards;
+}
+
+.focus-mode-indicator:hover {
+  opacity: 1;
+  color: var(--color-accent);
+}
+
+.focus-mode-indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: focus-dot-pulse 3s ease-in-out infinite;
+}
+
+@keyframes focus-indicator-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 0.7; transform: translateY(0); }
+}
+
+@keyframes focus-dot-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Mobile adjustments for focus indicator */
+@media (max-width: 640px) {
+  .focus-mode-indicator {
+    bottom: 72px; /* Above bottom toolbar */
+    right: 16px;
+    font-size: 0.7rem;
+    padding: 5px 12px;
+  }
+}
+
+/* ============================================
+   BOTTOM TOOLBAR (MOBILE)
+   Fixed toolbar in the thumb zone for mobile editing.
+   Uses env(safe-area-inset-bottom) for notched devices.
+   ============================================ */
+
+.editor-toolbar-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding: 6px 8px;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  background: var(--color-bg-primary);
+  border-top: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
 }
 
 /* ============================================

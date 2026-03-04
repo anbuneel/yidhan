@@ -31,8 +31,9 @@ const shortcuts: ShortcutSection[] = [
   {
     title: 'Editor',
     items: [
+      { keys: [modKey, 'Shift', 'F'], description: 'Toggle focus mode' },
       { keys: [modKey, 'Shift', 'C'], description: 'Copy note to clipboard' },
-      { keys: ['Esc'], description: 'Save and return to library' },
+      { keys: ['Esc'], description: 'Exit focus mode / Save and return' },
       { keys: ['/'], description: 'Open slash commands menu' },
     ],
   },
@@ -60,6 +61,7 @@ const shortcuts: ShortcutSection[] = [
       { keys: ['Swipe left'], description: 'Delete note' },
       { keys: ['Swipe right'], description: 'Pin/unpin note' },
       { keys: ['Pull down'], description: 'Refresh notes' },
+      { keys: ['Triple-tap'], description: 'Toggle focus mode' },
     ],
   },
 ];
