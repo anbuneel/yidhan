@@ -622,6 +622,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     };
   }, [showExportMenu]);
 
+  const handleToggleFocusMode = useCallback(() => setIsFocusMode(prev => !prev), []);
+
   // Track touch start position to distinguish taps from scrolls
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
@@ -1196,7 +1198,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
           {/* Toolbar - desktop: flows after tags, sticky on scroll */}
           {!isMobile && (
             <div className="editor-toolbar-sticky focus-mode-target">
-              <EditorToolbar editor={editor} />
+              <EditorToolbar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
             </div>
           )}
 
@@ -1270,7 +1272,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       {/* Mobile: Bottom toolbar — fixed at thumb zone */}
       {isMobile && !isFocusMode && (
         <div className="editor-toolbar-bottom">
-          <EditorToolbar editor={editor} variant="bottom" />
+          <EditorToolbar editor={editor} variant="bottom" onToggleFocusMode={handleToggleFocusMode} />
         </div>
       )}
 

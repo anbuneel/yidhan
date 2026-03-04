@@ -19,6 +19,7 @@ const WELCOME_CONTENT = `<h2>Your calm space for thoughts</h2>
 <li><strong>Switch themes</strong> — Toggle between light (Kintsugi) and dark (Midnight) themes in the header</li>
 <li><strong>Import your notes</strong> — Bring notes from other apps via JSON or Markdown from the profile menu</li>
 <li><strong>Export your notes</strong> — Back up to JSON or export as Markdown anytime</li>
+<li><strong>Focus mode</strong> — Press <code>Ctrl+Shift+F</code> (or triple-tap on mobile) to hide all chrome and write distraction-free</li>
 </ul>
 <h3>Tips</h3>
 <p>Your notes sync automatically across devices. Changes are saved as you type — look for the save indicator in the editor.</p>
