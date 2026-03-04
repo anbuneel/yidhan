@@ -647,6 +647,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
     if (tapCountRef.current >= 3) {
       tapCountRef.current = 0;
+      // Clear native text selection that triple-tap may have triggered
+      window.getSelection()?.removeAllRanges();
       setIsFocusMode((prev) => !prev);
       return;
     }
