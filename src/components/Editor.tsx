@@ -8,6 +8,8 @@ import { ShareModal } from './ShareModal';
 import { formatShortDate, formatRelativeTime } from '../utils/formatTime';
 import { HeaderShell } from './HeaderShell';
 import { WhisperBack } from './WhisperBack';
+import { useMobileDetect } from '../hooks/useMobileDetect';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import {
   exportNoteToMarkdown,
   exportNoteToJSON,
@@ -27,6 +29,7 @@ import {
 const RESUME_SCROLL_THRESHOLD_PX = 400; // Show resume chip if scrolled > 400px
 const RESUME_CHIP_MIN_VISIBLE_MS = 2000; // Keep chip visible for at least 2 seconds
 const SCROLL_SAVE_THROTTLE_MS = 1000; // Save scroll position at most every 1 second
+const TRIPLE_TAP_WINDOW_MS = 500; // Time window for triple-tap detection
 
 // E2EE sharing re-enabled: shares are encrypted client-side with per-share random keys.
 // The decryption key lives in the URL fragment and never reaches the server.
@@ -60,9 +63,15 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   const [showShareModal, setShowShareModal] = useState(false);
   const [showResumeChip, setShowResumeChip] = useState(false);
   const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const isMobile = useMobileDetect();
+  useKeyboardHeight(); // Sets --keyboard-height CSS var for bottom toolbar positioning
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const tapCountRef = useRef(0);
+  const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const throttledScrollSaveRef = useRef<ThrottledSave | null>(null);
   // Store pending scroll save data (captured at scroll time, not timer execution time)
@@ -107,9 +116,10 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       lastSavedContentRef.current = note.content;
       setRemoteUpdate(null);
       dismissedRemoteRef.current = null;
-      // Reset resume chip and scroll save for new note
+      // Reset resume chip, scroll save, and focus mode for new note
       setShowResumeChip(false);
       setSavedScrollPosition(null);
+      setIsFocusMode(false);
       resumeChipShownAtRef.current = 0;
       throttledScrollSaveRef.current = null;
       pendingScrollSaveRef.current = null; // Clear pending data for old note
@@ -372,8 +382,18 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-      // Escape: save and go back (await any in-flight save)
+      // Cmd/Ctrl+Shift+F: toggle focus mode
+      if (e.key.toLowerCase() === 'f' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+        e.preventDefault();
+        setIsFocusMode((prev) => !prev);
+        return;
+      }
+      // Escape: exit focus mode first, then save and go back
       if (e.key === 'Escape') {
+        if (isFocusMode) {
+          setIsFocusMode(false);
+          return;
+        }
         // First await any existing in-flight save
         if (inFlightSaveRef.current) {
           await inFlightSaveRef.current;
@@ -393,7 +413,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [performSave, onBack, note, title, content]);
+  }, [performSave, onBack, note, title, content, isFocusMode]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -401,12 +421,14 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     const autoSaveTimeout = autoSaveTimeoutRef;
     const savePhaseTimeout = savePhaseTimeoutRef;
     const hideIndicatorTimeout = hideIndicatorTimeoutRef;
+    const tapTimeout = tapTimeoutRef;
 
     return () => {
       // Clear any pending timeouts when component unmounts
       if (autoSaveTimeout.current) clearTimeout(autoSaveTimeout.current);
       if (savePhaseTimeout.current) clearTimeout(savePhaseTimeout.current);
       if (hideIndicatorTimeout.current) clearTimeout(hideIndicatorTimeout.current);
+      if (tapTimeout.current) clearTimeout(tapTimeout.current);
     };
   }, []);
 
@@ -599,6 +621,47 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showExportMenu]);
+
+  // Track touch start position to distinguish taps from scrolls
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }, []);
+
+  // Triple-tap on mobile writing area toggles focus mode
+  // Only counts stationary taps (movement < 10px), ignoring scrolls and drags
+  // Ignores taps on interactive elements (buttons, dropdowns) to prevent accidental triggers
+  const handleTapEnd = useCallback((e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    if (!start) return;
+
+    const touch = e.changedTouches[0];
+    const dx = Math.abs(touch.clientX - start.x);
+    const dy = Math.abs(touch.clientY - start.y);
+    touchStartRef.current = null;
+
+    // Ignore if touch moved (scroll/drag, not a tap)
+    if (dx > 10 || dy > 10) return;
+
+    // Ignore taps on interactive child elements (TagSelector, toolbar, footer links)
+    const target = e.target as HTMLElement;
+    if (target.closest('button, select, input, [role="menu"], [role="listbox"]')) return;
+
+    tapCountRef.current += 1;
+    if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
+
+    if (tapCountRef.current >= 3) {
+      tapCountRef.current = 0;
+      // Clear native text selection that triple-tap may have triggered
+      window.getSelection()?.removeAllRanges();
+      setIsFocusMode((prev) => !prev);
+      return;
+    }
+
+    tapTimeoutRef.current = setTimeout(() => {
+      tapCountRef.current = 0;
+    }, TRIPLE_TAP_WINDOW_MS);
+  }, []);
 
   // Left content: Logo + Breadcrumb (integrated for visual continuity)
   const leftContent = (
@@ -938,13 +1001,13 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   return (
     <div
       ref={scrollContainerRef}
-      className="h-screen overflow-y-auto"
+      className={`h-screen overflow-y-auto ${isFocusMode ? 'focus-mode-active' : ''}`}
       style={{ background: 'var(--color-bg-primary)' }}
       data-testid="note-editor"
     >
       {/* Sticky Zone: Header only */}
       <div
-        className="editor-sticky-zone"
+        className="editor-sticky-zone focus-mode-target"
         style={{ background: 'var(--color-bg-primary)' }}
       >
         <HeaderShell
@@ -959,7 +1022,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
       {/* Resume chip - shown when reopening a note with saved scroll position */}
       {showResumeChip && (
-        <div className="flex justify-center py-2">
+        <div className="flex justify-center py-2 focus-mode-target">
           <button
             onClick={handleResumeScroll}
             aria-label="Resume editing at your last position"
@@ -1079,8 +1142,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       )}
 
       {/* Editor Content */}
-      <main>
-        <div className="max-w-[800px] mx-auto px-4 sm:px-10 pt-2 pb-40">
+      <main onTouchStart={handleTouchStart} onTouchEnd={handleTapEnd}>
+        <div className="max-w-[800px] mx-auto px-4 sm:px-10 pt-2 pb-40 editor-writing-area">
           {/* Title */}
           <textarea
             ref={titleRef}
@@ -1093,12 +1156,12 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
               w-full
               font-semibold
               bg-transparent
-              border-none
               outline-none
               resize-none
               overflow-hidden
               leading-tight
               mb-2
+              editor-title
             "
             style={{
               fontFamily: 'var(--font-display)',
@@ -1112,7 +1175,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
           {/* Timestamps */}
           <div
-            className="text-xs mb-1"
+            className="text-xs mb-1 focus-mode-target"
             style={{
               fontFamily: 'var(--font-body)',
               color: 'var(--color-text-tertiary)',
@@ -1122,7 +1185,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
           </div>
 
           {/* Tag Selector */}
-          <div className="mb-1">
+          <div className="mb-1 focus-mode-target">
             <TagSelector
               tags={tags}
               selectedTagIds={note.tags.map((t) => t.id)}
@@ -1131,10 +1194,12 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
             />
           </div>
 
-          {/* Toolbar - flows naturally after tags, becomes sticky when scrolled */}
-          <div className="editor-toolbar-sticky">
-            <EditorToolbar editor={editor} />
-          </div>
+          {/* Toolbar - desktop: flows after tags, sticky on scroll */}
+          {!isMobile && (
+            <div className="editor-toolbar-sticky focus-mode-target">
+              <EditorToolbar editor={editor} />
+            </div>
+          )}
 
           {/* Rich Text Content */}
           <RichTextEditor
@@ -1148,7 +1213,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
           {/* Organic Footer - appears at natural end of content */}
           <footer
-            className="mt-16 mb-8 flex flex-col items-center gap-4"
+            className="mt-16 mb-8 flex flex-col items-center gap-4 focus-mode-target"
             style={{ color: 'var(--color-text-tertiary)' }}
           >
             {/* Decorative dots - like end of a letter */}
@@ -1202,8 +1267,31 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
         </div>
       </main>
 
-      {/* Floating scroll-to-top button */}
-      <WhisperBack scrollContainerRef={scrollContainerRef} />
+      {/* Mobile: Bottom toolbar — fixed at thumb zone */}
+      {isMobile && !isFocusMode && (
+        <div className="editor-toolbar-bottom">
+          <EditorToolbar editor={editor} variant="bottom" />
+        </div>
+      )}
+
+      {/* Floating scroll-to-top button — hidden in focus mode */}
+      {!isFocusMode && <WhisperBack scrollContainerRef={scrollContainerRef} />}
+
+      {/* Focus Mode indicator pill + screen reader announcement */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {isFocusMode ? 'Focus mode on' : 'Focus mode off'}
+      </div>
+      {isFocusMode && (
+        <button
+          onClick={() => setIsFocusMode(false)}
+          className="focus-mode-indicator"
+          aria-label="Exit focus mode"
+          title={isMobile ? 'Exit focus mode (tap)' : 'Exit focus mode (Esc)'}
+        >
+          <span className="focus-mode-indicator-dot" />
+          {isMobile ? 'Focus · tap to exit' : 'Focus · Esc'}
+        </button>
+      )}
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (

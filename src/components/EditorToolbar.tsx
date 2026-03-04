@@ -1,6 +1,5 @@
 import type { Editor } from '@tiptap/react';
 import { useState, useRef, useEffect } from 'react';
-import { useMobileDetect } from '../hooks/useMobileDetect';
 
 interface ToolbarButtonProps {
   onClick: () => void;
@@ -59,12 +58,13 @@ function ToolbarDivider() {
   );
 }
 
-// Overflow menu for mobile toolbar
+// Overflow menu for toolbar (supports upward/downward opening)
 interface OverflowMenuProps {
   children: React.ReactNode;
+  direction?: 'down' | 'up';
 }
 
-function OverflowMenu({ children }: OverflowMenuProps) {
+function OverflowMenu({ children, direction = 'down' }: OverflowMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -82,6 +82,10 @@ function OverflowMenu({ children }: OverflowMenuProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
+  const positionStyle = direction === 'up'
+    ? { bottom: '100%', marginBottom: '8px' }
+    : { top: '100%', marginTop: '4px' };
+
   return (
     <div className="relative" ref={menuRef}>
       <ToolbarButton
@@ -97,11 +101,14 @@ function OverflowMenu({ children }: OverflowMenuProps) {
       </ToolbarButton>
       {isOpen && (
         <div
-          className="absolute right-0 top-full mt-1 p-1.5 rounded-lg z-50 flex flex-wrap gap-0.5"
+          className="absolute right-0 p-1.5 rounded-lg z-50 flex flex-wrap gap-0.5"
           style={{
+            ...positionStyle,
             background: 'var(--color-bg-secondary)',
             border: '1px solid var(--glass-border)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            boxShadow: direction === 'up'
+              ? '0 -4px 12px rgba(0,0,0,0.15)'
+              : '0 4px 12px rgba(0,0,0,0.15)',
             minWidth: '200px',
             maxWidth: '280px',
           }}
@@ -114,12 +121,38 @@ function OverflowMenu({ children }: OverflowMenuProps) {
   );
 }
 
-interface EditorToolbarProps {
-  editor: Editor | null;
+// Heading cycle button: ¶ → H1 → H2 → H3 → ¶
+function HeadingCycleButton({ editor }: { editor: Editor }) {
+  const currentLevel =
+    editor.isActive('heading', { level: 1 }) ? 1
+    : editor.isActive('heading', { level: 2 }) ? 2
+    : editor.isActive('heading', { level: 3 }) ? 3
+    : 0;
+
+  const label = currentLevel > 0 ? `H${currentLevel}` : '¶';
+
+  function cycleHeading(): void {
+    switch (currentLevel) {
+      case 1: editor.chain().focus().toggleHeading({ level: 2 }).run(); break;
+      case 2: editor.chain().focus().toggleHeading({ level: 3 }).run(); break;
+      case 3: editor.chain().focus().setParagraph().run(); break;
+      default: editor.chain().focus().toggleHeading({ level: 1 }).run(); break;
+    }
+  }
+
+  return (
+    <ToolbarButton onClick={cycleHeading} isActive={currentLevel > 0} title="Cycle heading level">
+      <span className="text-xs font-bold">{label}</span>
+    </ToolbarButton>
+  );
 }
 
-export function EditorToolbar({ editor }: EditorToolbarProps) {
-  const isMobile = useMobileDetect();
+interface EditorToolbarProps {
+  editor: Editor | null;
+  variant?: 'inline' | 'bottom';
+}
+
+export function EditorToolbar({ editor, variant = 'inline' }: EditorToolbarProps) {
 
   if (!editor) {
     return (
@@ -326,8 +359,8 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     </ToolbarButton>
   );
 
-  // Mobile layout: Essential tools + overflow menu
-  if (isMobile) {
+  // Bottom toolbar variant: compact bar for thumb zone
+  if (variant === 'bottom') {
     return (
       <div
         className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg"
@@ -336,37 +369,31 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
           border: '1px solid var(--glass-border)',
         }}
       >
-        {/* Essential text formatting */}
         {BoldButton}
         {ItalicButton}
 
         <ToolbarDivider />
 
-        {/* Essential lists */}
+        <HeadingCycleButton editor={editor} />
+
+        <ToolbarDivider />
+
         {BulletListButton}
         {TaskListButton}
 
         <ToolbarDivider />
 
-        {/* Undo/Redo */}
         {UndoButton}
         {RedoButton}
 
         <ToolbarDivider />
 
-        {/* Overflow menu with remaining tools */}
-        <OverflowMenu>
-          {/* Text styles */}
+        {/* Overflow opens upward from bottom toolbar */}
+        <OverflowMenu direction="up">
           {UnderlineButton}
           {StrikeButton}
           {HighlightButton}
-          {/* Headings */}
-          {H1Button}
-          {H2Button}
-          {H3Button}
-          {/* Lists */}
           {NumberedListButton}
-          {/* Block elements */}
           {QuoteButton}
           {CodeBlockButton}
           {HorizontalRuleButton}

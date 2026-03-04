@@ -11,6 +11,7 @@ Core product documentation.
 | Document | Description | Date |
 |----------|-------------|------|
 | [prd.md](prd.md) | Product Requirements Document (features, personas, user flows) | 2025-12-29 |
+| [roadmap.md](roadmap.md) | **NEW** Unified product roadmap (29 items across 4 phases, consolidated from 8+ docs) | 2026-03-03 |
 | [technical-spec.md](technical-spec.md) | Technical architecture and implementation details | 2025-12-29 |
 | [ui-layout.md](ui-layout.md) | ASCII diagrams of all UI components and layouts | 2025-12-29 |
 
@@ -36,7 +37,8 @@ Design analysis and feature exploration (Claude-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [codebase-bloat-audit-codex.md](analysis/codebase-bloat-audit-codex.md) | **NEW** Quick bloat audit focused on maintainability and velocity risks | 2026-01-27 |
+| [editor-excellence-proposal-claude.md](analysis/editor-excellence-proposal-claude.md) | **NEW** Editor Excellence sprint: Focus Mode + Page Presence + Bottom Toolbar design proposal | 2026-03-03 |
+| [codebase-bloat-audit-codex.md](analysis/codebase-bloat-audit-codex.md) | Quick bloat audit focused on maintainability and velocity risks | 2026-01-27 |
 | [kintsugi-light-mode-enhancements-claude.md](analysis/kintsugi-light-mode-enhancements-claude.md) | **NEW** Light mode enhancements: grain opacity, shadow warmth, card refinements | 2026-01-26 |
 | [editor-ux-evaluation-claude.md](analysis/editor-ux-evaluation-claude.md) | **NEW** Editor UI/UX evaluation: typography, toolbar, mobile, 15 quick wins | 2026-01-26 |
 | [mobile-implementation-review-claude.md](analysis/mobile-implementation-review-claude.md) | Mobile implementation review: current state 8.5/10, 12 polish opportunities | 2026-01-16 |
