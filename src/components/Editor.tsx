@@ -1272,7 +1272,10 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       {/* Floating scroll-to-top button — hidden in focus mode */}
       {!isFocusMode && <WhisperBack scrollContainerRef={scrollContainerRef} />}
 
-      {/* Focus Mode indicator pill */}
+      {/* Focus Mode indicator pill + screen reader announcement */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {isFocusMode ? 'Focus mode on' : ''}
+      </div>
       {isFocusMode && (
         <button
           onClick={() => setIsFocusMode(false)}
