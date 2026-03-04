@@ -12,7 +12,7 @@ export const changelog: ChangelogEntry[] = [
     date: '2026-03-03',
     changes: [
       { type: 'feature', text: 'Focus Mode — Ctrl+Shift+F (desktop) / triple-tap (mobile) strips editor chrome for distraction-free writing with vignette overlay and indicator pill' },
-      { type: 'feature', text: 'Subtle Page Presence — "Manuscript Glow" radial gradient gives the writing canvas atmosphere (terracotta light / golden dark) with title separator accent line' },
+      { type: 'feature', text: 'Subtle Page Presence — elevated writing surface with "Manuscript Glow" (terracotta light / golden dark), wabi-sabi corners, and soft shadow' },
       { type: 'feature', text: 'Bottom Toolbar on Mobile — formatting tools fixed at thumb zone with heading cycle button (¶/H1/H2/H3) and upward overflow menu' },
       { type: 'improvement', text: 'Keyboard-aware toolbar positioning via Visual Viewport API (toolbar moves above virtual keyboard)' },
       { type: 'improvement', text: 'Screen reader announcements for focus mode toggle via aria-live region' },

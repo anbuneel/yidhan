@@ -1065,7 +1065,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
            while the editor has unsaved local changes */}
       {remoteUpdate && (
         <div
-          className="max-w-[800px] mx-auto px-4 sm:px-10"
+          className="max-w-[900px] mx-auto px-4 sm:px-10"
           role="alert"
         >
           <div
@@ -1143,7 +1143,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
       {/* Editor Content */}
       <main onTouchStart={handleTouchStart} onTouchEnd={handleTapEnd}>
-        <div className="max-w-[800px] mx-auto px-4 sm:px-10 pt-2 pb-40 editor-writing-area">
+        <div className="max-w-[900px] mx-auto px-4 sm:px-10 pt-2 pb-12 editor-writing-area">
           {/* Title */}
           <textarea
             ref={titleRef}
@@ -1161,7 +1161,6 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
               overflow-hidden
               leading-tight
               mb-2
-              editor-title
             "
             style={{
               fontFamily: 'var(--font-display)',
@@ -1211,60 +1210,61 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
             onEditorReady={setEditor}
           />
 
-          {/* Organic Footer - appears at natural end of content */}
-          <footer
-            className="mt-16 mb-8 flex flex-col items-center gap-4 focus-mode-target"
-            style={{ color: 'var(--color-text-tertiary)' }}
-          >
-            {/* Decorative dots - like end of a letter */}
-            <div className="flex gap-2 opacity-40">
-              <span className="w-1 h-1 rounded-full bg-current" />
-              <span className="w-1 h-1 rounded-full bg-current" />
-              <span className="w-1 h-1 rounded-full bg-current" />
-            </div>
-
-            {/* Return link - larger touch target on mobile */}
-            <button
-              onClick={handleLogoClick}
-              className="
-                flex items-center gap-2
-                px-4 py-3
-                min-h-[44px]
-                text-sm
-                transition-colors duration-300
-                hover:text-[var(--color-accent)]
-                active:text-[var(--color-accent)]
-              "
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-tertiary)',
-              }}
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-              Return to notes
-            </button>
-
-            {/* Keyboard hint - desktop only */}
-            <span
-              className="hidden sm:block text-xs opacity-50"
-              style={{ fontFamily: 'var(--font-body)' }}
-            >
-              Press <kbd className="px-1.5 py-0.5 rounded text-[10px] bg-[var(--color-bg-secondary)]">Esc</kbd> to save & exit
-            </span>
-          </footer>
         </div>
+
+        {/* Organic Footer - sits below the elevated page surface */}
+        <footer
+          className="max-w-[900px] mx-auto mt-16 mb-8 flex flex-col items-center gap-4 focus-mode-target"
+          style={{ color: 'var(--color-text-tertiary)' }}
+        >
+          {/* Decorative dots - like end of a letter */}
+          <div className="flex gap-2 opacity-40">
+            <span className="w-1 h-1 rounded-full bg-current" />
+            <span className="w-1 h-1 rounded-full bg-current" />
+            <span className="w-1 h-1 rounded-full bg-current" />
+          </div>
+
+          {/* Return link - larger touch target on mobile */}
+          <button
+            onClick={handleLogoClick}
+            className="
+              flex items-center gap-2
+              px-4 py-3
+              min-h-[44px]
+              text-sm
+              transition-colors duration-300
+              hover:text-[var(--color-accent)]
+              active:text-[var(--color-accent)]
+            "
+            style={{
+              fontFamily: 'var(--font-body)',
+              color: 'var(--color-text-tertiary)',
+            }}
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+            Return to notes
+          </button>
+
+          {/* Keyboard hint - desktop only */}
+          <span
+            className="hidden sm:block text-xs opacity-50"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
+            Press <kbd className="px-1.5 py-0.5 rounded text-[10px] bg-[var(--color-bg-secondary)]">Esc</kbd> to save & exit
+          </span>
+        </footer>
       </main>
 
       {/* Mobile: Bottom toolbar — fixed at thumb zone */}
