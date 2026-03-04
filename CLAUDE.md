@@ -21,12 +21,12 @@ src/
 ├── components/
 │   ├── Auth.tsx           # Login/signup/Google OAuth/password reset UI (supports modal mode)
 │   ├── ChangelogPage.tsx  # Version history page with categorized changes
-│   ├── Editor.tsx         # Note editor with rich text + tag selector + save/sync indicator + E2EE sharing
+│   ├── Editor.tsx         # Note editor with rich text + tag selector + save/sync indicator + E2EE sharing + focus mode + mobile bottom toolbar
 │   ├── PassphraseSetup.tsx # First-time E2EE passphrase setup screen
 │   ├── PassphraseSetup.test.tsx # 10 tests: form validation, setup flow, welcome note, error states
 │   ├── PassphraseUnlock.tsx # Returning user E2EE unlock screen
 │   ├── PassphraseUnlock.test.tsx # 12 tests: unlock flow, error states, sign-out, remember browser
-│   ├── EditorToolbar.tsx  # Formatting toolbar for rich text editor (sticky in header zone)
+│   ├── EditorToolbar.tsx  # Formatting toolbar (variant: 'inline' desktop / 'bottom' mobile, HeadingCycleButton, OverflowMenu with direction)
 │   ├── ErrorBoundary.tsx  # Error boundary with chunk error detection (deployment handling)
 │   ├── Footer.tsx         # Minimal footer with changelog/roadmap/shortcuts/GitHub links
 │   ├── KeyboardShortcutsModal.tsx # Help modal showing all keyboard shortcuts and gestures
@@ -378,10 +378,13 @@ See `src/data/changelog.ts` for full feature history. See `src/data/roadmap.ts` 
 4. Use asymmetric border-radius: `2px 12px 4px 12px` for small elements
 
 ### Modifying the editor
-- Toolbar buttons are in `EditorToolbar.tsx` (rendered in sticky zone by `Editor.tsx`)
+- Toolbar buttons are in `EditorToolbar.tsx` with `variant` prop: `'inline'` (desktop, sticky in header zone) or `'bottom'` (mobile, fixed at thumb zone)
+- Mobile toolbar uses `HeadingCycleButton` (¶→H1→H2→H3→¶) and `OverflowMenu` with `direction="up"` prop
+- Focus mode uses parent-class CSS strategy: `focus-mode-active` on scroll container triggers descendant `.focus-mode-target` elements to fade out
 - Editor content is in `RichTextEditor.tsx` (exposes editor via `onEditorReady` callback)
 - Editor styles are in `index.css` under `.rich-text-editor`
 - Add new Tiptap extensions via npm and configure in `RichTextEditor.tsx`
+- `useKeyboardHeight` hook sets `--keyboard-height` CSS variable for keyboard-aware positioning
 
 ### Database changes
 1. Update schema in Supabase SQL Editor
