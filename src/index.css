@@ -1048,7 +1048,6 @@ body::before {
    like a surface rather than a void.
    ============================================ */
 
-/* Writing area gets a soft radial glow to feel like a lit surface */
 .editor-writing-area {
   position: relative;
 }
@@ -1147,13 +1146,11 @@ body::before {
    container triggers descendant .focus-mode-target to fade out.
    ============================================ */
 
-/* Elements that hide in focus mode */
 .focus-mode-target {
   transition: opacity 300ms ease, max-height 300ms ease;
   overflow: hidden;
 }
 
-/* When focus mode is active, hide all targets */
 .focus-mode-active .focus-mode-target {
   opacity: 0;
   max-height: 0 !important;
@@ -1164,12 +1161,8 @@ body::before {
   border: none;
 }
 
-/* Un-stick the header so it scrolls away instead of hovering */
-.focus-mode-active .editor-sticky-zone {
-  position: relative;
-}
-
-/* Un-stick the toolbar */
+/* Un-stick header and toolbar so they scroll away */
+.focus-mode-active .editor-sticky-zone,
 .focus-mode-active .editor-toolbar-sticky {
   position: relative;
 }

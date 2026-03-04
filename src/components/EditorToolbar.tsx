@@ -124,29 +124,26 @@ function OverflowMenu({ children, direction = 'down' }: OverflowMenuProps) {
 
 // Heading cycle button: ¶ → H1 → H2 → H3 → ¶
 function HeadingCycleButton({ editor }: { editor: Editor }) {
-  const getLabel = () => {
-    if (editor.isActive('heading', { level: 1 })) return 'H1';
-    if (editor.isActive('heading', { level: 2 })) return 'H2';
-    if (editor.isActive('heading', { level: 3 })) return 'H3';
-    return '¶';
-  };
+  const currentLevel =
+    editor.isActive('heading', { level: 1 }) ? 1
+    : editor.isActive('heading', { level: 2 }) ? 2
+    : editor.isActive('heading', { level: 3 }) ? 3
+    : 0;
 
-  const cycleHeading = () => {
-    if (editor.isActive('heading', { level: 1 })) {
-      editor.chain().focus().toggleHeading({ level: 2 }).run();
-    } else if (editor.isActive('heading', { level: 2 })) {
-      editor.chain().focus().toggleHeading({ level: 3 }).run();
-    } else if (editor.isActive('heading', { level: 3 })) {
-      editor.chain().focus().setParagraph().run();
-    } else {
-      editor.chain().focus().toggleHeading({ level: 1 }).run();
+  const label = currentLevel > 0 ? `H${currentLevel}` : '¶';
+
+  function cycleHeading(): void {
+    switch (currentLevel) {
+      case 1: editor.chain().focus().toggleHeading({ level: 2 }).run(); break;
+      case 2: editor.chain().focus().toggleHeading({ level: 3 }).run(); break;
+      case 3: editor.chain().focus().setParagraph().run(); break;
+      default: editor.chain().focus().toggleHeading({ level: 1 }).run(); break;
     }
-  };
+  }
 
-  const isActive = editor.isActive('heading');
   return (
-    <ToolbarButton onClick={cycleHeading} isActive={isActive} title="Cycle heading level">
-      <span className="text-xs font-bold">{getLabel()}</span>
+    <ToolbarButton onClick={cycleHeading} isActive={currentLevel > 0} title="Cycle heading level">
+      <span className="text-xs font-bold">{label}</span>
     </ToolbarButton>
   );
 }
@@ -407,7 +404,7 @@ export function EditorToolbar({ editor, variant = 'inline' }: EditorToolbarProps
     );
   }
 
-  // Mobile inline layout (fallback, used if not bottom variant)
+  // Mobile inline layout (legacy path — bottom variant is preferred on mobile)
   if (isMobile) {
     return (
       <div

@@ -28,6 +28,7 @@ import {
 const RESUME_SCROLL_THRESHOLD_PX = 400; // Show resume chip if scrolled > 400px
 const RESUME_CHIP_MIN_VISIBLE_MS = 2000; // Keep chip visible for at least 2 seconds
 const SCROLL_SAVE_THROTTLE_MS = 1000; // Save scroll position at most every 1 second
+const TRIPLE_TAP_WINDOW_MS = 500; // Time window for triple-tap detection
 
 // E2EE sharing re-enabled: shares are encrypted client-side with per-share random keys.
 // The decryption key lives in the URL fragment and never reaches the server.
@@ -66,7 +67,6 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  // Triple-tap tracking for mobile focus mode toggle
   const tapCountRef = useRef(0);
   const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -619,9 +619,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     };
   }, [showExportMenu]);
 
-  // Triple-tap handler for mobile focus mode toggle
+  // Triple-tap on mobile writing area toggles focus mode
   const handleTripleTap = useCallback(() => {
-    if (!isMobile) return;
     tapCountRef.current += 1;
     if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
 
@@ -631,11 +630,10 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       return;
     }
 
-    // Reset tap count after 500ms of no taps
     tapTimeoutRef.current = setTimeout(() => {
       tapCountRef.current = 0;
-    }, 500);
-  }, [isMobile]);
+    }, TRIPLE_TAP_WINDOW_MS);
+  }, []);
 
   // Left content: Logo + Breadcrumb (integrated for visual continuity)
   const leftContent = (
@@ -975,7 +973,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   return (
     <div
       ref={scrollContainerRef}
-      className={`h-screen overflow-y-auto${isFocusMode ? ' focus-mode-active' : ''}`}
+      className={`h-screen overflow-y-auto ${isFocusMode ? 'focus-mode-active' : ''}`}
       style={{ background: 'var(--color-bg-primary)' }}
       data-testid="note-editor"
     >
