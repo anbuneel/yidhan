@@ -3,6 +3,9 @@ import type { Theme } from '../types';
 import { HeaderShell, type MenuSectionConfig } from './HeaderShell';
 import { SyncIndicator } from './SyncIndicator';
 
+const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+const modKey = isMac ? '⌘' : 'Ctrl+';
+
 interface HeaderProps {
   theme: Theme;
   onThemeToggle: () => void;
@@ -172,7 +175,7 @@ export function Header({
                 fontFamily: 'var(--font-body)',
               }}
             >
-              ⌘K
+              {modKey}K
             </span>
           )}
         </div>

@@ -15,7 +15,7 @@ const WELCOME_CONTENT = `<h2>Your calm space for thoughts</h2>
 <li><strong>Create a note</strong> — Click the "New Note" button or start typing</li>
 <li><strong>Rich formatting</strong> — Use the toolbar for bold, italic, headers, lists, quotes, and code blocks</li>
 <li><strong>Organize with tags</strong> — Add tags to categorize your notes and filter by them later</li>
-<li><strong>Quick search</strong> — Press <code>Cmd+K</code> (or <code>Ctrl+K</code>) to search your notes instantly</li>
+<li><strong>Quick search</strong> — Press <code>Ctrl+K</code> (or <code>Cmd+K</code> on Mac) to search your notes instantly</li>
 <li><strong>Switch themes</strong> — Toggle between light (Kintsugi) and dark (Midnight) themes in the header</li>
 <li><strong>Import your notes</strong> — Bring notes from other apps via JSON or Markdown from the profile menu</li>
 <li><strong>Export your notes</strong> — Back up to JSON or export as Markdown anytime</li>
