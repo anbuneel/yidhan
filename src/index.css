@@ -1110,7 +1110,7 @@ body::before {
 }
 
 /* Mobile toolbar adjustments */
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .editor-toolbar button {
     min-width: 32px;
     min-height: 32px;
@@ -1249,7 +1249,7 @@ body::before {
 }
 
 /* Mobile adjustments for focus indicator */
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .focus-mode-indicator {
     bottom: calc(24px + env(safe-area-inset-bottom, 0px));
     right: 16px;
@@ -1288,7 +1288,7 @@ body::before {
   scroll-padding-top: 140px; /* Header (~60px) + Toolbar (~80px) */
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   /* Mobile: toolbar is fixed at bottom, only header is sticky at top */
   .editor-sticky-zone + main {
     scroll-padding-top: 72px; /* Header only (~60px + padding) */
@@ -1301,7 +1301,7 @@ textarea:focus,
   scroll-margin-top: 140px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   textarea:focus,
   .ProseMirror:focus {
     scroll-margin-top: 72px;

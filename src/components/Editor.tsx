@@ -645,7 +645,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
     // Ignore taps on interactive child elements (TagSelector, toolbar, footer links)
     const target = e.target as HTMLElement;
-    if (target.closest('button, select, input, [role="menu"], [role="listbox"]')) return;
+    if (target.closest('button, select, input, textarea, [role="menu"], [role="listbox"]')) return;
 
     tapCountRef.current += 1;
     if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
