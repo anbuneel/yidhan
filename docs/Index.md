@@ -23,6 +23,7 @@ Business strategy, competitive positioning, and launch planning.
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [design-critique-tracker.md](active/design-critique-tracker.md) | Design critique findings tracker — decisions, completed items, open issues | 2026-03-07 |
 | [strategic-viability-review-claude.md](active/strategic-viability-review-claude.md) | Honest competitive viability assessment and gap analysis | 2026-01-06 |
 | [competitive-design-evaluation-claude.md](active/competitive-design-evaluation-claude.md) | Design comparison vs Notion, Bear, Apple Notes, Obsidian, Craft | 2025-12-26 |
 | [launch-readiness-assessment.md](active/launch-readiness-assessment.md) | Launch readiness checklist (93% ready as of 2025-12-28) | 2025-12-28 |

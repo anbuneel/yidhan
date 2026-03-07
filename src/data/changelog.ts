@@ -19,6 +19,8 @@ export const changelog: ChangelogEntry[] = [
       { type: 'improvement', text: 'Welcome notes shortened to set emotional tone rather than list features — contextual discovery over upfront teaching' },
       { type: 'improvement', text: 'Chapter headers made more visible as scroll landmarks (larger text, primary color)' },
       { type: 'fix', text: 'Removed redundant backdrop-filter blur from showcase cards and auth modal (blur-on-blur with overlay)' },
+      { type: 'improvement', text: 'Card backgrounds made more opaque across all themes — cards feel like card stock rather than tracing paper' },
+      { type: 'improvement', text: 'Light theme card shadows strengthened with dual-layer technique for better definition on warm backgrounds' },
       { type: 'fix', text: 'Note card hover lift reduced from 6px to 3px for subtler, more paper-like interaction' },
     ],
   },

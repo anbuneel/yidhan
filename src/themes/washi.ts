@@ -20,7 +20,7 @@ export const washi: ThemeConfig = {
     bgPrimary: '#F6F1E7',
     bgSecondary: '#EDE6D6',
     bgTertiary: '#E3D9C6',
-    cardBg: 'rgba(253, 250, 242, 0.75)',
+    cardBg: 'rgba(253, 250, 242, 0.90)',
 
     // Typography: Sumi ink - warm black
     textPrimary: '#3D3630',
@@ -56,9 +56,9 @@ export const washi: ThemeConfig = {
 
     // Borders and shadows (warm sepia tones)
     glassBorder: 'rgba(61, 54, 48, 0.18)',
-    shadowSm: '0 2px 8px rgba(61, 54, 48, 0.06)',
-    shadowMd: '0 20px 40px -10px rgba(61, 54, 48, 0.12)',
-    shadowLg: '0 10px 40px rgba(61, 54, 48, 0.15)',
+    shadowSm: '0 2px 8px rgba(61, 54, 48, 0.10)',
+    shadowMd: '0 4px 12px rgba(61, 54, 48, 0.08), 0 20px 40px -10px rgba(61, 54, 48, 0.22)',
+    shadowLg: '0 4px 12px rgba(61, 54, 48, 0.10), 0 10px 40px rgba(61, 54, 48, 0.25)',
 
     // Effects
     noiseOpacity: '0.10',
