@@ -332,10 +332,9 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   // Auth card content (shared between modal and full page)
   const authCard = (
     <div
-        className="w-full max-w-[600px] p-6 md:p-10 mx-auto"
+        className="w-full max-w-[440px] p-6 md:p-10 mx-auto"
         style={{
           background: 'var(--color-card-bg)',
-          backdropFilter: 'blur(20px)',
           border: '1px solid var(--glass-border)',
           borderRadius: 'var(--radius-card)',
         }}
@@ -825,6 +824,18 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             </p>
           )}
         </div>
+
+        {/* E2EE Trust Signal */}
+        <p
+          className="text-center mt-6 text-xs"
+          style={{
+            fontFamily: 'var(--font-body)',
+            color: 'var(--color-text-tertiary)',
+            letterSpacing: '0.03em',
+          }}
+        >
+          End-to-end encrypted. Your thoughts belong only to you.
+        </p>
         </>
         )}
       </div>

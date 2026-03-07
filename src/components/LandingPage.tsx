@@ -50,10 +50,7 @@ function ShowcaseCard({ note, index }: { note: typeof SAMPLE_NOTES[number]; inde
       className="p-6 pb-5 relative overflow-hidden flex flex-col showcase-card"
       style={{
         background: 'var(--color-card-bg)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid var(--glass-border)',
-        borderTop: '2px solid var(--color-accent-muted)',
         borderRadius: 'var(--radius-card)',
         boxShadow: 'var(--shadow-md)',
         minHeight: '180px',
@@ -106,7 +103,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
       {/* Left Panel - Hero (45/55 asymmetric split on desktop) */}
       <section className="w-full md:w-[45%] flex flex-col" style={{ background: 'var(--color-bg-primary)' }}>
         {/* Left Header */}
-        <header className="h-16 px-6 md:px-8 lg:px-12 flex items-center shrink-0">
+        <header className="h-16 px-6 md:px-8 lg:px-12 flex items-center justify-between shrink-0">
           <span
             className="text-[1.4rem] md:text-[1.75rem] font-semibold tracking-tight"
             style={{
@@ -118,20 +115,45 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
           >
             Yidhan
           </span>
+
+          {/* Mobile-only: Theme toggle + Sign In (desktop has these in right panel header) */}
+          <div className="flex md:hidden items-center gap-3">
+            <button
+              onClick={onThemeToggle}
+              className="landing-theme-toggle focus-ring w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              )}
+            </button>
+            <button
+              onClick={onSignIn}
+              className="landing-signin-btn focus-ring px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 touch-press-light"
+            >
+              Sign In
+            </button>
+          </div>
         </header>
 
         {/* Hero Content */}
         <div className="flex-1 flex items-center px-6 md:px-8 lg:px-12 py-8 md:py-0">
             <div className="max-w-lg">
               <h2
-                className="text-3xl md:text-4xl lg:text-[3.25rem] font-light leading-[1.1] mb-4 md:mb-6 landing-reveal"
+                className="text-4xl md:text-5xl lg:text-[4rem] font-light leading-[1.1] mb-4 md:mb-6 landing-reveal"
                 style={{
                   fontFamily: 'var(--font-display)',
                   color: 'var(--color-text-primary)',
                   letterSpacing: '-0.02em',
                 }}
               >
-                A quiet space<br />for your notes.
+                A quiet space<br />for your thoughts.
               </h2>
               <p
                 className="text-base lg:text-lg mb-8 md:mb-10 max-w-sm landing-reveal landing-reveal-1"
@@ -163,7 +185,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 <div className="flex items-center gap-4">
                   <button
                     onClick={onStartWriting}
-                    className="landing-cta-button focus-ring px-8 py-3.5 rounded-lg text-base font-medium transition-all duration-300 touch-press"
+                    className="landing-cta-button focus-ring px-10 py-4 rounded-lg text-lg font-medium transition-all duration-300 touch-press"
                     style={{
                       fontFamily: 'var(--font-body)',
                     }}
@@ -192,14 +214,6 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                     <span className="landing-secondary-cta-arrow" aria-hidden="true">→</span>
                   </a>
 
-                  {/* Returning user - Sign In (mobile only, desktop has header button) */}
-                  <button
-                    onClick={onSignIn}
-                    className="md:hidden landing-secondary-cta focus-ring text-sm transition-all duration-200 inline-flex items-center gap-1 w-fit"
-                  >
-                    Already have an account?
-                    <span className="font-medium" style={{ color: 'var(--color-accent)' }}>Sign in</span>
-                  </button>
                 </div>
               </div>
 
@@ -220,6 +234,49 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                   </div>
                 ))}
               </div>
+
+              {/* Inline card peek - mobile only (desktop has the full showcase panel) */}
+              <article
+                className="md:hidden mt-8 p-5 relative overflow-hidden landing-reveal landing-reveal-4"
+                style={{
+                  background: 'var(--color-card-bg)',
+                  border: '1px solid var(--glass-border)',
+                  borderRadius: 'var(--radius-card)',
+                  boxShadow: 'var(--shadow-sm)',
+                  transform: 'rotate(-1deg)',
+                }}
+              >
+                <h3
+                  className="text-base font-semibold mb-2 leading-tight"
+                  style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
+                >
+                  {SAMPLE_NOTES[0].title}
+                </h3>
+                {/* Safe: hardcoded sample data, not user input */}
+                <div
+                  className="note-card-preview text-sm leading-relaxed line-clamp-3"
+                  style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)' }}
+                  dangerouslySetInnerHTML={{ __html: SAMPLE_NOTES[0].content }}
+                />
+                <div className="flex items-center justify-between mt-3">
+                  <span
+                    className="text-xs px-2 py-0.5 rounded"
+                    style={{
+                      background: `${TAG_COLORS[SAMPLE_NOTES[0].tag.color]}15`,
+                      color: TAG_COLORS[SAMPLE_NOTES[0].tag.color],
+                      fontWeight: 500,
+                    }}
+                  >
+                    {SAMPLE_NOTES[0].tag.name}
+                  </span>
+                  <span
+                    className="text-[0.6rem] uppercase tracking-widest"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    {SAMPLE_NOTES[0].time}
+                  </span>
+                </div>
+              </article>
 
               {/* Footer links - integrated into left panel */}
               <nav
@@ -281,9 +338,9 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
           </div>
         </section>
 
-      {/* Right Panel - Showcase (55% asymmetric split on desktop) */}
+      {/* Right Panel - Showcase (55% asymmetric split, desktop only) */}
       <section
-        className="w-full md:w-[55%] flex flex-col relative"
+        className="hidden md:flex md:w-[55%] flex-col relative"
         style={{
           background: 'var(--color-bg-tertiary)',
         }}
@@ -327,54 +384,11 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
         </header>
 
         {/* Cards Container - Vertically Centered */}
-        <div className="flex-1 flex items-center justify-center px-6 md:px-10 py-6 md:py-8">
+        <div className="flex-1 flex items-center justify-center px-10 py-8">
             <div className="w-full max-w-3xl flex flex-col gap-6">
-              {/* Mobile-only: Show task list card */}
-              <article
-                className="md:hidden p-5 relative overflow-hidden showcase-card"
-                style={{
-                  background: 'var(--color-card-bg)',
-                  border: '1px solid var(--glass-border)',
-                  borderTop: '2px solid var(--color-accent-muted)',
-                  borderRadius: 'var(--radius-card)',
-                  boxShadow: 'var(--shadow-sm)',
-                }}
-              >
-                <h3
-                  className="text-lg font-semibold mb-2"
-                  style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
-                >
-                  {SAMPLE_NOTES[1].title}
-                </h3>
-                {/* Safe: content is hardcoded sample data, not user input */}
-                <div
-                  className="note-card-preview text-sm"
-                  style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)' }}
-                  dangerouslySetInnerHTML={{ __html: SAMPLE_NOTES[1].content }}
-                />
-                <div className="flex items-center justify-between mt-3">
-                  <span
-                    className="text-xs px-2 py-0.5 rounded"
-                    style={{
-                      background: `${TAG_COLORS[SAMPLE_NOTES[1].tag.color]}15`,
-                      color: TAG_COLORS[SAMPLE_NOTES[1].tag.color],
-                      fontWeight: 500,
-                    }}
-                  >
-                    {SAMPLE_NOTES[1].tag.name}
-                  </span>
-                  <span
-                    className="text-[0.6rem] uppercase tracking-widest"
-                    style={{ color: 'var(--color-text-tertiary)' }}
-                  >
-                    {SAMPLE_NOTES[1].time}
-                  </span>
-                </div>
-              </article>
-
-              {/* Sample Cards - Desktop only: two staggered flex columns (requires exactly 4 SAMPLE_NOTES) */}
+              {/* Sample Cards - two staggered flex columns (requires exactly 4 SAMPLE_NOTES) */}
               <div
-                className="hidden md:flex"
+                className="flex"
                 style={{ gap: '20px' }}
               >
                 {/* Left column */}
@@ -433,9 +447,9 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
         }
         .landing-signin-btn {
           font-family: var(--font-body);
-          color: var(--color-text-primary);
-          background: transparent;
-          border: 1px solid var(--glass-border);
+          color: var(--color-accent);
+          background: var(--color-bg-secondary);
+          border: 1px solid var(--color-accent-muted);
         }
         .landing-signin-btn:hover {
           color: var(--color-cta-text);

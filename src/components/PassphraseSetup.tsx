@@ -7,23 +7,16 @@ interface PassphraseSetupProps {
   onComplete?: () => void;
 }
 
-const WELCOME_TITLE = 'Welcome to Yidhan!';
-const WELCOME_CONTENT = `<h2>Your calm space for thoughts</h2>
-<p>Yidhan is a distraction-free note-taking app — where thoughts bloom with clarity. Inspired by wabi-sabi philosophy, finding beauty in simplicity.</p>
-<h3>Getting started</h3>
+const WELCOME_TITLE = 'Welcome to Yidhan';
+const WELCOME_CONTENT = `<p>This is your quiet space for writing.</p>
+<p>There's nothing to configure, no folders to organize. Just start a new note when a thought arrives.</p>
+<h3>A few things to discover as you go</h3>
 <ul>
-<li><strong>Create a note</strong> — Click the "New Note" button or start typing</li>
-<li><strong>Rich formatting</strong> — Use the toolbar for bold, italic, headers, lists, quotes, and code blocks</li>
-<li><strong>Organize with tags</strong> — Add tags to categorize your notes and filter by them later</li>
-<li><strong>Quick search</strong> — Press <code>Ctrl+K</code> (or <code>Cmd+K</code> on Mac) to search your notes instantly</li>
-<li><strong>Switch themes</strong> — Toggle between light (Kintsugi) and dark (Midnight) themes in the header</li>
-<li><strong>Import your notes</strong> — Bring notes from other apps via JSON or Markdown from the profile menu</li>
-<li><strong>Export your notes</strong> — Back up to JSON or export as Markdown anytime</li>
-<li><strong>Focus mode</strong> — Press <code>Ctrl+Shift+F</code> (or triple-tap on mobile) to hide all chrome and write distraction-free</li>
+<li>Type <code>/</code> for quick commands</li>
+<li>Add tags to organize naturally</li>
+<li>Press <code>Ctrl+K</code> (or <code>Cmd+K</code> on Mac) to search</li>
 </ul>
-<h3>Tips</h3>
-<p>Your notes sync automatically across devices. Changes are saved as you type — look for the save indicator in the editor.</p>
-<p>Feel free to delete this note when you're ready. Happy writing!</p>`;
+<p>Everything else can wait. Start writing.</p>`;
 
 export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
   const { user } = useAuth();

@@ -128,10 +128,10 @@ export function ChapterSection({
           )}
 
           <span
-            className="text-sm font-medium"
+            className="text-base font-medium"
             style={{
               fontFamily: 'var(--font-display)',
-              color: 'var(--color-text-secondary)',
+              color: 'var(--color-text-primary)',
             }}
           >
             {label}

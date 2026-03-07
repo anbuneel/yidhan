@@ -100,7 +100,7 @@
 
   /* Typography */
   --font-display: 'Cormorant Garamond', Georgia, serif;
-  --font-body: 'Inter', system-ui, sans-serif;
+  --font-body: 'Source Sans 3', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', Consolas, monospace;
 
   /* Radii - Asymmetric organic */
@@ -955,7 +955,7 @@ body::before {
 .auth-modal-content {
   position: relative;
   width: calc(100% - 2rem);
-  max-width: 600px;
+  max-width: 440px;
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
   animation: auth-modal-scale-in 0.35s var(--spring-bounce) forwards;
@@ -1007,22 +1007,6 @@ body::before {
 .auth-modal-close:hover {
   background: var(--color-bg-secondary);
   color: var(--color-text-primary);
-}
-
-@media (min-width: 768px) {
-  .auth-modal-close {
-    top: -48px;
-    right: 0;
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-  }
-
-  .auth-modal-close:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
-  }
 }
 
 /* Masonry Grid Layout */

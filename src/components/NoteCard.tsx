@@ -58,7 +58,6 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
       style={{
         background: 'var(--color-card-bg)',
         border: '1px solid var(--glass-border)',
-        ...(isCompact ? {} : { borderTop: '2px solid var(--color-accent-muted)' }),
         borderRadius: 'var(--radius-card)',
         boxShadow: isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)',
         transitionTimingFunction: 'var(--spring-bounce)',
@@ -76,12 +75,10 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         }
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = isCompact ? 'translateY(-3px)' : 'translateY(-6px)';
-        if (!isCompact) e.currentTarget.style.borderTopColor = 'var(--color-accent)';
+        e.currentTarget.style.transform = 'translateY(-3px)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
-        if (!isCompact) e.currentTarget.style.borderTopColor = 'var(--color-accent-muted)';
       }}
     >
       {/* Pin button - top-right corner (only in full mode) */}

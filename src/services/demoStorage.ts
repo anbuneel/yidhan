@@ -53,13 +53,11 @@ export const DEMO_STORAGE_VERSION = 1;
 const DEFAULT_WELCOME_NOTE: DemoNote = {
   localId: 'welcome-note',
   title: 'Welcome to your practice space',
-  content: `<p>This is your quiet corner for writing. Everything you create here is saved in your browser.</p>
-<h2>Try these features</h2>
+  content: `<p>This is your quiet corner for writing. Everything here is saved in your browser.</p>
 <ul>
-  <li>Type <code>/</code> for slash commands</li>
-  <li>Press <code>Cmd+N</code> to create a new note</li>
-  <li>Add tags to organize your thoughts</li>
-  <li>Pin important notes to the top</li>
+<li>Type <code>/</code> for quick commands</li>
+<li>Add tags to organize naturally</li>
+<li>Pin important notes to the top</li>
 </ul>
 <p>When you're ready, create an account to sync across devices.</p>`,
   pinned: false,

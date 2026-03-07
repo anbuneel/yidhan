@@ -92,7 +92,7 @@ See [Mobile Gap Analysis](docs/analysis/mobile-ios-gap-analysis-claude.md) for d
 - **Rich Text:** Tiptap (ProseMirror)
 - **Backend:** Supabase (PostgreSQL, Auth, Real-time)
 - **Native:** Capacitor (Android ready, iOS planned)
-- **Fonts:** Cormorant Garamond, Inter
+- **Fonts:** Cormorant Garamond, Source Sans 3
 
 ## Documentation
 
