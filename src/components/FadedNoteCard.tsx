@@ -70,12 +70,9 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
       "
       style={{
         background: 'var(--color-card-bg)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid var(--glass-border)',
         borderRadius: 'var(--radius-card)',
-        // Softer shadow for faded notes
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+        boxShadow: 'var(--shadow-sm)',
         transitionTimingFunction: 'var(--spring-smooth)',
         minHeight: '200px',
         maxHeight: '300px',
@@ -240,8 +237,6 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
           "
           style={{
             background: 'var(--color-card-bg)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
             borderRadius: 'var(--radius-card)',
           }}
           onClick={(e) => e.stopPropagation()}

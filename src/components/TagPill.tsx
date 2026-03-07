@@ -181,7 +181,7 @@ export function AddTagPill({ onClick }: AddTagPillProps) {
     <button
       onClick={onClick}
       className="
-        w-7 h-7 sm:w-9 sm:h-9
+        w-9 h-9
         flex items-center justify-center
         transition-all duration-300
         focus:outline-none

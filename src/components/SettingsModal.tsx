@@ -194,6 +194,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
               {/* Email (read-only) */}
               <div className="mb-5">
                 <label
+                  htmlFor="settings-email"
                   className="block text-sm mb-2"
                   style={{
                     fontFamily: 'var(--font-body)',
@@ -203,6 +204,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   Email
                 </label>
                 <input
+                  id="settings-email"
                   type="email"
                   value={user?.email || ''}
                   disabled
@@ -225,6 +227,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
               {/* Full Name */}
               <div className="mb-5">
                 <label
+                  htmlFor="settings-display-name"
                   className="block text-sm mb-2"
                   style={{
                     fontFamily: 'var(--font-body)',
@@ -234,7 +237,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   Display Name
                 </label>
                 <input
+                  id="settings-display-name"
                   type="text"
+                  autoComplete="name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Enter your name"
@@ -413,6 +418,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
               {/* Current Password */}
               <div className="mb-5">
                 <label
+                  htmlFor="settings-current-password"
                   className="block text-sm mb-2"
                   style={{
                     fontFamily: 'var(--font-body)',
@@ -422,6 +428,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   Current Password
                 </label>
                 <input
+                  id="settings-current-password"
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
@@ -452,6 +459,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
               {/* New Password */}
               <div className="mb-5">
                 <label
+                  htmlFor="settings-new-password"
                   className="block text-sm mb-2"
                   style={{
                     fontFamily: 'var(--font-body)',
@@ -461,7 +469,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   New Password
                 </label>
                 <input
+                  id="settings-new-password"
                   type="password"
+                  autoComplete="new-password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new password"
@@ -491,6 +501,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
               {/* Confirm Password */}
               <div className="mb-6">
                 <label
+                  htmlFor="settings-confirm-password"
                   className="block text-sm mb-2"
                   style={{
                     fontFamily: 'var(--font-body)',
@@ -500,7 +511,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   Confirm New Password
                 </label>
                 <input
+                  id="settings-confirm-password"
                   type="password"
+                  autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm new password"
@@ -745,8 +758,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         }}
                       >
                         <div
-                          className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
+                          className="absolute top-0.5 w-5 h-5 rounded-full shadow transition-transform duration-200"
                           style={{
+                            background: 'var(--color-bg-primary)',
                             transform: vaultSettings.settings.rememberBrowser
                               ? 'translateX(26px)'
                               : 'translateX(2px)',
@@ -862,8 +876,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       }}
                     >
                       <div
-                        className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
+                        className="absolute top-0.5 w-5 h-5 rounded-full shadow transition-transform duration-200"
                         style={{
+                          background: 'var(--color-bg-primary)',
                           transform: sessionSettings.settings.isTrustedDevice
                             ? 'translateX(26px)'
                             : 'translateX(2px)',

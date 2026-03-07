@@ -304,7 +304,7 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(
             border: '1px solid var(--glass-border)',
             borderRadius: '8px',
             padding: '8px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
           <div
@@ -325,7 +325,7 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(
           border: '1px solid var(--glass-border)',
           borderRadius: '8px',
           padding: '4px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          boxShadow: 'var(--shadow-sm)',
           minWidth: '200px',
         }}
       >

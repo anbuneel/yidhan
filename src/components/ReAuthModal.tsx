@@ -174,6 +174,7 @@ export function ReAuthModal({
           {/* Input */}
           <div className="mb-4">
             <label
+              htmlFor="reauth-input"
               className="block text-sm mb-2"
               style={{
                 fontFamily: 'var(--font-body)',
@@ -183,6 +184,7 @@ export function ReAuthModal({
               {isOAuthUser ? 'Your email' : 'Your password'}
             </label>
             <input
+              id="reauth-input"
               ref={inputRef}
               type={isOAuthUser ? 'email' : 'password'}
               value={input}

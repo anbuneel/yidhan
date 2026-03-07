@@ -199,7 +199,7 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
         `}
         style={{
           background: 'var(--color-bg-primary)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
+          boxShadow: 'var(--shadow-lg)',
           transitionTimingFunction: 'var(--spring-bounce)',
         }}
         onClick={(e) => e.stopPropagation()}

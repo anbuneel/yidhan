@@ -17,7 +17,7 @@
   --color-card-bg: rgba(252, 248, 238, 0.80);
   --color-text-primary: #3E3B36;
   --color-text-secondary: #6B6862;
-  --color-text-tertiary: #8F8C86;
+  --color-text-tertiary: #7D7974;
   --color-accent: #C25634;
   --color-accent-hover: #A84828;
   --color-accent-glow: rgba(194, 86, 52, 0.2);
@@ -43,6 +43,7 @@
   --shadow-lg: 0 10px 40px rgba(120, 80, 60, 0.32);
   --noise-opacity: 0.18;
   --noise-filter: sepia(65%) saturate(140%) brightness(0.93);
+  --color-accent-rgb: 194, 86, 52;
 }
 
 /* Dark Theme: Midnight - Deep forest green with antique gold accents */
@@ -79,6 +80,7 @@
   --shadow-lg: 0 20px 50px -10px rgba(0, 0, 0, 0.6);
   --noise-opacity: 0.05;
   --noise-filter: grayscale(100%);
+  --color-accent-rgb: 212, 175, 55;
 }
 /* THEME-END */
 
@@ -114,7 +116,7 @@
   --ease-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
 
   /* iOS-style Spring Animations */
-  --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);  /* Overshoot bounce (iOS feel) */
+  --spring-bounce: cubic-bezier(0.22, 1, 0.36, 1);     /* Smooth deceleration (ease-out-quint) */
   --spring-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);   /* Smooth ease-out */
   --spring-snappy: cubic-bezier(0.4, 0, 0.2, 1);       /* Quick, responsive */
 }
@@ -1143,7 +1145,7 @@ body::before {
   margin-bottom: 0.5rem;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .editor-toolbar-sticky {
     margin-left: -2.5rem;
     margin-right: -2.5rem;

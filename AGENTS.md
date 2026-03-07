@@ -530,6 +530,41 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - Users can only access their own notes and tags
 - See `supabase/migrations/security_audit_checklist.sql` for audit queries
 
+## Design Context
+
+### Users
+Reflective writers and minimalist professionals (age 25-50) who value aesthetics as much as functionality. They write for personal reflection, not productivity optimization. They're overwhelmed by feature-rich apps (Notion, Obsidian) and seek a calm, intentional digital space. Their context: capturing thoughts quickly, organizing naturally, accessing from any device.
+
+### Brand Personality
+**Calm, Intentional, Warm.** Yidhan speaks softly — never shouts, never sells. The voice is like a well-worn notebook: familiar, trustworthy, unpretentious. Language is organic ("Faded Notes" not "Trash", "Release" not "Delete"). The app recedes into the background, letting thoughts take center stage.
+
+### Emotional Goals
+Opening Yidhan should feel like:
+1. **Relief & exhale** — walking into a quiet room after a noisy day
+2. **Curiosity & delight** — discovering a beautifully crafted object you want to explore
+3. **Trust & safety** — opening a personal journal that is private, secure, and yours
+
+### Aesthetic Direction
+- **Visual tone:** Japanese-inspired minimalism with warmth — think Muji store interiors, Kinfolk magazine spreads. Natural materials, generous whitespace, subtle texture.
+- **References:** Muji (restraint, material honesty), Kinfolk (warm minimalism, editorial typography)
+- **Anti-references:** Popular note-taking/writing apps (Notion, Obsidian, Bear, iA Writer, Apple Notes). Yidhan should NOT look or feel like any of them. No sidebar-heavy layouts, no feature density, no tech-forward aesthetics.
+- **Signature elements:** Paper noise texture overlay, asymmetric wabi-sabi corners (`2px 24px 4px 24px`), manuscript glow on editor, glass-morphic card surfaces, spring-physics animations
+- **Color philosophy:** Earthy, natural palette drawn from Japanese craft — terracotta, gold, forest, stone, sage, plum. Never neon, never cold blue. Dark themes use deep forest green (not pure black) with antique gold accents.
+
+### Design Principles
+1. **Restraint over features** — Every element must earn its place. When in doubt, leave it out. The app competes on restraint, not features.
+2. **Warmth over precision** — Prefer organic, imperfect forms (asymmetric corners, textured surfaces) over pixel-perfect geometric rigidity. Wabi-sabi: beauty in imperfection.
+3. **Calm over engagement** — No notifications, no gamification, no dark patterns. The interface should lower the user's heart rate, not raise it.
+4. **Craft over convention** — Sweat the details that others skip: custom animations, thoughtful transitions, curated color palettes. Quality of execution signals respect for the user.
+5. **Honesty over decoration** — Empty states are honest, not hidden. Surfaces feel like real materials (paper, glass). Elements have physical presence (shadows, depth) without gratuitous ornamentation.
+
+### Accessibility Baseline
+- **WCAG AA** across all themes (verified contrast ratios on all CTA/accent combinations)
+- `prefers-reduced-motion` respected globally (animations collapse to 0.01ms)
+- Focus-visible rings on all interactive elements
+- iOS safe-area insets for notched devices
+- 16px minimum font on mobile inputs (prevents iOS zoom)
+
 ## Database Migrations
 
 SQL migrations are stored in `supabase/migrations/`:

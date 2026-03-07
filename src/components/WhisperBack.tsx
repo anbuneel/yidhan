@@ -82,15 +82,15 @@ export function WhisperBack({ scrollContainerRef }: WhisperBackProps) {
         color: 'var(--color-text-primary)',
         background: 'var(--color-bg-secondary)',
         border: '1px solid var(--glass-border)',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+        boxShadow: 'var(--shadow-sm)',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.color = 'var(--color-accent)';
-        e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+        e.currentTarget.style.boxShadow = 'var(--shadow-md)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.color = 'var(--color-text-primary)';
-        e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)';
+        e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
       }}
       aria-label="Scroll to top"
     >

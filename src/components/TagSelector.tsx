@@ -38,6 +38,8 @@ export function TagSelector({
       {/* Selected tags display + trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
         className="
           flex items-center gap-2
           px-3 py-2
