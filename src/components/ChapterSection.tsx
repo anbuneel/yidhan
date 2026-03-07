@@ -77,7 +77,7 @@ export function ChapterSection({
       className="mb-0"
       aria-label={`${label} - ${notes.length} ${notes.length === 1 ? 'note' : 'notes'}`}
       style={isPinned ? {
-        background: 'rgba(var(--color-accent-rgb), 0.03)',
+        background: 'color-mix(in srgb, var(--color-accent) 3%, transparent)',
         borderRadius: '8px',
         marginBottom: '0.75rem',
         padding: '0.25rem 0',

@@ -103,7 +103,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
           onMouseEnter={(e) => {
             if (!note.pinned) {
               e.currentTarget.style.color = 'var(--color-accent)';
-              e.currentTarget.style.background = 'rgba(var(--color-accent-rgb), 0.1)';
+              e.currentTarget.style.background = 'color-mix(in srgb, var(--color-accent) 10%, transparent)';
             }
           }}
           onMouseLeave={(e) => {
