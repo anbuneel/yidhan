@@ -18,7 +18,7 @@ export const kintsugi: ThemeConfig = {
     bgPrimary: '#EBE8E4',
     bgSecondary: '#E5E2DD',
     bgTertiary: '#D9D5CF',
-    cardBg: 'rgba(252, 248, 238, 0.80)',
+    cardBg: 'rgba(252, 248, 238, 0.92)',
 
     // Typography: Dark sepia, not harsh black
     textPrimary: '#3E3B36',
@@ -54,9 +54,9 @@ export const kintsugi: ThemeConfig = {
 
     // Borders and shadows (warm terracotta-brown tones per Gemini feedback)
     glassBorder: 'rgba(62, 59, 54, 0.25)',
-    shadowSm: '0 2px 8px rgba(120, 80, 60, 0.15)',
-    shadowMd: '0 20px 40px -10px rgba(120, 80, 60, 0.28)',
-    shadowLg: '0 10px 40px rgba(120, 80, 60, 0.32)',
+    shadowSm: '0 2px 8px rgba(120, 80, 60, 0.18)',
+    shadowMd: '0 4px 12px rgba(120, 80, 60, 0.12), 0 20px 40px -10px rgba(120, 80, 60, 0.38)',
+    shadowLg: '0 4px 12px rgba(120, 80, 60, 0.15), 0 10px 40px rgba(120, 80, 60, 0.38)',
 
     // Effects
     noiseOpacity: '0.18',

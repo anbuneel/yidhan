@@ -109,8 +109,8 @@ describe('PassphraseSetup', () => {
     await waitFor(() => {
       expect(mockCreateEncryptedNote).toHaveBeenCalledWith(
         'user-setup-1',
-        'Welcome to Yidhan!',
-        expect.stringContaining('calm space for thoughts'),
+        'Welcome to Yidhan',
+        expect.stringContaining('quiet space for writing'),
         mockKeys
       );
     });

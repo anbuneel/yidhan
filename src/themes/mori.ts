@@ -20,7 +20,7 @@ export const mori: ThemeConfig = {
     bgPrimary: '#181D18',
     bgSecondary: '#1F251F',
     bgTertiary: '#282F28',
-    cardBg: 'rgba(24, 29, 24, 0.8)',
+    cardBg: 'rgba(24, 29, 24, 0.90)',
 
     // Typography: Moonlight on paper
     textPrimary: '#E6E3DC',

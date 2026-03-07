@@ -18,7 +18,7 @@ export const midnight: ThemeConfig = {
     bgPrimary: '#050A06',
     bgSecondary: '#0A120B',
     bgTertiary: '#141E14',
-    cardBg: 'rgba(20, 30, 20, 0.6)',
+    cardBg: 'rgba(20, 30, 20, 0.88)',
 
     // Typography: Warm off-white (secondary bumped ~12% brighter per Gemini feedback)
     textPrimary: '#EAE6D8',

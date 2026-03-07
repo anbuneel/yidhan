@@ -13,7 +13,7 @@ Yidhan is a calm, distraction-free note-taking application — where thoughts bl
 - **Layout:** react-masonry-css (Pinterest-style card grid)
 - **Backend:** Supabase (PostgreSQL + Auth + Real-time)
 - **Native:** Capacitor (Android, iOS planned)
-- **Fonts:** Cormorant Garamond (display), Inter (body)
+- **Fonts:** Cormorant Garamond (display), Source Sans 3 (body)
 
 ## Project Structure
 ```

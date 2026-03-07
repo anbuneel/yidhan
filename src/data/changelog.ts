@@ -8,6 +8,23 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.8.0',
+    date: '2026-03-07',
+    changes: [
+      { type: 'improvement', text: 'Body font upgraded from Inter to Source Sans 3 — warmer, more distinctive typography that complements Cormorant Garamond' },
+      { type: 'improvement', text: 'Removed colored top-border accent from all note cards — asymmetric wabi-sabi corners now carry the visual identity alone' },
+      { type: 'improvement', text: 'Landing page CTA hierarchy refined — larger headline (4rem), bolder Start Writing button, and more visible Sign In for returning users' },
+      { type: 'improvement', text: 'Mobile landing page redesigned — inline card peek replaces disconnected right panel, theme toggle and Sign In moved to header' },
+      { type: 'improvement', text: 'Auth modal polished — narrower card (440px), close button moved inside, E2EE trust signal added' },
+      { type: 'improvement', text: 'Welcome notes shortened to set emotional tone rather than list features — contextual discovery over upfront teaching' },
+      { type: 'improvement', text: 'Chapter headers made more visible as scroll landmarks (larger text, primary color)' },
+      { type: 'fix', text: 'Removed redundant backdrop-filter blur from showcase cards and auth modal (blur-on-blur with overlay)' },
+      { type: 'improvement', text: 'Card backgrounds made more opaque across all themes — cards feel like card stock rather than tracing paper' },
+      { type: 'improvement', text: 'Light theme card shadows strengthened with dual-layer technique for better definition on warm backgrounds' },
+      { type: 'fix', text: 'Note card hover lift reduced from 6px to 3px for subtler, more paper-like interaction' },
+    ],
+  },
+  {
     version: '3.7.0',
     date: '2026-03-06',
     changes: [

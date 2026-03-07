@@ -81,14 +81,6 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
         filter: 'saturate(0.6) sepia(0.08)',
       }}
     >
-      {/* Muted accent line */}
-      <div
-        className="absolute top-0 left-0 w-full h-[2px]"
-        style={{
-          background: 'var(--color-accent)',
-          opacity: 0.3,
-        }}
-      />
 
       {/* Restore button - top-right corner */}
       <button
