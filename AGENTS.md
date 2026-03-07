@@ -272,7 +272,7 @@ Example changelog entry:
 
 **IMPORTANT:** All documentation created by Claude must include the following metadata:
 
-1. **Author:** Claude (Opus 4.5)
+1. **Author:** Claude (Opus 4.6)
 2. **Date/Timestamp:** YYYY-MM-DD (date of creation)
 3. **Original Prompt:** The user's original request (quoted in blockquote)
 
@@ -283,7 +283,7 @@ Example changelog entry:
 **Version:** 1.0
 **Last Updated:** YYYY-MM-DD
 **Status:** [Living Document | Complete | Draft]
-**Author:** Claude (Opus 4.5)
+**Author:** Claude (Opus 4.6)
 
 ---
 

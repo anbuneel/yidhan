@@ -760,7 +760,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         <div
                           className="absolute top-0.5 w-5 h-5 rounded-full shadow transition-transform duration-200"
                           style={{
-                            background: 'var(--color-bg-primary)',
+                            background: 'var(--color-text-primary)',
                             transform: vaultSettings.settings.rememberBrowser
                               ? 'translateX(26px)'
                               : 'translateX(2px)',
