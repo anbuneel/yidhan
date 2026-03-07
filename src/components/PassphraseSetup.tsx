@@ -122,6 +122,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
             <input
               id="passphrase"
               type="password"
+              autoComplete="new-password"
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
               placeholder="At least 8 characters"
@@ -149,6 +150,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
             <input
               id="confirm"
               type="password"
+              autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="Re-enter passphrase"

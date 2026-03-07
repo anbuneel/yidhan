@@ -8,6 +8,21 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.7.0',
+    date: '2026-03-06',
+    changes: [
+      { type: 'improvement', text: 'Shadows now use theme-aware tokens — warm terracotta tints in light mode, neutral in dark mode (6 components)' },
+      { type: 'improvement', text: 'All form inputs have autoComplete hints for password managers and browser autofill (10 inputs across 5 components)' },
+      { type: 'improvement', text: 'Form labels properly associated with inputs via htmlFor/id for screen reader accessibility (8 label pairs)' },
+      { type: 'improvement', text: 'Card animations use smooth ease-out-quint deceleration instead of overshoot bounce' },
+      { type: 'improvement', text: 'Removed unnecessary backdrop-filter blur from note cards for better scroll performance' },
+      { type: 'fix', text: 'Kintsugi tertiary text contrast improved from 2.7:1 to 3.5:1 for better readability' },
+      { type: 'fix', text: 'SettingsModal toggle knobs now theme-aware (were hardcoded white)' },
+      { type: 'fix', text: 'Missing --color-accent-rgb CSS variable added for both light and dark themes' },
+      { type: 'fix', text: 'Editor toolbar breakpoint aligned to 768px standard (was 640px)' },
+    ],
+  },
+  {
     version: '3.6.0',
     date: '2026-03-03',
     changes: [

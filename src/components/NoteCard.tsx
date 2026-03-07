@@ -57,8 +57,6 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
       `}
       style={{
         background: 'var(--color-card-bg)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid var(--glass-border)',
         ...(isCompact ? {} : { borderTop: '2px solid var(--color-accent-muted)' }),
         borderRadius: 'var(--radius-card)',
@@ -69,6 +67,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
       }}
       role="button"
       tabIndex={0}
+      aria-label={`Open note: ${note.title || 'Untitled'}`}
       onClick={() => onClick(note.id)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {

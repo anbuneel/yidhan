@@ -23,7 +23,7 @@ export const kintsugi: ThemeConfig = {
     // Typography: Dark sepia, not harsh black
     textPrimary: '#3E3B36',
     textSecondary: '#6B6862',
-    textTertiary: '#8F8C86',
+    textTertiary: '#7D7974',
 
     // Accent: Terracotta / Lacquer Red
     accent: '#C25634',

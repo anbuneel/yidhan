@@ -106,9 +106,7 @@ function OverflowMenu({ children, direction = 'down' }: OverflowMenuProps) {
             ...positionStyle,
             background: 'var(--color-bg-secondary)',
             border: '1px solid var(--glass-border)',
-            boxShadow: direction === 'up'
-              ? '0 -4px 12px rgba(0,0,0,0.15)'
-              : '0 4px 12px rgba(0,0,0,0.15)',
+            boxShadow: 'var(--shadow-sm)',
             minWidth: '200px',
             maxWidth: '280px',
           }}

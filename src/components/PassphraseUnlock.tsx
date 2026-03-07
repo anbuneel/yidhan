@@ -78,6 +78,7 @@ export function PassphraseUnlock() {
             <input
               id="passphrase"
               type="password"
+              autoComplete="current-password"
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
               placeholder="Enter your passphrase"
