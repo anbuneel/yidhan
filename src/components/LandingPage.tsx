@@ -10,7 +10,7 @@ interface LandingPageProps {
   onRoadmapClick: () => void;
 }
 
-// Sample notes for the app preview - matches actual NoteCard sizing (200-300px)
+// Sample notes for the app preview (2 cards + writing surface vignette)
 const SAMPLE_NOTES: Array<{
   title: string;
   content: string; // HTML content for rich preview
@@ -28,18 +28,6 @@ const SAMPLE_NOTES: Array<{
     content: '<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked disabled></label><div><p>Farmers market</p></div></li><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked disabled></label><div><p>Return library books</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox" disabled></label><div><p>Call mom</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox" disabled></label><div><p>Fix bike tire</p></div></li></ul>',
     tag: { name: 'Tasks', color: 'sage' },
     time: '3 days ago',
-  },
-  {
-    title: 'Book notes: Atomic Habits',
-    content: '<p>Key insight: habits are the compound interest of self-improvement.</p>',
-    tag: { name: 'Reading', color: 'forest' },
-    time: '1 week ago',
-  },
-  {
-    title: 'Weeknight rescue plan',
-    content: '<ul data-type="taskList"><li data-type="taskItem" data-checked="false"><label><input type="checkbox" disabled></label><div><p>Prep grains Sunday</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox" disabled></label><div><p>Always keep eggs on hand</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox" disabled></label><div><p>Frozen veggies are not cheating</p></div></li><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked disabled></label><div><p>One fancy meal (Friday?)</p></div></li></ul>',
-    tag: { name: 'Cooking', color: 'gold' },
-    time: '5 days ago',
   },
 ];
 
@@ -227,7 +215,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 {['Open source', 'Works offline', 'End-to-end encrypted'].map((signal) => (
                   <div
                     key={signal}
-                    className="landing-trust-signal flex items-center gap-2 text-sm"
+                    className="landing-trust-signal flex items-center gap-2.5 text-base"
                   >
                     <span className="landing-trust-signal-icon">✦</span>
                     {signal}
@@ -383,26 +371,58 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
           </button>
         </header>
 
-        {/* Cards Container - Vertically Centered */}
+        {/* Cards + Writing Surface - Vertically Centered */}
         <div className="flex-1 flex items-center justify-center px-10 py-8">
-            <div className="w-full max-w-3xl flex flex-col gap-6">
-              {/* Sample Cards - two staggered flex columns (requires exactly 4 SAMPLE_NOTES) */}
-              <div
-                className="flex"
-                style={{ gap: '20px' }}
-              >
-                {/* Left column */}
-                <div className="flex-1 flex flex-col" style={{ gap: '20px' }}>
-                  {[0, 2].map((idx) => (
-                    <ShowcaseCard key={idx} note={SAMPLE_NOTES[idx]} index={idx} />
-                  ))}
-                </div>
+            <div className="w-full max-w-3xl flex flex-col gap-5">
+              {/* Top row: 2 showcase cards side by side */}
+              <div className="flex" style={{ gap: '20px' }}>
+                {[0, 1].map((idx) => (
+                  <div key={idx} className="flex-1">
+                    <ShowcaseCard note={SAMPLE_NOTES[idx]} index={idx} />
+                  </div>
+                ))}
+              </div>
 
-                {/* Right column - staggered down for wabi-sabi asymmetry */}
-                <div className="flex-1 flex flex-col" style={{ gap: '20px', paddingTop: '48px' }}>
-                  {[1, 3].map((idx) => (
-                    <ShowcaseCard key={idx} note={SAMPLE_NOTES[idx]} index={idx} />
-                  ))}
+              {/* Writing surface vignette — evokes the editor feel */}
+              <div
+                className="writing-surface-vignette relative overflow-hidden"
+                style={{
+                  background: 'var(--color-card-bg)',
+                  border: '1px solid var(--glass-border)',
+                  borderRadius: 'var(--radius-card)',
+                  boxShadow: 'var(--shadow-md)',
+                  padding: '2.5rem 3rem',
+                  minHeight: '200px',
+                }}
+              >
+                {/* Manuscript glow — same effect as the real editor */}
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse 60% 50% at 50% 40%, var(--color-accent-glow), transparent)',
+                    opacity: 0.5,
+                  }}
+                />
+                {/* Faint ruled lines */}
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundImage: 'repeating-linear-gradient(to bottom, transparent, transparent 31px, var(--glass-border) 31px, var(--glass-border) 32px)',
+                    opacity: 0.3,
+                  }}
+                />
+                {/* Text that fades in line by line */}
+                <div className="relative" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)' }}>
+                  <p className="writing-line text-base leading-[2rem] mb-0" style={{ animationDelay: '0.6s' }}>
+                    There&apos;s something about writing in a quiet space —
+                  </p>
+                  <p className="writing-line text-base leading-[2rem] mb-0" style={{ animationDelay: '1.2s' }}>
+                    no sidebars, no distractions, just your thoughts
+                  </p>
+                  <p className="writing-line text-base leading-[2rem] mb-0" style={{ animationDelay: '1.8s' }}>
+                    finding their way onto the page.
+                  </p>
+                  <span className="writing-cursor" style={{ animationDelay: '2.4s' }}>▎</span>
                 </div>
               </div>
             </div>
@@ -468,7 +488,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
         }
         .landing-trust-signal-icon {
           color: var(--color-accent);
-          font-size: 0.7rem;
+          font-size: 0.85rem;
         }
         /* Left panel entrance choreography */
         .landing-reveal {
@@ -511,6 +531,35 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
             opacity: 1;
             transform: translateY(0);
           }
+        }
+
+        /* Writing surface vignette */
+        .writing-surface-vignette {
+          animation: card-reveal 0.8s ease-out backwards;
+          animation-delay: 0.3s;
+        }
+        .writing-line {
+          opacity: 0;
+          animation: writing-fade-in 0.8s ease-out forwards;
+        }
+        .writing-cursor {
+          opacity: 0;
+          animation: writing-fade-in 0.4s ease-out forwards, cursor-blink 1s ease-in-out 3s infinite;
+          color: var(--color-accent);
+          font-size: 1.1rem;
+        }
+        @keyframes writing-fade-in {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes cursor-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .writing-line { animation: none; opacity: 1; }
+          .writing-cursor { animation: none; opacity: 1; }
+          .writing-surface-vignette { animation: none; }
         }
 
       `}</style>

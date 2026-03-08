@@ -50,37 +50,81 @@ export interface DemoState {
 export const DEMO_STORAGE_KEY = 'yidhan-demo-state';
 export const DEMO_STORAGE_VERSION = 1;
 
-const DEFAULT_WELCOME_NOTE: DemoNote = {
-  localId: 'welcome-note',
-  title: 'Welcome to your practice space',
-  content: `<p>This is your quiet corner for writing. Everything here is saved in your browser.</p>
+const STARTER_NOTES: DemoNote[] = [
+  {
+    localId: 'starter-welcome',
+    title: 'Welcome to Yidhan',
+    content: `<p>A calm space for your thoughts. Pin important notes, organize with tags, and write in focus mode.</p>
+<p>Your notes are end-to-end encrypted — only you can read them.</p>`,
+    pinned: true,
+    tagIds: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    localId: 'starter-books',
+    title: 'Book Recommendations',
+    content: `<p>Books people keep telling me to read:</p>
 <ul>
-<li>Type <code>/</code> for quick commands</li>
-<li>Add tags to organize naturally</li>
-<li>Pin important notes to the top</li>
+<li>Atomic Habits</li>
+<li>The Almanack of Naval Ravikant</li>
+<li>Four Thousand Weeks</li>
 </ul>
-<p>When you're ready, create an account to sync across devices.</p>`,
-  pinned: false,
-  tagIds: [],
-  createdAt: Date.now(),
-  updatedAt: Date.now(),
-};
+<p>Started Four Thousand Weeks last night. The bit about how we'll never "get on top of everything" was oddly freeing.</p>`,
+    pinned: false,
+    tagIds: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    localId: 'starter-recipe',
+    title: 'Recipe — Overnight Oats',
+    content: `<p>Equal parts oats and milk. Spoon of yogurt, pinch of salt, honey to taste. Mix, fridge overnight. Top with whatever fruit is around.</p>
+<p>The trick is the salt — makes everything else pop.</p>`,
+    pinned: false,
+    tagIds: ['tag-recipes'],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    localId: 'starter-weekend',
+    title: 'Weekend Plans',
+    content: `<ul>
+<li>Farmers market Saturday morning</li>
+<li>Fix the kitchen shelf (finally)</li>
+<li>Try that new coffee place on 5th</li>
+</ul>`,
+    pinned: false,
+    tagIds: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+];
+
+// IDs of all starter notes for detection
+const STARTER_NOTE_IDS = new Set(STARTER_NOTES.map((n) => n.localId));
 
 const DEFAULT_TAGS: DemoTag[] = [
   { localId: 'tag-journal', name: 'Journal', color: 'terracotta', createdAt: Date.now() },
   { localId: 'tag-ideas', name: 'Ideas', color: 'gold', createdAt: Date.now() },
+  { localId: 'tag-recipes', name: 'Recipes', color: 'sage', createdAt: Date.now() },
 ];
 
 function createDefaultState(): DemoState {
   const now = Date.now();
+  // Stagger timestamps so notes appear in the right temporal order
   return {
     version: DEMO_STORAGE_VERSION,
-    notes: [{ ...DEFAULT_WELCOME_NOTE, createdAt: now, updatedAt: now }],
+    notes: STARTER_NOTES.map((note, i) => ({
+      ...note,
+      createdAt: now - i * 60_000, // 1 minute apart, newest first
+      updatedAt: now - i * 60_000,
+    })),
     tags: DEFAULT_TAGS.map((tag) => ({ ...tag, createdAt: now })),
     metadata: {
       createdAt: now,
       lastVisit: now,
-      totalNotesCreated: 1,
+      totalNotesCreated: STARTER_NOTES.length,
       promptDismissedAt: null,
       ribbonDismissedAt: null,
     },
@@ -130,15 +174,15 @@ export function saveDemoState(state: DemoState): void {
 }
 
 /**
- * Check if a welcome note has been edited from its default state
+ * Check if a starter note has been edited from its default state
  */
-function hasWelcomeNoteBeenEdited(note: DemoNote): boolean {
-  if (note.localId !== 'welcome-note') return false;
+function hasStarterNoteBeenEdited(note: DemoNote): boolean {
+  const original = STARTER_NOTES.find((s) => s.localId === note.localId);
+  if (!original) return false;
   return (
-    note.title !== DEFAULT_WELCOME_NOTE.title ||
-    note.content !== DEFAULT_WELCOME_NOTE.content ||
-    note.pinned !== DEFAULT_WELCOME_NOTE.pinned ||
-    note.tagIds.length > 0
+    note.title !== original.title ||
+    note.content !== original.content ||
+    note.pinned !== original.pinned
   );
 }
 
@@ -150,9 +194,9 @@ export function hasDemoState(): boolean {
     const stored = localStorage.getItem(DEMO_STORAGE_KEY);
     if (!stored) return false;
     const parsed = JSON.parse(stored) as DemoState;
-    // Has state if: user-created notes exist OR welcome note was edited
+    // Has state if: user-created notes exist OR any starter note was edited
     return parsed.notes.some(
-      (n) => n.localId !== 'welcome-note' || hasWelcomeNoteBeenEdited(n)
+      (n) => !STARTER_NOTE_IDS.has(n.localId) || hasStarterNoteBeenEdited(n)
     );
   } catch {
     return false;
@@ -373,9 +417,9 @@ export function getDemoDataForMigration(): {
 } {
   const state = getDemoState();
   return {
-    // Include welcome note only if it has been edited, exclude if unchanged
+    // Include starter notes only if they have been edited, exclude if unchanged
     notes: state.notes.filter(
-      (n) => n.localId !== 'welcome-note' || hasWelcomeNoteBeenEdited(n)
+      (n) => !STARTER_NOTE_IDS.has(n.localId) || hasStarterNoteBeenEdited(n)
     ),
     tags: state.tags,
   };

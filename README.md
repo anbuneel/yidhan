@@ -19,7 +19,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Light & Dark Themes** - Kintsugi (warm light) and Midnight (forest green dark) themes
 - **Tag Organization** - Organize notes with colorful tags and filter by multiple tags
 - **Tag Management** - Create, edit, and delete tags with a beautiful color picker
-- **Landing Page** - Asymmetric 45/55 split with staggered card showcase, entrance choreography, and accessible CTA tokens
+- **Landing Page** - Asymmetric 45/55 split with showcase cards, writing surface vignette, OS theme detection, and accessible CTA tokens
 - **Practice Space** - Full-featured demo at `/demo` without signup; notes persist in localStorage
 - **Seamless Onboarding** - Demo content auto-saves after signup, email confirmation with resend options
 - **Export/Import** - Backup notes to JSON or Markdown, restore from backups
@@ -32,7 +32,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Google Sign-In** - Quick authentication via Google OAuth
 - **Secure** - User authentication with row-level security
 - **Error Boundary** - Graceful error handling with user-friendly recovery UI
-- **Welcome Note** - New users receive a helpful onboarding note automatically
+- **Starter Notes** - New users receive 4 starter notes and a Recipes tag to make the library feel alive from the first moment
 - **Security Hardened** - XSS prevention, input validation, sanitized error messages
 - **Pin Notes** - Pin important notes to the top of your library
 - **Toast Notifications** - Modern, non-intrusive feedback for all actions

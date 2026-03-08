@@ -38,6 +38,12 @@
 | **Card background opacity** | Made cards more opaque (paper feel): Kintsugi 80%->92%, Midnight 60%->88%, Washi 75%->90%, Mori 80%->90% | design-critique |
 | **Light mode card shadows** | Added dual-layer shadows for Kintsugi/Washi (tight edge + ambient depth) for better card definition | design-critique |
 | **Welcome note content** | Shortened from 8 bullet points to 3 concise items; demo welcome note also tightened | design-critique |
+| **Sparse library state** | 4 starter notes + Recipes tag for both demo and authenticated users. Writing surface vignette on landing page. | design-critique-explorations |
+| **Landing page writing surface** | Right panel: 4 staggered cards → 2 cards + full-width writing vignette (manuscript glow, ruled lines, fade-in text) | design-critique-explorations |
+| **OS theme detection** | Landing page detects `prefers-color-scheme` — light-mode users see Kintsugi on first visit | design-critique-explorations |
+| **Aged paper gradient** | Cards get subtle warm-to-warmer gradient (3% accent at bottom via `color-mix`) | design-critique-explorations |
+| **Confident trust signals** | Landing trust signals bumped from text-sm to text-base with larger icons | design-critique-explorations |
+| **Confident empty state** | "Your notes await" title bumped to text-2xl with more breathing room | design-critique-explorations |
 
 ### Verified (No Action Needed)
 
@@ -78,16 +84,10 @@ Decisions made during critique review sessions. These are intentional choices, n
 
 | Item | Description | Issue |
 |------|-------------|-------|
-| **Sparse library state** | Single welcome card in 3-column masonry looks like a ghost town on demo page and after first signup. Previous fix attempt (maxWidth constraint) broke layout. Needs different approach — possibly constraining column count to 1 when <=2 notes, or adding atmospheric context. | [#156](https://github.com/anbuneel/yidhan/issues/156) |
 | **Inline hover handler refactor** | 135 `onMouseEnter`/`onMouseLeave` inline style handlers across 23 files bypass CSS transitions and could cause jank. Should migrate to CSS `:hover` with custom properties. Large scope — separate PR. | [#157](https://github.com/anbuneel/yidhan/issues/157) |
 
 ### Future Creative Exploration
 
 These are bigger directional ideas from the critique "Questions to Consider" sections. Worth revisiting when planning a design refresh or major version.
 
-| Idea | Source | Notes |
-|------|--------|-------|
-| **Writing surface as landing hero** | v1 Q1 | Instead of static showcase cards, show the actual writing experience — manuscript glow, blinking cursor, focus mode. The product's magic is the editor, not the card grid. |
-| **Paper metaphor depth** | v1 Q4 | Subtle torn edges, watercolor bleed, faint ruled lines on cards. Would strengthen the physical paper metaphor beyond corners + texture + warmth. Requires creative exploration — could easily go too far. |
-| **Confident sizing** | v1 Q3 | "Yidhan's philosophy is calm, not shy." Some elements could be bolder without losing restraint. Partially addressed (headline, CTA), but body text spacing, trust signals, and empty states could benefit. |
-| **Light theme as hero for landing** | v1 Q2, v2 Q4 | Even with dark as default, the landing page could detect `prefers-color-scheme` and show Kintsugi to users who prefer light — making the first impression match their system preference. |
+All creative explorations from v1/v2 critique have been addressed in the design-critique-explorations branch (v3.9.0).

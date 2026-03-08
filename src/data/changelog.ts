@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.9.0',
+    date: '2026-03-07',
+    changes: [
+      { type: 'feature', text: 'New users now start with 4 starter notes and a Recipes tag — library feels alive from the first moment' },
+      { type: 'feature', text: 'Landing page writing vignette — manuscript glow, ruled lines, and text that fades in line by line, showing the writing experience alongside note cards' },
+      { type: 'improvement', text: 'Landing page now detects OS color preference — light-mode users see Kintsugi theme on first visit' },
+      { type: 'improvement', text: 'Note cards gain a subtle aged-paper gradient (3% accent warmth at the bottom edge)' },
+      { type: 'improvement', text: 'Trust signals on landing page made bolder (text-base, larger icons) for more confident first impression' },
+      { type: 'improvement', text: 'Empty library state made bolder — larger title, more breathing room before first note' },
+    ],
+  },
+  {
     version: '3.8.0',
     date: '2026-03-07',
     changes: [

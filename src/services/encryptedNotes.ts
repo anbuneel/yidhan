@@ -69,7 +69,8 @@ export async function createEncryptedNote(
   userId: string,
   title: string,
   content: string,
-  keys: DerivedKeys
+  keys: DerivedKeys,
+  pinned = false
 ): Promise<Note> {
   // Validate and sanitize (same checks as createNoteOffline)
   const validatedTitle = validateNoteTitle(title);
@@ -90,7 +91,7 @@ export async function createEncryptedNote(
     userId,
     title: '',
     content: '',
-    pinned: false,
+    pinned,
     deletedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -112,7 +113,7 @@ export async function createEncryptedNote(
     payload: {
       title: '',
       content: '',
-      pinned: false,
+      pinned,
       encrypted_payload: encrypted.ciphertext,
       encryption_iv: encrypted.iv,
       encryption_version: encrypted.version,
@@ -135,7 +136,7 @@ export async function createEncryptedNote(
     createdAt: new Date(now),
     updatedAt: new Date(now),
     tags: [],
-    pinned: false,
+    pinned,
     deletedAt: null,
     syncStatus: 'pending',
     encryptedPayload: encrypted.ciphertext,
