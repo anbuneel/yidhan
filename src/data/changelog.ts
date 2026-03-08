@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.9.1',
+    date: '2026-03-07',
+    changes: [
+      { type: 'improvement', text: 'Sync indicator is now invisible when working — no more "N pending" flash when navigating between editor and library' },
+      { type: 'improvement', text: 'Editor now shows "Saved" instead of "Synced" — honest, simple, one word' },
+      { type: 'improvement', text: 'Pending sync count only appears after 30 seconds of stuck items, signaling a genuine issue rather than normal queue processing' },
+    ],
+  },
+  {
     version: '3.9.0',
     date: '2026-03-07',
     changes: [

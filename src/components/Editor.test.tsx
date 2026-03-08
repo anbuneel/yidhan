@@ -509,19 +509,24 @@ describe('Editor', () => {
     });
   });
 
-  describe('synced indicator (3A)', () => {
-    it('shows "Synced" when noteSyncStatus transitions from pending to synced', async () => {
+  describe('sync confirmation indicator', () => {
+    it('shows "Saved" when noteSyncStatus transitions from pending to synced', async () => {
       const { rerender } = render(
         <Editor {...defaultProps} noteSyncStatus="pending" />
       );
 
+      // Wait for initial save status to settle to idle
+      await act(async () => {
+        vi.advanceTimersByTime(2500);
+      });
+
       // Transition to synced
       rerender(<Editor {...defaultProps} noteSyncStatus="synced" />);
 
-      expect(screen.getByText('Synced')).toBeInTheDocument();
+      expect(screen.getByText('Saved')).toBeInTheDocument();
     });
 
-    it('does not show "Synced" if noteSyncStatus was already synced (no transition)', async () => {
+    it('does not show "Saved" if noteSyncStatus was already synced (no transition)', async () => {
       const { rerender } = render(
         <Editor {...defaultProps} noteSyncStatus="synced" />
       );
@@ -529,11 +534,11 @@ describe('Editor', () => {
       // Re-render with same status — no transition
       rerender(<Editor {...defaultProps} noteSyncStatus="synced" />);
 
-      // Should not show synced indicator (no pending→synced transition occurred)
-      expect(screen.queryByText('Synced')).not.toBeInTheDocument();
+      // Should not show saved indicator (no pending→synced transition occurred)
+      expect(screen.queryByText('Saved')).not.toBeInTheDocument();
     });
 
-    it('does not show "Synced" during active save (saveStatus is saving)', async () => {
+    it('does not show "Saved" during active save (saveStatus is saving)', async () => {
       // Start with a save in progress
       let resolveSave: () => void;
       const savePromise = new Promise<void>((resolve) => {
@@ -560,9 +565,8 @@ describe('Editor', () => {
         <Editor {...defaultProps} onUpdate={onUpdate} noteSyncStatus="synced" />
       );
 
-      // Still showing Saving... not Synced
+      // Still showing Saving... not Saved
       expect(screen.getByText('Saving...')).toBeInTheDocument();
-      expect(screen.queryByText('Synced')).not.toBeInTheDocument();
 
       // Cleanup
       await act(async () => {
@@ -570,21 +574,26 @@ describe('Editor', () => {
       });
     });
 
-    it('auto-hides "Synced" indicator after 2 seconds', async () => {
+    it('auto-hides "Saved" indicator after 2 seconds', async () => {
       const { rerender } = render(
         <Editor {...defaultProps} noteSyncStatus="pending" />
       );
 
+      // Wait for initial state to settle to idle
+      await act(async () => {
+        vi.advanceTimersByTime(2500);
+      });
+
       rerender(<Editor {...defaultProps} noteSyncStatus="synced" />);
 
-      expect(screen.getByText('Synced')).toBeInTheDocument();
+      expect(screen.getByText('Saved')).toBeInTheDocument();
 
       // Advance 2 seconds
       await act(async () => {
         vi.advanceTimersByTime(2000);
       });
 
-      expect(screen.queryByText('Synced')).not.toBeInTheDocument();
+      expect(screen.queryByText('Saved')).not.toBeInTheDocument();
     });
   });
 

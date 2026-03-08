@@ -2,19 +2,20 @@
  * Sync Indicator
  *
  * Subtle indicator showing offline/sync status.
- * - Offline: Cloud icon with X
- * - Syncing: Spinning indicator
- * - Pending: Ink dot with count
+ * Follows "invisible when working" philosophy:
  * - Synced: No indicator (zen - absence is peace)
+ * - Offline: Cloud icon with X
+ * - Stuck pending (30s+): Ink dot with count
+ * - Normal pending (<30s): No indicator (sync is invisible)
  */
 
 import { useSyncStatus } from '../hooks/useSyncStatus';
 
 export function SyncIndicator() {
-  const { isOnline, pendingCount, isSynced } = useSyncStatus();
+  const { isOnline, pendingCount, isStuck } = useSyncStatus();
 
-  // Zen philosophy: when all is synced, show nothing
-  if (isSynced) {
+  // Zen philosophy: when all is well, show nothing
+  if (pendingCount === 0 && isOnline) {
     return null;
   }
 
@@ -63,8 +64,8 @@ export function SyncIndicator() {
     );
   }
 
-  // Pending changes (online but not synced)
-  if (pendingCount > 0) {
+  // Pending changes — only shown when stuck (30s+ without syncing)
+  if (isStuck && pendingCount > 0) {
     return (
       <div
         className="flex items-center gap-1.5 px-2 py-1 rounded-md"
