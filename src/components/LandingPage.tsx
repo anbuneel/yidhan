@@ -383,43 +383,35 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 ))}
               </div>
 
-              {/* Writing surface vignette — evokes the editor feel */}
+              {/* Writing surface vignette — mirrors the real editor-writing-area */}
               <div
                 className="writing-surface-vignette relative overflow-hidden"
                 style={{
-                  background: 'var(--color-card-bg)',
-                  border: '1px solid var(--glass-border)',
+                  background: 'color-mix(in srgb, var(--color-bg-primary) 92%, white 8%)',
                   borderRadius: 'var(--radius-card)',
-                  boxShadow: 'var(--shadow-md)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03)',
                   padding: '2.5rem 3rem',
                   minHeight: '200px',
                 }}
               >
-                {/* Manuscript glow — same effect as the real editor */}
+                {/* Manuscript glow — matches editor-writing-area::after */}
                 <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background: 'radial-gradient(ellipse 60% 50% at 50% 40%, var(--color-accent-glow), transparent)',
-                    opacity: 0.5,
-                  }}
+                  className="writing-surface-glow absolute inset-0 pointer-events-none"
                 />
-                {/* Faint ruled lines */}
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    backgroundImage: 'repeating-linear-gradient(to bottom, transparent, transparent 31px, var(--glass-border) 31px, var(--glass-border) 32px)',
-                    opacity: 0.3,
-                  }}
-                />
-                {/* Text that fades in line by line */}
-                <div className="relative" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)' }}>
-                  <p className="writing-line text-base leading-[2rem] mb-0" style={{ animationDelay: '0.6s' }}>
+                {/* Text that fades in line by line — matches editor font styling */}
+                <div className="relative" style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-text-primary)',
+                  fontSize: '1.2rem',
+                  lineHeight: 1.75,
+                }}>
+                  <p className="writing-line mb-0" style={{ animationDelay: '0.6s' }}>
                     There&apos;s something about writing in a quiet space —
                   </p>
-                  <p className="writing-line text-base leading-[2rem] mb-0" style={{ animationDelay: '1.2s' }}>
+                  <p className="writing-line mb-0" style={{ animationDelay: '1.2s' }}>
                     no sidebars, no distractions, just your thoughts
                   </p>
-                  <p className="writing-line text-base leading-[2rem] mb-0" style={{ animationDelay: '1.8s' }}>
+                  <p className="writing-line mb-0" style={{ animationDelay: '1.8s' }}>
                     finding their way onto the page.
                   </p>
                   <span className="writing-cursor" style={{ animationDelay: '2.4s' }}>▎</span>
@@ -533,10 +525,21 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
           }
         }
 
-        /* Writing surface vignette */
+        /* Writing surface vignette — mirrors .editor-writing-area from index.css */
         .writing-surface-vignette {
           animation: card-reveal 0.8s ease-out backwards;
           animation-delay: 0.3s;
+        }
+        [data-theme="dark"] .writing-surface-vignette {
+          background: color-mix(in srgb, var(--color-bg-primary) 75%, var(--color-bg-secondary) 25%);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.2);
+        }
+        /* Manuscript glow — matches editor-writing-area::after per theme */
+        .writing-surface-glow {
+          background: radial-gradient(ellipse 80% 50% at 50% 40%, rgba(194, 86, 52, 0.12) 0%, transparent 70%);
+        }
+        [data-theme="dark"] .writing-surface-glow {
+          background: radial-gradient(ellipse 80% 50% at 50% 40%, rgba(212, 175, 55, 0.12) 0%, transparent 70%);
         }
         .writing-line {
           opacity: 0;
