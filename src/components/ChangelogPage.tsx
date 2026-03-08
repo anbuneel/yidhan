@@ -81,26 +81,14 @@ export function ChangelogPage({ theme, onThemeToggle, onSignIn, onLogoClick, onR
             {changelog.map((entry) => (
               <article
                 key={entry.version}
-                className="p-6 relative"
+                className="p-6"
                 style={{
-                  background: 'var(--color-card-bg)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
+                  background: 'linear-gradient(to bottom, var(--color-card-bg), color-mix(in srgb, var(--color-card-bg) 97%, var(--color-accent)))',
                   border: '1px solid var(--glass-border)',
-                  borderTop: '1px solid var(--glass-border)',
                   borderRadius: 'var(--radius-card)',
                   boxShadow: 'var(--shadow-md)',
                 }}
               >
-                {/* Accent line */}
-                <div
-                  className="absolute top-0 left-0 w-full h-[2px]"
-                  style={{
-                    background: 'var(--color-accent)',
-                    opacity: 0.5,
-                    borderRadius: '2px 24px 0 0',
-                  }}
-                />
 
                 {/* Version header */}
                 <div className="flex items-center justify-between mb-5">
