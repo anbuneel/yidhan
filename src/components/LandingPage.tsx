@@ -37,16 +37,16 @@ function ShowcaseCard({ note, index }: { note: typeof SAMPLE_NOTES[number]; inde
     <article
       className="p-6 pb-5 relative overflow-hidden flex flex-col showcase-card"
       style={{
-        background: 'var(--color-card-bg)',
+        background: 'linear-gradient(to bottom, var(--color-card-bg), color-mix(in srgb, var(--color-card-bg) 97%, var(--color-accent)))',
         border: '1px solid var(--glass-border)',
         borderRadius: 'var(--radius-card)',
         boxShadow: 'var(--shadow-md)',
-        minHeight: '180px',
+        minHeight: '200px',
         animationDelay: `${0.1 + index * 0.1}s`,
       }}
     >
       <h3
-        className="text-base font-semibold line-clamp-1 mb-2 leading-tight"
+        className="text-xl font-semibold line-clamp-2 mb-3 leading-tight"
         style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
       >
         {note.title}
@@ -59,14 +59,18 @@ function ShowcaseCard({ note, index }: { note: typeof SAMPLE_NOTES[number]; inde
       />
       <div className="flex items-center justify-between mt-auto pt-4">
         <span
-          className="text-xs px-2 py-1 rounded"
+          className="inline-flex items-center gap-1 px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider"
           style={{
             fontFamily: 'var(--font-body)',
-            background: `${TAG_COLORS[note.tag.color]}15`,
-            color: TAG_COLORS[note.tag.color],
-            fontWeight: 500,
+            background: `${TAG_COLORS[note.tag.color]}0A`,
+            color: 'var(--color-text-secondary)',
+            borderRadius: 'var(--radius-sm)',
           }}
         >
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: TAG_COLORS[note.tag.color] }}
+          />
           {note.tag.name}
         </span>
         <span
@@ -227,7 +231,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
               <article
                 className="md:hidden mt-8 p-5 relative overflow-hidden landing-reveal landing-reveal-4"
                 style={{
-                  background: 'var(--color-card-bg)',
+                  background: 'linear-gradient(to bottom, var(--color-card-bg), color-mix(in srgb, var(--color-card-bg) 97%, var(--color-accent)))',
                   border: '1px solid var(--glass-border)',
                   borderRadius: 'var(--radius-card)',
                   boxShadow: 'var(--shadow-sm)',
@@ -235,7 +239,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 }}
               >
                 <h3
-                  className="text-base font-semibold mb-2 leading-tight"
+                  className="text-xl font-semibold mb-2 leading-tight"
                   style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
                 >
                   {SAMPLE_NOTES[0].title}
@@ -248,13 +252,17 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 />
                 <div className="flex items-center justify-between mt-3">
                   <span
-                    className="text-xs px-2 py-0.5 rounded"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider"
                     style={{
-                      background: `${TAG_COLORS[SAMPLE_NOTES[0].tag.color]}15`,
-                      color: TAG_COLORS[SAMPLE_NOTES[0].tag.color],
-                      fontWeight: 500,
+                      background: `${TAG_COLORS[SAMPLE_NOTES[0].tag.color]}0A`,
+                      color: 'var(--color-text-secondary)',
+                      borderRadius: 'var(--radius-sm)',
                     }}
                   >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ background: TAG_COLORS[SAMPLE_NOTES[0].tag.color] }}
+                    />
                     {SAMPLE_NOTES[0].tag.name}
                   </span>
                   <span
