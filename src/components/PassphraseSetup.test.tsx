@@ -13,6 +13,8 @@ import { PassphraseSetup } from './PassphraseSetup';
 // Mock dependencies
 const mockSetupPassphrase = vi.fn();
 const mockCreateEncryptedNote = vi.fn();
+const mockCreateTagOffline = vi.fn();
+const mockAddTagToNoteOffline = vi.fn();
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -28,6 +30,14 @@ vi.mock('../contexts/EncryptionContext', () => ({
 
 vi.mock('../services/encryptedNotes', () => ({
   createEncryptedNote: (...args: unknown[]) => mockCreateEncryptedNote(...args),
+}));
+
+vi.mock('../services/offlineTags', () => ({
+  createTagOffline: (...args: unknown[]) => mockCreateTagOffline(...args),
+}));
+
+vi.mock('../services/offlineNotes', () => ({
+  addTagToNoteOffline: (...args: unknown[]) => mockAddTagToNoteOffline(...args),
 }));
 
 beforeEach(() => {
@@ -76,7 +86,9 @@ describe('PassphraseSetup', () => {
   it('should call setupPassphrase and onComplete on successful submit', async () => {
     const mockKeys = { encryptionKey: {}, hashKey: {}, salt: new Uint8Array(16) };
     mockSetupPassphrase.mockResolvedValue(mockKeys);
-    mockCreateEncryptedNote.mockResolvedValue({ id: 'welcome-note' });
+    mockCreateTagOffline.mockResolvedValue({ id: 'tag-id', name: 'Recipes', color: 'sage' });
+    mockCreateEncryptedNote.mockResolvedValue({ id: 'note-id' });
+    mockAddTagToNoteOffline.mockResolvedValue(undefined);
     const onComplete = vi.fn();
     const user = userEvent.setup();
 
@@ -93,10 +105,12 @@ describe('PassphraseSetup', () => {
     });
   });
 
-  it('should create a welcome note after setup', async () => {
+  it('should create starter notes and tag after setup', async () => {
     const mockKeys = { encryptionKey: {}, hashKey: {}, salt: new Uint8Array(16) };
     mockSetupPassphrase.mockResolvedValue(mockKeys);
-    mockCreateEncryptedNote.mockResolvedValue({ id: 'welcome-note' });
+    mockCreateTagOffline.mockResolvedValue({ id: 'tag-recipes-id', name: 'Recipes', color: 'sage' });
+    mockCreateEncryptedNote.mockResolvedValue({ id: 'note-id' });
+    mockAddTagToNoteOffline.mockResolvedValue(undefined);
     const user = userEvent.setup();
 
     render(<PassphraseSetup />);
@@ -107,20 +121,26 @@ describe('PassphraseSetup', () => {
     await user.click(screen.getByRole('button', { name: 'Enable Encryption' }));
 
     await waitFor(() => {
+      // Should create the Recipes tag
+      expect(mockCreateTagOffline).toHaveBeenCalledWith('user-setup-1', 'Recipes', 'sage');
+      // Should create 4 starter notes
+      expect(mockCreateEncryptedNote).toHaveBeenCalledTimes(4);
+      // First note should be pinned welcome
       expect(mockCreateEncryptedNote).toHaveBeenCalledWith(
         'user-setup-1',
         'Welcome to Yidhan',
-        expect.stringContaining('quiet space for writing'),
-        mockKeys
+        expect.stringContaining('calm space for your thoughts'),
+        mockKeys,
+        true
       );
     });
   });
 
-  it('should still complete if welcome note creation fails', async () => {
+  it('should still complete if starter note creation fails', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const mockKeys = { encryptionKey: {}, hashKey: {}, salt: new Uint8Array(16) };
     mockSetupPassphrase.mockResolvedValue(mockKeys);
-    mockCreateEncryptedNote.mockRejectedValue(new Error('DB error'));
+    mockCreateTagOffline.mockRejectedValue(new Error('DB error'));
     const onComplete = vi.fn();
     const user = userEvent.setup();
 
@@ -133,7 +153,7 @@ describe('PassphraseSetup', () => {
 
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to create welcome note');
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to create starter notes');
     });
     consoleSpy.mockRestore();
   });

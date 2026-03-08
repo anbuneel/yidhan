@@ -176,19 +176,22 @@ export function ChapteredLibrary({
                 />
               </svg>
               <p
-                className="text-xl mb-2"
+                className="text-2xl mb-3"
                 style={{
                   fontFamily: 'var(--font-display)',
                   color: 'var(--color-text-primary)',
+                  fontWeight: 400,
+                  letterSpacing: '-0.01em',
                 }}
               >
                 Your notes await
               </p>
               <p
-                className="text-sm mb-6"
+                className="text-base mb-8"
                 style={{
                   fontFamily: 'var(--font-body)',
                   color: 'var(--color-text-tertiary)',
+                  lineHeight: 1.6,
                 }}
               >
                 A quiet space for your thoughts

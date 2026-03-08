@@ -56,7 +56,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         ${isCompact ? 'note-card-compact p-3' : 'p-6 pb-5'}
       `}
       style={{
-        background: 'var(--color-card-bg)',
+        background: 'linear-gradient(to bottom, var(--color-card-bg), color-mix(in srgb, var(--color-card-bg) 97%, var(--color-accent)))',
         border: '1px solid var(--glass-border)',
         borderRadius: 'var(--radius-card)',
         boxShadow: isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)',

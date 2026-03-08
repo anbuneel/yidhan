@@ -327,6 +327,10 @@ function App() {
     if (saved === 'light' || saved === 'dark') {
       return saved;
     }
+    // Match OS preference for first-time visitors (landing page sees their native theme)
+    if (window.matchMedia?.('(prefers-color-scheme: light)').matches) {
+      return 'light';
+    }
     return 'dark';
   });
 

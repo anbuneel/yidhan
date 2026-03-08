@@ -22,8 +22,8 @@ src/
 │   ├── Auth.tsx           # Login/signup/Google OAuth/password reset UI (supports modal mode)
 │   ├── ChangelogPage.tsx  # Version history page with categorized changes
 │   ├── Editor.tsx         # Note editor with rich text + tag selector + save/sync indicator + E2EE sharing + focus mode + mobile bottom toolbar
-│   ├── PassphraseSetup.tsx # First-time E2EE passphrase setup screen
-│   ├── PassphraseSetup.test.tsx # 10 tests: form validation, setup flow, welcome note, error states
+│   ├── PassphraseSetup.tsx # First-time E2EE passphrase setup screen + 4 starter notes + Recipes tag
+│   ├── PassphraseSetup.test.tsx # 10 tests: form validation, setup flow, starter notes + tag, error states
 │   ├── PassphraseUnlock.tsx # Returning user E2EE unlock screen
 │   ├── PassphraseUnlock.test.tsx # 12 tests: unlock flow, error states, sign-out, remember browser
 │   ├── EditorToolbar.tsx  # Formatting toolbar (variant: 'inline' desktop / 'bottom' mobile, HeadingCycleButton, OverflowMenu with direction)
@@ -40,7 +40,7 @@ src/
 │   ├── Header.tsx         # Library header with search, new note button (uses HeaderShell)
 │   ├── HeaderShell.tsx    # Shared header component for consistent layout across all pages
 │   ├── InstallPrompt.tsx  # Zen-styled PWA install prompt (shown after engagement)
-│   ├── LandingPage.tsx    # Split-screen landing page with interactive demo
+│   ├── LandingPage.tsx    # Split-screen landing page with showcase cards + writing surface vignette
 │   ├── LettingGoModal.tsx # Account departure modal with keepsakes export
 │   ├── LoadingFallback.tsx # Shared loading spinner for Suspense boundaries
 │   ├── Logo.tsx           # SVG logo image component (public asset reference)
@@ -100,7 +100,7 @@ src/
 │   ├── encryptedNotes.test.ts # 25 tests: roundtrip, batch, key mismatch, AAD binding
 │   ├── syncEngine.ts      # Queue processor, HMAC conflict detection, encrypted push/pull sync
 │   ├── syncEngine.test.ts # 42 tests: processQueue, pause/resume, conflict, pull, fullSync
-│   ├── demoStorage.ts     # localStorage operations for demo mode (no auth required)
+│   ├── demoStorage.ts     # localStorage operations for demo mode (4 starter notes + 3 tags, no auth required)
 │   ├── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, encrypted note creation)
 │   └── demoMigration.test.ts # 9 tests: empty state, encrypted notes, tag dedup, sanitization
 ├── types/
@@ -548,7 +548,7 @@ Opening Yidhan should feel like:
 - **Visual tone:** Japanese-inspired minimalism with warmth — think Muji store interiors, Kinfolk magazine spreads. Natural materials, generous whitespace, subtle texture.
 - **References:** Muji (restraint, material honesty), Kinfolk (warm minimalism, editorial typography)
 - **Anti-references:** Popular note-taking/writing apps (Notion, Obsidian, Bear, iA Writer, Apple Notes). Yidhan should NOT look or feel like any of them. No sidebar-heavy layouts, no feature density, no tech-forward aesthetics.
-- **Signature elements:** Paper noise texture overlay, asymmetric wabi-sabi corners (`2px 24px 4px 24px`), manuscript glow on editor, glass-morphic card surfaces, spring-physics animations
+- **Signature elements:** Paper noise texture overlay, asymmetric wabi-sabi corners (`2px 24px 4px 24px`), manuscript glow on editor, aged-paper gradient on cards (3% accent warmth at bottom), spring-physics animations
 - **Color philosophy:** Earthy, natural palette drawn from Japanese craft — terracotta, gold, forest, stone, sage, plum. Never neon, never cold blue. Dark themes use deep forest green (not pure black) with antique gold accents.
 
 ### Design Principles

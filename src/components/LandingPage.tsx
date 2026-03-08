@@ -10,7 +10,7 @@ interface LandingPageProps {
   onRoadmapClick: () => void;
 }
 
-// Sample notes for the app preview - matches actual NoteCard sizing (200-300px)
+// Sample notes for the app preview (2 cards + writing surface vignette)
 const SAMPLE_NOTES: Array<{
   title: string;
   content: string; // HTML content for rich preview
@@ -28,18 +28,6 @@ const SAMPLE_NOTES: Array<{
     content: '<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked disabled></label><div><p>Farmers market</p></div></li><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked disabled></label><div><p>Return library books</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox" disabled></label><div><p>Call mom</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox" disabled></label><div><p>Fix bike tire</p></div></li></ul>',
     tag: { name: 'Tasks', color: 'sage' },
     time: '3 days ago',
-  },
-  {
-    title: 'Book notes: Atomic Habits',
-    content: '<p>Key insight: habits are the compound interest of self-improvement.</p>',
-    tag: { name: 'Reading', color: 'forest' },
-    time: '1 week ago',
-  },
-  {
-    title: 'Weeknight rescue plan',
-    content: '<ul data-type="taskList"><li data-type="taskItem" data-checked="false"><label><input type="checkbox" disabled></label><div><p>Prep grains Sunday</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox" disabled></label><div><p>Always keep eggs on hand</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox" disabled></label><div><p>Frozen veggies are not cheating</p></div></li><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked disabled></label><div><p>One fancy meal (Friday?)</p></div></li></ul>',
-    tag: { name: 'Cooking', color: 'gold' },
-    time: '5 days ago',
   },
 ];
 
@@ -227,7 +215,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 {['Open source', 'Works offline', 'End-to-end encrypted'].map((signal) => (
                   <div
                     key={signal}
-                    className="landing-trust-signal flex items-center gap-2 text-sm"
+                    className="landing-trust-signal flex items-center gap-2.5 text-base"
                   >
                     <span className="landing-trust-signal-icon">✦</span>
                     {signal}
@@ -383,26 +371,50 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
           </button>
         </header>
 
-        {/* Cards Container - Vertically Centered */}
+        {/* Cards + Writing Surface - Vertically Centered */}
         <div className="flex-1 flex items-center justify-center px-10 py-8">
-            <div className="w-full max-w-3xl flex flex-col gap-6">
-              {/* Sample Cards - two staggered flex columns (requires exactly 4 SAMPLE_NOTES) */}
-              <div
-                className="flex"
-                style={{ gap: '20px' }}
-              >
-                {/* Left column */}
-                <div className="flex-1 flex flex-col" style={{ gap: '20px' }}>
-                  {[0, 2].map((idx) => (
-                    <ShowcaseCard key={idx} note={SAMPLE_NOTES[idx]} index={idx} />
-                  ))}
-                </div>
+            <div className="w-full max-w-3xl flex flex-col gap-5">
+              {/* Top row: 2 showcase cards side by side */}
+              <div className="flex" style={{ gap: '20px' }}>
+                {[0, 1].map((idx) => (
+                  <div key={idx} className="flex-1">
+                    <ShowcaseCard note={SAMPLE_NOTES[idx]} index={idx} />
+                  </div>
+                ))}
+              </div>
 
-                {/* Right column - staggered down for wabi-sabi asymmetry */}
-                <div className="flex-1 flex flex-col" style={{ gap: '20px', paddingTop: '48px' }}>
-                  {[1, 3].map((idx) => (
-                    <ShowcaseCard key={idx} note={SAMPLE_NOTES[idx]} index={idx} />
-                  ))}
+              {/* Writing surface vignette — mirrors the real editor-writing-area */}
+              <div
+                className="writing-surface-vignette relative overflow-hidden"
+                style={{
+                  background: 'color-mix(in srgb, var(--color-bg-primary) 92%, white 8%)',
+                  borderRadius: 'var(--radius-card)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03)',
+                  padding: '2.5rem 3rem',
+                  minHeight: '200px',
+                }}
+              >
+                {/* Manuscript glow — matches editor-writing-area::after */}
+                <div
+                  className="writing-surface-glow absolute inset-0 pointer-events-none"
+                />
+                {/* Text that fades in line by line — matches editor font styling */}
+                <div className="relative" style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-text-primary)',
+                  fontSize: '1.2rem',
+                  lineHeight: 1.75,
+                }}>
+                  <p className="writing-line mb-0" style={{ animationDelay: '0.6s' }}>
+                    There&apos;s something about writing in a quiet space —
+                  </p>
+                  <p className="writing-line mb-0" style={{ animationDelay: '1.2s' }}>
+                    no sidebars, no distractions, just your thoughts
+                  </p>
+                  <p className="writing-line mb-0" style={{ animationDelay: '1.8s' }}>
+                    finding their way onto the page.
+                  </p>
+                  <span className="writing-cursor" style={{ animationDelay: '2.4s' }}>▎</span>
                 </div>
               </div>
             </div>
@@ -468,7 +480,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
         }
         .landing-trust-signal-icon {
           color: var(--color-accent);
-          font-size: 0.7rem;
+          font-size: 0.85rem;
         }
         /* Left panel entrance choreography */
         .landing-reveal {
@@ -511,6 +523,46 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
             opacity: 1;
             transform: translateY(0);
           }
+        }
+
+        /* Writing surface vignette — mirrors .editor-writing-area from index.css */
+        .writing-surface-vignette {
+          animation: card-reveal 0.8s ease-out backwards;
+          animation-delay: 0.3s;
+        }
+        [data-theme="dark"] .writing-surface-vignette {
+          background: color-mix(in srgb, var(--color-bg-primary) 75%, var(--color-bg-secondary) 25%);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.2);
+        }
+        /* Manuscript glow — matches editor-writing-area::after per theme */
+        .writing-surface-glow {
+          background: radial-gradient(ellipse 80% 50% at 50% 40%, rgba(194, 86, 52, 0.12) 0%, transparent 70%);
+        }
+        [data-theme="dark"] .writing-surface-glow {
+          background: radial-gradient(ellipse 80% 50% at 50% 40%, rgba(212, 175, 55, 0.12) 0%, transparent 70%);
+        }
+        .writing-line {
+          opacity: 0;
+          animation: writing-fade-in 0.8s ease-out forwards;
+        }
+        .writing-cursor {
+          opacity: 0;
+          animation: writing-fade-in 0.4s ease-out forwards, cursor-breathe 3s ease-in-out 3s infinite;
+          color: var(--color-accent);
+          font-size: 1.1rem;
+        }
+        @keyframes writing-fade-in {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes cursor-breathe {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .writing-line { animation: none; opacity: 1; }
+          .writing-cursor { animation: none; opacity: 1; }
+          .writing-surface-vignette { animation: none; }
         }
 
       `}</style>

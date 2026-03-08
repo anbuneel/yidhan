@@ -2,21 +2,51 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useEncryption } from '../contexts/EncryptionContext';
 import { createEncryptedNote } from '../services/encryptedNotes';
+import { createTagOffline } from '../services/offlineTags';
+import { addTagToNoteOffline } from '../services/offlineNotes';
 
 interface PassphraseSetupProps {
   onComplete?: () => void;
 }
 
-const WELCOME_TITLE = 'Welcome to Yidhan';
-const WELCOME_CONTENT = `<p>This is your quiet space for writing.</p>
-<p>There's nothing to configure, no folders to organize. Just start a new note when a thought arrives.</p>
-<h3>A few things to discover as you go</h3>
+const STARTER_NOTES = [
+  {
+    title: 'Welcome to Yidhan',
+    content: `<p>A calm space for your thoughts. Pin important notes, organize with tags, and write in focus mode.</p>
+<p>Your notes are end-to-end encrypted — only you can read them.</p>`,
+    pinned: true,
+    tagKey: null as string | null,
+  },
+  {
+    title: 'Book Recommendations',
+    content: `<p>Books people keep telling me to read:</p>
 <ul>
-<li>Type <code>/</code> for quick commands</li>
-<li>Add tags to organize naturally</li>
-<li>Press <code>Ctrl+K</code> (or <code>Cmd+K</code> on Mac) to search</li>
+<li>Atomic Habits</li>
+<li>The Almanack of Naval Ravikant</li>
+<li>Four Thousand Weeks</li>
 </ul>
-<p>Everything else can wait. Start writing.</p>`;
+<p>Started Four Thousand Weeks last night. The bit about how we'll never "get on top of everything" was oddly freeing.</p>`,
+    pinned: false,
+    tagKey: null,
+  },
+  {
+    title: 'Recipe — Overnight Oats',
+    content: `<p>Equal parts oats and milk. Spoon of yogurt, pinch of salt, honey to taste. Mix, fridge overnight. Top with whatever fruit is around.</p>
+<p>The trick is the salt — makes everything else pop.</p>`,
+    pinned: false,
+    tagKey: 'recipes',
+  },
+  {
+    title: 'Weekend Plans',
+    content: `<ul>
+<li>Farmers market Saturday morning</li>
+<li>Fix the kitchen shelf (finally)</li>
+<li>Try that new coffee place on 5th</li>
+</ul>`,
+    pinned: false,
+    tagKey: null,
+  },
+];
 
 export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
   const { user } = useAuth();
@@ -54,13 +84,24 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
     try {
       const derivedKeys = await setupPassphrase(passphrase);
 
-      // Create encrypted welcome note (replaces server-side trigger disabled for E2EE)
+      // Create encrypted starter notes + tag (replaces server-side trigger disabled for E2EE)
       if (user) {
         try {
-          await createEncryptedNote(user.id, WELCOME_TITLE, WELCOME_CONTENT, derivedKeys);
+          // Create the Recipes tag first so we can link it to the recipe note
+          const recipesTag = await createTagOffline(user.id, 'Recipes', 'sage');
+          const tagMap: Record<string, string> = { recipes: recipesTag.id };
+
+          for (const starter of STARTER_NOTES) {
+            const note = await createEncryptedNote(
+              user.id, starter.title, starter.content, derivedKeys, starter.pinned
+            );
+            if (starter.tagKey && tagMap[starter.tagKey]) {
+              await addTagToNoteOffline(user.id, note.id, tagMap[starter.tagKey]);
+            }
+          }
         } catch {
-          // Non-fatal: welcome note is nice-to-have, don't block passphrase setup
-          console.error('Failed to create welcome note');
+          // Non-fatal: starter notes are nice-to-have, don't block passphrase setup
+          console.error('Failed to create starter notes');
         }
       }
 
