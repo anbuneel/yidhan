@@ -547,7 +547,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
         }
         .writing-cursor {
           opacity: 0;
-          animation: writing-fade-in 0.4s ease-out forwards, cursor-blink 1s ease-in-out 3s infinite;
+          animation: writing-fade-in 0.4s ease-out forwards, cursor-breathe 3s ease-in-out 3s infinite;
           color: var(--color-accent);
           font-size: 1.1rem;
         }
@@ -555,9 +555,9 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
           from { opacity: 0; transform: translateY(4px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes cursor-blink {
+        @keyframes cursor-breathe {
           0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
+          50% { opacity: 0.3; }
         }
         @media (prefers-reduced-motion: reduce) {
           .writing-line { animation: none; opacity: 1; }
