@@ -86,12 +86,14 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         <button
           onClick={handlePinClick}
           className={`
-            absolute top-3 right-3
-            w-8 h-8
+            absolute top-2 right-2
+            w-10 h-10
             rounded-full
             flex items-center justify-center
             transition-all duration-200
             focus:outline-none
+            focus:ring-2
+            focus:ring-[var(--color-accent)]
             focus:opacity-100
             hover:scale-110
             ${note.pinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
@@ -203,17 +205,19 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
           <button
             onClick={handleDeleteClick}
             className="
-              w-8 h-8
+              w-10 h-10
               rounded-full
               flex items-center justify-center
               opacity-0
               group-hover:opacity-100
               transition-all duration-200
               focus:outline-none
+              focus:ring-2
+              focus:ring-[var(--color-accent)]
               focus:opacity-100
               hover:scale-110
-              ml-3
-              -mr-3
+              ml-2
+              -mr-2
               shrink-0
             "
             style={{
