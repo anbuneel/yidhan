@@ -190,12 +190,12 @@ export function FadedNotesView({
             className="
               w-full max-w-sm
               p-6
-              rounded-lg
               text-center
             "
             style={{
               background: 'var(--color-bg-primary)',
               border: '1px solid var(--glass-border)',
+              borderRadius: 'var(--radius-card)',
               boxShadow: 'var(--shadow-lg)',
             }}
             onClick={(e) => e.stopPropagation()}
@@ -246,8 +246,8 @@ export function FadedNotesView({
                 "
                 style={{
                   fontFamily: 'var(--font-body)',
-                  color: 'var(--color-cta-text)',
-                  background: 'var(--color-cta-bg)',
+                  color: 'var(--color-destructive-text)',
+                  background: 'var(--color-destructive)',
                 }}
               >
                 Release All

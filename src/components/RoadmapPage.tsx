@@ -57,7 +57,7 @@ export function RoadmapPage({ theme, onThemeToggle, onSignIn, onLogoClick, onCha
               fontWeight: 300,
             }}
           >
-            What we're building and exploring next.
+            What we've built and where we're headed.
           </p>
 
           {/* Roadmap sections */}

@@ -288,8 +288,8 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
               "
               style={{
                 fontFamily: 'var(--font-body)',
-                color: 'var(--color-cta-text)',
-                background: 'var(--color-cta-bg)',
+                color: 'var(--color-destructive-text)',
+                background: 'var(--color-destructive)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.opacity = '0.9';
