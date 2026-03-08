@@ -1,4 +1,4 @@
-export type RoadmapStatus = 'in-progress' | 'coming-soon' | 'exploring';
+export type RoadmapStatus = 'shipped' | 'in-progress' | 'coming-soon' | 'exploring';
 
 export interface RoadmapItem {
   id: string;
@@ -9,16 +9,16 @@ export interface RoadmapItem {
 
 export const roadmap: RoadmapItem[] = [
   {
-    id: '1',
-    title: 'Mobile Native Feel',
-    description: 'iOS-style swipe gestures, pull-to-refresh, spring animations, and iOS Safari install guide. Available now on mobile!',
-    status: 'in-progress',
-  },
-  {
     id: '2',
     title: 'Zero-Knowledge Encryption',
-    description: 'End-to-end encryption for all your notes. Even we cannot read them — your thoughts remain truly private.',
-    status: 'coming-soon',
+    description: 'End-to-end encryption with Argon2id key derivation and AES-256-GCM. Your notes are encrypted before they leave your device — even we cannot read them.',
+    status: 'shipped',
+  },
+  {
+    id: '1',
+    title: 'Mobile Native Feel',
+    description: 'iOS-style swipe gestures, pull-to-refresh, spring animations, bottom sheet modals, and iOS Safari install guide.',
+    status: 'shipped',
   },
   {
     id: '3',
@@ -71,12 +71,14 @@ export const roadmap: RoadmapItem[] = [
 ];
 
 export const statusLabels: Record<RoadmapStatus, string> = {
+  'shipped': 'Shipped',
   'in-progress': 'In Progress',
   'coming-soon': 'Coming Soon',
   'exploring': 'Exploring',
 };
 
 export const statusColors: Record<RoadmapStatus, { bg: string; text: string }> = {
+  'shipped': { bg: 'color-mix(in srgb, var(--color-success) 15%, transparent)', text: 'var(--color-success)' },
   'in-progress': { bg: 'color-mix(in srgb, var(--color-status-progress) 15%, transparent)', text: 'var(--color-status-progress)' },
   'coming-soon': { bg: 'color-mix(in srgb, var(--color-status-coming) 15%, transparent)', text: 'var(--color-status-coming)' },
   'exploring': { bg: 'color-mix(in srgb, var(--color-status-exploring) 15%, transparent)', text: 'var(--color-status-exploring)' },

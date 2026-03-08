@@ -12,7 +12,7 @@ interface RoadmapPageProps {
   onSettingsClick?: () => void;
 }
 
-const statusOrder: RoadmapStatus[] = ['in-progress', 'coming-soon', 'exploring'];
+const statusOrder: RoadmapStatus[] = ['shipped', 'in-progress', 'coming-soon', 'exploring'];
 
 export function RoadmapPage({ theme, onThemeToggle, onSignIn, onLogoClick, onChangelogClick, onSettingsClick }: RoadmapPageProps) {
   // Group items by status
