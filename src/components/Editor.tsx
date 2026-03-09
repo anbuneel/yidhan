@@ -1290,9 +1290,10 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
           onClick={() => setShowDeleteConfirm(false)}
         >
           <div
-            role="dialog"
+            role="alertdialog"
             aria-modal="true"
             aria-labelledby="delete-dialog-title"
+            aria-describedby="delete-dialog-description"
             className="
               w-[400px]
               p-8
@@ -1313,9 +1314,10 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                 color: 'var(--color-text-primary)',
               }}
             >
-              Delete this note?
+              Let this note fade?
             </h3>
             <p
+              id="delete-dialog-description"
               className="mb-8"
               style={{
                 fontFamily: 'var(--font-body)',
@@ -1324,7 +1326,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                 lineHeight: 1.6,
               }}
             >
-              This action cannot be undone. The note will be permanently removed from your library.
+              It will rest in Faded Notes for 30 days, then quietly disappear.
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -1348,7 +1350,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                   e.currentTarget.style.borderColor = 'var(--glass-border)';
                 }}
               >
-                Cancel
+                Keep writing
               </button>
               <button
                 onClick={confirmDelete}
@@ -1370,7 +1372,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                   e.currentTarget.style.opacity = '1';
                 }}
               >
-                Delete
+                Let it fade
               </button>
             </div>
           </div>
