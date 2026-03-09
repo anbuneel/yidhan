@@ -3,6 +3,7 @@ import type { Editor as TiptapEditor } from '@tiptap/react';
 import type { Note, Tag, Theme } from '../types';
 import { RichTextEditor } from './RichTextEditor';
 import { EditorToolbar } from './EditorToolbar';
+import { EditorSidebar } from './EditorSidebar';
 import { TagSelector } from './TagSelector';
 import { ShareModal } from './ShareModal';
 import { formatShortDate, formatRelativeTime } from '../utils/formatTime';
@@ -64,11 +65,13 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   const [showResumeChip, setShowResumeChip] = useState(false);
   const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [showTimestamps, setShowTimestamps] = useState(false);
   const isMobile = useMobileDetect();
   useKeyboardHeight(); // Sets --keyboard-height CSS var for bottom toolbar positioning
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
   const tapCountRef = useRef(0);
   const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -120,6 +123,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       setShowResumeChip(false);
       setSavedScrollPosition(null);
       setIsFocusMode(false);
+      setShowTimestamps(false);
       resumeChipShownAtRef.current = 0;
       throttledScrollSaveRef.current = null;
       pendingScrollSaveRef.current = null; // Clear pending data for old note
@@ -232,6 +236,37 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       throttledScrollSaveRef.current?.flush();
     };
   }, [note.id, showResumeChip]);
+
+  // Update manuscript glow position on scroll — direct DOM mutation, no re-renders
+  useEffect(() => {
+    const scrollEl = scrollContainerRef.current;
+    const glowEl = glowRef.current;
+    if (!scrollEl || !glowEl) return;
+
+    const writingArea = glowEl.closest('.editor-writing-area') as HTMLElement | null;
+
+    let ticking = false;
+    const handleGlowScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const scrollTop = scrollEl.scrollTop;
+          const areaOffset = writingArea?.offsetTop ?? 0;
+          const areaHeight = writingArea?.scrollHeight ?? scrollEl.scrollHeight;
+          const viewportCenter = scrollTop + scrollEl.clientHeight * 0.4 - areaOffset;
+          const maxTop = areaHeight - 600;
+          const top = Math.max(0, Math.min(viewportCenter - 300, maxTop));
+          glowEl.style.top = `${top}px`;
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    scrollEl.addEventListener('scroll', handleGlowScroll, { passive: true });
+    handleGlowScroll(); // Initial position
+
+    return () => scrollEl.removeEventListener('scroll', handleGlowScroll);
+  }, []);
 
   // Handle resume button click
   const handleResumeScroll = useCallback(() => {
@@ -620,6 +655,9 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   }, [showExportMenu]);
 
   const handleToggleFocusMode = useCallback(() => setIsFocusMode(prev => !prev), []);
+  const handleTimestampToggle = useCallback(() => {
+    setShowTimestamps(prev => !prev);
+  }, []);
 
   // Track touch start position to distinguish taps from scrolls
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -1131,74 +1169,90 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
         </div>
       )}
 
+      {/* Vertical sidebar — desktop only; CSS hides below 1100px where inline toolbar shows instead */}
+      {!isMobile && (
+        <EditorSidebar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
+      )}
+
       {/* Editor Content */}
       <main onTouchStart={handleTouchStart} onTouchEnd={handleTapEnd}>
         <div className="max-w-[900px] mx-auto px-4 sm:px-10 pt-2 pb-12 editor-writing-area">
-          {/* Title */}
-          <textarea
-            ref={titleRef}
-            value={title}
-            onChange={handleTitleChange}
-            onKeyDown={handleTitleKeyDown}
-            onBlur={performSave}
-            placeholder="Untitled"
-            className="
-              w-full
-              font-semibold
-              bg-transparent
-              outline-none
-              resize-none
-              overflow-hidden
-              leading-tight
-              mb-2
-            "
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '2.25rem',
-              color: 'var(--color-text-primary)',
-              letterSpacing: '-0.02em',
-              caretColor: 'var(--color-accent)',
-            }}
-            rows={1}
+          {/* Viewport-following manuscript glow — position updated via ref, not state */}
+          <div
+            ref={glowRef}
+            className="editor-manuscript-glow"
+            aria-hidden="true"
           />
 
-          {/* Timestamps */}
+          {/* Title Zone — timestamps reveal on hover/tap */}
           <div
-            className="text-xs mb-1 focus-mode-target"
-            style={{
-              fontFamily: 'var(--font-body)',
-              color: 'var(--color-text-tertiary)',
-            }}
+            className={`editor-title-zone ${showTimestamps ? 'timestamps-visible' : ''}`}
+            onClick={isMobile ? handleTimestampToggle : undefined}
           >
-            Created {formatShortDate(note.createdAt)} · Edited {formatRelativeTime(note.updatedAt)}
-          </div>
-
-          {/* Tag Selector */}
-          <div className="mb-1 focus-mode-target">
-            <TagSelector
-              tags={tags}
-              selectedTagIds={note.tags.map((t) => t.id)}
-              onToggleTag={(tagId) => onToggleTag(note.id, tagId)}
-              onCreateTag={onCreateTag}
+            {/* Title */}
+            <textarea
+              ref={titleRef}
+              value={title}
+              onChange={handleTitleChange}
+              onKeyDown={handleTitleKeyDown}
+              onBlur={performSave}
+              onClick={(e) => e.stopPropagation()}
+              placeholder="Untitled"
+              className="w-full font-semibold bg-transparent outline-none resize-none overflow-hidden leading-tight"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '2.25rem',
+                color: 'var(--color-text-primary)',
+                letterSpacing: '-0.02em',
+                caretColor: 'var(--color-accent)',
+              }}
+              rows={1}
             />
+
+            {/* Timestamps — hidden until hover (desktop) or tap (mobile) */}
+            <div
+              className="editor-timestamps text-xs focus-mode-target"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-tertiary)',
+              }}
+            >
+              Created {formatShortDate(note.createdAt)} · Edited {formatRelativeTime(note.updatedAt)}
+            </div>
+
+            {/* Inline tag pills — always visible */}
+            <div className="mt-1 mb-2 focus-mode-target">
+              <TagSelector
+                tags={tags}
+                selectedTagIds={note.tags.map((t) => t.id)}
+                onToggleTag={(tagId) => onToggleTag(note.id, tagId)}
+                onCreateTag={onCreateTag}
+                variant="inline"
+              />
+            </div>
           </div>
 
-          {/* Toolbar - desktop: flows after tags, sticky on scroll */}
+          {/* Inline toolbar — visible on medium desktop (768-1099px), hidden when sidebar shows */}
           {!isMobile && (
-            <div className="editor-toolbar-sticky focus-mode-target">
+            <div className="editor-toolbar-sticky editor-toolbar-medium-fallback focus-mode-target">
               <EditorToolbar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
             </div>
           )}
 
-          {/* Rich Text Content */}
-          <RichTextEditor
-            content={content}
-            onChange={handleContentChange}
-            onBlur={performSave}
-            noteId={note.id}
-            autoFocus={hasContent}
-            onEditorReady={setEditor}
-          />
+          {/* Decorative divider — gradient line between title zone and body */}
+          <div className="editor-title-divider focus-mode-target" aria-hidden="true" />
+
+          {/* Rich Text Content — generous top margin for breathing room */}
+          <div className="mt-8">
+            <RichTextEditor
+              content={content}
+              onChange={handleContentChange}
+              onBlur={performSave}
+              noteId={note.id}
+              autoFocus={hasContent}
+              onEditorReady={setEditor}
+            />
+          </div>
 
         </div>
 
@@ -1290,9 +1344,10 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
           onClick={() => setShowDeleteConfirm(false)}
         >
           <div
-            role="dialog"
+            role="alertdialog"
             aria-modal="true"
             aria-labelledby="delete-dialog-title"
+            aria-describedby="delete-dialog-description"
             className="
               w-[400px]
               p-8
@@ -1313,9 +1368,10 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                 color: 'var(--color-text-primary)',
               }}
             >
-              Delete this note?
+              Let this note fade?
             </h3>
             <p
+              id="delete-dialog-description"
               className="mb-8"
               style={{
                 fontFamily: 'var(--font-body)',
@@ -1324,7 +1380,9 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                 lineHeight: 1.6,
               }}
             >
-              This action cannot be undone. The note will be permanently removed from your library.
+              {isDemo
+                ? 'This note will be permanently removed from your practice space.'
+                : 'It will rest in Faded Notes for 30 days, then quietly disappear.'}
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -1348,7 +1406,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                   e.currentTarget.style.borderColor = 'var(--glass-border)';
                 }}
               >
-                Cancel
+                Keep writing
               </button>
               <button
                 onClick={confirmDelete}
@@ -1370,7 +1428,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                   e.currentTarget.style.opacity = '1';
                 }}
               >
-                Delete
+                Let it fade
               </button>
             </div>
           </div>

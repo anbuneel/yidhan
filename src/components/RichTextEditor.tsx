@@ -275,12 +275,13 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
             top: 0,
             left: 0,
             pointerEvents: 'none',
-            fontFamily: 'var(--font-body)',
-            fontSize: '1.2rem',
+            fontFamily: 'var(--font-display)',
+            fontSize: '1.4rem',
             fontWeight: 400,
+            fontStyle: 'italic',
             color: 'var(--color-text-tertiary)',
-            opacity: 0.6,
-            transition: 'opacity 0.5s ease-in-out',
+            opacity: 0.35,
+            transition: 'opacity 0.8s ease-in-out',
           }}
         >
           {PLACEHOLDER_MESSAGES[placeholderIndex]}

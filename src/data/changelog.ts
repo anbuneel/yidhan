@@ -8,6 +8,21 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.10.0',
+    date: '2026-03-09',
+    changes: [
+      { type: 'feature', text: 'Vertical sidebar toolbar — frosted glass panel with quick-access formatting on wide screens (≥1100px)' },
+      { type: 'feature', text: 'Viewport-following manuscript glow — warm radial gradient that tracks your writing position' },
+      { type: 'improvement', text: 'Ghost-writing placeholder — Cormorant Garamond italic, softer opacity, slower fade' },
+      { type: 'improvement', text: 'Editorial blockquote — accent-colored left border with display font styling' },
+      { type: 'improvement', text: 'Three-dot decorative divider (· · ·) replacing standard horizontal rules' },
+      { type: 'improvement', text: 'Title zone hover-reveal — timestamps hidden by default, shown on hover or tap' },
+      { type: 'improvement', text: 'Inline tag pills in editor title zone for quicker tag management' },
+      { type: 'improvement', text: 'Delete dialog brand voice — "Let this note fade?" with gentler action labels' },
+      { type: 'fix', text: 'Tag dropdown clicks no longer accidentally toggle timestamp visibility on mobile' },
+    ],
+  },
+  {
     version: '3.9.1',
     date: '2026-03-07',
     changes: [

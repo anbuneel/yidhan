@@ -249,19 +249,19 @@ describe('Editor', () => {
 
       await user.click(screen.getByLabelText('Delete note'));
 
-      expect(screen.getByText('Delete this note?')).toBeInTheDocument();
-      expect(screen.getByText('Cancel')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+      expect(screen.getByText('Let this note fade?')).toBeInTheDocument();
+      expect(screen.getByText('Keep writing')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Let it fade' })).toBeInTheDocument();
     });
 
-    it('hides confirmation when Cancel clicked', async () => {
+    it('hides confirmation when Keep writing clicked', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Editor {...defaultProps} />);
 
       await user.click(screen.getByLabelText('Delete note'));
-      await user.click(screen.getByText('Cancel'));
+      await user.click(screen.getByText('Keep writing'));
 
-      expect(screen.queryByText('Delete this note?')).not.toBeInTheDocument();
+      expect(screen.queryByText('Let this note fade?')).not.toBeInTheDocument();
     });
 
     it('calls onDelete when Delete confirmed', async () => {
@@ -270,7 +270,7 @@ describe('Editor', () => {
       render(<Editor {...defaultProps} onDelete={onDelete} />);
 
       await user.click(screen.getByLabelText('Delete note'));
-      await user.click(screen.getByRole('button', { name: 'Delete' }));
+      await user.click(screen.getByRole('button', { name: 'Let it fade' }));
 
       expect(onDelete).toHaveBeenCalledWith('note-123');
     });
@@ -282,12 +282,12 @@ describe('Editor', () => {
       await user.click(screen.getByLabelText('Delete note'));
 
       // Click backdrop
-      const backdrop = screen.getByText('Delete this note?').closest('.fixed');
+      const backdrop = screen.getByText('Let this note fade?').closest('.fixed');
       if (backdrop) {
         fireEvent.click(backdrop);
       }
 
-      expect(screen.queryByText('Delete this note?')).not.toBeInTheDocument();
+      expect(screen.queryByText('Let this note fade?')).not.toBeInTheDocument();
     });
   });
 
