@@ -1097,6 +1097,21 @@ body::before {
   );
 }
 
+/* Title zone — hover-reveal timestamps */
+.editor-title-zone .editor-timestamps {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 300ms ease, opacity 300ms ease;
+}
+
+.editor-title-zone:hover .editor-timestamps,
+.editor-title-zone:focus-within .editor-timestamps,
+.editor-title-zone.timestamps-visible .editor-timestamps {
+  max-height: 2rem;
+  opacity: 1;
+}
+
 /* Sticky Editor Zone */
 .editor-sticky-zone {
   position: sticky;

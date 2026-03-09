@@ -7,6 +7,7 @@ interface TagSelectorProps {
   selectedTagIds: string[];
   onToggleTag: (tagId: string) => void;
   onCreateTag?: () => void;
+  variant?: 'dropdown' | 'inline';
 }
 
 export function TagSelector({
@@ -14,6 +15,7 @@ export function TagSelector({
   selectedTagIds,
   onToggleTag,
   onCreateTag,
+  variant = 'dropdown',
 }: TagSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -33,74 +35,7 @@ export function TagSelector({
 
   const selectedTags = tags.filter((t) => selectedTagIds.includes(t.id));
 
-  return (
-    <div className="relative" ref={containerRef}>
-      {/* Selected tags display + trigger */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-        className="
-          flex items-center gap-2
-          px-3 py-2
-          text-sm
-          transition-all duration-200
-          rounded-lg
-          hover:bg-[var(--color-bg-tertiary)]
-        "
-        style={{
-          fontFamily: 'var(--font-body)',
-          color: 'var(--color-text-secondary)',
-        }}
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-        </svg>
-
-        {selectedTags.length === 0 ? (
-          <span>Add tags</span>
-        ) : (
-          <span className="flex items-center gap-1.5">
-            {selectedTags.slice(0, 2).map((tag) => (
-              <span
-                key={tag.id}
-                className="
-                  inline-flex items-center gap-1
-                  px-2 py-0.5
-                  text-xs
-                  font-medium
-                "
-                style={{
-                  background: `${TAG_COLORS[tag.color]}15`,
-                  color: TAG_COLORS[tag.color],
-                  borderRadius: '4px',
-                }}
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: TAG_COLORS[tag.color] }}
-                />
-                {tag.name}
-              </span>
-            ))}
-            {selectedTags.length > 2 && (
-              <span className="text-xs">+{selectedTags.length - 2}</span>
-            )}
-          </span>
-        )}
-
-        <svg
-          className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {/* Dropdown */}
-      {isOpen && (
+  const dropdownJSX = isOpen ? (
         <div
           className="
             absolute left-0 top-full mt-2
@@ -211,7 +146,122 @@ export function TagSelector({
             </>
           )}
         </div>
-      )}
+  ) : null;
+
+  if (variant === 'inline') {
+    return (
+      <div className="relative flex items-center gap-1.5 flex-wrap" ref={containerRef}>
+        {selectedTags.map((tag) => (
+          <button
+            key={tag.id}
+            type="button"
+            className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium cursor-pointer transition-opacity duration-200 hover:opacity-80"
+            style={{
+              background: `${TAG_COLORS[tag.color]}15`,
+              color: TAG_COLORS[tag.color],
+              borderRadius: '4px',
+              border: 'none',
+            }}
+            onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: TAG_COLORS[tag.color] }}
+              aria-hidden="true"
+            />
+            {tag.name}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+          aria-label="Add tag"
+          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs transition-colors duration-200 rounded hover:bg-[var(--color-bg-tertiary)]"
+          style={{
+            fontFamily: 'var(--font-body)',
+            color: 'var(--color-text-tertiary)',
+          }}
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          {selectedTags.length === 0 && <span>Add tag</span>}
+        </button>
+
+        {dropdownJSX}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative" ref={containerRef}>
+      {/* Selected tags display + trigger */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        className="
+          flex items-center gap-2
+          px-3 py-2
+          text-sm
+          transition-all duration-200
+          rounded-lg
+          hover:bg-[var(--color-bg-tertiary)]
+        "
+        style={{
+          fontFamily: 'var(--font-body)',
+          color: 'var(--color-text-secondary)',
+        }}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+
+        {selectedTags.length === 0 ? (
+          <span>Add tags</span>
+        ) : (
+          <span className="flex items-center gap-1.5">
+            {selectedTags.slice(0, 2).map((tag) => (
+              <span
+                key={tag.id}
+                className="
+                  inline-flex items-center gap-1
+                  px-2 py-0.5
+                  text-xs
+                  font-medium
+                "
+                style={{
+                  background: `${TAG_COLORS[tag.color]}15`,
+                  color: TAG_COLORS[tag.color],
+                  borderRadius: '4px',
+                }}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: TAG_COLORS[tag.color] }}
+                />
+                {tag.name}
+              </span>
+            ))}
+            {selectedTags.length > 2 && (
+              <span className="text-xs">+{selectedTags.length - 2}</span>
+            )}
+          </span>
+        )}
+
+        <svg
+          className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {dropdownJSX}
     </div>
   );
 }

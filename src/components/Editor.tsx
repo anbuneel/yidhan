@@ -64,6 +64,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   const [showResumeChip, setShowResumeChip] = useState(false);
   const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [showTimestamps, setShowTimestamps] = useState(false);
   const isMobile = useMobileDetect();
   useKeyboardHeight(); // Sets --keyboard-height CSS var for bottom toolbar positioning
   const titleRef = useRef<HTMLTextAreaElement>(null);
@@ -120,6 +121,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       setShowResumeChip(false);
       setSavedScrollPosition(null);
       setIsFocusMode(false);
+      setShowTimestamps(false);
       resumeChipShownAtRef.current = 0;
       throttledScrollSaveRef.current = null;
       pendingScrollSaveRef.current = null; // Clear pending data for old note
@@ -620,6 +622,11 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   }, [showExportMenu]);
 
   const handleToggleFocusMode = useCallback(() => setIsFocusMode(prev => !prev), []);
+  const handleTimestampToggle = useCallback(() => {
+    if (isMobile) {
+      setShowTimestamps(prev => !prev);
+    }
+  }, [isMobile]);
 
   // Track touch start position to distinguish taps from scrolls
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -1134,53 +1141,51 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       {/* Editor Content */}
       <main onTouchStart={handleTouchStart} onTouchEnd={handleTapEnd}>
         <div className="max-w-[900px] mx-auto px-4 sm:px-10 pt-2 pb-12 editor-writing-area">
-          {/* Title */}
-          <textarea
-            ref={titleRef}
-            value={title}
-            onChange={handleTitleChange}
-            onKeyDown={handleTitleKeyDown}
-            onBlur={performSave}
-            placeholder="Untitled"
-            className="
-              w-full
-              font-semibold
-              bg-transparent
-              outline-none
-              resize-none
-              overflow-hidden
-              leading-tight
-              mb-2
-            "
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '2.25rem',
-              color: 'var(--color-text-primary)',
-              letterSpacing: '-0.02em',
-              caretColor: 'var(--color-accent)',
-            }}
-            rows={1}
-          />
-
-          {/* Timestamps */}
+          {/* Title Zone — timestamps reveal on hover/tap */}
           <div
-            className="text-xs mb-1 focus-mode-target"
-            style={{
-              fontFamily: 'var(--font-body)',
-              color: 'var(--color-text-tertiary)',
-            }}
+            className={`editor-title-zone ${showTimestamps ? 'timestamps-visible' : ''}`}
+            onClick={isMobile ? handleTimestampToggle : undefined}
           >
-            Created {formatShortDate(note.createdAt)} · Edited {formatRelativeTime(note.updatedAt)}
-          </div>
-
-          {/* Tag Selector */}
-          <div className="mb-1 focus-mode-target">
-            <TagSelector
-              tags={tags}
-              selectedTagIds={note.tags.map((t) => t.id)}
-              onToggleTag={(tagId) => onToggleTag(note.id, tagId)}
-              onCreateTag={onCreateTag}
+            {/* Title */}
+            <textarea
+              ref={titleRef}
+              value={title}
+              onChange={handleTitleChange}
+              onKeyDown={handleTitleKeyDown}
+              onBlur={performSave}
+              placeholder="Untitled"
+              className="w-full font-semibold bg-transparent outline-none resize-none overflow-hidden leading-tight"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '2.25rem',
+                color: 'var(--color-text-primary)',
+                letterSpacing: '-0.02em',
+                caretColor: 'var(--color-accent)',
+              }}
+              rows={1}
             />
+
+            {/* Timestamps — hidden until hover (desktop) or tap (mobile) */}
+            <div
+              className="editor-timestamps text-xs focus-mode-target"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-tertiary)',
+              }}
+            >
+              Created {formatShortDate(note.createdAt)} · Edited {formatRelativeTime(note.updatedAt)}
+            </div>
+
+            {/* Inline tag pills — always visible */}
+            <div className="mt-1 mb-2 focus-mode-target">
+              <TagSelector
+                tags={tags}
+                selectedTagIds={note.tags.map((t) => t.id)}
+                onToggleTag={(tagId) => onToggleTag(note.id, tagId)}
+                onCreateTag={onCreateTag}
+                variant="inline"
+              />
+            </div>
           </div>
 
           {/* Toolbar - desktop: flows after tags, sticky on scroll */}
