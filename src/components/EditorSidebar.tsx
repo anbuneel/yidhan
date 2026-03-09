@@ -13,6 +13,7 @@ function SidebarButton({ onClick, isActive = false, title, children }: SidebarBu
       onClick={onClick}
       title={title}
       aria-label={title}
+      aria-pressed={isActive}
       style={{
         background: isActive ? 'var(--color-accent)' : undefined,
         color: isActive ? 'var(--color-on-accent)' : undefined,
