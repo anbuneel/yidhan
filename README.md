@@ -42,7 +42,8 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Test Coverage** - Comprehensive tests with Vitest (coverage thresholds enforced in CI), React Testing Library, and Playwright E2E tests
 - **CI/CD Pipeline** - Automated testing, coverage enforcement, and builds via GitHub Actions
 - **Code Splitting** - Lazy-loaded editor for faster initial page loads
-- **Sticky Toolbar** - Formatting toolbar stays visible while scrolling long notes
+- **Sticky Toolbar** - Formatting toolbar stays visible while scrolling long notes; vertical sidebar on wide screens
+- **Manuscript Atmosphere** - Editorial blockquotes, three-dot dividers, ghost-writing placeholder, and viewport-following manuscript glow
 - **Slash Commands** - Type `/` for quick formatting: headings, lists, quotes, code blocks, timestamps, and more
 - **Focus Mode** - Ctrl+Shift+F (desktop) / triple-tap (mobile) hides all editor chrome for distraction-free writing with vignette overlay
 - **Bottom Toolbar** - Mobile formatting toolbar fixed at thumb zone with heading cycle button and keyboard-aware positioning
