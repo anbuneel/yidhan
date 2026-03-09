@@ -45,6 +45,7 @@ export function TagSelector({
             shadow-lg
             z-50
           "
+          onClick={(e) => e.stopPropagation()}
           style={{
             background: 'var(--color-bg-secondary)',
             border: '1px solid var(--glass-border)',
