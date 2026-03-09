@@ -1171,6 +1171,11 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
         </div>
       )}
 
+      {/* Vertical sidebar — desktop only, visible at ≥1100px via CSS */}
+      {!isMobile && (
+        <EditorSidebar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
+      )}
+
       {/* Editor Content */}
       <main onTouchStart={handleTouchStart} onTouchEnd={handleTapEnd}>
         <div className="max-w-[900px] mx-auto px-4 sm:px-10 pt-2 pb-12 editor-writing-area">
@@ -1233,11 +1238,6 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
             <div className="editor-toolbar-sticky editor-toolbar-medium-fallback focus-mode-target">
               <EditorToolbar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
             </div>
-          )}
-
-          {/* Vertical sidebar — desktop only, visible at ≥1100px via CSS */}
-          {!isMobile && (
-            <EditorSidebar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
           )}
 
           {/* Decorative divider — gradient line between title zone and body */}
