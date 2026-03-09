@@ -71,6 +71,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
   const tapCountRef = useRef(0);
   const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -235,6 +236,37 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       throttledScrollSaveRef.current?.flush();
     };
   }, [note.id, showResumeChip]);
+
+  // Update manuscript glow position on scroll — direct DOM mutation, no re-renders
+  useEffect(() => {
+    const scrollEl = scrollContainerRef.current;
+    const glowEl = glowRef.current;
+    if (!scrollEl || !glowEl) return;
+
+    const writingArea = glowEl.closest('.editor-writing-area') as HTMLElement | null;
+
+    let ticking = false;
+    const handleGlowScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const scrollTop = scrollEl.scrollTop;
+          const areaOffset = writingArea?.offsetTop ?? 0;
+          const areaHeight = writingArea?.scrollHeight ?? scrollEl.scrollHeight;
+          const viewportCenter = scrollTop + scrollEl.clientHeight * 0.4 - areaOffset;
+          const maxTop = areaHeight - 600;
+          const top = Math.max(0, Math.min(viewportCenter - 300, maxTop));
+          glowEl.style.top = `${top}px`;
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    scrollEl.addEventListener('scroll', handleGlowScroll, { passive: true });
+    handleGlowScroll(); // Initial position
+
+    return () => scrollEl.removeEventListener('scroll', handleGlowScroll);
+  }, []);
 
   // Handle resume button click
   const handleResumeScroll = useCallback(() => {
@@ -1142,6 +1174,13 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       {/* Editor Content */}
       <main onTouchStart={handleTouchStart} onTouchEnd={handleTapEnd}>
         <div className="max-w-[900px] mx-auto px-4 sm:px-10 pt-2 pb-12 editor-writing-area">
+          {/* Viewport-following manuscript glow — position updated via ref, not state */}
+          <div
+            ref={glowRef}
+            className="editor-manuscript-glow"
+            aria-hidden="true"
+          />
+
           {/* Title Zone — timestamps reveal on hover/tap */}
           <div
             className={`editor-title-zone ${showTimestamps ? 'timestamps-visible' : ''}`}
@@ -1201,15 +1240,20 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
             <EditorSidebar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
           )}
 
-          {/* Rich Text Content */}
-          <RichTextEditor
-            content={content}
-            onChange={handleContentChange}
-            onBlur={performSave}
-            noteId={note.id}
-            autoFocus={hasContent}
-            onEditorReady={setEditor}
-          />
+          {/* Decorative divider — gradient line between title zone and body */}
+          <div className="editor-title-divider focus-mode-target" aria-hidden="true" />
+
+          {/* Rich Text Content — generous top margin for breathing room */}
+          <div className="mt-8">
+            <RichTextEditor
+              content={content}
+              onChange={handleContentChange}
+              onBlur={performSave}
+              noteId={note.id}
+              autoFocus={hasContent}
+              onEditorReady={setEditor}
+            />
+          </div>
 
         </div>
 
