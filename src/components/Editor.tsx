@@ -3,6 +3,7 @@ import type { Editor as TiptapEditor } from '@tiptap/react';
 import type { Note, Tag, Theme } from '../types';
 import { RichTextEditor } from './RichTextEditor';
 import { EditorToolbar } from './EditorToolbar';
+import { EditorSidebar } from './EditorSidebar';
 import { TagSelector } from './TagSelector';
 import { ShareModal } from './ShareModal';
 import { formatShortDate, formatRelativeTime } from '../utils/formatTime';
@@ -1188,11 +1189,16 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
             </div>
           </div>
 
-          {/* Toolbar - desktop: flows after tags, sticky on scroll */}
+          {/* Inline toolbar — visible on medium desktop (768-1099px), hidden when sidebar shows */}
           {!isMobile && (
-            <div className="editor-toolbar-sticky focus-mode-target">
+            <div className="editor-toolbar-sticky editor-toolbar-medium-fallback focus-mode-target">
               <EditorToolbar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
             </div>
+          )}
+
+          {/* Vertical sidebar — desktop only, visible at ≥1100px via CSS */}
+          {!isMobile && (
+            <EditorSidebar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
           )}
 
           {/* Rich Text Content */}

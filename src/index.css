@@ -1166,6 +1166,90 @@ body::before {
   }
 }
 
+/* Hide inline toolbar when sidebar is visible */
+@media (min-width: 1100px) {
+  .editor-toolbar-medium-fallback {
+    display: none;
+  }
+}
+
+/* Vertical sidebar toolbar — slim, ghostly, left margin */
+.editor-sidebar {
+  position: fixed;
+  left: max(calc((100vw - 900px) / 2 - 56px), 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 15;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-bg-secondary) 60%, transparent);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 0.4;
+  transition: opacity 300ms ease;
+}
+
+/* Show only on wide screens where there's margin space */
+@media (min-width: 1100px) {
+  .editor-sidebar {
+    display: flex;
+  }
+}
+
+.editor-sidebar:hover,
+.editor-sidebar:focus-within {
+  opacity: 0.95;
+}
+
+.editor-sidebar-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.editor-sidebar-bottom {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Sidebar button */
+.editor-sidebar button {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 200ms ease;
+  color: var(--color-text-secondary);
+}
+
+.editor-sidebar button:hover {
+  background: var(--color-bg-tertiary);
+}
+
+/* Sidebar divider */
+.editor-sidebar-divider {
+  width: 16px;
+  height: 1px;
+  margin: 4px 0;
+  background: var(--glass-border);
+  opacity: 0.5;
+}
+
 /* ============================================
    FOCUS MODE
    Strips editor chrome for distraction-free writing.
