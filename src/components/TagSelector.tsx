@@ -163,6 +163,8 @@ export function TagSelector({
               border: 'none',
             }}
             onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+            aria-haspopup="listbox"
+            aria-expanded={isOpen}
           >
             <span
               className="w-1.5 h-1.5 rounded-full"

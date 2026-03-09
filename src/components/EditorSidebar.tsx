@@ -36,7 +36,7 @@ export function EditorSidebar({ editor, onToggleFocusMode }: EditorSidebarProps)
   if (!editor) return null;
 
   return (
-    <div className="editor-sidebar focus-mode-target">
+    <div className="editor-sidebar focus-mode-target" role="toolbar" aria-orientation="vertical" aria-label="Formatting toolbar">
       <div className="editor-sidebar-buttons">
         {/* Inline formatting */}
         <SidebarButton

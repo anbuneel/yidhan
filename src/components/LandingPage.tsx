@@ -402,7 +402,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                   minHeight: '200px',
                 }}
               >
-                {/* Manuscript glow — matches editor-writing-area::after */}
+                {/* Manuscript glow — matches .editor-manuscript-glow */}
                 <div
                   className="writing-surface-glow absolute inset-0 pointer-events-none"
                 />
@@ -542,7 +542,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
           background: color-mix(in srgb, var(--color-bg-primary) 75%, var(--color-bg-secondary) 25%);
           box-shadow: 0 1px 4px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.2);
         }
-        /* Manuscript glow — matches editor-writing-area::after per theme */
+        /* Manuscript glow — matches .editor-manuscript-glow per theme */
         .writing-surface-glow {
           background: radial-gradient(ellipse 80% 50% at 50% 40%, rgba(194, 86, 52, 0.12) 0%, transparent 70%);
         }

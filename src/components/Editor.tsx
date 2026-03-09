@@ -656,10 +656,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
   const handleToggleFocusMode = useCallback(() => setIsFocusMode(prev => !prev), []);
   const handleTimestampToggle = useCallback(() => {
-    if (isMobile) {
-      setShowTimestamps(prev => !prev);
-    }
-  }, [isMobile]);
+    setShowTimestamps(prev => !prev);
+  }, []);
 
   // Track touch start position to distinguish taps from scrolls
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -1171,7 +1169,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
         </div>
       )}
 
-      {/* Vertical sidebar — desktop only, visible at ≥1100px via CSS */}
+      {/* Vertical sidebar — desktop only; CSS hides below 1100px where inline toolbar shows instead */}
       {!isMobile && (
         <EditorSidebar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
       )}
@@ -1198,6 +1196,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
               onChange={handleTitleChange}
               onKeyDown={handleTitleKeyDown}
               onBlur={performSave}
+              onClick={(e) => e.stopPropagation()}
               placeholder="Untitled"
               className="w-full font-semibold bg-transparent outline-none resize-none overflow-hidden leading-tight"
               style={{
@@ -1381,7 +1380,9 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                 lineHeight: 1.6,
               }}
             >
-              It will rest in Faded Notes for 30 days, then quietly disappear.
+              {isDemo
+                ? 'This note will be permanently removed from your practice space.'
+                : 'It will rest in Faded Notes for 30 days, then quietly disappear.'}
             </p>
             <div className="flex gap-3 justify-end">
               <button
