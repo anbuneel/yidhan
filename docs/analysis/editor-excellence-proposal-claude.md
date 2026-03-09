@@ -2,7 +2,8 @@
 
 **Version:** 1.0
 **Last Updated:** 2026-03-03
-**Status:** Proposal
+**Status:** Complete (shipped in v3.6.0)
+**Archived:** 2026-03-09 — All three features (Focus Mode, Page Presence, Bottom Toolbar) implemented
 **Author:** Claude (Opus 4.6)
 **Consulted:** Frontend Design Skill
 

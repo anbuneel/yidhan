@@ -692,7 +692,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       {/* Note Title - visible on desktop, clicks to scroll to top */}
       <button
         onClick={handleScrollToTop}
-        className="hidden sm:inline truncate text-xl max-w-[200px] md:max-w-[300px] hover:text-[var(--color-accent)] transition-colors duration-200"
+        className="hidden sm:inline truncate text-xl max-w-[200px] md:max-w-[300px] py-1 hover:text-[var(--color-accent)] transition-colors duration-200"
         style={{
           fontFamily: 'var(--font-display)',
           fontWeight: 400,

@@ -38,7 +38,7 @@ Design analysis and feature exploration (Claude-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [editor-excellence-proposal-claude.md](analysis/editor-excellence-proposal-claude.md) | **NEW** Editor Excellence sprint: Focus Mode + Page Presence + Bottom Toolbar design proposal | 2026-03-03 |
+| [editor-calm-delight-review-claude.md](analysis/editor-calm-delight-review-claude.md) | **NEW** Editor calm & delight review: 9 decisions for metadata, toolbar, writing surface polish | 2026-03-09 |
 | [codebase-bloat-audit-codex.md](analysis/codebase-bloat-audit-codex.md) | Quick bloat audit focused on maintainability and velocity risks | 2026-01-27 |
 | [kintsugi-light-mode-enhancements-claude.md](analysis/kintsugi-light-mode-enhancements-claude.md) | **NEW** Light mode enhancements: grain opacity, shadow warmth, card refinements | 2026-01-26 |
 | [editor-ux-evaluation-claude.md](analysis/editor-ux-evaluation-claude.md) | **NEW** Editor UI/UX evaluation: typography, toolbar, mobile, 15 quick wins | 2026-01-26 |
@@ -117,6 +117,7 @@ Currently in-progress implementation plans and follow-ups.
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [2026-03-09-editor-calm-delight.md](plans/2026-03-09-editor-calm-delight.md) | **NEW** Editor calm & delight — 9 changes: sidebar toolbar, metadata collapse, writing surface polish | 2026-03-09 |
 | [vault-unlock-ux-implementation-plan.md](plans/vault-unlock-ux-implementation-plan.md) | Vault unlock UX plan — **Phase 1 complete** (session persist, auto-lock, lock button) | 2026-02-23 |
 | [e2ee-implementation-plan.md](plans/e2ee-implementation-plan.md) | **NEW** E2EE implementation plan v1.4 (Codex peer-reviewed, approved) | 2026-02-21 |
 | [yidhan-rebrand-plan.md](plans/yidhan-rebrand-plan.md) | **NEW** Yidhan rebrand implementation plan (128 files, 7 phases) | 2026-01-12 |
@@ -172,7 +173,8 @@ Implementation plans that have been completed.
 
 | Document | Description |
 |----------|-------------|
-| [pwa-native-feel-plan.md](plans/pwa-native-feel-plan.md) | **NEW** PWA native feel - iOS install guide, swipe gestures, pull-to-refresh, spring animations |
+| [editor-excellence-proposal-claude.md](analysis/editor-excellence-proposal-claude.md) | Editor Excellence sprint: Focus Mode + Page Presence + Bottom Toolbar (shipped v3.6.0) |
+| [pwa-native-feel-plan.md](plans/pwa-native-feel-plan.md) | PWA native feel - iOS install guide, swipe gestures, pull-to-refresh, spring animations |
 | [codex-review-action-plan.md](archive/plans/codex-review-action-plan.md) | Codex review fixes (P1/P2/P3 complete) |
 | [share-as-letter-implementation-plan.md](archive/plans/share-as-letter-implementation-plan.md) | Share as Letter feature (implemented) |
 | [offboarding-implementation-plan.md](archive/plans/offboarding-implementation-plan.md) | "Letting Go" offboarding (implemented) |
