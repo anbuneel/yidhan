@@ -7,8 +7,7 @@ import { NoteCard } from './NoteCard';
 interface SwipeableNoteCardProps {
   note: Note;
   onClick: (id: string) => void;
-  // onDelete can return boolean (true=success, false=failure) or void for backwards compatibility
-  onDelete: (id: string) => void | boolean | Promise<void | boolean>;
+  onDelete: (id: string) => void;
   onTogglePin: (id: string, pinned: boolean) => void;
   disabled?: boolean;
   isCompact?: boolean;
@@ -18,12 +17,10 @@ interface SwipeableNoteCardProps {
 const ACTION_THRESHOLD = 80; // Distance to reveal action
 const TRIGGER_THRESHOLD = 140; // Distance to auto-trigger action
 const VELOCITY_TRIGGER = 1.2; // Velocity to auto-trigger
-const DELETE_ANIMATION_DELAY = 150; // Delay before API call (snappy feel)
 
 /**
  * Swipeable wrapper for NoteCard with iOS-like gesture actions.
  *
- * - Swipe left → Delete action (red)
  * - Swipe right → Pin/Unpin action (gold)
  * - Spring physics for native feel
  * - Haptic feedback at thresholds
@@ -53,42 +50,6 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
     }
   }, []);
 
-  // Handle delete action
-  const handleDelete = useCallback(async () => {
-    setIsTriggering(true);
-    triggerHaptic('heavy');
-
-    // Animate off screen
-    api.start({
-      x: -window.innerWidth,
-      config: { tension: 200, friction: 25 },
-    });
-
-    // Brief delay for animation visibility, then delete
-    await new Promise((resolve) => setTimeout(resolve, DELETE_ANIMATION_DELAY));
-
-    // onDelete may return boolean (success/failure) or void
-    // Check result to determine if we need to recover UI
-    const result = await Promise.resolve(onDelete(note.id));
-
-    // If delete explicitly failed (returned false), show failure feedback
-    if (result === false) {
-      // Shake animation to indicate failure
-      api.start({
-        to: [
-          { x: 20, config: { duration: 50 } },
-          { x: -20, config: { duration: 50 } },
-          { x: 10, config: { duration: 50 } },
-          { x: -10, config: { duration: 50 } },
-          { x: 0, config: { tension: 300, friction: 20 } },
-        ],
-      });
-      triggerHaptic('heavy'); // Additional haptic to emphasize failure
-      setIsTriggering(false);
-    }
-    // If result is true or undefined (legacy), delete succeeded or we assume success
-  }, [api, note.id, onDelete, triggerHaptic]);
-
   // Handle pin action
   const handlePin = useCallback(() => {
     setIsTriggering(true);
@@ -105,7 +66,7 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
     });
   }, [api, note.id, note.pinned, onTogglePin, triggerHaptic]);
 
-  // Gesture binding
+  // Gesture binding (right-swipe only for pin/unpin)
   const bind = useDrag(
     ({ movement: [mx], velocity: [vx], direction: [dx], down, cancel, memo = { hapticTriggered: false } }) => {
       if (disabled || isTriggering) {
@@ -113,24 +74,24 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
         return;
       }
 
+      // Block left swipe — only allow right
+      const clampedMx = Math.max(0, mx);
+
       // Prevent card click during swipe
-      if (Math.abs(mx) > 10 && containerRef.current) {
+      if (clampedMx > 10 && containerRef.current) {
         containerRef.current.style.pointerEvents = 'none';
       }
 
       // Resistance when swiping beyond threshold
       const resistance = 0.5;
-      let targetX = mx;
+      let targetX = clampedMx;
 
-      // Apply resistance past thresholds
-      if (mx < -ACTION_THRESHOLD) {
-        targetX = -ACTION_THRESHOLD + (mx + ACTION_THRESHOLD) * resistance;
-      } else if (mx > ACTION_THRESHOLD) {
-        targetX = ACTION_THRESHOLD + (mx - ACTION_THRESHOLD) * resistance;
+      if (clampedMx > ACTION_THRESHOLD) {
+        targetX = ACTION_THRESHOLD + (clampedMx - ACTION_THRESHOLD) * resistance;
       }
 
       // Haptic feedback at threshold
-      if (!memo.hapticTriggered && Math.abs(mx) >= ACTION_THRESHOLD) {
+      if (!memo.hapticTriggered && clampedMx >= ACTION_THRESHOLD) {
         triggerHaptic('light');
         memo.hapticTriggered = true;
       }
@@ -144,14 +105,8 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
           containerRef.current.style.pointerEvents = '';
         }
 
-        // Check for delete trigger (left swipe)
-        if (mx < -TRIGGER_THRESHOLD || (mx < -ACTION_THRESHOLD && vx > VELOCITY_TRIGGER && dx < 0)) {
-          handleDelete();
-          return memo;
-        }
-
         // Check for pin trigger (right swipe)
-        if (mx > TRIGGER_THRESHOLD || (mx > ACTION_THRESHOLD && vx > VELOCITY_TRIGGER && dx > 0)) {
+        if (clampedMx > TRIGGER_THRESHOLD || (clampedMx > ACTION_THRESHOLD && vx > VELOCITY_TRIGGER && dx > 0)) {
           handlePin();
           return memo;
         }
@@ -165,21 +120,15 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
     {
       axis: 'x',
       filterTaps: true,
-      bounds: { left: -200, right: 200 },
+      bounds: { left: 0, right: 200 },
       rubberband: true,
     }
   );
 
   // Calculate action visibility
-  const deleteOpacity = x.to((val) => Math.min(1, Math.abs(Math.min(0, val)) / ACTION_THRESHOLD));
   const pinOpacity = x.to((val) => Math.min(1, Math.max(0, val) / ACTION_THRESHOLD));
 
-  // Scale effect for action icons
-  const deleteScale = x.to((val) => {
-    const progress = Math.abs(Math.min(0, val)) / TRIGGER_THRESHOLD;
-    return 0.8 + Math.min(progress, 1) * 0.4;
-  });
-
+  // Scale effect for action icon
   const pinScale = x.to((val) => {
     const progress = Math.max(0, val) / TRIGGER_THRESHOLD;
     return 0.8 + Math.min(progress, 1) * 0.4;
@@ -191,32 +140,6 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
       className="relative overflow-hidden touch-pan-y"
       style={{ borderRadius: 'var(--radius-card)' }}
     >
-      {/* Delete action (left side - revealed on left swipe) */}
-      <animated.div
-        className="absolute inset-y-0 right-0 flex items-center justify-end pr-6 pointer-events-none"
-        style={{
-          opacity: deleteOpacity,
-          background: 'linear-gradient(to left, var(--color-destructive), var(--color-error))',
-          borderRadius: 'var(--radius-card)',
-          width: '100%',
-        }}
-      >
-        <animated.div
-          style={{ transform: deleteScale.to((s) => `scale(${s})`), color: 'var(--color-cta-text)' }}
-          className="flex flex-col items-center"
-        >
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-          <span className="text-xs font-medium mt-1">Delete</span>
-        </animated.div>
-      </animated.div>
-
       {/* Pin action (right side - revealed on right swipe) */}
       <animated.div
         className="absolute inset-y-0 left-0 flex items-center justify-start pl-6 pointer-events-none"

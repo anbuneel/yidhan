@@ -8,6 +8,13 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.11.0',
+    date: '2026-03-10',
+    changes: [
+      { type: 'improvement', text: 'Removed swipe-left-to-delete on mobile — prevents accidental deletions, keeping the experience calm and intentional' },
+    ],
+  },
+  {
     version: '3.10.0',
     date: '2026-03-09',
     changes: [
