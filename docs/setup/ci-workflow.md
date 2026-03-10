@@ -2,7 +2,7 @@
 
 ## Overview
 
-Zenote uses GitHub Actions for continuous integration with an optimized two-tier approach that balances speed and thoroughness.
+Yidhan uses GitHub Actions for continuous integration with an optimized two-tier approach that balances speed and thoroughness.
 
 ## Workflow Behavior
 
@@ -59,6 +59,7 @@ Runs on every qualifying push/PR. Quick validation that catches most issues.
 
 - **Type check** - TypeScript compilation without emit
 - **Lint** - ESLint static analysis
+- **Docs sync check** - Verifies `AGENTS.md` is in sync with `CLAUDE.md` (`npm run docs:sync-agents:check`)
 - **Build** - Production build verification
 
 ### full-tests

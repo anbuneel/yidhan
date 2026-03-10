@@ -1,4 +1,4 @@
-# Zenote UI Layout Reference
+# Yidhan UI Layout Reference
 
 Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detailed layout work.
 
@@ -7,7 +7,7 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 **Desktop (≥768px):**
 ```
 ┌─────────────────────────────────┬─────────────────────────────────────────────┐
-│ Zenote                          │                          [🌙] [Sign In]     │
+│ Yidhan                          │                          [🌙] [Sign In]     │
 ├─────────────────────────────────┼─────────────────────────────────────────────┤
 │                                 │  ┌─────────────┐  ┌─────────────┐          │
 │  A quiet space                  │  │ Sample Note │  │ Sample Note │          │
@@ -29,7 +29,7 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 **Mobile (<768px):**
 ```
 ┌─────────────────────────────────┐
-│ Zenote            [🌙] [Sign In]│
+│ Yidhan            [🌙] [Sign In]│
 ├─────────────────────────────────┤
 │                                 │
 │   A quiet space                 │
@@ -65,7 +65,7 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 
 ```
 ┌─────────────────────────────────────┐
-│               Zenote                │
+│               Yidhan                │
 │           Welcome back              │
 │                                     │
 │  ┌─────────────┐ ┌─────────────┐    │
@@ -102,7 +102,7 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 
 All pages use `HeaderShell` component for pixel-perfect header consistency:
 ```
-[Zenote]        [    Center Content    ]        [☀] [JD]
+[Yidhan]        [    Center Content    ]        [☀] [JD]
   ↑                      ↑                         ↑
  Logo              Page-specific             Theme + Avatar
 (fixed)             (flexible)               (fixed position)
@@ -110,7 +110,7 @@ All pages use `HeaderShell` component for pixel-perfect header consistency:
 
 **Library Header (Desktop):**
 ```
-[Zenote]   [  Search...  ⌘K  ] [+ New Note]   [☀] [JD ↓]
+[Yidhan]   [  Search...  ⌘K  ] [+ New Note]   [☀] [JD ↓]
                                                     │
                                           ┌─────────┴─────────┐
                                           │ ⚙ Settings        │
@@ -126,7 +126,7 @@ All pages use `HeaderShell` component for pixel-perfect header consistency:
 
 **Library Header (Mobile - Two Rows):**
 ```
-Row 1: [Zenote]                    [+] [☀] [JD]
+Row 1: [Yidhan]                    [+] [☀] [JD]
 Row 2: [         Search...          ]
 ```
 - New Note button moved to Row 1 for quick access
@@ -134,7 +134,7 @@ Row 2: [         Search...          ]
 
 **Editor Header (Desktop):**
 ```
-[Zenote / Note Title]                    [Saving.../Saved ✓] [🗑] | [☀] [JD]
+[Yidhan / Note Title]                    [Saving.../Saved ✓] [🗑] | [☀] [JD]
      ↑                                          ↑
  Left Zone                                Right Actions
 (logo + breadcrumb integrated)          (save status + delete)
@@ -142,13 +142,13 @@ Row 2: [         Search...          ]
 
 **Editor Header (Mobile):**
 ```
-Row 1: [Zenote]                         [Saving...] [🗑] [☀] [JD]
+Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
 Row 2: [Note Title]
 ```
 
 **Landing/Public Pages:**
 ```
-[Zenote]                                         [☀] [Sign In]
+[Yidhan]                                         [☀] [Sign In]
 ```
 
 **HeaderShell Props by Page:**
@@ -256,7 +256,7 @@ Pinned notes:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ [Zenote]                          [Release All] | [☀] [JD] │
+│ [Yidhan]                          [Release All] | [☀] [JD] │
 ├─────────────────────────────────────────────────────────────┤
 │ Faded Notes                                                 │
 │ Notes rest here before releasing.                           │

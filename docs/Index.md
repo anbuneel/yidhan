@@ -128,7 +128,7 @@ Currently in-progress implementation plans and follow-ups.
 | [ios-pwa-experience-checklist-codex.md](active/ios-pwa-experience-checklist-codex.md) | iOS PWA experience checklist (install, offline, keyboard, performance) | 2026-01-08 |
 | [capacitor-implementation-plan.md](plans/capacitor-implementation-plan.md) | Capacitor setup guide (Android done, iOS pending) | 2026-01-09 |
 | [pwa-enhancements-plan.md](plans/pwa-enhancements-plan.md) | PWA enhancements (Share Target, Install Prompt) - **COMPLETE** | 2026-01-08 |
-| [onboarding-ux-followup.md](active/onboarding-ux-followup.md) | Onboarding improvements follow-up items | 2025-12-24 |
+| ~~onboarding-ux-followup.md~~ | *(removed — items completed or superseded)* | 2025-12-24 |
 
 ---
 
@@ -195,7 +195,7 @@ Early planning and analysis documents (kept for reference).
 
 | Document | Description |
 |----------|-------------|
-| [CLAUDE-full-2025-12-28.md](archive/planning/CLAUDE-full-2025-12-28.md) | Full CLAUDE.md snapshot |
+| ~~CLAUDE-full-2025-12-28.md~~ | *(removed — see CLAUDE.md for current version)* |
 | [tech-stack-comparison.md](archive/planning/tech-stack-comparison.md) | Technology stack evaluation |
 | [tech-stack-reco.md](archive/planning/tech-stack-reco.md) | Tech stack recommendations |
 | [ANALYSIS_REPORT.md](archive/planning/ANALYSIS_REPORT.md) | Initial codebase analysis |

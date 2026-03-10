@@ -1,4 +1,4 @@
-# Zenote - Technical Specification
+# Yidhan - Technical Specification
 
 **Version:** 1.0
 **Last Updated:** 2025-12-29
@@ -15,7 +15,7 @@
 
 ## System Overview
 
-Zenote is a React-based Single Page Application (SPA) with a Supabase backend providing PostgreSQL database, authentication, and real-time subscriptions.
+Yidhan is a React-based Single Page Application (SPA) with a Supabase backend providing PostgreSQL database, authentication, and real-time subscriptions.
 
 ### Technology Stack
 

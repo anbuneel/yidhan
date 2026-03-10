@@ -406,7 +406,7 @@ Offline → Make edits → Save to IndexedDB (sync queue)
 | Notion | ❌ No | ✅ Yes | ❌ No |
 | Bear | ⚠️ Optional (per-note) | ⚠️ Unencrypted only | ⚠️ Partial |
 | Standard Notes | ✅ All notes | ❌ Never | ✅ Yes |
-| **Zenote (Planned)** | ✅ All notes | ❌ Never | ✅ Yes |
+| **Yidhan** | ✅ All notes | ❌ Never | ✅ Yes |
 
 *See [encryption-capability-analysis-claude.md](analysis/encryption-capability-analysis-claude.md) for detailed analysis.*
 

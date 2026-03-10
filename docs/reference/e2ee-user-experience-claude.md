@@ -45,6 +45,14 @@ Yidhan's End-to-End Encryption (E2EE) protects note content with a user-chosen p
 - Wrong passphrase: "Incorrect passphrase. Please try again."
 - Option to sign out if unable to remember
 
+### "Remember this browser" (opt-in, since v3.4.0)
+- Checkbox on the unlock screen: "Remember this browser"
+- When enabled, persists a `SessionKeyBlob` in `localStorage` (survives browser restarts)
+- Keys verified against `encryption_key_check` on restore to detect stale keys after passphrase change
+- Activity-gated restore after auto-lock (keys stay out of memory during idle)
+- Cleared on manual lock, sign-out, or user switch
+- Default: off (opt-in for convenience vs. security tradeoff)
+
 ### Different device
 - Keys are per-device (never synced) → must enter passphrase again
 
@@ -93,9 +101,14 @@ Each note is encrypted with AAD (Additional Authenticated Data) of `noteId:userI
 
 ---
 
-## 6. Sharing: Disabled
+## 6. Sharing: E2EE Share as Letter
 
-**"Share as Letter" is completely disabled** when E2EE is active. The share button is hidden in the editor. This is a deliberate trade-off — encrypted content cannot be shared without breaking the encryption promise.
+**"Share as Letter" works with E2EE enabled** (since v3.5.0). Each share link generates a unique per-note AES-256-GCM key embedded in the URL fragment (`#k=<base64url>`). The server stores only ciphertext via the `fetch_shared_note` RPC — it never sees the plaintext.
+
+- Share links have a configurable TTL (1, 7, or 30 days)
+- Revoking a share soft-deletes it (`revoked_at` timestamp)
+- The recipient decrypts client-side using the key from the URL fragment
+- URL format: `/s/<token>/<slug>#k=<key>`
 
 ---
 

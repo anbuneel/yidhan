@@ -142,62 +142,7 @@ See [Mobile Gap Analysis](docs/analysis/mobile-ios-gap-analysis-claude.md) for d
 
 ### Database Setup
 
-Run this SQL in your Supabase SQL Editor:
-
-```sql
--- Create notes table
-create table notes (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) on delete cascade not null,
-  title text not null default '',
-  content text not null default '',
-  created_at timestamptz default now() not null,
-  updated_at timestamptz default now() not null
-);
-
--- Create tags table
-create table tags (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) on delete cascade not null,
-  name text not null,
-  color text not null default 'stone',
-  created_at timestamptz default now() not null,
-  unique(user_id, name)
-);
-
--- Create junction table for notes <-> tags
-create table note_tags (
-  note_id uuid references notes(id) on delete cascade not null,
-  tag_id uuid references tags(id) on delete cascade not null,
-  primary key (note_id, tag_id)
-);
-
--- Enable Row Level Security
-alter table notes enable row level security;
-alter table tags enable row level security;
-alter table note_tags enable row level security;
-
--- Notes policies
-create policy "Users can view own notes" on notes for select using (auth.uid() = user_id);
-create policy "Users can insert own notes" on notes for insert with check (auth.uid() = user_id);
-create policy "Users can update own notes" on notes for update using (auth.uid() = user_id);
-create policy "Users can delete own notes" on notes for delete using (auth.uid() = user_id);
-
--- Tags policies
-create policy "Users can manage their own tags" on tags for all using (auth.uid() = user_id);
-
--- Note_tags policies
-create policy "Users can manage their own note_tags" on note_tags for all using (
-  exists (select 1 from notes where notes.id = note_tags.note_id and notes.user_id = auth.uid())
-);
-
--- Indexes for performance
-create index notes_user_id_idx on notes(user_id);
-create index notes_updated_at_idx on notes(updated_at desc);
-create index tags_user_id_idx on tags(user_id);
-create index note_tags_note_id_idx on note_tags(note_id);
-create index note_tags_tag_id_idx on note_tags(tag_id);
-```
+The live schema includes tables for notes, tags, note_tags, and note_shares, plus E2EE columns, soft-delete, sync triggers, and RLS policies. Apply the migrations in `supabase/migrations/` in order to set up a new Supabase project. See [docs/technical-spec.md](docs/technical-spec.md) for the full schema reference.
 
 ## Scripts
 

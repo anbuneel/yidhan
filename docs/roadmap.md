@@ -69,9 +69,9 @@
 
 | # | Feature | Area | Status | Effort | Source |
 |---|---------|------|--------|--------|--------|
-| 1.1 | **Focus Mode** — Ctrl+Shift+F / triple-tap to strip away all chrome, dim everything except writing | `editor` | planned | 1-2 days | [focus mode plan](../../../.claude/plans/calm-honking-mist.md) |
-| 1.2 | **Subtle page presence** — Writing canvas gradient effect, custom caret refinements | `editor` | proposed | 1 day | [editor evaluation](analysis/editor-ux-evaluation-claude.md) |
-| 1.3 | **Bottom toolbar on mobile** — Move formatting to bottom of screen (thumb zone) | `editor` | proposed | 3 days | [editor evaluation](analysis/editor-ux-evaluation-claude.md) |
+| 1.1 | **Focus Mode** — Ctrl+Shift+F / triple-tap to strip away all chrome, dim everything except writing | `editor` | done | — | shipped in v3.6.0 |
+| 1.2 | **Subtle page presence** — Writing canvas gradient effect, custom caret refinements | `editor` | done | — | shipped in v3.9.0 (manuscript glow, aged-paper gradient) |
+| 1.3 | **Bottom toolbar on mobile** — Move formatting to bottom of screen (thumb zone) | `editor` | done | — | shipped in v3.6.0 |
 
 ### Other Ship Ready Items
 

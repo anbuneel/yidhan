@@ -2,7 +2,7 @@
 
 ## Overview
 
-Zenote uses Playwright for end-to-end testing. E2E tests require a dedicated test user account in Supabase.
+Yidhan uses Playwright for end-to-end testing. E2E tests require a dedicated test user account in Supabase.
 
 ## Prerequisites
 
