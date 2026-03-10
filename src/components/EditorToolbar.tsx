@@ -160,6 +160,7 @@ export function EditorToolbar({ editor, variant = 'inline', onToggleFocusMode }:
         style={{
           background: 'var(--color-bg-secondary)',
           border: '1px solid var(--glass-border)',
+          boxShadow: 'var(--shadow-sm)',
           minHeight: '44px',
         }}
       >
@@ -380,6 +381,7 @@ export function EditorToolbar({ editor, variant = 'inline', onToggleFocusMode }:
         style={{
           background: 'var(--color-bg-secondary)',
           border: '1px solid var(--glass-border)',
+          boxShadow: 'var(--shadow-sm)',
         }}
       >
         {BoldButton}
@@ -424,6 +426,7 @@ export function EditorToolbar({ editor, variant = 'inline', onToggleFocusMode }:
       style={{
         background: 'var(--color-bg-secondary)',
         border: '1px solid var(--glass-border)',
+        boxShadow: 'var(--shadow-sm)',
       }}
     >
       {/* Text Style */}
