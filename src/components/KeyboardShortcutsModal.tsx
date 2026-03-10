@@ -7,7 +7,7 @@ interface KeyboardShortcutsModalProps {
 
 // Detect platform for displaying correct modifier key
 const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-const modKey = isMac ? '⌘' : 'Ctrl';
+const modKey = isMac ? '\u2318' : 'Ctrl';
 
 interface ShortcutItem {
   keys: string[];
@@ -50,7 +50,7 @@ const shortcuts: ShortcutSection[] = [
       { keys: ['/code'], description: 'Code block' },
       { keys: ['/highlight'], description: 'Highlight text' },
       { keys: ['/divider'], description: 'Horizontal line' },
-      { keys: ['/date'], description: 'Insert today\'s date' },
+      { keys: ['/date'], description: "Insert today's date" },
       { keys: ['/time'], description: 'Insert current time' },
       { keys: ['/now'], description: 'Insert date and time' },
     ],
@@ -69,7 +69,7 @@ const shortcuts: ShortcutSection[] = [
  * Modal showing all keyboard shortcuts, slash commands, and mobile gestures.
  *
  * Uses wabi-sabi styling with calm "Quiet Shortcuts" title.
- * Platform-aware: shows ⌘ on Mac, Ctrl on Windows/Linux.
+ * Platform-aware: shows the macOS command symbol on Mac, Ctrl on Windows/Linux.
  */
 export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);

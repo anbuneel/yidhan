@@ -32,6 +32,7 @@ const TagModal = lazyWithRetry(() =>
 
 // Demo-specific user ID (used internally, not a real user)
 const DEMO_USER_ID = 'demo-user';
+let lastHandledDemoSearchFocusToken = 0;
 
 interface DemoPageProps {
   onSignUp: () => void;
@@ -410,7 +411,11 @@ function DemoHeader({
   }, []);
 
   useEffect(() => {
-    if (searchFocusToken === 0) return;
+    if (searchFocusToken === 0 || searchFocusToken === lastHandledDemoSearchFocusToken) {
+      return;
+    }
+
+    lastHandledDemoSearchFocusToken = searchFocusToken;
 
     const frame = window.requestAnimationFrame(() => {
       searchRef.current?.focus();

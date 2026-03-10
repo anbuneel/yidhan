@@ -4,7 +4,8 @@ import { HeaderShell, type MenuSectionConfig } from './HeaderShell';
 import { SyncIndicator } from './SyncIndicator';
 
 const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-const modKey = isMac ? '⌘' : 'Ctrl+';
+const modKey = isMac ? '\u2318' : 'Ctrl+';
+let lastHandledSearchFocusToken = 0;
 
 interface HeaderProps {
   theme: Theme;
@@ -42,10 +43,14 @@ export function Header({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const searchShortcutHint = isMac ? `${modKey}â‡§K` : `${modKey}Shift+K`;
+  const searchShortcutHint = isMac ? `${modKey}\u21E7K` : `${modKey}Shift+K`;
 
   useEffect(() => {
-    if (searchFocusToken === 0) return;
+    if (searchFocusToken === 0 || searchFocusToken === lastHandledSearchFocusToken) {
+      return;
+    }
+
+    lastHandledSearchFocusToken = searchFocusToken;
 
     const frame = window.requestAnimationFrame(() => {
       searchRef.current?.focus();

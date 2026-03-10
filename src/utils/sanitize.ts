@@ -31,9 +31,7 @@ DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   }
 
   if (tagName === 'a' && node.getAttribute('target') === '_blank') {
-    if (node.getAttribute('target') === '_blank') {
-      node.setAttribute('rel', 'noopener noreferrer');
-    }
+    node.setAttribute('rel', 'noopener noreferrer');
   }
 });
 
