@@ -194,15 +194,23 @@ export async function hydrateFromServer(userId: string): Promise<void> {
   const db = getOfflineDb(userId);
 
   if (await hasQueuedSyncWork(userId)) {
-    addHydrationBreadcrumb('Skipped hydration because queued local changes exist', {
-      reason: 'queued_local_changes',
-    }, 'warning');
+    addHydrationBreadcrumb({
+      category: 'hydration',
+      message: 'Skipped hydration because queued local changes exist',
+      level: 'warning',
+      data: {
+        reason: 'queued_local_changes',
+      },
+    });
     console.warn('Skipping startup hydration because local queued changes exist');
     return;
   }
 
   await setHydrationMeta(userId, 'in_progress');
-  addHydrationBreadcrumb('Hydration started');
+  addHydrationBreadcrumb({
+    category: 'hydration',
+    message: 'Hydration started',
+  });
 
   try {
     // Fetch all notes from server
@@ -243,8 +251,19 @@ export async function hydrateFromServer(userId: string): Promise<void> {
       const localNotes = await db.notes.toArray();
       const localTags = await db.tags.toArray();
       const localNoteTags = await db.noteTags.toArray();
+      const localNotesById = new Map(localNotes.map((note) => [note.id, note]));
+      const mergedNotes = (notesData || []).map((n) => {
+        const serverNote = dbNoteToLocal(n as DbNote, userId);
+        const localNote = localNotesById.get(serverNote.id);
 
-      const mergedNotes = (notesData || []).map((n) => dbNoteToLocal(n as DbNote, userId));
+        // Preserve unresolved local state so hydration cannot erase
+        // conflict or otherwise non-synced edits after metadata resets.
+        if (localNote && localNote.syncStatus !== 'synced') {
+          return localNote;
+        }
+
+        return serverNote;
+      });
       const mergedTags = (tagsData || []).map((t) => dbTagToLocal(t as DbTag, userId));
       const mergedNoteTags: LocalNoteTag[] = (noteTagsData || []).map((nt) => ({
         noteId: nt.note_id,
@@ -253,7 +272,7 @@ export async function hydrateFromServer(userId: string): Promise<void> {
         lastSyncedAt: hydratedAt,
       }));
 
-      const serverNoteIds = new Set(mergedNotes.map((note) => note.id));
+      const serverNoteIds = new Set((notesData || []).map((note) => note.id));
       const serverTagIds = new Set(mergedTags.map((tag) => tag.id));
       const serverNoteTagKeys = new Set(
         mergedNoteTags.map((noteTag) => `${noteTag.noteId}:${noteTag.tagId}`)
@@ -305,10 +324,14 @@ export async function hydrateFromServer(userId: string): Promise<void> {
       });
     });
 
-    addHydrationBreadcrumb('Hydration completed', {
-      noteCount: notesData?.length || 0,
-      tagCount: tagsData?.length || 0,
-      noteTagCount: noteTagsData?.length || 0,
+    addHydrationBreadcrumb({
+      category: 'hydration',
+      message: 'Hydration completed',
+      data: {
+        noteCount: notesData?.length || 0,
+        tagCount: tagsData?.length || 0,
+        noteTagCount: noteTagsData?.length || 0,
+      },
     });
     console.log(`Hydrated offline DB: ${notesData?.length || 0} notes, ${tagsData?.length || 0} tags`);
   } catch (error) {
@@ -317,9 +340,14 @@ export async function hydrateFromServer(userId: string): Promise<void> {
     } catch (metaError) {
       console.warn('Failed to reset hydration metadata after error:', metaError);
     }
-    addHydrationBreadcrumb('Hydration failed', {
-      error: error instanceof Error ? error.message : String(error),
-    }, 'warning');
+    addHydrationBreadcrumb({
+      category: 'hydration',
+      message: 'Hydration failed',
+      level: 'warning',
+      data: {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
     throw error;
   }
 }

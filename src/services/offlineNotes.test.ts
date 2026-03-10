@@ -732,7 +732,25 @@ describe('offlineNotes', () => {
         if (table === 'notes') {
           return {
             select: vi.fn().mockReturnValue({
-              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'conflict-note',
+                    user_id: TEST_USER_ID,
+                    title: 'Server wins only if safe',
+                    content: '<p>Server</p>',
+                    pinned: true,
+                    deleted_at: null,
+                    created_at: new Date('2026-03-01T00:00:00Z').toISOString(),
+                    updated_at: new Date('2026-03-10T00:00:00Z').toISOString(),
+                    encrypted_payload: null,
+                    encryption_iv: null,
+                    encryption_version: null,
+                    content_hash: null,
+                  },
+                ],
+                error: null,
+              }),
             }),
           };
         }
@@ -752,6 +770,8 @@ describe('offlineNotes', () => {
       const meta = await db.meta.get('hydration');
 
       expect(preserved?.syncStatus).toBe('conflict');
+      expect(preserved?.title).toBe('Keep conflict');
+      expect(preserved?.content).toBe('<p>Local</p>');
       expect(meta?.status).toBe('complete');
     });
 
