@@ -918,7 +918,7 @@ body::before {
 
 .note-card-preview ul[data-type="taskList"] li[data-checked="true"] > div {
   text-decoration: line-through;
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 /* ============================================
@@ -1099,19 +1099,21 @@ body::before {
   );
 }
 
-/* Title zone — hover-reveal timestamps */
-.editor-title-zone .editor-timestamps {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-height 300ms ease, opacity 300ms ease;
+/* Metadata row — tags left, timestamp right */
+.editor-metadata-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+  min-height: 1.5rem;
 }
 
-.editor-title-zone:hover .editor-timestamps,
-.editor-title-zone:focus-within .editor-timestamps,
-.editor-title-zone.timestamps-visible .editor-timestamps {
-  max-height: 2rem;
-  opacity: 1;
+.editor-metadata-row .editor-timestamps {
+  opacity: 0.4;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Decorative gradient line — title zone to body transition */
@@ -1211,6 +1213,10 @@ body::before {
 @media (min-width: 1100px) {
   .editor-sidebar {
     display: flex;
+  }
+  /* Hide inline toolbar when sidebar is visible — sidebar takes over */
+  .editor-toolbar-medium-fallback {
+    display: none;
   }
 }
 

@@ -1878,6 +1878,7 @@ function App() {
           onFadedNotesClick={handleFadedNotesClick}
           fadedNotesCount={fadedNotesCount}
         />
+        <div className="w-full flex-1 flex flex-col" style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <TagFilterBar
           tags={tags}
           selectedTagIds={selectedTagIds}
@@ -1901,6 +1902,7 @@ function App() {
             searchQuery={searchQuery}
           />
         )}
+        </div>
 
         {/* Tag Modal */}
         {showTagModal && (

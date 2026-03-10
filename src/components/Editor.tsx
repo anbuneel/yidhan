@@ -65,7 +65,6 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   const [showResumeChip, setShowResumeChip] = useState(false);
   const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
   const [isFocusMode, setIsFocusMode] = useState(false);
-  const [showTimestamps, setShowTimestamps] = useState(false);
   const isMobile = useMobileDetect();
   useKeyboardHeight(); // Sets --keyboard-height CSS var for bottom toolbar positioning
   const titleRef = useRef<HTMLTextAreaElement>(null);
@@ -123,7 +122,6 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       setShowResumeChip(false);
       setSavedScrollPosition(null);
       setIsFocusMode(false);
-      setShowTimestamps(false);
       resumeChipShownAtRef.current = 0;
       throttledScrollSaveRef.current = null;
       pendingScrollSaveRef.current = null; // Clear pending data for old note
@@ -655,9 +653,6 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   }, [showExportMenu]);
 
   const handleToggleFocusMode = useCallback(() => setIsFocusMode(prev => !prev), []);
-  const handleTimestampToggle = useCallback(() => {
-    setShowTimestamps(prev => !prev);
-  }, []);
 
   // Track touch start position to distinguish taps from scrolls
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -1184,11 +1179,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
             aria-hidden="true"
           />
 
-          {/* Title Zone — timestamps reveal on hover/tap */}
-          <div
-            className={`editor-title-zone ${showTimestamps ? 'timestamps-visible' : ''}`}
-            onClick={isMobile ? handleTimestampToggle : undefined}
-          >
+          {/* Title Zone */}
+          <div className="editor-title-zone">
             {/* Title */}
             <textarea
               ref={titleRef}
@@ -1196,7 +1188,6 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
               onChange={handleTitleChange}
               onKeyDown={handleTitleKeyDown}
               onBlur={performSave}
-              onClick={(e) => e.stopPropagation()}
               placeholder="Untitled"
               className="w-full font-semibold bg-transparent outline-none resize-none overflow-hidden leading-tight"
               style={{
@@ -1209,19 +1200,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
               rows={1}
             />
 
-            {/* Timestamps — hidden until hover (desktop) or tap (mobile) */}
-            <div
-              className="editor-timestamps text-xs focus-mode-target"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-tertiary)',
-              }}
-            >
-              Created {formatShortDate(note.createdAt)} · Edited {formatRelativeTime(note.updatedAt)}
-            </div>
-
-            {/* Inline tag pills — always visible */}
-            <div className="mt-1 mb-2 focus-mode-target">
+            {/* Metadata row — tags left, timestamp right */}
+            <div className="editor-metadata-row focus-mode-target">
               <TagSelector
                 tags={tags}
                 selectedTagIds={note.tags.map((t) => t.id)}
@@ -1229,6 +1209,15 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                 onCreateTag={onCreateTag}
                 variant="inline"
               />
+              <span
+                className="editor-timestamps text-xs"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-text-tertiary)',
+                }}
+              >
+                {formatShortDate(note.createdAt)} · {formatRelativeTime(note.updatedAt)}
+              </span>
             </div>
           </div>
 
