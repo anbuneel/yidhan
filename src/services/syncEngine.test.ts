@@ -622,6 +622,8 @@ describe('processQueue behavior', () => {
     expect(result.failed).toBe(0);
     expect(result.blocked).toBe(1);
     expect(result.errors.length).toBeGreaterThanOrEqual(1);
+    expect(mockUpdateSyncQueueEntry).not.toHaveBeenCalled();
+    expect(mockMarkSyncQueueEntryBlocked).toHaveBeenCalledTimes(1);
     expect(mockRemoveSyncQueueEntry).not.toHaveBeenCalledWith(
       TEST_USER_ID,
       'mut-exhausted',
@@ -636,6 +638,49 @@ describe('processQueue behavior', () => {
     // Clean up
     await db.syncQueue.clear();
     await db.notes.clear();
+  });
+
+  it('should block exhausted exception paths without writing pending retry metadata first', async () => {
+    const entry = buildEntry({
+      id: 205,
+      clientMutationId: 'mut-exception-exhausted',
+      operation: 'create',
+      entityType: 'note',
+      entityId: 'note-exception-exhausted',
+      retryCount: 4,
+    });
+    mockGetPendingSyncQueue.mockResolvedValue([entry]);
+    mockMarkNoteSynced.mockResolvedValue(undefined);
+    mockRemoveSyncQueueEntry.mockRejectedValue(new Error('remove failed'));
+
+    const db = getOfflineDb(TEST_USER_ID);
+    await db.syncQueue.put({ ...entry, id: 205 });
+
+    const idempotencyChain = buildChain({ data: null });
+    const insertChain = buildChain({
+      data: {
+        id: 'note-exception-exhausted',
+        updated_at: '2026-03-10T00:00:00Z',
+      },
+    });
+    mockFrom
+      .mockReturnValueOnce(idempotencyChain)
+      .mockReturnValueOnce(insertChain);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.failed).toBe(0);
+    expect(result.blocked).toBe(1);
+    expect(result.errors).toHaveLength(1);
+    expect(mockUpdateSyncQueueEntry).not.toHaveBeenCalled();
+    expect(mockMarkSyncQueueEntryBlocked).toHaveBeenCalledTimes(1);
+
+    const updated = await db.syncQueue.get(205);
+    expect(updated?.retryCount).toBe(5);
+    expect(updated?.status).toBe('blocked');
+    expect(updated?.lastError).toContain('remove failed');
+
+    await db.syncQueue.clear();
   });
 
   it('should block non-retryable failures instead of dropping them', async () => {

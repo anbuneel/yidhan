@@ -728,7 +728,6 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
         const newRetryCount = entry.retryCount + 1;
         const lastError = getErrorMessage(queueResult.error);
         const retryError = queueResult.error ?? new Error(lastError);
-        await updateRetryMetadata(userId, entry, newRetryCount, lastError);
         result.errors.push(retryError);
 
         // If too many retries, block the entry for manual retry
@@ -742,6 +741,7 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
           );
           result.blocked++;
         } else {
+          await updateRetryMetadata(userId, entry, newRetryCount, lastError);
           result.failed++;
         }
       } else {
@@ -771,7 +771,6 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
       try {
         const newRetryCount = entry.retryCount + 1;
         const lastError = getErrorMessage(syncError);
-        await updateRetryMetadata(userId, entry, newRetryCount, lastError);
 
         // Block the entry if too many retries
         if (newRetryCount >= 5) {
@@ -787,6 +786,7 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
             `Blocking failed sync entry after ${newRetryCount} retries: ${entry.entityType}/${entry.entityId}`
           );
         } else {
+          await updateRetryMetadata(userId, entry, newRetryCount, lastError);
           result.failed++;
         }
       } catch (dbError) {
