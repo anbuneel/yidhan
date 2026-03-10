@@ -14,6 +14,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **End-to-End Encryption** - Note titles and content encrypted client-side with AES-256-GCM before reaching the server; passphrase-derived keys via Argon2id with optional "Remember this browser" persistence
 - **Rich Text Editor** - Format your notes with bold, italic, headers, lists, quotes, code blocks, and task lists with checkboxes
 - **Cross-Device Sync** - Notes sync across devices in ~3 seconds with incremental pull, server-authoritative timestamps, and pagination
+- **Recoverable Sync Failures** - Repeated sync failures move into a blocked state with a visible retry action instead of silently dropping local changes
 - **Real-time Updates** - Changes appear instantly across tabs and devices with self-echo suppression
 - **Beautiful Design** - Warm, paper-like aesthetics with asymmetric "wabi-sabi" card corners
 - **Light & Dark Themes** - Kintsugi (warm light) and Midnight (forest green dark) themes
@@ -56,6 +57,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Share Target** - Share text from other apps directly to Yidhan (Android/Chrome)
 - **Install Prompt** - Friendly reminder to install after using the app
 - **Offline Editing** - Notes persist locally with IndexedDB, automatic sync when back online
+- **Safe Startup Hydration** - Startup cache hydration merges server state without clearing queued local work
 - **Conflict Resolution** - "Two Paths" modal for resolving concurrent edits across devices
 - **Share as Letter** - End-to-end encrypted share links with per-note keys; server never sees plaintext (1, 7, or 30 days)
 - **Swipe Gestures** - Swipe left to delete, right to pin/unpin notes (mobile)

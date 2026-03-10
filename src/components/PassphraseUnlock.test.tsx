@@ -172,7 +172,9 @@ describe('PassphraseUnlock', () => {
     render(<PassphraseUnlock />);
 
     expect(screen.getByText('Remember this browser')).toBeInTheDocument();
-    expect(screen.getByText('Only use on personal devices')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Only use on personal devices\./)
+    ).toBeInTheDocument();
   });
 
   it('should call setRememberBrowser when checkbox is toggled', async () => {

@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.12.0',
+    date: '2026-03-10',
+    changes: [
+      { type: 'improvement', text: 'Blocked sync recovery - repeated sync failures now stay recoverable in the local queue with a manual retry action instead of being silently dropped' },
+      { type: 'fix', text: 'Startup hydration no longer clears local notes, tags, or note-tag data when queued local work already exists' },
+      { type: 'improvement', text: 'Encryption trust surfaces hardened - clearer unrecoverable passphrase/share-link warnings and new reliability telemetry for vault restore and decryption failures' },
+    ],
+  },
+  {
     version: '3.11.0',
     date: '2026-03-10',
     changes: [

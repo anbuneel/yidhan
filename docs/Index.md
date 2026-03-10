@@ -23,7 +23,7 @@ Business strategy, competitive positioning, and launch planning.
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [design-critique-tracker.md](active/design-critique-tracker.md) | Design critique findings tracker — decisions, completed items, open issues | 2026-03-07 |
+| [design-critique-tracker.md](active/design-critique-tracker.md) | Design critique findings tracker - decisions, completed items, open issues | 2026-03-07 |
 | [strategic-viability-review-claude.md](active/strategic-viability-review-claude.md) | Honest competitive viability assessment and gap analysis | 2026-01-06 |
 | [competitive-design-evaluation-claude.md](active/competitive-design-evaluation-claude.md) | Design comparison vs Notion, Bear, Apple Notes, Obsidian, Craft | 2025-12-26 |
 | [launch-readiness-assessment.md](active/launch-readiness-assessment.md) | Launch readiness checklist (93% ready as of 2025-12-28) | 2025-12-28 |
@@ -117,8 +117,9 @@ Currently in-progress implementation plans and follow-ups.
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [2026-03-09-editor-calm-delight.md](plans/2026-03-09-editor-calm-delight.md) | **NEW** Editor calm & delight — 9 changes: sidebar toolbar, metadata collapse, writing surface polish | 2026-03-09 |
-| [vault-unlock-ux-implementation-plan.md](plans/vault-unlock-ux-implementation-plan.md) | Vault unlock UX plan — **Phase 1 complete** (session persist, auto-lock, lock button) | 2026-02-23 |
+| [reliability-hardening-plan-codex.md](active/reliability-hardening-plan-codex.md) | Reliability hardening plan for sync durability, non-destructive hydration, tag membership convergence, search scaling, and E2EE operational safeguards | 2026-03-10 |
+| [2026-03-09-editor-calm-delight.md](plans/2026-03-09-editor-calm-delight.md) | **NEW** Editor calm & delight - 9 changes: sidebar toolbar, metadata collapse, writing surface polish | 2026-03-09 |
+| [vault-unlock-ux-implementation-plan.md](plans/vault-unlock-ux-implementation-plan.md) | Vault unlock UX plan - **Phase 1 complete** (session persist, auto-lock, lock button) | 2026-02-23 |
 | [e2ee-implementation-plan.md](plans/e2ee-implementation-plan.md) | **NEW** E2EE implementation plan v1.4 (Codex peer-reviewed, approved) | 2026-02-21 |
 | [yidhan-rebrand-plan.md](plans/yidhan-rebrand-plan.md) | **NEW** Yidhan rebrand implementation plan (128 files, 7 phases) | 2026-01-12 |
 | [quiet-tasks-implementation-plan.md](plans/quiet-tasks-implementation-plan.md) | **NEW** Quiet Tasks feature (surface buried tasks/intentions, 6 phases) | 2026-01-14 |
@@ -128,7 +129,7 @@ Currently in-progress implementation plans and follow-ups.
 | [ios-pwa-experience-checklist-codex.md](active/ios-pwa-experience-checklist-codex.md) | iOS PWA experience checklist (install, offline, keyboard, performance) | 2026-01-08 |
 | [capacitor-implementation-plan.md](plans/capacitor-implementation-plan.md) | Capacitor setup guide (Android done, iOS pending) | 2026-01-09 |
 | [pwa-enhancements-plan.md](plans/pwa-enhancements-plan.md) | PWA enhancements (Share Target, Install Prompt) - **COMPLETE** | 2026-01-08 |
-| ~~onboarding-ux-followup.md~~ | *(removed — items completed or superseded)* | 2025-12-24 |
+| ~~onboarding-ux-followup.md~~ | *(removed - items completed or superseded)* | 2025-12-24 |
 
 ---
 
@@ -195,7 +196,7 @@ Early planning and analysis documents (kept for reference).
 
 | Document | Description |
 |----------|-------------|
-| ~~CLAUDE-full-2025-12-28.md~~ | *(removed — see CLAUDE.md for current version)* |
+| ~~CLAUDE-full-2025-12-28.md~~ | *(removed - see CLAUDE.md for current version)* |
 | [tech-stack-comparison.md](archive/planning/tech-stack-comparison.md) | Technology stack evaluation |
 | [tech-stack-reco.md](archive/planning/tech-stack-reco.md) | Tech stack recommendations |
 | [ANALYSIS_REPORT.md](archive/planning/ANALYSIS_REPORT.md) | Initial codebase analysis |
@@ -214,9 +215,9 @@ Early planning and analysis documents (kept for reference).
 
 **Current Status:**
 - Production app deployed at https://yidhan.vercel.app
-- **PWA Native Feel: ✅ 100% Complete** (see [pwa-native-feel-plan.md](plans/pwa-native-feel-plan.md))
+- **PWA Native Feel: complete (100%)** (see [pwa-native-feel-plan.md](plans/pwa-native-feel-plan.md))
 - Mobile readiness: 9/10 (improved from 8.5/10)
-- Android Capacitor: ✅ Working | iOS Capacitor: ⏳ Pending setup
+- Android Capacitor: working | iOS Capacitor: pending setup
 - 587 unit tests + 42 E2E tests passing
 - Bundle size: 555KB main + 416KB editor (gesture libraries added)
 
@@ -252,4 +253,5 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 
 ---
 
-*Last updated: 2026-02-23 (Vault unlock UX Phase 1 merged — PR #128)*
+*Last updated: 2026-03-10 (Reliability hardening plan added to Active Work)*
+

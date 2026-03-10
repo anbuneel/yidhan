@@ -5,6 +5,7 @@ import { decryptSharePayload } from '../lib/encryption';
 import { fetchSharedNote } from '../services/notes';
 import { sanitizeHtml } from '../utils/sanitize';
 import { Footer } from './Footer';
+import { reportReliabilityIssue } from '../utils/reliabilityTelemetry';
 
 const VALID_TAG_COLORS = new Set(['terracotta', 'gold', 'forest', 'stone', 'indigo', 'clay', 'sage', 'plum']);
 
@@ -84,6 +85,15 @@ export function SharedNoteView({
         } catch (error) {
           // Wrong key, tampered data, or AAD mismatch
           console.error('SharedNoteView: decryption failed', error);
+          reportReliabilityIssue({
+            category: 'sharing',
+            message: 'Shared note decryption failed',
+            level: 'warning',
+            data: {
+              source: 'shared_note_view',
+              keyLength: shareKey.length,
+            },
+          }, error);
           if (isMounted) setLoadingState('incomplete');
         }
       })
@@ -225,7 +235,7 @@ export function SharedNoteView({
                 lineHeight: 1.6,
               }}
             >
-              The full link is needed to read this note. Please ask the sender for the complete link.
+              The full link is needed to read this note. Please ask the sender for the complete link, including the `#k=` key fragment.
             </p>
             <button
               onClick={onInvalidToken}

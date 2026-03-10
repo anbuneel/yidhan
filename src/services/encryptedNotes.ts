@@ -16,9 +16,10 @@ import {
   fetchNotesOffline,
   fetchFadedNotesOffline,
 } from './offlineNotes';
-import { getOfflineDb, generateMutationId } from '../lib/offlineDb';
+import { getOfflineDb, createPendingSyncQueueEntry } from '../lib/offlineDb';
 import { validateNoteTitle, validateNoteContentLength } from '../utils/validation';
 import { sanitizeHtml } from '../utils/sanitize';
+import { reportReliabilityIssue } from '../utils/reliabilityTelemetry';
 
 /**
  * Decrypt a single note in-place if it has encrypted fields.
@@ -49,14 +50,26 @@ async function decryptNoteIfNeeded(
     return note;
   }
 
-  const { title, content } = await decryptNote(
-    note.id,
-    userId,
-    { ciphertext: note.encryptedPayload!, iv: note.encryptionIv! },
-    keys.encryptionKey
-  );
+  try {
+    const { title, content } = await decryptNote(
+      note.id,
+      userId,
+      { ciphertext: note.encryptedPayload!, iv: note.encryptionIv! },
+      keys.encryptionKey
+    );
 
-  return { ...note, title, content };
+    return { ...note, title, content };
+  } catch (error) {
+    reportReliabilityIssue({
+      category: 'vault',
+      message: 'Encrypted note decryption failed',
+      level: 'warning',
+      data: {
+        source: 'note_decryption',
+      },
+    }, error);
+    throw error;
+  }
 }
 
 /**
@@ -105,8 +118,7 @@ export async function createEncryptedNote(
     contentHash: encrypted.contentHash,
   };
 
-  const syncEntry: SyncQueueEntry = {
-    clientMutationId: generateMutationId(),
+  const syncEntry: SyncQueueEntry = createPendingSyncQueueEntry({
     operation: 'create',
     entityType: 'note',
     entityId: noteId,
@@ -120,8 +132,7 @@ export async function createEncryptedNote(
       content_hash: encrypted.contentHash,
     },
     createdAt: now,
-    retryCount: 0,
-  };
+  });
 
   await db.transaction('rw', db.notes, db.syncQueue, async () => {
     await db.notes.add(localNote);
@@ -178,8 +189,7 @@ export async function updateEncryptedNote(
 
   // Update note + sync queue in a single Dexie transaction.
   // Compacts previous pending updates to same entity.
-  const syncEntry: SyncQueueEntry = {
-    clientMutationId: generateMutationId(),
+  const syncEntry: SyncQueueEntry = createPendingSyncQueueEntry({
     operation: 'update',
     entityType: 'note',
     entityId: noteId,
@@ -192,8 +202,7 @@ export async function updateEncryptedNote(
       content_hash: encrypted.contentHash,
     },
     createdAt: now,
-    retryCount: 0,
-  };
+  });
 
   await db.transaction('rw', db.notes, db.syncQueue, async () => {
     await db.notes.update(noteId, {
@@ -395,8 +404,7 @@ export async function createEncryptedNotesBatch(
         contentHash: encrypted.contentHash,
       };
 
-      const syncEntry: SyncQueueEntry = {
-        clientMutationId: generateMutationId(),
+      const syncEntry: SyncQueueEntry = createPendingSyncQueueEntry({
         operation: 'create',
         entityType: 'note',
         entityId: noteId,
@@ -412,8 +420,7 @@ export async function createEncryptedNotesBatch(
           content_hash: encrypted.contentHash,
         },
         createdAt: now,
-        retryCount: 0,
-      };
+      });
 
       await db.transaction('rw', db.notes, db.syncQueue, async () => {
         await db.notes.add(localNote);

@@ -5,18 +5,100 @@
  * Follows "invisible when working" philosophy:
  * - Synced: No indicator (zen - absence is peace)
  * - Offline: Cloud icon with X
- * - Stuck pending (30s+): Ink dot with count
+  * - Stuck pending (30s+): Ink dot with count
+ * - Blocked: Manual retry needed
  * - Normal pending (<30s): No indicator (sync is invisible)
  */
 
+import { useState } from 'react';
 import { useSyncStatus } from '../hooks/useSyncStatus';
 
-export function SyncIndicator() {
-  const { isOnline, pendingCount, isStuck } = useSyncStatus();
+interface SyncIndicatorProps {
+  onRetryBlockedChanges?: () => Promise<void>;
+  isRetryingBlockedChanges?: boolean;
+}
+
+export function SyncIndicator({
+  onRetryBlockedChanges,
+  isRetryingBlockedChanges = false,
+}: SyncIndicatorProps) {
+  const { isOnline, pendingCount, blockedCount, isStuck, refresh } = useSyncStatus();
+  const [isRetryingLocal, setIsRetryingLocal] = useState(false);
+  const isRetrying = isRetryingBlockedChanges || isRetryingLocal;
+
+  const handleRetryBlockedChanges = async () => {
+    if (!onRetryBlockedChanges || !isOnline || isRetrying) {
+      return;
+    }
+
+    setIsRetryingLocal(true);
+    try {
+      await onRetryBlockedChanges();
+      await refresh();
+    } finally {
+      setIsRetryingLocal(false);
+    }
+  };
 
   // Zen philosophy: when all is well, show nothing
-  if (pendingCount === 0 && isOnline) {
+  if (pendingCount === 0 && blockedCount === 0 && isOnline) {
     return null;
+  }
+
+  if (blockedCount > 0) {
+    return (
+      <div
+        className="flex items-center gap-2 px-2 py-1 rounded-md"
+        style={{
+          background: 'var(--color-bg-tertiary)',
+        }}
+        role="status"
+        aria-label={`${blockedCount} change${blockedCount === 1 ? '' : 's'} blocked and awaiting retry`}
+      >
+        <span
+          className="w-2 h-2 rounded-full"
+          style={{ background: 'var(--color-destructive)' }}
+          aria-hidden="true"
+        />
+        <span
+          className="text-xs font-medium"
+          style={{
+            color: 'var(--color-text-secondary)',
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          {blockedCount} blocked
+        </span>
+        {isOnline && onRetryBlockedChanges ? (
+          <button
+            type="button"
+            onClick={handleRetryBlockedChanges}
+            disabled={isRetrying}
+            className="text-xs font-medium transition-opacity"
+            style={{
+              color: 'var(--color-accent)',
+              fontFamily: 'var(--font-body)',
+              background: 'transparent',
+              border: 'none',
+              cursor: isRetrying ? 'wait' : 'pointer',
+              opacity: isRetrying ? 0.6 : 1,
+            }}
+          >
+            {isRetrying ? 'Retrying...' : 'Retry blocked changes'}
+          </button>
+        ) : (
+          <span
+            className="text-[11px]"
+            style={{
+              color: 'var(--color-text-tertiary)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            Reconnect to retry
+          </span>
+        )}
+      </div>
+    );
   }
 
   // Offline state

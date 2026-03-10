@@ -64,6 +64,7 @@ export function PassphraseUnlock() {
           style={{ color: 'var(--color-text-secondary)' }}
         >
           Enter your passphrase to decrypt and access your notes.
+          Forgotten passphrases cannot be reset or recovered.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -117,7 +118,7 @@ export function PassphraseUnlock() {
                 className="block text-xs mt-0.5"
                 style={{ color: 'var(--color-text-tertiary)' }}
               >
-                Only use on personal devices
+                Only use on personal devices. This stores unlocked vault keys on this device.
               </span>
             </span>
           </label>

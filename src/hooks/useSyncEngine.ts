@@ -7,6 +7,7 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { addReliabilityBreadcrumb } from '../utils/reliabilityTelemetry';
 import { useAuth } from '../contexts/AuthContext';
 import { useNetworkStatus } from './useNetworkStatus';
 import {
@@ -73,7 +74,7 @@ export function mapSyncOutcome(result: FullSyncResult): SyncOutcome {
   if (failedDataEntities.size === 2 && totalPulled === 0) return 'error';
 
   // Some failures (data errors with partial data, push failures, or membership issues)
-  if (failedDataEntities.size > 0 || result.failed > 0 || hasMembershipErrors) {
+  if (failedDataEntities.size > 0 || result.failed > 0 || result.blocked > 0 || hasMembershipErrors) {
     return 'partial';
   }
 
@@ -151,6 +152,20 @@ export function useSyncEngine(
         }
 
         const outcome = mapSyncOutcome(result);
+        if (outcome !== 'ok') {
+          addReliabilityBreadcrumb({
+            category: 'sync',
+            message: 'Sync completed with non-ideal outcome',
+            level: outcome === 'error' ? 'error' : 'warning',
+            data: {
+              outcome,
+              processed: result.processed,
+              failed: result.failed,
+              blocked: result.blocked,
+              pullErrors: result.pullErrors.length,
+            },
+          });
+        }
         return { outcome, result };
       } catch (error) {
         console.error('Sync failed:', error);

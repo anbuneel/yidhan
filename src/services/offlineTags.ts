@@ -7,12 +7,10 @@
 
 import {
   getOfflineDb,
-  generateMutationId,
   type LocalTag,
-  type SyncQueueEntry,
-  type SyncOperation,
 } from '../lib/offlineDb';
 import type { Tag, TagColor } from '../types';
+import { queueSyncOperation } from './offlineNotes';
 
 // Convert LocalTag to App Tag
 function localTagToTag(localTag: LocalTag): Tag {
@@ -23,43 +21,6 @@ function localTagToTag(localTag: LocalTag): Tag {
     createdAt: new Date(localTag.createdAt),
     updatedAt: localTag.serverUpdatedAt ? new Date(localTag.serverUpdatedAt) : undefined,
   };
-}
-
-/**
- * Add an operation to the sync queue
- */
-async function queueSyncOperation(
-  userId: string,
-  operation: SyncOperation,
-  entityType: 'note' | 'tag' | 'noteTag',
-  entityId: string,
-  payload: unknown
-): Promise<string> {
-  const db = getOfflineDb(userId);
-  const clientMutationId = generateMutationId();
-  const now = Date.now();
-
-  const entry: SyncQueueEntry = {
-    clientMutationId,
-    operation,
-    entityType,
-    entityId,
-    payload,
-    createdAt: now,
-    retryCount: 0,
-  };
-
-  // Queue compaction for updates
-  if (operation === 'update') {
-    await db.syncQueue
-      .where('entityId')
-      .equals(entityId)
-      .and((e) => e.operation === 'update' && e.entityType === entityType)
-      .delete();
-  }
-
-  await db.syncQueue.add(entry);
-  return clientMutationId;
 }
 
 /**

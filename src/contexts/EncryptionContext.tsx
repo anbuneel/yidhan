@@ -3,6 +3,10 @@ import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 import type { DerivedKeys, SessionKeyBlob } from '../lib/encryption';
 import { deriveKeys, createKeyCheck, verifyKeyCheck, exportSessionKeys, importSessionKeys } from '../lib/encryption';
+import {
+  addReliabilityBreadcrumb,
+  reportReliabilityIssue,
+} from '../utils/reliabilityTelemetry';
 
 export type LockReason = 'auto-lock' | 'manual' | 'sign-out';
 
@@ -60,6 +64,12 @@ async function restoreSession(userId: string): Promise<DerivedKeys | null> {
     return await importSessionKeys(blob);
   } catch (err) {
     console.warn('[EncryptionContext] Session restore blob corrupted, clearing:', err);
+    reportReliabilityIssue({
+      category: 'vault',
+      message: 'Vault session restore failed',
+      level: 'warning',
+      data: { source: 'sessionStorage' },
+    }, err);
     clearSession(userId);
     return null;
   }
@@ -117,6 +127,12 @@ async function restoreLocal(userId: string): Promise<DerivedKeys | null> {
     return await importSessionKeys(blob);
   } catch (err) {
     console.warn('[EncryptionContext] localStorage restore blob corrupted, clearing:', err);
+    reportReliabilityIssue({
+      category: 'vault',
+      message: 'Persisted vault restore failed',
+      level: 'warning',
+      data: { source: 'localStorage' },
+    }, err);
     clearLocal(userId);
     return null;
   }
@@ -191,11 +207,23 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
           if (restored && keyCheck && keyCheckIv) {
             const isValid = await verifyKeyCheck(restored.encryptionKey, keyCheck, keyCheckIv);
             if (!isValid) {
+              reportReliabilityIssue({
+                category: 'vault',
+                message: 'Persisted vault keys failed key-check',
+                level: 'warning',
+                data: { source: 'localStorage_restore' },
+              });
               console.warn('[EncryptionContext] localStorage keys failed key-check — stale or corrupted, clearing');
               clearLocal(currentUserId);
               restored = null;
             }
           } else if (restored) {
+            reportReliabilityIssue({
+              category: 'vault',
+              message: 'Persisted vault restore missing key-check metadata',
+              level: 'warning',
+              data: { source: 'localStorage_restore' },
+            });
             // Key-check metadata missing — cannot verify integrity, require manual passphrase
             console.warn('[EncryptionContext] Cannot verify localStorage keys: key-check metadata missing');
             clearLocal(currentUserId);
@@ -213,6 +241,12 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
         }
       } catch (err) {
         if (!cancelled) {
+          reportReliabilityIssue({
+            category: 'vault',
+            message: 'Vault restore flow failed',
+            level: 'warning',
+            data: { source: 'restore_effect' },
+          }, err);
           console.warn('[EncryptionContext] Session restore failed, passphrase required:', err);
           clearSession(currentUserId);
         }
@@ -248,6 +282,12 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
         const restored = await restoreLocal(currentUserId);
         if (aborted) return;
         if (!restored) {
+          addReliabilityBreadcrumb({
+            category: 'vault',
+            message: 'Activity-gated restore found no persisted keys',
+            level: 'warning',
+            data: { source: 'activity_gate' },
+          });
           console.warn('[EncryptionContext] Activity-gated restore: no keys found in localStorage, passphrase required');
           return;
         }
@@ -257,10 +297,22 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
           const isValid = await verifyKeyCheck(restored.encryptionKey, keyCheck, keyCheckIv);
           if (aborted) return;
           if (!isValid) {
+            reportReliabilityIssue({
+              category: 'vault',
+              message: 'Activity-gated restore failed key-check',
+              level: 'warning',
+              data: { source: 'activity_gate' },
+            });
             clearLocal(currentUserId);
             return;
           }
         } else {
+          reportReliabilityIssue({
+            category: 'vault',
+            message: 'Activity-gated restore missing key-check metadata',
+            level: 'warning',
+            data: { source: 'activity_gate' },
+          });
           // Key-check metadata missing — cannot verify integrity, require manual passphrase
           console.warn('[EncryptionContext] Activity-gated restore: key-check metadata missing, refusing unverified keys');
           clearLocal(currentUserId);
@@ -273,6 +325,12 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
         setKeyState((prev) => prev.keys !== null ? prev : { keys: restored, userId: currentUserId });
       } catch (err) {
         if (aborted) return;
+        reportReliabilityIssue({
+          category: 'vault',
+          message: 'Activity-gated restore failed',
+          level: 'warning',
+          data: { source: 'activity_gate' },
+        }, err);
         console.warn('[EncryptionContext] Activity-gated restore failed:', err);
         clearLocal(currentUserId);
       }

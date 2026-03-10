@@ -351,6 +351,17 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
               Include note title in link
             </label>
 
+            <p
+              className="text-xs"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-tertiary)',
+                lineHeight: 1.6,
+              }}
+            >
+              Copy the full link somewhere safe after creation. If the `#k=` part is lost, this shared note cannot be reopened.
+            </p>
+
             {/* Create button */}
             <button
               onClick={handleCreateShare}

@@ -14,6 +14,12 @@ import Dexie from 'dexie';
 import type { DerivedKeys } from '../lib/encryption';
 import { getOfflineDb } from '../lib/offlineDb';
 
+const mockReportReliabilityIssue = vi.fn();
+
+vi.mock('../utils/reliabilityTelemetry', () => ({
+  reportReliabilityIssue: mockReportReliabilityIssue,
+}));
+
 // Helper: derive real crypto keys for testing (lightweight, no Argon2id)
 async function deriveTestKeys(): Promise<DerivedKeys> {
   const c = globalThis.crypto;
@@ -281,6 +287,13 @@ describe('encryptedNotes', () => {
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining('1 failed'),
       );
+      expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category: 'vault',
+          message: 'Encrypted note decryption failed',
+        }),
+        expect.anything()
+      );
 
       consoleSpy.mockRestore();
       warnSpy.mockRestore();
@@ -302,6 +315,13 @@ describe('encryptedNotes', () => {
       expect(consoleSpy).toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining('0 succeeded'),
+      );
+      expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category: 'vault',
+          message: 'Encrypted note decryption failed',
+        }),
+        expect.anything()
       );
 
       consoleSpy.mockRestore();

@@ -17,8 +17,14 @@ import {
   getPendingSyncQueue,
   removeSyncQueueEntry,
   markNoteSynced,
+  markSyncQueueEntryBlocked,
+  updateSyncQueueEntry,
 } from './offlineNotes';
 import { markTagSynced } from './offlineTags';
+import {
+  addReliabilityBreadcrumb,
+  reportReliabilityIssue,
+} from '../utils/reliabilityTelemetry';
 
 // Lazy check for native platform (avoids issues at module initialization)
 let _isNative: boolean | null = null;
@@ -103,6 +109,7 @@ async function waitForUnpause(): Promise<void> {
 export interface SyncResult {
   processed: number;
   failed: number;
+  blocked: number;
   conflicts: number;
   errors: Error[];
 }
@@ -137,6 +144,13 @@ export interface FullSyncResult extends SyncResult {
 // Callbacks for conflict handling (set by App.tsx)
 let onConflictDetected: ((conflict: ConflictInfo) => void) | null = null;
 
+type QueueEntryOutcome = 'processed' | 'retry' | 'blocked';
+
+interface QueueEntryResult {
+  outcome: QueueEntryOutcome;
+  error?: Error;
+}
+
 /**
  * Register a conflict handler
  */
@@ -168,13 +182,12 @@ export function removePendingMutation(clientMutationId: string): void {
 }
 
 /**
- * Process a single sync queue entry
- * Returns true if successful, false if should retry
+ * Process a single sync queue entry.
  */
 async function processQueueEntry(
   userId: string,
   entry: SyncQueueEntry
-): Promise<boolean> {
+): Promise<QueueEntryResult> {
   const { operation, entityType, entityId, payload, clientMutationId } = entry;
 
   // Add to pending mutations for self-ignore
@@ -183,25 +196,41 @@ async function processQueueEntry(
   try {
     switch (entityType) {
       case 'note':
-        return await processNoteOperation(userId, operation, entityId, payload);
+        return {
+          outcome: await processNoteOperation(userId, operation, entityId, payload)
+            ? 'processed'
+            : 'retry',
+        };
       case 'tag':
-        return await processTagOperation(userId, operation, entityId, payload);
+        return {
+          outcome: await processTagOperation(userId, operation, entityId, payload)
+            ? 'processed'
+            : 'retry',
+        };
       case 'noteTag':
-        return await processNoteTagOperation(operation, payload);
+        return {
+          outcome: await processNoteTagOperation(operation, payload)
+            ? 'processed'
+            : 'retry',
+        };
       default:
         console.warn(`Unknown entity type: ${entityType}`);
-        return true; // Don't retry unknown types
+        return { outcome: 'processed' };
     }
   } catch (error) {
     console.error(`Sync error for ${entityType}/${entityId}:`, error);
 
-    // Check if it's a retryable error
     if (isRetryableError(error)) {
-      return false; // Retry later
+      return {
+        outcome: 'retry',
+        error: error instanceof Error ? error : new Error(String(error)),
+      };
     }
 
-    // Non-retryable error (4xx client errors)
-    return true; // Remove from queue
+    return {
+      outcome: 'blocked',
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
   } finally {
     // Remove from pending after a delay to allow realtime to process
     const timeoutId = setTimeout(() => {
@@ -557,20 +586,49 @@ function isRetryableError(error: unknown): boolean {
   return false;
 }
 
-async function updateRetryCount(
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim();
+  }
+
+  return 'Unknown sync failure';
+}
+
+async function updateRetryMetadata(
   userId: string,
   entry: SyncQueueEntry,
-  retryCount: number
+  retryCount: number,
+  lastError: string | null
 ): Promise<void> {
-  const db = getOfflineDb(userId);
-  if (typeof entry.id === 'number') {
-    await db.syncQueue.update(entry.id, { retryCount });
-  } else {
-    await db.syncQueue
-      .where('clientMutationId')
-      .equals(entry.clientMutationId)
-      .modify({ retryCount });
-  }
+  await updateSyncQueueEntry(userId, entry, {
+    status: 'pending',
+    retryCount,
+    lastError,
+    lastAttemptAt: Date.now(),
+    blockedAt: null,
+  });
+}
+
+async function blockQueueEntry(
+  userId: string,
+  entry: SyncQueueEntry,
+  retryCount: number,
+  reason: 'stale_cleanup' | 'retry_exhausted' | 'exception_exhausted' | 'non_retryable',
+  lastError: string
+): Promise<void> {
+  await markSyncQueueEntryBlocked(userId, entry, retryCount, lastError);
+  reportReliabilityIssue({
+    category: 'sync',
+    message: 'Sync queue entry blocked',
+    level: 'warning',
+    data: {
+      reason,
+      operation: entry.operation,
+      entityType: entry.entityType,
+      entityId: entry.entityId,
+      retryCount,
+    },
+  });
 }
 
 /**
@@ -601,6 +659,7 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
   const result: SyncResult = {
     processed: 0,
     failed: 0,
+    blocked: 0,
     conflicts: 0,
     errors: [],
   };
@@ -619,16 +678,37 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
     const staleEntries = await db.syncQueue
       .where('createdAt')
       .below(oneHourAgo)
-      .filter((entry) => entry.retryCount >= 3 && entry.operation !== 'create')
+      .filter(
+        (entry) =>
+          (entry.status ?? 'pending') === 'pending' &&
+          entry.retryCount >= 3 &&
+          entry.operation !== 'create'
+      )
       .toArray();
 
     if (staleEntries.length > 0) {
       console.warn(
-        `Cleaning up ${staleEntries.length} stale sync entries (age > 1hr, retries >= 3)`
+        `Blocking ${staleEntries.length} stale sync entries (age > 1hr, retries >= 3)`
       );
       for (const entry of staleEntries) {
-        await removeSyncQueueEntry(userId, entry.clientMutationId, entry.id);
+        await blockQueueEntry(
+          userId,
+          entry,
+          entry.retryCount,
+          'stale_cleanup',
+          'Change has been pending for over an hour and now needs manual retry.'
+        );
+        result.blocked++;
+        result.errors.push(
+          new Error(`Blocked stale sync entry for ${entry.entityType}/${entry.entityId}`)
+        );
       }
+      addReliabilityBreadcrumb({
+        category: 'sync',
+        message: 'Stale sync entries blocked',
+        level: 'warning',
+        data: { count: staleEntries.length },
+      });
     }
   } catch (cleanupError) {
     // Non-fatal: if cleanup fails, continue with normal sync
@@ -639,30 +719,50 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
 
   for (const entry of queue) {
     try {
-      const success = await processQueueEntry(userId, entry);
+      const queueResult = await processQueueEntry(userId, entry);
 
-      if (success) {
+      if (queueResult.outcome === 'processed') {
         await removeSyncQueueEntry(userId, entry.clientMutationId, entry.id);
         result.processed++;
-      } else {
-        // Increment retry count
+      } else if (queueResult.outcome === 'retry') {
         const newRetryCount = entry.retryCount + 1;
-        await updateRetryCount(userId, entry, newRetryCount);
+        const lastError = getErrorMessage(queueResult.error);
+        const retryError = queueResult.error ?? new Error(lastError);
+        result.errors.push(retryError);
 
-        // If too many retries, remove from queue
+        // If too many retries, block the entry for manual retry
         if (newRetryCount >= 5) {
-          await removeSyncQueueEntry(userId, entry.clientMutationId, entry.id);
-          result.failed++;
-          result.errors.push(
-            new Error(`Max retries exceeded for ${entry.entityType}/${entry.entityId}`)
+          await blockQueueEntry(
+            userId,
+            entry,
+            newRetryCount,
+            'retry_exhausted',
+            lastError
           );
+          result.blocked++;
+        } else {
+          await updateRetryMetadata(userId, entry, newRetryCount, lastError);
+          result.failed++;
         }
+      } else {
+        const blockedError = queueResult.error ?? new Error('Non-retryable sync failure');
+        const blockedRetryCount = entry.retryCount + 1;
+        await blockQueueEntry(
+          userId,
+          entry,
+          blockedRetryCount,
+          'non_retryable',
+          getErrorMessage(blockedError)
+        );
+        result.blocked++;
+        result.errors.push(blockedError);
       }
     } catch (error) {
-      result.errors.push(error instanceof Error ? error : new Error(String(error)));
+      const syncError = error instanceof Error ? error : new Error(String(error));
+      result.errors.push(syncError);
 
       // Check if sync status is 'conflict'
-      if (error instanceof Error && error.message.includes('conflict')) {
+      if (syncError.message.includes('conflict')) {
         result.conflicts++;
       }
 
@@ -670,15 +770,24 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
       // Previously, exceptions left entries stuck forever with retryCount never incrementing
       try {
         const newRetryCount = entry.retryCount + 1;
-        await updateRetryCount(userId, entry, newRetryCount);
+        const lastError = getErrorMessage(syncError);
 
-        // Remove from queue if too many retries
+        // Block the entry if too many retries
         if (newRetryCount >= 5) {
-          await removeSyncQueueEntry(userId, entry.clientMutationId, entry.id);
-          result.failed++;
-          console.warn(
-            `Removing failed sync entry after ${newRetryCount} retries: ${entry.entityType}/${entry.entityId}`
+          await blockQueueEntry(
+            userId,
+            entry,
+            newRetryCount,
+            'exception_exhausted',
+            lastError
           );
+          result.blocked++;
+          console.warn(
+            `Blocking failed sync entry after ${newRetryCount} retries: ${entry.entityType}/${entry.entityId}`
+          );
+        } else {
+          await updateRetryMetadata(userId, entry, newRetryCount, lastError);
+          result.failed++;
         }
       } catch (dbError) {
         // If we can't update the retry count, log and continue
@@ -690,7 +799,7 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
   }
 
   console.log(
-    `Sync complete: ${result.processed} processed, ${result.failed} failed, ${result.conflicts} conflicts`
+    `Sync complete: ${result.processed} processed, ${result.failed} failed, ${result.blocked} blocked, ${result.conflicts} conflicts`
   );
 
   return result;

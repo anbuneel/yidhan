@@ -23,6 +23,8 @@ const {
   mockRemoveSyncQueueEntry,
   mockMarkNoteSynced,
   mockMarkTagSynced,
+  mockUpdateSyncQueueEntry,
+  mockMarkSyncQueueEntryBlocked,
 } = vi.hoisted(() => ({
   mockFrom: vi.fn(),
   mockFetchAllPaginated: vi.fn(),
@@ -30,6 +32,8 @@ const {
   mockRemoveSyncQueueEntry: vi.fn(),
   mockMarkNoteSynced: vi.fn(),
   mockMarkTagSynced: vi.fn(),
+  mockUpdateSyncQueueEntry: vi.fn(),
+  mockMarkSyncQueueEntryBlocked: vi.fn(),
 }));
 
 // Module-level mocks
@@ -46,6 +50,8 @@ vi.mock('./offlineNotes', () => ({
   getPendingSyncQueue: (...args: unknown[]) => mockGetPendingSyncQueue(...args),
   removeSyncQueueEntry: (...args: unknown[]) => mockRemoveSyncQueueEntry(...args),
   markNoteSynced: (...args: unknown[]) => mockMarkNoteSynced(...args),
+  updateSyncQueueEntry: (...args: unknown[]) => mockUpdateSyncQueueEntry(...args),
+  markSyncQueueEntryBlocked: (...args: unknown[]) => mockMarkSyncQueueEntryBlocked(...args),
 }));
 
 vi.mock('./offlineTags', () => ({
@@ -84,6 +90,46 @@ function resetSyncTestState(): void {
   vi.resetAllMocks();
   entryIdCounter = 0;
   Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+  mockUpdateSyncQueueEntry.mockImplementation(async (userId: string, entry: SyncQueueEntry, updates: Partial<SyncQueueEntry>) => {
+    const db = getOfflineDb(userId);
+    if (typeof entry.id === 'number') {
+      await db.syncQueue.update(entry.id, {
+        ...updates,
+        updatedAt: updates.updatedAt ?? Date.now(),
+      });
+      return;
+    }
+
+    await db.syncQueue
+      .where('clientMutationId')
+      .equals(entry.clientMutationId)
+      .modify({
+        ...updates,
+        updatedAt: updates.updatedAt ?? Date.now(),
+      });
+  });
+  mockMarkSyncQueueEntryBlocked.mockImplementation(async (userId: string, entry: SyncQueueEntry, retryCount: number, lastError: string) => {
+    const db = getOfflineDb(userId);
+    const now = Date.now();
+    const payload = {
+      status: 'blocked' as const,
+      retryCount,
+      lastError,
+      lastAttemptAt: now,
+      blockedAt: now,
+      updatedAt: now,
+    };
+
+    if (typeof entry.id === 'number') {
+      await db.syncQueue.update(entry.id, payload);
+      return;
+    }
+
+    await db.syncQueue
+      .where('clientMutationId')
+      .equals(entry.clientMutationId)
+      .modify(payload);
+  });
 }
 
 /** Clear all IDB tables used by sync behavior tests */
@@ -127,6 +173,11 @@ function buildEntry(overrides: Partial<SyncQueueEntry> = {}): SyncQueueEntry {
     },
     createdAt: Date.now(),
     retryCount: 0,
+    status: 'pending',
+    lastError: null,
+    lastAttemptAt: null,
+    blockedAt: null,
+    updatedAt: Date.now(),
     ...overrides,
   };
 }
@@ -135,6 +186,7 @@ function buildResult(overrides: Partial<FullSyncResult> = {}): FullSyncResult {
   return {
     processed: 0,
     failed: 0,
+    blocked: 0,
     conflicts: 0,
     errors: [],
     pulled: { notes: 0, tags: 0 },
@@ -516,12 +568,14 @@ describe('processQueue behavior', () => {
     // Verify retry count was incremented in DB
     const updated = await db.syncQueue.get(100);
     expect(updated?.retryCount).toBe(1);
+    expect(updated?.status).toBe('pending');
+    expect(updated?.lastError).toContain('network timeout');
 
     // Clean up
     await db.syncQueue.clear();
   });
 
-  it('should remove entry after max retries (5)', async () => {
+  it('should block entry after max retries (5)', async () => {
     const entry = buildEntry({
       id: 200,
       clientMutationId: 'mut-exhausted',
@@ -564,21 +618,104 @@ describe('processQueue behavior', () => {
 
     const result = await processQueue(TEST_USER_ID);
 
-    // Entry should be removed from queue after exceeding max retries
-    expect(result.failed).toBeGreaterThanOrEqual(1);
+    // Entry should remain in the queue but move to blocked state
+    expect(result.failed).toBe(0);
+    expect(result.blocked).toBe(1);
     expect(result.errors.length).toBeGreaterThanOrEqual(1);
-    expect(mockRemoveSyncQueueEntry).toHaveBeenCalledWith(
+    expect(mockUpdateSyncQueueEntry).not.toHaveBeenCalled();
+    expect(mockMarkSyncQueueEntryBlocked).toHaveBeenCalledTimes(1);
+    expect(mockRemoveSyncQueueEntry).not.toHaveBeenCalledWith(
       TEST_USER_ID,
       'mut-exhausted',
       200
     );
+
+    const updated = await db.syncQueue.get(200);
+    expect(updated?.retryCount).toBe(5);
+    expect(updated?.status).toBe('blocked');
+    expect(updated?.lastError).toContain('fetch timeout');
 
     // Clean up
     await db.syncQueue.clear();
     await db.notes.clear();
   });
 
-  it('should clean up stale non-create entries older than 1 hour', async () => {
+  it('should block exhausted exception paths without writing pending retry metadata first', async () => {
+    const entry = buildEntry({
+      id: 205,
+      clientMutationId: 'mut-exception-exhausted',
+      operation: 'create',
+      entityType: 'note',
+      entityId: 'note-exception-exhausted',
+      retryCount: 4,
+    });
+    mockGetPendingSyncQueue.mockResolvedValue([entry]);
+    mockMarkNoteSynced.mockResolvedValue(undefined);
+    mockRemoveSyncQueueEntry.mockRejectedValue(new Error('remove failed'));
+
+    const db = getOfflineDb(TEST_USER_ID);
+    await db.syncQueue.put({ ...entry, id: 205 });
+
+    const idempotencyChain = buildChain({ data: null });
+    const insertChain = buildChain({
+      data: {
+        id: 'note-exception-exhausted',
+        updated_at: '2026-03-10T00:00:00Z',
+      },
+    });
+    mockFrom
+      .mockReturnValueOnce(idempotencyChain)
+      .mockReturnValueOnce(insertChain);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.failed).toBe(0);
+    expect(result.blocked).toBe(1);
+    expect(result.errors).toHaveLength(1);
+    expect(mockUpdateSyncQueueEntry).not.toHaveBeenCalled();
+    expect(mockMarkSyncQueueEntryBlocked).toHaveBeenCalledTimes(1);
+
+    const updated = await db.syncQueue.get(205);
+    expect(updated?.retryCount).toBe(5);
+    expect(updated?.status).toBe('blocked');
+    expect(updated?.lastError).toContain('remove failed');
+
+    await db.syncQueue.clear();
+  });
+
+  it('should block non-retryable failures instead of dropping them', async () => {
+    const entry = buildEntry({
+      id: 210,
+      clientMutationId: 'mut-non-retryable',
+      operation: 'create',
+      entityType: 'note',
+      entityId: 'note-non-retryable',
+    });
+    mockGetPendingSyncQueue.mockResolvedValue([entry]);
+
+    const db = getOfflineDb(TEST_USER_ID);
+    await db.syncQueue.put({ ...entry, id: 210 });
+
+    const failChain = buildChain();
+    failChain.maybeSingle.mockRejectedValue(
+      Object.assign(new Error('permission denied'), { status: 400 })
+    );
+    mockFrom.mockReturnValue(failChain);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.failed).toBe(0);
+    expect(result.blocked).toBe(1);
+    expect(mockRemoveSyncQueueEntry).not.toHaveBeenCalled();
+
+    const blocked = await db.syncQueue.get(210);
+    expect(blocked?.status).toBe('blocked');
+    expect(blocked?.lastError).toContain('permission denied');
+
+    await db.syncQueue.clear();
+  });
+
+  it('should block stale non-create entries older than 1 hour', async () => {
     const db = getOfflineDb(TEST_USER_ID);
 
     // Seed a stale update entry (>1hr old, retryCount >= 3)
@@ -591,19 +728,24 @@ describe('processQueue behavior', () => {
       payload: {},
       createdAt: twoHoursAgo,
       retryCount: 3,
+      status: 'pending',
+      lastError: null,
+      lastAttemptAt: null,
+      blockedAt: null,
+      updatedAt: twoHoursAgo,
     });
 
     mockGetPendingSyncQueue.mockResolvedValue([]);
-    mockRemoveSyncQueueEntry.mockResolvedValue(undefined);
 
-    await processQueue(TEST_USER_ID);
+    const result = await processQueue(TEST_USER_ID);
 
-    // Stale entry should have been cleaned up
-    expect(mockRemoveSyncQueueEntry).toHaveBeenCalledWith(
-      TEST_USER_ID,
-      'mut-stale',
-      expect.any(Number)
-    );
+    expect(result.failed).toBe(0);
+    expect(result.blocked).toBe(1);
+    expect(mockRemoveSyncQueueEntry).not.toHaveBeenCalled();
+
+    const blocked = await db.syncQueue.toArray();
+    expect(blocked[0]?.status).toBe('blocked');
+    expect(blocked[0]?.lastError).toContain('manual retry');
 
     // Clean up
     await db.syncQueue.clear();
@@ -622,19 +764,21 @@ describe('processQueue behavior', () => {
       payload: {},
       createdAt: twoHoursAgo,
       retryCount: 5,
+      status: 'pending',
+      lastError: null,
+      lastAttemptAt: null,
+      blockedAt: null,
+      updatedAt: twoHoursAgo,
     });
 
     mockGetPendingSyncQueue.mockResolvedValue([]);
-    mockRemoveSyncQueueEntry.mockResolvedValue(undefined);
 
     await processQueue(TEST_USER_ID);
 
-    // Create entries should NOT be cleaned up by stale cleanup
-    expect(mockRemoveSyncQueueEntry).not.toHaveBeenCalledWith(
-      TEST_USER_ID,
-      'mut-stale-create',
-      expect.any(Number)
-    );
+    const preserved = await db.syncQueue.toArray();
+    expect(preserved).toHaveLength(1);
+    expect(preserved[0]?.status).toBe('pending');
+    expect(mockRemoveSyncQueueEntry).not.toHaveBeenCalled();
 
     // Clean up
     await db.syncQueue.clear();
