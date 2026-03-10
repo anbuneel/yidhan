@@ -1,7 +1,7 @@
 # Yidhan - Product Requirements Document
 
-**Version:** 2.0
-**Last Updated:** 2026-01-12
+**Version:** 2.1
+**Last Updated:** 2026-03-10
 **Status:** Living Document
 **Author:** Claude (Opus 4.5)
 
@@ -145,6 +145,8 @@ Zenote aims to be the antithesis of feature-bloated productivity tools. Where ot
 |---------|-------------|----------|
 | Offline Editing | Edit notes without internet via IndexedDB (Dexie.js) | P0 |
 | Sync Queue | Pending changes queue with automatic sync on reconnect | P0 |
+| Blocked Changes Recovery | Repeated sync failures stay recoverable with a manual retry action instead of being discarded | P1 |
+| Safe Startup Hydration | Startup hydration merges server state without clearing queued local work | P1 |
 | Conflict Detection | Detects concurrent edits to same note | P1 |
 | "Two Paths" Modal | Visual conflict resolution (keep local, keep remote, or merge) | P1 |
 | Sync Indicator | Subtle status showing offline/pending state | P2 |
@@ -331,6 +333,7 @@ Offline → Make edits → Save to IndexedDB (sync queue)
 | Uptime | 99.9% (via Vercel + Supabase) |
 | Data Durability | 99.999999999% (Supabase/AWS) |
 | Save Retry | 3 attempts with exponential backoff |
+| Failed Sync Recovery | Blocked changes remain recoverable until the user retries or resolves them |
 
 ---
 

@@ -2,6 +2,8 @@ import Dexie, { type Table } from 'dexie';
 
 // Sync status for local entities
 export type SyncStatus = 'synced' | 'pending' | 'conflict';
+export type SyncQueueStatus = 'pending' | 'blocked';
+export type HydrationStatus = 'never' | 'in_progress' | 'complete';
 
 // Sync operation types
 export type SyncOperation =
@@ -72,6 +74,19 @@ export interface SyncQueueEntry {
   payload: unknown;
   createdAt: number;
   retryCount: number;
+  status?: SyncQueueStatus;
+  lastError?: string | null;
+  lastAttemptAt?: number | null;
+  blockedAt?: number | null;
+  updatedAt?: number;
+}
+
+export interface HydrationMetaRecord {
+  key: 'hydration';
+  status: HydrationStatus;
+  lastHydratedAt: number | null;
+  cacheSchemaVersion: number;
+  updatedAt: number;
 }
 
 // Conflict record for unresolved conflicts
@@ -88,6 +103,38 @@ export interface ConflictRecord {
 // while keeping conflict detection active (truthy, so the `lastSyncedAt`
 // guard in processNoteOperation still fires).
 export const MIGRATION_SYNC_SENTINEL = 1;
+export const HYDRATION_META_KEY = 'hydration';
+export const OFFLINE_CACHE_SCHEMA_VERSION = 1;
+
+interface CreateSyncQueueEntryInput {
+  clientMutationId?: string;
+  operation: SyncOperation;
+  entityType: EntityType;
+  entityId: string;
+  payload: unknown;
+  createdAt?: number;
+}
+
+export function createPendingSyncQueueEntry(
+  input: CreateSyncQueueEntryInput
+): SyncQueueEntry {
+  const createdAt = input.createdAt ?? Date.now();
+
+  return {
+    clientMutationId: input.clientMutationId ?? generateMutationId(),
+    operation: input.operation,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    payload: input.payload,
+    createdAt,
+    retryCount: 0,
+    status: 'pending',
+    lastError: null,
+    lastAttemptAt: null,
+    blockedAt: null,
+    updatedAt: createdAt,
+  };
+}
 
 // Yidhan offline database
 class YidhanDB extends Dexie {
@@ -96,6 +143,7 @@ class YidhanDB extends Dexie {
   noteTags!: Table<LocalNoteTag, [string, string]>;
   syncQueue!: Table<SyncQueueEntry, number>;
   conflicts!: Table<ConflictRecord, number>;
+  meta!: Table<HydrationMetaRecord, string>;
 
   constructor(userId: string) {
     // Per-user database naming for isolation
@@ -158,6 +206,25 @@ class YidhanDB extends Dexie {
         encryptionIv: null,
         encryptionVersion: null,
         contentHash: null,
+      });
+    });
+
+    // v5: queue state metadata + hydration metadata
+    this.version(5).stores({
+      notes: 'id, userId, syncStatus, deletedAt, pinned, updatedAt',
+      tags: 'id, name, syncStatus',
+      noteTags: '[noteId+tagId], noteId, tagId, syncStatus',
+      syncQueue: '++id, clientMutationId, entityType, entityId, status, createdAt, blockedAt',
+      conflicts: '++id, entityType, entityId, detectedAt',
+      meta: '&key, status, updatedAt',
+    }).upgrade(async (tx) => {
+      const now = Date.now();
+      await tx.table('syncQueue').toCollection().modify((entry: SyncQueueEntry) => {
+        entry.status = entry.status ?? 'pending';
+        entry.lastError = entry.lastError ?? null;
+        entry.lastAttemptAt = entry.lastAttemptAt ?? null;
+        entry.blockedAt = entry.blockedAt ?? null;
+        entry.updatedAt = entry.updatedAt ?? entry.createdAt ?? now;
       });
     });
   }

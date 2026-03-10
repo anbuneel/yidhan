@@ -11,15 +11,19 @@ import {
   getOfflineDb,
   clearOfflineDb,
   hasOfflineDb,
-  generateMutationId,
+  createPendingSyncQueueEntry,
   type LocalNote,
   type LocalTag,
   type LocalNoteTag,
+  type HydrationMetaRecord,
   type SyncQueueEntry,
   type SyncOperation,
+  HYDRATION_META_KEY,
+  OFFLINE_CACHE_SCHEMA_VERSION,
 } from '../lib/offlineDb';
 import type { Note, Tag, TagColor } from '../types';
 import type { DbNote, DbTag } from '../types/database';
+import { addReliabilityBreadcrumb as addHydrationBreadcrumb } from '../utils/reliabilityTelemetry';
 import { sanitizeHtml } from '../utils/sanitize';
 import { validateNoteTitle, validateNoteContentLength } from '../utils/validation';
 
@@ -93,6 +97,95 @@ function dbTagToLocal(dbTag: DbTag, userId: string): LocalTag {
   };
 }
 
+function getQueueEntryStatus(entry: SyncQueueEntry): 'pending' | 'blocked' {
+  return entry.status ?? 'pending';
+}
+
+function buildHydrationMeta(
+  current: HydrationMetaRecord | undefined,
+  status: HydrationMetaRecord['status'],
+  lastHydratedAt: number | null = current?.lastHydratedAt ?? null
+): HydrationMetaRecord {
+  return {
+    key: HYDRATION_META_KEY,
+    status,
+    lastHydratedAt,
+    cacheSchemaVersion: OFFLINE_CACHE_SCHEMA_VERSION,
+    updatedAt: Date.now(),
+  };
+}
+
+async function getHydrationMeta(
+  userId: string
+): Promise<HydrationMetaRecord | undefined> {
+  const db = getOfflineDb(userId);
+  return db.meta.get(HYDRATION_META_KEY);
+}
+
+async function setHydrationMeta(
+  userId: string,
+  status: HydrationMetaRecord['status'],
+  lastHydratedAt?: number | null
+): Promise<void> {
+  const db = getOfflineDb(userId);
+  const current = await db.meta.get(HYDRATION_META_KEY);
+  await db.meta.put(buildHydrationMeta(current, status, lastHydratedAt));
+}
+
+async function hasQueuedSyncWork(userId: string): Promise<boolean> {
+  const { pendingCount, blockedCount } = await getSyncQueueCounts(userId);
+  return pendingCount > 0 || blockedCount > 0;
+}
+
+async function compactQueueForEntity(
+  userId: string,
+  operation: SyncOperation,
+  entityType: 'note' | 'tag' | 'noteTag',
+  entityId: string
+): Promise<void> {
+  const db = getOfflineDb(userId);
+  const entries = await db.syncQueue
+    .where('entityId')
+    .equals(entityId)
+    .and((entry) => entry.entityType === entityType)
+    .toArray();
+
+  const idsToDelete = entries
+    .filter((entry) => {
+      if (getQueueEntryStatus(entry) === 'blocked') {
+        return false;
+      }
+
+      if (operation === 'update') {
+        return entry.operation === 'update';
+      }
+
+      if (operation === 'pin') {
+        return entry.operation === 'pin';
+      }
+
+      if (operation === 'delete') {
+        return entry.operation !== 'create';
+      }
+
+      if (operation === 'soft_delete' || operation === 'restore') {
+        return entry.operation === 'soft_delete' || entry.operation === 'restore';
+      }
+
+      if (entityType === 'noteTag') {
+        return entry.operation === 'add_tag' || entry.operation === 'remove_tag';
+      }
+
+      return false;
+    })
+    .map((entry) => entry.id)
+    .filter((id): id is number => typeof id === 'number');
+
+  if (idsToDelete.length > 0) {
+    await db.syncQueue.bulkDelete(idsToDelete);
+  }
+}
+
 /**
  * Hydrate IndexedDB from Supabase
  * Called on login to populate local database with server data
@@ -100,69 +193,135 @@ function dbTagToLocal(dbTag: DbTag, userId: string): LocalTag {
 export async function hydrateFromServer(userId: string): Promise<void> {
   const db = getOfflineDb(userId);
 
-  // Fetch all notes from server
-  const { data: notesData, error: notesError } = await supabase
-    .from('notes')
-    .select('*')
-    .order('updated_at', { ascending: false });
-
-  if (notesError) {
-    console.error('Error fetching notes for hydration:', notesError);
-    throw notesError;
+  if (await hasQueuedSyncWork(userId)) {
+    addHydrationBreadcrumb('Skipped hydration because queued local changes exist', {
+      reason: 'queued_local_changes',
+    }, 'warning');
+    console.warn('Skipping startup hydration because local queued changes exist');
+    return;
   }
 
-  // Fetch all tags from server
-  const { data: tagsData, error: tagsError } = await supabase
-    .from('tags')
-    .select('*');
+  await setHydrationMeta(userId, 'in_progress');
+  addHydrationBreadcrumb('Hydration started');
 
-  if (tagsError) {
-    console.error('Error fetching tags for hydration:', tagsError);
-    throw tagsError;
+  try {
+    // Fetch all notes from server
+    const { data: notesData, error: notesError } = await supabase
+      .from('notes')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (notesError) {
+      console.error('Error fetching notes for hydration:', notesError);
+      throw notesError;
+    }
+
+    // Fetch all tags from server
+    const { data: tagsData, error: tagsError } = await supabase
+      .from('tags')
+      .select('*');
+
+    if (tagsError) {
+      console.error('Error fetching tags for hydration:', tagsError);
+      throw tagsError;
+    }
+
+    // Fetch all note-tag relationships
+    const { data: noteTagsData, error: noteTagsError } = await supabase
+      .from('note_tags')
+      .select('note_id, tag_id');
+
+    if (noteTagsError) {
+      console.error('Error fetching note-tags for hydration:', noteTagsError);
+      throw noteTagsError;
+    }
+
+    const hydratedAt = Date.now();
+
+    // Merge server state into IndexedDB without wiping local state wholesale
+    await db.transaction('rw', [db.notes, db.tags, db.noteTags, db.meta], async () => {
+      const localNotes = await db.notes.toArray();
+      const localTags = await db.tags.toArray();
+      const localNoteTags = await db.noteTags.toArray();
+
+      const mergedNotes = (notesData || []).map((n) => dbNoteToLocal(n as DbNote, userId));
+      const mergedTags = (tagsData || []).map((t) => dbTagToLocal(t as DbTag, userId));
+      const mergedNoteTags: LocalNoteTag[] = (noteTagsData || []).map((nt) => ({
+        noteId: nt.note_id,
+        tagId: nt.tag_id,
+        syncStatus: 'synced' as const,
+        lastSyncedAt: hydratedAt,
+      }));
+
+      const serverNoteIds = new Set(mergedNotes.map((note) => note.id));
+      const serverTagIds = new Set(mergedTags.map((tag) => tag.id));
+      const serverNoteTagKeys = new Set(
+        mergedNoteTags.map((noteTag) => `${noteTag.noteId}:${noteTag.tagId}`)
+      );
+
+      const syncedNoteIdsToDelete = localNotes
+        .filter((note) => note.syncStatus === 'synced' && !serverNoteIds.has(note.id))
+        .map((note) => note.id);
+      if (syncedNoteIdsToDelete.length > 0) {
+        await db.notes.bulkDelete(syncedNoteIdsToDelete);
+      }
+
+      const syncedTagIdsToDelete = localTags
+        .filter((tag) => tag.syncStatus === 'synced' && !serverTagIds.has(tag.id))
+        .map((tag) => tag.id);
+      if (syncedTagIdsToDelete.length > 0) {
+        await db.tags.bulkDelete(syncedTagIdsToDelete);
+      }
+
+      const syncedNoteTagsToDelete = localNoteTags
+        .filter(
+          (noteTag) =>
+            noteTag.syncStatus === 'synced' &&
+            !serverNoteTagKeys.has(`${noteTag.noteId}:${noteTag.tagId}`)
+        )
+        .map((noteTag) => [noteTag.noteId, noteTag.tagId] as [string, string]);
+      for (const key of syncedNoteTagsToDelete) {
+        await db.noteTags.delete(key);
+      }
+
+      if (mergedNotes.length > 0) {
+        await db.notes.bulkPut(mergedNotes);
+      }
+
+      if (mergedTags.length > 0) {
+        await db.tags.bulkPut(mergedTags);
+      }
+
+      if (mergedNoteTags.length > 0) {
+        await db.noteTags.bulkPut(mergedNoteTags);
+      }
+
+      await db.meta.put({
+        key: HYDRATION_META_KEY,
+        status: 'complete',
+        lastHydratedAt: hydratedAt,
+        cacheSchemaVersion: OFFLINE_CACHE_SCHEMA_VERSION,
+        updatedAt: hydratedAt,
+      });
+    });
+
+    addHydrationBreadcrumb('Hydration completed', {
+      noteCount: notesData?.length || 0,
+      tagCount: tagsData?.length || 0,
+      noteTagCount: noteTagsData?.length || 0,
+    });
+    console.log(`Hydrated offline DB: ${notesData?.length || 0} notes, ${tagsData?.length || 0} tags`);
+  } catch (error) {
+    try {
+      await setHydrationMeta(userId, 'never');
+    } catch (metaError) {
+      console.warn('Failed to reset hydration metadata after error:', metaError);
+    }
+    addHydrationBreadcrumb('Hydration failed', {
+      error: error instanceof Error ? error.message : String(error),
+    }, 'warning');
+    throw error;
   }
-
-  // Fetch all note-tag relationships
-  const { data: noteTagsData, error: noteTagsError } = await supabase
-    .from('note_tags')
-    .select('note_id, tag_id');
-
-  if (noteTagsError) {
-    console.error('Error fetching note-tags for hydration:', noteTagsError);
-    throw noteTagsError;
-  }
-
-  // Clear existing data and populate fresh
-  await db.transaction('rw', [db.notes, db.tags, db.noteTags], async () => {
-    // Clear existing data
-    await db.notes.clear();
-    await db.tags.clear();
-    await db.noteTags.clear();
-
-    // Insert notes
-    const localNotes = (notesData || []).map((n) => dbNoteToLocal(n as DbNote, userId));
-    if (localNotes.length > 0) {
-      await db.notes.bulkAdd(localNotes);
-    }
-
-    // Insert tags
-    const localTags = (tagsData || []).map((t) => dbTagToLocal(t as DbTag, userId));
-    if (localTags.length > 0) {
-      await db.tags.bulkAdd(localTags);
-    }
-
-    // Insert note-tag relationships
-    const localNoteTags: LocalNoteTag[] = (noteTagsData || []).map((nt) => ({
-      noteId: nt.note_id,
-      tagId: nt.tag_id,
-      syncStatus: 'synced' as const,
-      lastSyncedAt: Date.now(),
-    }));
-    if (localNoteTags.length > 0) {
-      await db.noteTags.bulkAdd(localNoteTags);
-    }
-  });
-
-  console.log(`Hydrated offline DB: ${notesData?.length || 0} notes, ${tagsData?.length || 0} tags`);
 }
 
 /**
@@ -177,13 +336,12 @@ export async function needsHydration(userId: string): Promise<boolean> {
     const checkHydration = async (): Promise<boolean> => {
       const exists = await hasOfflineDb(userId);
       if (!exists) return true;
+      if (await hasQueuedSyncWork(userId)) return false;
 
-      const db = getOfflineDb(userId);
-      const noteCount = await db.notes.count();
-
-      // If we have notes locally, assume we're hydrated
-      // In a more robust implementation, we'd check a lastHydratedAt timestamp
-      return noteCount === 0;
+      const meta = await getHydrationMeta(userId);
+      if (!meta) return true;
+      if (meta.cacheSchemaVersion !== OFFLINE_CACHE_SCHEMA_VERSION) return true;
+      return meta.status !== 'complete';
     };
 
     // Use Promise.race with a timeout that properly resolves/rejects
@@ -373,31 +531,17 @@ export async function queueSyncOperation(
   payload: unknown
 ): Promise<string> {
   const db = getOfflineDb(userId);
-  const clientMutationId = generateMutationId();
-  const now = Date.now();
+  await compactQueueForEntity(userId, operation, entityType, entityId);
 
-  const entry: SyncQueueEntry = {
-    clientMutationId,
+  const entry = createPendingSyncQueueEntry({
     operation,
     entityType,
     entityId,
     payload,
-    createdAt: now,
-    retryCount: 0,
-  };
-
-  // Queue compaction: remove previous pending updates to same entity
-  // (keep creates and deletes, only compact consecutive updates)
-  if (operation === 'update') {
-    await db.syncQueue
-      .where('entityId')
-      .equals(entityId)
-      .and((e) => e.operation === 'update' && e.entityType === entityType)
-      .delete();
-  }
+  });
 
   await db.syncQueue.add(entry);
-  return clientMutationId;
+  return entry.clientMutationId;
 }
 
 /**
@@ -761,7 +905,8 @@ export async function removeTagFromNoteOffline(
 export async function getPendingSyncQueue(userId: string): Promise<SyncQueueEntry[]> {
   const db = getOfflineDb(userId);
 
-  const entries = await db.syncQueue.orderBy('createdAt').toArray();
+  const entries = (await db.syncQueue.orderBy('createdAt').toArray())
+    .filter((entry) => getQueueEntryStatus(entry) === 'pending');
 
   // Dependency ordering: creates before add_tag, notes/tags before noteTags
   // Sort by: 1) create operations first, 2) note/tag entities before noteTag
@@ -795,6 +940,70 @@ export async function removeSyncQueueEntry(
   }
 }
 
+export async function updateSyncQueueEntry(
+  userId: string,
+  entry: SyncQueueEntry,
+  updates: Partial<SyncQueueEntry>
+): Promise<void> {
+  const db = getOfflineDb(userId);
+  const payload = {
+    ...updates,
+    updatedAt: updates.updatedAt ?? Date.now(),
+  };
+
+  if (typeof entry.id === 'number') {
+    await db.syncQueue.update(entry.id, payload);
+  } else {
+    await db.syncQueue
+      .where('clientMutationId')
+      .equals(entry.clientMutationId)
+      .modify(payload);
+  }
+}
+
+export async function markSyncQueueEntryBlocked(
+  userId: string,
+  entry: SyncQueueEntry,
+  retryCount: number,
+  lastError: string
+): Promise<void> {
+  const now = Date.now();
+  await updateSyncQueueEntry(userId, entry, {
+    status: 'blocked',
+    retryCount,
+    lastError,
+    lastAttemptAt: now,
+    blockedAt: now,
+  });
+}
+
+export async function retryBlockedSyncEntries(userId: string): Promise<number> {
+  const db = getOfflineDb(userId);
+  const blockedEntries = await db.syncQueue
+    .filter((entry) => getQueueEntryStatus(entry) === 'blocked')
+    .toArray();
+
+  if (blockedEntries.length === 0) {
+    return 0;
+  }
+
+  const now = Date.now();
+  await db.transaction('rw', db.syncQueue, async () => {
+    for (const entry of blockedEntries) {
+      await updateSyncQueueEntry(userId, entry, {
+        status: 'pending',
+        retryCount: 0,
+        lastError: null,
+        lastAttemptAt: null,
+        blockedAt: null,
+        updatedAt: now,
+      });
+    }
+  });
+
+  return blockedEntries.length;
+}
+
 /**
  * Mark a note as synced after successful server sync
  *
@@ -821,9 +1030,26 @@ export async function markNoteSynced(
 /**
  * Get count of pending sync operations
  */
-export async function getPendingSyncCount(userId: string): Promise<number> {
+export async function getSyncQueueCounts(
+  userId: string
+): Promise<{ pendingCount: number; blockedCount: number }> {
   const db = getOfflineDb(userId);
-  return db.syncQueue.count();
+  const [pendingCount, blockedCount] = await Promise.all([
+    db.syncQueue.where('status').equals('pending').count(),
+    db.syncQueue.where('status').equals('blocked').count(),
+  ]);
+
+  return { pendingCount, blockedCount };
+}
+
+export async function getPendingSyncCount(userId: string): Promise<number> {
+  const { pendingCount } = await getSyncQueueCounts(userId);
+  return pendingCount;
+}
+
+export async function getBlockedSyncCount(userId: string): Promise<number> {
+  const { blockedCount } = await getSyncQueueCounts(userId);
+  return blockedCount;
 }
 
 // ============================================

@@ -28,6 +28,7 @@ vi.mock('../lib/supabase', () => ({
 }));
 
 import { getOfflineDb, type LocalTag } from '../lib/offlineDb';
+import { supabase } from '../lib/supabase';
 
 const TEST_USER_ID = 'test-user-offline-notes';
 
@@ -110,6 +111,8 @@ describe('offlineNotes', () => {
       expect(queue[0].entityType).toBe('note');
       expect(queue[0].entityId).toBe(note.id);
       expect(queue[0].retryCount).toBe(0);
+      expect(queue[0].status).toBe('pending');
+      expect(queue[0].lastError).toBeNull();
     });
 
     it('should handle empty title and content', async () => {
@@ -187,6 +190,43 @@ describe('offlineNotes', () => {
 
       // Only 1 update should remain after compaction
       expect(updates).toHaveLength(1);
+    });
+
+    it('should preserve blocked update entries when queueing a new update', async () => {
+      const { createNoteOffline, updateNoteOffline } = await import('./offlineNotes');
+
+      const created = await createNoteOffline(TEST_USER_ID, 'Note', '<p>V1</p>');
+      const db = getOfflineDb(TEST_USER_ID);
+      await db.syncQueue.clear();
+
+      await db.syncQueue.add({
+        clientMutationId: 'blocked-update-entry',
+        operation: 'update',
+        entityType: 'note',
+        entityId: created.id,
+        payload: { title: 'Blocked', content: '<p>Blocked</p>' },
+        createdAt: 1,
+        retryCount: 5,
+        status: 'blocked',
+        lastError: 'network timeout',
+        lastAttemptAt: 2,
+        blockedAt: 2,
+        updatedAt: 2,
+      });
+
+      await updateNoteOffline(TEST_USER_ID, {
+        ...created,
+        title: 'New Title',
+        content: '<p>V2</p>',
+      });
+
+      const updates = (await db.syncQueue.toArray()).filter(
+        (entry) => entry.operation === 'update' && entry.entityId === created.id
+      );
+
+      expect(updates).toHaveLength(2);
+      expect(updates.filter((entry) => entry.status === 'blocked')).toHaveLength(1);
+      expect(updates.filter((entry) => entry.status === 'pending')).toHaveLength(1);
     });
 
     it('should throw for non-existent note', async () => {
@@ -543,18 +583,199 @@ describe('offlineNotes', () => {
       const addTagIdx = queue.findIndex((e) => e.operation === 'add_tag');
       expect(createIdx).toBeLessThan(addTagIdx);
     });
+
+    it('should exclude blocked entries from automatic processing', async () => {
+      const { getPendingSyncQueue } = await import('./offlineNotes');
+      const db = getOfflineDb(TEST_USER_ID);
+
+      await db.syncQueue.bulkAdd([
+        {
+          clientMutationId: 'pending-entry',
+          operation: 'create',
+          entityType: 'note',
+          entityId: 'note-pending',
+          payload: {},
+          createdAt: 1,
+          retryCount: 0,
+          status: 'pending',
+          lastError: null,
+          lastAttemptAt: null,
+          blockedAt: null,
+          updatedAt: 1,
+        },
+        {
+          clientMutationId: 'blocked-entry',
+          operation: 'update',
+          entityType: 'note',
+          entityId: 'note-blocked',
+          payload: {},
+          createdAt: 2,
+          retryCount: 5,
+          status: 'blocked',
+          lastError: 'needs retry',
+          lastAttemptAt: 2,
+          blockedAt: 2,
+          updatedAt: 2,
+        },
+      ]);
+
+      const queue = await getPendingSyncQueue(TEST_USER_ID);
+
+      expect(queue).toHaveLength(1);
+      expect(queue[0].clientMutationId).toBe('pending-entry');
+    });
   });
 
   describe('getPendingSyncCount', () => {
-    it('should return count of pending operations', async () => {
-      const { createNoteOffline, getPendingSyncCount } = await import('./offlineNotes');
+    it('should return count of pending operations only', async () => {
+      const { createNoteOffline, getPendingSyncCount, getBlockedSyncCount } = await import('./offlineNotes');
 
       expect(await getPendingSyncCount(TEST_USER_ID)).toBe(0);
 
       await createNoteOffline(TEST_USER_ID, 'A');
       await createNoteOffline(TEST_USER_ID, 'B');
 
+      const db = getOfflineDb(TEST_USER_ID);
+      await db.syncQueue.add({
+        clientMutationId: 'blocked-count-entry',
+        operation: 'update',
+        entityType: 'note',
+        entityId: 'blocked-note',
+        payload: {},
+        createdAt: Date.now(),
+        retryCount: 5,
+        status: 'blocked',
+        lastError: 'retry later',
+        lastAttemptAt: Date.now(),
+        blockedAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
       expect(await getPendingSyncCount(TEST_USER_ID)).toBe(2);
+      expect(await getBlockedSyncCount(TEST_USER_ID)).toBe(1);
+    });
+  });
+
+  describe('retryBlockedSyncEntries', () => {
+    it('should reset blocked entries back to pending', async () => {
+      const { retryBlockedSyncEntries, getBlockedSyncCount, getPendingSyncCount } = await import('./offlineNotes');
+      const db = getOfflineDb(TEST_USER_ID);
+
+      await db.syncQueue.add({
+        clientMutationId: 'blocked-retry-entry',
+        operation: 'update',
+        entityType: 'note',
+        entityId: 'note-retry',
+        payload: {},
+        createdAt: 1,
+        retryCount: 5,
+        status: 'blocked',
+        lastError: 'network timeout',
+        lastAttemptAt: 2,
+        blockedAt: 2,
+        updatedAt: 2,
+      });
+
+      const retried = await retryBlockedSyncEntries(TEST_USER_ID);
+      const resetEntry = await db.syncQueue.where('clientMutationId').equals('blocked-retry-entry').first();
+
+      expect(retried).toBe(1);
+      expect(resetEntry?.status).toBe('pending');
+      expect(resetEntry?.retryCount).toBe(0);
+      expect(resetEntry?.lastError).toBeNull();
+      expect(resetEntry?.blockedAt).toBeNull();
+      expect(await getBlockedSyncCount(TEST_USER_ID)).toBe(0);
+      expect(await getPendingSyncCount(TEST_USER_ID)).toBe(1);
+    });
+  });
+
+  describe('hydration', () => {
+    it('should skip hydration when queued work exists', async () => {
+      const { createNoteOffline, hydrateFromServer } = await import('./offlineNotes');
+      const fromMock = vi.mocked(supabase.from);
+
+      const note = await createNoteOffline(TEST_USER_ID, 'Local only', '<p>Keep me</p>');
+
+      await hydrateFromServer(TEST_USER_ID);
+
+      const db = getOfflineDb(TEST_USER_ID);
+      const preserved = await db.notes.get(note.id);
+      expect(preserved?.title).toBe('Local only');
+      expect(fromMock).not.toHaveBeenCalled();
+    });
+
+    it('should preserve non-synced local rows during merge hydration', async () => {
+      const { hydrateFromServer } = await import('./offlineNotes');
+      const db = getOfflineDb(TEST_USER_ID);
+      const fromMock = vi.mocked(supabase.from);
+
+      await db.notes.put({
+        id: 'conflict-note',
+        userId: TEST_USER_ID,
+        title: 'Keep conflict',
+        content: '<p>Local</p>',
+        pinned: false,
+        deletedAt: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        syncStatus: 'conflict',
+        lastSyncedAt: null,
+        serverUpdatedAt: null,
+        localUpdatedAt: Date.now(),
+        encryptedPayload: null,
+        encryptionIv: null,
+        encryptionVersion: null,
+        contentHash: null,
+      });
+
+      fromMock.mockImplementation((table: string) => {
+        if (table === 'notes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
+        if (table === 'tags' || table === 'note_tags') {
+          return {
+            select: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+
+        throw new Error(`Unexpected hydration table "${table}"`);
+      });
+
+      await hydrateFromServer(TEST_USER_ID);
+
+      const preserved = await db.notes.get('conflict-note');
+      const meta = await db.meta.get('hydration');
+
+      expect(preserved?.syncStatus).toBe('conflict');
+      expect(meta?.status).toBe('complete');
+    });
+
+    it('should reset hydration metadata after a failed hydration attempt', async () => {
+      const { hydrateFromServer } = await import('./offlineNotes');
+      const db = getOfflineDb(TEST_USER_ID);
+      const fromMock = vi.mocked(supabase.from);
+
+      fromMock.mockImplementation((table: string) => {
+        if (table === 'notes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({ data: null, error: new Error('notes down') }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected hydration table "${table}"`);
+      });
+
+      await expect(hydrateFromServer(TEST_USER_ID)).rejects.toThrow('notes down');
+
+      const meta = await db.meta.get('hydration');
+      expect(meta?.status).toBe('never');
     });
   });
 

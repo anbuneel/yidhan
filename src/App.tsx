@@ -55,6 +55,7 @@ import {
   deleteNoteFromServer,
   upsertTagFromServer,
   deleteTagFromServer,
+  retryBlockedSyncEntries,
 } from './services/offlineNotes';
 import {
   createEncryptedNote,
@@ -202,6 +203,7 @@ function App() {
   // Sync engine for offline support
   const { conflicts, removeConflict, triggerSync } = useSyncEngine(handleSyncComplete);
   const [activeConflict, setActiveConflict] = useState<typeof conflicts[0] | null>(null);
+  const [isRetryingBlockedChanges, setIsRetryingBlockedChanges] = useState(false);
 
   // Coalesced sync trigger: after a save, wait 2s then trigger sync.
   // Reset on each save to prevent flooding during rapid typing.
@@ -1270,6 +1272,44 @@ function App() {
     }
   }, [user, triggerSync, keys]);
 
+  const handleRetryBlockedChanges = useCallback(async () => {
+    if (!user || isRetryingBlockedChanges) {
+      return;
+    }
+
+    setIsRetryingBlockedChanges(true);
+    try {
+      const retriedCount = await retryBlockedSyncEntries(user.id);
+      if (retriedCount === 0) {
+        return;
+      }
+
+      const { outcome } = await triggerSync();
+
+      if (outcome === 'ok') {
+        toast.success('Blocked changes sent again', { duration: 2000 });
+        return;
+      }
+
+      if (outcome === 'offline') {
+        toast('Queued blocked changes for the next connection.', {
+          duration: 2500,
+        });
+        return;
+      }
+
+      toast('Retried blocked changes, but some still need attention.', {
+        duration: 3000,
+        icon: '\u26A0\uFE0F',
+      });
+    } catch (error) {
+      console.error('Failed to retry blocked changes:', error);
+      toast.error('Failed to retry blocked changes');
+    } finally {
+      setIsRetryingBlockedChanges(false);
+    }
+  }, [user, triggerSync, isRetryingBlockedChanges]);
+
   // Tag filter handlers
   const handleTagToggle = (tagId: string) => {
     // Clear search when using tag filters
@@ -1877,6 +1917,8 @@ function App() {
           onSettingsClick={() => setShowSettingsModal(true)}
           onFadedNotesClick={handleFadedNotesClick}
           fadedNotesCount={fadedNotesCount}
+          onRetryBlockedChanges={handleRetryBlockedChanges}
+          isRetryingBlockedChanges={isRetryingBlockedChanges}
         />
         <div className="w-full flex-1 flex flex-col" style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <TagFilterBar

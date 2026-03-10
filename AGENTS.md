@@ -49,7 +49,7 @@ src/
 │   ├── ShareModal.tsx     # Modal for creating/managing E2EE share links (capability-link model)
 │   ├── ShareModal.test.tsx # 18 tests: rendering, create flow, revoke, modal interactions
 │   ├── SharedNoteView.tsx # Public read-only view with client-side decryption for shared notes
-│   ├── SyncIndicator.tsx  # Subtle offline/sync status indicator
+│   ├── SyncIndicator.tsx  # Subtle offline/sync status indicator with blocked-change retry state
 │   ├── ConflictModal.tsx  # "Two Paths" conflict resolution modal
 │   ├── ConflictModal.test.tsx # 17 tests: rendering, resolution buttons, escape, backdrop, error recovery
 │   ├── ReloadPrompt.tsx   # PWA service worker update prompt (non-disruptive refresh banner)
@@ -81,25 +81,25 @@ src/
 │   └── roadmap.ts         # Roadmap items with status
 ├── contexts/
 │   ├── AuthContext.tsx    # Auth state management (login, signup, Google OAuth, password reset, profile, offboarding)
-│   └── EncryptionContext.tsx # E2EE key management (derive, unlock, lock, memory-only key storage)
+│   └── EncryptionContext.tsx # E2EE key management (derive, unlock, lock, remembered browser restore, telemetry)
 ├── lib/
 │   ├── encryption.ts      # Core E2EE crypto: Argon2id + AES-256-GCM + HMAC-SHA-256 + share encryption
 │   ├── __tests__/
 │   │   ├── encryption.test.ts # 12 crypto unit tests (roundtrip, tamper, wrong key/AAD)
 │   │   └── shareEncryption.test.ts # 26 tests: base64url, token/key gen, encrypt/decrypt roundtrip, AAD
 │   ├── supabase.ts        # Supabase client instance + fetchAllPaginated helper
-│   └── offlineDb.ts       # Dexie IndexedDB schema for offline storage (v4 with encryption fields)
+│   └── offlineDb.ts       # Dexie IndexedDB schema for offline storage (v5 with blocked queue state + hydration metadata)
 ├── services/
 │   ├── notes.ts           # CRUD operations for notes (with tags) + E2EE share functions
 │   ├── notes.test.ts      # 64 tests: CRUD, search, soft-delete, share encryption, RPC
 │   ├── tags.ts            # CRUD operations for tags
-│   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue + realtime upserts
+│   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue, safe hydration, and blocked-entry recovery helpers
 │   ├── offlineNotes.test.ts # 37 tests: offline CRUD, sync queue, server upsert
 │   ├── offlineTags.ts     # Offline-aware tag operations
 │   ├── offlineTags.test.ts  # 18 tests: create/update/delete, dedup, queue compaction
-│   ├── encryptedNotes.ts  # Encrypt/decrypt wrapper over offlineNotes (E2EE service layer)
+│   ├── encryptedNotes.ts  # Encrypt/decrypt wrapper over offlineNotes (E2EE service layer + decryption telemetry)
 │   ├── encryptedNotes.test.ts # 25 tests: roundtrip, batch, key mismatch, AAD binding
-│   ├── syncEngine.ts      # Queue processor, HMAC conflict detection, encrypted push/pull sync
+│   ├── syncEngine.ts      # Queue processor with blocked-entry recovery, HMAC conflict detection, encrypted push/pull sync
 │   ├── syncEngine.test.ts # 42 tests: processQueue, pause/resume, conflict, pull, fullSync
 │   ├── demoStorage.ts     # localStorage operations for demo mode (4 starter notes + 3 tags, no auth required)
 │   ├── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, encrypted note creation)
@@ -108,8 +108,8 @@ src/
 │   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares, fetch_shared_note RPC)
 ├── hooks/
 │   ├── useNetworkStatus.ts # Network connectivity monitoring (singleton pattern)
-│   ├── useSyncEngine.ts    # Sync engine React integration, conflict resolution
-│   ├── useSyncStatus.ts    # Sync state for UI (pending count, online status)
+│   ├── useSyncEngine.ts    # Sync engine React integration, outcome mapping, conflict resolution
+│   ├── useSyncStatus.ts    # Sync state for UI (pending + blocked counts, online status)
 │   ├── useViewTransition.ts # View Transitions API wrapper for smooth page transitions
 │   ├── useInstallPrompt.ts  # PWA install prompt with engagement tracking
 │   ├── useShareTarget.ts    # Handle incoming shares from Share Target API
@@ -130,6 +130,7 @@ src/
 │   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
 │   ├── formatTime.ts      # Relative time formatting
 │   ├── lazyWithRetry.ts   # Smart lazy loading with retry and auto-reload on version updates
+│   ├── reliabilityTelemetry.ts # Shared Sentry breadcrumb/error helpers for hydration, sync, vault, and sharing reliability events
 │   ├── sanitize.ts        # HTML/text sanitization (XSS prevention)
 │   ├── temporalGrouping.ts # Group notes by time (Pinned, This Week, Last Week, etc.)
 │   ├── updateBanner.ts    # Persistent update banner for chunk errors / app version updates
@@ -435,6 +436,8 @@ content...
 ## Notes
 - Content is stored as HTML (from Tiptap's `getHTML()`), encrypted client-side before storage
 - **E2EE**: Title + content encrypted as JSON blob using AES-256-GCM with AAD (`noteId:userId`). Tags remain plaintext. Keys derived from passphrase via Argon2id (`hash-wasm` WASM). Keys held in React state + sessionStorage (survives refresh, cleared on tab close/signout/vault lock).
+- **Blocked sync recovery:** Sync queue entries now use `pending` / `blocked` state so repeated failures remain recoverable instead of being dropped.
+- **Safe hydration:** Startup hydration uses local metadata and merge behavior to avoid clearing queued local work during recovery paths.
 - Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase (all payloads encrypted)
 - Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps
 - Server-side `notes_updated_at_trigger` prevents client clock skew issues
@@ -519,6 +522,7 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Key storage:** React state in `EncryptionContext` + sessionStorage for tab-refresh persistence (raw key bytes exported/imported via `exportSessionKeys`/`importSessionKeys`). Optional localStorage persistence via "Remember this browser" (opt-in, default off).
 - **Remember this browser:** When enabled, persists `SessionKeyBlob` in localStorage (survives browser restarts). Keys verified against `encryption_key_check` on restore to detect stale keys after passphrase change. Activity-gated restore after auto-lock (keys stay out of memory during idle). Cleared on manual lock, sign-out, or user switch.
 - **Vault lock:** Manual lock button + configurable auto-lock timer (0/15/60 min idle). Lock reason differentiates behavior: `auto-lock` preserves localStorage (silent re-unlock on user return), `manual`/`sign-out` clears all storage.
+- **Reliability telemetry:** Sentry breadcrumbs/reports track hydration starts/failures, blocked sync entries, vault restore issues, note decryption failures, and shared-link decryption failures.
 - **What's encrypted:** Title + content as JSON blob in `encrypted_payload`
 - **What's NOT encrypted:** Tags (plaintext), metadata (timestamps, pinned)
 - **Salt + key-check:** Stored in Supabase `user_metadata` for passphrase verification

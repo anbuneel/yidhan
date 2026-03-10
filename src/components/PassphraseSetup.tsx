@@ -141,6 +141,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
           style={{ color: 'var(--color-text-secondary)' }}
         >
           Set a passphrase to encrypt your notes end-to-end.
+          Keep it somewhere safe before continuing.
           Only you can read them — not even the server.
         </p>
 
@@ -217,7 +218,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
             />
             <span className="text-xs leading-relaxed">
               I understand that if I forget this passphrase, my notes cannot be recovered.
-              There are no recovery codes.
+              There are no recovery codes or reset links for encrypted notes.
             </span>
           </label>
 

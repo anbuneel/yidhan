@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from '../contexts/AuthContext';
-import { getPendingSyncCount } from '../services/offlineNotes';
+import { getSyncQueueCounts } from '../services/offlineNotes';
 import { useNetworkStatus } from './useNetworkStatus';
 
 // On native platforms, assume online (network detection is unreliable in WebViews)
@@ -20,6 +20,8 @@ const STUCK_THRESHOLD_MS = 30_000;
 export interface SyncStatus {
   /** Number of pending operations in the sync queue */
   pendingCount: number;
+  /** Number of blocked operations awaiting manual retry */
+  blockedCount: number;
   /** Whether we're currently online */
   isOnline: boolean;
   /** Whether all changes are synced */
@@ -40,6 +42,7 @@ export function useSyncStatus(): SyncStatus {
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
   const [pendingCount, setPendingCount] = useState(0);
+  const [blockedCount, setBlockedCount] = useState(0);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [isStuck, setIsStuck] = useState(false);
   // Ref to track when pending items first appeared (not needed for rendering)
@@ -48,18 +51,20 @@ export function useSyncStatus(): SyncStatus {
   const refresh = useCallback(async () => {
     if (!user) {
       setPendingCount(0);
+      setBlockedCount(0);
       setIsStuck(false);
       pendingSinceRef.current = null;
       return;
     }
 
     try {
-      const count = await getPendingSyncCount(user.id);
-      setPendingCount(count);
+      const counts = await getSyncQueueCounts(user.id);
+      setPendingCount(counts.pendingCount);
+      setBlockedCount(counts.blockedCount);
       setLastChecked(new Date());
 
       // Track when pending items first appeared
-      if (count > 0) {
+      if (counts.pendingCount > 0) {
         if (pendingSinceRef.current === null) {
           pendingSinceRef.current = Date.now();
         }
@@ -100,8 +105,9 @@ export function useSyncStatus(): SyncStatus {
 
   return {
     pendingCount,
+    blockedCount,
     isOnline: effectiveOnline,
-    isSynced: pendingCount === 0 && effectiveOnline,
+    isSynced: pendingCount === 0 && blockedCount === 0 && effectiveOnline,
     isStuck,
     lastChecked,
     refresh,

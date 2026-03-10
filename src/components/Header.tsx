@@ -18,6 +18,8 @@ interface HeaderProps {
   onSettingsClick: () => void;
   onFadedNotesClick: () => void;
   fadedNotesCount: number;
+  onRetryBlockedChanges?: () => Promise<void>;
+  isRetryingBlockedChanges?: boolean;
 }
 
 export function Header({
@@ -32,6 +34,8 @@ export function Header({
   onSettingsClick,
   onFadedNotesClick,
   fadedNotesCount,
+  onRetryBlockedChanges,
+  isRetryingBlockedChanges = false,
 }: HeaderProps) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -218,7 +222,10 @@ export function Header({
   // Combine sync indicator and new note button as right actions
   const rightActionsContent = (
     <div className="flex items-center gap-2 sm:gap-3">
-      <SyncIndicator />
+      <SyncIndicator
+        onRetryBlockedChanges={onRetryBlockedChanges}
+        isRetryingBlockedChanges={isRetryingBlockedChanges}
+      />
       {newNoteButton}
     </div>
   );
