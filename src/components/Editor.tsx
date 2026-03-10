@@ -41,6 +41,7 @@ interface EditorProps {
   tags: Tag[];
   userId: string;
   onBack: () => void;
+  onRequestSearch: () => void;
   onUpdate: (note: Note) => Promise<void>;
   onDelete: (id: string) => void;
   onToggleTag: (noteId: string, tagId: string) => void;
@@ -54,7 +55,42 @@ interface EditorProps {
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'copied' | 'error';
 
-export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus }: EditorProps) {
+interface NoteSnapshot {
+  title: string;
+  content: string;
+  tagSignature: string;
+}
+
+function buildTagSignature(tags: Tag[]): string {
+  return tags
+    .map((tag) => tag.id)
+    .sort()
+    .join('|');
+}
+
+function buildSnapshot(title: string, content: string, tags: Tag[]): NoteSnapshot {
+  return {
+    title,
+    content,
+    tagSignature: buildTagSignature(tags),
+  };
+}
+
+function sameSnapshot(a: NoteSnapshot | null, b: NoteSnapshot | null): boolean {
+  return (
+    a !== null &&
+    b !== null &&
+    a.title === b.title &&
+    a.content === b.content &&
+    a.tagSignature === b.tagSignature
+  );
+}
+
+function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): boolean {
+  return a !== null && b !== null && a.title === b.title && a.content === b.content;
+}
+
+export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus }: EditorProps) {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -89,20 +125,17 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
   const savePhaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Track in-flight save promise to await on navigation
-  const inFlightSaveRef = useRef<Promise<void> | null>(null);
+  const inFlightSaveRef = useRef<Promise<boolean> | null>(null);
   const [currentNoteId, setCurrentNoteId] = useState(note.id);
 
   // Remote update tracking (2B): detect when the note prop changes from
   // another device's sync, distinguish from our own save echoing back
-  const lastSavedTitleRef = useRef(note.title);
-  const lastSavedContentRef = useRef(note.content);
-  const [remoteUpdate, setRemoteUpdate] = useState<{
-    title: string;
-    content: string;
-  } | null>(null);
+  const committedSnapshotRef = useRef(buildSnapshot(note.title, note.content, note.tags));
+  const inFlightSnapshotRef = useRef<NoteSnapshot | null>(null);
+  const [remoteUpdate, setRemoteUpdate] = useState<NoteSnapshot | null>(null);
   // Track the last dismissed remote version so the detection effect
   // doesn't re-show the banner after the next sync rehydration
-  const dismissedRemoteRef = useRef<{ title: string; content: string } | null>(null);
+  const dismissedRemoteRef = useRef<NoteSnapshot | null>(null);
 
   // Reset local state when switching to a different note
   useEffect(() => {
@@ -113,9 +146,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       setCurrentNoteId(note.id);
       setTitle(note.title);
       setContent(note.content);
-      // Update lastSaved refs for the new note (2B)
-      lastSavedTitleRef.current = note.title;
-      lastSavedContentRef.current = note.content;
+      committedSnapshotRef.current = buildSnapshot(note.title, note.content, note.tags);
+      inFlightSnapshotRef.current = null;
       setRemoteUpdate(null);
       dismissedRemoteRef.current = null;
       // Reset resume chip, scroll save, and focus mode for new note
@@ -127,7 +159,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       pendingScrollSaveRef.current = null; // Clear pending data for old note
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note.id]);
+  }, [note.id, note.title, note.content, note.tags]);
 
   // Detect remote updates to the currently open note (2B)
   // When the note prop changes (from sync rehydration) while the same note is open:
@@ -138,38 +170,48 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     // Only watch for changes when the note ID hasn't changed (same note open)
     if (note.id !== currentNoteId) return;
 
-    // Check if the prop actually changed
-    const propTitleChanged = note.title !== lastSavedTitleRef.current;
-    const propContentChanged = note.content !== lastSavedContentRef.current;
-    if (!propTitleChanged && !propContentChanged) return;
+    const incomingSnapshot = buildSnapshot(note.title, note.content, note.tags);
+    const committedSnapshot = committedSnapshotRef.current;
+    const activeInFlightSnapshot = inFlightSnapshotRef.current;
 
-    // Skip if this is a version the user already dismissed via "Keep mine"
-    if (
-      dismissedRemoteRef.current &&
-      note.title === dismissedRemoteRef.current.title &&
-      note.content === dismissedRemoteRef.current.content
-    ) return;
+    const titleOrContentChangedAgainstCommitted =
+      !sameTitleAndContent(incomingSnapshot, committedSnapshot);
+    const titleOrContentChangedAgainstInFlight =
+      activeInFlightSnapshot === null || !sameTitleAndContent(incomingSnapshot, activeInFlightSnapshot);
 
-    // Check if the local editor has unsaved changes
+    if (!titleOrContentChangedAgainstCommitted) {
+      if (!sameSnapshot(committedSnapshot, incomingSnapshot)) {
+        committedSnapshotRef.current = incomingSnapshot;
+      }
+      return;
+    }
+
+    if (!titleOrContentChangedAgainstInFlight) {
+      return;
+    }
+
+    if (sameSnapshot(dismissedRemoteRef.current, incomingSnapshot)) {
+      return;
+    }
+
     const hasUnsavedChanges =
-      title !== lastSavedTitleRef.current ||
-      content !== lastSavedContentRef.current;
+      title !== committedSnapshot.title ||
+      content !== committedSnapshot.content;
 
     if (hasUnsavedChanges) {
-      // Dirty editor: show banner to let user choose
-      setRemoteUpdate({ title: note.title, content: note.content });
-    } else {
-      // Clean editor: silently update local state
-      setTitle(note.title);
-      setContent(note.content);
-      lastSavedTitleRef.current = note.title;
-      lastSavedContentRef.current = note.content;
-      if (editor) {
-        editor.commands.setContent(note.content, { emitUpdate: false });
-      }
+      setRemoteUpdate(incomingSnapshot);
+      return;
+    }
+
+    setTitle(note.title);
+    setContent(note.content);
+    committedSnapshotRef.current = incomingSnapshot;
+    setRemoteUpdate(null);
+    if (editor) {
+      editor.commands.setContent(note.content, { emitUpdate: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note.title, note.content, note.id]);
+  }, [note.title, note.content, note.id, note.tags]);
 
   // Load saved scroll position and show Resume chip if far from top
   useEffect(() => {
@@ -192,16 +234,19 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     if (!container) return;
 
     const handleScroll = () => {
+      const capturedNoteId = note.id;
+      const capturedScroll = container.scrollTop;
+
       // Ignore scroll events from stale handlers during DOM reflow
       // The activeNoteIdRef is updated synchronously during render, before effects cleanup
       // So if note.id (from closure) differs, this is an OLD handler firing after note switch
-      if (note.id !== activeNoteIdRef.current) return;
+      if (capturedNoteId !== activeNoteIdRef.current) return;
 
       // Capture both noteId and scrollTop NOW at scroll time
       // This prevents saving wrong data if note switches before timer fires
       pendingScrollSaveRef.current = {
-        noteId: note.id,
-        scroll: container.scrollTop,
+        noteId: capturedNoteId,
+        scroll: capturedScroll,
       };
 
       // Create throttled save if not exists
@@ -277,9 +322,27 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     }
   }, [savedScrollPosition]);
 
+  const cancelPendingAutoSave = useCallback(() => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+      autoSaveTimeoutRef.current = null;
+    }
+  }, []);
+
   // Perform the actual save (async with proper status tracking)
-  const performSave = useCallback(async () => {
-    if (title === note.title && content === note.content) return;
+  const performSave = useCallback(async (): Promise<boolean> => {
+    const draftSnapshot = buildSnapshot(title, content, note.tags);
+
+    if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
+      return true;
+    }
+
+    if (inFlightSaveRef.current) {
+      await inFlightSaveRef.current;
+      if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
+        return true;
+      }
+    }
 
     // Clear any existing indicator timeouts
     if (savePhaseTimeoutRef.current) {
@@ -290,25 +353,24 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     }
 
     setSaveStatus('saving');
-
-    // Update lastSaved refs BEFORE the async call (2B fix).
-    // The optimistic setNotes() inside onUpdate triggers a React re-render;
-    // if refs still have old values, the remote-detection effect would
-    // misclassify our own save as a remote update and show a false banner.
-    const prevSavedTitle = lastSavedTitleRef.current;
-    const prevSavedContent = lastSavedContentRef.current;
-    lastSavedTitleRef.current = title;
-    lastSavedContentRef.current = content;
+    inFlightSnapshotRef.current = draftSnapshot;
 
     // Create and track the save promise
-    const savePromise = (async () => {
+    let savePromise: Promise<boolean> | null = null;
+    savePromise = (async () => {
       try {
         await onUpdate({
           ...note,
-          title,
-          content,
+          title: draftSnapshot.title,
+          content: draftSnapshot.content,
           updatedAt: new Date(),
         });
+
+        committedSnapshotRef.current = draftSnapshot;
+        if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
+          inFlightSnapshotRef.current = null;
+        }
+        setRemoteUpdate(null);
 
         // Show success state
         setSaveStatus('saved');
@@ -317,11 +379,11 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
         hideIndicatorTimeoutRef.current = setTimeout(() => {
           setSaveStatus('idle');
         }, 2000);
+        return true;
       } catch {
-        // Revert refs so the detection effect correctly identifies
-        // the state as "unsaved changes" after a failed save
-        lastSavedTitleRef.current = prevSavedTitle;
-        lastSavedContentRef.current = prevSavedContent;
+        if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
+          inFlightSnapshotRef.current = null;
+        }
 
         // Save failed after retries - show error state
         setSaveStatus('error');
@@ -330,14 +392,17 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
         hideIndicatorTimeoutRef.current = setTimeout(() => {
           setSaveStatus('idle');
         }, 5000);
+        return false;
       } finally {
         // Clear the in-flight ref when done
-        inFlightSaveRef.current = null;
+        if (inFlightSaveRef.current === savePromise) {
+          inFlightSaveRef.current = null;
+        }
       }
     })();
 
     inFlightSaveRef.current = savePromise;
-    await savePromise;
+    return await savePromise;
   }, [title, content, note, onUpdate]);
 
   // Auto-save when content changes (debounced)
@@ -374,20 +439,14 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
       try {
         // Cancel the debounce timer
-        if (autoSaveTimeoutRef.current) {
-          clearTimeout(autoSaveTimeoutRef.current);
-          autoSaveTimeoutRef.current = null;
-        }
+        cancelPendingAutoSave();
 
         // Await any in-flight save before starting a new one
         if (inFlightSaveRef.current) {
           await inFlightSaveRef.current;
         }
 
-        // Only save if there are unsaved changes
-        if (title !== note.title || content !== note.content) {
-          await performSave();
-        }
+        await performSave();
       } finally {
         flushingRef.current = false;
       }
@@ -410,7 +469,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', handlePageHide);
     };
-  }, [title, content, note.title, note.content, performSave]);
+  }, [cancelPendingAutoSave, title, content, note.title, note.content, performSave]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -421,12 +480,26 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
         setIsFocusMode((prev) => !prev);
         return;
       }
+      // Cmd/Ctrl+Shift+K: save, return to library, and focus search
+      if (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+        e.preventDefault();
+        cancelPendingAutoSave();
+        if (inFlightSaveRef.current) {
+          await inFlightSaveRef.current;
+        }
+        const didSave = await performSave();
+        if (didSave) {
+          onRequestSearch();
+        }
+        return;
+      }
       // Escape: exit focus mode first, then save and go back
       if (e.key === 'Escape') {
         if (isFocusMode) {
           setIsFocusMode(false);
           return;
         }
+        cancelPendingAutoSave();
         // First await any existing in-flight save
         if (inFlightSaveRef.current) {
           await inFlightSaveRef.current;
@@ -446,7 +519,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [performSave, onBack, note, title, content, isFocusMode]);
+  }, [cancelPendingAutoSave, performSave, onBack, onRequestSearch, note, title, content, isFocusMode]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -514,8 +587,8 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
     if (!remoteUpdate) return;
     setTitle(remoteUpdate.title);
     setContent(remoteUpdate.content);
-    lastSavedTitleRef.current = remoteUpdate.title;
-    lastSavedContentRef.current = remoteUpdate.content;
+    committedSnapshotRef.current = remoteUpdate;
+    inFlightSnapshotRef.current = null;
     if (editor) {
       editor.commands.setContent(remoteUpdate.content, { emitUpdate: false });
     }
@@ -560,6 +633,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
 
   // Handle logo click: save and go back (awaits any in-flight save)
   const handleLogoClick = async () => {
+    cancelPendingAutoSave();
     // First await any existing in-flight save
     if (inFlightSaveRef.current) {
       await inFlightSaveRef.current;
@@ -914,10 +988,7 @@ export function Editor({ note, tags, userId, onBack, onUpdate, onDelete, onToggl
                   onClick={async () => {
                     setShowExportMenu(false);
                     // Flush any unsaved edits so ShareModal encrypts the latest content
-                    if (autoSaveTimeoutRef.current) {
-                      clearTimeout(autoSaveTimeoutRef.current);
-                      autoSaveTimeoutRef.current = null;
-                    }
+                    cancelPendingAutoSave();
                     await performSave();
                     setShowShareModal(true);
                   }}

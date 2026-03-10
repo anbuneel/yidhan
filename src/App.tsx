@@ -390,6 +390,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Note[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchFocusToken, setSearchFocusToken] = useState(0);
 
   // Import state with progress tracking
   const [importProgress, setImportProgress] = useState<{
@@ -948,6 +949,14 @@ function App() {
     });
   };
 
+  const requestLibrarySearch = useCallback(() => {
+    startTransition(() => {
+      setView('library');
+      setSelectedNoteId(null);
+      setSearchFocusToken((prev) => prev + 1);
+    });
+  }, [startTransition]);
+
   const handleNewNote = useCallback(async () => {
     if (!user) return;
     if (!keys) {
@@ -983,6 +992,39 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [user, view, handleNewNote]);
+
+  useEffect(() => {
+    if (!user || view === 'editor') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || !e.shiftKey || e.key.toLowerCase() !== 'k') {
+        return;
+      }
+
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      e.preventDefault();
+
+      if (view === 'library') {
+        setSearchFocusToken((prev) => prev + 1);
+        return;
+      }
+
+      requestLibrarySearch();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [user, view, requestLibrarySearch]);
 
   // Keyboard shortcut: ? to show keyboard shortcuts modal
   useEffect(() => {
@@ -1909,6 +1951,7 @@ function App() {
           theme={theme}
           onThemeToggle={handleThemeToggle}
           onNewNote={handleNewNote}
+          searchFocusToken={searchFocusToken}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
           onExportJSON={handleExportJSON}
@@ -2120,6 +2163,7 @@ function App() {
               tags={tags}
               userId={user.id}
               onBack={handleBack}
+              onRequestSearch={requestLibrarySearch}
               onUpdate={handleNoteUpdate}
               onDelete={handleNoteDelete}
               onToggleTag={handleNoteTagToggle}

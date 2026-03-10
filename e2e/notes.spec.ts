@@ -221,7 +221,7 @@ test.describe('Notes', () => {
       await expect(page.getByPlaceholder(/search/i).first()).toHaveValue('');
     });
 
-    // Note: Ctrl+K keyboard shortcut may not work reliably in headless browser
+    // Note: Ctrl+Shift+K keyboard shortcut may not work reliably in headless browser
     // Testing click-to-focus instead
     test('focuses search when clicked', async ({ authenticatedPage: page }) => {
       // Ensure we're on the library page

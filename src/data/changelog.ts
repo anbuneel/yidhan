@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.13.0',
+    date: '2026-03-10',
+    changes: [
+      { type: 'fix', text: 'Search now uses Cmd/Ctrl+Shift+K consistently across the app, demo, and shortcuts help, including save-and-search handoff from the editor' },
+      { type: 'fix', text: 'Rendered notes now strip arbitrary classes and unsafe inline styles while preserving safe text alignment from the editor' },
+      { type: 'fix', text: 'Vault session restores now verify key-check metadata before unlocking after a refresh, failing closed when stored keys are stale or corrupted' },
+      { type: 'fix', text: 'Editor saves are serialized to avoid duplicate saves, false remote-update banners, and stale scroll-position writes during rapid transitions' },
+    ],
+  },
+  {
     version: '3.12.0',
     date: '2026-03-10',
     changes: [
