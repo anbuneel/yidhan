@@ -10,6 +10,7 @@ interface HeaderProps {
   theme: Theme;
   onThemeToggle: () => void;
   onNewNote: () => void;
+  searchFocusToken: number;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onExportJSON: () => void;
@@ -26,6 +27,7 @@ export function Header({
   theme,
   onThemeToggle,
   onNewNote,
+  searchFocusToken,
   searchQuery,
   onSearchChange,
   onExportJSON,
@@ -40,22 +42,17 @@ export function Header({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const searchShortcutHint = isMac ? `${modKey}â‡§K` : `${modKey}Shift+K`;
 
-  // Keyboard shortcut: Cmd/Ctrl + K to focus search
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        searchRef.current?.focus();
-      }
-      if (e.key === 'Escape' && isSearchFocused) {
-        searchRef.current?.blur();
-        onSearchChange('');
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSearchFocused, onSearchChange]);
+    if (searchFocusToken === 0) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      searchRef.current?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [searchFocusToken]);
 
   // Build menu sections for profile dropdown
   const menuSections: MenuSectionConfig[] = [
@@ -148,6 +145,13 @@ export function Header({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                onSearchChange('');
+                e.currentTarget.blur();
+              }
+            }}
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setIsSearchFocused(false)}
             placeholder="Search..."
@@ -179,7 +183,7 @@ export function Header({
                 fontFamily: 'var(--font-body)',
               }}
             >
-              {modKey}K
+              {searchShortcutHint}
             </span>
           )}
         </div>

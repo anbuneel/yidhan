@@ -506,7 +506,7 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Note titles:** Sanitized with DOMPurify to prevent XSS
 
 ### Sanitization Functions (`src/utils/sanitize.ts`)
-- `sanitizeHtml(html)` - Sanitize rich HTML content (allows safe tags), adds `rel="noopener noreferrer"` to external links
+- `sanitizeHtml(html)` - Sanitize rich HTML content (allows safe tags), strips arbitrary classes and unsafe inline styles, preserves safe `text-align` on supported block elements, and adds `rel="noopener noreferrer"` to external links
 - `sanitizeText(text)` - Strip HTML and escape special characters
 - `escapeHtml(text)` - Escape HTML special characters only
 
@@ -520,7 +520,7 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Encryption:** AES-256-GCM with AAD (`noteId:userId`) prevents note-swapping attacks
 - **Conflict detection:** HMAC-SHA-256 content hash replaces plaintext comparison in sync engine
 - **Key storage:** React state in `EncryptionContext` + sessionStorage for tab-refresh persistence (raw key bytes exported/imported via `exportSessionKeys`/`importSessionKeys`). Optional localStorage persistence via "Remember this browser" (opt-in, default off).
-- **Remember this browser:** When enabled, persists `SessionKeyBlob` in localStorage (survives browser restarts). Keys verified against `encryption_key_check` on restore to detect stale keys after passphrase change. Activity-gated restore after auto-lock (keys stay out of memory during idle). Cleared on manual lock, sign-out, or user switch.
+- **Remember this browser:** When enabled, persists `SessionKeyBlob` in localStorage (survives browser restarts). All restore paths, including refresh-time `sessionStorage`, verify `encryption_key_check` before unlocking to detect stale keys after passphrase change. Activity-gated restore after auto-lock keeps keys out of memory during idle. Cleared on manual lock, sign-out, or user switch.
 - **Vault lock:** Manual lock button + configurable auto-lock timer (0/15/60 min idle). Lock reason differentiates behavior: `auto-lock` preserves localStorage (silent re-unlock on user return), `manual`/`sign-out` clears all storage.
 - **Reliability telemetry:** Sentry breadcrumbs/reports track hydration starts/failures, blocked sync entries, vault restore issues, note decryption failures, and shared-link decryption failures.
 - **What's encrypted:** Title + content as JSON blob in `encrypted_payload`

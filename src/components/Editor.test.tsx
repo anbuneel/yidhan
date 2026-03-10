@@ -93,6 +93,7 @@ describe('Editor', () => {
     tags: mockTags,
     userId: 'user-123',
     onBack: vi.fn(),
+    onRequestSearch: vi.fn(),
     onUpdate: vi.fn().mockResolvedValue(undefined),
     onDelete: vi.fn(),
     onToggleTag: vi.fn(),
@@ -239,6 +240,33 @@ describe('Editor', () => {
       expect(onUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Second' })
       );
+    });
+
+    it('does not duplicate saves when blur fires during an in-flight save', async () => {
+      let resolveSave: (() => void) | undefined;
+      const onUpdate = vi.fn().mockImplementation(() => new Promise<void>((resolve) => {
+        resolveSave = resolve;
+      }));
+
+      render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'Updated Title' } });
+
+      await act(async () => {
+        vi.advanceTimersByTime(800);
+      });
+
+      fireEvent.blur(titleInput);
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        resolveSave?.();
+      });
+
+      await waitFor(() => {
+        expect(onUpdate).toHaveBeenCalledTimes(1);
+      });
     });
   });
 
@@ -437,6 +465,47 @@ describe('Editor', () => {
       await waitFor(() => {
         expect(exportImport.copyNoteToClipboard).toHaveBeenCalled();
       });
+    });
+
+    it('saves and requests search on Cmd+Shift+K', async () => {
+      const onRequestSearch = vi.fn();
+      const onUpdate = vi.fn().mockResolvedValue(undefined);
+      render(<Editor {...defaultProps} onUpdate={onUpdate} onRequestSearch={onRequestSearch} />);
+
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'Changed' } });
+
+      fireEvent.keyDown(window, {
+        key: 'K',
+        metaKey: true,
+        shiftKey: true,
+      });
+
+      await waitFor(() => {
+        expect(onUpdate).toHaveBeenCalled();
+        expect(onRequestSearch).toHaveBeenCalled();
+      });
+    });
+
+    it('does not request search when save fails on Cmd+Shift+K', async () => {
+      const onRequestSearch = vi.fn();
+      const onUpdate = vi.fn().mockRejectedValue(new Error('save failed'));
+      render(<Editor {...defaultProps} onUpdate={onUpdate} onRequestSearch={onRequestSearch} />);
+
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'Changed' } });
+
+      fireEvent.keyDown(window, {
+        key: 'K',
+        ctrlKey: true,
+        shiftKey: true,
+      });
+
+      await waitFor(() => {
+        expect(onUpdate).toHaveBeenCalled();
+      });
+
+      expect(onRequestSearch).not.toHaveBeenCalled();
     });
   });
 
@@ -780,6 +849,27 @@ describe('Editor', () => {
 
       // Should NOT show the banner — this is our own save, not a remote update
       expect(screen.queryByText('Updated on another device')).not.toBeInTheDocument();
+    });
+    it('does not show the banner for tag-only prop changes', () => {
+      const { rerender } = render(<Editor {...defaultProps} />);
+
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'My Local Edit' } });
+
+      const tagOnlyUpdate = createMockNote({
+        id: 'note-123',
+        title: 'Test Note',
+        content: '<p>Test content</p>',
+        tags: [
+          createMockTag({ id: 'tag-1', name: 'Work' }),
+          createMockTag({ id: 'tag-2', name: 'Personal' }),
+        ],
+      });
+
+      rerender(<Editor {...defaultProps} note={tagOnlyUpdate} />);
+
+      expect(screen.queryByText('Updated on another device')).not.toBeInTheDocument();
+      expect(screen.getByDisplayValue('My Local Edit')).toBeInTheDocument();
     });
   });
 });

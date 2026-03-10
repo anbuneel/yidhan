@@ -54,7 +54,7 @@ Today I'm grateful for the quiet moments...
 | Shortcut | Action | Where |
 |----------|--------|-------|
 | `Cmd/Ctrl + N` | Create new note | Library |
-| `Cmd/Ctrl + K` | Focus search | Library |
+| `Cmd/Ctrl + Shift + K` | Focus search | Library |
 | `Escape` | Save and go back | Editor |
 | `Cmd/Ctrl + Shift + C` | Copy note to clipboard | Editor |
 | `Cmd/Ctrl + B` | Bold | Editor |
@@ -132,7 +132,7 @@ Click a chapter header to collapse/expand it.
 Click the pin icon on any note card to keep it at the top of your library.
 
 ### Quick search
-Press `Cmd/Ctrl + K` anywhere in the library to jump to search.
+Press `Cmd/Ctrl + Shift + K` anywhere in the library to jump to search.
 
 ### Tag filtering
 Click tags in the filter bar to show only notes with those tags. Click "All Notes" to clear filters.

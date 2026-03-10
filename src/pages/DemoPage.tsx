@@ -9,7 +9,7 @@
  * (3+ notes AND 5+ minutes).
  */
 
-import { useState, useCallback, useEffect, useMemo, Suspense } from 'react';
+import { useState, useCallback, useEffect, useMemo, Suspense, useRef } from 'react';
 import type { Note, Tag, Theme, TagColor } from '../types';
 import { useDemoState } from '../hooks/useDemoState';
 import { useSoftPrompt } from '../hooks/useSoftPrompt';
@@ -87,6 +87,7 @@ export function DemoPage({
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchFocusToken, setSearchFocusToken] = useState(0);
 
   // Tag filter state
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -161,6 +162,12 @@ export function DemoPage({
     setView('library');
     setSelectedNoteId(null);
   };
+
+  const handleRequestSearch = useCallback(() => {
+    setView('library');
+    setSelectedNoteId(null);
+    setSearchFocusToken((prev) => prev + 1);
+  }, []);
 
   const handleNoteUpdate = useCallback(
     async (updatedNote: Note): Promise<void> => {
@@ -297,6 +304,7 @@ export function DemoPage({
             tags={tags}
             userId={DEMO_USER_ID}
             onBack={handleBack}
+            onRequestSearch={handleRequestSearch}
             onUpdate={handleNoteUpdate}
             onDelete={handleNoteDelete}
             onToggleTag={handleNoteTagToggle}
@@ -329,6 +337,7 @@ export function DemoPage({
           theme={theme}
           onThemeToggle={onThemeToggle}
           onNewNote={handleNewNote}
+          searchFocusToken={searchFocusToken}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onSignIn={onSignIn}
@@ -370,6 +379,7 @@ interface DemoHeaderProps {
   theme: Theme;
   onThemeToggle: () => void;
   onNewNote: () => void;
+  searchFocusToken: number;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onSignIn: () => void;
@@ -379,23 +389,35 @@ function DemoHeader({
   theme,
   onThemeToggle,
   onNewNote,
+  searchFocusToken,
   searchQuery,
   onSearchChange,
   onSignIn,
 }: DemoHeaderProps) {
+  const searchRef = useRef<HTMLInputElement>(null);
+
   // Keyboard shortcut for search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        const searchInput = document.getElementById('demo-search-input');
-        searchInput?.focus();
+        searchRef.current?.focus();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (searchFocusToken === 0) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      searchRef.current?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [searchFocusToken]);
 
   return (
     <HeaderShell
@@ -449,6 +471,7 @@ function DemoHeader({
         <div className="relative w-full max-w-sm">
           <input
             id="demo-search-input"
+            ref={searchRef}
             type="text"
             placeholder="Search notes..."
             value={searchQuery}
@@ -482,6 +505,15 @@ function DemoHeader({
               }}
             >
               {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}
+            </kbd>
+            <kbd
+              className="px-1.5 py-0.5 rounded"
+              style={{
+                background: 'var(--color-bg-tertiary)',
+                border: '1px solid var(--glass-border)',
+              }}
+            >
+              Shift
             </kbd>
             <kbd
               className="px-1.5 py-0.5 rounded"

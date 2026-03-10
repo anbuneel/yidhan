@@ -57,6 +57,8 @@ const baseUser = {
 };
 
 beforeEach(() => {
+  sessionStorage.clear();
+  localStorage.clear();
   mockUseAuth.mockReturnValue({ user: baseUser });
   mockImportSessionKeys.mockReset();
   mockVerifyKeyCheck.mockReset();
@@ -65,6 +67,117 @@ beforeEach(() => {
 });
 
 describe('EncryptionContext telemetry', () => {
+  it('verifies session restore before unlocking', async () => {
+    const fakeKeys = {
+      encryptionKey: {} as CryptoKey,
+      hashKey: {} as CryptoKey,
+      salt: new Uint8Array([1, 2, 3]),
+      rawEncryptionKey: new Uint8Array(32),
+      rawHashKey: new Uint8Array(32),
+    };
+
+    sessionStorage.setItem(
+      'yidhan-vault-user-1-vault-session',
+      JSON.stringify({ encKey: 'enc', hashKey: 'hash', salt: 'salt' })
+    );
+    mockImportSessionKeys.mockResolvedValue(fakeKeys);
+    mockVerifyKeyCheck.mockResolvedValue(true);
+
+    render(
+      <EncryptionProvider>
+        <Probe />
+      </EncryptionProvider>
+    );
+
+    await waitFor(() => {
+      expect(mockVerifyKeyCheck).toHaveBeenCalledWith(
+        fakeKeys.encryptionKey,
+        'key-check',
+        'key-check-iv'
+      );
+    });
+
+    expect(screen.getByText('unlocked')).toBeInTheDocument();
+  });
+
+  it('clears session restore blobs that fail key-check and stays locked', async () => {
+    const fakeKeys = {
+      encryptionKey: {} as CryptoKey,
+      hashKey: {} as CryptoKey,
+      salt: new Uint8Array([1, 2, 3]),
+      rawEncryptionKey: new Uint8Array(32),
+      rawHashKey: new Uint8Array(32),
+    };
+
+    sessionStorage.setItem(
+      'yidhan-vault-user-1-vault-session',
+      JSON.stringify({ encKey: 'enc', hashKey: 'hash', salt: 'salt' })
+    );
+    mockImportSessionKeys.mockResolvedValue(fakeKeys);
+    mockVerifyKeyCheck.mockResolvedValue(false);
+
+    render(
+      <EncryptionProvider>
+        <Probe />
+      </EncryptionProvider>
+    );
+
+    await waitFor(() => {
+      expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category: 'vault',
+          message: 'Vault session keys failed key-check',
+        })
+      );
+    });
+
+    expect(sessionStorage.getItem('yidhan-vault-user-1-vault-session')).toBeNull();
+    expect(screen.getByText('locked')).toBeInTheDocument();
+  });
+
+  it('fails closed when session restore cannot be verified', async () => {
+    const fakeKeys = {
+      encryptionKey: {} as CryptoKey,
+      hashKey: {} as CryptoKey,
+      salt: new Uint8Array([1, 2, 3]),
+      rawEncryptionKey: new Uint8Array(32),
+      rawHashKey: new Uint8Array(32),
+    };
+
+    mockUseAuth.mockReturnValue({
+      user: {
+        ...baseUser,
+        user_metadata: {
+          encryption_salt: 'c2FsdA==',
+        },
+      },
+    });
+    sessionStorage.setItem(
+      'yidhan-vault-user-1-vault-session',
+      JSON.stringify({ encKey: 'enc', hashKey: 'hash', salt: 'salt' })
+    );
+    mockImportSessionKeys.mockResolvedValue(fakeKeys);
+
+    render(
+      <EncryptionProvider>
+        <Probe />
+      </EncryptionProvider>
+    );
+
+    await waitFor(() => {
+      expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category: 'vault',
+          message: 'Vault session restore missing key-check metadata',
+        })
+      );
+    });
+
+    expect(mockVerifyKeyCheck).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem('yidhan-vault-user-1-vault-session')).toBeNull();
+    expect(screen.getByText('locked')).toBeInTheDocument();
+  });
+
   it('reports corrupted session restore blobs and clears session storage', async () => {
     sessionStorage.setItem('yidhan-vault-user-1-vault-session', '{bad-json');
 

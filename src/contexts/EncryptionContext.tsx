@@ -117,6 +117,59 @@ function clearLocal(userId: string | null): void {
   }
 }
 
+interface RestoreVerificationOptions {
+  restored: DerivedKeys | null;
+  keyCheck?: string;
+  keyCheckIv?: string;
+  source: 'sessionStorage_restore' | 'localStorage_restore' | 'activity_gate';
+  invalidMessage: string;
+  missingMetadataMessage: string;
+  cleanup: () => void;
+  cleanupLabel: string;
+}
+
+async function verifyRestoredKeys({
+  restored,
+  keyCheck,
+  keyCheckIv,
+  source,
+  invalidMessage,
+  missingMetadataMessage,
+  cleanup,
+  cleanupLabel,
+}: RestoreVerificationOptions): Promise<DerivedKeys | null> {
+  if (!restored) {
+    return null;
+  }
+
+  if (!keyCheck || !keyCheckIv) {
+    reportReliabilityIssue({
+      category: 'vault',
+      message: missingMetadataMessage,
+      level: 'warning',
+      data: { source },
+    });
+    console.warn(`[EncryptionContext] Cannot verify ${cleanupLabel}: key-check metadata missing`);
+    cleanup();
+    return null;
+  }
+
+  const isValid = await verifyKeyCheck(restored.encryptionKey, keyCheck, keyCheckIv);
+  if (!isValid) {
+    reportReliabilityIssue({
+      category: 'vault',
+      message: invalidMessage,
+      level: 'warning',
+      data: { source },
+    });
+    console.warn(`[EncryptionContext] ${cleanupLabel} failed key-check — stale or corrupted, clearing`);
+    cleanup();
+    return null;
+  }
+
+  return restored;
+}
+
 /** Try to restore keys from localStorage */
 async function restoreLocal(userId: string): Promise<DerivedKeys | null> {
   try {
@@ -198,6 +251,16 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       try {
         // Try sessionStorage first (fast path for page refresh)
         let restored = await restoreSession(currentUserId);
+        restored = await verifyRestoredKeys({
+          restored,
+          keyCheck,
+          keyCheckIv,
+          source: 'sessionStorage_restore',
+          invalidMessage: 'Vault session keys failed key-check',
+          missingMetadataMessage: 'Vault session restore missing key-check metadata',
+          cleanup: () => clearSession(currentUserId),
+          cleanupLabel: 'sessionStorage keys',
+        });
 
         // Fall back to localStorage if rememberBrowser is enabled
         if (!restored && isRememberBrowserEnabled(currentUserId)) {

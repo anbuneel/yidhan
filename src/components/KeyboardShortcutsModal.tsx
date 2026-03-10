@@ -23,7 +23,7 @@ const shortcuts: ShortcutSection[] = [
   {
     title: 'Global',
     items: [
-      { keys: [modKey, 'K'], description: 'Focus search' },
+      { keys: [modKey, 'Shift', 'K'], description: 'Focus search' },
       { keys: [modKey, 'N'], description: 'Create new note' },
       { keys: ['?'], description: 'Show this help' },
     ],

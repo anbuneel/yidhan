@@ -1,9 +1,36 @@
 import DOMPurify from 'dompurify';
 
+const ALLOWED_TEXT_ALIGN_TAGS = new Set(['p', 'h1', 'h2', 'h3', 'blockquote']);
+const ALLOWED_TEXT_ALIGN_VALUES = new Set(['left', 'right', 'center', 'justify']);
+
 // Add a hook to ensure all external links (target="_blank") have rel="noopener noreferrer"
 // This prevents reverse tabnabbing attacks where the new page can access the original page's window object
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-  if ('tagName' in node && node.tagName.toLowerCase() === 'a') {
+  if (!('tagName' in node) || !('getAttribute' in node) || !('setAttribute' in node) || !('removeAttribute' in node)) {
+    return;
+  }
+
+  const tagName = node.tagName.toLowerCase();
+
+  // Strip presentational classes from rendered note HTML.
+  if (node.getAttribute('class')) {
+    node.removeAttribute('class');
+  }
+
+  // Only preserve a narrow text-align style on block content elements.
+  const style = node.getAttribute('style');
+  if (style) {
+    const match = style.trim().match(/^text-align\s*:\s*(left|right|center|justify)\s*;?$/i);
+    const normalizedValue = match?.[1].toLowerCase();
+
+    if (normalizedValue && ALLOWED_TEXT_ALIGN_TAGS.has(tagName) && ALLOWED_TEXT_ALIGN_VALUES.has(normalizedValue)) {
+      node.setAttribute('style', `text-align: ${normalizedValue};`);
+    } else {
+      node.removeAttribute('style');
+    }
+  }
+
+  if (tagName === 'a' && node.getAttribute('target') === '_blank') {
     if (node.getAttribute('target') === '_blank') {
       node.setAttribute('rel', 'noopener noreferrer');
     }
@@ -32,7 +59,7 @@ export function sanitizeHtml(html: string): string {
       'span', 'div',
     ],
     ALLOWED_ATTR: [
-      'href', 'target', 'rel', 'class', 'style',
+      'href', 'target', 'rel', 'style',
       // Task list attributes (Tiptap)
       'data-type', 'data-checked', 'type', 'checked', 'disabled',
     ],

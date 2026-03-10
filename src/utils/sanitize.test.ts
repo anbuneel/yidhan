@@ -49,6 +49,41 @@ describe('sanitizeHtml', () => {
     expect(output).toContain('rel="noopener noreferrer"');
     expect(output).toContain('target="_blank"');
   });
+
+  it('strips class attributes', () => {
+    const input = '<p class="custom-note">Styled text</p>';
+    expect(sanitizeHtml(input)).toBe('<p>Styled text</p>');
+  });
+
+  it('preserves safe text-align styles on supported block elements', () => {
+    const input = '<p style="text-align: center">Centered text</p>';
+    expect(sanitizeHtml(input)).toBe('<p style="text-align: center;">Centered text</p>');
+  });
+
+  it('strips unsafe inline styles', () => {
+    const input = '<p style="background:url(https://tracker.test/pixel.png)">Tracked</p>';
+    expect(sanitizeHtml(input)).toBe('<p>Tracked</p>');
+  });
+
+  it('strips mixed style declarations even when they include text-align', () => {
+    const input = '<p style="text-align: center; color: red">Mixed</p>';
+    expect(sanitizeHtml(input)).toBe('<p>Mixed</p>');
+  });
+
+  it('strips text-align styles from unsupported elements', () => {
+    const input = '<span style="text-align: center">Inline</span>';
+    expect(sanitizeHtml(input)).toBe('<span>Inline</span>');
+  });
+
+  it('preserves task list structural attributes', () => {
+    const input = '<ul data-type="taskList"><li data-checked="true"><label><input type="checkbox" checked disabled></label><div>Done</div></li></ul>';
+    const output = sanitizeHtml(input);
+    expect(output).toContain('data-type="taskList"');
+    expect(output).toContain('data-checked="true"');
+    expect(output).toContain('type="checkbox"');
+    expect(output).toContain('checked=""');
+    expect(output).toContain('disabled=""');
+  });
 });
 
 describe('escapeHtml', () => {

@@ -100,7 +100,7 @@ Zenote aims to be the antithesis of feature-bloated productivity tools. Where ot
 | Temporal Chapters | Automatic grouping: Pinned, This Week, Last Week, This Month, Earlier, Archive | P0 |
 | Tag System | Multiple tags per note with 8 wabi-sabi colors | P0 |
 | Tag Filtering | Filter library by one or more tags | P1 |
-| Search | Full-text search with Cmd/Ctrl+K shortcut | P0 |
+| Search | Full-text search with Cmd/Ctrl+Shift+K shortcut | P0 |
 | Collapsible Sections | Expand/collapse chapter sections with preview | P2 |
 
 #### 3. Authentication & Account
@@ -314,7 +314,7 @@ Offline → Make edits → Save to IndexedDB (sync queue)
 | Requirement | Implementation |
 |-------------|----------------|
 | Data Isolation | Row Level Security (RLS) on all tables |
-| XSS Prevention | DOMPurify sanitization on all user content |
+| XSS Prevention | DOMPurify sanitization on all user content with restricted attributes and inline styles |
 | Auth Security | Supabase Auth with secure session handling |
 | Share Links | Cryptographically secure 32-character tokens |
 
