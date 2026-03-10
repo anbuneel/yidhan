@@ -117,7 +117,7 @@ Currently in-progress implementation plans and follow-ups.
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [reliability-hardening-plan-codex.md](active/reliability-hardening-plan-codex.md) | Reliability hardening plan for sync durability, non-destructive hydration, tag membership convergence, search scaling, and E2EE operational safeguards | 2026-03-10 |
+| [reliability-hardening-plan-codex.md](active/reliability-hardening-plan-codex.md) | Reliability hardening plan — items 1-3 implemented (PR #163): blocked sync recovery, safe hydration, E2EE telemetry. Items 4-5 deferred. | 2026-03-10 |
 | [2026-03-09-editor-calm-delight.md](plans/2026-03-09-editor-calm-delight.md) | **NEW** Editor calm & delight - 9 changes: sidebar toolbar, metadata collapse, writing surface polish | 2026-03-09 |
 | [vault-unlock-ux-implementation-plan.md](plans/vault-unlock-ux-implementation-plan.md) | Vault unlock UX plan - **Phase 1 complete** (session persist, auto-lock, lock button) | 2026-02-23 |
 | [e2ee-implementation-plan.md](plans/e2ee-implementation-plan.md) | **NEW** E2EE implementation plan v1.4 (Codex peer-reviewed, approved) | 2026-02-21 |

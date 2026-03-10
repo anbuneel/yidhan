@@ -2,7 +2,7 @@
 
 **Version:** 1.2
 **Last Updated:** 2026-03-10
-**Status:** Draft (Review Requested)
+**Status:** Items 1-3 Implemented (PR #163) — Items 4-5 Deferred
 **Author:** Codex (GPT-5)
 **Date/Timestamp:** 2026-03-10
 
