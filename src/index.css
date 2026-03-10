@@ -1225,6 +1225,17 @@ body::before {
   opacity: 0.95;
 }
 
+/* Sidebar is position:fixed — fade only, no layout collapse needed */
+.editor-sidebar.focus-mode-target {
+  max-height: none;
+}
+.focus-mode-active .editor-sidebar.focus-mode-target {
+  max-height: none !important;
+  margin: 0;          /* restore — fixed element has no flow margins */
+  padding: 8px 4px;   /* preserve original padding */
+  border: 1px solid var(--glass-border); /* preserve frosted border */
+}
+
 .editor-sidebar-buttons {
   display: flex;
   flex-direction: column;
