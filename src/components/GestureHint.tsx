@@ -89,18 +89,6 @@ function GestureItem({ direction, icon, iconColor, description }: GestureItemPro
   );
 }
 
-/** Delete icon for swipe left gesture */
-const DeleteIcon = (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={1.5}
-      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-    />
-  </svg>
-);
-
 /** Pin icon for swipe right gesture */
 const PinIcon = (
   <svg fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
@@ -112,7 +100,6 @@ const PinIcon = (
  * One-time overlay that teaches users about swipe gestures.
  *
  * Shows on first mobile visit to help users discover:
- * - Swipe left to delete
  * - Swipe right to pin/unpin
  *
  * Design philosophy:
@@ -213,17 +200,11 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
             color: 'var(--color-text-primary)',
           }}
         >
-          Quick gestures
+          Quick gesture
         </h2>
 
-        {/* Gesture illustrations */}
+        {/* Gesture illustration */}
         <div className="space-y-4 mb-6">
-          <GestureItem
-            direction="left"
-            icon={DeleteIcon}
-            iconColor="var(--color-destructive)"
-            description="Delete note"
-          />
           <GestureItem
             direction="right"
             icon={PinIcon}

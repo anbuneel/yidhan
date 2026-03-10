@@ -58,7 +58,6 @@ const shortcuts: ShortcutSection[] = [
   {
     title: 'Mobile Gestures',
     items: [
-      { keys: ['Swipe left'], description: 'Delete note' },
       { keys: ['Swipe right'], description: 'Pin/unpin note' },
       { keys: ['Pull down'], description: 'Refresh notes' },
       { keys: ['Triple-tap'], description: 'Toggle focus mode' },

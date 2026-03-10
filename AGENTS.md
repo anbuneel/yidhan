@@ -66,7 +66,7 @@ src/
 │   ├── WelcomeBackPrompt.tsx # Prompt shown when departing user signs in during grace period
 │   ├── WhisperBack.tsx    # Floating back button for long notes (scroll-triggered)
 │   ├── IOSInstallGuide.tsx # Visual 3-step tutorial for iOS Safari PWA installation
-│   ├── SwipeableNoteCard.tsx # Note card wrapper with swipe gestures (delete/pin)
+│   ├── SwipeableNoteCard.tsx # Note card wrapper with swipe gesture (pin/unpin only)
 │   ├── PullToRefresh.tsx  # Pull-to-refresh wrapper with spring physics
 │   ├── GestureHint.tsx    # One-time swipe gesture tutorial overlay (mobile)
 │   ├── BottomSheet.tsx    # iOS-style bottom sheet modal component
