@@ -349,7 +349,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 e.currentTarget.style.background = 'var(--color-cta-bg)';
               }}
             >
-              {isExportingFull ? 'Preparing...' : 'Full Backup (includes share links)'}
+              {isExportingFull ? 'Preparing...' : 'Full Backup'}
             </button>
           </div>
 

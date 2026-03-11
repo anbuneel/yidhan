@@ -1156,14 +1156,43 @@ export async function upsertNoteFromServer(
 export async function deleteNoteFromServer(
   userId: string,
   noteId: string
-): Promise<void> {
+): Promise<
+  | { deleted: true }
+  | {
+      deleted: false;
+      localNote: LocalNote;
+    }
+> {
   const db = getOfflineDb(userId);
+  const existing = await db.notes.get(noteId);
+
+  if (!existing) {
+    return { deleted: true };
+  }
+
+  const hasPendingNoteSync = await db.syncQueue
+    .where('entityId')
+    .equals(noteId)
+    .and((entry) => entry.entityType === 'note')
+    .count();
+
+  if (existing.syncStatus !== 'synced' || hasPendingNoteSync > 0) {
+    const conflictedNote: LocalNote = {
+      ...existing,
+      syncStatus: 'conflict',
+    };
+
+    await db.notes.update(noteId, { syncStatus: 'conflict' });
+    return { deleted: false, localNote: conflictedNote };
+  }
 
   // Remove note and its tag associations
   await db.transaction('rw', [db.notes, db.noteTags], async () => {
     await db.notes.delete(noteId);
     await db.noteTags.where('noteId').equals(noteId).delete();
   });
+
+  return { deleted: true };
 }
 
 /**

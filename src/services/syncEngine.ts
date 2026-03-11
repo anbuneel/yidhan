@@ -160,6 +160,10 @@ export function setConflictHandler(
   onConflictDetected = handler;
 }
 
+export function reportConflict(conflict: ConflictInfo): void {
+  onConflictDetected?.(conflict);
+}
+
 /**
  * Check if a mutation ID is pending (for self-ignore)
  */
@@ -326,7 +330,7 @@ async function processNoteOperation(
             // Continue with the update (will just bump server timestamp)
           } else if (onConflictDetected) {
             // Real conflict: content differs
-            onConflictDetected({
+            reportConflict({
               entityType: 'note',
               entityId: noteId,
               localVersion: localNote,
