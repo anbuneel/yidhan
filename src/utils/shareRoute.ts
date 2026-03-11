@@ -39,14 +39,16 @@ export function getShareKeyStorageKey(token: string): string {
   return `${SHARE_KEY_SESSION_PREFIX}${token}`;
 }
 
-export function persistShareKeyToSession(token: string, shareKeyBase64Url: string): void {
+export function persistShareKeyToSession(token: string, shareKeyBase64Url: string): boolean {
   const storage = getSessionStorage();
-  if (!storage) return;
+  if (!storage) return false;
 
   try {
     storage.setItem(getShareKeyStorageKey(token), shareKeyBase64Url);
+    return true;
   } catch (error) {
     console.warn('Failed to persist share key to session storage:', error);
+    return false;
   }
 }
 
@@ -76,13 +78,13 @@ function getPersistedShareKey(token: string): Uint8Array {
   return shareKey;
 }
 
-export function preserveShareKeyFromLocation(pathname: string, hash: string): void {
+export function preserveShareKeyFromLocation(pathname: string, hash: string): boolean {
   const token = getShareTokenFromPath(pathname);
   const encodedKey = hash.match(SHARE_KEY_FRAGMENT_PATTERN)?.[1];
 
-  if (!token || !encodedKey) return;
+  if (!token || !encodedKey) return false;
 
-  persistShareKeyToSession(token, encodedKey);
+  return persistShareKeyToSession(token, encodedKey);
 }
 
 export function reloadWithPreservedShareContext(

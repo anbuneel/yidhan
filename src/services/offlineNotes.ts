@@ -23,7 +23,10 @@ import {
 } from '../lib/offlineDb';
 import type { Note, Tag, TagColor } from '../types';
 import type { DbNote, DbTag } from '../types/database';
-import { addReliabilityBreadcrumb as addHydrationBreadcrumb } from '../utils/reliabilityTelemetry';
+import {
+  addReliabilityBreadcrumb as addHydrationBreadcrumb,
+  reportReliabilityIssue,
+} from '../utils/reliabilityTelemetry';
 import { sanitizeHtml } from '../utils/sanitize';
 import { validateNoteTitle, validateNoteContentLength } from '../utils/validation';
 
@@ -1149,20 +1152,24 @@ export async function upsertNoteFromServer(
   }
 }
 
-/**
- * Delete a note from IndexedDB (realtime subscription - server delete)
- * Does NOT queue sync operation since this is server->local
- */
-export async function deleteNoteFromServer(
-  userId: string,
-  noteId: string
-): Promise<
+export type DeleteNoteFromServerResult =
   | { deleted: true }
   | {
       deleted: false;
       localNote: LocalNote;
-    }
-> {
+    };
+
+/**
+ * Apply a realtime server delete to IndexedDB.
+ *
+ * Clean notes are removed immediately. Notes with unsynced local work are
+ * converted into conflicts so the app can offer recovery instead of silently
+ * deleting the local draft.
+ */
+export async function deleteNoteFromServer(
+  userId: string,
+  noteId: string
+): Promise<DeleteNoteFromServerResult> {
   const db = getOfflineDb(userId);
   const existing = await db.notes.get(noteId);
 
@@ -1182,7 +1189,25 @@ export async function deleteNoteFromServer(
       syncStatus: 'conflict',
     };
 
-    await db.notes.update(noteId, { syncStatus: 'conflict' });
+    try {
+      const updated = await db.notes.update(noteId, { syncStatus: 'conflict' });
+      if (updated === 0) {
+        reportReliabilityIssue({
+          category: 'sync',
+          message: 'Failed to mark hard-delete conflict in IndexedDB',
+          level: 'warning',
+          data: { noteId, userId, reason: 'missing_local_note' },
+        });
+      }
+    } catch (error) {
+      reportReliabilityIssue({
+        category: 'sync',
+        message: 'Failed to persist hard-delete conflict state',
+        level: 'warning',
+        data: { noteId, userId },
+      }, error);
+    }
+
     return { deleted: false, localNote: conflictedNote };
   }
 

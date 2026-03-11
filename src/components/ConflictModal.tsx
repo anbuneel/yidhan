@@ -7,24 +7,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
-import type { ConflictInfo } from '../services/syncEngine';
-import type { LocalNote } from '../lib/offlineDb';
+import type { ConflictInfo, NoteConflictServerVersion } from '../services/syncEngine';
 import { escapeHtml } from '../utils/sanitize';
 
 interface ConflictModalProps {
   conflict: ConflictInfo | null;
   onResolve: (choice: 'local' | 'server' | 'both') => Promise<void>;
   onDismiss: () => void;
-}
-
-interface ServerNote {
-  id: string;
-  title: string;
-  content: string;
-  pinned: boolean;
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 /**
@@ -74,8 +63,30 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
   // Only handle note conflicts (tags use last-write-wins)
   if (conflict.entityType !== 'note') return null;
 
-  const localNote = conflict.localVersion as LocalNote;
-  const serverNote = conflict.serverVersion as ServerNote;
+  const localNote = conflict.localVersion;
+  const serverNote: NoteConflictServerVersion = conflict.serverVersion;
+  const isHardDeletedConflict = serverNote.hard_deleted === true;
+  const headerText = isHardDeletedConflict
+    ? 'This note was edited here, but deleted on another device. Which path should remain?'
+    : 'This note was changed in two places. Which feels truer?';
+  const localActionLabel = isHardDeletedConflict ? 'Restore this note' : 'Keep this';
+  const localActionAriaLabel = isHardDeletedConflict ? 'Restore local note' : 'Keep local version';
+  const localResolvingLabel = isHardDeletedConflict ? 'Restoring...' : 'Keeping...';
+  const serverHeading = isHardDeletedConflict
+    ? 'Deleted on another device'
+    : escapeHtml(serverNote.title) || 'Untitled';
+  const serverPreview = isHardDeletedConflict
+    ? 'Choosing this accepts the deletion and removes the original note from this device.'
+    : getPlainTextPreview(serverNote.content);
+  const serverActionLabel = isHardDeletedConflict ? 'Accept deletion' : 'Keep this';
+  const serverActionAriaLabel = isHardDeletedConflict ? 'Accept note deletion' : 'Keep server version';
+  const serverResolvingLabel = isHardDeletedConflict ? 'Accepting...' : 'Keeping...';
+  const bothActionLabel = isHardDeletedConflict
+    ? 'Keep a copy instead'
+    : 'Keep both as separate notes';
+  const bothHelperText = isHardDeletedConflict
+    ? 'A copy will be kept here while the deleted original stays gone.'
+    : 'One will be saved as a copy';
 
   const handleResolve = async (choice: 'local' | 'server' | 'both') => {
     setIsResolving(true);
@@ -148,7 +159,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               color: 'var(--color-text-secondary)',
             }}
           >
-            This note was changed in two places. Which feels truer?
+            {headerText}
           </p>
         </div>
 
@@ -224,7 +235,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                   e.currentTarget.style.color = 'var(--color-accent)';
                 }
               }}
-              aria-label="Keep local version"
+              aria-label={localActionAriaLabel}
             >
               {isResolving && resolvedChoice === 'local' ? (
                 <span className="flex items-center justify-center gap-2">
@@ -232,10 +243,10 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                     className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
                     style={{ borderColor: 'var(--color-on-accent)', borderTopColor: 'transparent' }}
                   />
-                  Keeping...
+                  {localResolvingLabel}
                 </span>
               ) : (
-                'Keep this'
+                localActionLabel
               )}
             </button>
           </div>
@@ -256,7 +267,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                 className="text-xs font-medium uppercase tracking-wider"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
-                Another device
+                {isHardDeletedConflict ? 'Deleted elsewhere' : 'Another device'}
               </span>
               <span
                 className="text-xs"
@@ -272,7 +283,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                 color: 'var(--color-text-primary)',
               }}
             >
-              {escapeHtml(serverNote.title) || 'Untitled'}
+              {serverHeading}
             </h3>
             <p
               className="text-sm line-clamp-4"
@@ -281,7 +292,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                 color: 'var(--color-text-secondary)',
               }}
             >
-              {getPlainTextPreview(serverNote.content)}
+              {serverPreview}
             </p>
             <button
               onClick={() => handleResolve('server')}
@@ -310,7 +321,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                   e.currentTarget.style.color = 'var(--color-accent)';
                 }
               }}
-              aria-label="Keep server version"
+              aria-label={serverActionAriaLabel}
             >
               {isResolving && resolvedChoice === 'server' ? (
                 <span className="flex items-center justify-center gap-2">
@@ -318,10 +329,10 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                     className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
                     style={{ borderColor: 'var(--color-on-accent)', borderTopColor: 'transparent' }}
                   />
-                  Keeping...
+                  {serverResolvingLabel}
                 </span>
               ) : (
-                'Keep this'
+                serverActionLabel
               )}
             </button>
           </div>
@@ -354,7 +365,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                 e.currentTarget.style.borderColor = 'var(--glass-border)';
               }
             }}
-            aria-label="Keep both versions as separate notes"
+            aria-label={isHardDeletedConflict ? 'Keep a copy instead of the deleted original' : 'Keep both versions as separate notes'}
           >
             {isResolving && resolvedChoice === 'both' ? (
               <span className="flex items-center justify-center gap-2">
@@ -365,14 +376,14 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                 Creating copy...
               </span>
             ) : (
-              'Keep both as separate notes'
+              bothActionLabel
             )}
           </button>
           <p
             className="mt-2 text-xs"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            One will be saved as a copy
+            {bothHelperText}
           </p>
         </div>
       </div>

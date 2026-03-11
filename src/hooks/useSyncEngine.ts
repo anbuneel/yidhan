@@ -19,6 +19,7 @@ import {
   type ConflictInfo,
   type FullSyncResult,
   type PullError,
+  type NoteConflictServerVersion,
 } from '../services/syncEngine';
 import { getPendingSyncCount } from '../services/offlineNotes';
 
@@ -301,7 +302,9 @@ export function useSyncEngine(
  * plaintext title/content) and preserves encryption metadata through
  * all resolution paths. The optional `keys` parameter is required for
  * the "both" path on encrypted notes (re-encrypts the copy with a new
- * noteId so AAD is correct).
+ * noteId so AAD is correct). Hard-delete conflicts use a delete-aware
+ * path: "local" recreates the note, "server" accepts the deletion,
+ * and "both" keeps a copy while letting the original stay deleted.
  */
 export async function resolveConflict(
   userId: string,
@@ -317,25 +320,25 @@ export async function resolveConflict(
     throw new Error('Only note conflicts are supported');
   }
 
-  const localNote = conflict.localVersion as import('../lib/offlineDb').LocalNote;
-  const serverNote = conflict.serverVersion as {
-    id: string;
-    user_id?: string;
-    title: string;
-    content: string;
-    pinned: boolean;
-    deleted_at: string | null;
-    created_at: string;
-    updated_at: string;
-    encrypted_payload: string | null;
-    encryption_iv: string | null;
-    encryption_version: number | null;
-    content_hash: string | null;
-    hard_deleted?: boolean;
-  };
+  const localNote = conflict.localVersion;
+  const serverNote: NoteConflictServerVersion = conflict.serverVersion;
 
   const isEncrypted = Boolean(localNote.encryptedPayload);
   const isHardDeletedConflict = serverNote.hard_deleted === true;
+
+  const logHardDeleteRecreateFallback = (error: unknown): void => {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.warn('Failed to recreate hard-deleted note online; queueing local recovery:', error);
+    addReliabilityBreadcrumb({
+      category: 'sync',
+      message: 'Hard-delete recovery fell back to queued recreate',
+      level: 'warning',
+      data: {
+        noteId: localNote.id,
+        reason,
+      },
+    });
+  };
 
   const getOriginalNoteTagLinks = async () =>
     db.noteTags.where('noteId').equals(localNote.id).toArray();
@@ -412,37 +415,43 @@ export async function resolveConflict(
 
       if (isHardDeletedConflict) {
         if (navigator.onLine) {
-          const { data: recreated, error } = await supabase
-            .from('notes')
-            .upsert({
-              id: localNote.id,
-              user_id: userId,
-              ...notePayload,
-            })
-            .select('updated_at')
-            .single();
+          try {
+            const { data: recreated, error } = await supabase
+              .from('notes')
+              .upsert({
+                id: localNote.id,
+                user_id: userId,
+                ...notePayload,
+              })
+              .select('updated_at')
+              .single();
 
-          if (!error) {
-            await clearOriginalNoteQueueEntries();
-            await queueTagRestores();
+            if (!error && recreated) {
+              await clearOriginalNoteQueueEntries();
+              await queueTagRestores();
 
-            const serverTime = new Date(recreated.updated_at).getTime();
-            await db.notes.update(localNote.id, {
-              syncStatus: 'synced',
-              deletedAt: null,
-              lastSyncedAt: serverTime,
-              serverUpdatedAt: serverTime,
-              updatedAt: serverTime,
-              localUpdatedAt: serverTime,
-            });
-
-            if (localNoteTags.length > 0) {
-              await db.noteTags.where('noteId').equals(localNote.id).modify({
-                syncStatus: 'pending',
-                lastSyncedAt: null,
+              const serverTime = new Date(recreated.updated_at).getTime();
+              await db.notes.update(localNote.id, {
+                syncStatus: 'synced',
+                deletedAt: null,
+                lastSyncedAt: serverTime,
+                serverUpdatedAt: serverTime,
+                updatedAt: serverTime,
+                localUpdatedAt: serverTime,
               });
+
+              if (localNoteTags.length > 0) {
+                await db.noteTags.where('noteId').equals(localNote.id).modify({
+                  syncStatus: 'pending',
+                  lastSyncedAt: null,
+                });
+              }
+              break;
             }
-            break;
+
+            logHardDeleteRecreateFallback(error ?? new Error('Missing recreated note timestamp'));
+          } catch (error) {
+            logHardDeleteRecreateFallback(error);
           }
         }
 

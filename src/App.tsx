@@ -93,7 +93,7 @@ import { migrateDemoToAccount } from './services/demoMigration';
 import { sanitizeHtml } from './utils/sanitize';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useSyncEngine, resolveConflict } from './hooks/useSyncEngine';
-import { reportConflict } from './services/syncEngine';
+import { reportConflict, type HardDeletedServerNoteVersion } from './services/syncEngine';
 import { useViewTransition } from './hooks/useViewTransition';
 import { useInstallPrompt } from './hooks/useInstallPrompt';
 import { useShareTarget, formatSharedContent } from './hooks/useShareTarget';
@@ -147,15 +147,15 @@ function migrateLocalStorageKeys(): void {
 // Run migration on module load (before React renders)
 migrateLocalStorageKeys();
 
-/** An empty key signals SharedNoteView to show "incomplete link" state */
-function buildDeletedServerVersion(note: LocalNote) {
+/** Build a synthetic server version representing a note deleted on another device. */
+function buildDeletedServerVersion(note: LocalNote): HardDeletedServerNoteVersion {
   const serverTimestamp = new Date(note.serverUpdatedAt ?? Date.now()).toISOString();
 
   return {
     id: note.id,
     user_id: note.userId,
-    title: note.title,
-    content: note.content,
+    title: '',
+    content: '',
     pinned: note.pinned,
     deleted_at: new Date().toISOString(),
     created_at: new Date(note.createdAt).toISOString(),
@@ -433,11 +433,14 @@ function App() {
   );
 
   // Defense in depth: clear the URL fragment after reading the share key
-  // Prevents the key from lingering in the address bar or browser history
+  // Only strip it once the session copy succeeds so the URL remains the
+  // fallback if sessionStorage is unavailable.
   useEffect(() => {
     if (shareRoute && window.location.hash.startsWith('#k=')) {
-      preserveShareKeyFromLocation(window.location.pathname, window.location.hash);
-      window.history.replaceState({}, '', window.location.pathname);
+      const persisted = preserveShareKeyFromLocation(window.location.pathname, window.location.hash);
+      if (persisted) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

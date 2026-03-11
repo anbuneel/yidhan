@@ -25,12 +25,17 @@ describe('shareRoute', () => {
   });
 
   it('falls back to the persisted share key when the fragment is missing', () => {
-    preserveShareKeyFromLocation(TEST_PATH, `#k=${TEST_KEY}`);
+    expect(preserveShareKeyFromLocation(TEST_PATH, `#k=${TEST_KEY}`)).toBe(true);
 
     const route = parseShareRoute(TEST_PATH, '');
 
     expect(route).not.toBeNull();
     expect(route?.shareKey).toHaveLength(32);
+  });
+
+  it('returns null for non-share paths', () => {
+    expect(parseShareRoute('/', '')).toBeNull();
+    expect(parseShareRoute('/demo', '')).toBeNull();
   });
 
   it('persists the current share key before reloading', () => {
@@ -43,5 +48,16 @@ describe('shareRoute', () => {
 
     expect(sessionStorage.getItem(getShareKeyStorageKey(TEST_TOKEN))).toBe(TEST_KEY);
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the URL fragment as the fallback when session storage persistence fails', () => {
+    const setItemSpy = vi.spyOn(window.sessionStorage, 'setItem').mockImplementation(() => {
+      throw new Error('Quota exceeded');
+    });
+
+    expect(preserveShareKeyFromLocation(TEST_PATH, `#k=${TEST_KEY}`)).toBe(false);
+    expect(sessionStorage.getItem(getShareKeyStorageKey(TEST_TOKEN))).toBeNull();
+
+    setItemSpy.mockRestore();
   });
 });

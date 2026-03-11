@@ -108,7 +108,8 @@ src/
 │   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares, fetch_shared_note RPC)
 ├── hooks/
 │   ├── useNetworkStatus.ts # Network connectivity monitoring (singleton pattern)
-│   ├── useSyncEngine.ts    # Sync engine React integration, outcome mapping, conflict resolution
+│   ├── useSyncEngine.ts    # Sync engine React integration, outcome mapping, delete-aware conflict resolution
+│   ├── useSyncEngine.test.ts # 4 tests: hard-delete conflict recovery paths (local/server/both + online fallback)
 │   ├── useSyncStatus.ts    # Sync state for UI (pending + blocked counts, online status)
 │   ├── useViewTransition.ts # View Transitions API wrapper for smooth page transitions
 │   ├── useInstallPrompt.ts  # PWA install prompt with engagement tracking
@@ -132,6 +133,8 @@ src/
 │   ├── lazyWithRetry.ts   # Smart lazy loading with retry and auto-reload on version updates
 │   ├── reliabilityTelemetry.ts # Shared Sentry breadcrumb/error helpers for hydration, sync, vault, and sharing reliability events
 │   ├── sanitize.ts        # HTML/text sanitization (XSS prevention)
+│   ├── shareRoute.ts      # Shared-note route parsing + session-backed share-key preservation across reloads
+│   ├── shareRoute.test.ts # 5 tests: fragment parsing, session fallback, non-share routes, storage failure handling
 │   ├── temporalGrouping.ts # Group notes by time (Pinned, This Week, Last Week, etc.)
 │   ├── updateBanner.ts    # Persistent update banner for chunk errors / app version updates
 │   ├── validation.ts      # Note title/content validation and length limits

@@ -16,7 +16,9 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-function createMockConflict(overrides: Partial<ConflictInfo> = {}): ConflictInfo {
+type NoteConflict = Extract<ConflictInfo, { entityType: 'note' }>;
+
+function createMockConflict(overrides: Partial<NoteConflict> = {}): NoteConflict {
   return {
     entityType: 'note',
     entityId: 'note-conflict-1',
@@ -46,6 +48,10 @@ function createMockConflict(overrides: Partial<ConflictInfo> = {}): ConflictInfo
       deleted_at: null,
       created_at: new Date(Date.now() - 86400000).toISOString(),
       updated_at: new Date(Date.now() - 1800000).toISOString(),
+      encrypted_payload: null,
+      encryption_iv: null,
+      encryption_version: null,
+      content_hash: null,
     },
     ...overrides,
   };
@@ -74,7 +80,32 @@ describe('ConflictModal', () => {
   });
 
   it('should render null for non-note conflicts', () => {
-    const tagConflict = createMockConflict({ entityType: 'tag' });
+    const tagConflict: ConflictInfo = {
+      entityType: 'tag',
+      entityId: 'tag-conflict-1',
+      localVersion: {
+        id: 'tag-conflict-1',
+        userId: 'user-1',
+        name: 'Local Tag',
+        color: 'gold',
+        createdAt: Date.now() - 1000,
+        syncStatus: 'pending',
+        lastSyncedAt: null,
+        serverUpdatedAt: null,
+        localUpdatedAt: Date.now(),
+      },
+      serverVersion: {
+        id: 'tag-conflict-1',
+        userId: 'user-1',
+        name: 'Server Tag',
+        color: 'stone',
+        createdAt: Date.now() - 1000,
+        syncStatus: 'synced',
+        lastSyncedAt: Date.now(),
+        serverUpdatedAt: Date.now(),
+        localUpdatedAt: Date.now(),
+      },
+    };
     const { container } = render(
       <ConflictModal conflict={tagConflict} onResolve={defaultProps.onResolve} onDismiss={defaultProps.onDismiss} />
     );
@@ -219,7 +250,7 @@ describe('ConflictModal', () => {
     const base = createMockConflict();
     const conflict = createMockConflict({
       localVersion: { ...base.localVersion, title: '' },
-      serverVersion: { ...(base.serverVersion as Record<string, unknown>), title: '' },
+      serverVersion: { ...base.serverVersion, title: '' },
     });
 
     render(
@@ -245,5 +276,29 @@ describe('ConflictModal', () => {
     });
 
     consoleSpy.mockRestore();
+  });
+
+  it('renders delete-aware copy for hard-delete conflicts', () => {
+    const base = createMockConflict();
+    const hardDeleteConflict = createMockConflict({
+      serverVersion: {
+        ...base.serverVersion,
+        title: '',
+        content: '',
+        deleted_at: new Date().toISOString(),
+        hard_deleted: true,
+        user_id: 'user-1',
+      },
+    });
+
+    render(
+      <ConflictModal conflict={hardDeleteConflict} onResolve={defaultProps.onResolve} onDismiss={defaultProps.onDismiss} />
+    );
+
+    expect(screen.getByText('Deleted on another device')).toBeInTheDocument();
+    expect(screen.getByText('Restore this note')).toBeInTheDocument();
+    expect(screen.getByText('Accept deletion')).toBeInTheDocument();
+    expect(screen.getByText('Keep a copy instead')).toBeInTheDocument();
+    expect(screen.getByText(/accepts the deletion/i)).toBeInTheDocument();
   });
 });
