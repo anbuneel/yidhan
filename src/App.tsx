@@ -6,8 +6,12 @@ import { ChapteredLibrary } from './components/ChapteredLibrary';
 import { Auth } from './components/Auth';
 import { LandingPage } from './components/LandingPage';
 import { sanitizeText } from './utils/sanitize';
-import { fromBase64Url } from './lib/encryption';
 import { lazyWithRetry } from './utils/lazyWithRetry';
+import {
+  clearPersistedShareKey,
+  parseShareRoute,
+  preserveShareKeyFromLocation,
+} from './utils/shareRoute';
 
 // Lazy load heavy components with smart retry (auto-reloads on chunk errors when safe)
 const Editor = lazyWithRetry(() => import('./components/Editor').then(module => ({ default: module.Editor })));
@@ -57,6 +61,7 @@ import {
   deleteTagFromServer,
   retryBlockedSyncEntries,
 } from './services/offlineNotes';
+import type { LocalNote } from './lib/offlineDb';
 import {
   createEncryptedNote,
   updateEncryptedNote,
@@ -88,6 +93,7 @@ import { migrateDemoToAccount } from './services/demoMigration';
 import { sanitizeHtml } from './utils/sanitize';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useSyncEngine, resolveConflict } from './hooks/useSyncEngine';
+import { reportConflict, type HardDeletedServerNoteVersion } from './services/syncEngine';
 import { useViewTransition } from './hooks/useViewTransition';
 import { useInstallPrompt } from './hooks/useInstallPrompt';
 import { useShareTarget, formatSharedContent } from './hooks/useShareTarget';
@@ -141,33 +147,25 @@ function migrateLocalStorageKeys(): void {
 // Run migration on module load (before React renders)
 migrateLocalStorageKeys();
 
-/** An empty key signals SharedNoteView to show "incomplete link" state */
-const EMPTY_SHARE_KEY = new Uint8Array(0);
+/** Build a synthetic server version representing a note deleted on another device. */
+function buildDeletedServerVersion(note: LocalNote): HardDeletedServerNoteVersion {
+  const serverTimestamp = new Date(note.serverUpdatedAt ?? Date.now()).toISOString();
 
-/**
- * Parse a share route from the current URL.
- * URL format: /s/<22-char-token>/<optional-slug>#k=<43-char-base64url-key>
- * Returns null if the URL is not a share route.
- */
-function parseShareRoute(
-  pathname: string,
-  hash: string
-): { token: string; shareKey: Uint8Array } | null {
-  const tokenMatch = pathname.match(/^\/s\/([A-Za-z0-9_-]{22})(?:\/|$)/);
-  if (!tokenMatch) return null;
-
-  const token = tokenMatch[1];
-  const keyMatch = hash.match(/^#k=([A-Za-z0-9_-]{43})$/);
-  if (!keyMatch) return { token, shareKey: EMPTY_SHARE_KEY };
-
-  try {
-    const shareKey = fromBase64Url(keyMatch[1]);
-    if (shareKey.length !== 32) return { token, shareKey: EMPTY_SHARE_KEY };
-    return { token, shareKey };
-  } catch (error) {
-    console.warn('Failed to decode share key from URL fragment:', error);
-    return { token, shareKey: EMPTY_SHARE_KEY };
-  }
+  return {
+    id: note.id,
+    user_id: note.userId,
+    title: '',
+    content: '',
+    pinned: note.pinned,
+    deleted_at: new Date().toISOString(),
+    created_at: new Date(note.createdAt).toISOString(),
+    updated_at: serverTimestamp,
+    encrypted_payload: note.encryptedPayload ?? null,
+    encryption_iv: note.encryptionIv ?? null,
+    encryption_version: note.encryptionVersion ?? null,
+    content_hash: note.contentHash ?? null,
+    hard_deleted: true as const,
+  };
 }
 
 function App() {
@@ -435,10 +433,14 @@ function App() {
   );
 
   // Defense in depth: clear the URL fragment after reading the share key
-  // Prevents the key from lingering in the address bar or browser history
+  // Only strip it once the session copy succeeds so the URL remains the
+  // fallback if sessionStorage is unavailable.
   useEffect(() => {
     if (shareRoute && window.location.hash.startsWith('#k=')) {
-      window.history.replaceState({}, '', window.location.pathname);
+      const persisted = preserveShareKeyFromLocation(window.location.pathname, window.location.hash);
+      if (persisted) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -680,14 +682,31 @@ function App() {
         }).catch(console.error);
       },
       (deletedId) => {
-        // Remove from IndexedDB
-        deleteNoteFromServer(userId, deletedId).catch(console.error);
+        deleteNoteFromServer(userId, deletedId)
+          .then((result) => {
+            if (!result.deleted) {
+              setNotes((prev) =>
+                prev.map((note) =>
+                  note.id === deletedId ? { ...note, syncStatus: 'conflict' as const } : note
+                )
+              );
 
-        setNotes((prev) => prev.filter((n) => n.id !== deletedId));
-        if (selectedNoteIdRef.current === deletedId) {
-          setView('library');
-          setSelectedNoteId(null);
-        }
+              reportConflict({
+                entityType: 'note',
+                entityId: deletedId,
+                localVersion: result.localNote,
+                serverVersion: buildDeletedServerVersion(result.localNote),
+              });
+              return;
+            }
+
+            setNotes((prev) => prev.filter((n) => n.id !== deletedId));
+            if (selectedNoteIdRef.current === deletedId) {
+              setView('library');
+              setSelectedNoteId(null);
+            }
+          })
+          .catch(console.error);
       }
     );
 
@@ -1245,21 +1264,36 @@ function App() {
   const handleConflictResolve = async (choice: 'local' | 'server' | 'both') => {
     if (!activeConflict || !user) return;
 
+    const conflictToResolve = activeConflict;
+
     try {
-      await resolveConflict(user.id, activeConflict, choice, keys ?? undefined);
-      removeConflict(activeConflict.entityId);
+      await resolveConflict(user.id, conflictToResolve, choice, keys ?? undefined);
+      removeConflict(conflictToResolve.entityId);
+      setActiveConflict(null);
 
       // Refresh notes from IndexedDB after conflict resolution
       const refreshedNotes = keys
         ? await fetchDecryptedNotes(user.id, keys)
         : await fetchNotesOffline(user.id);
       setNotes(refreshedNotes);
+
+      const resolvedOriginalMissing = !refreshedNotes.some(
+        (note) => note.id === conflictToResolve.entityId
+      );
+      if (
+        selectedNoteIdRef.current === conflictToResolve.entityId &&
+        resolvedOriginalMissing
+      ) {
+        setView('library');
+        setSelectedNoteId(null);
+      }
     } catch (error) {
       console.error('Failed to resolve conflict:', error);
       toast.error('Failed to resolve conflict. Please try again.');
       // Still remove the conflict to prevent infinite retry loops
       // User can trigger a sync to re-detect conflicts if needed
-      removeConflict(activeConflict.entityId);
+      removeConflict(conflictToResolve.entityId);
+      setActiveConflict(null);
     }
   };
 
@@ -1775,6 +1809,7 @@ function App() {
             onThemeToggle={handleThemeToggle}
             onInvalidToken={() => {
               // Clear URL and show landing/library
+              clearPersistedShareKey(shareRoute.token);
               window.history.replaceState({}, '', '/');
               setShareRoute(null);
             }}

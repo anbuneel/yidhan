@@ -349,8 +349,18 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 e.currentTarget.style.background = 'var(--color-cta-bg)';
               }}
             >
-              {isExportingFull ? 'Preparing...' : 'Full Backup (includes share links)'}
+              {isExportingFull ? 'Preparing...' : 'Full Backup'}
             </button>
+            <p
+              className="mt-2 text-xs"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-tertiary)',
+                lineHeight: 1.5,
+              }}
+            >
+              Includes notes, tags, and share metadata. Existing share decryption keys are not included.
+            </p>
           </div>
 
           {/* Action buttons */}

@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.13.1',
+    date: '2026-03-11',
+    changes: [
+      { type: 'fix', text: 'Shared-note links now survive refresh, update prompts, and chunk-error recovery within the same browser session' },
+      { type: 'fix', text: 'Hard-delete conflicts now preserve unsynced local work safely and present delete-aware recovery choices instead of misleading note-versus-note copy' },
+      { type: 'fix', text: 'Direct visits and refreshes on /demo now fall back to the app shell on Vercel instead of returning 404' },
+      { type: 'fix', text: 'Full backup wording now makes it explicit that share decryption keys are not included, only share metadata' },
+    ],
+  },
+  {
     version: '3.13.0',
     date: '2026-03-10',
     changes: [

@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
 import * as Sentry from '@sentry/react';
+import { reloadWithPreservedShareContext } from '../utils/shareRoute';
 
 interface Props {
   children: ReactNode;
@@ -60,7 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return;
     }
 
-    window.location.reload();
+    reloadWithPreservedShareContext();
   };
 
   render(): ReactNode {

@@ -1,9 +1,9 @@
 # Launch Readiness Assessment
 
-**Author:** Claude (Opus 4.5)
+**Author:** Claude (Opus 4.5 → Opus 4.6)
 **Created:** 2025-12-26
-**Last Updated:** 2026-01-11
-**Status:** ✅ Complete
+**Last Updated:** 2026-03-10
+**Status:** Active — Not Yet Launch-Ready
 
 ---
 
@@ -17,6 +17,204 @@
 | Assessment 4 | 2025-12-28 | ~93% | Codex review fixes complete |
 | Assessment 5 | 2026-01-07 | ~95% | Full offline editing complete (PR #48) |
 | Assessment 6 | 2026-01-11 | ~100% | Phase 0 launch polish complete |
+| **Assessment 7** | **2026-03-10** | **Not ready** | **Codex deep-dive: trust/recovery gaps in offboarding, sharing, sync** |
+
+---
+
+# Assessment 7 (2026-03-10)
+
+**Reviewer:** Codex (GPT-5) — deep readiness review
+**Counter-reviewer:** Claude (Opus 4.6) — verification and triage
+**Verdict:** Not ready for broad public launch. Biggest gaps are trust/recovery issues in offboarding, sharing, and cross-device sync — not visual polish.
+
+## Executive Summary
+
+Codex performed a deep readiness review focusing on backend trust, data integrity, and deployment hygiene. Claude verified every finding against the source code. The issues fall into three categories:
+
+1. **Features that promise more than they deliver** — offboarding, backup labels, OAuth re-auth
+2. **Data integrity edges** — sync conflicts, non-atomic writes, silent overwrites
+3. **Deployment hygiene** — routes, env vars, social metadata
+
+Category 1 is the most dangerous for launch: users forgive missing features but not features that lie.
+
+---
+
+## Must Fix Before Launch (6 items)
+
+### 1. Disable "Letting Go" (offboarding)
+
+**Problem:** The UI promises "Your account will fade for 14 days, then release" but there is no server-side job that actually deletes anything. `initiateOffboarding()` only writes `departing_at` into `user_metadata`. The 14-day countdown is pure client-side math with no backend enforcement.
+
+**Evidence:**
+- [`AuthContext.tsx:283`](../../src/contexts/AuthContext.tsx#L283) — `initiateOffboarding` sets metadata only
+- [`AuthContext.tsx:305`](../../src/contexts/AuthContext.tsx#L305) — `daysUntilRelease` is client-side computation
+- [`LettingGoModal.tsx:248`](../../src/components/LettingGoModal.tsx#L248) — UI promises "then release"
+
+**Fix:** Hide the offboarding link from SettingsModal for launch. Ship proper server-side deletion (edge function + cron) as a dedicated trust workstream later.
+
+**Effort:** Small (hide feature) / Large (build real backend)
+
+### 2. Persist share key in sessionStorage
+
+**Problem:** The app strips `#k=` from the URL immediately after parsing, then stores the share key only in React state. Any page reload after mount (SW update, error recovery, manual refresh) loses the decryption key permanently, turning a valid shared note into "incomplete link."
+
+**Evidence:**
+- [`App.tsx:433`](../../src/App.tsx#L433) — share key parsed into `useState` on mount
+- [`App.tsx:439`](../../src/App.tsx#L439) — `replaceState` strips `#k=` from URL
+- [`ReloadPrompt.tsx:40`](../../src/components/ReloadPrompt.tsx#L40) — SW update triggers `location.reload()`
+- [`ErrorBoundary.tsx:57`](../../src/components/ErrorBoundary.tsx#L57) — error recovery triggers `location.reload()`
+
+**Fix:** Before stripping `#k=`, persist the share key in `sessionStorage` keyed by token. `SharedNoteView` reads from sessionStorage as fallback. One `sessionStorage.setItem` + one `getItem` — quick, high-value fix.
+
+**Effort:** Small (~1 hour)
+
+### 3. Fix "Full Backup" misleading copy
+
+**Problem:** The export button says "Full Backup (includes share links)" but it only exports share tokens, not the `#k=` decryption keys. The share UI itself warns that losing `#k=` makes links unusable — contradicting the backup promise.
+
+**Evidence:**
+- [`LettingGoModal.tsx:352`](../../src/components/LettingGoModal.tsx#L352) — "includes share links" label
+- [`exportImport.ts:169`](../../src/utils/exportImport.ts#L169) — `FullAccountExport` type: token only, no key
+- [`notes.ts:695`](../../src/services/notes.ts#L695) — `fetchAllNoteShares` returns token, not key
+- [`ShareModal.tsx:362`](../../src/components/ShareModal.tsx#L362) — warns about losing `#k=`
+
+**Fix:** Change label to "Full Backup (includes share metadata)" or remove the claim. Share keys are ephemeral by design — the export can't include them without an architectural change.
+
+**Effort:** Trivial (copy change)
+
+### 4. Update social metadata
+
+**Problem:** `index.html` still references the old Zenote URL/branding, so link previews show stale information.
+
+**Evidence:**
+- [`index.html:40`](../../index.html#L40) — old Zenote metadata
+
+**Fix:** Update OG tags to Yidhan branding and live URL.
+
+**Effort:** Trivial
+
+### 5. Verify `/demo` route on Vercel
+
+**Problem:** `vercel.json` only has a rewrite for `/s/*`. The landing page links to `/demo`, which is a client-side route. Direct navigation or refresh could 404.
+
+**Evidence:**
+- [`vercel.json:2`](../../vercel.json#L2) — only `/s/:path*` rewrite exists
+- [`LandingPage.tsx:201`](../../src/components/LandingPage.tsx#L201) — links to `/demo`
+- [`App.tsx:445`](../../src/App.tsx#L445) — branches on `/demo` pathname
+
+**Mitigating factor:** Vercel's default SPA behavior for Vite projects serves `index.html` as fallback for unmatched routes. This likely works already, but needs explicit verification.
+
+**Fix:** Test direct navigation to `https://yidhan.vercel.app/demo`. If it 404s, add a catch-all rewrite: `{ "source": "/(.*)", "destination": "/index.html" }`.
+
+**Effort:** Trivial (verify + one-line fix if needed)
+
+### 6. Guard `deleteNoteFromServer` against unsynced work
+
+**Problem:** When a server-originated delete arrives via realtime, `deleteNoteFromServer()` unconditionally removes the note from IndexedDB — even if it has pending unsynced local edits. This is genuine silent data loss.
+
+**Evidence:**
+- [`offlineNotes.ts:1156`](../../src/services/offlineNotes.ts#L1156) — no `syncStatus` check before delete
+- [`App.tsx:682`](../../src/App.tsx#L682) — realtime DELETE handler calls this function
+
+**Fix:** Check `syncStatus` before deleting. If `pending` or `blocked`, convert to a conflict (surface via `ConflictModal`) instead of hard-deleting. The conflict resolution infrastructure already exists.
+
+**Effort:** Small (~2-3 hours including tests)
+
+---
+
+## Deferred to Post-Launch (5 items)
+
+### 7. OAuth re-authentication (DEFERRED)
+
+**Problem:** For Google/GitHub users, the ReAuthModal just checks whether typed email matches — no actual OAuth challenge.
+
+**Evidence:** [`ReAuthModal.tsx:78`](../../src/components/ReAuthModal.tsx#L78)
+
+**Why defer:** With offboarding disabled (item 1), the main action gated by re-auth is full backup export. Low user count at launch = low risk. Build proper `signInWithOAuth({ prompt: 'consent' })` step-up auth as part of the offboarding trust workstream.
+
+### 8. Cross-device tag sync (DEFERRED)
+
+**Problem:** `pullRemoteChanges()` only reconciles `notes` and `tags`, not `note_tags`. Multi-device tag assignments drift until full hydration.
+
+**Evidence:** [`syncEngine.ts:816`](../../src/services/syncEngine.ts#L816)
+
+**Why defer:** Already flagged as deferred post-launch in CLAUDE.md (item 4 of reliability plan). Tags sync on full hydration (login/refresh), just not incrementally. Annoying for multi-device but not data-losing.
+
+### 9. Non-atomic offline mutations (DEFERRED)
+
+**Problem:** Tag creation, tag assignment, note update/pin/delete paths write IndexedDB and queue sync as separate operations. A crash in the sub-millisecond window between them leaves unsynced local state.
+
+**Evidence:**
+- [`offlineTags.ts:61`](../../src/services/offlineTags.ts#L61)
+- [`offlineNotes.ts:737`](../../src/services/offlineNotes.ts#L737)
+- [`offlineNotes.ts:861`](../../src/services/offlineNotes.ts#L861)
+- [`encryptedNotes.ts:207`](../../src/services/encryptedNotes.ts#L207) — shows the correct transaction pattern
+
+**Why defer:** The crash window is sub-millisecond. `encryptedNotes.ts` already has the correct pattern — standardize all paths onto it post-launch.
+
+### 10. `upsertNoteFromServer` conflict edge (DEFERRED)
+
+**Problem:** Server upsert can overwrite a pending local note's content in IndexedDB while preserving `syncStatus: 'pending'`. The sync queue still holds the local version and will push it.
+
+**Evidence:** [`offlineNotes.ts:1096`](../../src/services/offlineNotes.ts#L1096)
+
+**Why defer:** The queue preserves the local version — it's confusing UX (UI briefly shows server version) but not data loss. Fix alongside broader conflict resolution improvements.
+
+### 11. Supabase env var graceful failure (DEFERRED)
+
+**Problem:** Missing env vars cause a hard `throw` at module import, producing a blank screen.
+
+**Evidence:** [`supabase.ts:7`](../../src/lib/supabase.ts#L7)
+
+**Why defer:** Only triggers during a bad deploy. In production on Vercel with configured env vars, this never fires. Landing page and demo both need Supabase — no useful degraded state exists.
+
+---
+
+## Manual Verification Before Launch (not code)
+
+### 12. Audit live Supabase sharing policies
+
+**Problem:** Migration history contains old public-read policies, later revocations, then E2EE RPC reintroduction. The desired policy set should be verified against the live Supabase project.
+
+**Evidence:**
+- [`add_shared_note_public_access.sql:6`](../../supabase/migrations/add_shared_note_public_access.sql#L6)
+- [`expire_shares_for_e2ee.sql:8`](../../supabase/migrations/expire_shares_for_e2ee.sql#L8)
+- [`enable_e2ee_sharing.sql:19`](../../supabase/migrations/enable_e2ee_sharing.sql#L19)
+- [`fix_note_shares_rls_ownership.sql:12`](../../supabase/migrations/fix_note_shares_rls_ownership.sql#L12)
+
+**Action:** Query `pg_policies`, `pg_proc`, and `information_schema.role_table_grants` in the live Supabase project. Verify RLS policies and `fetch_shared_note` RPC match expected state.
+
+---
+
+## Launch Effort Estimate
+
+| Item | Effort | Priority |
+|------|--------|----------|
+| 1. Disable "Letting Go" | 30 min | Must fix |
+| 2. Share key sessionStorage | 1 hour | Must fix |
+| 3. Fix backup copy | 15 min | Must fix |
+| 4. Social metadata | 15 min | Must fix |
+| 5. Verify `/demo` route | 15 min | Must fix |
+| 6. Guard `deleteNoteFromServer` | 2-3 hours | Must fix |
+| 12. Audit Supabase policies | 1 hour (manual) | Must verify |
+| **Total** | **~1-2 days** | |
+
+---
+
+## Codex's Original Recommended Sequence
+
+For reference, Codex recommended the following 8-step sequence:
+
+1. Put immediate guardrails in place (disable/flag "Letting Go", fix backup copy, `/demo` rewrite, social metadata, supabase.ts throw)
+2. Fix offboarding and re-auth as one trust workstream (server-owned workflow, real OAuth step-up)
+3. Make shared links reload-safe (sessionStorage persistence before stripping `#k=`)
+4. Fix cross-device tag sync (extend pull to reconcile `note_tags`, add realtime handling)
+5. Remove silent data-loss behavior (unify pull/realtime conflict rules, guard `deleteNoteFromServer`)
+6. Make offline mutations atomic (bring all write paths onto `encryptedNotes.ts` transaction pattern)
+7. Fix share-backup trust gap (store owner-only encrypted recovery copy of share keys)
+8. Audit live sharing policy state (verify DB against expected policy/function/grant set)
+
+Our triage adopts items 1, 3, 5 (partially) as must-fix and defers items 2, 4, 6, 7 to post-launch. Item 8 is a manual verification task.
 
 ---
 

@@ -114,12 +114,46 @@ export interface SyncResult {
   errors: Error[];
 }
 
-export interface ConflictInfo {
-  entityType: 'note' | 'tag';
-  entityId: string;
-  localVersion: LocalNote | LocalTag;
-  serverVersion: unknown;
+export interface ServerNoteVersion {
+  id: string;
+  user_id?: string;
+  title: string;
+  content: string;
+  pinned: boolean;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  encrypted_payload: string | null;
+  encryption_iv: string | null;
+  encryption_version: number | null;
+  content_hash: string | null;
 }
+
+export interface HardDeletedServerNoteVersion extends ServerNoteVersion {
+  user_id: string;
+  deleted_at: string;
+  hard_deleted: true;
+}
+
+export type NoteConflictServerVersion =
+  | (ServerNoteVersion & { hard_deleted?: false })
+  | HardDeletedServerNoteVersion;
+
+export interface NoteConflictInfo {
+  entityType: 'note';
+  entityId: string;
+  localVersion: LocalNote;
+  serverVersion: NoteConflictServerVersion;
+}
+
+export interface TagConflictInfo {
+  entityType: 'tag';
+  entityId: string;
+  localVersion: LocalTag;
+  serverVersion: LocalTag;
+}
+
+export type ConflictInfo = NoteConflictInfo | TagConflictInfo;
 
 export interface PullError {
   entity: 'notes' | 'tags';
@@ -158,6 +192,10 @@ export function setConflictHandler(
   handler: (conflict: ConflictInfo) => void
 ): void {
   onConflictDetected = handler;
+}
+
+export function reportConflict(conflict: ConflictInfo): void {
+  onConflictDetected?.(conflict);
 }
 
 /**
@@ -326,7 +364,7 @@ async function processNoteOperation(
             // Continue with the update (will just bump server timestamp)
           } else if (onConflictDetected) {
             // Real conflict: content differs
-            onConflictDetected({
+            reportConflict({
               entityType: 'note',
               entityId: noteId,
               localVersion: localNote,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { preserveShareKeyFromLocation } from '../utils/shareRoute';
 
 /**
  * ReloadPrompt - Shows a subtle prompt when a new app version is available
@@ -38,6 +39,7 @@ export function ReloadPrompt() {
   }, [registration]);
 
   const handleUpdate = () => {
+    preserveShareKeyFromLocation(window.location.pathname, window.location.hash);
     updateServiceWorker(true);
   };
 

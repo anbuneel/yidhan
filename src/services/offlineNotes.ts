@@ -23,7 +23,10 @@ import {
 } from '../lib/offlineDb';
 import type { Note, Tag, TagColor } from '../types';
 import type { DbNote, DbTag } from '../types/database';
-import { addReliabilityBreadcrumb as addHydrationBreadcrumb } from '../utils/reliabilityTelemetry';
+import {
+  addReliabilityBreadcrumb as addHydrationBreadcrumb,
+  reportReliabilityIssue,
+} from '../utils/reliabilityTelemetry';
 import { sanitizeHtml } from '../utils/sanitize';
 import { validateNoteTitle, validateNoteContentLength } from '../utils/validation';
 
@@ -1149,21 +1152,72 @@ export async function upsertNoteFromServer(
   }
 }
 
+export type DeleteNoteFromServerResult =
+  | { deleted: true }
+  | {
+      deleted: false;
+      localNote: LocalNote;
+    };
+
 /**
- * Delete a note from IndexedDB (realtime subscription - server delete)
- * Does NOT queue sync operation since this is server->local
+ * Apply a realtime server delete to IndexedDB.
+ *
+ * Clean notes are removed immediately. Notes with unsynced local work are
+ * converted into conflicts so the app can offer recovery instead of silently
+ * deleting the local draft.
  */
 export async function deleteNoteFromServer(
   userId: string,
   noteId: string
-): Promise<void> {
+): Promise<DeleteNoteFromServerResult> {
   const db = getOfflineDb(userId);
+  const existing = await db.notes.get(noteId);
+
+  if (!existing) {
+    return { deleted: true };
+  }
+
+  const hasPendingNoteSync = await db.syncQueue
+    .where('entityId')
+    .equals(noteId)
+    .and((entry) => entry.entityType === 'note')
+    .count();
+
+  if (existing.syncStatus !== 'synced' || hasPendingNoteSync > 0) {
+    const conflictedNote: LocalNote = {
+      ...existing,
+      syncStatus: 'conflict',
+    };
+
+    try {
+      const updated = await db.notes.update(noteId, { syncStatus: 'conflict' });
+      if (updated === 0) {
+        reportReliabilityIssue({
+          category: 'sync',
+          message: 'Failed to mark hard-delete conflict in IndexedDB',
+          level: 'warning',
+          data: { noteId, userId, reason: 'missing_local_note' },
+        });
+      }
+    } catch (error) {
+      reportReliabilityIssue({
+        category: 'sync',
+        message: 'Failed to persist hard-delete conflict state',
+        level: 'warning',
+        data: { noteId, userId },
+      }, error);
+    }
+
+    return { deleted: false, localNote: conflictedNote };
+  }
 
   // Remove note and its tag associations
   await db.transaction('rw', [db.notes, db.noteTags], async () => {
     await db.notes.delete(noteId);
     await db.noteTags.where('noteId').equals(noteId).delete();
   });
+
+  return { deleted: true };
 }
 
 /**

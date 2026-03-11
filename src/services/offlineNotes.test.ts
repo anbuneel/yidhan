@@ -908,7 +908,7 @@ describe('offlineNotes', () => {
   });
 
   describe('deleteNoteFromServer', () => {
-    it('should remove note and tag associations from IndexedDB', async () => {
+    it('should remove note and tag associations from IndexedDB when local state is clean', async () => {
       const { createNoteOffline, deleteNoteFromServer } = await import('./offlineNotes');
 
       const note = await createNoteOffline(TEST_USER_ID, 'To Remove', '<p>R</p>');
@@ -918,9 +918,11 @@ describe('offlineNotes', () => {
 
       // Clear the sync queue from the create operation
       await db.syncQueue.clear();
+      await db.notes.update(note.id, { syncStatus: 'synced' });
 
-      await deleteNoteFromServer(TEST_USER_ID, note.id);
+      const result = await deleteNoteFromServer(TEST_USER_ID, note.id);
 
+      expect(result).toEqual({ deleted: true });
       const stored = await db.notes.get(note.id);
       expect(stored).toBeUndefined();
 
@@ -930,6 +932,34 @@ describe('offlineNotes', () => {
       // Should NOT have created any sync queue entries
       const queue = await db.syncQueue.toArray();
       expect(queue).toHaveLength(0);
+    });
+
+    it('should preserve notes with unsynced work and mark them as conflicts', async () => {
+      const { createNoteOffline, deleteNoteFromServer } = await import('./offlineNotes');
+
+      const note = await createNoteOffline(TEST_USER_ID, 'Pending Note', '<p>Keep me</p>');
+
+      const db = getOfflineDb(TEST_USER_ID);
+      await db.noteTags.add({
+        noteId: note.id,
+        tagId: 'some-tag',
+        syncStatus: 'synced',
+        lastSyncedAt: Date.now(),
+      });
+
+      const result = await deleteNoteFromServer(TEST_USER_ID, note.id);
+
+      expect(result.deleted).toBe(false);
+      if (result.deleted) {
+        return;
+      }
+
+      const stored = await db.notes.get(note.id);
+      expect(stored?.syncStatus).toBe('conflict');
+
+      const associations = await db.noteTags.where('noteId').equals(note.id).toArray();
+      expect(associations).toHaveLength(1);
+      expect(result.localNote.id).toBe(note.id);
     });
   });
 

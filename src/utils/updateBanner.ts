@@ -1,3 +1,5 @@
+import { reloadWithPreservedShareContext } from './shareRoute';
+
 /**
  * Shows a persistent banner prompting user to refresh when the app has been updated.
  * Used by both main.tsx (for global chunk errors) and lazyWithRetry.ts (for lazy load failures).
@@ -44,7 +46,7 @@ export function showUpdateBanner(): void {
     font-weight: 500;
     cursor: pointer;
   `;
-  button.onclick = () => window.location.reload();
+  button.onclick = () => reloadWithPreservedShareContext();
 
   banner.appendChild(message);
   banner.appendChild(button);
