@@ -153,6 +153,7 @@ function buildDeletedServerVersion(note: LocalNote) {
 
   return {
     id: note.id,
+    user_id: note.userId,
     title: note.title,
     content: note.content,
     pinned: note.pinned,
@@ -163,6 +164,7 @@ function buildDeletedServerVersion(note: LocalNote) {
     encryption_iv: note.encryptionIv ?? null,
     encryption_version: note.encryptionVersion ?? null,
     content_hash: note.contentHash ?? null,
+    hard_deleted: true as const,
   };
 }
 
@@ -1259,21 +1261,36 @@ function App() {
   const handleConflictResolve = async (choice: 'local' | 'server' | 'both') => {
     if (!activeConflict || !user) return;
 
+    const conflictToResolve = activeConflict;
+
     try {
-      await resolveConflict(user.id, activeConflict, choice, keys ?? undefined);
-      removeConflict(activeConflict.entityId);
+      await resolveConflict(user.id, conflictToResolve, choice, keys ?? undefined);
+      removeConflict(conflictToResolve.entityId);
+      setActiveConflict(null);
 
       // Refresh notes from IndexedDB after conflict resolution
       const refreshedNotes = keys
         ? await fetchDecryptedNotes(user.id, keys)
         : await fetchNotesOffline(user.id);
       setNotes(refreshedNotes);
+
+      const resolvedOriginalMissing = !refreshedNotes.some(
+        (note) => note.id === conflictToResolve.entityId
+      );
+      if (
+        selectedNoteIdRef.current === conflictToResolve.entityId &&
+        resolvedOriginalMissing
+      ) {
+        setView('library');
+        setSelectedNoteId(null);
+      }
     } catch (error) {
       console.error('Failed to resolve conflict:', error);
       toast.error('Failed to resolve conflict. Please try again.');
       // Still remove the conflict to prevent infinite retry loops
       // User can trigger a sync to re-detect conflicts if needed
-      removeConflict(activeConflict.entityId);
+      removeConflict(conflictToResolve.entityId);
+      setActiveConflict(null);
     }
   };
 

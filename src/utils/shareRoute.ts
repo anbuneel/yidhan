@@ -1,6 +1,6 @@
 import { fromBase64Url } from '../lib/encryption';
 
-export const EMPTY_SHARE_KEY = new Uint8Array(0);
+const EMPTY_SHARE_KEY = new Uint8Array(0);
 
 const SHARE_ROUTE_PATTERN = /^\/s\/([A-Za-z0-9_-]{22})(?:\/|$)/;
 const SHARE_KEY_FRAGMENT_PATTERN = /^#k=([A-Za-z0-9_-]{43})$/;
@@ -26,7 +26,7 @@ function decodeShareKey(shareKeyBase64Url: string): Uint8Array {
     const shareKey = fromBase64Url(shareKeyBase64Url);
     return shareKey.length === 32 ? shareKey : EMPTY_SHARE_KEY;
   } catch (error) {
-    console.warn('Failed to decode share key from session storage:', error);
+    console.warn('Failed to decode share key:', error);
     return EMPTY_SHARE_KEY;
   }
 }

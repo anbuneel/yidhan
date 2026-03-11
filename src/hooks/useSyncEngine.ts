@@ -320,6 +320,7 @@ export async function resolveConflict(
   const localNote = conflict.localVersion as import('../lib/offlineDb').LocalNote;
   const serverNote = conflict.serverVersion as {
     id: string;
+    user_id?: string;
     title: string;
     content: string;
     pinned: boolean;
@@ -330,20 +331,47 @@ export async function resolveConflict(
     encryption_iv: string | null;
     encryption_version: number | null;
     content_hash: string | null;
+    hard_deleted?: boolean;
   };
 
   const isEncrypted = Boolean(localNote.encryptedPayload);
+  const isHardDeletedConflict = serverNote.hard_deleted === true;
+
+  const getOriginalNoteTagLinks = async () =>
+    db.noteTags.where('noteId').equals(localNote.id).toArray();
+
+  const clearOriginalNoteQueueEntries = async (): Promise<void> => {
+    const entryIds = (await db.syncQueue
+      .filter((entry) =>
+        (entry.entityType === 'note' && entry.entityId === localNote.id) ||
+        (entry.entityType === 'noteTag' && entry.entityId.startsWith(`${localNote.id}:`))
+      )
+      .toArray())
+      .map((entry) => entry.id)
+      .filter((id): id is number => typeof id === 'number');
+
+    if (entryIds.length > 0) {
+      await db.syncQueue.bulkDelete(entryIds);
+    }
+  };
+
+  const deleteOriginalNoteLocalState = async (): Promise<void> => {
+    await db.transaction('rw', [db.notes, db.noteTags, db.syncQueue], async () => {
+      await db.notes.delete(localNote.id);
+      await db.noteTags.where('noteId').equals(localNote.id).delete();
+      await clearOriginalNoteQueueEntries();
+    });
+  };
 
   switch (choice) {
     case 'local': {
-      // Push local version to server (or queue if offline).
-      // For encrypted notes, push encrypted fields instead of empty plaintext.
       const { queueSyncOperation } = await import('../services/offlineNotes');
-
-      const pushPayload = isEncrypted
+      const localNoteTags = await getOriginalNoteTagLinks();
+      const notePayload = isEncrypted
         ? {
             title: '' as string,
             content: '' as string,
+            pinned: localNote.pinned,
             encrypted_payload: localNote.encryptedPayload,
             encryption_iv: localNote.encryptionIv,
             encryption_version: localNote.encryptionVersion,
@@ -352,43 +380,115 @@ export async function resolveConflict(
         : {
             title: localNote.title,
             content: localNote.content,
+            pinned: localNote.pinned,
           };
 
-      if (navigator.onLine) {
-        // Try to push directly when online
-        const { data: pushed, error } = await supabase
-          .from('notes')
-          .update(pushPayload)
-          .eq('id', localNote.id)
-          .select('updated_at')
-          .single();
+      const queueTagRestores = async (): Promise<void> => {
+        for (const noteTag of localNoteTags) {
+          await queueSyncOperation(userId, 'add_tag', 'noteTag', `${localNote.id}:${noteTag.tagId}`, {
+            noteId: localNote.id,
+            tagId: noteTag.tagId,
+          });
+        }
+      };
 
-        if (error) {
-          // Queue for retry if server update failed
-          await queueSyncOperation(userId, 'update', 'note', localNote.id, pushPayload);
+      const queueRecreatedNote = async (): Promise<void> => {
+        await clearOriginalNoteQueueEntries();
+        await queueSyncOperation(userId, 'create', 'note', localNote.id, notePayload);
+        await queueTagRestores();
+
+        await db.notes.update(localNote.id, {
+          syncStatus: 'pending',
+          deletedAt: null,
+        });
+
+        if (localNoteTags.length > 0) {
+          await db.noteTags.where('noteId').equals(localNote.id).modify({
+            syncStatus: 'pending',
+            lastSyncedAt: null,
+          });
+        }
+      };
+
+      if (isHardDeletedConflict) {
+        if (navigator.onLine) {
+          const { data: recreated, error } = await supabase
+            .from('notes')
+            .upsert({
+              id: localNote.id,
+              user_id: userId,
+              ...notePayload,
+            })
+            .select('updated_at')
+            .single();
+
+          if (!error) {
+            await clearOriginalNoteQueueEntries();
+            await queueTagRestores();
+
+            const serverTime = new Date(recreated.updated_at).getTime();
+            await db.notes.update(localNote.id, {
+              syncStatus: 'synced',
+              deletedAt: null,
+              lastSyncedAt: serverTime,
+              serverUpdatedAt: serverTime,
+              updatedAt: serverTime,
+              localUpdatedAt: serverTime,
+            });
+
+            if (localNoteTags.length > 0) {
+              await db.noteTags.where('noteId').equals(localNote.id).modify({
+                syncStatus: 'pending',
+                lastSyncedAt: null,
+              });
+            }
+            break;
+          }
+        }
+
+        await queueRecreatedNote();
+      } else {
+        if (navigator.onLine) {
+          // Try to push directly when online
+          const { data: pushed, error } = await supabase
+            .from('notes')
+            .update(notePayload)
+            .eq('id', localNote.id)
+            .select('updated_at')
+            .single();
+
+          if (error) {
+            // Queue for retry if server update failed
+            await queueSyncOperation(userId, 'update', 'note', localNote.id, notePayload);
+            await db.notes.update(localNote.id, {
+              syncStatus: 'pending',
+            });
+          } else {
+            // Mark as synced using server timestamp to avoid clock skew
+            const serverTime = new Date(pushed.updated_at).getTime();
+            await db.notes.update(localNote.id, {
+              syncStatus: 'synced',
+              lastSyncedAt: serverTime,
+              serverUpdatedAt: serverTime,
+            });
+          }
+        } else {
+          // Queue for sync when back online
+          await queueSyncOperation(userId, 'update', 'note', localNote.id, notePayload);
           await db.notes.update(localNote.id, {
             syncStatus: 'pending',
           });
-        } else {
-          // Mark as synced using server timestamp to avoid clock skew
-          const serverTime = new Date(pushed.updated_at).getTime();
-          await db.notes.update(localNote.id, {
-            syncStatus: 'synced',
-            lastSyncedAt: serverTime,
-            serverUpdatedAt: serverTime,
-          });
         }
-      } else {
-        // Queue for sync when back online
-        await queueSyncOperation(userId, 'update', 'note', localNote.id, pushPayload);
-        await db.notes.update(localNote.id, {
-          syncStatus: 'pending',
-        });
       }
       break;
     }
 
     case 'server': {
+      if (isHardDeletedConflict) {
+        await deleteOriginalNoteLocalState();
+        break;
+      }
+
       // Apply server version locally — include encrypted fields from server
       const serverTime = new Date(serverNote.updated_at).getTime();
       await db.notes.update(serverNote.id, {
@@ -486,6 +586,11 @@ export async function resolveConflict(
           content: localNote.content,
           pinned: false,
         });
+      }
+
+      if (isHardDeletedConflict) {
+        await deleteOriginalNoteLocalState();
+        break;
       }
 
       // Update original with server version (including encrypted fields)

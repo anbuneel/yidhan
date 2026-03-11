@@ -951,7 +951,7 @@ describe('offlineNotes', () => {
 
       expect(result.deleted).toBe(false);
       if (result.deleted) {
-        throw new Error('Expected local conflict result');
+        return;
       }
 
       const stored = await db.notes.get(note.id);
