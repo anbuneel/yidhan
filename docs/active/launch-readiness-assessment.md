@@ -186,18 +186,21 @@ Category 1 is the most dangerous for launch: users forgive missing features but 
 
 ---
 
-## Launch Effort Estimate
+## Implementation Status (PR #165, merged 2026-03-11)
 
-| Item | Effort | Priority |
-|------|--------|----------|
-| 1. Disable "Letting Go" | 30 min | Must fix |
-| 2. Share key sessionStorage | 1 hour | Must fix |
-| 3. Fix backup copy | 15 min | Must fix |
-| 4. Social metadata | 15 min | Must fix |
-| 5. Verify `/demo` route | 15 min | Must fix |
-| 6. Guard `deleteNoteFromServer` | 2-3 hours | Must fix |
-| 12. Audit Supabase policies | 1 hour (manual) | Must verify |
-| **Total** | **~1-2 days** | |
+| Item | Effort | Status | Notes |
+|------|--------|--------|-------|
+| 1. Disable "Letting Go" | 30 min | **NOT DONE** | Feature still accessible in SettingsModal |
+| 2. Share key sessionStorage | 1 hour | **Done** | New `shareRoute.ts` module, all reload paths covered |
+| 3. Fix backup copy | 15 min | **Partial** | Removed "(includes share links)" — label now just "Full Backup" |
+| 4. Social metadata | 15 min | **Done** | OG URL updated to yidhan.vercel.app |
+| 5. Verify `/demo` route | 15 min | **Done** | Catch-all SPA rewrite added to vercel.json |
+| 6. Guard `deleteNoteFromServer` | 2-3 hours | **Done** | Discriminated union return, conflict surfaced via ConflictModal |
+| 12. Audit Supabase policies | 1 hour (manual) | **Not started** | Manual verification needed |
+
+### Remaining before launch
+- **Item 1:** Hide offboarding link in SettingsModal (~30 min)
+- **Item 12:** Manually audit live Supabase sharing policies
 
 ---
 
