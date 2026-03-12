@@ -1,8 +1,17 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
-import type { DerivedKeys, SessionKeyBlob } from '../lib/encryption';
-import { deriveKeys, createKeyCheck, verifyKeyCheck, exportSessionKeys, importSessionKeys } from '../lib/encryption';
+import type { DerivedKeys, KeyCheckVersion, SessionKeyBlob } from '../lib/encryption';
+import {
+  KEY_CHECK_VERSION,
+  createKeyCheck,
+  deriveKeys,
+  exportSessionKeys,
+  fromBase64,
+  importSessionKeys,
+  toBase64,
+  verifyKeyCheck,
+} from '../lib/encryption';
 import {
   addReliabilityBreadcrumb,
   reportReliabilityIssue,
@@ -130,9 +139,11 @@ function clearLocal(userId: string | null): void {
 }
 
 interface RestoreVerificationOptions {
+  userId: string;
   restored: DerivedKeys | null;
   keyCheck?: string;
   keyCheckIv?: string;
+  keyCheckVersion?: unknown;
   source: 'sessionStorage_restore' | 'localStorage_restore' | 'activity_gate';
   invalidMessage: string;
   missingMetadataMessage: string;
@@ -140,10 +151,53 @@ interface RestoreVerificationOptions {
   cleanupLabel: string;
 }
 
+function parseKeyCheckVersion(version: unknown): KeyCheckVersion | null {
+  if (version == null) {
+    return 1;
+  }
+  if (version === 1 || version === '1') {
+    return 1;
+  }
+  if (version === KEY_CHECK_VERSION || version === String(KEY_CHECK_VERSION)) {
+    return KEY_CHECK_VERSION;
+  }
+  return null;
+}
+
+async function upgradeLegacyKeyCheck(
+  userId: string,
+  encryptionKey: CryptoKey,
+  source: RestoreVerificationOptions['source'] | 'unlock_passphrase'
+): Promise<void> {
+  try {
+    const { keyCheck, keyCheckIv, keyCheckVersion } = await createKeyCheck(encryptionKey, userId);
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        encryption_key_check: keyCheck,
+        encryption_key_check_iv: keyCheckIv,
+        encryption_key_check_version: keyCheckVersion,
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  } catch (err) {
+    reportReliabilityIssue({
+      category: 'vault',
+      message: 'Failed to upgrade legacy key-check metadata',
+      level: 'warning',
+      data: { source, userId },
+    }, err);
+  }
+}
+
 async function verifyRestoredKeys({
+  userId,
   restored,
   keyCheck,
   keyCheckIv,
+  keyCheckVersion,
   source,
   invalidMessage,
   missingMetadataMessage,
@@ -166,7 +220,26 @@ async function verifyRestoredKeys({
     return null;
   }
 
-  const isValid = await verifyKeyCheck(restored.encryptionKey, keyCheck, keyCheckIv);
+  const parsedKeyCheckVersion = parseKeyCheckVersion(keyCheckVersion);
+  if (parsedKeyCheckVersion === null) {
+    reportReliabilityIssue({
+      category: 'vault',
+      message: 'Vault restore has unsupported key-check metadata version',
+      level: 'warning',
+      data: { source },
+    });
+    console.warn(`[EncryptionContext] Cannot verify ${cleanupLabel}: unsupported key-check version`);
+    cleanup();
+    return null;
+  }
+
+  const isValid = await verifyKeyCheck(
+    restored.encryptionKey,
+    keyCheck,
+    keyCheckIv,
+    userId,
+    parsedKeyCheckVersion
+  );
   if (!isValid) {
     reportReliabilityIssue({
       category: 'vault',
@@ -177,6 +250,10 @@ async function verifyRestoredKeys({
     console.warn(`[EncryptionContext] ${cleanupLabel} failed key-check — stale or corrupted, clearing`);
     cleanup();
     return null;
+  }
+
+  if (parsedKeyCheckVersion !== KEY_CHECK_VERSION) {
+    void upgradeLegacyKeyCheck(userId, restored.encryptionKey, source);
   }
 
   return restored;
@@ -257,6 +334,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
     const keyCheck = user?.user_metadata?.encryption_key_check as string | undefined;
     const keyCheckIv = user?.user_metadata?.encryption_key_check_iv as string | undefined;
+    const keyCheckVersion = user?.user_metadata?.encryption_key_check_version;
 
     let cancelled = false;
     (async () => {
@@ -264,9 +342,11 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
         // Try sessionStorage first (fast path for page refresh)
         let restored = await restoreSession(currentUserId);
         restored = await verifyRestoredKeys({
+          userId: currentUserId,
           restored,
           keyCheck,
           keyCheckIv,
+          keyCheckVersion,
           source: 'sessionStorage_restore',
           invalidMessage: 'Vault session keys failed key-check',
           missingMetadataMessage: 'Vault session restore missing key-check metadata',
@@ -279,33 +359,18 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
         // Fall back to localStorage if rememberBrowser is enabled
         if (!restored && isRememberBrowserEnabled(currentUserId)) {
           restored = await restoreLocal(currentUserId);
-
-          // Verify restored keys against key-check (prevents stale keys after passphrase change)
-          if (restored && keyCheck && keyCheckIv) {
-            const isValid = await verifyKeyCheck(restored.encryptionKey, keyCheck, keyCheckIv);
-            if (!isValid) {
-              reportReliabilityIssue({
-                category: 'vault',
-                message: 'Persisted vault keys failed key-check',
-                level: 'warning',
-                data: { source: 'localStorage_restore' },
-              });
-              console.warn('[EncryptionContext] localStorage keys failed key-check — stale or corrupted, clearing');
-              clearLocal(currentUserId);
-              restored = null;
-            }
-          } else if (restored) {
-            reportReliabilityIssue({
-              category: 'vault',
-              message: 'Persisted vault restore missing key-check metadata',
-              level: 'warning',
-              data: { source: 'localStorage_restore' },
-            });
-            // Key-check metadata missing — cannot verify integrity, require manual passphrase
-            console.warn('[EncryptionContext] Cannot verify localStorage keys: key-check metadata missing');
-            clearLocal(currentUserId);
-            restored = null;
-          }
+          restored = await verifyRestoredKeys({
+            userId: currentUserId,
+            restored,
+            keyCheck,
+            keyCheckIv,
+            keyCheckVersion,
+            source: 'localStorage_restore',
+            invalidMessage: 'Persisted vault keys failed key-check',
+            missingMetadataMessage: 'Persisted vault restore missing key-check metadata',
+            cleanup: () => clearLocal(currentUserId),
+            cleanupLabel: 'localStorage keys',
+          });
 
         }
 
@@ -338,7 +403,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       }
     })();
     return () => { cancelled = true; };
-  }, [currentUserId, isEncryptionSetup, keyState.keys, user?.user_metadata?.encryption_key_check, user?.user_metadata?.encryption_key_check_iv]);
+  }, [currentUserId, isEncryptionSetup, keyState.keys, user?.user_metadata?.encryption_key_check, user?.user_metadata?.encryption_key_check_iv, user?.user_metadata?.encryption_key_check_version]);
 
   // Activity-gated restore: after auto-lock with rememberBrowser, wait for user activity
   // before restoring keys from localStorage. Calls restoreLocal() directly because
@@ -351,6 +416,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
     const keyCheck = user?.user_metadata?.encryption_key_check as string | undefined;
     const keyCheckIv = user?.user_metadata?.encryption_key_check_iv as string | undefined;
+    const keyCheckVersion = user?.user_metadata?.encryption_key_check_version;
 
     // Abort flag prevents a race where mousedown fires handleActivity (async)
     // and then click fires lockVault('sign-out') synchronously — the in-flight
@@ -364,7 +430,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       detachListeners();
 
       try {
-        const restored = await restoreLocal(currentUserId);
+        let restored = await restoreLocal(currentUserId);
         if (aborted) return;
         if (!restored) {
           addReliabilityBreadcrumb({
@@ -377,30 +443,20 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
           return;
         }
 
-        // Verify against key-check
-        if (keyCheck && keyCheckIv) {
-          const isValid = await verifyKeyCheck(restored.encryptionKey, keyCheck, keyCheckIv);
-          if (aborted) return;
-          if (!isValid) {
-            reportReliabilityIssue({
-              category: 'vault',
-              message: 'Activity-gated restore failed key-check',
-              level: 'warning',
-              data: { source: 'activity_gate' },
-            });
-            clearLocal(currentUserId);
-            return;
-          }
-        } else {
-          reportReliabilityIssue({
-            category: 'vault',
-            message: 'Activity-gated restore missing key-check metadata',
-            level: 'warning',
-            data: { source: 'activity_gate' },
-          });
-          // Key-check metadata missing — cannot verify integrity, require manual passphrase
-          console.warn('[EncryptionContext] Activity-gated restore: key-check metadata missing, refusing unverified keys');
-          clearLocal(currentUserId);
+        restored = await verifyRestoredKeys({
+          userId: currentUserId,
+          restored,
+          keyCheck,
+          keyCheckIv,
+          keyCheckVersion,
+          source: 'activity_gate',
+          invalidMessage: 'Activity-gated restore failed key-check',
+          missingMetadataMessage: 'Activity-gated restore missing key-check metadata',
+          cleanup: () => clearLocal(currentUserId),
+          cleanupLabel: 'activity-gated localStorage keys',
+        });
+        if (aborted) return;
+        if (!restored) {
           return;
         }
 
@@ -446,7 +502,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       aborted = true;
       detachListeners();
     };
-  }, [currentUserId, isEncryptionSetup, keyState.keys, user?.user_metadata?.encryption_key_check, user?.user_metadata?.encryption_key_check_iv]);
+  }, [currentUserId, isEncryptionSetup, keyState.keys, user?.user_metadata?.encryption_key_check, user?.user_metadata?.encryption_key_check_iv, user?.user_metadata?.encryption_key_check_version]);
 
   const keys = useMemo(() => {
     if (keyState.userId === null || keyState.userId !== currentUserId) {
@@ -467,15 +523,10 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     const derivedKeys = await deriveKeys(passphrase);
 
     // Create key-check blob for later passphrase verification
-    const { keyCheck, keyCheckIv } = await createKeyCheck(derivedKeys.encryptionKey);
+    const { keyCheck, keyCheckIv, keyCheckVersion } = await createKeyCheck(derivedKeys.encryptionKey, user.id);
 
     // Base64-encode the salt for storage
-    let saltBase64 = '';
-    const saltBytes = derivedKeys.salt;
-    for (let i = 0; i < saltBytes.length; i++) {
-      saltBase64 += String.fromCharCode(saltBytes[i]);
-    }
-    saltBase64 = btoa(saltBase64);
+    const saltBase64 = toBase64(derivedKeys.salt);
 
     // Store in user_metadata — MUST succeed before we hold keys in memory.
     const { error } = await supabase.auth.updateUser({
@@ -483,6 +534,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
         encryption_salt: saltBase64,
         encryption_key_check: keyCheck,
         encryption_key_check_iv: keyCheckIv,
+        encryption_key_check_version: keyCheckVersion,
         encryption_version: 1,
       },
     });
@@ -518,33 +570,59 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
   /**
    * Unlock the vault with existing passphrase.
-   * Returns true if passphrase is correct, false otherwise.
+   * Returns true if the passphrase is correct, false if incorrect.
+   * Throws when vault metadata/configuration is missing or unsupported.
    */
   const unlockWithPassphrase = useCallback(async (passphrase: string): Promise<boolean> => {
-    if (!user) return false;
-    if (!encryptionSalt) return false;
+    if (!user) {
+      throw new Error('You must be signed in to unlock your notes.');
+    }
+    if (!encryptionSalt) {
+      throw new Error('Encryption is not set up for this account.');
+    }
 
     const keyCheck = user.user_metadata?.encryption_key_check as string | undefined;
     const keyCheckIv = user.user_metadata?.encryption_key_check_iv as string | undefined;
 
     if (!keyCheck || !keyCheckIv) {
-      return false;
+      reportReliabilityIssue({
+        category: 'vault',
+        message: 'Passphrase unlock missing key-check metadata',
+        level: 'warning',
+        data: { source: 'unlock_passphrase', userId: user.id },
+      });
+      throw new Error('Vault metadata is incomplete. Please sign out and sign back in.');
     }
 
     // Decode the stored salt
-    const saltBinary = atob(encryptionSalt);
-    const salt = new Uint8Array(saltBinary.length);
-    for (let i = 0; i < saltBinary.length; i++) {
-      salt[i] = saltBinary.charCodeAt(i);
+    const salt = fromBase64(encryptionSalt);
+    const parsedKeyCheckVersion = parseKeyCheckVersion(user.user_metadata?.encryption_key_check_version);
+    if (parsedKeyCheckVersion === null) {
+      reportReliabilityIssue({
+        category: 'vault',
+        message: 'Passphrase unlock encountered unsupported key-check metadata version',
+        level: 'warning',
+        data: { source: 'unlock_passphrase', userId: user.id },
+      });
+      throw new Error('Vault metadata uses an unsupported format. Please sign out and sign back in.');
     }
 
     // Derive keys from the passphrase + stored salt
     const derivedKeys = await deriveKeys(passphrase, salt);
 
     // Verify the key-check
-    const isValid = await verifyKeyCheck(derivedKeys.encryptionKey, keyCheck, keyCheckIv);
+    const isValid = await verifyKeyCheck(
+      derivedKeys.encryptionKey,
+      keyCheck,
+      keyCheckIv,
+      user.id,
+      parsedKeyCheckVersion
+    );
 
     if (isValid) {
+      if (parsedKeyCheckVersion !== KEY_CHECK_VERSION) {
+        void upgradeLegacyKeyCheck(user.id, derivedKeys.encryptionKey, 'unlock_passphrase');
+      }
       setKeyState({ keys: derivedKeys, userId: user.id });
       persistSession(user.id, derivedKeys);
       if (isRememberBrowserEnabled(user.id) && !persistLocal(user.id, derivedKeys)) {

@@ -1,18 +1,25 @@
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { EncryptionProvider, useEncryption } from './EncryptionContext';
 
 const {
   mockUseAuth,
+  mockCreateKeyCheck,
   mockImportSessionKeys,
   mockExportSessionKeys,
+  mockGetUser,
+  mockUpdateUser,
   mockVerifyKeyCheck,
   mockReportReliabilityIssue,
   mockAddReliabilityBreadcrumb,
 } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
+  mockCreateKeyCheck: vi.fn(),
   mockImportSessionKeys: vi.fn(),
   mockExportSessionKeys: vi.fn(),
+  mockGetUser: vi.fn(),
+  mockUpdateUser: vi.fn(),
   mockVerifyKeyCheck: vi.fn(),
   mockReportReliabilityIssue: vi.fn(),
   mockAddReliabilityBreadcrumb: vi.fn(),
@@ -25,18 +32,21 @@ vi.mock('./AuthContext', () => ({
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
-      updateUser: vi.fn(),
-      getUser: vi.fn(),
+      updateUser: mockUpdateUser,
+      getUser: mockGetUser,
     },
   },
 }));
 
 vi.mock('../lib/encryption', () => ({
   deriveKeys: vi.fn(),
-  createKeyCheck: vi.fn(),
+  createKeyCheck: mockCreateKeyCheck,
   verifyKeyCheck: mockVerifyKeyCheck,
   exportSessionKeys: mockExportSessionKeys,
   importSessionKeys: mockImportSessionKeys,
+  toBase64: vi.fn(),
+  fromBase64: vi.fn(),
+  KEY_CHECK_VERSION: 2,
 }));
 
 vi.mock('../utils/reliabilityTelemetry', () => ({
@@ -62,6 +72,30 @@ function ControlsProbe() {
   );
 }
 
+function UnlockProbe() {
+  const { unlockWithPassphrase } = useEncryption();
+  const [result, setResult] = useState('idle');
+
+  return (
+    <div>
+      <div>{result}</div>
+      <button
+        type="button"
+        onClick={async () => {
+          try {
+            const success = await unlockWithPassphrase('correct-passphrase');
+            setResult(success ? 'success' : 'incorrect');
+          } catch (err) {
+            setResult(err instanceof Error ? `error:${err.message}` : 'error');
+          }
+        }}
+      >
+        Unlock
+      </button>
+    </div>
+  );
+}
+
 function createFakeKeys() {
   return {
     encryptionKey: {} as CryptoKey,
@@ -78,6 +112,7 @@ const baseUser = {
     encryption_salt: 'c2FsdA==',
     encryption_key_check: 'key-check',
     encryption_key_check_iv: 'key-check-iv',
+    encryption_key_check_version: 2,
   },
 };
 
@@ -85,11 +120,19 @@ beforeEach(() => {
   sessionStorage.clear();
   localStorage.clear();
   mockUseAuth.mockReturnValue({ user: baseUser });
+  mockCreateKeyCheck.mockReset();
   mockImportSessionKeys.mockReset();
   mockExportSessionKeys.mockReset();
+  mockGetUser.mockReset();
+  mockUpdateUser.mockReset();
   mockVerifyKeyCheck.mockReset();
   mockReportReliabilityIssue.mockReset();
   mockAddReliabilityBreadcrumb.mockReset();
+  mockCreateKeyCheck.mockResolvedValue({
+    keyCheck: 'key-check-v2',
+    keyCheckIv: 'key-check-iv-v2',
+    keyCheckVersion: 2,
+  });
   mockExportSessionKeys.mockReturnValue({
     version: 2,
     encKey: 'enc',
@@ -97,6 +140,8 @@ beforeEach(() => {
     salt: 'salt',
     checksum: 'deadbeef',
   });
+  mockUpdateUser.mockResolvedValue({ error: null });
+  mockGetUser.mockResolvedValue({ data: { user: baseUser } });
 });
 
 describe('EncryptionContext telemetry', () => {
@@ -120,7 +165,9 @@ describe('EncryptionContext telemetry', () => {
       expect(mockVerifyKeyCheck).toHaveBeenCalledWith(
         fakeKeys.encryptionKey,
         'key-check',
-        'key-check-iv'
+        'key-check-iv',
+        'vault-user-1',
+        2
       );
     });
 
@@ -185,6 +232,54 @@ describe('EncryptionContext telemetry', () => {
     expect(localStorage.getItem('yidhan-vault-user-1-vault-persisted-keys')).toBe(
       JSON.stringify({ version: 2, encKey: 'enc', hashKey: 'hash', salt: 'salt', checksum: 'deadbeef' })
     );
+  });
+
+  it('upgrades legacy key-check metadata after a successful restore', async () => {
+    const fakeKeys = createFakeKeys();
+
+    mockUseAuth.mockReturnValue({
+      user: {
+        ...baseUser,
+        user_metadata: {
+          encryption_salt: 'c2FsdA==',
+          encryption_key_check: 'key-check',
+          encryption_key_check_iv: 'key-check-iv',
+        },
+      },
+    });
+    sessionStorage.setItem(
+      'yidhan-vault-user-1-vault-session',
+      JSON.stringify({ encKey: 'enc', hashKey: 'hash', salt: 'salt' })
+    );
+    mockImportSessionKeys.mockResolvedValue(fakeKeys);
+    mockVerifyKeyCheck.mockResolvedValue(true);
+
+    render(
+      <EncryptionProvider>
+        <Probe />
+      </EncryptionProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('unlocked')).toBeInTheDocument();
+    });
+
+    expect(mockVerifyKeyCheck).toHaveBeenCalledWith(
+      fakeKeys.encryptionKey,
+      'key-check',
+      'key-check-iv',
+      'vault-user-1',
+      1
+    );
+    await waitFor(() => {
+      expect(mockUpdateUser).toHaveBeenCalledWith({
+        data: {
+          encryption_key_check: 'key-check-v2',
+          encryption_key_check_iv: 'key-check-iv-v2',
+          encryption_key_check_version: 2,
+        },
+      });
+    });
   });
 
   it('clears session restore blobs that fail key-check and stays locked', async () => {
@@ -486,5 +581,43 @@ describe('EncryptionContext vault state machine', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
 
     expect(localStorage.getItem('yidhan-vault-user-1-vault-persisted-keys')).toBeNull();
+  });
+});
+
+describe('EncryptionContext unlockWithPassphrase', () => {
+  it('throws for incomplete vault metadata instead of treating it as an incorrect passphrase', async () => {
+    mockUseAuth.mockReturnValue({
+      user: {
+        ...baseUser,
+        user_metadata: {
+          encryption_salt: 'c2FsdA==',
+          encryption_key_check: undefined,
+          encryption_key_check_iv: undefined,
+          encryption_key_check_version: 2,
+        },
+      },
+    });
+
+    render(
+      <EncryptionProvider>
+        <UnlockProbe />
+      </EncryptionProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('error:Vault metadata is incomplete. Please sign out and sign back in.')
+      ).toBeInTheDocument();
+    });
+
+    expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'vault',
+        message: 'Passphrase unlock missing key-check metadata',
+      })
+    );
+    expect(mockVerifyKeyCheck).not.toHaveBeenCalled();
   });
 });

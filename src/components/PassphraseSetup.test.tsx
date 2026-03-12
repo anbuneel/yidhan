@@ -83,6 +83,24 @@ describe('PassphraseSetup', () => {
     expect(screen.getByText('Passphrases do not match')).toBeInTheDocument();
   });
 
+  it('shows a weak strength hint for short passphrases', async () => {
+    const user = userEvent.setup();
+    render(<PassphraseSetup />);
+
+    await user.type(screen.getByLabelText('Passphrase'), 'short');
+
+    expect(screen.getByText('Strength: Too short')).toBeInTheDocument();
+  });
+
+  it('shows a strong strength hint for long varied passphrases', async () => {
+    const user = userEvent.setup();
+    render(<PassphraseSetup />);
+
+    await user.type(screen.getByLabelText('Passphrase'), 'Long-Quiet-Passphrase-2026!');
+
+    expect(screen.getByText('Strength: Strong')).toBeInTheDocument();
+  });
+
   it('should call setupPassphrase and onComplete on successful submit', async () => {
     const mockKeys = { encryptionKey: {}, hashKey: {}, salt: new Uint8Array(16) };
     mockSetupPassphrase.mockResolvedValue(mockKeys);
