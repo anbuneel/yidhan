@@ -71,12 +71,19 @@ import {
   pauseSync,
   resumeSync,
   setConflictHandler,
+  buildQueueBatches,
+  invalidateSyncPullCursors,
+  SYNC_BATCH_CONCURRENCY_LIMIT,
   type FullSyncResult,
   type PullError,
   type ConflictInfo,
 } from './syncEngine';
 import { mapSyncOutcome } from '../hooks/useSyncEngine';
-import { getOfflineDb, type SyncQueueEntry } from '../lib/offlineDb';
+import {
+  MIGRATION_SYNC_SENTINEL,
+  getOfflineDb,
+  type SyncQueueEntry,
+} from '../lib/offlineDb';
 
 // ──────────────────────────────────────────────────
 // Helpers
@@ -292,6 +299,69 @@ describe('syncEngine', () => {
       }).not.toThrow();
     });
   });
+
+  describe('invalidateSyncPullCursors', () => {
+    it('resets synced note and tag cursors to the migration sentinel', async () => {
+      const db = getOfflineDb(TEST_USER_ID);
+      await db.notes.put({
+        id: 'note-synced',
+        userId: TEST_USER_ID,
+        title: 'Synced',
+        content: '',
+        pinned: false,
+        deletedAt: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        syncStatus: 'synced',
+        lastSyncedAt: 1234,
+        serverUpdatedAt: 1234,
+        localUpdatedAt: 1234,
+        encryptedPayload: null,
+        encryptionIv: null,
+        encryptionVersion: null,
+        contentHash: null,
+      });
+      await db.notes.put({
+        id: 'note-pending',
+        userId: TEST_USER_ID,
+        title: 'Pending',
+        content: '',
+        pinned: false,
+        deletedAt: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        syncStatus: 'pending',
+        lastSyncedAt: 9999,
+        serverUpdatedAt: 9999,
+        localUpdatedAt: 9999,
+        encryptedPayload: null,
+        encryptionIv: null,
+        encryptionVersion: null,
+        contentHash: null,
+      });
+      await db.tags.put({
+        id: 'tag-synced',
+        userId: TEST_USER_ID,
+        name: 'Tag',
+        color: 'gold',
+        createdAt: Date.now(),
+        syncStatus: 'synced',
+        lastSyncedAt: 5678,
+        serverUpdatedAt: 5678,
+        localUpdatedAt: 5678,
+      });
+
+      await invalidateSyncPullCursors(TEST_USER_ID);
+
+      const syncedNote = await db.notes.get('note-synced');
+      const pendingNote = await db.notes.get('note-pending');
+      const syncedTag = await db.tags.get('tag-synced');
+
+      expect(syncedNote?.lastSyncedAt).toBe(MIGRATION_SYNC_SENTINEL);
+      expect(pendingNote?.lastSyncedAt).toBe(9999);
+      expect(syncedTag?.lastSyncedAt).toBe(MIGRATION_SYNC_SENTINEL);
+    });
+  });
 });
 
 describe('mapSyncOutcome', () => {
@@ -457,6 +527,42 @@ describe('server timestamp authority', () => {
     expect(source).not.toMatch(updatePayloadPattern);
     const displayPayloadPattern = /\.update\(\{[^}]*display_updated_at:\s*new Date\(\)/s;
     expect(source).not.toMatch(displayPayloadPattern);
+  });
+});
+
+describe('buildQueueBatches', () => {
+  it('starts a new batch when the same entity appears twice', () => {
+    const first = buildEntry({ entityType: 'note', entityId: 'note-a', operation: 'update' });
+    const second = buildEntry({ entityType: 'note', entityId: 'note-a', operation: 'pin' });
+
+    const batches = buildQueueBatches([first, second]);
+
+    expect(batches).toHaveLength(2);
+    expect(batches[0]).toEqual([first]);
+    expect(batches[1]).toEqual([second]);
+  });
+
+  it('uses noteTag operations as a dependency barrier', () => {
+    const note = buildEntry({ entityType: 'note', entityId: 'note-a', operation: 'update' });
+    const noteTag = buildEntry({ entityType: 'noteTag', entityId: 'note-a:tag-a', operation: 'add_tag' });
+    const tag = buildEntry({ entityType: 'tag', entityId: 'tag-a', operation: 'update' });
+
+    const batches = buildQueueBatches([note, noteTag, tag]);
+
+    expect(batches).toHaveLength(3);
+    expect(batches[0]).toEqual([note]);
+    expect(batches[1]).toEqual([noteTag]);
+    expect(batches[2]).toEqual([tag]);
+  });
+
+  it('allows independent noteTag operations to share a batch', () => {
+    const first = buildEntry({ entityType: 'noteTag', entityId: 'note-a:tag-a', operation: 'add_tag' });
+    const second = buildEntry({ entityType: 'noteTag', entityId: 'note-b:tag-b', operation: 'remove_tag' });
+
+    const batches = buildQueueBatches([first, second]);
+
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toEqual([first, second]);
   });
 });
 
@@ -651,6 +757,72 @@ describe('processQueue behavior', () => {
       'mut-batch-tag',
       tagEntry.id
     );
+  });
+
+  it('should cap concurrency within a batch', async () => {
+    const entries = Array.from({ length: SYNC_BATCH_CONCURRENCY_LIMIT + 2 }, (_, index) =>
+      buildEntry({
+        clientMutationId: `mut-batch-cap-${index}`,
+        operation: 'create',
+        entityType: 'note',
+        entityId: `note-batch-cap-${index}`,
+        payload: {
+          title: `Batch ${index}`,
+          content: '<p>Hello</p>',
+          pinned: false,
+          encrypted_payload: null,
+          encryption_iv: null,
+          encryption_version: null,
+          content_hash: null,
+        },
+      })
+    );
+
+    mockGetPendingSyncQueue.mockResolvedValue(entries);
+    mockRemoveSyncQueueEntry.mockResolvedValue(undefined);
+    mockMarkNoteSynced.mockResolvedValue(undefined);
+
+    const deferredReads = entries.map(() =>
+      createDeferred<{ data: null; error: null }>()
+    );
+    const pendingReads = [...deferredReads];
+    const maybeSingle = vi.fn(() => pendingReads.shift()!.promise);
+    const single = vi.fn().mockResolvedValue({
+      data: { id: 'created-note', updated_at: '2026-03-12T00:00:00Z' },
+      error: null,
+    });
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table !== 'notes') {
+        throw new Error(`Unexpected table: ${table}`);
+      }
+
+      const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+      for (const method of ['select', 'insert', 'update', 'delete', 'eq', 'gt', 'filter']) {
+        chain[method] = vi.fn().mockReturnValue(chain);
+      }
+      chain.maybeSingle = maybeSingle;
+      chain.single = single;
+      return chain;
+    });
+
+    const syncPromise = processQueue(TEST_USER_ID);
+    await vi.waitFor(() => {
+      expect(maybeSingle).toHaveBeenCalledTimes(SYNC_BATCH_CONCURRENCY_LIMIT);
+    });
+
+    deferredReads[0].resolve({ data: null, error: null });
+    await vi.waitFor(() => {
+      expect(maybeSingle).toHaveBeenCalledTimes(SYNC_BATCH_CONCURRENCY_LIMIT + 1);
+    });
+
+    for (const deferred of deferredReads.slice(1)) {
+      deferred.resolve({ data: null, error: null });
+    }
+
+    const result = await syncPromise;
+    expect(result.processed).toBe(entries.length);
+    expect(single).toHaveBeenCalledTimes(entries.length);
   });
 
   it('should increment retry count on retryable network error', async () => {
@@ -898,7 +1070,7 @@ describe('processQueue behavior', () => {
   it('should NOT clean up stale create entries (preserves user data)', async () => {
     const db = getOfflineDb(TEST_USER_ID);
 
-    // Seed a stale CREATE entry (>1hr old, retryCount >= 3)
+    // Seed a stale CREATE entry (>24hr old, retryCount >= 3)
     const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
     await db.syncQueue.put({
       clientMutationId: 'mut-stale-create',
@@ -1104,12 +1276,14 @@ describe('conflict detection via processQueue', () => {
     const conflicts: ConflictInfo[] = [];
     setConflictHandler((c) => conflicts.push(c));
 
-    await processQueue(TEST_USER_ID);
+    const result = await processQueue(TEST_USER_ID);
 
     // Conflict should have been detected
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0].entityType).toBe('note');
     expect(conflicts[0].entityId).toBe(noteId);
+    expect(result.conflicts).toBe(1);
+    expect(result.processed).toBe(0);
 
     // Local note should be marked as conflict
     const localNote = await db.notes.get(noteId);

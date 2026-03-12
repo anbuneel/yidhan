@@ -93,7 +93,11 @@ import { migrateDemoToAccount } from './services/demoMigration';
 import { sanitizeHtml } from './utils/sanitize';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useSyncEngine, resolveConflict } from './hooks/useSyncEngine';
-import { reportConflict, type HardDeletedServerNoteVersion } from './services/syncEngine';
+import {
+  reportConflict,
+  invalidateSyncPullCursors,
+  type HardDeletedServerNoteVersion,
+} from './services/syncEngine';
 import { useViewTransition } from './hooks/useViewTransition';
 import { useInstallPrompt } from './hooks/useInstallPrompt';
 import { useShareTarget, formatSharedContent } from './hooks/useShareTarget';
@@ -200,7 +204,29 @@ function App() {
     }
   }, [user?.id, keys]);
 
-  const reportRealtimePersistenceFailure = useCallback((
+  const reportRealtimeDisplayFailure = useCallback((
+    operation: 'insert' | 'update',
+    error: unknown
+  ) => {
+    reportReliabilityIssue({
+      category: 'sync',
+      message: 'Realtime note could not be decrypted for display',
+      level: 'warning',
+      data: {
+        operation,
+        userId: user?.id ?? null,
+      },
+    }, error);
+    toast.error('A live note change was saved locally but could not be displayed. Please refresh.');
+  }, [user?.id]);
+
+  // Sync engine for offline support
+  const { conflicts, removeConflict, triggerSync } = useSyncEngine(handleSyncComplete);
+  const [activeConflict, setActiveConflict] = useState<typeof conflicts[0] | null>(null);
+  const [isRetryingBlockedChanges, setIsRetryingBlockedChanges] = useState(false);
+  const realtimeRecoveryInFlightRef = useRef(false);
+
+  const reportRealtimePersistenceFailure = useCallback(async (
     entity: 'note' | 'tag',
     operation: 'insert' | 'update' | 'delete',
     error: unknown
@@ -215,13 +241,37 @@ function App() {
         userId: user?.id ?? null,
       },
     }, error);
-    toast.error('A live change could not be saved locally. Please refresh.');
-  }, [user?.id]);
+    toast.error('A live change could not be saved locally. Recovering sync state now.');
 
-  // Sync engine for offline support
-  const { conflicts, removeConflict, triggerSync } = useSyncEngine(handleSyncComplete);
-  const [activeConflict, setActiveConflict] = useState<typeof conflicts[0] | null>(null);
-  const [isRetryingBlockedChanges, setIsRetryingBlockedChanges] = useState(false);
+    const uid = user?.id;
+    if (!uid || realtimeRecoveryInFlightRef.current) {
+      return;
+    }
+
+    realtimeRecoveryInFlightRef.current = true;
+
+    try {
+      await invalidateSyncPullCursors(uid);
+      const { outcome } = await triggerSync();
+      if (outcome === 'error') {
+        reportReliabilityIssue({
+          category: 'sync',
+          message: 'Realtime persistence recovery sync failed',
+          level: 'warning',
+          data: { entity, operation, userId: uid },
+        });
+      }
+    } catch (recoveryError) {
+      reportReliabilityIssue({
+        category: 'sync',
+        message: 'Failed to schedule recovery after realtime persistence failure',
+        level: 'warning',
+        data: { entity, operation, userId: uid },
+      }, recoveryError);
+    } finally {
+      realtimeRecoveryInFlightRef.current = false;
+    }
+  }, [triggerSync, user?.id]);
 
   // Coalesced sync trigger: after a save, wait 2s then trigger sync.
   // Reset on each save to prevent flooding during rapid typing.
@@ -652,7 +702,7 @@ function App() {
             await upsertNoteFromServer(userId, newNote);
           } catch (error) {
             console.error('Failed to persist realtime note insert:', error);
-            reportRealtimePersistenceFailure('note', 'insert', error);
+            void reportRealtimePersistenceFailure('note', 'insert', error);
             return;
           }
 
@@ -664,7 +714,10 @@ function App() {
               // Set syncStatus: 'synced' since this note came from the server
               return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
             });
-          }).catch(console.error);
+          }).catch((error) => {
+            console.error('Failed to decrypt realtime note insert for display:', error);
+            reportRealtimeDisplayFailure('insert', error);
+          });
         })();
       },
       (updatedNote) => {
@@ -673,7 +726,7 @@ function App() {
             await upsertNoteFromServer(userId, updatedNote);
           } catch (error) {
             console.error('Failed to persist realtime note update:', error);
-            reportRealtimePersistenceFailure('note', 'update', error);
+            void reportRealtimePersistenceFailure('note', 'update', error);
             return;
           }
 
@@ -711,7 +764,10 @@ function App() {
                 return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
               }
             });
-          }).catch(console.error);
+          }).catch((error) => {
+            console.error('Failed to decrypt realtime note update for display:', error);
+            reportRealtimeDisplayFailure('update', error);
+          });
         })();
       },
       (deletedId) => {
@@ -741,13 +797,13 @@ function App() {
           })
           .catch((error) => {
             console.error('Failed to persist realtime note delete:', error);
-            reportRealtimePersistenceFailure('note', 'delete', error);
+            void reportRealtimePersistenceFailure('note', 'delete', error);
           });
       }
     );
 
     return () => unsubscribe();
-  }, [userId, isHydrating, hydrationBypassed, reportRealtimePersistenceFailure]);
+  }, [userId, isHydrating, hydrationBypassed, reportRealtimeDisplayFailure, reportRealtimePersistenceFailure]);
   // Note: selectedNoteId removed from deps (2F) — using selectedNoteIdRef instead
   // to prevent Supabase channel unsubscribe/resubscribe on every note selection
 
@@ -927,7 +983,7 @@ function App() {
           })
           .catch((error) => {
             console.error('Failed to persist realtime tag insert:', error);
-            reportRealtimePersistenceFailure('tag', 'insert', error);
+            void reportRealtimePersistenceFailure('tag', 'insert', error);
           });
       },
       (updatedTag) => {
@@ -939,7 +995,7 @@ function App() {
           })
           .catch((error) => {
             console.error('Failed to persist realtime tag update:', error);
-            reportRealtimePersistenceFailure('tag', 'update', error);
+            void reportRealtimePersistenceFailure('tag', 'update', error);
           });
       },
       (deletedId) => {
@@ -950,7 +1006,7 @@ function App() {
           })
           .catch((error) => {
             console.error('Failed to persist realtime tag delete:', error);
-            reportRealtimePersistenceFailure('tag', 'delete', error);
+            void reportRealtimePersistenceFailure('tag', 'delete', error);
           });
       }
     );

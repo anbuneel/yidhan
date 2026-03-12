@@ -9,6 +9,7 @@ import { Capacitor } from '@capacitor/core';
 import { supabase, fetchAllPaginated } from '../lib/supabase';
 import {
   getOfflineDb,
+  MIGRATION_SYNC_SENTINEL,
   type SyncQueueEntry,
   type LocalNote,
   type LocalTag,
@@ -67,6 +68,7 @@ const pendingTimeouts = new Set<ReturnType<typeof setTimeout>>();
 const MAX_SYNC_RETRIES = 5;
 const STALE_SYNC_ENTRY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const STALE_SYNC_ENTRY_MIN_RETRIES = 3;
+export const SYNC_BATCH_CONCURRENCY_LIMIT = 6;
 
 // Sync state
 let isSyncing = false;
@@ -190,11 +192,18 @@ export interface FullSyncResult extends SyncResult {
 // Callbacks for conflict handling (set by App.tsx)
 let onConflictDetected: ((conflict: ConflictInfo) => void) | null = null;
 
-type QueueEntryOutcome = 'processed' | 'retry' | 'blocked';
+type QueueEntryOutcome = 'processed' | 'retry' | 'blocked' | 'conflict';
 
 interface QueueEntryResult {
   outcome: QueueEntryOutcome;
   error?: Error;
+}
+
+class SyncConflictError extends Error {
+  constructor(entityId: string) {
+    super(`Sync conflict detected for ${entityId}`);
+    this.name = 'SyncConflictError';
+  }
 }
 
 /**
@@ -268,6 +277,13 @@ async function processQueueEntry(
         return { outcome: 'processed' };
     }
   } catch (error) {
+    if (error instanceof SyncConflictError) {
+      return {
+        outcome: 'conflict',
+        error,
+      };
+    }
+
     console.error(`Sync error for ${entityType}/${entityId}:`, error);
 
     if (isRetryableError(error)) {
@@ -393,7 +409,7 @@ async function processNoteOperation(
             });
             // Mark as conflict in local DB
             await db.notes.update(noteId, { syncStatus: 'conflict' });
-            return true; // Remove from queue, conflict handler takes over
+            throw new SyncConflictError(noteId);
           }
         }
       }
@@ -708,7 +724,7 @@ function mergeSyncResult(target: SyncResult, delta: SyncResult): void {
   target.errors.push(...delta.errors);
 }
 
-function buildQueueBatches(queue: SyncQueueEntry[]): SyncQueueEntry[][] {
+export function buildQueueBatches(queue: SyncQueueEntry[]): SyncQueueEntry[][] {
   const batches: SyncQueueEntry[][] = [];
   let currentBatch: SyncQueueEntry[] = [];
   let currentBatchKind: 'entity' | 'noteTag' | null = null;
@@ -717,6 +733,8 @@ function buildQueueBatches(queue: SyncQueueEntry[]): SyncQueueEntry[][] {
   for (const entry of queue) {
     const batchKind = entry.entityType === 'noteTag' ? 'noteTag' : 'entity';
     const entityKey = `${entry.entityType}:${entry.entityId}`;
+    // noteTag operations depend on their note/tag already existing on the server,
+    // so they always start a new batch when crossing the entity <-> noteTag boundary.
     const shouldStartNewBatch =
       currentBatch.length > 0
       && (currentBatchKind !== batchKind || currentBatchKeys.has(entityKey));
@@ -737,6 +755,56 @@ function buildQueueBatches(queue: SyncQueueEntry[]): SyncQueueEntry[][] {
   }
 
   return batches;
+}
+
+async function processBatchWithLimit(
+  userId: string,
+  batch: SyncQueueEntry[],
+  concurrencyLimit: number = SYNC_BATCH_CONCURRENCY_LIMIT
+): Promise<SyncResult[]> {
+  const results: SyncResult[] = new Array(batch.length);
+  let nextIndex = 0;
+
+  // Independent queue entries can run in parallel, but keep concurrency bounded
+  // and convert any unexpected throw into a per-entry SyncResult.
+  const worker = async () => {
+    while (nextIndex < batch.length) {
+      const currentIndex = nextIndex++;
+      try {
+        results[currentIndex] = await processQueuedEntryAndPersist(userId, batch[currentIndex]);
+      } catch (unexpectedError) {
+        results[currentIndex] = {
+          processed: 0,
+          failed: 1,
+          blocked: 0,
+          conflicts: 0,
+          errors: [unexpectedError instanceof Error ? unexpectedError : new Error(String(unexpectedError))],
+        };
+      }
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrencyLimit, batch.length) }, () => worker())
+  );
+
+  return results;
+}
+
+export async function invalidateSyncPullCursors(userId: string): Promise<void> {
+  const db = getOfflineDb(userId);
+
+  await db.transaction('rw', [db.notes, db.tags], async () => {
+    await db.notes
+      .where('syncStatus')
+      .equals('synced')
+      .modify({ lastSyncedAt: MIGRATION_SYNC_SENTINEL });
+
+    await db.tags
+      .where('syncStatus')
+      .equals('synced')
+      .modify({ lastSyncedAt: MIGRATION_SYNC_SENTINEL });
+  });
 }
 
 async function processQueuedEntryAndPersist(
@@ -770,6 +838,9 @@ async function processQueuedEntryAndPersist(
         await updateRetryMetadata(userId, entry, newRetryCount, lastError);
         result.failed++;
       }
+    } else if (queueResult.outcome === 'conflict') {
+      await removeSyncQueueEntry(userId, entry.clientMutationId, entry.id);
+      result.conflicts++;
     } else {
       const blockedError = queueResult.error ?? new Error('Non-retryable sync failure');
       const blockedRetryCount = entry.retryCount + 1;
@@ -786,10 +857,6 @@ async function processQueuedEntryAndPersist(
   } catch (error) {
     const syncError = error instanceof Error ? error : new Error(String(error));
     result.errors.push(syncError);
-
-    if (syncError.message.includes('conflict')) {
-      result.conflicts++;
-    }
 
     try {
       const newRetryCount = entry.retryCount + 1;
@@ -880,7 +947,7 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
           entry,
           entry.retryCount,
           'stale_cleanup',
-          'Change has been pending for over an hour and now needs manual retry.'
+          'Change has been pending for over 24 hours and now needs manual retry.'
         );
         result.blocked++;
         result.errors.push(
@@ -902,9 +969,7 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
   const queue = await getPendingSyncQueue(userId);
 
   for (const batch of buildQueueBatches(queue)) {
-    const batchResults = await Promise.all(
-      batch.map((entry) => processQueuedEntryAndPersist(userId, entry))
-    );
+    const batchResults = await processBatchWithLimit(userId, batch);
 
     for (const batchResult of batchResults) {
       mergeSyncResult(result, batchResult);
