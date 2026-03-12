@@ -224,6 +224,8 @@ function App() {
   const { conflicts, removeConflict, triggerSync } = useSyncEngine(handleSyncComplete);
   const [activeConflict, setActiveConflict] = useState<typeof conflicts[0] | null>(null);
   const [isRetryingBlockedChanges, setIsRetryingBlockedChanges] = useState(false);
+  const triggerSyncRef = useRef(triggerSync);
+  triggerSyncRef.current = triggerSync;
   const realtimeRecoveryInFlightRef = useRef(false);
 
   const reportRealtimePersistenceFailure = useCallback(async (
@@ -251,8 +253,10 @@ function App() {
     realtimeRecoveryInFlightRef.current = true;
 
     try {
+      // Reset pull cursors before scheduling recovery so the next sync
+      // cannot reuse a stale incremental cursor after a dropped realtime write.
       await invalidateSyncPullCursors(uid);
-      const { outcome } = await triggerSync();
+      const { outcome } = await triggerSyncRef.current();
       if (outcome === 'error') {
         reportReliabilityIssue({
           category: 'sync',
@@ -271,7 +275,7 @@ function App() {
     } finally {
       realtimeRecoveryInFlightRef.current = false;
     }
-  }, [triggerSync, user?.id]);
+  }, [user?.id]);
 
   // Coalesced sync trigger: after a save, wait 2s then trigger sync.
   // Reset on each save to prevent flooding during rapid typing.
