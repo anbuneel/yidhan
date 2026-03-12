@@ -64,6 +64,7 @@ function localTagToTag(localTag: LocalTag): Tag {
 function dbNoteToLocal(dbNote: DbNote, userId: string): LocalNote {
   // Use server timestamp for lastSyncedAt to avoid clock skew issues
   const serverTime = new Date(dbNote.updated_at).getTime();
+  const displayTime = new Date(dbNote.display_updated_at ?? dbNote.updated_at).getTime();
   return {
     id: dbNote.id,
     userId,
@@ -72,7 +73,7 @@ function dbNoteToLocal(dbNote: DbNote, userId: string): LocalNote {
     pinned: dbNote.pinned ?? false,
     deletedAt: dbNote.deleted_at ? new Date(dbNote.deleted_at).getTime() : null,
     createdAt: new Date(dbNote.created_at).getTime(),
-    updatedAt: serverTime,
+    updatedAt: displayTime,
     syncStatus: 'synced',
     lastSyncedAt: serverTime,
     serverUpdatedAt: serverTime,
@@ -864,7 +865,8 @@ export async function toggleNotePinOffline(
 export async function addTagToNoteOffline(
   userId: string,
   noteId: string,
-  tagId: string
+  tagId: string,
+  options?: { preserveUpdatedAt?: boolean }
 ): Promise<void> {
   const db = getOfflineDb(userId);
   const now = Date.now();
@@ -889,11 +891,13 @@ export async function addTagToNoteOffline(
 
   await db.noteTags.add(noteTag);
 
-  // Update note's updatedAt
-  await db.notes.update(noteId, {
-    updatedAt: now,
-    localUpdatedAt: now,
-  });
+  if (!options?.preserveUpdatedAt) {
+    // Tag changes count as note activity unless we're reconstructing an import.
+    await db.notes.update(noteId, {
+      updatedAt: now,
+      localUpdatedAt: now,
+    });
+  }
 
   // Queue for sync
   await queueSyncOperation(userId, 'add_tag', 'noteTag', `${noteId}:${tagId}`, {

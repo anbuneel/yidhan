@@ -25,6 +25,7 @@ import {
   addReliabilityBreadcrumb,
   reportReliabilityIssue,
 } from '../utils/reliabilityTelemetry';
+import type { Database } from '../types/database';
 
 // Lazy check for native platform (avoids issues at module initialization)
 let _isNative: boolean | null = null;
@@ -122,6 +123,7 @@ export interface ServerNoteVersion {
   pinned: boolean;
   deleted_at: string | null;
   created_at: string;
+  display_updated_at?: string | null;
   updated_at: string;
   encrypted_payload: string | null;
   encryption_iv: string | null;
@@ -138,6 +140,12 @@ export interface HardDeletedServerNoteVersion extends ServerNoteVersion {
 export type NoteConflictServerVersion =
   | (ServerNoteVersion & { hard_deleted?: false })
   | HardDeletedServerNoteVersion;
+
+function getDisplayUpdatedAt(
+  note: Pick<ServerNoteVersion, 'updated_at' | 'display_updated_at'>
+): string {
+  return note.display_updated_at ?? note.updated_at;
+}
 
 export interface NoteConflictInfo {
   entityType: 'note';
@@ -306,7 +314,7 @@ async function processNoteOperation(
         return true;
       }
 
-      const insertPayload: Record<string, unknown> = {
+      const insertPayload: Database['public']['Tables']['notes']['Insert'] = {
         id: noteId,
         user_id: userId,
         title: (data.title as string) ?? '',
@@ -322,7 +330,7 @@ async function processNoteOperation(
         insertPayload.created_at = data.createdAt;
       }
       if (typeof data.updatedAt === 'string') {
-        insertPayload.updated_at = data.updatedAt;
+        insertPayload.display_updated_at = data.updatedAt;
       }
 
       const { data: created, error } = await supabase
@@ -902,6 +910,7 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
 
     // Use server timestamp for lastSyncedAt (not Date.now())
     const serverTime = new Date(serverNote.updated_at).getTime();
+    const displayTime = new Date(getDisplayUpdatedAt(serverNote)).getTime();
     await db.notes.put({
       id: serverNote.id,
       userId,
@@ -912,7 +921,7 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
         ? new Date(serverNote.deleted_at).getTime()
         : null,
       createdAt: new Date(serverNote.created_at).getTime(),
-      updatedAt: serverTime,
+      updatedAt: displayTime,
       syncStatus: 'synced',
       lastSyncedAt: serverTime,
       serverUpdatedAt: serverTime,

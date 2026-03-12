@@ -42,7 +42,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [securityMessage, setSecurityMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [securityMessage, setSecurityMessage] = useState<{ text: string } | null>(null);
 
   // Initialize form with user data
   useEffect(() => {
@@ -68,7 +68,6 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
 
     if (!success) {
       setSecurityMessage({
-        type: 'error',
         text: newValue
           ? 'Could not remember this browser. Check available storage or browser privacy settings and try again.'
           : 'Could not update this browser setting. Please try again.',
@@ -787,9 +786,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         className="mt-2 text-xs"
                         style={{
                           fontFamily: 'var(--font-body)',
-                          color: securityMessage.type === 'success'
-                            ? 'var(--color-accent)'
-                            : 'var(--color-destructive)',
+                          color: 'var(--color-destructive)',
                         }}
                       >
                         {securityMessage.text}

@@ -159,6 +159,7 @@ function buildDeletedServerVersion(note: LocalNote): HardDeletedServerNoteVersio
     pinned: note.pinned,
     deleted_at: new Date().toISOString(),
     created_at: new Date(note.createdAt).toISOString(),
+    display_updated_at: new Date(note.updatedAt).toISOString(),
     updated_at: serverTimestamp,
     encrypted_payload: note.encryptedPayload ?? null,
     encryption_iv: note.encryptionIv ?? null,
@@ -1611,7 +1612,7 @@ function App() {
           for (const tagName of originalTags) {
             const tagId = tagMap.get(tagName);
             if (tagId) {
-              await addTagToNoteOffline(user.id, note.id, tagId);
+              await addTagToNoteOffline(user.id, note.id, tagId, { preserveUpdatedAt: true });
             }
           }
           setImportProgress({ isImporting: true, current: i + 1, total: createdNotes.length, phase: 'finalizing' });
@@ -1681,7 +1682,7 @@ function App() {
               for (const tagName of originalTags) {
                 const tagId = tagMap.get(tagName);
                 if (tagId) {
-                  await addTagToNoteOffline(user.id, note.id, tagId);
+                  await addTagToNoteOffline(user.id, note.id, tagId, { preserveUpdatedAt: true });
                 }
               }
               setImportProgress({ isImporting: true, current: i + 1, total: createdNotes.length, phase: 'finalizing' });
@@ -1751,7 +1752,7 @@ function App() {
           for (const tagName of noteTags) {
             const tagId = tagMap.get(tagName);
             if (tagId) {
-              await addTagToNoteOffline(user.id, newNote.id, tagId);
+              await addTagToNoteOffline(user.id, newNote.id, tagId, { preserveUpdatedAt: true });
             }
           }
 

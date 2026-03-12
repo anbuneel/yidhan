@@ -50,6 +50,12 @@ export interface SyncState {
   removeConflict: (entityId: string) => void;
 }
 
+function getDisplayUpdatedAt(
+  note: Pick<NoteConflictServerVersion, 'updated_at' | 'display_updated_at'>
+): string {
+  return note.display_updated_at ?? note.updated_at;
+}
+
 /**
  * Map a FullSyncResult to a SyncOutcome.
  *
@@ -436,8 +442,8 @@ export async function resolveConflict(
                 deletedAt: null,
                 lastSyncedAt: serverTime,
                 serverUpdatedAt: serverTime,
-                updatedAt: serverTime,
-                localUpdatedAt: serverTime,
+                updatedAt: localNote.updatedAt,
+                localUpdatedAt: localNote.localUpdatedAt,
               });
 
               if (localNoteTags.length > 0) {
@@ -500,6 +506,7 @@ export async function resolveConflict(
 
       // Apply server version locally — include encrypted fields from server
       const serverTime = new Date(serverNote.updated_at).getTime();
+      const displayTime = new Date(getDisplayUpdatedAt(serverNote)).getTime();
       await db.notes.update(serverNote.id, {
         title: serverNote.title,
         content: serverNote.content,
@@ -507,7 +514,7 @@ export async function resolveConflict(
         deletedAt: serverNote.deleted_at
           ? new Date(serverNote.deleted_at).getTime()
           : null,
-        updatedAt: serverTime,
+        updatedAt: displayTime,
         syncStatus: 'synced',
         lastSyncedAt: serverTime,
         serverUpdatedAt: serverTime,
@@ -604,6 +611,7 @@ export async function resolveConflict(
 
       // Update original with server version (including encrypted fields)
       const serverUpdatedTime = new Date(serverNote.updated_at).getTime();
+      const displayUpdatedTime = new Date(getDisplayUpdatedAt(serverNote)).getTime();
       await db.notes.update(serverNote.id, {
         title: serverNote.title,
         content: serverNote.content,
@@ -611,7 +619,7 @@ export async function resolveConflict(
         deletedAt: serverNote.deleted_at
           ? new Date(serverNote.deleted_at).getTime()
           : null,
-        updatedAt: serverUpdatedTime,
+        updatedAt: displayUpdatedTime,
         syncStatus: 'synced',
         lastSyncedAt: serverUpdatedTime,
         serverUpdatedAt: serverUpdatedTime,

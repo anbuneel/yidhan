@@ -78,10 +78,6 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
     const persistKeys = options?.persistKeys;
 
     if (!userId) {
-      if (enabled && persistKeys && !persistKeys()) {
-        return false;
-      }
-
       setSettings((prev) => ({ ...prev, rememberBrowser: enabled }));
       return true;
     }
@@ -90,11 +86,8 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
     const persistedKeysKey = storageKey(userId, 'persisted-keys');
 
     try {
-      localStorage.setItem(rememberKey, String(enabled));
-
       if (enabled) {
         if (persistKeys && !persistKeys()) {
-          localStorage.removeItem(rememberKey);
           localStorage.removeItem(persistedKeysKey);
           return false;
         }
@@ -102,6 +95,7 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
         localStorage.removeItem(persistedKeysKey);
       }
 
+      localStorage.setItem(rememberKey, String(enabled));
       setSettings((prev) => ({ ...prev, rememberBrowser: enabled }));
       return true;
     } catch (err) {
@@ -109,13 +103,12 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
 
       try {
         localStorage.removeItem(rememberKey);
-        if (enabled) {
-          localStorage.removeItem(persistedKeysKey);
-        }
+        localStorage.removeItem(persistedKeysKey);
       } catch {
         // Best-effort cleanup after a failed write.
       }
 
+      setSettings((prev) => ({ ...prev, rememberBrowser: false }));
       return false;
     }
   }, [userId]);

@@ -398,9 +398,8 @@ describe('mapSyncOutcome', () => {
 
 describe('server timestamp authority', () => {
   // These tests document the contract that push paths must NOT send client
-  // timestamps. The server-side trigger (notes_updated_at_trigger) is the
-  // sole authority. We verify the source code does not contain client-time
-  // assignments in note update payloads.
+  // timestamps into server-authoritative sync columns. The server-side trigger
+  // owns updated_at and advances display_updated_at on ordinary updates.
 
   it('syncEngine processNoteMutation update path does not send updated_at', async () => {
     // Read the source and verify no client timestamp in the update payload.
@@ -418,6 +417,8 @@ describe('server timestamp authority', () => {
     // Should NOT match because we removed it.
     const updatePayloadPattern = /\.update\(\{[^}]*updated_at:\s*new Date\(\)/s;
     expect(source).not.toMatch(updatePayloadPattern);
+    const displayPayloadPattern = /\.update\(\{[^}]*display_updated_at:\s*new Date\(\)/s;
+    expect(source).not.toMatch(displayPayloadPattern);
   });
 
   it('notes.ts updateNote does not send updated_at', async () => {
@@ -430,6 +431,8 @@ describe('server timestamp authority', () => {
 
     const updatePayloadPattern = /\.update\(\{[^}]*updated_at:\s*new Date\(\)/s;
     expect(source).not.toMatch(updatePayloadPattern);
+    const displayPayloadPattern = /\.update\(\{[^}]*display_updated_at:\s*new Date\(\)/s;
+    expect(source).not.toMatch(displayPayloadPattern);
   });
 
   it('useSyncEngine resolveConflict does not send updated_at', async () => {
@@ -442,6 +445,8 @@ describe('server timestamp authority', () => {
 
     const updatePayloadPattern = /\.update\(\{[^}]*updated_at:\s*new Date\(\)/s;
     expect(source).not.toMatch(updatePayloadPattern);
+    const displayPayloadPattern = /\.update\(\{[^}]*display_updated_at:\s*new Date\(\)/s;
+    expect(source).not.toMatch(displayPayloadPattern);
   });
 });
 
@@ -515,7 +520,7 @@ describe('processQueue behavior', () => {
     expect(result.failed).toBe(0);
     expect(insertChain.insert).toHaveBeenCalledWith(expect.objectContaining({
       created_at: importedCreatedAt,
-      updated_at: importedUpdatedAt,
+      display_updated_at: importedUpdatedAt,
     }));
     expect(mockRemoveSyncQueueEntry).toHaveBeenCalledWith(
       TEST_USER_ID,
@@ -1111,6 +1116,37 @@ describe('pullRemoteChanges behavior', () => {
     expect(stored).toBeDefined();
     expect(stored!.title).toBe('Server Note');
     expect(stored!.syncStatus).toBe('synced');
+  });
+
+  it('should keep display chronology separate from the sync cursor when pulling notes', async () => {
+    const serverNote = {
+      id: 'pulled-imported-note',
+      title: 'Imported elsewhere',
+      content: '<p>From backup</p>',
+      pinned: false,
+      deleted_at: null,
+      created_at: '2024-01-10T00:00:00Z',
+      display_updated_at: '2024-01-12T00:00:00Z',
+      updated_at: '2026-03-12T00:00:00Z',
+      encrypted_payload: null,
+      encryption_iv: null,
+      encryption_version: null,
+      content_hash: null,
+    };
+
+    mockFetchAllPaginated
+      .mockResolvedValueOnce({ data: [serverNote], error: null })
+      .mockResolvedValueOnce({ data: [{ id: 'pulled-imported-note' }], error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
+
+    await pullRemoteChanges(TEST_USER_ID);
+
+    const db = getOfflineDb(TEST_USER_ID);
+    const stored = await db.notes.get('pulled-imported-note');
+    expect(stored?.updatedAt).toBe(new Date('2024-01-12T00:00:00Z').getTime());
+    expect(stored?.serverUpdatedAt).toBe(new Date('2026-03-12T00:00:00Z').getTime());
+    expect(stored?.lastSyncedAt).toBe(new Date('2026-03-12T00:00:00Z').getTime());
   });
 
   it('should skip notes with pending syncStatus', async () => {

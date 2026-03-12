@@ -540,6 +540,26 @@ describe('offlineNotes', () => {
       const addTagOps = queue.filter((e) => e.operation === 'add_tag');
       expect(addTagOps).toHaveLength(1);
     });
+
+    it('preserves imported updatedAt when tagging imported notes', async () => {
+      const { createNotesBatchOffline, addTagToNoteOffline } = await import('./offlineNotes');
+      const importedCreatedAt = new Date('2024-01-01T00:00:00Z');
+      const importedUpdatedAt = new Date('2024-01-05T00:00:00Z');
+
+      const [note] = await createNotesBatchOffline(TEST_USER_ID, [{
+        title: 'Imported',
+        content: '<p>Preserve me</p>',
+        createdAt: importedCreatedAt,
+        updatedAt: importedUpdatedAt,
+      }]);
+
+      await seedTag('tag-import-1', 'Imported', 'sage');
+      await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-import-1', { preserveUpdatedAt: true });
+
+      const db = getOfflineDb(TEST_USER_ID);
+      const stored = await db.notes.get(note.id);
+      expect(stored?.updatedAt).toBe(importedUpdatedAt.getTime());
+    });
   });
 
   describe('removeTagFromNoteOffline', () => {
