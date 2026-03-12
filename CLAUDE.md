@@ -23,9 +23,9 @@ src/
 │   ├── ChangelogPage.tsx  # Version history page with categorized changes
 │   ├── Editor.tsx         # Note editor with rich text + tag selector + save/sync indicator + E2EE sharing + focus mode + mobile bottom toolbar + manuscript glow
 │   ├── PassphraseSetup.tsx # First-time E2EE passphrase setup screen + 4 starter notes + Recipes tag
-│   ├── PassphraseSetup.test.tsx # 10 tests: form validation, setup flow, starter notes + tag, error states
-│   ├── PassphraseUnlock.tsx # Returning user E2EE unlock screen
-│   ├── PassphraseUnlock.test.tsx # 12 tests: unlock flow, error states, sign-out, remember browser
+│   ├── PassphraseSetup.test.tsx # 12 tests: form validation, setup flow, starter notes + tag, error states, strength indicator
+│   ├── PassphraseUnlock.tsx # Returning user E2EE unlock screen with client-side lockout after repeated failures
+│   ├── PassphraseUnlock.test.tsx # 18 tests: unlock flow, error states, sign-out, remember browser, lockout enforcement
 │   ├── EditorToolbar.tsx  # Formatting toolbar (variant: 'inline' desktop / 'bottom' mobile, HeadingCycleButton, OverflowMenu with direction)
 │   ├── EditorSidebar.tsx  # Vertical sidebar toolbar (≥1100px) — frosted glass, 10 formatting buttons + focus mode toggle
 │   ├── ErrorBoundary.tsx  # Error boundary with chunk error detection (deployment handling)
@@ -82,11 +82,11 @@ src/
 ├── contexts/
 │   ├── AuthContext.tsx    # Auth state management (login, signup, Google OAuth, password reset, profile, offboarding)
 │   ├── EncryptionContext.tsx # E2EE key management (derive, unlock, lock, remembered browser restore, telemetry)
-│   └── EncryptionContext.test.tsx # 13 tests: vault state machine, blob checksum verification, v1→v2 upgrade, multi-tab key cleanup
+│   └── EncryptionContext.test.tsx # 15 tests: vault state machine, blob checksum verification, v1→v2 upgrade, multi-tab key cleanup, legacy key-check upgrade
 ├── lib/
-│   ├── encryption.ts      # Core E2EE crypto: Argon2id + AES-256-GCM + HMAC-SHA-256 + share encryption + SessionKeyBlob v2 checksum
+│   ├── encryption.ts      # Core E2EE crypto: Argon2id + AES-256-GCM + HMAC-SHA-256 + share encryption + SessionKeyBlob v2 checksum + key-check AAD versioning
 │   ├── __tests__/
-│   │   ├── encryption.test.ts # 24 crypto unit tests (roundtrip, tamper, wrong key/AAD, blob checksum, v1 compat)
+│   │   ├── encryption.test.ts # 27 crypto unit tests (roundtrip, tamper, wrong key/AAD, blob checksum, v1 compat, key-check AAD, salt validation)
 │   │   └── shareEncryption.test.ts # 26 tests: base64url, token/key gen, encrypt/decrypt roundtrip, AAD
 │   ├── supabase.ts        # Supabase client instance + fetchAllPaginated helper
 │   └── offlineDb.ts       # Dexie IndexedDB schema for offline storage (v5 with blocked queue state + hydration metadata)
