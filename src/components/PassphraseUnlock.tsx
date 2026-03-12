@@ -1,15 +1,126 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useEncryption } from '../contexts/EncryptionContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useVaultSettings } from '../hooks/useVaultSettings';
 
+const MAX_FAILED_UNLOCK_ATTEMPTS = 5;
+const UNLOCK_LOCKOUT_MS = 60 * 1000;
+
+interface UnlockLockoutState {
+  failedAttempts: number;
+  lockedUntil: number | null;
+}
+
+const DEFAULT_LOCKOUT_STATE: UnlockLockoutState = {
+  failedAttempts: 0,
+  lockedUntil: null,
+};
+
+function lockoutStorageKey(userId: string | null): string | null {
+  return userId ? `yidhan-${userId}-vault-unlock-lockout` : null;
+}
+
+function readLockoutState(userId: string | null): UnlockLockoutState {
+  const storageKey = lockoutStorageKey(userId);
+  if (!storageKey) {
+    return DEFAULT_LOCKOUT_STATE;
+  }
+
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) {
+      return DEFAULT_LOCKOUT_STATE;
+    }
+
+    const parsed = JSON.parse(raw) as Partial<UnlockLockoutState>;
+    const failedAttempts = typeof parsed.failedAttempts === 'number'
+      ? Math.max(0, parsed.failedAttempts)
+      : 0;
+    const lockedUntil = typeof parsed.lockedUntil === 'number'
+      ? parsed.lockedUntil
+      : null;
+
+    if (lockedUntil !== null && lockedUntil <= Date.now()) {
+      localStorage.removeItem(storageKey);
+      return DEFAULT_LOCKOUT_STATE;
+    }
+
+    return { failedAttempts, lockedUntil };
+  } catch {
+    return DEFAULT_LOCKOUT_STATE;
+  }
+}
+
+function persistLockoutState(userId: string | null, state: UnlockLockoutState): void {
+  const storageKey = lockoutStorageKey(userId);
+  if (!storageKey) {
+    return;
+  }
+
+  try {
+    if (state.failedAttempts === 0 && state.lockedUntil === null) {
+      localStorage.removeItem(storageKey);
+      return;
+    }
+
+    localStorage.setItem(storageKey, JSON.stringify(state));
+  } catch {
+    // Lockout persistence is hardening only — fall back to in-memory state.
+  }
+}
+
+function clearLockoutState(userId: string | null): UnlockLockoutState {
+  persistLockoutState(userId, DEFAULT_LOCKOUT_STATE);
+  return DEFAULT_LOCKOUT_STATE;
+}
+
+function recordFailedUnlockAttempt(userId: string | null): UnlockLockoutState {
+  const current = readLockoutState(userId);
+  const failedAttempts = current.failedAttempts + 1;
+  const nextState: UnlockLockoutState = failedAttempts >= MAX_FAILED_UNLOCK_ATTEMPTS
+    ? { failedAttempts, lockedUntil: Date.now() + UNLOCK_LOCKOUT_MS }
+    : { failedAttempts, lockedUntil: null };
+  persistLockoutState(userId, nextState);
+  return nextState;
+}
+
 export function PassphraseUnlock() {
   const { unlockWithPassphrase, lockVault } = useEncryption();
   const { user, signOut } = useAuth();
+  const userId = user?.id ?? null;
   const vaultSettings = useVaultSettings(user?.id ?? null);
   const [passphrase, setPassphrase] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lockoutState, setLockoutState] = useState<UnlockLockoutState>(() => readLockoutState(userId));
+  const [lockoutNow, setLockoutNow] = useState(() => Date.now());
+  const isLockedOut = lockoutState.lockedUntil !== null && lockoutState.lockedUntil > lockoutNow;
+  const remainingLockoutSeconds = isLockedOut
+    ? Math.max(1, Math.ceil((lockoutState.lockedUntil! - lockoutNow) / 1000))
+    : 0;
+
+  useEffect(() => {
+    setLockoutState(readLockoutState(userId));
+    setLockoutNow(Date.now());
+  }, [userId]);
+
+  useEffect(() => {
+    if (!isLockedOut) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      const now = Date.now();
+      setLockoutNow(now);
+
+      if (lockoutState.lockedUntil !== null && lockoutState.lockedUntil <= now) {
+        setLockoutState(clearLockoutState(userId));
+        setError('');
+      }
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [isLockedOut, lockoutState.lockedUntil, userId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,12 +131,31 @@ export function PassphraseUnlock() {
       return;
     }
 
+    if (isLockedOut) {
+      setError(`Too many incorrect attempts. Try again in ${remainingLockoutSeconds}s.`);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const success = await unlockWithPassphrase(passphrase);
       if (!success) {
-        setError('Incorrect passphrase. Please try again.');
+        const nextLockoutState = recordFailedUnlockAttempt(userId);
+        setLockoutState(nextLockoutState);
+        setLockoutNow(Date.now());
+        if (nextLockoutState.lockedUntil !== null) {
+          setError(`Too many incorrect attempts. Try again in ${Math.ceil(UNLOCK_LOCKOUT_MS / 1000)}s.`);
+        } else {
+          const attemptsRemaining = MAX_FAILED_UNLOCK_ATTEMPTS - nextLockoutState.failedAttempts;
+          setError(
+            `Incorrect passphrase. ${attemptsRemaining} ${
+              attemptsRemaining === 1 ? 'attempt' : 'attempts'
+            } remaining before a short lockout.`
+          );
+        }
         setPassphrase('');
+      } else {
+        setLockoutState(clearLockoutState(userId));
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred';
@@ -131,7 +261,7 @@ export function PassphraseUnlock() {
 
           <button
             type="submit"
-            disabled={!passphrase || isSubmitting}
+            disabled={!passphrase || isSubmitting || isLockedOut}
             className="w-full py-2 text-sm transition-opacity"
             style={{
               background: 'var(--color-cta-bg)',
@@ -139,12 +269,12 @@ export function PassphraseUnlock() {
               borderRadius: '2px 12px 4px 12px',
               fontFamily: 'var(--font-body)',
               fontWeight: 500,
-              opacity: passphrase && !isSubmitting ? 1 : 0.5,
-              cursor: passphrase && !isSubmitting ? 'pointer' : 'not-allowed',
+              opacity: passphrase && !isSubmitting && !isLockedOut ? 1 : 0.5,
+              cursor: passphrase && !isSubmitting && !isLockedOut ? 'pointer' : 'not-allowed',
               border: 'none',
             }}
           >
-            {isSubmitting ? 'Unlocking...' : 'Unlock'}
+            {isSubmitting ? 'Unlocking...' : isLockedOut ? `Locked for ${remainingLockoutSeconds}s` : 'Unlock'}
           </button>
 
           <button

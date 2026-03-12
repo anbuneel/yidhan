@@ -9,6 +9,50 @@ interface PassphraseSetupProps {
   onComplete?: () => void;
 }
 
+interface PassphraseStrength {
+  label: 'Too short' | 'Weak' | 'Fair' | 'Good' | 'Strong';
+  score: number;
+  color: string;
+}
+
+function evaluatePassphraseStrength(passphrase: string): PassphraseStrength | null {
+  if (!passphrase) {
+    return null;
+  }
+
+  if (passphrase.length < 8) {
+    return { label: 'Too short', score: 1, color: 'var(--color-destructive)' };
+  }
+
+  let score = 0;
+  if (passphrase.length >= 8) score++;
+  if (passphrase.length >= 12) score++;
+  if (passphrase.length >= 16) score++;
+
+  const characterClasses = [
+    /[a-z]/.test(passphrase),
+    /[A-Z]/.test(passphrase),
+    /\d/.test(passphrase),
+    /[^A-Za-z0-9]/.test(passphrase),
+  ].filter(Boolean).length;
+
+  if (characterClasses >= 2) score++;
+  if (characterClasses >= 3) score++;
+  if (characterClasses === 4) score++;
+
+  if (score <= 2) {
+    return { label: 'Weak', score: 1, color: 'var(--color-destructive)' };
+  }
+  if (score <= 4) {
+    return { label: 'Fair', score: 2, color: 'var(--color-accent)' };
+  }
+  if (score <= 5) {
+    return { label: 'Good', score: 3, color: 'var(--color-cta-bg)' };
+  }
+
+  return { label: 'Strong', score: 4, color: 'var(--color-cta-bg)' };
+}
+
 const STARTER_NOTES = [
   {
     title: 'Welcome to Yidhan',
@@ -56,6 +100,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
   const [acknowledged, setAcknowledged] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const passphraseStrength = evaluatePassphraseStrength(passphrase);
 
   const isValid = passphrase.length >= 8 &&
                   passphrase === confirm &&
@@ -172,6 +217,32 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
                 outline: 'none',
               }}
             />
+            {passphraseStrength && (
+              <div className="mt-2 space-y-1">
+                <div
+                  className="text-xs"
+                  style={{ color: passphraseStrength.color, fontFamily: 'var(--font-body)' }}
+                >
+                  Strength: {passphraseStrength.label}
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="grid grid-cols-4 gap-1"
+                >
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <div
+                      key={index}
+                      className="h-1 rounded-full"
+                      style={{
+                        background: index < passphraseStrength.score
+                          ? passphraseStrength.color
+                          : 'var(--glass-border)',
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

@@ -59,6 +59,12 @@ describe('encryption', () => {
       expect(keys1.salt.length).toBe(16);
       expect(keys2.salt.length).toBe(16);
     });
+
+    it('rejects invalid salt lengths', async () => {
+      await expect(
+        deriveKeys(TEST_PASSPHRASE, new Uint8Array(8))
+      ).rejects.toThrow('Invalid salt length');
+    });
   });
 
   describe('encryptNote / decryptNote', () => {
@@ -285,8 +291,14 @@ describe('encryption', () => {
     it('key-check roundtrip verification succeeds with correct key', async () => {
       const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
 
-      const { keyCheck, keyCheckIv } = await createKeyCheck(keys.encryptionKey);
-      const isValid = await verifyKeyCheck(keys.encryptionKey, keyCheck, keyCheckIv);
+      const { keyCheck, keyCheckIv, keyCheckVersion } = await createKeyCheck(keys.encryptionKey, TEST_USER_ID);
+      const isValid = await verifyKeyCheck(
+        keys.encryptionKey,
+        keyCheck,
+        keyCheckIv,
+        TEST_USER_ID,
+        keyCheckVersion
+      );
 
       expect(isValid).toBe(true);
     });
@@ -295,10 +307,50 @@ describe('encryption', () => {
       const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
       const wrongKeys = await deriveKeys('wrong-passphrase', TEST_SALT);
 
-      const { keyCheck, keyCheckIv } = await createKeyCheck(keys.encryptionKey);
-      const isValid = await verifyKeyCheck(wrongKeys.encryptionKey, keyCheck, keyCheckIv);
+      const { keyCheck, keyCheckIv, keyCheckVersion } = await createKeyCheck(keys.encryptionKey, TEST_USER_ID);
+      const isValid = await verifyKeyCheck(
+        wrongKeys.encryptionKey,
+        keyCheck,
+        keyCheckIv,
+        TEST_USER_ID,
+        keyCheckVersion
+      );
 
       expect(isValid).toBe(false);
+    });
+
+    it('key-check verification fails with the wrong user AAD', async () => {
+      const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
+      const { keyCheck, keyCheckIv, keyCheckVersion } = await createKeyCheck(keys.encryptionKey, TEST_USER_ID);
+      const isValid = await verifyKeyCheck(
+        keys.encryptionKey,
+        keyCheck,
+        keyCheckIv,
+        'different-user-id',
+        keyCheckVersion
+      );
+
+      expect(isValid).toBe(false);
+    });
+
+    it('legacy key-check verification still works for v1 metadata', async () => {
+      const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
+      const knownPlaintext = new TextEncoder().encode('yidhan-key-check-v1');
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ciphertext = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        keys.encryptionKey,
+        knownPlaintext
+      );
+      const isValid = await verifyKeyCheck(
+        keys.encryptionKey,
+        toBase64(new Uint8Array(ciphertext)),
+        toBase64(iv),
+        TEST_USER_ID,
+        1
+      );
+
+      expect(isValid).toBe(true);
     });
   });
 });

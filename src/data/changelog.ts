@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.13.5',
+    date: '2026-03-12',
+    changes: [
+      { type: 'improvement', text: 'Passphrase unlock now applies a short client-side lockout after repeated failures, reducing rapid brute-force retries on shared devices' },
+      { type: 'improvement', text: 'Vault key-check metadata is now versioned and bound to the user ID via AES-GCM additional authenticated data, with legacy key-checks upgrading automatically after a successful verify' },
+      { type: 'improvement', text: 'Passphrase setup now shows a lightweight strength indicator and derived-key salt inputs are validated strictly at 16 bytes' },
+    ],
+  },
+  {
     version: '3.13.4',
     date: '2026-03-12',
     changes: [

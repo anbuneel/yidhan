@@ -29,6 +29,9 @@ import { argon2id } from 'hash-wasm';
 /** Encryption schema version. Increment when changing cipher, KDF, or serialization. */
 export const ENCRYPTION_VERSION = 1;
 export const SESSION_BLOB_VERSION = 2;
+export const KEY_CHECK_VERSION = 2;
+const SALT_LENGTH_BYTES = 16;
+const KEY_CHECK_SENTINEL = 'yidhan-key-check-v1';
 
 /** Argon2id parameters — changing these invalidates existing derived keys. */
 export const ARGON2_PARAMS = {
@@ -74,6 +77,7 @@ export interface SessionKeyBlobV2 {
 }
 
 export type SessionKeyBlob = SessionKeyBlobV1 | SessionKeyBlobV2;
+export type KeyCheckVersion = 1 | typeof KEY_CHECK_VERSION;
 
 export interface EncryptedNote {
   ciphertext: string;   // base64
@@ -150,6 +154,10 @@ function isSessionKeyBlobV2(blob: SessionKeyBlob): blob is SessionKeyBlobV2 {
   return blob.version === SESSION_BLOB_VERSION;
 }
 
+function buildKeyCheckAad(userId: string): Uint8Array {
+  return textEncoder.encode(`yidhan-key-check:${userId}:v${KEY_CHECK_VERSION}`);
+}
+
 // TS 5.9 narrows Uint8Array to Uint8Array<ArrayBufferLike> which is not
 // assignable to BufferSource. At runtime, crypto.subtle.importKey accepts
 // Uint8Array directly. Cast through BufferSource to satisfy the type checker.
@@ -179,8 +187,12 @@ export async function deriveKeys(
   passphrase: string,
   salt?: Uint8Array
 ): Promise<DerivedKeys> {
+  if (salt && salt.length !== SALT_LENGTH_BYTES) {
+    throw new Error(`Invalid salt length: expected ${SALT_LENGTH_BYTES}, got ${salt.length}`);
+  }
+
   // Generate or use provided salt
-  const keySalt = salt ?? crypto.getRandomValues(new Uint8Array(16));
+  const keySalt = salt ?? crypto.getRandomValues(new Uint8Array(SALT_LENGTH_BYTES));
 
   // Argon2id: 64-byte output
   const hashHex = await argon2id({
@@ -382,13 +394,15 @@ export async function importSessionKeys(blob: SessionKeyBlob): Promise<DerivedKe
  * @returns { keyCheck: base64, keyCheckIv: base64 }
  */
 export async function createKeyCheck(
-  encryptionKey: CryptoKey
-): Promise<{ keyCheck: string; keyCheckIv: string }> {
-  const knownPlaintext = textEncoder.encode('yidhan-key-check-v1');
+  encryptionKey: CryptoKey,
+  userId: string
+): Promise<{ keyCheck: string; keyCheckIv: string; keyCheckVersion: typeof KEY_CHECK_VERSION }> {
+  const knownPlaintext = textEncoder.encode(KEY_CHECK_SENTINEL);
   const iv = crypto.getRandomValues(new Uint8Array(12));
+  const aad = buildKeyCheckAad(userId) as BufferSource;
 
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv, additionalData: aad },
     encryptionKey,
     knownPlaintext
   );
@@ -396,6 +410,7 @@ export async function createKeyCheck(
   return {
     keyCheck: toBase64(new Uint8Array(ciphertext)),
     keyCheckIv: toBase64(iv),
+    keyCheckVersion: KEY_CHECK_VERSION,
   };
 }
 
@@ -410,20 +425,30 @@ export async function createKeyCheck(
 export async function verifyKeyCheck(
   encryptionKey: CryptoKey,
   keyCheck: string,
-  keyCheckIv: string
+  keyCheckIv: string,
+  userId: string,
+  keyCheckVersion: KeyCheckVersion = KEY_CHECK_VERSION
 ): Promise<boolean> {
   try {
     const ciphertextBytes = fromBase64(keyCheck);
     const ivBytes = fromBase64(keyCheckIv);
+    const iv = new Uint8Array(ivBytes) as BufferSource;
+    const aad = buildKeyCheckAad(userId) as BufferSource;
 
     const plaintextBuffer = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: new Uint8Array(ivBytes) },
+      keyCheckVersion === KEY_CHECK_VERSION
+        ? {
+            name: 'AES-GCM',
+            iv,
+            additionalData: aad,
+          }
+        : { name: 'AES-GCM', iv },
       encryptionKey,
       new Uint8Array(ciphertextBytes)
     );
 
     const plaintext = textDecoder.decode(plaintextBuffer);
-    return plaintext === 'yidhan-key-check-v1';
+    return plaintext === KEY_CHECK_SENTINEL;
   } catch {
     // Decryption failed — wrong key
     return false;

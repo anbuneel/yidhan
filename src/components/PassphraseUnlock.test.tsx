@@ -40,6 +40,7 @@ vi.mock('../hooks/useVaultSettings', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
 });
 
 describe('PassphraseUnlock', () => {
@@ -93,7 +94,7 @@ describe('PassphraseUnlock', () => {
     await user.click(screen.getByRole('button', { name: 'Unlock' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Incorrect passphrase. Please try again.')).toBeInTheDocument();
+      expect(screen.getByText('Incorrect passphrase. 4 attempts remaining before a short lockout.')).toBeInTheDocument();
     });
   });
 
@@ -110,6 +111,60 @@ describe('PassphraseUnlock', () => {
     await waitFor(() => {
       expect(input).toHaveValue('');
     });
+  });
+
+  it('locks the form after repeated incorrect attempts', async () => {
+    mockUnlockWithPassphrase.mockResolvedValue(false);
+    const user = userEvent.setup();
+
+    render(<PassphraseUnlock />);
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await user.type(screen.getByLabelText('Passphrase'), 'wrong-passphrase');
+      await user.click(screen.getByRole('button', { name: /Unlock|Locked for/ }));
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText(/Too many incorrect attempts/)).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: /Locked for/ })).toBeDisabled();
+  });
+
+  it('does not call unlock while a stored lockout is active', async () => {
+    localStorage.setItem(
+      'yidhan-user-unlock-1-vault-unlock-lockout',
+      JSON.stringify({ failedAttempts: 5, lockedUntil: Date.now() + 60_000 })
+    );
+    const user = userEvent.setup();
+
+    render(<PassphraseUnlock />);
+
+    const input = screen.getByLabelText('Passphrase');
+    await user.type(input, 'correct-passphrase');
+    fireEvent.submit(input.closest('form')!);
+
+    expect(mockUnlockWithPassphrase).not.toHaveBeenCalled();
+    expect(screen.getByText(/Too many incorrect attempts/)).toBeInTheDocument();
+  });
+
+  it('clears stored lockout state after a successful unlock', async () => {
+    localStorage.setItem(
+      'yidhan-user-unlock-1-vault-unlock-lockout',
+      JSON.stringify({ failedAttempts: 2, lockedUntil: null })
+    );
+    mockUnlockWithPassphrase.mockResolvedValue(true);
+    const user = userEvent.setup();
+
+    render(<PassphraseUnlock />);
+
+    await user.type(screen.getByLabelText('Passphrase'), 'correct-passphrase');
+    await user.click(screen.getByRole('button', { name: /Unlock|Locked for/ }));
+
+    await waitFor(() => {
+      expect(mockUnlockWithPassphrase).toHaveBeenCalledWith('correct-passphrase');
+    });
+    expect(localStorage.getItem('yidhan-user-unlock-1-vault-unlock-lockout')).toBeNull();
   });
 
   it('should show error when unlock throws', async () => {
