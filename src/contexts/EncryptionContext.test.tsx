@@ -130,6 +130,63 @@ describe('EncryptionContext telemetry', () => {
     );
   });
 
+  it('does not recreate remembered keys from a session-only restore after another tab cleared them', async () => {
+    const fakeKeys = createFakeKeys();
+
+    localStorage.setItem('yidhan-vault-user-1-vault-remember-browser', 'true');
+    sessionStorage.setItem(
+      'yidhan-vault-user-1-vault-session',
+      JSON.stringify({ encKey: 'enc', hashKey: 'hash', salt: 'salt' })
+    );
+    mockImportSessionKeys.mockResolvedValue(fakeKeys);
+    mockVerifyKeyCheck.mockResolvedValue(true);
+
+    render(
+      <EncryptionProvider>
+        <Probe />
+      </EncryptionProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('unlocked')).toBeInTheDocument();
+    });
+
+    expect(sessionStorage.getItem('yidhan-vault-user-1-vault-session')).toBe(
+      JSON.stringify({ version: 2, encKey: 'enc', hashKey: 'hash', salt: 'salt', checksum: 'deadbeef' })
+    );
+    expect(localStorage.getItem('yidhan-vault-user-1-vault-persisted-keys')).toBeNull();
+  });
+
+  it('refreshes an existing remembered blob after a successful session restore', async () => {
+    const fakeKeys = createFakeKeys();
+
+    localStorage.setItem('yidhan-vault-user-1-vault-remember-browser', 'true');
+    localStorage.setItem(
+      'yidhan-vault-user-1-vault-persisted-keys',
+      JSON.stringify({ version: 1, encKey: 'enc', hashKey: 'hash', salt: 'salt' })
+    );
+    sessionStorage.setItem(
+      'yidhan-vault-user-1-vault-session',
+      JSON.stringify({ version: 1, encKey: 'enc', hashKey: 'hash', salt: 'salt' })
+    );
+    mockImportSessionKeys.mockResolvedValue(fakeKeys);
+    mockVerifyKeyCheck.mockResolvedValue(true);
+
+    render(
+      <EncryptionProvider>
+        <Probe />
+      </EncryptionProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('unlocked')).toBeInTheDocument();
+    });
+
+    expect(localStorage.getItem('yidhan-vault-user-1-vault-persisted-keys')).toBe(
+      JSON.stringify({ version: 2, encKey: 'enc', hashKey: 'hash', salt: 'salt', checksum: 'deadbeef' })
+    );
+  });
+
   it('clears session restore blobs that fail key-check and stays locked', async () => {
     const fakeKeys = createFakeKeys();
 

@@ -95,6 +95,16 @@ function isRememberBrowserEnabled(userId: string | null): boolean {
   }
 }
 
+function hasPersistedLocalKeys(userId: string | null): boolean {
+  if (!userId) return false;
+  try {
+    return localStorage.getItem(localKey(userId)) !== null;
+  } catch (err) {
+    console.warn('[EncryptionContext] Failed to read persisted vault keys:', err);
+    return false;
+  }
+}
+
 /** Persist key material to localStorage (survives tab close + browser restart) */
 function persistLocal(userId: string, keys: DerivedKeys): boolean {
   try {
@@ -263,6 +273,8 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
           cleanup: () => clearSession(currentUserId),
           cleanupLabel: 'sessionStorage keys',
         });
+        const hadPersistedLocalKeys = isRememberBrowserEnabled(currentUserId)
+          && hasPersistedLocalKeys(currentUserId);
 
         // Fall back to localStorage if rememberBrowser is enabled
         if (!restored && isRememberBrowserEnabled(currentUserId)) {
@@ -299,7 +311,10 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
         if (restored && !cancelled) {
           persistSession(currentUserId, restored);
-          if (isRememberBrowserEnabled(currentUserId) && !persistLocal(currentUserId, restored)) {
+          // Only rewrite localStorage when a remembered blob already exists.
+          // This preserves checksum upgrades without recreating browser-restart
+          // persistence after a manual/sign-out clear in another tab.
+          if (hadPersistedLocalKeys && !persistLocal(currentUserId, restored)) {
             reportReliabilityIssue({
               category: 'vault',
               message: 'Failed to refresh persisted vault keys after restore',
