@@ -152,6 +152,16 @@ function buildChain(result: { data?: unknown; error?: unknown } = {}) {
   return chain;
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 let entryIdCounter = 0;
 
 /** Build a SyncQueueEntry for testing */
@@ -562,6 +572,87 @@ describe('processQueue behavior', () => {
     expect(mockMarkTagSynced).toHaveBeenCalled();
   });
 
+  it('should process independent entities in parallel batches', async () => {
+    const noteEntry = buildEntry({
+      clientMutationId: 'mut-batch-note',
+      operation: 'create',
+      entityType: 'note',
+      entityId: 'note-batch',
+      payload: {
+        title: 'Batch Note',
+        content: '<p>Hello</p>',
+        pinned: false,
+        encrypted_payload: null,
+        encryption_iv: null,
+        encryption_version: null,
+        content_hash: null,
+      },
+    });
+    const tagEntry = buildEntry({
+      clientMutationId: 'mut-batch-tag',
+      operation: 'create',
+      entityType: 'tag',
+      entityId: 'tag-batch',
+      payload: { name: 'Batch Tag', color: 'gold' },
+    });
+
+    mockGetPendingSyncQueue.mockResolvedValue([noteEntry, tagEntry]);
+    mockRemoveSyncQueueEntry.mockResolvedValue(undefined);
+    mockMarkNoteSynced.mockResolvedValue(undefined);
+    mockMarkTagSynced.mockResolvedValue(undefined);
+
+    const noteIdempotencyDeferred = createDeferred<{ data: null; error: null }>();
+    const tagIdempotencyDeferred = createDeferred<{ data: null; error: null }>();
+    const noteIdempotencyChain = buildChain();
+    const tagIdempotencyChain = buildChain();
+    const noteInsertChain = buildChain({
+      data: { id: 'note-batch', updated_at: '2026-03-12T00:00:00Z' },
+    });
+    const tagInsertChain = buildChain({
+      data: { id: 'tag-batch', created_at: '2026-03-12T00:00:00Z' },
+    });
+
+    noteIdempotencyChain.maybeSingle.mockReturnValue(noteIdempotencyDeferred.promise);
+    tagIdempotencyChain.maybeSingle.mockReturnValue(tagIdempotencyDeferred.promise);
+
+    let noteCalls = 0;
+    let tagCalls = 0;
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'notes') {
+        noteCalls += 1;
+        return noteCalls === 1 ? noteIdempotencyChain : noteInsertChain;
+      }
+      if (table === 'tags') {
+        tagCalls += 1;
+        return tagCalls === 1 ? tagIdempotencyChain : tagInsertChain;
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    const syncPromise = processQueue(TEST_USER_ID);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(noteIdempotencyChain.maybeSingle).toHaveBeenCalledTimes(1);
+    expect(tagIdempotencyChain.maybeSingle).toHaveBeenCalledTimes(1);
+
+    noteIdempotencyDeferred.resolve({ data: null, error: null });
+    tagIdempotencyDeferred.resolve({ data: null, error: null });
+
+    const result = await syncPromise;
+
+    expect(result.processed).toBe(2);
+    expect(mockRemoveSyncQueueEntry).toHaveBeenCalledWith(
+      TEST_USER_ID,
+      'mut-batch-note',
+      noteEntry.id
+    );
+    expect(mockRemoveSyncQueueEntry).toHaveBeenCalledWith(
+      TEST_USER_ID,
+      'mut-batch-tag',
+      tagEntry.id
+    );
+  });
+
   it('should increment retry count on retryable network error', async () => {
     const entry = buildEntry({
       id: 100,
@@ -737,24 +828,24 @@ describe('processQueue behavior', () => {
     await db.syncQueue.clear();
   });
 
-  it('should block stale non-create entries older than 1 hour', async () => {
+  it('should block stale non-create entries older than 24 hours', async () => {
     const db = getOfflineDb(TEST_USER_ID);
 
-    // Seed a stale update entry (>1hr old, retryCount >= 3)
-    const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
+    // Seed a stale update entry (>24hr old, retryCount >= 3)
+    const twoDaysAgo = Date.now() - 48 * 60 * 60 * 1000;
     await db.syncQueue.put({
       clientMutationId: 'mut-stale',
       operation: 'update',
       entityType: 'note',
       entityId: 'note-stale',
       payload: {},
-      createdAt: twoHoursAgo,
+      createdAt: twoDaysAgo,
       retryCount: 3,
       status: 'pending',
       lastError: null,
       lastAttemptAt: null,
       blockedAt: null,
-      updatedAt: twoHoursAgo,
+      updatedAt: twoDaysAgo,
     });
 
     mockGetPendingSyncQueue.mockResolvedValue([]);
@@ -770,6 +861,37 @@ describe('processQueue behavior', () => {
     expect(blocked[0]?.lastError).toContain('manual retry');
 
     // Clean up
+    await db.syncQueue.clear();
+  });
+
+  it('should not block retrying entries before the 24-hour stale threshold', async () => {
+    const db = getOfflineDb(TEST_USER_ID);
+
+    const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
+    await db.syncQueue.put({
+      clientMutationId: 'mut-not-stale-yet',
+      operation: 'update',
+      entityType: 'note',
+      entityId: 'note-not-stale-yet',
+      payload: {},
+      createdAt: twoHoursAgo,
+      retryCount: 4,
+      status: 'pending',
+      lastError: null,
+      lastAttemptAt: null,
+      blockedAt: null,
+      updatedAt: twoHoursAgo,
+    });
+
+    mockGetPendingSyncQueue.mockResolvedValue([]);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.blocked).toBe(0);
+    const pending = await db.syncQueue.toArray();
+    expect(pending).toHaveLength(1);
+    expect(pending[0]?.status).toBe('pending');
+
     await db.syncQueue.clear();
   });
 

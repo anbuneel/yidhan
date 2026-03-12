@@ -64,6 +64,10 @@ const pendingMutations = new Set<string>();
 // Track timeout IDs to prevent memory leaks
 const pendingTimeouts = new Set<ReturnType<typeof setTimeout>>();
 
+const MAX_SYNC_RETRIES = 5;
+const STALE_SYNC_ENTRY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const STALE_SYNC_ENTRY_MIN_RETRIES = 3;
+
 // Sync state
 let isSyncing = false;
 let syncPromise: Promise<SyncResult> | null = null;
@@ -686,6 +690,136 @@ async function blockQueueEntry(
   });
 }
 
+function createEmptySyncResult(): SyncResult {
+  return {
+    processed: 0,
+    failed: 0,
+    blocked: 0,
+    conflicts: 0,
+    errors: [],
+  };
+}
+
+function mergeSyncResult(target: SyncResult, delta: SyncResult): void {
+  target.processed += delta.processed;
+  target.failed += delta.failed;
+  target.blocked += delta.blocked;
+  target.conflicts += delta.conflicts;
+  target.errors.push(...delta.errors);
+}
+
+function buildQueueBatches(queue: SyncQueueEntry[]): SyncQueueEntry[][] {
+  const batches: SyncQueueEntry[][] = [];
+  let currentBatch: SyncQueueEntry[] = [];
+  let currentBatchKind: 'entity' | 'noteTag' | null = null;
+  const currentBatchKeys = new Set<string>();
+
+  for (const entry of queue) {
+    const batchKind = entry.entityType === 'noteTag' ? 'noteTag' : 'entity';
+    const entityKey = `${entry.entityType}:${entry.entityId}`;
+    const shouldStartNewBatch =
+      currentBatch.length > 0
+      && (currentBatchKind !== batchKind || currentBatchKeys.has(entityKey));
+
+    if (shouldStartNewBatch) {
+      batches.push(currentBatch);
+      currentBatch = [];
+      currentBatchKeys.clear();
+    }
+
+    currentBatch.push(entry);
+    currentBatchKind = batchKind;
+    currentBatchKeys.add(entityKey);
+  }
+
+  if (currentBatch.length > 0) {
+    batches.push(currentBatch);
+  }
+
+  return batches;
+}
+
+async function processQueuedEntryAndPersist(
+  userId: string,
+  entry: SyncQueueEntry
+): Promise<SyncResult> {
+  const result = createEmptySyncResult();
+
+  try {
+    const queueResult = await processQueueEntry(userId, entry);
+
+    if (queueResult.outcome === 'processed') {
+      await removeSyncQueueEntry(userId, entry.clientMutationId, entry.id);
+      result.processed++;
+    } else if (queueResult.outcome === 'retry') {
+      const newRetryCount = entry.retryCount + 1;
+      const lastError = getErrorMessage(queueResult.error);
+      const retryError = queueResult.error ?? new Error(lastError);
+      result.errors.push(retryError);
+
+      if (newRetryCount >= MAX_SYNC_RETRIES) {
+        await blockQueueEntry(
+          userId,
+          entry,
+          newRetryCount,
+          'retry_exhausted',
+          lastError
+        );
+        result.blocked++;
+      } else {
+        await updateRetryMetadata(userId, entry, newRetryCount, lastError);
+        result.failed++;
+      }
+    } else {
+      const blockedError = queueResult.error ?? new Error('Non-retryable sync failure');
+      const blockedRetryCount = entry.retryCount + 1;
+      await blockQueueEntry(
+        userId,
+        entry,
+        blockedRetryCount,
+        'non_retryable',
+        getErrorMessage(blockedError)
+      );
+      result.blocked++;
+      result.errors.push(blockedError);
+    }
+  } catch (error) {
+    const syncError = error instanceof Error ? error : new Error(String(error));
+    result.errors.push(syncError);
+
+    if (syncError.message.includes('conflict')) {
+      result.conflicts++;
+    }
+
+    try {
+      const newRetryCount = entry.retryCount + 1;
+      const lastError = getErrorMessage(syncError);
+
+      if (newRetryCount >= MAX_SYNC_RETRIES) {
+        await blockQueueEntry(
+          userId,
+          entry,
+          newRetryCount,
+          'exception_exhausted',
+          lastError
+        );
+        result.blocked++;
+        console.warn(
+          `Blocking failed sync entry after ${newRetryCount} retries: ${entry.entityType}/${entry.entityId}`
+        );
+      } else {
+        await updateRetryMetadata(userId, entry, newRetryCount, lastError);
+        result.failed++;
+      }
+    } catch (dbError) {
+      console.error('Failed to update retry count:', dbError);
+      result.failed++;
+    }
+  }
+
+  return result;
+}
+
 /**
  * Process the entire sync queue
  * Called when coming back online or periodically
@@ -711,13 +845,7 @@ export async function processQueue(userId: string): Promise<SyncResult> {
 }
 
 async function doProcessQueue(userId: string): Promise<SyncResult> {
-  const result: SyncResult = {
-    processed: 0,
-    failed: 0,
-    blocked: 0,
-    conflicts: 0,
-    errors: [],
-  };
+  const result = createEmptySyncResult();
 
   // Check if online (uses Capacitor Network on native for reliable detection)
   if (!(await isOnline())) {
@@ -726,24 +854,25 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
 
   // Cleanup stale sync entries to prevent permanent "pending" state
   // Only removes non-create operations (creates could lose user data if removed)
-  // Entries older than 1 hour with 3+ retries are considered abandoned
+  // Entries older than 24 hours with 3+ retries are considered abandoned.
+  // Mobile devices can legitimately sleep through long offline windows.
   try {
     const db = getOfflineDb(userId);
-    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    const staleCutoff = Date.now() - STALE_SYNC_ENTRY_MAX_AGE_MS;
     const staleEntries = await db.syncQueue
       .where('createdAt')
-      .below(oneHourAgo)
+      .below(staleCutoff)
       .filter(
         (entry) =>
           (entry.status ?? 'pending') === 'pending' &&
-          entry.retryCount >= 3 &&
+          entry.retryCount >= STALE_SYNC_ENTRY_MIN_RETRIES &&
           entry.operation !== 'create'
       )
       .toArray();
 
     if (staleEntries.length > 0) {
       console.warn(
-        `Blocking ${staleEntries.length} stale sync entries (age > 1hr, retries >= 3)`
+        `Blocking ${staleEntries.length} stale sync entries (age > 24hr, retries >= 3)`
       );
       for (const entry of staleEntries) {
         await blockQueueEntry(
@@ -772,84 +901,13 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
 
   const queue = await getPendingSyncQueue(userId);
 
-  for (const entry of queue) {
-    try {
-      const queueResult = await processQueueEntry(userId, entry);
+  for (const batch of buildQueueBatches(queue)) {
+    const batchResults = await Promise.all(
+      batch.map((entry) => processQueuedEntryAndPersist(userId, entry))
+    );
 
-      if (queueResult.outcome === 'processed') {
-        await removeSyncQueueEntry(userId, entry.clientMutationId, entry.id);
-        result.processed++;
-      } else if (queueResult.outcome === 'retry') {
-        const newRetryCount = entry.retryCount + 1;
-        const lastError = getErrorMessage(queueResult.error);
-        const retryError = queueResult.error ?? new Error(lastError);
-        result.errors.push(retryError);
-
-        // If too many retries, block the entry for manual retry
-        if (newRetryCount >= 5) {
-          await blockQueueEntry(
-            userId,
-            entry,
-            newRetryCount,
-            'retry_exhausted',
-            lastError
-          );
-          result.blocked++;
-        } else {
-          await updateRetryMetadata(userId, entry, newRetryCount, lastError);
-          result.failed++;
-        }
-      } else {
-        const blockedError = queueResult.error ?? new Error('Non-retryable sync failure');
-        const blockedRetryCount = entry.retryCount + 1;
-        await blockQueueEntry(
-          userId,
-          entry,
-          blockedRetryCount,
-          'non_retryable',
-          getErrorMessage(blockedError)
-        );
-        result.blocked++;
-        result.errors.push(blockedError);
-      }
-    } catch (error) {
-      const syncError = error instanceof Error ? error : new Error(String(error));
-      result.errors.push(syncError);
-
-      // Check if sync status is 'conflict'
-      if (syncError.message.includes('conflict')) {
-        result.conflicts++;
-      }
-
-      // FIX: Increment retry count for exceptions too (prevents infinite pending state)
-      // Previously, exceptions left entries stuck forever with retryCount never incrementing
-      try {
-        const newRetryCount = entry.retryCount + 1;
-        const lastError = getErrorMessage(syncError);
-
-        // Block the entry if too many retries
-        if (newRetryCount >= 5) {
-          await blockQueueEntry(
-            userId,
-            entry,
-            newRetryCount,
-            'exception_exhausted',
-            lastError
-          );
-          result.blocked++;
-          console.warn(
-            `Blocking failed sync entry after ${newRetryCount} retries: ${entry.entityType}/${entry.entityId}`
-          );
-        } else {
-          await updateRetryMetadata(userId, entry, newRetryCount, lastError);
-          result.failed++;
-        }
-      } catch (dbError) {
-        // If we can't update the retry count, log and continue
-        // The stale entry cleanup will handle it eventually
-        console.error('Failed to update retry count:', dbError);
-        result.failed++;
-      }
+    for (const batchResult of batchResults) {
+      mergeSyncResult(result, batchResult);
     }
   }
 

@@ -1196,12 +1196,14 @@ export async function deleteNoteFromServer(
     try {
       const updated = await db.notes.update(noteId, { syncStatus: 'conflict' });
       if (updated === 0) {
+        const error = new Error('Failed to mark hard-delete conflict in IndexedDB');
         reportReliabilityIssue({
           category: 'sync',
           message: 'Failed to mark hard-delete conflict in IndexedDB',
           level: 'warning',
           data: { noteId, userId, reason: 'missing_local_note' },
-        });
+        }, error);
+        throw error;
       }
     } catch (error) {
       reportReliabilityIssue({
@@ -1210,6 +1212,7 @@ export async function deleteNoteFromServer(
         level: 'warning',
         data: { noteId, userId },
       }, error);
+      throw error;
     }
 
     return { deleted: false, localNote: conflictedNote };
