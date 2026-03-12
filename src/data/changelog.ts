@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.13.4',
+    date: '2026-03-12',
+    changes: [
+      { type: 'fix', text: 'Realtime note and tag updates now fail closed if IndexedDB persistence fails, avoiding React state drifting ahead of local storage' },
+      { type: 'improvement', text: 'Sync queue processing now batches independent entities in parallel while preserving per-entity ordering' },
+      { type: 'improvement', text: 'Stale sync entries now wait 24 hours before being blocked for manual retry, reducing false positives after long mobile sleep windows' },
+    ],
+  },
+  {
     version: '3.13.3',
     date: '2026-03-12',
     changes: [

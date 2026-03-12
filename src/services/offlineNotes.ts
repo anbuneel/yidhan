@@ -1163,6 +1163,10 @@ export type DeleteNoteFromServerResult =
       localNote: LocalNote;
     };
 
+type HardDeleteConflictPersistenceError = Error & {
+  reason?: 'missing_local_note';
+};
+
 /**
  * Apply a realtime server delete to IndexedDB.
  *
@@ -1196,20 +1200,23 @@ export async function deleteNoteFromServer(
     try {
       const updated = await db.notes.update(noteId, { syncStatus: 'conflict' });
       if (updated === 0) {
-        reportReliabilityIssue({
-          category: 'sync',
-          message: 'Failed to mark hard-delete conflict in IndexedDB',
-          level: 'warning',
-          data: { noteId, userId, reason: 'missing_local_note' },
-        });
+        const error = new Error('Failed to mark hard-delete conflict in IndexedDB') as HardDeleteConflictPersistenceError;
+        error.reason = 'missing_local_note';
+        throw error;
       }
     } catch (error) {
+      const persistenceError = error as HardDeleteConflictPersistenceError;
       reportReliabilityIssue({
         category: 'sync',
         message: 'Failed to persist hard-delete conflict state',
         level: 'warning',
-        data: { noteId, userId },
+        data: {
+          noteId,
+          userId,
+          ...(persistenceError.reason ? { reason: persistenceError.reason } : {}),
+        },
       }, error);
+      throw error;
     }
 
     return { deleted: false, localNote: conflictedNote };

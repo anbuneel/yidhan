@@ -93,7 +93,11 @@ import { migrateDemoToAccount } from './services/demoMigration';
 import { sanitizeHtml } from './utils/sanitize';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useSyncEngine, resolveConflict } from './hooks/useSyncEngine';
-import { reportConflict, type HardDeletedServerNoteVersion } from './services/syncEngine';
+import {
+  reportConflict,
+  invalidateSyncPullCursors,
+  type HardDeletedServerNoteVersion,
+} from './services/syncEngine';
 import { useViewTransition } from './hooks/useViewTransition';
 import { useInstallPrompt } from './hooks/useInstallPrompt';
 import { useShareTarget, formatSharedContent } from './hooks/useShareTarget';
@@ -105,6 +109,7 @@ import { ConflictModal } from './components/ConflictModal';
 import { InstallPrompt } from './components/InstallPrompt';
 import { IOSInstallGuide } from './components/IOSInstallGuide';
 import { SessionTimeoutModal } from './components/SessionTimeoutModal';
+import { reportReliabilityIssue } from './utils/reliabilityTelemetry';
 import './App.css';
 
 const DEMO_STORAGE_KEY = 'yidhan-demo-content';
@@ -199,10 +204,78 @@ function App() {
     }
   }, [user?.id, keys]);
 
+  const reportRealtimeDisplayFailure = useCallback((
+    operation: 'insert' | 'update',
+    error: unknown
+  ) => {
+    reportReliabilityIssue({
+      category: 'sync',
+      message: 'Realtime note could not be decrypted for display',
+      level: 'warning',
+      data: {
+        operation,
+        userId: user?.id ?? null,
+      },
+    }, error);
+    toast.error('A live note change was saved locally but could not be displayed. Please refresh.');
+  }, [user?.id]);
+
   // Sync engine for offline support
   const { conflicts, removeConflict, triggerSync } = useSyncEngine(handleSyncComplete);
   const [activeConflict, setActiveConflict] = useState<typeof conflicts[0] | null>(null);
   const [isRetryingBlockedChanges, setIsRetryingBlockedChanges] = useState(false);
+  const triggerSyncRef = useRef(triggerSync);
+  triggerSyncRef.current = triggerSync;
+  const realtimeRecoveryInFlightRef = useRef(false);
+
+  const reportRealtimePersistenceFailure = useCallback(async (
+    entity: 'note' | 'tag',
+    operation: 'insert' | 'update' | 'delete',
+    error: unknown
+  ) => {
+    reportReliabilityIssue({
+      category: 'sync',
+      message: 'Realtime change could not be persisted locally',
+      level: 'warning',
+      data: {
+        entity,
+        operation,
+        userId: user?.id ?? null,
+      },
+    }, error);
+    toast.error('A live change could not be saved locally. Recovering sync state now.');
+
+    const uid = user?.id;
+    if (!uid || realtimeRecoveryInFlightRef.current) {
+      return;
+    }
+
+    realtimeRecoveryInFlightRef.current = true;
+
+    try {
+      // Reset pull cursors before scheduling recovery so the next sync
+      // cannot reuse a stale incremental cursor after a dropped realtime write.
+      await invalidateSyncPullCursors(uid);
+      const { outcome } = await triggerSyncRef.current();
+      if (outcome === 'error') {
+        reportReliabilityIssue({
+          category: 'sync',
+          message: 'Realtime persistence recovery sync failed',
+          level: 'warning',
+          data: { entity, operation, userId: uid },
+        });
+      }
+    } catch (recoveryError) {
+      reportReliabilityIssue({
+        category: 'sync',
+        message: 'Failed to schedule recovery after realtime persistence failure',
+        level: 'warning',
+        data: { entity, operation, userId: uid },
+      }, recoveryError);
+    } finally {
+      realtimeRecoveryInFlightRef.current = false;
+    }
+  }, [user?.id]);
 
   // Coalesced sync trigger: after a save, wait 2s then trigger sync.
   // Reset on each save to prevent flooding during rapid typing.
@@ -628,59 +701,78 @@ function App() {
     const unsubscribe = subscribeToNotes(
       userId,
       (newNote) => {
-        // Write to IndexedDB first
-        upsertNoteFromServer(userId, newNote).catch(console.error);
+        void (async () => {
+          try {
+            await upsertNoteFromServer(userId, newNote);
+          } catch (error) {
+            console.error('Failed to persist realtime note insert:', error);
+            void reportRealtimePersistenceFailure('note', 'insert', error);
+            return;
+          }
 
-        // Decrypt and update React state
-        maybeDecrypt(newNote).then((decrypted) => {
-          setNotes((prev) => {
-            // Avoid duplicates
-            if (prev.some((n) => n.id === decrypted.id)) return prev;
-            // New notes from real-time don't have tags; they'll be fetched on next full load
-            // Set syncStatus: 'synced' since this note came from the server
-            return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
+          maybeDecrypt(newNote).then((decrypted) => {
+            setNotes((prev) => {
+              // Avoid duplicates
+              if (prev.some((n) => n.id === decrypted.id)) return prev;
+              // New notes from real-time don't have tags; they'll be fetched on next full load
+              // Set syncStatus: 'synced' since this note came from the server
+              return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
+            });
+          }).catch((error) => {
+            console.error('Failed to decrypt realtime note insert for display:', error);
+            reportRealtimeDisplayFailure('insert', error);
           });
-        }).catch(console.error);
+        })();
       },
       (updatedNote) => {
-        // Write to IndexedDB first
-        upsertNoteFromServer(userId, updatedNote).catch(console.error);
-
-        // Check if this is a soft-delete (note now has deletedAt set)
-        if (updatedNote.deletedAt) {
-          // Remove from active notes and update faded count
-          setNotes((prev) => prev.filter((n) => n.id !== updatedNote.id));
-          setFadedNotesCount((prev) => prev + 1);
-          if (selectedNoteIdRef.current === updatedNote.id) {
-            setView('library');
-            setSelectedNoteId(null);
+        void (async () => {
+          try {
+            await upsertNoteFromServer(userId, updatedNote);
+          } catch (error) {
+            console.error('Failed to persist realtime note update:', error);
+            void reportRealtimePersistenceFailure('note', 'update', error);
+            return;
           }
-          return;
-        }
 
-        // Decrypt and update React state
-        maybeDecrypt(updatedNote).then((decrypted) => {
-          // Check if this is a restore (note no longer has deletedAt)
-          // This handles notes restored from another tab
-          setNotes((prev) => {
-            const existingNote = prev.find((n) => n.id === decrypted.id);
-            if (existingNote) {
-              // Note exists, update it preserving tags and local-only fields
-              return prev.map((n) => {
-                if (n.id === decrypted.id) {
-                  return { ...decrypted, tags: n.tags, syncStatus: n.syncStatus };
-                }
-                return n;
-              });
-            } else {
-              // Note doesn't exist in active list (was restored from faded)
-              // Add it back (tags will be empty, will refresh on next full load)
-              // Set syncStatus: 'synced' since this came from the server
-              setFadedNotesCount((prev) => Math.max(0, prev - 1));
-              return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
+          // Check if this is a soft-delete (note now has deletedAt set)
+          if (updatedNote.deletedAt) {
+            // Remove from active notes and update faded count
+            setNotes((prev) => prev.filter((n) => n.id !== updatedNote.id));
+            setFadedNotesCount((prev) => prev + 1);
+            if (selectedNoteIdRef.current === updatedNote.id) {
+              setView('library');
+              setSelectedNoteId(null);
             }
+            return;
+          }
+
+          // Decrypt and update React state
+          maybeDecrypt(updatedNote).then((decrypted) => {
+            // Check if this is a restore (note no longer has deletedAt)
+            // This handles notes restored from another tab
+            setNotes((prev) => {
+              const existingNote = prev.find((n) => n.id === decrypted.id);
+              if (existingNote) {
+                // Note exists, update it preserving tags and local-only fields
+                return prev.map((n) => {
+                  if (n.id === decrypted.id) {
+                    return { ...decrypted, tags: n.tags, syncStatus: n.syncStatus };
+                  }
+                  return n;
+                });
+              } else {
+                // Note doesn't exist in active list (was restored from faded)
+                // Add it back (tags will be empty, will refresh on next full load)
+                // Set syncStatus: 'synced' since this came from the server
+                setFadedNotesCount((prev) => Math.max(0, prev - 1));
+                return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
+              }
+            });
+          }).catch((error) => {
+            console.error('Failed to decrypt realtime note update for display:', error);
+            reportRealtimeDisplayFailure('update', error);
           });
-        }).catch(console.error);
+        })();
       },
       (deletedId) => {
         deleteNoteFromServer(userId, deletedId)
@@ -707,12 +799,15 @@ function App() {
               setSelectedNoteId(null);
             }
           })
-          .catch(console.error);
+          .catch((error) => {
+            console.error('Failed to persist realtime note delete:', error);
+            void reportRealtimePersistenceFailure('note', 'delete', error);
+          });
       }
     );
 
     return () => unsubscribe();
-  }, [userId, isHydrating, hydrationBypassed]);
+  }, [userId, isHydrating, hydrationBypassed, reportRealtimeDisplayFailure, reportRealtimePersistenceFailure]);
   // Note: selectedNoteId removed from deps (2F) — using selectedNoteIdRef instead
   // to prevent Supabase channel unsubscribe/resubscribe on every note selection
 
@@ -883,33 +978,45 @@ function App() {
     const unsubscribeTags = subscribeToTags(
       userId,
       (newTag) => {
-        // Write to IndexedDB first
-        upsertTagFromServer(userId, newTag).catch(console.error);
-
-        setTags((prev) => {
-          if (prev.some((t) => t.id === newTag.id)) return prev;
-          return [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name));
-        });
+        upsertTagFromServer(userId, newTag)
+          .then(() => {
+            setTags((prev) => {
+              if (prev.some((t) => t.id === newTag.id)) return prev;
+              return [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name));
+            });
+          })
+          .catch((error) => {
+            console.error('Failed to persist realtime tag insert:', error);
+            void reportRealtimePersistenceFailure('tag', 'insert', error);
+          });
       },
       (updatedTag) => {
-        // Write to IndexedDB first
-        upsertTagFromServer(userId, updatedTag).catch(console.error);
-
-        setTags((prev) =>
-          prev.map((t) => (t.id === updatedTag.id ? updatedTag : t))
-        );
+        upsertTagFromServer(userId, updatedTag)
+          .then(() => {
+            setTags((prev) =>
+              prev.map((t) => (t.id === updatedTag.id ? updatedTag : t))
+            );
+          })
+          .catch((error) => {
+            console.error('Failed to persist realtime tag update:', error);
+            void reportRealtimePersistenceFailure('tag', 'update', error);
+          });
       },
       (deletedId) => {
-        // Remove from IndexedDB
-        deleteTagFromServer(userId, deletedId).catch(console.error);
-
-        setTags((prev) => prev.filter((t) => t.id !== deletedId));
-        setSelectedTagIds((prev) => prev.filter((id) => id !== deletedId));
+        deleteTagFromServer(userId, deletedId)
+          .then(() => {
+            setTags((prev) => prev.filter((t) => t.id !== deletedId));
+            setSelectedTagIds((prev) => prev.filter((id) => id !== deletedId));
+          })
+          .catch((error) => {
+            console.error('Failed to persist realtime tag delete:', error);
+            void reportRealtimePersistenceFailure('tag', 'delete', error);
+          });
       }
     );
 
     return () => unsubscribeTags();
-  }, [userId, isHydrating]);
+  }, [userId, isHydrating, reportRealtimePersistenceFailure]);
 
   // Fetch faded notes count when user is authenticated and hydration is complete
   useEffect(() => {

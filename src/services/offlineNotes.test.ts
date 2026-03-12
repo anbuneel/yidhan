@@ -981,6 +981,23 @@ describe('offlineNotes', () => {
       expect(associations).toHaveLength(1);
       expect(result.localNote.id).toBe(note.id);
     });
+
+    it('should throw when conflict state cannot be persisted locally', async () => {
+      const { createNoteOffline, deleteNoteFromServer } = await import('./offlineNotes');
+
+      const note = await createNoteOffline(TEST_USER_ID, 'Pending Note', '<p>Keep me</p>');
+      const db = getOfflineDb(TEST_USER_ID);
+      const updateSpy = vi
+        .spyOn(db.notes, 'update')
+        .mockRejectedValueOnce(new Error('quota exceeded'));
+
+      await expect(deleteNoteFromServer(TEST_USER_ID, note.id)).rejects.toThrow('quota exceeded');
+
+      const stored = await db.notes.get(note.id);
+      expect(stored?.syncStatus).toBe('pending');
+
+      updateSpy.mockRestore();
+    });
   });
 
   // ──────────────────────────────────────────────────
