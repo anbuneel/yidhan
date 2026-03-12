@@ -95,13 +95,13 @@ src/
 │   ├── notes.test.ts      # 65 tests: CRUD, search, soft-delete, share encryption, RPC
 │   ├── tags.ts            # CRUD operations for tags
 │   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue, safe hydration, and blocked-entry recovery helpers
-│   ├── offlineNotes.test.ts # 45 tests: offline CRUD, sync queue, server upsert, timestamp preservation
+│   ├── offlineNotes.test.ts # 46 tests: offline CRUD, sync queue, server upsert, timestamp preservation, hard-delete conflict
 │   ├── offlineTags.ts     # Offline-aware tag operations
 │   ├── offlineTags.test.ts  # 18 tests: create/update/delete, dedup, queue compaction
 │   ├── encryptedNotes.ts  # Encrypt/decrypt wrapper over offlineNotes (E2EE service layer + decryption telemetry)
 │   ├── encryptedNotes.test.ts # 25 tests: roundtrip, batch, key mismatch, AAD binding
-│   ├── syncEngine.ts      # Queue processor with blocked-entry recovery, HMAC conflict detection, encrypted push/pull sync
-│   ├── syncEngine.test.ts # 45 tests: processQueue, pause/resume, conflict, pull, fullSync, timestamp forwarding
+│   ├── syncEngine.ts      # Queue processor with batched concurrency, blocked-entry recovery, stale cleanup, HMAC conflict detection, encrypted push/pull sync
+│   ├── syncEngine.test.ts # 52 tests: processQueue, pause/resume, conflict, pull, fullSync, timestamp forwarding, batching, stale cleanup
 │   ├── demoStorage.ts     # localStorage operations for demo mode (4 starter notes + 3 tags, no auth required)
 │   ├── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, encrypted note creation)
 │   └── demoMigration.test.ts # 9 tests: empty state, encrypted notes, tag dedup, sanitization
@@ -444,7 +444,7 @@ content...
 - **Blocked sync recovery:** Sync queue entries now use `pending` / `blocked` state so repeated failures remain recoverable instead of being dropped.
 - **Safe hydration:** Startup hydration uses local metadata and merge behavior to avoid clearing queued local work during recovery paths.
 - Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase (all payloads encrypted)
-- Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps. Import timestamps (`createdAt`/`updatedAt`) are forwarded through the sync queue to Supabase INSERT to preserve note chronology.
+- Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps. Import timestamps (`createdAt`/`updatedAt`) are forwarded through the sync queue to Supabase INSERT to preserve note chronology. Queue processing uses `buildQueueBatches()` for parallel execution with bounded concurrency (`SYNC_BATCH_CONCURRENCY_LIMIT = 6`); noteTag entries force batch barriers. Stale entries (>24h, 3+ retries, non-create) are auto-blocked to prevent permanent "pending" state. Typed `SyncConflictError` enables clean conflict routing without retry logic.
 - Server-side `notes_updated_at_trigger` prevents client clock skew issues (fires on UPDATE only; INSERT preserves client-supplied timestamps)
 - Self-echo suppression via `pendingMutations` set prevents realtime re-applying own changes
 - Realtime subscriptions update IndexedDB + React state for cross-device changes
