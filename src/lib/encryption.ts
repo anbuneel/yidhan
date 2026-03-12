@@ -28,6 +28,7 @@ import { argon2id } from 'hash-wasm';
 
 /** Encryption schema version. Increment when changing cipher, KDF, or serialization. */
 export const ENCRYPTION_VERSION = 1;
+export const SESSION_BLOB_VERSION = 2;
 
 /** Argon2id parameters — changing these invalidates existing derived keys. */
 export const ARGON2_PARAMS = {
@@ -55,13 +56,24 @@ export interface DerivedKeys {
   rawHashKey: Uint8Array;        // 32 bytes
 }
 
-/** Serialized key material for sessionStorage persistence */
-export interface SessionKeyBlob {
+/** Legacy serialized key material without corruption detection. */
+export interface SessionKeyBlobV1 {
   version: 1;       // blob schema version
   encKey: string;   // base64
   hashKey: string;  // base64
   salt: string;     // base64
 }
+
+/** Serialized key material with an integrity checksum for corruption detection. */
+export interface SessionKeyBlobV2 {
+  version: 2;
+  encKey: string;    // base64
+  hashKey: string;   // base64
+  salt: string;      // base64
+  checksum: string;  // hex FNV-1a checksum of the serialized payload
+}
+
+export type SessionKeyBlob = SessionKeyBlobV1 | SessionKeyBlobV2;
 
 export interface EncryptedNote {
   ciphertext: string;   // base64
@@ -109,6 +121,34 @@ export function fromBase64(base64: string): Uint8Array {
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
+
+function buildSessionBlobPayload(
+  blob: Pick<SessionKeyBlobV1, 'encKey' | 'hashKey' | 'salt'>
+): string {
+  return `yidhan-session-blob-v2:${blob.encKey}:${blob.hashKey}:${blob.salt}`;
+}
+
+function computeSessionBlobChecksum(
+  blob: Pick<SessionKeyBlobV1, 'encKey' | 'hashKey' | 'salt'>
+): string {
+  const bytes = textEncoder.encode(buildSessionBlobPayload(blob));
+  let hash = 0x811c9dc5;
+
+  for (const byte of bytes) {
+    hash ^= byte;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+
+  return hash.toString(16).padStart(8, '0');
+}
+
+function hasValidSessionBlobChecksum(blob: SessionKeyBlobV2): boolean {
+  return computeSessionBlobChecksum(blob) === blob.checksum;
+}
+
+function isSessionKeyBlobV2(blob: SessionKeyBlob): blob is SessionKeyBlobV2 {
+  return blob.version === SESSION_BLOB_VERSION;
+}
 
 // TS 5.9 narrows Uint8Array to Uint8Array<ArrayBufferLike> which is not
 // assignable to BufferSource. At runtime, crypto.subtle.importKey accepts
@@ -281,11 +321,16 @@ export async function computeContentHash(
  * Uses raw key bytes cached at derive time (keys remain non-extractable).
  */
 export function exportSessionKeys(keys: DerivedKeys): SessionKeyBlob {
-  return {
-    version: 1,
+  const payload = {
     encKey: toBase64(keys.rawEncryptionKey),
     hashKey: toBase64(keys.rawHashKey),
     salt: toBase64(keys.salt),
+  };
+
+  return {
+    version: SESSION_BLOB_VERSION,
+    ...payload,
+    checksum: computeSessionBlobChecksum(payload),
   };
 }
 
@@ -294,7 +339,19 @@ export function exportSessionKeys(keys: DerivedKeys): SessionKeyBlob {
  * Re-imports raw bytes as non-extractable CryptoKeys.
  */
 export async function importSessionKeys(blob: SessionKeyBlob): Promise<DerivedKeys> {
-  if (blob.version !== 1) throw new Error(`Unsupported session blob version: ${blob.version}`);
+  const version = blob.version as number;
+  if (version !== 1 && version !== SESSION_BLOB_VERSION) {
+    throw new Error(`Unsupported session blob version: ${version}`);
+  }
+
+  if (version === SESSION_BLOB_VERSION && isSessionKeyBlobV2(blob)) {
+    if (!blob.checksum) {
+      throw new Error('Missing session blob checksum');
+    }
+    if (!hasValidSessionBlobChecksum(blob)) {
+      throw new Error('Session blob integrity check failed');
+    }
+  }
 
   const rawEncryptionKey = fromBase64(blob.encKey);
   const rawHashKey = fromBase64(blob.hashKey);

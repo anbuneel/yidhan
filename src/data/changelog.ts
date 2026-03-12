@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.13.3',
+    date: '2026-03-12',
+    changes: [
+      { type: 'fix', text: 'Remembered vault sessions now include a checksum so corrupted key blobs are rejected and cleared before key import' },
+      { type: 'improvement', text: 'Existing remembered-browser vault blobs now upgrade themselves to the checksummed format after a successful restore' },
+    ],
+  },
+  {
     version: '3.13.2',
     date: '2026-03-12',
     changes: [
