@@ -56,6 +56,15 @@ function isValidDateString(value: unknown): boolean {
   return !isNaN(date.getTime());
 }
 
+function sanitizeImportedDate(value: unknown, nowMs: number): number {
+  if (!isValidDateString(value)) {
+    return nowMs;
+  }
+
+  const timestamp = new Date(value as string).getTime();
+  return Math.min(timestamp, nowMs);
+}
+
 /**
  * Validate that a color is a valid TagColor
  */
@@ -93,10 +102,12 @@ function validateExportedNote(note: unknown, index: number): ExportedNote {
       .map((t) => t.slice(0, MAX_TAG_NAME_LENGTH));
   }
 
-  // Dates: optional, use current date if invalid
-  const now = new Date().toISOString();
-  const createdAt = isValidDateString(n.createdAt) ? (n.createdAt as string) : now;
-  const updatedAt = isValidDateString(n.updatedAt) ? (n.updatedAt as string) : now;
+  // Dates: optional, use current date if invalid, and never trust future values.
+  const nowMs = Date.now();
+  const createdAtMs = sanitizeImportedDate(n.createdAt, nowMs);
+  const updatedAtMs = Math.max(createdAtMs, sanitizeImportedDate(n.updatedAt, nowMs));
+  const createdAt = new Date(createdAtMs).toISOString();
+  const updatedAt = new Date(updatedAtMs).toISOString();
 
   return { title, content, tags, createdAt, updatedAt };
 }

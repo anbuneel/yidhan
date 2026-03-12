@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.13.2',
+    date: '2026-03-12',
+    changes: [
+      { type: 'fix', text: 'Imported notes now preserve their historical chronology across devices without reusing the server sync cursor as the visible updated time' },
+      { type: 'fix', text: 'Remember this browser now fails closed in both enable and disable storage-error paths, clearing persisted vault keys and avoiding misleading toggle state' },
+      { type: 'improvement', text: 'Vault auto-lock, manual lock, sign-out cleanup, and remembered-browser restore paths now have explicit state-transition test coverage' },
+    ],
+  },
+  {
     version: '3.13.1',
     date: '2026-03-11',
     changes: [

@@ -55,14 +55,14 @@ function mockSupabaseChannel(channel: MockChannel): void {
 }
 
 // Helper to create a chainable mock builder for fetchNotes
-// fetchNotes calls .order() twice (for pinned and updated_at), so we track call count
+// fetchNotes calls .order() twice (for pinned and display_updated_at), so we track call count
 // Client-side filtering happens after fetch, so mock returns all data for filter tests
 function createFetchNotesBuilder(data: unknown[] = [], error: Error | null = null): MockQueryBuilder {
   let orderCallCount = 0;
   const mockBuilder = createMockQueryBuilder();
   mockBuilder.order = vi.fn().mockImplementation(() => {
     orderCallCount++;
-    // Return this for first call (pinned), resolve on second call (updated_at)
+    // Return this for first call (pinned), resolve on second call (display_updated_at)
     if (orderCallCount < 2) {
       return mockBuilder;
     }
@@ -80,6 +80,7 @@ function createDbNote(overrides: Partial<{
   pinned: boolean;
   deleted_at: string | null;
   created_at: string;
+  display_updated_at: string;
   updated_at: string;
 }> = {}) {
   return {
@@ -90,6 +91,7 @@ function createDbNote(overrides: Partial<{
     pinned: false,
     deleted_at: null,
     created_at: '2024-01-01T12:00:00.000Z',
+    display_updated_at: '2024-01-15T12:00:00.000Z',
     updated_at: '2024-01-15T12:00:00.000Z',
     ...overrides,
   };
@@ -141,7 +143,7 @@ describe('notes service', () => {
   });
 
   describe('fetchNotes', () => {
-    // fetchNotes calls .order() twice (for pinned and updated_at), so we need
+    // fetchNotes calls .order() twice (for pinned and display_updated_at), so we need
     // orderCallsBeforeResolve=1 to chain the first call and resolve on the second
     it('returns empty array when no notes exist', async () => {
       const mockBuilder = createMockQueryBuilder({ data: [], orderCallsBeforeResolve: 1 });
@@ -170,6 +172,25 @@ describe('notes service', () => {
       expect(result).toHaveLength(1);
       expect(result[0].tags).toHaveLength(1);
       expect(result[0].tags[0].name).toBe('Work');
+    });
+
+    it('uses display_updated_at for note chronology when present', async () => {
+      const dbNotes = [
+        {
+          ...createDbNote({
+            id: '1',
+            display_updated_at: '2023-06-15T15:00:00.000Z',
+            updated_at: '2026-03-12T00:00:00.000Z',
+          }),
+          note_tags: [],
+        },
+      ];
+      const mockBuilder = createFetchNotesBuilder(dbNotes);
+      mockSupabaseFrom(mockBuilder);
+
+      const result = await fetchNotes();
+
+      expect(result[0].updatedAt.toISOString()).toBe('2023-06-15T15:00:00.000Z');
     });
 
     it('excludes soft-deleted notes', async () => {
@@ -208,14 +229,14 @@ describe('notes service', () => {
       expect(result[0].id).toBe('1');
     });
 
-    it('orders by pinned first, then by updated_at', async () => {
+    it('orders by pinned first, then by display_updated_at', async () => {
       const mockBuilder = createFetchNotesBuilder([]);
       mockSupabaseFrom(mockBuilder);
 
       await fetchNotes();
 
       expect(mockBuilder.order).toHaveBeenCalledWith('pinned', { ascending: false });
-      expect(mockBuilder.order).toHaveBeenCalledWith('updated_at', { ascending: false });
+      expect(mockBuilder.order).toHaveBeenCalledWith('display_updated_at', { ascending: false });
     });
 
     it('throws error when fetch fails', async () => {
@@ -279,7 +300,7 @@ describe('notes service', () => {
         title: 'Imported Note',
         content: '<p>Content</p>',
         created_at: '2023-06-01T10:00:00.000Z',
-        updated_at: '2023-06-15T15:00:00.000Z',
+        display_updated_at: '2023-06-15T15:00:00.000Z',
       });
     });
 
@@ -369,7 +390,7 @@ describe('notes service', () => {
       expect(mockBuilder.insert).toHaveBeenCalledWith([
         expect.objectContaining({
           created_at: '2023-01-01T00:00:00.000Z',
-          updated_at: '2023-01-01T00:00:00.000Z',
+          display_updated_at: '2023-01-01T00:00:00.000Z',
         }),
       ]);
     });
@@ -439,6 +460,7 @@ describe('notes service', () => {
 
       const payload = mockBuilder.update.mock.calls[0][0];
       expect(payload).not.toHaveProperty('updated_at');
+      expect(payload).not.toHaveProperty('display_updated_at');
     });
 
     it('throws error when update fails', async () => {

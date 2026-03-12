@@ -74,6 +74,75 @@ describe('useVaultSettings', () => {
     expect(localStorage.getItem(`yidhan-${USER_ID}-vault-remember-browser`)).toBe('true');
   });
 
+  it('should keep rememberBrowser disabled when persisting remembered keys fails', () => {
+    const { result } = renderHook(() => useVaultSettings(USER_ID));
+    const persistKeys = vi.fn(() => false);
+    let success = true;
+
+    act(() => {
+      success = result.current.setRememberBrowser(true, { persistKeys });
+    });
+
+    expect(success).toBe(false);
+    expect(persistKeys).toHaveBeenCalledTimes(1);
+    expect(result.current.settings.rememberBrowser).toBe(false);
+    expect(localStorage.getItem(`yidhan-${USER_ID}-vault-remember-browser`)).toBeNull();
+    expect(localStorage.getItem(`yidhan-${USER_ID}-vault-persisted-keys`)).toBeNull();
+  });
+
+  it('should keep rememberBrowser disabled when localStorage write fails', () => {
+    const originalSetItem = window.localStorage.setItem;
+    Object.defineProperty(window.localStorage, 'setItem', {
+      configurable: true,
+      value: vi.fn(() => {
+        throw new Error('quota exceeded');
+      }),
+    });
+    const { result } = renderHook(() => useVaultSettings(USER_ID));
+    let success = true;
+
+    act(() => {
+      success = result.current.setRememberBrowser(true);
+    });
+
+    expect(success).toBe(false);
+    expect(result.current.settings.rememberBrowser).toBe(false);
+    Object.defineProperty(window.localStorage, 'setItem', {
+      configurable: true,
+      value: originalSetItem,
+    });
+  });
+
+  it('clears persisted keys when disabling rememberBrowser fails', () => {
+    localStorage.setItem(`yidhan-${USER_ID}-vault-remember-browser`, 'true');
+    localStorage.setItem(`yidhan-${USER_ID}-vault-persisted-keys`, 'some-keys');
+
+    const originalSetItem = window.localStorage.setItem;
+    Object.defineProperty(window.localStorage, 'setItem', {
+      configurable: true,
+      value: vi.fn(() => {
+        throw new Error('quota exceeded');
+      }),
+    });
+
+    const { result } = renderHook(() => useVaultSettings(USER_ID));
+    let success = true;
+
+    act(() => {
+      success = result.current.setRememberBrowser(false);
+    });
+
+    expect(success).toBe(false);
+    expect(result.current.settings.rememberBrowser).toBe(false);
+    expect(localStorage.getItem(`yidhan-${USER_ID}-vault-remember-browser`)).toBeNull();
+    expect(localStorage.getItem(`yidhan-${USER_ID}-vault-persisted-keys`)).toBeNull();
+
+    Object.defineProperty(window.localStorage, 'setItem', {
+      configurable: true,
+      value: originalSetItem,
+    });
+  });
+
   it('should clear persisted keys when disabling rememberBrowser', () => {
     localStorage.setItem(`yidhan-${USER_ID}-vault-remember-browser`, 'true');
     localStorage.setItem(`yidhan-${USER_ID}-vault-persisted-keys`, 'some-keys');
@@ -94,6 +163,20 @@ describe('useVaultSettings', () => {
     expect(result.current.settings.autoLockMinutes).toBe(15);
     // Nothing should be written to localStorage
     expect(localStorage.getItem(`yidhan-null-vault-auto-lock-minutes`)).toBeNull();
+  });
+
+  it('does not try to persist keys when there is no userId', () => {
+    const persistKeys = vi.fn(() => false);
+    const { result } = renderHook(() => useVaultSettings(null));
+    let success = false;
+
+    act(() => {
+      success = result.current.setRememberBrowser(true, { persistKeys });
+    });
+
+    expect(success).toBe(true);
+    expect(persistKeys).not.toHaveBeenCalled();
+    expect(result.current.settings.rememberBrowser).toBe(true);
   });
 
   it('should reload settings when userId changes', () => {

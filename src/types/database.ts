@@ -8,6 +8,7 @@ export type Database = {
           title: string;
           content: string;
           created_at: string;
+          display_updated_at: string;
           updated_at: string;
           pinned: boolean;
           deleted_at: string | null;
@@ -22,6 +23,7 @@ export type Database = {
           title?: string;
           content?: string;
           created_at?: string;
+          display_updated_at?: string;
           updated_at?: string;
           pinned?: boolean;
           deleted_at?: string | null;
@@ -36,6 +38,7 @@ export type Database = {
           title?: string;
           content?: string;
           created_at?: string;
+          display_updated_at?: string;
           updated_at?: string;
           pinned?: boolean;
           deleted_at?: string | null;

@@ -15,7 +15,7 @@ interface SettingsModalProps {
   vaultSettings?: UseVaultSettingsResult;
   isVaultUnlocked?: boolean;
   onLockVault?: () => void;
-  onPersistToLocal?: () => void;
+  onPersistToLocal?: () => boolean;
 }
 
 type SettingsTab = 'profile' | 'password' | 'security';
@@ -42,6 +42,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [securityMessage, setSecurityMessage] = useState<{ text: string } | null>(null);
 
   // Initialize form with user data
   useEffect(() => {
@@ -49,6 +50,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
       setFullName(user.user_metadata?.full_name || '');
       setProfileMessage(null);
       setPasswordMessage(null);
+      setSecurityMessage(null);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -57,9 +59,20 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
 
   function handleRememberBrowserToggle() {
     if (!vaultSettings) return;
+    setSecurityMessage(null);
+
     const newValue = !vaultSettings.settings.rememberBrowser;
-    vaultSettings.setRememberBrowser(newValue);
-    if (newValue) onPersistToLocal?.();
+    const success = vaultSettings.setRememberBrowser(newValue, {
+      persistKeys: newValue && isVaultUnlocked ? onPersistToLocal : undefined,
+    });
+
+    if (!success) {
+      setSecurityMessage({
+        text: newValue
+          ? 'Could not remember this browser. Check available storage or browser privacy settings and try again.'
+          : 'Could not update this browser setting. Please try again.',
+      });
+    }
   }
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
@@ -768,6 +781,17 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         />
                       </div>
                     </div>
+                    {securityMessage && (
+                      <p
+                        className="mt-2 text-xs"
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          color: 'var(--color-destructive)',
+                        }}
+                      >
+                        {securityMessage.text}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

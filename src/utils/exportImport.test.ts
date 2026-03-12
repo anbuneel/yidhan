@@ -247,6 +247,50 @@ describe('exportImport', () => {
       expect(createdAt.getTime()).toBeLessThanOrEqual(after.getTime());
     });
 
+    it('caps future dates at the current time', () => {
+      const future = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const data = {
+        version: 1,
+        notes: [
+          { title: 'Future', content: '', tags: [], createdAt: future, updatedAt: future },
+        ],
+        tags: [],
+      };
+
+      const before = Date.now();
+      const result = parseImportedJSON(JSON.stringify(data));
+      const after = Date.now();
+
+      const createdAt = new Date(result.notes[0].createdAt).getTime();
+      const updatedAt = new Date(result.notes[0].updatedAt).getTime();
+
+      expect(createdAt).toBeGreaterThanOrEqual(before);
+      expect(createdAt).toBeLessThanOrEqual(after);
+      expect(updatedAt).toBeGreaterThanOrEqual(before);
+      expect(updatedAt).toBeLessThanOrEqual(after);
+    });
+
+    it('never allows updatedAt earlier than createdAt after normalization', () => {
+      const data = {
+        version: 1,
+        notes: [
+          {
+            title: 'Skewed',
+            content: '',
+            tags: [],
+            createdAt: '2024-01-05T12:00:00Z',
+            updatedAt: '2024-01-01T12:00:00Z',
+          },
+        ],
+        tags: [],
+      };
+
+      const result = parseImportedJSON(JSON.stringify(data));
+
+      expect(result.notes[0].createdAt).toBe('2024-01-05T12:00:00.000Z');
+      expect(result.notes[0].updatedAt).toBe('2024-01-05T12:00:00.000Z');
+    });
+
     it('defaults invalid tag colors to stone', () => {
       const data = {
         version: 1,

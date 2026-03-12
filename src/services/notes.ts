@@ -24,12 +24,13 @@ function toTag(dbTag: DbTag): Tag {
 
 // Convert database note to app note
 function toNote(dbNote: DbNote, tags: Tag[] = []): Note {
+  const displayUpdatedAt = dbNote.display_updated_at ?? dbNote.updated_at;
   return {
     id: dbNote.id,
     title: dbNote.title,
     content: dbNote.content,
     createdAt: new Date(dbNote.created_at),
-    updatedAt: new Date(dbNote.updated_at),
+    updatedAt: new Date(displayUpdatedAt),
     tags,
     pinned: dbNote.pinned ?? false,
     deletedAt: dbNote.deleted_at ? new Date(dbNote.deleted_at) : null,
@@ -43,7 +44,7 @@ function toNote(dbNote: DbNote, tags: Tag[] = []): Note {
 // Fetch all active notes for the current user (excludes soft-deleted)
 export async function fetchNotes(filterTagIds?: string[]): Promise<Note[]> {
   // Get all active notes (not soft-deleted) with their tags via join
-  // Order by pinned first, then by updated_at
+  // Order by pinned first, then by display_updated_at
   const { data, error } = await supabase
     .from('notes')
     .select(`
@@ -55,7 +56,7 @@ export async function fetchNotes(filterTagIds?: string[]): Promise<Note[]> {
     `)
     .is('deleted_at', null)
     .order('pinned', { ascending: false })
-    .order('updated_at', { ascending: false });
+    .order('display_updated_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching notes:', error);
@@ -98,7 +99,7 @@ export async function createNote(
     title: string;
     content: string;
     created_at?: string;
-    updated_at?: string;
+    display_updated_at?: string;
   } = {
     user_id: userId,
     title: validatedTitle,
@@ -110,7 +111,7 @@ export async function createNote(
     insertData.created_at = options.createdAt.toISOString();
   }
   if (options?.updatedAt) {
-    insertData.updated_at = options.updatedAt.toISOString();
+    insertData.display_updated_at = options.updatedAt.toISOString();
   }
 
   const { data, error } = await supabase
@@ -160,7 +161,7 @@ export async function createNotesBatch(
         title: string;
         content: string;
         created_at?: string;
-        updated_at?: string;
+        display_updated_at?: string;
       } = {
         user_id: userId,
         title: validatedTitle,
@@ -171,7 +172,7 @@ export async function createNotesBatch(
         data.created_at = note.createdAt.toISOString();
       }
       if (note.updatedAt) {
-        data.updated_at = note.updatedAt.toISOString();
+        data.display_updated_at = note.updatedAt.toISOString();
       }
 
       return data;
@@ -302,7 +303,7 @@ export async function searchNotes(query: string): Promise<Note[]> {
     // Wrap values in double quotes to handle special chars like commas in PostgREST syntax
     .or(`title.ilike."${searchTerm}",content.ilike."${searchTerm}"`)
     .order('pinned', { ascending: false })
-    .order('updated_at', { ascending: false });
+    .order('display_updated_at', { ascending: false });
 
   if (error) {
     console.error('Error searching notes:', error);
