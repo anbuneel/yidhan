@@ -82,11 +82,11 @@ src/
 ├── contexts/
 │   ├── AuthContext.tsx    # Auth state management (login, signup, Google OAuth, password reset, profile, offboarding)
 │   ├── EncryptionContext.tsx # E2EE key management (derive, unlock, lock, remembered browser restore, telemetry)
-│   └── EncryptionContext.test.tsx # 8 tests: vault state machine (auto-lock, manual lock, sign-out, activity-gated restore)
+│   └── EncryptionContext.test.tsx # 13 tests: vault state machine, blob checksum verification, v1→v2 upgrade, multi-tab key cleanup
 ├── lib/
-│   ├── encryption.ts      # Core E2EE crypto: Argon2id + AES-256-GCM + HMAC-SHA-256 + share encryption
+│   ├── encryption.ts      # Core E2EE crypto: Argon2id + AES-256-GCM + HMAC-SHA-256 + share encryption + SessionKeyBlob v2 checksum
 │   ├── __tests__/
-│   │   ├── encryption.test.ts # 12 crypto unit tests (roundtrip, tamper, wrong key/AAD)
+│   │   ├── encryption.test.ts # 24 crypto unit tests (roundtrip, tamper, wrong key/AAD, blob checksum, v1 compat)
 │   │   └── shareEncryption.test.ts # 26 tests: base64url, token/key gen, encrypt/decrypt roundtrip, AAD
 │   ├── supabase.ts        # Supabase client instance + fetchAllPaginated helper
 │   └── offlineDb.ts       # Dexie IndexedDB schema for offline storage (v5 with blocked queue state + hydration metadata)
@@ -524,7 +524,7 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Key derivation:** Argon2id via `hash-wasm` (parallelism=1, iterations=3, memory=64MB, hashLength=64)
 - **Encryption:** AES-256-GCM with AAD (`noteId:userId`) prevents note-swapping attacks
 - **Conflict detection:** HMAC-SHA-256 content hash replaces plaintext comparison in sync engine
-- **Key storage:** React state in `EncryptionContext` + sessionStorage for tab-refresh persistence (raw key bytes exported/imported via `exportSessionKeys`/`importSessionKeys`). Optional localStorage persistence via "Remember this browser" (opt-in, default off).
+- **Key storage:** React state in `EncryptionContext` + sessionStorage for tab-refresh persistence (raw key bytes exported/imported via `exportSessionKeys`/`importSessionKeys`). Optional localStorage persistence via "Remember this browser" (opt-in, default off). `SessionKeyBlob` v2 includes FNV-1a checksum for corruption detection (not a cryptographic MAC — `verifyKeyCheck()` is the security gate). Legacy v1 blobs accepted and auto-upgraded to v2 on successful restore.
 - **Remember this browser:** When enabled, persists `SessionKeyBlob` in localStorage (survives browser restarts). All restore paths, including refresh-time `sessionStorage`, verify `encryption_key_check` before unlocking to detect stale keys after passphrase change. Activity-gated restore after auto-lock keeps keys out of memory during idle. Cleared on manual lock, sign-out, or user switch. **Fails closed:** if localStorage is unavailable (quota exceeded, privacy mode), the preference is not enabled and the user sees an inline error.
 - **Vault lock:** Manual lock button + configurable auto-lock timer (0/15/60 min idle). Lock reason differentiates behavior: `auto-lock` preserves localStorage (silent re-unlock on user return), `manual`/`sign-out` clears all storage.
 - **Reliability telemetry:** Sentry breadcrumbs/reports track hydration starts/failures, blocked sync entries, vault restore issues, note decryption failures, and shared-link decryption failures.
