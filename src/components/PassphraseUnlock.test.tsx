@@ -184,6 +184,27 @@ describe('PassphraseUnlock', () => {
     consoleSpy.mockRestore();
   });
 
+  it('does not record a failed attempt when unlock fails due to vault metadata', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockUnlockWithPassphrase.mockRejectedValue(
+      new Error('Vault metadata is incomplete. Please sign out and sign back in.')
+    );
+    const user = userEvent.setup();
+
+    render(<PassphraseUnlock />);
+
+    await user.type(screen.getByLabelText('Passphrase'), 'correct-passphrase');
+    await user.click(screen.getByRole('button', { name: 'Unlock' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Unlock failed: Vault metadata is incomplete. Please sign out and sign back in.')
+      ).toBeInTheDocument();
+    });
+    expect(localStorage.getItem('yidhan-user-unlock-1-vault-unlock-lockout')).toBeNull();
+    consoleSpy.mockRestore();
+  });
+
   it('should show submitting state during unlock', async () => {
     mockUnlockWithPassphrase.mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();

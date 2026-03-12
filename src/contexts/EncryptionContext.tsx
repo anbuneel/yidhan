@@ -570,17 +570,28 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
   /**
    * Unlock the vault with existing passphrase.
-   * Returns true if passphrase is correct, false otherwise.
+   * Returns true if the passphrase is correct, false if incorrect.
+   * Throws when vault metadata/configuration is missing or unsupported.
    */
   const unlockWithPassphrase = useCallback(async (passphrase: string): Promise<boolean> => {
-    if (!user) return false;
-    if (!encryptionSalt) return false;
+    if (!user) {
+      throw new Error('You must be signed in to unlock your notes.');
+    }
+    if (!encryptionSalt) {
+      throw new Error('Encryption is not set up for this account.');
+    }
 
     const keyCheck = user.user_metadata?.encryption_key_check as string | undefined;
     const keyCheckIv = user.user_metadata?.encryption_key_check_iv as string | undefined;
 
     if (!keyCheck || !keyCheckIv) {
-      return false;
+      reportReliabilityIssue({
+        category: 'vault',
+        message: 'Passphrase unlock missing key-check metadata',
+        level: 'warning',
+        data: { source: 'unlock_passphrase', userId: user.id },
+      });
+      throw new Error('Vault metadata is incomplete. Please sign out and sign back in.');
     }
 
     // Decode the stored salt
@@ -593,7 +604,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
         level: 'warning',
         data: { source: 'unlock_passphrase', userId: user.id },
       });
-      return false;
+      throw new Error('Vault metadata uses an unsupported format. Please sign out and sign back in.');
     }
 
     // Derive keys from the passphrase + stored salt

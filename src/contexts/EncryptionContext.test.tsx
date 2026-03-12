@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { EncryptionProvider, useEncryption } from './EncryptionContext';
@@ -67,6 +68,30 @@ function ControlsProbe() {
       <button type="button" onClick={() => lockVault('auto-lock')}>Auto lock</button>
       <button type="button" onClick={() => lockVault('manual')}>Manual lock</button>
       <button type="button" onClick={() => lockVault('sign-out')}>Sign out</button>
+    </div>
+  );
+}
+
+function UnlockProbe() {
+  const { unlockWithPassphrase } = useEncryption();
+  const [result, setResult] = useState('idle');
+
+  return (
+    <div>
+      <div>{result}</div>
+      <button
+        type="button"
+        onClick={async () => {
+          try {
+            const success = await unlockWithPassphrase('correct-passphrase');
+            setResult(success ? 'success' : 'incorrect');
+          } catch (err) {
+            setResult(err instanceof Error ? `error:${err.message}` : 'error');
+          }
+        }}
+      >
+        Unlock
+      </button>
     </div>
   );
 }
@@ -556,5 +581,43 @@ describe('EncryptionContext vault state machine', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
 
     expect(localStorage.getItem('yidhan-vault-user-1-vault-persisted-keys')).toBeNull();
+  });
+});
+
+describe('EncryptionContext unlockWithPassphrase', () => {
+  it('throws for incomplete vault metadata instead of treating it as an incorrect passphrase', async () => {
+    mockUseAuth.mockReturnValue({
+      user: {
+        ...baseUser,
+        user_metadata: {
+          encryption_salt: 'c2FsdA==',
+          encryption_key_check: undefined,
+          encryption_key_check_iv: undefined,
+          encryption_key_check_version: 2,
+        },
+      },
+    });
+
+    render(
+      <EncryptionProvider>
+        <UnlockProbe />
+      </EncryptionProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('error:Vault metadata is incomplete. Please sign out and sign back in.')
+      ).toBeInTheDocument();
+    });
+
+    expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'vault',
+        message: 'Passphrase unlock missing key-check metadata',
+      })
+    );
+    expect(mockVerifyKeyCheck).not.toHaveBeenCalled();
   });
 });
