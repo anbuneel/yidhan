@@ -27,6 +27,7 @@ import {
   verifyKeyCheck,
   exportSessionKeys,
   importSessionKeys,
+  toBase64,
 } from '../encryption';
 
 // Fixed test salt for deterministic key derivation
@@ -219,14 +220,15 @@ describe('encryption', () => {
       const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
       const blob = exportSessionKeys(keys);
 
-      expect(blob.version).toBe(1);
+      expect(blob.version).toBe(2);
+      expect(blob).toHaveProperty('checksum');
     });
 
     it('rejects blob with wrong version', async () => {
       const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
       const blob = exportSessionKeys(keys);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (blob as any).version = 2;
+      (blob as any).version = 3;
 
       await expect(importSessionKeys(blob)).rejects.toThrow('Unsupported session blob version');
     });
@@ -234,9 +236,48 @@ describe('encryption', () => {
     it('rejects blob with wrong key length', async () => {
       const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
       const blob = exportSessionKeys(keys);
-      blob.encKey = btoa('short'); // 5 bytes, not 32
+      const legacyBlob = {
+        version: 1 as const,
+        encKey: btoa('short'), // 5 bytes, not 32
+        hashKey: blob.hashKey,
+        salt: blob.salt,
+      };
 
-      await expect(importSessionKeys(blob)).rejects.toThrow('Invalid encryption key length');
+      await expect(importSessionKeys(legacyBlob)).rejects.toThrow('Invalid encryption key length');
+    });
+
+    it('rejects blob with integrity mismatch', async () => {
+      const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
+      const blob = exportSessionKeys(keys);
+      blob.encKey = toBase64(new Uint8Array(32).fill(7));
+
+      await expect(importSessionKeys(blob)).rejects.toThrow('Session blob integrity check failed');
+    });
+
+    it('rejects v2 blobs missing a checksum', async () => {
+      const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
+      const blob = exportSessionKeys(keys);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (blob as any).checksum;
+
+      await expect(importSessionKeys(blob)).rejects.toThrow('Missing session blob checksum');
+    });
+
+    it('imports legacy v1 blobs for backward compatibility', async () => {
+      const keys = await deriveKeys(TEST_PASSPHRASE, TEST_SALT);
+      const blobV2 = exportSessionKeys(keys);
+      const blobV1 = {
+        version: 1 as const,
+        encKey: blobV2.encKey,
+        hashKey: blobV2.hashKey,
+        salt: blobV2.salt,
+      };
+
+      const restored = await importSessionKeys(blobV1);
+
+      expect(restored.rawEncryptionKey).toEqual(keys.rawEncryptionKey);
+      expect(restored.rawHashKey).toEqual(keys.rawHashKey);
+      expect(restored.salt).toEqual(keys.salt);
     });
   });
 

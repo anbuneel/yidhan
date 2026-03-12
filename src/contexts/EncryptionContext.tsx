@@ -295,13 +295,18 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
             restored = null;
           }
 
-          // If restored from localStorage, re-populate sessionStorage for this tab
-          if (restored) {
-            persistSession(currentUserId, restored);
-          }
         }
 
         if (restored && !cancelled) {
+          persistSession(currentUserId, restored);
+          if (isRememberBrowserEnabled(currentUserId) && !persistLocal(currentUserId, restored)) {
+            reportReliabilityIssue({
+              category: 'vault',
+              message: 'Failed to refresh persisted vault keys after restore',
+              level: 'warning',
+              data: { source: 'restore_upgrade' },
+            });
+          }
           setKeyState((prev) => prev.keys !== null ? prev : { keys: restored, userId: currentUserId });
         }
       } catch (err) {
@@ -387,6 +392,14 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
         // Valid — repopulate sessionStorage and unlock
         if (aborted) return;
         persistSession(currentUserId, restored);
+        if (!persistLocal(currentUserId, restored)) {
+          reportReliabilityIssue({
+            category: 'vault',
+            message: 'Failed to refresh persisted vault keys after activity-gated restore',
+            level: 'warning',
+            data: { source: 'activity_gate' },
+          });
+        }
         setKeyState((prev) => prev.keys !== null ? prev : { keys: restored, userId: currentUserId });
       } catch (err) {
         if (aborted) return;
