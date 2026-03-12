@@ -81,7 +81,8 @@ src/
 │   └── roadmap.ts         # Roadmap items with status
 ├── contexts/
 │   ├── AuthContext.tsx    # Auth state management (login, signup, Google OAuth, password reset, profile, offboarding)
-│   └── EncryptionContext.tsx # E2EE key management (derive, unlock, lock, remembered browser restore, telemetry)
+│   ├── EncryptionContext.tsx # E2EE key management (derive, unlock, lock, remembered browser restore, telemetry)
+│   └── EncryptionContext.test.tsx # 8 tests: vault state machine (auto-lock, manual lock, sign-out, activity-gated restore)
 ├── lib/
 │   ├── encryption.ts      # Core E2EE crypto: Argon2id + AES-256-GCM + HMAC-SHA-256 + share encryption
 │   ├── __tests__/
@@ -91,16 +92,16 @@ src/
 │   └── offlineDb.ts       # Dexie IndexedDB schema for offline storage (v5 with blocked queue state + hydration metadata)
 ├── services/
 │   ├── notes.ts           # CRUD operations for notes (with tags) + E2EE share functions
-│   ├── notes.test.ts      # 64 tests: CRUD, search, soft-delete, share encryption, RPC
+│   ├── notes.test.ts      # 65 tests: CRUD, search, soft-delete, share encryption, RPC
 │   ├── tags.ts            # CRUD operations for tags
 │   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue, safe hydration, and blocked-entry recovery helpers
-│   ├── offlineNotes.test.ts # 37 tests: offline CRUD, sync queue, server upsert
+│   ├── offlineNotes.test.ts # 45 tests: offline CRUD, sync queue, server upsert, timestamp preservation
 │   ├── offlineTags.ts     # Offline-aware tag operations
 │   ├── offlineTags.test.ts  # 18 tests: create/update/delete, dedup, queue compaction
 │   ├── encryptedNotes.ts  # Encrypt/decrypt wrapper over offlineNotes (E2EE service layer + decryption telemetry)
 │   ├── encryptedNotes.test.ts # 25 tests: roundtrip, batch, key mismatch, AAD binding
 │   ├── syncEngine.ts      # Queue processor with blocked-entry recovery, HMAC conflict detection, encrypted push/pull sync
-│   ├── syncEngine.test.ts # 42 tests: processQueue, pause/resume, conflict, pull, fullSync
+│   ├── syncEngine.test.ts # 45 tests: processQueue, pause/resume, conflict, pull, fullSync, timestamp forwarding
 │   ├── demoStorage.ts     # localStorage operations for demo mode (4 starter notes + 3 tags, no auth required)
 │   ├── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, encrypted note creation)
 │   └── demoMigration.test.ts # 9 tests: empty state, encrypted notes, tag dedup, sanitization
@@ -123,12 +124,13 @@ src/
 │   ├── useSessionSettings.test.ts # 24 tests: localStorage persistence, 90-day TTL, effective timeout
 │   ├── useKeyboardHeight.ts # Visual Viewport API for keyboard height tracking
 │   ├── useVaultSettings.ts  # Per-user vault settings (auto-lock minutes, remember browser)
-│   ├── useVaultSettings.test.ts # 11 tests: defaults, persistence, user switching, key cleanup
+│   ├── useVaultSettings.test.ts # 15 tests: defaults, persistence, user switching, key cleanup, fail-closed remember
 │   ├── useIdleTimer.ts      # Simple idle timer hook (fires onIdle after N minutes of inactivity)
 │   └── useIdleTimer.test.ts # 9 tests: timer fire, disable, activity reset, cleanup
 ├── utils/
 │   ├── editorPosition.ts  # Cross-session cursor/scroll position persistence (localStorage)
-│   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation
+│   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation + timestamp preservation
+│   ├── exportImport.test.ts # 96 tests: JSON/Markdown export/import, validation, timestamp handling
 │   ├── formatTime.ts      # Relative time formatting
 │   ├── lazyWithRetry.ts   # Smart lazy loading with retry and auto-reload on version updates
 │   ├── reliabilityTelemetry.ts # Shared Sentry breadcrumb/error helpers for hydration, sync, vault, and sharing reliability events
@@ -442,8 +444,8 @@ content...
 - **Blocked sync recovery:** Sync queue entries now use `pending` / `blocked` state so repeated failures remain recoverable instead of being dropped.
 - **Safe hydration:** Startup hydration uses local metadata and merge behavior to avoid clearing queued local work during recovery paths.
 - Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase (all payloads encrypted)
-- Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps
-- Server-side `notes_updated_at_trigger` prevents client clock skew issues
+- Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps. Import timestamps (`createdAt`/`updatedAt`) are forwarded through the sync queue to Supabase INSERT to preserve note chronology.
+- Server-side `notes_updated_at_trigger` prevents client clock skew issues (fires on UPDATE only; INSERT preserves client-supplied timestamps)
 - Self-echo suppression via `pendingMutations` set prevents realtime re-applying own changes
 - Realtime subscriptions update IndexedDB + React state for cross-device changes
 - All note/tag operations are scoped to authenticated user via RLS
@@ -523,7 +525,7 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Encryption:** AES-256-GCM with AAD (`noteId:userId`) prevents note-swapping attacks
 - **Conflict detection:** HMAC-SHA-256 content hash replaces plaintext comparison in sync engine
 - **Key storage:** React state in `EncryptionContext` + sessionStorage for tab-refresh persistence (raw key bytes exported/imported via `exportSessionKeys`/`importSessionKeys`). Optional localStorage persistence via "Remember this browser" (opt-in, default off).
-- **Remember this browser:** When enabled, persists `SessionKeyBlob` in localStorage (survives browser restarts). All restore paths, including refresh-time `sessionStorage`, verify `encryption_key_check` before unlocking to detect stale keys after passphrase change. Activity-gated restore after auto-lock keeps keys out of memory during idle. Cleared on manual lock, sign-out, or user switch.
+- **Remember this browser:** When enabled, persists `SessionKeyBlob` in localStorage (survives browser restarts). All restore paths, including refresh-time `sessionStorage`, verify `encryption_key_check` before unlocking to detect stale keys after passphrase change. Activity-gated restore after auto-lock keeps keys out of memory during idle. Cleared on manual lock, sign-out, or user switch. **Fails closed:** if localStorage is unavailable (quota exceeded, privacy mode), the preference is not enabled and the user sees an inline error.
 - **Vault lock:** Manual lock button + configurable auto-lock timer (0/15/60 min idle). Lock reason differentiates behavior: `auto-lock` preserves localStorage (silent re-unlock on user return), `manual`/`sign-out` clears all storage.
 - **Reliability telemetry:** Sentry breadcrumbs/reports track hydration starts/failures, blocked sync entries, vault restore issues, note decryption failures, and shared-link decryption failures.
 - **What's encrypted:** Title + content as JSON blob in `encrypted_payload`
@@ -594,3 +596,4 @@ SQL migrations are stored in `supabase/migrations/`:
 - `add_encryption_columns.sql` - Add encrypted_payload, encryption_iv, encryption_version, content_hash columns
 - `add_restore_timestamps_rpc.sql` - RPC to restore note timestamps after E2EE migration (bypasses updated_at trigger)
 - `fix_note_shares_rls_ownership.sql` - Add WITH CHECK to enforce note ownership on note_shares INSERT/UPDATE (prevents DoS via UNIQUE constraint)
+- `update_notes_display_updated_at.sql` - Add display_updated_at column for import timestamp preservation (bypasses updated_at trigger)
