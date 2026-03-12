@@ -306,19 +306,28 @@ async function processNoteOperation(
         return true;
       }
 
+      const insertPayload: Record<string, unknown> = {
+        id: noteId,
+        user_id: userId,
+        title: (data.title as string) ?? '',
+        content: (data.content as string) ?? '',
+        pinned: (data.pinned as boolean) ?? false,
+        encrypted_payload: (data.encrypted_payload as string | null) ?? null,
+        encryption_iv: (data.encryption_iv as string | null) ?? null,
+        encryption_version: (data.encryption_version as number | null) ?? null,
+        content_hash: (data.content_hash as string | null) ?? null,
+      };
+
+      if (typeof data.createdAt === 'string') {
+        insertPayload.created_at = data.createdAt;
+      }
+      if (typeof data.updatedAt === 'string') {
+        insertPayload.updated_at = data.updatedAt;
+      }
+
       const { data: created, error } = await supabase
         .from('notes')
-        .insert({
-          id: noteId,
-          user_id: userId,
-          title: (data.title as string) ?? '',
-          content: (data.content as string) ?? '',
-          pinned: (data.pinned as boolean) ?? false,
-          encrypted_payload: (data.encrypted_payload as string | null) ?? null,
-          encryption_iv: (data.encryption_iv as string | null) ?? null,
-          encryption_version: (data.encryption_version as number | null) ?? null,
-          content_hash: (data.content_hash as string | null) ?? null,
-        })
+        .insert(insertPayload)
         .select()
         .single();
 

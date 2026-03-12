@@ -24,7 +24,7 @@ interface EncryptionContextType {
   /** Clear keys from memory. Reason controls what storage is cleared. */
   lockVault: (reason?: LockReason) => void;
   /** Persist current in-memory keys to localStorage (when enabling remember-browser while unlocked) */
-  persistToLocal: () => void;
+  persistToLocal: () => boolean;
 }
 
 const EncryptionContext = createContext<EncryptionContextType | undefined>(undefined);
@@ -96,12 +96,14 @@ function isRememberBrowserEnabled(userId: string | null): boolean {
 }
 
 /** Persist key material to localStorage (survives tab close + browser restart) */
-function persistLocal(userId: string, keys: DerivedKeys): void {
+function persistLocal(userId: string, keys: DerivedKeys): boolean {
   try {
     const blob = exportSessionKeys(keys);
     localStorage.setItem(localKey(userId), JSON.stringify(blob));
+    return true;
   } catch (err) {
     console.warn('[EncryptionContext] Failed to persist vault keys to localStorage:', err);
+    return false;
   }
 }
 
@@ -470,8 +472,13 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     // Metadata confirmed — safe to hold keys in memory and persist to session
     setKeyState({ keys: derivedKeys, userId: user.id });
     persistSession(user.id, derivedKeys);
-    if (isRememberBrowserEnabled(user.id)) {
-      persistLocal(user.id, derivedKeys);
+    if (isRememberBrowserEnabled(user.id) && !persistLocal(user.id, derivedKeys)) {
+      reportReliabilityIssue({
+        category: 'vault',
+        message: 'Failed to persist remembered vault keys during setup',
+        level: 'warning',
+        data: { source: 'setup_passphrase' },
+      });
     }
 
     // Mark restore as attempted so auto-lock doesn't trigger immediate re-restore
@@ -512,8 +519,13 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     if (isValid) {
       setKeyState({ keys: derivedKeys, userId: user.id });
       persistSession(user.id, derivedKeys);
-      if (isRememberBrowserEnabled(user.id)) {
-        persistLocal(user.id, derivedKeys);
+      if (isRememberBrowserEnabled(user.id) && !persistLocal(user.id, derivedKeys)) {
+        reportReliabilityIssue({
+          category: 'vault',
+          message: 'Failed to persist remembered vault keys during unlock',
+          level: 'warning',
+          data: { source: 'unlock_passphrase' },
+        });
       }
       // Mark restore as attempted so auto-lock doesn't trigger immediate re-restore
       sessionRestoreAttemptedRef.current = user.id;
@@ -555,10 +567,11 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
    * Persist current in-memory keys to localStorage.
    * Called when user enables "Remember this browser" in Settings while already unlocked.
    */
-  const persistToLocal = useCallback(() => {
+  const persistToLocal = useCallback((): boolean => {
     if (keyState.keys && keyState.userId) {
-      persistLocal(keyState.userId, keyState.keys);
+      return persistLocal(keyState.userId, keyState.keys);
     }
+    return false;
   }, [keyState.keys, keyState.userId]);
 
   return (

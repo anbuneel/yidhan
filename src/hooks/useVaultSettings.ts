@@ -11,7 +11,10 @@ export interface VaultSettings {
 export interface UseVaultSettingsResult {
   settings: VaultSettings;
   setAutoLockMinutes: (minutes: AutoLockMinutes) => void;
-  setRememberBrowser: (enabled: boolean) => void;
+  setRememberBrowser: (
+    enabled: boolean,
+    options?: { persistKeys?: () => boolean }
+  ) => boolean;
 }
 
 const DEFAULTS: VaultSettings = {
@@ -68,17 +71,52 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
     }
   }, [userId]);
 
-  const setRememberBrowser = useCallback((enabled: boolean) => {
-    setSettings((prev) => ({ ...prev, rememberBrowser: enabled }));
-    if (userId) {
-      try {
-        localStorage.setItem(storageKey(userId, 'remember-browser'), String(enabled));
-        // When disabling, immediately clear any persisted vault keys.
-        // Key must match localKey() in EncryptionContext.tsx
-        if (!enabled) {
-          localStorage.removeItem(storageKey(userId, 'persisted-keys'));
+  const setRememberBrowser = useCallback((
+    enabled: boolean,
+    options?: { persistKeys?: () => boolean }
+  ): boolean => {
+    const persistKeys = options?.persistKeys;
+
+    if (!userId) {
+      if (enabled && persistKeys && !persistKeys()) {
+        return false;
+      }
+
+      setSettings((prev) => ({ ...prev, rememberBrowser: enabled }));
+      return true;
+    }
+
+    const rememberKey = storageKey(userId, 'remember-browser');
+    const persistedKeysKey = storageKey(userId, 'persisted-keys');
+
+    try {
+      localStorage.setItem(rememberKey, String(enabled));
+
+      if (enabled) {
+        if (persistKeys && !persistKeys()) {
+          localStorage.removeItem(rememberKey);
+          localStorage.removeItem(persistedKeysKey);
+          return false;
         }
-      } catch (err) { console.warn('[useVaultSettings] Failed to persist remember-browser setting:', err); }
+      } else {
+        localStorage.removeItem(persistedKeysKey);
+      }
+
+      setSettings((prev) => ({ ...prev, rememberBrowser: enabled }));
+      return true;
+    } catch (err) {
+      console.warn('[useVaultSettings] Failed to persist remember-browser setting:', err);
+
+      try {
+        localStorage.removeItem(rememberKey);
+        if (enabled) {
+          localStorage.removeItem(persistedKeysKey);
+        }
+      } catch {
+        // Best-effort cleanup after a failed write.
+      }
+
+      return false;
     }
   }, [userId]);
 

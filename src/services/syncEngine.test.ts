@@ -476,11 +476,24 @@ describe('processQueue behavior', () => {
   });
 
   it('should process a create-note entry successfully', async () => {
+    const importedCreatedAt = '2026-01-10T00:00:00.000Z';
+    const importedUpdatedAt = '2026-01-12T00:00:00.000Z';
     const entry = buildEntry({
       clientMutationId: 'mut-create-note',
       operation: 'create',
       entityType: 'note',
       entityId: 'note-abc',
+      payload: {
+        title: 'Imported note',
+        content: '<p>Hello</p>',
+        pinned: false,
+        createdAt: importedCreatedAt,
+        updatedAt: importedUpdatedAt,
+        encrypted_payload: null,
+        encryption_iv: null,
+        encryption_version: null,
+        content_hash: null,
+      },
     });
     mockGetPendingSyncQueue.mockResolvedValue([entry]);
     mockRemoveSyncQueueEntry.mockResolvedValue(undefined);
@@ -500,6 +513,10 @@ describe('processQueue behavior', () => {
 
     expect(result.processed).toBe(1);
     expect(result.failed).toBe(0);
+    expect(insertChain.insert).toHaveBeenCalledWith(expect.objectContaining({
+      created_at: importedCreatedAt,
+      updated_at: importedUpdatedAt,
+    }));
     expect(mockRemoveSyncQueueEntry).toHaveBeenCalledWith(
       TEST_USER_ID,
       'mut-create-note',
