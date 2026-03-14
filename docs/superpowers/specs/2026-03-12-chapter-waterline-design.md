@@ -1,6 +1,6 @@
 # Chapter Waterline: Scaling Yidhan's Library
 
-**Version:** 1.1
+**Version:** 1.2
 **Last Updated:** 2026-03-12
 **Status:** Draft
 **Author:** Claude (Opus 4.6)
@@ -27,7 +27,7 @@ When a user accumulates 100+ notes, the library view suffers from three compound
 - `ChapterSection` is not wrapped in `React.memo` — re-renders on every parent state change
 - `NoteCard` passes full `note.content` to `sanitizeHtml()` even though CSS clips at 300px
 - Default chapter collapsing helps (100+ notes: only Pinned + This Week expand), but a chapter with 80 notes still renders all 80
-- Search only matches note titles, no content search
+- Search filters non-matching notes out of the library entirely, losing spatial context
 - Current search shortcut is `Ctrl+Shift+K` (defined in `App.tsx` line 1127)
 
 ---
@@ -119,6 +119,8 @@ The current search model in `App.tsx` **filters** `displayNotes` — non-matchin
 4. `ChapterSection` applies highlight/fade styling at the wrapper `<div class="note-card-entrance">` level — this covers both `NoteCard` and `SwipeableNoteCard` without changes to either component
 5. When search is cleared, `searchQuery` becomes empty and all cards restore to full opacity
 
+**Removal of "Searching..." spinner:** The current `App.tsx` (lines ~2118-2121) conditionally renders a "Searching..." placeholder that replaces the entire `ChapteredLibrary` during search. This must be removed. Under the focused-gaze model, the library remains visible at all times during search — faded non-matching cards replace the spinner as the visual feedback that search is active. The `isSearching` loading state and its conditional render branch are deleted.
+
 **Matching logic:** Client-side only. Searches against decrypted note titles and content already held in React state (no re-decryption needed). Uses existing 300ms debounce from `App.tsx`.
 
 ### Search + Progressive Rendering Interaction
@@ -176,9 +178,11 @@ No visible UI change — these make the above features feel smooth.
 **Fix:** Use existing `htmlToPlainText()` to convert content to plaintext, truncate to ~200 characters, then render as text. This is the same approach already used in compact mode (`NoteCard` line 21). Extending it to full mode eliminates the need for a `truncateHtml()` utility entirely.
 
 ```
-Before: sanitizeHtml(note.content)           // 5000 chars HTML → DOMPurify → rich DOM
-After:  htmlToPlainText(note.content, 200)   // 5000 chars → plaintext → truncate → text node
+Before: sanitizeHtml(note.content)                      // 5000 chars HTML → DOMPurify → rich DOM
+After:  htmlToPlainText(note.content).slice(0, 200)     // 5000 chars → plaintext → truncate → text node
 ```
+
+Note: `htmlToPlainText()` currently accepts a single argument (`html: string`). Truncation is a separate `.slice(0, 200)` call on the returned plaintext string. No function signature change needed.
 
 Trade-off: Full-mode cards lose rich text preview (headings, bold, lists in preview). The preview becomes plaintext-only. This is acceptable because the card preview is a scanning aid, not a reading surface — users open the note for full content.
 
@@ -190,8 +194,11 @@ Currently missing. Adding `React.memo` with a comparator on all props that affec
 const ChapterSection = memo(function ChapterSection(...) { ... },
   (prev, next) =>
     prev.notes === next.notes &&
-    prev.isExpanded === next.isExpanded &&
+    prev.chapterKey === next.chapterKey &&
     prev.label === next.label &&
+    prev.defaultExpanded === next.defaultExpanded &&
+    prev.isPinned === next.isPinned &&
+    prev.isCompact === next.isCompact &&
     prev.searchQuery === next.searchQuery &&
     prev.matchedNoteIds === next.matchedNoteIds &&
     prev.onNoteClick === next.onNoteClick &&
@@ -199,6 +206,8 @@ const ChapterSection = memo(function ChapterSection(...) { ... },
     prev.onTogglePin === next.onTogglePin
 );
 ```
+
+Note: `chapterKey` is used for element IDs and opacity mapping. `defaultExpanded` is the prop that drives initial expansion (not `isExpanded`, which is internal state). `isPinned` affects always-expanded behavior and accent styling. `isCompact` affects card rendering mode on mobile. All must be in the comparator to avoid silent rendering bugs.
 
 Callback props (`onNoteClick`, `onNoteDelete`, `onTogglePin`) must be stabilized with `useCallback` in `ChapteredLibrary` to prevent memo invalidation.
 
