@@ -82,6 +82,16 @@ export const ChapterSection = memo(function ChapterSection({
   // Search is "active" only after debounce settles (matchedNoteIds is defined)
   const isSearchActive = matchedNoteIds !== undefined;
 
+  // Determine if this section should be collapsible
+  const isCollapsible = !isPinned && notes.length >= 20;
+
+  // Force-expand during search so matches in collapsed chapters are visible
+  const effectiveExpanded = isSearchActive
+    ? true
+    : isCollapsible
+      ? isExpanded
+      : true;
+
   const displayNotes = isSearchActive ? notes : notes.slice(0, visibleCount);
   const hasMore = !isSearchActive && visibleCount < notes.length;
   const remainingCount = Math.max(0, notes.length - visibleCount);
@@ -147,16 +157,6 @@ export const ChapterSection = memo(function ChapterSection({
     .map((n) => n.title || 'Untitled')
     .join(' · ');
 
-  // Determine if this section should be collapsible
-  const isCollapsible = !isPinned && notes.length >= 20;
-
-  // Force-expand during search so matches in collapsed chapters are visible
-  const effectiveExpanded = isSearchActive
-    ? true
-    : isCollapsible
-      ? isExpanded
-      : true;
-
   return (
     <section
       id={`chapter-${chapterKey}`}
@@ -185,8 +185,8 @@ export const ChapterSection = memo(function ChapterSection({
         }}
         onClick={isCollapsible && !isSearchActive ? () => setIsExpanded(!isExpanded) : undefined}
         role={isCollapsible && !isSearchActive ? 'button' : undefined}
-        aria-expanded={isCollapsible ? effectiveExpanded : undefined}
-        aria-controls={isCollapsible ? `chapter-content-${chapterKey}` : undefined}
+        aria-expanded={isCollapsible && !isSearchActive ? effectiveExpanded : undefined}
+        aria-controls={isCollapsible && !isSearchActive ? `chapter-content-${chapterKey}` : undefined}
         tabIndex={isCollapsible && !isSearchActive ? 0 : undefined}
         onKeyDown={isCollapsible && !isSearchActive ? (e) => {
           if (e.key === 'Enter' || e.key === ' ') {

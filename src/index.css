@@ -397,7 +397,7 @@ body::before {
 /* Search: highlight matching cards */
 .note-card-search-match {
   transform: scale(1.02);
-  transition: transform 200ms ease, box-shadow 200ms ease;
+  transition: transform 200ms ease, filter 200ms ease;
   filter: drop-shadow(0 0 8px var(--color-accent-glow));
 }
 
