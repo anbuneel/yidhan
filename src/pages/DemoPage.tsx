@@ -21,6 +21,7 @@ import { Footer } from '../components/Footer';
 import { HeaderShell } from '../components/HeaderShell';
 import { LoadingFallback } from '../components/LoadingFallback';
 import { DEMO_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
+import { htmlToPlainText } from '../utils/sanitize';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 
 // Lazy load heavy components
@@ -150,7 +151,7 @@ export function DemoPage({
     const matched = new Set<string>();
     for (const note of displayNotes) {
       const titleMatch = note.title.toLowerCase().includes(q);
-      const contentMatch = note.content.toLowerCase().includes(q);
+      const contentMatch = htmlToPlainText(note.content).toLowerCase().includes(q);
       if (titleMatch || contentMatch) {
         matched.add(note.id);
       }
@@ -588,6 +589,7 @@ function DemoHeader({
                     background: 'var(--color-bg-tertiary)',
                     color: 'var(--color-text-secondary)',
                   }}
+                  aria-label="Clear search"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
