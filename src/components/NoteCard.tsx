@@ -76,7 +76,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         borderRadius: 'var(--radius-card)',
         boxShadow: isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)',
         transitionTimingFunction: 'var(--spring-bounce)',
-        minHeight: isCompact ? 'auto' : '240px',
+        minHeight: isCompact ? 'auto' : '280px',
         maxHeight: isCompact ? '120px' : '300px',
       }}
       role="button"
