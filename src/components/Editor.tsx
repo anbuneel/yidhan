@@ -480,19 +480,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         setIsFocusMode((prev) => !prev);
         return;
       }
-      // Cmd/Ctrl+K: save, return to library, and focus search
-      if (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey) && !e.altKey) {
-        e.preventDefault();
-        cancelPendingAutoSave();
-        if (inFlightSaveRef.current) {
-          await inFlightSaveRef.current;
-        }
-        const didSave = await performSave();
-        if (didSave) {
-          onRequestSearch();
-        }
-        return;
-      }
       // Escape: exit focus mode first, then save and go back
       if (e.key === 'Escape') {
         if (isFocusMode) {
@@ -519,7 +506,29 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cancelPendingAutoSave, performSave, onBack, onRequestSearch, note, title, content, isFocusMode]);
+  }, [cancelPendingAutoSave, performSave, onBack, note, title, content, isFocusMode]);
+
+  useEffect(() => {
+    const handleSearchShortcut = async (e: KeyboardEvent) => {
+      const isSearchKey = e.code === 'KeyK' || e.key.toLowerCase() === 'k';
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || !isSearchKey) {
+        return;
+      }
+
+      e.preventDefault();
+      cancelPendingAutoSave();
+      if (inFlightSaveRef.current) {
+        await inFlightSaveRef.current;
+      }
+      const didSave = await performSave();
+      if (didSave) {
+        onRequestSearch();
+      }
+    };
+
+    document.addEventListener('keydown', handleSearchShortcut, true);
+    return () => document.removeEventListener('keydown', handleSearchShortcut, true);
+  }, [cancelPendingAutoSave, performSave, onRequestSearch]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {

@@ -400,7 +400,8 @@ function DemoHeader({
   // Keyboard shortcut for search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.key.toLowerCase() !== 'k') {
+      const isSearchKey = e.code === 'KeyK' || e.key.toLowerCase() === 'k';
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || !isSearchKey) {
         return;
       }
 
@@ -419,8 +420,8 @@ function DemoHeader({
       searchRef.current?.focus();
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
   }, []);
 
   useEffect(() => {

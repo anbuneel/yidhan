@@ -475,7 +475,7 @@ describe('Editor', () => {
       const titleInput = screen.getByDisplayValue('Test Note');
       fireEvent.change(titleInput, { target: { value: 'Changed' } });
 
-      fireEvent.keyDown(window, {
+      fireEvent.keyDown(document, {
         key: 'K',
         metaKey: true,
       });
@@ -494,7 +494,7 @@ describe('Editor', () => {
       const titleInput = screen.getByDisplayValue('Test Note');
       fireEvent.change(titleInput, { target: { value: 'Changed' } });
 
-      fireEvent.keyDown(window, {
+      fireEvent.keyDown(document, {
         key: 'K',
         ctrlKey: true,
       });

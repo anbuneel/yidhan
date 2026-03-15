@@ -1123,7 +1123,8 @@ function App() {
     if (!user || view === 'editor') return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.key.toLowerCase() !== 'k') {
+      const isSearchKey = e.code === 'KeyK' || e.key.toLowerCase() === 'k';
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || !isSearchKey) {
         return;
       }
 
@@ -1148,8 +1149,8 @@ function App() {
       requestLibrarySearch();
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
   }, [user, view, requestLibrarySearch]);
 
   // Keyboard shortcut: ? to show keyboard shortcuts modal
