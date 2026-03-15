@@ -11,6 +11,7 @@ interface SwipeableNoteCardProps {
   onTogglePin: (id: string, pinned: boolean) => void;
   disabled?: boolean;
   isCompact?: boolean;
+  searchQuery?: string;
 }
 
 // Swipe thresholds (in pixels)
@@ -32,6 +33,7 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
   onTogglePin,
   disabled = false,
   isCompact = false,
+  searchQuery,
 }: SwipeableNoteCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isTriggering, setIsTriggering] = useState(false);
@@ -187,8 +189,9 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
           onDelete={onDelete}
           onTogglePin={onTogglePin}
           isCompact={isCompact}
+          searchQuery={searchQuery}
         />
       </animated.div>
     </div>
   );
-}, (prev, next) => prev.note === next.note && prev.disabled === next.disabled && prev.isCompact === next.isCompact);
+}, (prev, next) => prev.note === next.note && prev.disabled === next.disabled && prev.isCompact === next.isCompact && prev.searchQuery === next.searchQuery);

@@ -5,7 +5,7 @@ import { Header } from './components/Header';
 import { ChapteredLibrary } from './components/ChapteredLibrary';
 import { Auth } from './components/Auth';
 import { LandingPage } from './components/LandingPage';
-import { sanitizeText } from './utils/sanitize';
+import { sanitizeText, htmlToPlainText } from './utils/sanitize';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 import {
   clearPersistedShareKey,
@@ -46,7 +46,6 @@ import {
   fetchNotesOffline,
   createNoteOffline,
   createNotesBatchOffline,
-  searchNotesOffline,
   toggleNotePinOffline,
   softDeleteNoteOffline,
   restoreNoteOffline,
@@ -66,7 +65,6 @@ import {
   createEncryptedNote,
   updateEncryptedNote,
   fetchDecryptedNotes,
-  searchDecryptedNotes,
   fetchDecryptedFadedNotes,
   decryptNoteFromServer,
   createEncryptedNotesBatch,
@@ -458,10 +456,9 @@ function App() {
     };
   }, []);
 
-  // Search state
+  // Search state (focused-gaze model: highlights matches instead of filtering)
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Note[] | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const [matchedNoteIds, setMatchedNoteIds] = useState<Set<string> | undefined>(undefined);
   const [searchFocusToken, setSearchFocusToken] = useState(0);
 
   // Import state with progress tracking
@@ -531,6 +528,10 @@ function App() {
 
   // Debounce timer refs
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Ref for stable delete callback (avoid re-creating handler on every notes change)
+  const notesRef = useRef(notes);
+  notesRef.current = notes;
 
   // Track if we've migrated demo content (prevent duplicate migrations)
   // Using a ref instead of state because:
@@ -1048,26 +1049,24 @@ function App() {
     });
   }, [notes]);
 
-  // Determine which notes to display (memoized to avoid recalculation on every render)
+  // Determine which notes to display (tag-filtered only; search uses highlight, not filtering)
   const displayNotes = useMemo(() => {
-    const notesToUse = searchResults !== null ? searchResults : sortedNotes;
+    if (selectedTagIds.length === 0) return sortedNotes;
 
-    if (selectedTagIds.length === 0) return notesToUse;
-
-    return notesToUse.filter((note) => {
+    return sortedNotes.filter((note) => {
       const noteTagIds = note.tags.map((t) => t.id);
       return selectedTagIds.every((tagId) => noteTagIds.includes(tagId));
     });
-  }, [searchResults, sortedNotes, selectedTagIds]);
+  }, [sortedNotes, selectedTagIds]);
 
   const selectedNote = notes.find((n) => n.id === selectedNoteId);
 
-  const handleNoteClick = (id: string) => {
+  const handleNoteClick = useCallback((id: string) => {
     startTransition(() => {
       setSelectedNoteId(id);
       setView('editor');
     });
-  };
+  }, [startTransition]);
 
   const handleBack = () => {
     startTransition(() => {
@@ -1222,17 +1221,17 @@ function App() {
 
   // Soft delete a note (move to Faded Notes)
   // Returns true on success, false on failure (for UI recovery in swipe gestures)
-  const handleNoteDelete = async (id: string): Promise<boolean> => {
+  const handleNoteDelete = useCallback(async (id: string): Promise<boolean> => {
     if (!user) return false;
 
-    // Find the note before deleting (for potential undo)
-    const deletedNote = notes.find((n) => n.id === id);
+    // Find the note before deleting (for potential undo) — read from ref for callback stability
+    const deletedNote = notesRef.current.find((n) => n.id === id);
 
     try {
       await softDeleteNoteOffline(user.id, id);
       setNotes((prev) => prev.filter((n) => n.id !== id));
       setFadedNotesCount((prev) => prev + 1);
-      if (selectedNoteId === id) {
+      if (selectedNoteIdRef.current === id) {
         setView('library');
         setSelectedNoteId(null);
       }
@@ -1274,7 +1273,7 @@ function App() {
       toast.error('Failed to delete note');
       return false;
     }
-  };
+  }, [user]);
 
   // Restore a note from Faded Notes
   const handleRestoreNote = async (id: string) => {
@@ -1345,7 +1344,7 @@ function App() {
     }
   };
 
-  const handleTogglePin = async (id: string, pinned: boolean) => {
+  const handleTogglePin = useCallback(async (id: string, pinned: boolean) => {
     if (!user) return;
 
     try {
@@ -1362,7 +1361,7 @@ function App() {
         prev.map((n) => (n.id === id ? { ...n, pinned: !pinned } : n))
       );
     }
-  };
+  }, [user]);
 
   const handleThemeToggle = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
@@ -1496,9 +1495,7 @@ function App() {
 
   // Tag filter handlers
   const handleTagToggle = (tagId: string) => {
-    // Clear search when using tag filters
-    setSearchQuery('');
-    setSearchResults(null);
+    // Tag toggle preserves search query — matchedNoteIds recomputes via useEffect
     setSelectedTagIds((prev) =>
       prev.includes(tagId)
         ? prev.filter((id) => id !== tagId)
@@ -1600,45 +1597,43 @@ function App() {
     }
   };
 
-  // Debounced search handler
+  // Compute matchedNoteIds from a query against displayNotes
+  const computeMatchedIds = useCallback((query: string, notesToSearch: Note[]): Set<string> => {
+    const q = query.toLowerCase();
+    const matched = new Set<string>();
+    for (const note of notesToSearch) {
+      const titleMatch = note.title.toLowerCase().includes(q);
+      const contentMatch = htmlToPlainText(note.content).toLowerCase().includes(q);
+      if (titleMatch || contentMatch) {
+        matched.add(note.id);
+      }
+    }
+    return matched;
+  }, []);
+
+  // Debounced search handler (focused-gaze: highlights, doesn't filter)
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
 
-    // Clear existing timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    // If query is empty, clear results immediately
     if (!query.trim()) {
-      setSearchResults(null);
-      setIsSearching(false);
+      setMatchedNoteIds(undefined);
       return;
     }
 
-    setIsSearching(true);
-
-    // Debounce the search
-    searchTimeoutRef.current = setTimeout(async () => {
-      if (!user) {
-        setSearchResults([]);
-        setIsSearching(false);
-        return;
-      }
-
-      try {
-        const results = keys
-          ? await searchDecryptedNotes(user.id, query, keys)
-          : await searchNotesOffline(user.id, query);
-        setSearchResults(results);
-      } catch (error) {
-        console.error('Search failed:', error);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
+    searchTimeoutRef.current = setTimeout(() => {
+      setMatchedNoteIds(computeMatchedIds(query, displayNotes));
     }, 300);
-  }, [user, keys]);
+  }, [computeMatchedIds, displayNotes]);
+
+  // Recompute matchedNoteIds when displayNotes changes during active search
+  useEffect(() => {
+    if (!searchQuery?.trim()) return;
+    setMatchedNoteIds(computeMatchedIds(searchQuery, displayNotes));
+  }, [displayNotes, searchQuery, computeMatchedIds]);
 
   // Export to JSON
   const handleExportJSON = useCallback(() => {
@@ -2105,6 +2100,8 @@ function App() {
           fadedNotesCount={fadedNotesCount}
           onRetryBlockedChanges={handleRetryBlockedChanges}
           isRetryingBlockedChanges={isRetryingBlockedChanges}
+          matchedCount={matchedNoteIds?.size}
+          totalCount={displayNotes.length}
         />
         <div className="w-full flex-1 flex flex-col" style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <TagFilterBar
@@ -2115,21 +2112,16 @@ function App() {
           onAddTag={handleAddTag}
           onEditTag={handleEditTag}
         />
-        {isSearching ? (
-          <div className="flex-1 flex items-center justify-center">
-            <p style={{ color: 'var(--color-text-secondary)' }}>Searching...</p>
-          </div>
-        ) : (
-          <ChapteredLibrary
-            notes={displayNotes}
-            onNoteClick={handleNoteClick}
-            onNoteDelete={handleNoteDelete}
-            onTogglePin={handleTogglePin}
-            onNewNote={handleNewNote}
-            onRefresh={handleRefresh}
-            searchQuery={searchQuery}
-          />
-        )}
+        <ChapteredLibrary
+          notes={displayNotes}
+          onNoteClick={handleNoteClick}
+          onNoteDelete={handleNoteDelete}
+          onTogglePin={handleTogglePin}
+          onNewNote={handleNewNote}
+          onRefresh={handleRefresh}
+          searchQuery={searchQuery}
+          matchedNoteIds={matchedNoteIds}
+        />
         </div>
 
         {/* Tag Modal */}

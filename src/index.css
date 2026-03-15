@@ -371,20 +371,65 @@ body::before {
    Spring physics for native-feel interactions
    ============================================ */
 
-/* Entrance: spring bounce with stagger delay (applied via inline style) */
-@keyframes card-enter {
+/* Entrance: rising wave with stagger delay (applied via inline style) */
+@keyframes rising-wave {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.96);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
 .note-card-entrance {
-  animation: card-enter 0.4s var(--spring-bounce) backwards;
+  animation: rising-wave 0.2s var(--spring-bounce) backwards;
+}
+
+/* Search: fade non-matching cards */
+.note-card-search-fade {
+  opacity: 0.12;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+
+/* Search: highlight matching cards */
+.note-card-search-match {
+  transform: scale(1.02);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  filter: drop-shadow(0 0 8px var(--color-accent-glow));
+}
+
+/* Waterline affordance */
+.waterline {
+  position: relative;
+  text-align: center;
+  padding: 12px 0 8px;
+  mask-image: linear-gradient(to bottom, black 60%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent);
+  min-height: 40px;
+}
+
+@media (max-width: 700px) {
+  .waterline {
+    min-height: 56px;
+  }
+}
+
+.waterline-text {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.02em;
+}
+
+/* Search snippet highlighting */
+.note-card-entrance mark {
+  background: var(--color-accent-glow);
+  color: var(--color-text-primary);
+  padding: 0 2px;
+  border-radius: 2px;
 }
 
 /* Delete: gentle collapse with subtle rotation */
