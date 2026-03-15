@@ -752,8 +752,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                           Stay unlocked across sessions. Only use on personal devices.
                         </span>
                       </div>
-                      <div
-                        className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer shrink-0 ml-4"
+                      <button
+                        type="button"
+                        className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer shrink-0 ml-4 focus-ring"
                         style={{
                           background: vaultSettings.settings.rememberBrowser
                             ? 'var(--color-accent)'
@@ -762,13 +763,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         role="switch"
                         aria-checked={vaultSettings.settings.rememberBrowser}
                         aria-label="Remember this browser"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleRememberBrowserToggle();
-                          }
-                        }}
+                        onClick={(e) => { e.stopPropagation(); handleRememberBrowserToggle(); }}
                       >
                         <div
                           className="absolute top-0.5 w-5 h-5 rounded-full shadow transition-transform duration-200"
@@ -779,7 +774,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                               : 'translateX(2px)',
                           }}
                         />
-                      </div>
+                      </button>
                     </div>
                     {securityMessage && (
                       <p
@@ -881,8 +876,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         Extends session to 14 days. Only use on personal devices.
                       </span>
                     </div>
-                    <div
-                      className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer shrink-0 ml-4"
+                    <button
+                      type="button"
+                      className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer shrink-0 ml-4 focus-ring"
                       style={{
                         background: sessionSettings.settings.isTrustedDevice
                           ? 'var(--color-accent)'
@@ -891,13 +887,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       role="switch"
                       aria-checked={sessionSettings.settings.isTrustedDevice}
                       aria-label="This is a trusted device"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          sessionSettings.toggleTrustedDevice();
-                        }
-                      }}
+                      onClick={(e) => { e.stopPropagation(); sessionSettings.toggleTrustedDevice(); }}
                     >
                       <div
                         className="absolute top-0.5 w-5 h-5 rounded-full shadow transition-transform duration-200"
@@ -908,7 +898,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                             : 'translateX(2px)',
                         }}
                       />
-                    </div>
+                    </button>
                   </div>
                   {sessionSettings.settings.isTrustedDevice && sessionSettings.settings.trustedAt && (
                     <p

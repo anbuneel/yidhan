@@ -244,7 +244,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
             <div className="space-y-4">
               {steps.map((step, index) => (
                 <div
-                  key={index}
+                  key={step.title}
                   className={`
                     flex items-start gap-4 p-4 rounded-lg
                     transition-all duration-300 cursor-pointer

@@ -17,6 +17,7 @@ export const changelog: ChangelogEntry[] = [
       { type: 'fix', text: 'Search now responds to Cmd/Ctrl+K again across the library, demo, shortcuts help, and editor save-and-search handoff' },
       { type: 'improvement', text: 'Library performance: ~80% fewer DOM nodes on initial load for large libraries (100+ notes)' },
       { type: 'improvement', text: 'Rising wave entrance animation for newly loaded cards' },
+      { type: 'improvement', text: 'Accessibility polish: semantic buttons for tag edit/remove, focus-visible rings on toggle switches and footer links, keyboard-dismissable tooltips' },
     ],
   },
   {
