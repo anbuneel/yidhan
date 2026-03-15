@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react';
+import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import Masonry from 'react-masonry-css';
 import type { Note } from '../types';
 import type { ChapterKey } from '../utils/temporalGrouping';
@@ -67,8 +67,8 @@ export const ChapterSection = memo(function ChapterSection({
   const sentinelRef = useRef<HTMLDivElement>(null);
   const readyRef = useRef(false);
 
-  // Fingerprint: detect when the note set meaningfully changes
-  const fingerprint = notes.map(n => n.id).join(',');
+  // Fingerprint: detect when the note set meaningfully changes (memoized to avoid rebuilding on unrelated renders)
+  const fingerprint = useMemo(() => notes.map(n => n.id).join(','), [notes]);
 
   // Reset visibleCount when fingerprint changes (derive-from-props pattern)
   const [prevFingerprint, setPrevFingerprint] = useState(fingerprint);
@@ -79,20 +79,11 @@ export const ChapterSection = memo(function ChapterSection({
     }
   }
 
-  // Reset visibleCount when search is cleared (derive-from-props pattern)
-  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
-  if (prevSearchQuery && !searchQuery && prevSearchQuery !== searchQuery) {
-    setPrevSearchQuery(searchQuery);
-    setVisibleCount(INITIAL_CARD_COUNT);
-  } else if (prevSearchQuery !== searchQuery) {
-    setPrevSearchQuery(searchQuery);
-  }
-
   const isSearchActive = !!searchQuery;
 
   const displayNotes = isSearchActive ? notes : notes.slice(0, visibleCount);
   const hasMore = !isSearchActive && visibleCount < notes.length;
-  const remainingCount = notes.length - visibleCount;
+  const remainingCount = Math.max(0, notes.length - visibleCount);
 
   // IntersectionObserver for progressive loading
   useEffect(() => {
@@ -288,8 +279,9 @@ export const ChapterSection = memo(function ChapterSection({
                   key={note.id}
                   className={`note-card-entrance${isFaded ? ' note-card-search-fade' : ''}${isMatch ? ' note-card-search-match' : ''}`}
                   style={{
-                    animationDelay: `${index * 0.06}s`,
+                    animationDelay: `${Math.min(index * 0.06, 0.6)}s`,
                   }}
+                  {...(isFaded ? { 'aria-hidden': true, tabIndex: -1 } : {})}
                 >
                   {isTouchDevice ? (
                     <SwipeableNoteCard

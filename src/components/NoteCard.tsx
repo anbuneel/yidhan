@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import type { Note } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
@@ -16,8 +16,8 @@ interface NoteCardProps {
 export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogglePin, isCompact = false, searchQuery }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Plain text preview for all modes (truncated for performance)
-  const plainText = htmlToPlainText(note.content);
+  // Plain text preview for all modes (memoized to avoid repeated DOMPurify calls)
+  const plainText = useMemo(() => htmlToPlainText(note.content), [note.content]);
   const preview = isCompact
     ? plainText.slice(0, 80) + (plainText.length > 80 ? '...' : '')
     : plainText.slice(0, 200) + (plainText.length > 200 ? '...' : '');
