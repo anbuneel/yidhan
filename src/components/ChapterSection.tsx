@@ -284,7 +284,7 @@ export const ChapterSection = memo(function ChapterSection({
                   style={{
                     animationDelay: `${Math.min(index * 0.06, 0.6)}s`,
                   }}
-                  {...(isFaded ? { 'aria-hidden': true, inert: '' } : {})}
+                  {...(isFaded ? { 'aria-hidden': true, inert: true } : {})}
                 >
                   {isTouchDevice ? (
                     <SwipeableNoteCard
