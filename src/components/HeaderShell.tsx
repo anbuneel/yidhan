@@ -355,10 +355,22 @@ export function HeaderShell({
           onSignIn && (
             <button
               onClick={onSignIn}
-              className="px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:text-[var(--color-accent)]"
+              className="px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
               style={{
                 fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-secondary)',
+                color: 'var(--color-accent)',
+                background: 'var(--color-bg-secondary)',
+                border: '1px solid var(--color-accent-muted)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--color-cta-text)';
+                e.currentTarget.style.background = 'var(--color-cta-bg)';
+                e.currentTarget.style.borderColor = 'var(--color-cta-bg)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--color-accent)';
+                e.currentTarget.style.background = 'var(--color-bg-secondary)';
+                e.currentTarget.style.borderColor = 'var(--color-accent-muted)';
               }}
             >
               Sign In
