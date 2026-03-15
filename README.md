@@ -48,7 +48,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Slash Commands** - Type `/` for quick formatting: headings, lists, quotes, code blocks, timestamps, and more
 - **Focus Mode** - Ctrl+Shift+F (desktop) / triple-tap (mobile) hides all editor chrome for distraction-free writing with vignette overlay
 - **Bottom Toolbar** - Mobile formatting toolbar fixed at thumb zone with heading cycle button and keyboard-aware positioning
-- **Keyboard Shortcuts** - `Cmd/Ctrl+N` for new note, `Cmd/Ctrl+Shift+K` for search, `Escape` to go back
+- **Keyboard Shortcuts** - `Cmd/Ctrl+N` for new note, `Cmd/Ctrl+K` for search, `Escape` to go back
 - **Note Timestamps** - Created and edited dates displayed in the editor
 - **Public Changelog** - Browse version history and recent updates
 - **Public Roadmap** - See what's coming next and features being explored

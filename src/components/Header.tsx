@@ -47,7 +47,7 @@ export function Header({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const searchShortcutHint = isMac ? `${modKey}\u21E7K` : `${modKey}Shift+K`;
+  const searchShortcutHint = `${modKey}K`;
 
   useEffect(() => {
     if (searchFocusToken === 0 || searchFocusToken === lastHandledSearchFocusToken) {

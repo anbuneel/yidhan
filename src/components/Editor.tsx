@@ -480,8 +480,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         setIsFocusMode((prev) => !prev);
         return;
       }
-      // Cmd/Ctrl+Shift+K: save, return to library, and focus search
-      if (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+      // Cmd/Ctrl+K: save, return to library, and focus search
+      if (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey) && !e.altKey) {
         e.preventDefault();
         cancelPendingAutoSave();
         if (inFlightSaveRef.current) {

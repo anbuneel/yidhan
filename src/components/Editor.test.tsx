@@ -467,7 +467,7 @@ describe('Editor', () => {
       });
     });
 
-    it('saves and requests search on Cmd+Shift+K', async () => {
+    it('saves and requests search on Cmd+K', async () => {
       const onRequestSearch = vi.fn();
       const onUpdate = vi.fn().mockResolvedValue(undefined);
       render(<Editor {...defaultProps} onUpdate={onUpdate} onRequestSearch={onRequestSearch} />);
@@ -478,7 +478,6 @@ describe('Editor', () => {
       fireEvent.keyDown(window, {
         key: 'K',
         metaKey: true,
-        shiftKey: true,
       });
 
       await waitFor(() => {
@@ -487,7 +486,7 @@ describe('Editor', () => {
       });
     });
 
-    it('does not request search when save fails on Cmd+Shift+K', async () => {
+    it('does not request search when save fails on Cmd+K', async () => {
       const onRequestSearch = vi.fn();
       const onUpdate = vi.fn().mockRejectedValue(new Error('save failed'));
       render(<Editor {...defaultProps} onUpdate={onUpdate} onRequestSearch={onRequestSearch} />);
@@ -498,7 +497,6 @@ describe('Editor', () => {
       fireEvent.keyDown(window, {
         key: 'K',
         ctrlKey: true,
-        shiftKey: true,
       });
 
       await waitFor(() => {

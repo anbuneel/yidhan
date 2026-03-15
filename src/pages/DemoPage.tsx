@@ -400,10 +400,23 @@ function DemoHeader({
   // Keyboard shortcut for search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        searchRef.current?.focus();
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.key.toLowerCase() !== 'k') {
+        return;
       }
+
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      e.preventDefault();
+      searchRef.current?.focus();
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -510,15 +523,6 @@ function DemoHeader({
               }}
             >
               {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}
-            </kbd>
-            <kbd
-              className="px-1.5 py-0.5 rounded"
-              style={{
-                background: 'var(--color-bg-tertiary)',
-                border: '1px solid var(--glass-border)',
-              }}
-            >
-              Shift
             </kbd>
             <kbd
               className="px-1.5 py-0.5 rounded"

@@ -42,7 +42,8 @@ describe('Header', () => {
   it('shows the updated search shortcut hint', () => {
     render(<Header {...defaultProps} />);
 
-    expect(screen.getByText(/Shift\+K$/)).toBeInTheDocument();
+    const expectedShortcut = navigator.platform.toUpperCase().includes('MAC') ? '\u2318K' : 'Ctrl+K';
+    expect(screen.getByText(expectedShortcut)).toBeInTheDocument();
   });
 
   it('focuses search when the focus token changes', async () => {
