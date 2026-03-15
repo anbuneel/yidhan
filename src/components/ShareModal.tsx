@@ -422,11 +422,18 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                     onClick={() => setShowPrivacyTip(!showPrivacyTip)}
                     onMouseEnter={() => setShowPrivacyTip(true)}
                     onMouseLeave={() => setShowPrivacyTip(false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape' && showPrivacyTip) {
+                        e.stopPropagation();
+                        setShowPrivacyTip(false);
+                      }
+                    }}
                     className="w-4 h-4 rounded-full flex items-center justify-center transition-colors"
                     style={{
                       color: 'var(--color-text-tertiary)',
                     }}
                     aria-label="Privacy information"
+                    aria-expanded={showPrivacyTip}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -435,6 +442,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                   {showPrivacyTip && (
                     <div
                       className="absolute left-0 top-6 z-10 w-64 p-3 rounded-lg shadow-lg text-xs"
+                      role="tooltip"
                       style={{
                         background: 'var(--color-bg-tertiary)',
                         border: '1px solid var(--glass-border)',

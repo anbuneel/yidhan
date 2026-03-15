@@ -59,18 +59,11 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
 
       {/* Edit button */}
       {onEdit && (
-        <span
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             onEdit();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.stopPropagation();
-              onEdit();
-            }
           }}
           className="
             ml-1
@@ -79,6 +72,7 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
             rounded-full
             opacity-0
             group-hover:opacity-100
+            focus-visible:opacity-100
             transition-opacity duration-200
             hover:bg-[var(--color-bg-tertiary)]
           "
@@ -88,23 +82,16 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
           </svg>
-        </span>
+        </button>
       )}
 
       {/* Remove button */}
       {showRemove && onRemove && (
-        <span
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.stopPropagation();
-              onRemove();
-            }
           }}
           className="
             ml-1
@@ -113,15 +100,17 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
             rounded-full
             opacity-0
             group-hover:opacity-100
+            focus-visible:opacity-100
             transition-opacity duration-200
             hover:bg-[var(--color-bg-tertiary)]
           "
           style={{ color: 'var(--color-text-tertiary)' }}
+          aria-label="Remove tag"
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
-        </span>
+        </button>
       )}
     </button>
   );
