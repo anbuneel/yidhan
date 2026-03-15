@@ -575,6 +575,7 @@ function DemoHeader({
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setIsSearchFocused(false)}
                 placeholder="Search..."
+                aria-label="Search notes"
                 className="flex-1 bg-transparent border-none outline-none text-sm min-w-0"
                 style={{
                   fontFamily: 'var(--font-body)',
@@ -637,7 +638,6 @@ function DemoHeader({
             focus:outline-none
             focus:ring-2
             focus:ring-[var(--color-accent)]
-            focus:ring-offset-2
             hover:-translate-y-0.5
             shrink-0
             touch-press
