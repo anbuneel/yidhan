@@ -32,9 +32,9 @@ src/
 │   ├── Footer.tsx         # Minimal footer with changelog/roadmap/shortcuts/GitHub links
 │   ├── KeyboardShortcutsModal.tsx # Help modal showing all keyboard shortcuts and gestures
 │   ├── SessionTimeoutModal.tsx # Session timeout warning modal (zen "session fading" messaging)
-│   ├── ChapteredLibrary.tsx # Temporal chapters note organization (Pinned, This Week, Last Week, etc.)
+│   ├── ChapteredLibrary.tsx # Temporal chapters note organization (Pinned, This Week, Last Week, etc.) + focused-gaze search threading + "No thoughts found" overlay
 │   ├── ChapterNav.tsx     # Desktop dot navigation sidebar for chapter jumping
-│   ├── ChapterSection.tsx # Collapsible chapter section with masonry grid
+│   ├── ChapterSection.tsx # Collapsible chapter section with masonry grid, progressive rendering (6-card batches via IntersectionObserver), waterline affordance, search fade/highlight, React.memo
 │   ├── FadedNoteCard.tsx  # Card for soft-deleted notes (restore/permanent delete)
 │   ├── FadedNotesView.tsx # View for recovering soft-deleted notes
 │   ├── TimeRibbon.tsx     # Mobile chapter scrubber navigation
@@ -137,7 +137,7 @@ src/
 │   ├── sanitize.ts        # HTML/text sanitization (XSS prevention)
 │   ├── shareRoute.ts      # Shared-note route parsing + session-backed share-key preservation across reloads
 │   ├── shareRoute.test.ts # 5 tests: fragment parsing, session fallback, non-share routes, storage failure handling
-│   ├── temporalGrouping.ts # Group notes by time (Pinned, This Week, Last Week, etc.)
+│   ├── temporalGrouping.ts # Group notes by time (Pinned, This Week, Last Week, etc.) + WATERLINE_TEXT map for chapter-aware waterline text
 │   ├── updateBanner.ts    # Persistent update banner for chunk errors / app version updates
 │   ├── validation.ts      # Note title/content validation and length limits
 │   ├── validation.test.ts # 17 tests: title sanitization, XSS, length limits, unicode
@@ -451,6 +451,8 @@ content...
 - All note/tag operations are scoped to authenticated user via RLS
 - Tags support many-to-many relationship with notes
 - Tag filtering uses AND logic (notes must have ALL selected tags)
+- **Focused-gaze search**: Search highlights matching cards (fade non-matches to 12% opacity) instead of filtering them out. `matchedNoteIds` computed via `useMemo` from `debouncedSearchQuery` + `displayNotes`. Tag toggle preserves search query. Progressive rendering suspends during search (all cards render). `Ctrl+Shift+K` focuses search bar.
+- **Progressive rendering**: Each `ChapterSection` shows 6 cards initially (`INITIAL_CARD_COUNT`), loads 6 more via IntersectionObserver sentinel with drain loop for tall viewports. Fingerprint-based reset (`notes.map(id).join`). Chapters force-expand during search.
 - User's full name is stored in Supabase `user_metadata.full_name`
 - Password recovery detected via Supabase `PASSWORD_RECOVERY` auth event
 - Google/GitHub OAuth use Supabase's `signInWithOAuth` with redirect back to app origin

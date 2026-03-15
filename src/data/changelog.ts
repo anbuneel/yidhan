@@ -8,6 +8,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.14.0',
+    date: '2026-03-15',
+    changes: [
+      { type: 'feature', text: 'Chapter Waterline: progressive rendering shows 6 cards per chapter initially, loading more as you scroll with a washi paper-edge waterline' },
+      { type: 'feature', text: 'Focused-gaze search: non-matching cards fade gracefully instead of disappearing, preserving your spatial memory of where notes live' },
+      { type: 'feature', text: 'Search snippets show context around matches with highlighted keywords' },
+      { type: 'improvement', text: 'Library performance: ~80% fewer DOM nodes on initial load for large libraries (100+ notes)' },
+      { type: 'improvement', text: 'Rising wave entrance animation for newly loaded cards' },
+    ],
+  },
+  {
     version: '3.13.5',
     date: '2026-03-12',
     changes: [
