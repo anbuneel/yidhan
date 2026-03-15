@@ -79,7 +79,8 @@ export const ChapterSection = memo(function ChapterSection({
     }
   }
 
-  const isSearchActive = !!searchQuery;
+  // Search is "active" only after debounce settles (matchedNoteIds is defined)
+  const isSearchActive = matchedNoteIds !== undefined;
 
   const displayNotes = isSearchActive ? notes : notes.slice(0, visibleCount);
   const hasMore = !isSearchActive && visibleCount < notes.length;
@@ -136,7 +137,7 @@ export const ChapterSection = memo(function ChapterSection({
       clearTimeout(timer);
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [isSearchActive, notes.length, fingerprint]);
+  }, [isSearchActive, notes.length, fingerprint, effectiveExpanded]);
 
   const opacity = CHAPTER_OPACITY[chapterKey];
 
@@ -283,7 +284,7 @@ export const ChapterSection = memo(function ChapterSection({
                   style={{
                     animationDelay: `${Math.min(index * 0.06, 0.6)}s`,
                   }}
-                  {...(isFaded ? { 'aria-hidden': true, tabIndex: -1 } : {})}
+                  {...(isFaded ? { 'aria-hidden': true, inert: '' } : {})}
                 >
                   {isTouchDevice ? (
                     <SwipeableNoteCard

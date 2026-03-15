@@ -198,7 +198,7 @@ export function Header({
         </div>
 
         {/* Search result count */}
-        {searchQuery && matchedCount !== undefined && matchedCount > 0 && totalCount !== undefined && (
+        {searchQuery && matchedCount !== undefined && totalCount !== undefined && (
           <p
             className="text-center mt-1"
             style={{
