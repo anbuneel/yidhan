@@ -7,7 +7,6 @@ import App from './App.tsx'
 import { AuthProvider } from './contexts/AuthContext'
 import { EncryptionProvider } from './contexts/EncryptionContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { ReloadPrompt } from './components/ReloadPrompt'
 import { showUpdateBanner } from './utils/updateBanner'
 
 // Handle chunk loading errors (happens when app is open during deployment)
@@ -104,7 +103,6 @@ createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <EncryptionProvider>
         <App />
-        <ReloadPrompt />
         <Toaster
           position="bottom-center"
           toastOptions={{
