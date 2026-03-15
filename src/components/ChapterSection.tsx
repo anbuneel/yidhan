@@ -93,6 +93,7 @@ export const ChapterSection = memo(function ChapterSection({
     const sentinel = sentinelRef.current;
 
     const totalNotes = notes.length;
+    let rafId: number | undefined;
 
     // Drain loop: check if sentinel is still visible after each batch
     const drainCheck = () => {
@@ -103,7 +104,7 @@ export const ChapterSection = memo(function ChapterSection({
         setVisibleCount(prev => {
           const next = Math.min(prev + BATCH_SIZE, totalNotes);
           if (next > prev) {
-            requestAnimationFrame(drainCheck);
+            rafId = requestAnimationFrame(drainCheck);
           }
           return next;
         });
@@ -116,7 +117,7 @@ export const ChapterSection = memo(function ChapterSection({
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setVisibleCount(prev => Math.min(prev + BATCH_SIZE, totalNotes));
-            requestAnimationFrame(drainCheck);
+            rafId = requestAnimationFrame(drainCheck);
           }
         });
       },
@@ -133,6 +134,7 @@ export const ChapterSection = memo(function ChapterSection({
     return () => {
       observer.disconnect();
       clearTimeout(timer);
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, [isSearchActive, notes.length, fingerprint]);
 
@@ -312,7 +314,7 @@ export const ChapterSection = memo(function ChapterSection({
 
           {/* Waterline */}
           {hasMore && (
-            <div className="waterline" aria-live="polite">
+            <div className="waterline">
               <p className="waterline-text">
                 {WATERLINE_TEXT[chapterKey](remainingCount)}
               </p>

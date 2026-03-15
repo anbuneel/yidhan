@@ -458,7 +458,7 @@ function App() {
 
   // Search state (focused-gaze model: highlights matches instead of filtering)
   const [searchQuery, setSearchQuery] = useState('');
-  const [matchedNoteIds, setMatchedNoteIds] = useState<Set<string> | undefined>(undefined);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [searchFocusToken, setSearchFocusToken] = useState(0);
 
   // Import state with progress tracking
@@ -1597,20 +1597,6 @@ function App() {
     }
   };
 
-  // Compute matchedNoteIds from a query against displayNotes
-  const computeMatchedIds = useCallback((query: string, notesToSearch: Note[]): Set<string> => {
-    const q = query.toLowerCase();
-    const matched = new Set<string>();
-    for (const note of notesToSearch) {
-      const titleMatch = note.title.toLowerCase().includes(q);
-      const contentMatch = htmlToPlainText(note.content).toLowerCase().includes(q);
-      if (titleMatch || contentMatch) {
-        matched.add(note.id);
-      }
-    }
-    return matched;
-  }, []);
-
   // Debounced search handler (focused-gaze: highlights, doesn't filter)
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
@@ -1620,20 +1606,38 @@ function App() {
     }
 
     if (!query.trim()) {
-      setMatchedNoteIds(undefined);
+      setDebouncedSearchQuery('');
       return;
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      setMatchedNoteIds(computeMatchedIds(query, displayNotes));
+      setDebouncedSearchQuery(query);
     }, 300);
-  }, [computeMatchedIds, displayNotes]);
+  }, []);
 
-  // Recompute matchedNoteIds when displayNotes changes during active search
+  // Clean up search timeout on unmount
   useEffect(() => {
-    if (!searchQuery?.trim()) return;
-    setMatchedNoteIds(computeMatchedIds(searchQuery, displayNotes));
-  }, [displayNotes, searchQuery, computeMatchedIds]);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Compute matchedNoteIds from debounced query (stable reference via useMemo)
+  const matchedNoteIds = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) return undefined;
+    const q = debouncedSearchQuery.toLowerCase();
+    const matched = new Set<string>();
+    for (const note of displayNotes) {
+      const titleMatch = note.title.toLowerCase().includes(q);
+      const contentMatch = htmlToPlainText(note.content).toLowerCase().includes(q);
+      if (titleMatch || contentMatch) {
+        matched.add(note.id);
+      }
+    }
+    return matched;
+  }, [debouncedSearchQuery, displayNotes]);
 
   // Export to JSON
   const handleExportJSON = useCallback(() => {
