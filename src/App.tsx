@@ -7,6 +7,7 @@ import { Auth } from './components/Auth';
 import { LandingPage } from './components/LandingPage';
 import { sanitizeText, htmlToPlainText } from './utils/sanitize';
 import { lazyWithRetry } from './utils/lazyWithRetry';
+import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
 import {
   clearPersistedShareKey,
   parseShareRoute,
@@ -1081,6 +1082,7 @@ function App() {
       setSelectedNoteId(null);
       setSearchFocusToken((prev) => prev + 1);
     });
+    scheduleSearchFocus(LIBRARY_SEARCH_INPUT_ID);
   }, [startTransition]);
 
   const handleNewNote = useCallback(async () => {
@@ -1143,6 +1145,7 @@ function App() {
 
       if (view === 'library') {
         setSearchFocusToken((prev) => prev + 1);
+        scheduleSearchFocus(LIBRARY_SEARCH_INPUT_ID);
         return;
       }
 

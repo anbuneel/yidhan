@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { Theme } from '../types';
 import { HeaderShell, type MenuSectionConfig } from './HeaderShell';
 import { SyncIndicator } from './SyncIndicator';
+import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
 
 const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 const modKey = isMac ? '\u2318' : 'Ctrl+';
@@ -57,7 +58,7 @@ export function Header({
     lastHandledSearchFocusToken = searchFocusToken;
 
     const frame = window.requestAnimationFrame(() => {
-      searchRef.current?.focus();
+      scheduleSearchFocus(LIBRARY_SEARCH_INPUT_ID);
     });
 
     return () => window.cancelAnimationFrame(frame);
@@ -150,6 +151,7 @@ export function Header({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
+            id={LIBRARY_SEARCH_INPUT_ID}
             ref={searchRef}
             type="text"
             value={searchQuery}

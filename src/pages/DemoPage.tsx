@@ -20,6 +20,7 @@ import { TagFilterBar } from '../components/TagFilterBar';
 import { Footer } from '../components/Footer';
 import { HeaderShell } from '../components/HeaderShell';
 import { LoadingFallback } from '../components/LoadingFallback';
+import { DEMO_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 
 // Lazy load heavy components
@@ -417,7 +418,7 @@ function DemoHeader({
       }
 
       e.preventDefault();
-      searchRef.current?.focus();
+      scheduleSearchFocus(DEMO_SEARCH_INPUT_ID);
     };
 
     document.addEventListener('keydown', handleKeyDown, true);
@@ -489,7 +490,7 @@ function DemoHeader({
       center={
         <div className="relative w-full max-w-sm">
           <input
-            id="demo-search-input"
+            id={DEMO_SEARCH_INPUT_ID}
             ref={searchRef}
             type="text"
             placeholder="Search notes..."
