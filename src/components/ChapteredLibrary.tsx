@@ -23,6 +23,7 @@ interface ChapteredLibraryProps {
   onNewNote?: () => void;
   onRefresh?: () => Promise<void>;
   searchQuery?: string;
+  matchedNoteIds?: Set<string>;
 }
 
 export function ChapteredLibrary({
@@ -33,6 +34,7 @@ export function ChapteredLibrary({
   onNewNote,
   onRefresh,
   searchQuery,
+  matchedNoteIds,
 }: ChapteredLibraryProps) {
   // Auto-detect compact mode based on viewport width (mobile = compact)
   const [isCompact, setIsCompact] = useState(() => {
@@ -121,44 +123,14 @@ export function ChapteredLibrary({
     return chapters.map((c) => ({ key: c.key as ChapterKey, label: c.label }));
   }, [chapters]);
 
-  // Empty state
-  if (notes.length === 0) {
-    const isSearching = searchQuery && searchQuery.trim().length > 0;
+  // Is search active with no matches?
+  const isSearchNoMatches = !!(searchQuery && searchQuery.trim().length > 0 && matchedNoteIds && matchedNoteIds.size === 0);
 
+  // Empty state (no notes at all)
+  if (notes.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
-          {isSearching ? (
-            <>
-              <svg
-                className="w-12 h-12 mx-auto mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                style={{ color: 'var(--color-text-tertiary)' }}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <p
-                className="text-lg mb-2"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  color: 'var(--color-text-secondary)',
-                }}
-              >
-                No results for "{searchQuery}"
-              </p>
-              <p
-                className="text-sm"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-tertiary)',
-                }}
-              >
-                Try searching with different keywords
-              </p>
-            </>
-          ) : (
             <>
               {/* Notebook icon */}
               <svg
@@ -247,7 +219,6 @@ export function ChapteredLibrary({
                 </kbd>
               </p>
             </>
-          )}
         </div>
       </div>
     );
@@ -256,7 +227,7 @@ export function ChapteredLibrary({
   // Library content (rendered inside or outside PullToRefresh based on device)
   const libraryContent = (
     <main
-      className="flex-1 overflow-y-auto pb-32"
+      className="flex-1 overflow-y-auto pb-32 relative"
       style={{ scrollbarWidth: 'none' }}
       data-testid="library-view"
     >
@@ -273,8 +244,28 @@ export function ChapteredLibrary({
           onNoteDelete={onNoteDelete}
           onTogglePin={onTogglePin}
           isCompact={isCompact}
+          searchQuery={searchQuery}
+          matchedNoteIds={matchedNoteIds}
         />
       ))}
+
+      {/* "No thoughts found" overlay — centered on faded library */}
+      {isSearchNoMatches && (
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{ zIndex: 5 }}
+        >
+          <p
+            className="text-lg"
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'var(--color-text-secondary)',
+            }}
+          >
+            No thoughts found
+          </p>
+        </div>
+      )}
     </main>
   );
 

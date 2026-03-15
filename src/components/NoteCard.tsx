@@ -1,8 +1,8 @@
-import { useState, memo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import type { Note } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
-import { sanitizeHtml, sanitizeText, htmlToPlainText } from '../utils/sanitize';
+import { sanitizeText, htmlToPlainText, escapeHtml } from '../utils/sanitize';
 
 interface NoteCardProps {
   note: Note;
@@ -10,16 +10,31 @@ interface NoteCardProps {
   onDelete: (id: string) => void;
   onTogglePin: (id: string, pinned: boolean) => void;
   isCompact?: boolean;
+  searchQuery?: string;
 }
 
-export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogglePin, isCompact = false }: NoteCardProps) {
+export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogglePin, isCompact = false, searchQuery }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Extract plain text preview for compact mode (no HTML escaping - React handles it)
-  const compactPreview = (() => {
-    if (!isCompact) return '';
-    const text = htmlToPlainText(note.content);
-    return text.slice(0, 80) + (text.length > 80 ? '...' : '');
+  // Plain text preview for all modes (memoized to avoid repeated DOMPurify calls)
+  const plainText = useMemo(() => htmlToPlainText(note.content), [note.content]);
+  const preview = isCompact
+    ? plainText.slice(0, 80) + (plainText.length > 80 ? '...' : '')
+    : plainText.slice(0, 200) + (plainText.length > 200 ? '...' : '');
+
+  // Search snippet: ~40 chars around the first match with <mark> highlighting
+  const searchSnippet = (() => {
+    if (!searchQuery) return null;
+    const query = searchQuery.toLowerCase();
+    const idx = plainText.toLowerCase().indexOf(query);
+    if (idx === -1) return null;
+
+    const start = Math.max(0, idx - 20);
+    const end = Math.min(plainText.length, idx + searchQuery.length + 20);
+    const before = escapeHtml(plainText.slice(start, idx));
+    const match = escapeHtml(plainText.slice(idx, idx + searchQuery.length));
+    const after = escapeHtml(plainText.slice(idx + searchQuery.length, end));
+    return `${start > 0 ? '...' : ''}${before}<mark>${match}</mark>${after}${end < plainText.length ? '...' : ''}`;
   })();
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -151,22 +166,27 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         />
       </div>
 
-      {/* Preview - Full HTML in normal mode, single line text in compact */}
-      {isCompact ? (
+      {/* Preview - Plaintext in all modes (truncated for performance) */}
+      <p
+        className={`flex-1 overflow-hidden ${isCompact ? 'text-sm truncate' : 'note-card-preview'}`}
+        style={{
+          fontFamily: 'var(--font-body)',
+          color: 'var(--color-text-secondary)',
+        }}
+      >
+        {preview || 'No content'}
+      </p>
+
+      {/* Search snippet with match highlighting */}
+      {searchSnippet && (
         <p
-          className="text-sm truncate flex-1"
+          className="text-xs mt-1 overflow-hidden"
           style={{
             fontFamily: 'var(--font-body)',
-            color: 'var(--color-text-secondary)',
+            color: 'var(--color-text-tertiary)',
+            lineHeight: 1.4,
           }}
-        >
-          {compactPreview || 'No content'}
-        </p>
-      ) : (
-        /* Preview - Rendered HTML content (sanitized to prevent XSS) */
-        <div
-          className="note-card-preview flex-1 overflow-hidden"
-          dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.content) }}
+          dangerouslySetInnerHTML={{ __html: searchSnippet }}
         />
       )}
 
@@ -244,4 +264,4 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
 
     </article>
   );
-}, (prev, next) => prev.note === next.note && prev.isCompact === next.isCompact);
+}, (prev, next) => prev.note === next.note && prev.isCompact === next.isCompact && prev.searchQuery === next.searchQuery);

@@ -149,23 +149,11 @@ describe('ChapteredLibrary', () => {
       expect(screen.getByText('N')).toBeInTheDocument();
     });
 
-    it('shows search empty state when searching with no results', () => {
+    it('shows normal empty state even when search is active with no notes', () => {
       render(<ChapteredLibrary {...defaultProps} searchQuery="nonexistent" />);
 
-      expect(screen.getByText('No results for "nonexistent"')).toBeInTheDocument();
-      expect(screen.getByText('Try searching with different keywords')).toBeInTheDocument();
-    });
-
-    it('does not show create button in search empty state', () => {
-      render(
-        <ChapteredLibrary
-          {...defaultProps}
-          searchQuery="nonexistent"
-          onNewNote={vi.fn()}
-        />
-      );
-
-      expect(screen.queryByText('Create your first note')).not.toBeInTheDocument();
+      // With 0 notes, shows the standard empty state (focused-gaze search only applies when notes exist)
+      expect(screen.getByText('Your notes await')).toBeInTheDocument();
     });
   });
 
