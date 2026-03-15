@@ -14,8 +14,16 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
   const colorValue = TAG_COLORS[tag.color];
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
       data-tag-pill
       className="
         group
@@ -24,15 +32,13 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
         flex items-center gap-1.5 sm:gap-2
         text-xs sm:text-sm font-medium
         transition-all duration-300
-        focus:outline-none
-        focus:ring-2
-        focus:ring-[var(--color-accent)]
-        focus:ring-offset-1
+        focus-ring
         hover:-translate-y-0.5
         shrink-0
       "
       style={{
         fontFamily: 'var(--font-body)',
+        cursor: 'pointer',
         background: isActive
           ? `${colorValue}20`
           : 'var(--color-card-bg)',
@@ -112,7 +118,7 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
           </svg>
         </button>
       )}
-    </button>
+    </div>
   );
 }
 
