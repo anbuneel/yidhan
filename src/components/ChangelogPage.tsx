@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { changelog, type ChangeType } from '../data/changelog';
 import { HeaderShell } from './HeaderShell';
 import { Footer } from './Footer';
@@ -27,7 +28,7 @@ const changeTypeColors: Record<ChangeType, string> = {
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   if (isNaN(date.getTime())) {
-    return dateString; // Return original string as fallback for invalid dates
+    return dateString;
   }
   return date.toLocaleDateString('en-US', {
     month: 'short',
@@ -36,7 +37,43 @@ function formatDate(dateString: string): string {
   });
 }
 
+/** Number of recent entries that get full visual treatment */
+const FULL_ENTRIES = 3;
+
+/**
+ * Hook: observe elements entering the viewport and apply a fade-in class.
+ */
+function useScrollReveal() {
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            (entry.target as HTMLElement).classList.add('changelog-visible');
+            observerRef.current?.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -30px 0px' }
+    );
+
+    return () => observerRef.current?.disconnect();
+  }, []);
+
+  const observe = (el: HTMLElement | null) => {
+    if (el && observerRef.current) {
+      observerRef.current.observe(el);
+    }
+  };
+
+  return observe;
+}
+
 export function ChangelogPage({ theme, onThemeToggle, onSignIn, onLogoClick, onRoadmapClick, onSettingsClick }: ChangelogPageProps) {
+  const observe = useScrollReveal();
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -52,7 +89,7 @@ export function ChangelogPage({ theme, onThemeToggle, onSignIn, onLogoClick, onR
 
       {/* Content */}
       <main className="flex-1">
-        <div className="max-w-[800px] mx-auto px-10 pb-20">
+        <div className="max-w-[800px] mx-auto px-6 sm:px-10 pb-20">
           {/* Title */}
           <h1
             className="font-semibold mb-3"
@@ -66,82 +103,98 @@ export function ChangelogPage({ theme, onThemeToggle, onSignIn, onLogoClick, onR
             What's New
           </h1>
           <p
-            className="text-base mb-10"
+            className="text-base mb-12"
             style={{
               fontFamily: 'var(--font-body)',
               color: 'var(--color-text-secondary)',
               fontWeight: 300,
+              fontStyle: 'italic',
             }}
           >
-            All the latest updates and improvements to Yidhan.
+            What we remember.
           </p>
 
-          {/* Changelog entries */}
-          <div className="space-y-8">
-            {changelog.map((entry) => (
-              <article
-                key={entry.version}
-                className="p-6"
-                style={{
-                  background: 'linear-gradient(to bottom, var(--color-card-bg), color-mix(in srgb, var(--color-card-bg) 97%, var(--color-accent)))',
-                  border: '1px solid var(--glass-border)',
-                  borderRadius: 'var(--radius-card)',
-                  boxShadow: 'var(--shadow-md)',
-                }}
-              >
+          {/* Changelog entries with left-margin thread */}
+          <div
+            className="space-y-6"
+            style={{
+              borderLeft: '1px solid color-mix(in srgb, var(--color-accent) 15%, transparent)',
+              paddingLeft: '24px',
+              marginLeft: '8px',
+            }}
+          >
+            {changelog.map((entry, index) => {
+              const isRecent = index < FULL_ENTRIES;
 
-                {/* Version header */}
-                <div className="flex items-center justify-between mb-5">
-                  <h2
-                    className="text-xl font-semibold"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      color: 'var(--color-text-primary)',
-                    }}
-                  >
-                    v{entry.version}
-                  </h2>
-                  <span
-                    className="text-xs px-3 py-1 rounded-full uppercase tracking-wider"
-                    style={{
-                      fontFamily: 'var(--font-body)',
-                      background: 'var(--color-bg-secondary)',
-                      color: 'var(--color-text-tertiary)',
-                      fontWeight: 500,
-                      letterSpacing: '0.1em',
-                    }}
-                  >
-                    {formatDate(entry.date)}
-                  </span>
-                </div>
-
-                {/* Changes list */}
-                <ul className="space-y-3">
-                  {entry.changes.map((change) => (
-                    <li
-                      key={`${entry.version}-${change.type}-${change.text.slice(0, 30)}`}
-                      className="flex items-start gap-3"
+              return (
+                <article
+                  key={entry.version}
+                  ref={observe}
+                  className="changelog-item transition-all duration-500"
+                  style={{
+                    // Progressive compression: recent entries get full treatment
+                    padding: isRecent ? '24px' : '16px 20px',
+                    background: isRecent
+                      ? 'linear-gradient(to bottom, var(--color-card-bg), color-mix(in srgb, var(--color-card-bg) 97%, var(--color-accent)))'
+                      : 'var(--color-card-bg)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: 'var(--radius-card)',
+                    boxShadow: isRecent ? 'var(--shadow-sm)' : 'none',
+                    opacity: isRecent ? 1 : 0.85,
+                  }}
+                >
+                  {/* Version header */}
+                  <div className={`flex items-baseline gap-3 ${isRecent ? 'mb-5' : 'mb-3'}`}>
+                    <h2
                       style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text-secondary)',
-                        fontWeight: 300,
-                        fontSize: '0.95rem',
-                        lineHeight: 1.6,
+                        fontFamily: 'var(--font-display)',
+                        fontSize: isRecent ? '1.25rem' : '1rem',
+                        fontWeight: 600,
+                        color: 'var(--color-text-primary)',
                       }}
                     >
-                      <span
-                        className="shrink-0 mt-0.5"
-                        style={{ color: changeTypeColors[change.type] }}
-                        title={changeTypeIcons[change.type].label}
+                      {entry.version}
+                    </h2>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        fontSize: '0.75rem',
+                        color: 'var(--color-text-tertiary)',
+                        fontWeight: 400,
+                      }}
+                    >
+                      {formatDate(entry.date)}
+                    </span>
+                  </div>
+
+                  {/* Changes list */}
+                  <ul className={isRecent ? 'space-y-3' : 'space-y-1.5'}>
+                    {entry.changes.map((change) => (
+                      <li
+                        key={`${entry.version}-${change.type}-${change.text.slice(0, 30)}`}
+                        className="flex items-start gap-3"
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          color: 'var(--color-text-secondary)',
+                          fontWeight: 300,
+                          fontSize: isRecent ? '0.95rem' : '0.875rem',
+                          lineHeight: 1.6,
+                        }}
                       >
-                        {changeTypeIcons[change.type].icon}
-                      </span>
-                      <span>{change.text}</span>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            ))}
+                        <span
+                          className="shrink-0 mt-0.5"
+                          style={{ color: changeTypeColors[change.type] }}
+                          title={changeTypeIcons[change.type].label}
+                        >
+                          {changeTypeIcons[change.type].icon}
+                        </span>
+                        <span>{change.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              );
+            })}
           </div>
         </div>
       </main>
@@ -151,6 +204,27 @@ export function ChangelogPage({ theme, onThemeToggle, onSignIn, onLogoClick, onR
         onChangelogClick={() => {}}
         onRoadmapClick={onRoadmapClick}
       />
+
+      {/* Changelog-specific styles */}
+      <style>{`
+        .changelog-item {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        .changelog-item.changelog-visible {
+          opacity: inherit;
+          transform: translateY(0);
+          transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+
+        @media (max-width: 640px) {
+          div[style*="border-left"] {
+            border-left-color: transparent !important;
+            padding-left: 0 !important;
+            margin-left: 0 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
