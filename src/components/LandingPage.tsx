@@ -1,5 +1,6 @@
 import { TAG_COLORS, type Theme, type TagColor } from '../types';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
+import { Logo } from './Logo';
 
 interface LandingPageProps {
   onStartWriting: () => void;
@@ -96,17 +97,7 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
       <section className="w-full md:w-[45%] flex flex-col" style={{ background: 'var(--color-bg-primary)' }}>
         {/* Left Header */}
         <header className="h-16 px-6 md:px-8 lg:px-12 flex items-center justify-between shrink-0">
-          <span
-            className="text-[1.4rem] md:text-[1.75rem] font-semibold tracking-tight"
-            style={{
-              fontFamily: 'var(--font-display)',
-              color: 'var(--color-text-primary)',
-              letterSpacing: '-0.5px',
-              userSelect: 'none',
-            }}
-          >
-            Yidhan
-          </span>
+          <Logo variant="header" className="shrink-0" />
 
           {/* Mobile-only: Theme toggle + Sign In (desktop has these in right panel header) */}
           <div className="flex md:hidden items-center gap-3">

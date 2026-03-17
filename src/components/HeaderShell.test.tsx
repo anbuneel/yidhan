@@ -43,7 +43,7 @@ describe('HeaderShell', () => {
   describe('rendering', () => {
     it('renders the logo by default', () => {
       render(<HeaderShell {...defaultProps} />);
-      expect(screen.getByText('Yidhan')).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Yidhan' })).toBeInTheDocument();
     });
 
     it('renders clickable logo when onLogoClick is provided', async () => {
@@ -51,7 +51,7 @@ describe('HeaderShell', () => {
       const onLogoClick = vi.fn();
       render(<HeaderShell {...defaultProps} onLogoClick={onLogoClick} />);
 
-      await user.click(screen.getByText('Yidhan'));
+      await user.click(screen.getByRole('button', { name: 'Yidhan' }));
       expect(onLogoClick).toHaveBeenCalled();
     });
 
@@ -64,7 +64,7 @@ describe('HeaderShell', () => {
       );
 
       expect(screen.getByTestId('custom-left')).toBeInTheDocument();
-      expect(screen.queryByText('Yidhan')).not.toBeInTheDocument();
+      expect(screen.queryByRole('img', { name: 'Yidhan' })).not.toBeInTheDocument();
     });
 
     it('renders center content (in both desktop and mobile slots)', () => {

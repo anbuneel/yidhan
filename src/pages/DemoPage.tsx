@@ -20,6 +20,7 @@ import { TagFilterBar } from '../components/TagFilterBar';
 import { Footer } from '../components/Footer';
 import { HeaderShell } from '../components/HeaderShell';
 import { LoadingFallback } from '../components/LoadingFallback';
+import { Logo } from '../components/Logo';
 import { DEMO_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
 import { htmlToPlainText } from '../utils/sanitize';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
@@ -505,17 +506,7 @@ function DemoHeader({
           >
             ←
           </a>
-          <span
-            className="text-xl sm:text-2xl"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 500,
-              color: 'var(--color-text-primary)',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Yidhan
-          </span>
+          <Logo variant="editor" />
           <span
             className="text-xs px-2 py-0.5 rounded-full"
             style={{

@@ -5,6 +5,7 @@ import { decryptSharePayload } from '../lib/encryption';
 import { fetchSharedNote } from '../services/notes';
 import { sanitizeHtml } from '../utils/sanitize';
 import { Footer } from './Footer';
+import { Logo } from './Logo';
 import { reportReliabilityIssue } from '../utils/reliabilityTelemetry';
 
 const VALID_TAG_COLORS = new Set(['terracotta', 'gold', 'forest', 'stone', 'indigo', 'clay', 'sage', 'plum']);
@@ -117,16 +118,7 @@ export function SharedNoteView({
     >
       <div className="h-16 flex items-center justify-between">
         {/* Logo */}
-        <span
-          className="text-[1.4rem] md:text-[1.75rem] font-semibold tracking-tight"
-          style={{
-            fontFamily: 'var(--font-display)',
-            color: 'var(--color-text-primary)',
-            letterSpacing: '-0.5px',
-          }}
-        >
-          Yidhan
-        </span>
+        <Logo variant="header" />
 
         {/* Theme Toggle */}
         <button

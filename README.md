@@ -16,7 +16,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Cross-Device Sync** - Notes sync across devices in ~3 seconds with incremental pull, server-authoritative timestamps, and pagination
 - **Recoverable Sync Failures** - Repeated sync failures move into a blocked state with a visible retry action instead of silently dropping local changes
 - **Real-time Updates** - Changes appear instantly across tabs and devices with self-echo suppression
-- **Beautiful Design** - Warm, paper-like aesthetics with asymmetric "wabi-sabi" card corners
+- **Beautiful Design** - Warm, paper-like aesthetics with asymmetric "wabi-sabi" card corners and a painterly Yidhan brand mark
 - **Light & Dark Themes** - Kintsugi (warm light) and Midnight (forest green dark) themes
 - **Tag Organization** - Organize notes with colorful tags and filter by multiple tags
 - **Tag Management** - Create, edit, and delete tags with a beautiful color picker
