@@ -39,6 +39,9 @@ const compactImageSizes: Record<'header' | 'editor', string> = {
   editor: '(max-width: 640px) 23px, 26px',
 };
 
+const buttonClassName =
+  'inline-flex items-center rounded-[14px] motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:-translate-y-px motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]';
+
 function isLockupVariant(variant: LogoVariant): variant is 'hero' | 'auth' {
   return variant === 'hero' || variant === 'auth';
 }
@@ -58,13 +61,13 @@ export function Logo({
         srcSet={`${lockup720} 720w, ${lockup1200} 1200w`}
         sizes={lockupSizes[variant]}
         alt={onClick ? '' : alt}
-        aria-hidden={onClick ? 'true' : undefined}
+        aria-hidden={onClick ? true : undefined}
         className={`${lockupImageClasses[variant]} h-auto max-w-none select-none ${imageClassName}`.trim()}
         decoding="async"
         loading={priority ? 'eager' : 'lazy'}
         fetchPriority={priority ? 'high' : 'auto'}
         draggable={false}
-        data-testid="brand-logo"
+        data-testid="brand-logo-lockup"
       />
     );
 
@@ -74,7 +77,7 @@ export function Logo({
           type="button"
           onClick={onClick}
           aria-label={alt}
-          className={`inline-flex items-center rounded-[14px] transition-transform duration-200 hover:-translate-y-px focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 focus:ring-offset-[var(--color-bg-primary)] ${className}`.trim()}
+          className={`${buttonClassName} ${className}`.trim()}
           style={{
             background: 'none',
             border: 'none',
@@ -106,7 +109,7 @@ export function Logo({
       loading={priority ? 'eager' : 'lazy'}
       fetchPriority={priority ? 'high' : 'auto'}
       draggable={false}
-      data-testid="brand-logo"
+      data-testid="brand-logo-mark"
     />
   );
 
@@ -135,7 +138,7 @@ export function Logo({
         type="button"
         onClick={onClick}
         aria-label={alt}
-        className={`inline-flex items-center rounded-[14px] transition-transform duration-200 hover:-translate-y-px focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 focus:ring-offset-[var(--color-bg-primary)] ${className}`.trim()}
+        className={`${buttonClassName} ${className}`.trim()}
         style={{
           background: 'none',
           border: 'none',
