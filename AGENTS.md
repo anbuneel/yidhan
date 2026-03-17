@@ -18,6 +18,8 @@ Yidhan is a calm, distraction-free note-taking application — where thoughts bl
 ## Project Structure
 ```
 src/
+├── assets/
+│   └── brand/             # Optimized WebP logo assets (lockup 720/1200, mark 256/512)
 ├── components/
 │   ├── Auth.tsx           # Login/signup/Google OAuth/password reset UI (supports modal mode)
 │   ├── ChangelogPage.tsx  # Version history page with categorized changes
@@ -155,7 +157,8 @@ src/
 ├── App.css                # Additional app styles
 ├── index.css              # Design system + Tiptap styles
 ├── types.ts               # App types (Note, Tag, Theme, ViewMode, TagColor) + encryption fields
-└── main.tsx               # Entry point with AuthProvider, EncryptionProvider, Sentry breadcrumb scrubbing
+├── main.tsx               # Entry point with AuthProvider, EncryptionProvider, Sentry breadcrumb scrubbing
+└── logo-test-main.tsx     # Isolated entrypoint for brand test page (logo-test.html)
 
 e2e/
 ├── fixtures.ts            # Playwright test fixtures and helpers
