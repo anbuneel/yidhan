@@ -21,6 +21,7 @@ import { Footer } from '../components/Footer';
 import { HeaderShell } from '../components/HeaderShell';
 import { LoadingFallback } from '../components/LoadingFallback';
 import { Logo } from '../components/Logo';
+import mark256 from '../assets/brand/yidhan-logo-mark-256.webp';
 import { DEMO_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
 import { htmlToPlainText } from '../utils/sanitize';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
@@ -490,7 +491,7 @@ function DemoHeader({
       onSignIn={onSignIn}
       leftContent={
         <div
-          className="flex items-center gap-3"
+          className="flex items-center gap-2 sm:gap-3"
           style={{ userSelect: 'none' }}
         >
           {/* Subtle home link */}
@@ -506,7 +507,14 @@ function DemoHeader({
           >
             ←
           </a>
-          <Logo variant="editor" />
+          <img
+            src={mark256}
+            alt="Yidhan"
+            className="h-[23px] w-auto shrink-0 sm:hidden"
+            decoding="async"
+            draggable={false}
+          />
+          <Logo variant="editor" className="hidden sm:inline-flex" />
           <span
             className="text-xs px-2 py-0.5 rounded-full"
             style={{
