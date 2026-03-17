@@ -88,9 +88,9 @@ export function Logo({
     }
 
     return (
-      <div className={`inline-flex items-center ${className}`.trim()}>
+      <span className={`inline-flex items-center ${className}`.trim()}>
         {image}
-      </div>
+      </span>
     );
   }
 
@@ -149,12 +149,12 @@ export function Logo({
   }
 
   return (
-    <div
+    <span
       className={`inline-flex items-center ${className}`.trim()}
       role="img"
       aria-label={alt}
     >
       {compactLogo}
-    </div>
+    </span>
   );
 }
