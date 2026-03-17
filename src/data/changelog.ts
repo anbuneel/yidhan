@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.14.1',
+    date: '2026-03-16',
+    changes: [
+      { type: 'improvement', text: 'Compact headers now use a Gemini-derived mark with live wordmark typography, while taller surfaces keep the painted lockup where it reads clearly' },
+      { type: 'improvement', text: 'Brand rendering now uses optimized responsive WebP assets instead of the broken placeholder SVG path' },
+    ],
+  },
+  {
     version: '3.14.0',
     date: '2026-03-15',
     changes: [

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Editor } from './Editor';
 import { createMockNote, createMockTag } from '../test/factories';
@@ -146,7 +146,7 @@ describe('Editor', () => {
     it('renders the header with title in breadcrumb', () => {
       render(<Editor {...defaultProps} />);
       // The header left content should include the note title
-      expect(screen.getByTestId('header-left')).toHaveTextContent('Yidhan');
+      expect(within(screen.getByTestId('header-left')).getByRole('button', { name: 'Yidhan' })).toBeInTheDocument();
       expect(screen.getByTestId('header-left')).toHaveTextContent('Test Note');
     });
 
@@ -408,9 +408,7 @@ describe('Editor', () => {
       const onBack = vi.fn();
       render(<Editor {...defaultProps} onBack={onBack} />);
 
-      // Find the Yidhan button in header
-      const yidhanButtons = screen.getAllByText('Yidhan');
-      await user.click(yidhanButtons[0]);
+      await user.click(screen.getByRole('button', { name: 'Yidhan' }));
 
       expect(onBack).toHaveBeenCalled();
     });

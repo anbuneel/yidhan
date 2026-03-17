@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { setTrustedDeviceOnLogin } from '../hooks/useSessionSettings';
 import type { Theme } from '../types';
+import { Logo } from './Logo';
 
 type AuthMode = 'login' | 'signup' | 'forgot' | 'reset';
 
@@ -340,15 +341,8 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         }}
       >
         {/* Logo/Title */}
-        <h1
-          className="text-3xl md:text-4xl font-semibold text-center mb-2"
-          style={{
-            fontFamily: 'var(--font-display)',
-            color: 'var(--color-text-primary)',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          Yidhan
+        <h1 className="mb-2 flex justify-center">
+          <Logo variant="auth" />
         </h1>
         <h2
           id="auth-modal-title"

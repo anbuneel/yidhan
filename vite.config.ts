@@ -1,4 +1,5 @@
 /// <reference types="vitest" />
+import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -8,6 +9,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   build: {
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+      },
       output: {
         manualChunks: {
           // Split heavy vendor dependencies into separate chunks
@@ -26,8 +30,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'robots.txt'],
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // Exclude large files from precache (yidhan-logo.svg is 3.65MB, exceeds 2MB limit)
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        // Exclude the legacy oversized SVG from precache.
         globIgnores: ['**/yidhan-logo.svg'],
         // Serve index.html for all navigation requests (full offline-first)
         navigateFallback: 'index.html',
