@@ -6,7 +6,7 @@
  * entry/exit animations aligned with Yidhan's calm aesthetic.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface ImpermanenceRibbonProps {
   onSignUp: () => void;
@@ -16,6 +16,7 @@ interface ImpermanenceRibbonProps {
 export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fade in on mount
   useEffect(() => {
@@ -23,10 +24,18 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const handleDismiss = () => {
+  // Clean up dismiss timer on unmount
+  useEffect(() => {
+    return () => {
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    };
+  }, []);
+
+  const handleDismiss = useCallback(() => {
+    if (isExiting) return;
     setIsExiting(true);
-    setTimeout(() => onDismiss(), 300);
-  };
+    dismissTimerRef.current = setTimeout(() => onDismiss(), 300);
+  }, [isExiting, onDismiss]);
 
   return (
     <div
