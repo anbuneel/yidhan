@@ -21,7 +21,6 @@ import { Footer } from '../components/Footer';
 import { HeaderShell } from '../components/HeaderShell';
 import { LoadingFallback } from '../components/LoadingFallback';
 import { Logo } from '../components/Logo';
-import mark256 from '../assets/brand/yidhan-logo-mark-256.webp';
 import { DEMO_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
 import { htmlToPlainText } from '../utils/sanitize';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
@@ -32,6 +31,9 @@ const Editor = lazyWithRetry(() =>
 );
 const TagModal = lazyWithRetry(() =>
   import('../components/TagModal').then((module) => ({ default: module.TagModal }))
+);
+const KeyboardShortcutsModal = lazyWithRetry(() =>
+  import('../components/KeyboardShortcutsModal').then((module) => ({ default: module.KeyboardShortcutsModal }))
 );
 
 // Demo-specific user ID (used internally, not a real user)
@@ -86,6 +88,10 @@ export function DemoPage({
     onDismissRibbon: dismissRibbon,
   });
 
+  // First-run: show welcome intro until user creates their first note
+  const hasOnlyStarterNotes = notes.length > 0 && notes.every((n) => n.id.startsWith('starter-'));
+
+
   // View state
   const [view, setView] = useState<'library' | 'editor'>('library');
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
@@ -102,6 +108,9 @@ export function DemoPage({
   // Tag modal state
   const [showTagModal, setShowTagModal] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
+
+  // Shortcuts modal state
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   // Get selected note
   const selectedNote = useMemo(() => {
@@ -325,6 +334,16 @@ export function DemoPage({
           onDismiss={dismissPrompt}
         />
       )}
+
+      {/* Keyboard Shortcuts Modal */}
+      {showShortcutsModal && (
+        <Suspense fallback={null}>
+          <KeyboardShortcutsModal
+            isOpen={showShortcutsModal}
+            onClose={() => setShowShortcutsModal(false)}
+          />
+        </Suspense>
+      )}
     </>
   );
 
@@ -379,7 +398,19 @@ export function DemoPage({
           totalCount={displayNotes.length}
         />
 
-        <div className="w-full flex-1 flex flex-col" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div
+          className="w-full flex-1 flex flex-col relative"
+          style={{ maxWidth: '1400px', margin: '0 auto' }}
+        >
+        {/* Ambient warmth — subtle radial glow unique to practice space */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(ellipse 60% 40% at 50% 20%, var(--color-accent-glow), transparent 70%)',
+            opacity: 0.4,
+          }}
+        />
+
         {/* Tag Filter Bar */}
         <TagFilterBar
           tags={tags}
@@ -390,7 +421,39 @@ export function DemoPage({
           onEditTag={handleEditTag}
         />
 
-        {/* Note Library */}
+        {/* First-run welcome — disappears once user creates a note */}
+        {hasOnlyStarterNotes && (
+          <div
+            className="text-center px-6 pt-4 pb-2"
+            style={{
+              animation: 'fade-in 0.6s ease-out backwards',
+              animationDelay: '0.15s',
+            }}
+          >
+            <p
+              className="text-lg sm:text-xl"
+              style={{
+                fontFamily: 'var(--font-display)',
+                color: 'var(--color-text-primary)',
+                fontWeight: 500,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Write freely — no account needed
+            </p>
+            <p
+              className="text-sm mt-1.5"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-primary)',
+                opacity: 0.6,
+              }}
+            >
+              These starter notes are yours to edit, delete, or ignore
+            </p>
+          </div>
+        )}
+
         <ChapteredLibrary
           notes={displayNotes}
           onNoteClick={handleNoteClick}
@@ -403,7 +466,11 @@ export function DemoPage({
         </div>
 
         {/* Footer */}
-        <Footer onChangelogClick={onChangelogClick} onRoadmapClick={onRoadmapClick} />
+        <Footer
+          onChangelogClick={onChangelogClick}
+          onRoadmapClick={onRoadmapClick}
+          onShortcutsClick={() => setShowShortcutsModal(true)}
+        />
       </div>
       {sharedModals}
     </>
@@ -494,38 +561,17 @@ function DemoHeader({
           className="flex items-center gap-2 sm:gap-3"
           style={{ userSelect: 'none' }}
         >
-          {/* Subtle home link */}
-          <a
-            href="/"
-            className="text-sm transition-colors duration-200 hover:text-[var(--color-accent)]"
-            style={{
-              fontFamily: 'var(--font-body)',
-              color: 'var(--color-text-tertiary)',
-              textDecoration: 'none',
-            }}
-            title="Back to home"
-          >
-            ←
-          </a>
-          <img
-            src={mark256}
-            alt="Yidhan"
-            className="h-[23px] w-auto shrink-0 sm:hidden"
-            decoding="async"
-            draggable={false}
-          />
-          <Logo variant="editor" className="hidden sm:inline-flex" />
+          <Logo onClick={() => { window.location.href = '/'; }} />
           <span
-            className="text-xs px-2 py-0.5 rounded-full"
+            className="hidden sm:inline text-base italic"
             style={{
-              fontFamily: 'var(--font-body)',
+              fontFamily: 'var(--font-display)',
               color: 'var(--color-accent)',
-              background: 'var(--color-accent-glow)',
-              border: '1px solid var(--color-accent)',
-              opacity: 0.9,
+              letterSpacing: '0.02em',
+              opacity: 0.75,
             }}
           >
-            Explore
+            Practice Space
           </span>
         </div>
       }
@@ -637,6 +683,7 @@ function DemoHeader({
             focus:outline-none
             focus:ring-2
             focus:ring-[var(--color-accent)]
+            focus:ring-offset-2
             hover:-translate-y-0.5
             shrink-0
             touch-press
