@@ -46,7 +46,7 @@ src/
 │   ├── LandingPage.tsx    # Split-screen landing page with showcase cards + writing surface vignette
 │   ├── LettingGoModal.tsx # Account departure modal with keepsakes export
 │   ├── LoadingFallback.tsx # Shared loading spinner for Suspense boundaries
-│   ├── Logo.tsx           # Shared brand component (compact mark + live wordmark for headers, painted lockup for taller placements)
+│   ├── Logo.tsx           # Shared brand component (compact mark + live wordmark for headers; header variant used consistently across all pages)
 │   ├── NoteCard.tsx       # Individual note card with tag badges
 │   ├── ShareModal.tsx     # Modal for creating/managing E2EE share links (capability-link model)
 │   ├── ShareModal.test.tsx # 18 tests: rendering, create flow, revoke, modal interactions
@@ -73,10 +73,10 @@ src/
 │   ├── GestureHint.tsx    # One-time swipe gesture tutorial overlay (mobile)
 │   ├── BottomSheet.tsx    # iOS-style bottom sheet modal component
 │   └── demo/              # Demo mode components (Practice Space)
-│       ├── ImpermanenceRibbon.tsx # Subtle banner reminding notes aren't saved to cloud
-│       └── InvitationModal.tsx    # Soft signup prompt ("A Gentle Invitation")
+│       ├── ImpermanenceRibbon.tsx # Editorial subheader reminding notes are browser-local (entry/exit animations)
+│       └── InvitationModal.tsx    # Soft signup prompt ("These words are yours") with frosted backdrop
 ├── pages/
-│   ├── DemoPage.tsx       # Full-featured demo experience at /demo route
+│   ├── DemoPage.tsx       # Full-featured demo experience at /demo route (practice space with first-run welcome, ambient warmth, keyboard shortcuts)
 │   └── LogoTestPage.tsx   # Brand preview page for testing the shipped lockup and compact mark across themes
 ├── data/
 │   ├── changelog.ts       # Version history data

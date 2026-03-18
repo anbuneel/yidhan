@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.15.0',
+    date: '2026-03-17',
+    changes: [
+      { type: 'improvement', text: 'Demo page redesigned as a "Practice Space" with integrated editorial ribbon, first-run welcome intro, and ambient warmth' },
+      { type: 'improvement', text: 'Invitation modal now uses frosted backdrop and warmer keepsake-style copy' },
+      { type: 'improvement', text: 'Consistent logo across all pages — Auth page now uses the same header variant' },
+      { type: 'improvement', text: 'Keyboard shortcuts discoverable from demo footer' },
+    ],
+  },
+  {
     version: '3.14.1',
     date: '2026-03-16',
     changes: [
