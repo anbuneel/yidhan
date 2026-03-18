@@ -89,7 +89,7 @@ export function DemoPage({
   });
 
   // First-run: show welcome intro until user creates their first note
-  const isFirstRun = notes.length > 0 && notes.every((n) => n.id.startsWith('starter-'));
+  const hasOnlyStarterNotes = notes.length > 0 && notes.every((n) => n.id.startsWith('starter-'));
 
 
   // View state
@@ -422,7 +422,7 @@ export function DemoPage({
         />
 
         {/* First-run welcome — disappears once user creates a note */}
-        {isFirstRun && (
+        {hasOnlyStarterNotes && (
           <div
             className="text-center px-6 pt-4 pb-2"
             style={{
@@ -454,17 +454,15 @@ export function DemoPage({
           </div>
         )}
 
-        <div>
-          <ChapteredLibrary
-            notes={displayNotes}
-            onNoteClick={handleNoteClick}
-            onNoteDelete={handleNoteDelete}
-            onTogglePin={handleTogglePin}
-            onNewNote={handleNewNote}
-            searchQuery={searchQuery}
-            matchedNoteIds={matchedNoteIds}
-          />
-        </div>
+        <ChapteredLibrary
+          notes={displayNotes}
+          onNoteClick={handleNoteClick}
+          onNoteDelete={handleNoteDelete}
+          onTogglePin={handleTogglePin}
+          onNewNote={handleNewNote}
+          searchQuery={searchQuery}
+          matchedNoteIds={matchedNoteIds}
+        />
         </div>
 
         {/* Footer */}
@@ -558,7 +556,6 @@ function DemoHeader({
       theme={theme}
       onThemeToggle={onThemeToggle}
       onSignIn={onSignIn}
-      onLogoClick={() => { window.location.href = '/'; }}
       leftContent={
         <div
           className="flex items-center gap-2 sm:gap-3"
