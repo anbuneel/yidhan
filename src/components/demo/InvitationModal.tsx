@@ -16,7 +16,6 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
   return (
     <div
       className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0, 0, 0, 0.4)' }}
       onClick={onDismiss}
     >
       <div
@@ -25,7 +24,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
           background: 'var(--color-card-bg)',
           border: '1px solid var(--glass-border)',
           borderRadius: '2px 24px 4px 24px',
-          animation: 'float-up 0.5s ease-out',
+          animation: 'modal-enter 0.4s ease-out',
         }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -33,19 +32,17 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
         aria-labelledby="invitation-title"
         aria-describedby="invitation-body"
       >
-        {/* Icon */}
+        {/* Icon + Title — tight grouping */}
         <div
-          className="text-2xl mb-4"
+          className="text-lg mb-1"
           style={{ color: 'var(--color-accent)' }}
           aria-hidden="true"
         >
           ✦
         </div>
-
-        {/* Title */}
         <h2
           id="invitation-title"
-          className="text-xl sm:text-2xl mb-5"
+          className="text-xl sm:text-2xl mb-6"
           style={{
             fontFamily: 'var(--font-display)',
             color: 'var(--color-text-primary)',
@@ -53,13 +50,13 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
             fontWeight: 500,
           }}
         >
-          A Gentle Invitation
+          These words are yours
         </h2>
 
         {/* Body */}
         <p
           id="invitation-body"
-          className="text-sm sm:text-base mb-7 leading-relaxed"
+          className="text-sm sm:text-base mb-8 leading-relaxed"
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-secondary)',
@@ -68,12 +65,12 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
         >
           You've written{' '}
           <strong style={{ color: 'var(--color-accent)', fontWeight: 500 }}>
-            {noteCount} {noteCount === 1 ? 'note' : 'notes'}
+            {noteCount} {noteCount === 1 ? 'thought' : 'thoughts'}
           </strong>{' '}
-          here. They're yours to keep.
+          here. We'd hate for them to disappear.
           <br />
           <br />
-          Create a free account to encrypt and sync your notes across devices.
+          A free account encrypts and syncs everything — your notes stay yours, on every device.
         </p>
 
         {/* Primary CTA */}
@@ -99,7 +96,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
             e.currentTarget.style.boxShadow = '0 4px 16px var(--color-accent-glow)';
           }}
         >
-          Keep My Notes
+          Keep My Thoughts
         </button>
 
         {/* Dismiss link */}
@@ -123,23 +120,9 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
             e.currentTarget.style.color = 'var(--color-text-tertiary)';
           }}
         >
-          Continue without
+          Not yet
         </button>
       </div>
-
-      {/* Animation keyframes */}
-      <style>{`
-        @keyframes float-up {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }

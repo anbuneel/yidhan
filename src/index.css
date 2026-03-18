@@ -1440,6 +1440,13 @@ body::before {
   50% { opacity: 1; }
 }
 
+/* Demo: ImpermanenceRibbon pulsing dot */
+@keyframes demo-ribbon-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
+}
+
+
 /* Mobile adjustments for focus indicator */
 @media (max-width: 767px) {
   .focus-mode-indicator {
