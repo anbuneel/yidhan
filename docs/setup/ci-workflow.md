@@ -125,7 +125,7 @@ npm run check
 
 ## Monitoring
 
-View CI status at: https://github.com/anbuneel/zenote/actions
+View CI status at: https://github.com/anbuneel/yidhan/actions
 
 ## Troubleshooting
 

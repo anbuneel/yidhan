@@ -7,13 +7,13 @@ When logging in with Google, users see:
 Choose an account to continue to ijalctbscxyztbwjfoem.supabase.co
 ```
 
-Instead of seeing the actual app domain (`zenote.vercel.app`).
+Instead of seeing the actual app domain (`yidhan.vercel.app`).
 
 ## Solutions
 
 ### Option 1: Supabase Custom Domains (Pro plan)
 
-Supabase offers a **Custom Domains** feature that lets you use your own domain (e.g., `auth.zenote.vercel.app`) instead of the default Supabase project URL. This changes what users see on the Google consent screen.
+Supabase offers a **Custom Domains** feature that lets you use your own domain (e.g., `auth.yidhan.vercel.app`) instead of the default Supabase project URL. This changes what users see on the Google consent screen.
 
 **Requirements:**
 - Supabase Pro plan ($25/month)
@@ -34,10 +34,10 @@ To show your **app name and logo** on the consent screen (instead of just the do
 **Steps:**
 1. Go to [Google Cloud Console → OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent)
 2. Fill in:
-   - App name: "Zenote"
+   - App name: "Yidhan"
    - App logo
-   - Privacy policy URL: https://zenote.vercel.app/privacy (need to create)
-   - Terms of service URL: https://zenote.vercel.app/terms (need to create)
+   - Privacy policy URL: https://yidhan.vercel.app/privacy (need to create)
+   - Terms of service URL: https://yidhan.vercel.app/terms (need to create)
 3. Submit for verification (can take several days)
 
 **Note:** This won't change the domain shown, but will make it look more professional with branding.
@@ -45,14 +45,14 @@ To show your **app name and logo** on the consent screen (instead of just the do
 ### Option 3: Both Solutions
 
 For the best user experience, combine both:
-- Custom domain shows `zenote.vercel.app`
+- Custom domain shows `yidhan.vercel.app`
 - Google verification shows app name and logo
 
 ## Comparison
 
 | What you want | Solution | Cost |
 |---------------|----------|------|
-| Show `zenote.vercel.app` instead of Supabase URL | Supabase Custom Domains | Pro plan ($25/mo) |
+| Show `yidhan.vercel.app` instead of Supabase URL | Supabase Custom Domains | Pro plan ($25/mo) |
 | Show app name & logo | Google OAuth verification | Free |
 | Both | Both solutions | Pro plan |
 

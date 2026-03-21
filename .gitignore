@@ -35,6 +35,7 @@ nul
 *.txt
 !README.txt
 !docs/**/*.txt
+!public/robots.txt
 
 # Claude Code local settings
 .claude/

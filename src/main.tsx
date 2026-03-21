@@ -40,10 +40,11 @@ if (sentryDsn) {
       // capturing decrypted content (title, tags, note body) in replays
       ...(!isSharedRoute ? [Sentry.replayIntegration({
         // Mask note content in session replays for privacy
+        maskAllText: true,
         maskAllInputs: true,
         blockAllMedia: false,
-        // Block sensitive content selectors
-        block: ['.rich-text-editor', '.ProseMirror', '[data-sensitive]'],
+        // Block sensitive content selectors (decrypted note titles, previews, editor)
+        block: ['.rich-text-editor', '.ProseMirror', '[data-sensitive]', '.note-card'],
       })] : []),
     ],
     // Performance monitoring sample rate (10% of transactions)

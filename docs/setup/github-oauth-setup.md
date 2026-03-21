@@ -1,6 +1,6 @@
 # GitHub OAuth Setup Guide
 
-This guide walks through configuring GitHub OAuth for Zenote.
+This guide walks through configuring GitHub OAuth for Yidhan.
 
 ## Prerequisites
 
@@ -17,8 +17,8 @@ This guide walks through configuring GitHub OAuth for Zenote.
 3. Fill in the form:
    | Field | Value |
    |-------|-------|
-   | **Application name** | `Zenote` |
-   | **Homepage URL** | `https://zenote.vercel.app` |
+   | **Application name** | `Yidhan` |
+   | **Homepage URL** | `https://yidhan.vercel.app` |
    | **Authorization callback URL** | `https://<your-supabase-project>.supabase.co/auth/v1/callback` |
 
    > Replace `<your-supabase-project>` with your actual Supabase project reference (found in Supabase Dashboard → Settings → API)
@@ -50,10 +50,10 @@ This guide walks through configuring GitHub OAuth for Zenote.
 
 In Supabase Dashboard → **Authentication** → **URL Configuration**:
 
-1. Ensure **Site URL** is set to: `https://zenote.vercel.app`
+1. Ensure **Site URL** is set to: `https://yidhan.vercel.app`
 
 2. Add to **Redirect URLs**:
-   - `https://zenote.vercel.app` (production)
+   - `https://yidhan.vercel.app` (production)
    - `http://localhost:5173` (local development)
 
 ## Step 4: Test the Integration

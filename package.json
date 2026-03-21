@@ -1,7 +1,7 @@
 {
   "name": "yidhan-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "3.15.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,6 +20,7 @@
     "theme:generate": "tsx scripts/generate-theme-css.ts",
     "theme:preview": "tsx scripts/generate-theme-css.ts --preview",
     "icons:generate": "tsx scripts/generate-icons.ts",
+    "og:generate": "tsx scripts/generate-og-image.ts",
     "splash:generate": "tsx scripts/generate-splash-screens.ts",
     "docs:sync-agents": "node scripts/sync-agents.mjs",
     "docs:sync-agents:check": "node scripts/sync-agents.mjs --check",
