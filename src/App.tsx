@@ -391,17 +391,16 @@ function App() {
   const [showAppLoader, setShowAppLoader] = useState(appLoading);
   const appLoaderStartedAtRef = useRef<number | null>(null);
   const appLoaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Views that map to direct-entry URL routes
+  const routeableViews: readonly ViewMode[] = ['changelog', 'roadmap', 'privacy', 'terms', 'support'];
   const [view, setView] = useState<ViewMode>(() => {
-    const path = window.location.pathname;
-    if (path === '/privacy') return 'privacy';
-    if (path === '/terms') return 'terms';
-    if (path === '/support') return 'support';
-    return 'library';
+    const path = window.location.pathname.replace(/\/$/, '') || '/';
+    const match = routeableViews.find(v => path === `/${v}`);
+    return match || 'library';
   });
-  // Sync URL pathname for direct-entry routes (privacy, terms, support)
-  const routeableViews = ['privacy', 'terms', 'support'] as const;
+  // Sync URL pathname for direct-entry routes
   useEffect(() => {
-    const expectedPath = routeableViews.includes(view as typeof routeableViews[number]) ? `/${view}` : '/';
+    const expectedPath = routeableViews.includes(view) ? `/${view}` : '/';
     if (window.location.pathname !== expectedPath) {
       window.history.pushState({}, '', expectedPath);
     }
@@ -409,15 +408,13 @@ function App() {
   // Handle browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname;
-      if (path === '/privacy') setView('privacy');
-      else if (path === '/terms') setView('terms');
-      else if (path === '/support') setView('support');
-      else setView('library');
+      const path = window.location.pathname.replace(/\/$/, '') || '/';
+      const match = routeableViews.find(v => path === `/${v}`);
+      setView(match || 'library');
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- routeableViews is a stable const
 
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   // Ref for selectedNoteId — used in realtime handlers to avoid re-creating
