@@ -2322,9 +2322,6 @@ function App() {
           onChangelogClick={() => startTransition(() => setView('changelog'))}
           onRoadmapClick={() => startTransition(() => setView('roadmap'))}
           onShortcutsClick={() => setShowShortcutsModal(true)}
-          onPrivacyClick={() => startTransition(() => setView('privacy'))}
-          onTermsClick={() => startTransition(() => setView('terms'))}
-          onSupportClick={() => startTransition(() => setView('support'))}
         />
 
         {/* Import Loading Overlay with Progress */}

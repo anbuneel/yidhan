@@ -4,12 +4,9 @@ interface FooterProps {
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
   onShortcutsClick?: () => void;
-  onPrivacyClick?: () => void;
-  onTermsClick?: () => void;
-  onSupportClick?: () => void;
 }
 
-export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick, onPrivacyClick, onTermsClick, onSupportClick }: FooterProps) {
+export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick }: FooterProps) {
   return (
     <footer className="py-6 px-4 text-center shrink-0">
       <nav
@@ -52,39 +49,27 @@ export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick, onP
         >
           GitHub
         </a>
-        {onPrivacyClick && (
-          <>
-            <span aria-hidden="true">·</span>
-            <button
-              onClick={onPrivacyClick}
-              className="footer-link hover:underline transition-colors duration-200"
-            >
-              Privacy
-            </button>
-          </>
-        )}
-        {onTermsClick && (
-          <>
-            <span aria-hidden="true">·</span>
-            <button
-              onClick={onTermsClick}
-              className="footer-link hover:underline transition-colors duration-200"
-            >
-              Terms
-            </button>
-          </>
-        )}
-        {onSupportClick && (
-          <>
-            <span aria-hidden="true">·</span>
-            <button
-              onClick={onSupportClick}
-              className="footer-link hover:underline transition-colors duration-200"
-            >
-              Support
-            </button>
-          </>
-        )}
+        <span aria-hidden="true">·</span>
+        <a
+          href="/privacy"
+          className="footer-link hover:underline transition-colors duration-200"
+        >
+          Privacy
+        </a>
+        <span aria-hidden="true">·</span>
+        <a
+          href="/terms"
+          className="footer-link hover:underline transition-colors duration-200"
+        >
+          Terms
+        </a>
+        <span aria-hidden="true">·</span>
+        <a
+          href="/support"
+          className="footer-link hover:underline transition-colors duration-200"
+        >
+          Support
+        </a>
       </nav>
     </footer>
   );
