@@ -36,8 +36,8 @@ To show your **app name and logo** on the consent screen (instead of just the do
 2. Fill in:
    - App name: "Yidhan"
    - App logo
-   - Privacy policy URL: https://yidhan.vercel.app/privacy (need to create)
-   - Terms of service URL: https://yidhan.vercel.app/terms (need to create)
+   - Privacy policy URL: https://yidhan.vercel.app/privacy
+   - Terms of service URL: https://yidhan.vercel.app/terms
 3. Submit for verification (can take several days)
 
 **Note:** This won't change the domain shown, but will make it look more professional with branding.
@@ -60,8 +60,8 @@ For the best user experience, combine both:
 
 - [ ] Supabase Custom Domains configured
 - [ ] Google OAuth app verification submitted
-- [ ] Privacy policy page created
-- [ ] Terms of service page created
+- [x] Privacy policy page created
+- [x] Terms of service page created
 
 ## References
 

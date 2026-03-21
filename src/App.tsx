@@ -391,7 +391,34 @@ function App() {
   const [showAppLoader, setShowAppLoader] = useState(appLoading);
   const appLoaderStartedAtRef = useRef<number | null>(null);
   const appLoaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [view, setView] = useState<ViewMode>('library');
+  const [view, setView] = useState<ViewMode>(() => {
+    const path = window.location.pathname;
+    if (path === '/privacy') return 'privacy';
+    if (path === '/terms') return 'terms';
+    if (path === '/support') return 'support';
+    return 'library';
+  });
+  // Sync URL pathname for direct-entry routes (privacy, terms, support)
+  const routeableViews = ['privacy', 'terms', 'support'] as const;
+  useEffect(() => {
+    const expectedPath = routeableViews.includes(view as typeof routeableViews[number]) ? `/${view}` : '/';
+    if (window.location.pathname !== expectedPath) {
+      window.history.pushState({}, '', expectedPath);
+    }
+  }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === '/privacy') setView('privacy');
+      else if (path === '/terms') setView('terms');
+      else if (path === '/support') setView('support');
+      else setView('library');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   // Ref for selectedNoteId — used in realtime handlers to avoid re-creating
   // the Supabase channel subscription every time a note is opened/closed (2F)
