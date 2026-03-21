@@ -809,9 +809,8 @@ function App() {
     );
 
     return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keys accessed via keysRef (avoids channel churn on vault lock/unlock); selectedNoteId via selectedNoteIdRef (avoids resubscribe on note selection)
   }, [userId, isHydrating, hydrationBypassed, reportRealtimeDisplayFailure, reportRealtimePersistenceFailure]);
-  // Note: selectedNoteId removed from deps (2F) — using selectedNoteIdRef instead
-  // to prevent Supabase channel unsubscribe/resubscribe on every note selection
 
   // Re-fetch notes when encryption keys become available (vault unlock).
   // Separate from the main fetch effect to avoid resubscribing realtime channels.
