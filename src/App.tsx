@@ -21,6 +21,9 @@ const RoadmapPage = lazyWithRetry(() => import('./components/RoadmapPage').then(
 const FadedNotesView = lazyWithRetry(() => import('./components/FadedNotesView').then(module => ({ default: module.FadedNotesView })));
 const SharedNoteView = lazyWithRetry(() => import('./components/SharedNoteView').then(module => ({ default: module.SharedNoteView })));
 const DemoPage = lazyWithRetry(() => import('./pages/DemoPage').then(module => ({ default: module.DemoPage })));
+const PrivacyPage = lazyWithRetry(() => import('./components/PrivacyPage').then(module => ({ default: module.PrivacyPage })));
+const TermsPage = lazyWithRetry(() => import('./components/TermsPage').then(module => ({ default: module.TermsPage })));
+const SupportPage = lazyWithRetry(() => import('./components/SupportPage').then(module => ({ default: module.SupportPage })));
 
 import { TagFilterBar } from './components/TagFilterBar';
 import { WelcomeBackPrompt } from './components/WelcomeBackPrompt';
@@ -2027,6 +2030,103 @@ function App() {
     );
   }
 
+  if (view === 'privacy') {
+    return (
+      <>
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingFallback />}>
+            <PrivacyPage
+              theme={theme}
+              onThemeToggle={handleThemeToggle}
+              onSignIn={() => {
+                setAuthModalMode('login');
+                setShowAuthModal(true);
+              }}
+              onLogoClick={() => startTransition(() => setView('library'))}
+              onChangelogClick={() => startTransition(() => setView('changelog'))}
+              onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+              onSettingsClick={() => setShowSettingsModal(true)}
+            />
+          </Suspense>
+        </ErrorBoundary>
+        {showAuthModal && (
+          <Auth
+            theme={theme}
+            onThemeToggle={handleThemeToggle}
+            initialMode={authModalMode}
+            isModal
+            onClose={() => setShowAuthModal(false)}
+          />
+        )}
+      </>
+    );
+  }
+
+  if (view === 'terms') {
+    return (
+      <>
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingFallback />}>
+            <TermsPage
+              theme={theme}
+              onThemeToggle={handleThemeToggle}
+              onSignIn={() => {
+                setAuthModalMode('login');
+                setShowAuthModal(true);
+              }}
+              onLogoClick={() => startTransition(() => setView('library'))}
+              onChangelogClick={() => startTransition(() => setView('changelog'))}
+              onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+              onPrivacyClick={() => startTransition(() => setView('privacy'))}
+              onSettingsClick={() => setShowSettingsModal(true)}
+            />
+          </Suspense>
+        </ErrorBoundary>
+        {showAuthModal && (
+          <Auth
+            theme={theme}
+            onThemeToggle={handleThemeToggle}
+            initialMode={authModalMode}
+            isModal
+            onClose={() => setShowAuthModal(false)}
+          />
+        )}
+      </>
+    );
+  }
+
+  if (view === 'support') {
+    return (
+      <>
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingFallback />}>
+            <SupportPage
+              theme={theme}
+              onThemeToggle={handleThemeToggle}
+              onSignIn={() => {
+                setAuthModalMode('login');
+                setShowAuthModal(true);
+              }}
+              onLogoClick={() => startTransition(() => setView('library'))}
+              onChangelogClick={() => startTransition(() => setView('changelog'))}
+              onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+              onSettingsClick={() => setShowSettingsModal(true)}
+            />
+          </Suspense>
+        </ErrorBoundary>
+        {showAuthModal && (
+          <Auth
+            theme={theme}
+            onThemeToggle={handleThemeToggle}
+            initialMode={authModalMode}
+            isModal
+            onClose={() => setShowAuthModal(false)}
+          />
+        )}
+      </>
+    );
+  }
+
   // Show landing page with auth modal if not logged in
   if (!user) {
     return (
@@ -2044,6 +2144,9 @@ function App() {
           onThemeToggle={handleThemeToggle}
           onChangelogClick={() => startTransition(() => setView('changelog'))}
           onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+          onPrivacyClick={() => startTransition(() => setView('privacy'))}
+          onTermsClick={() => startTransition(() => setView('terms'))}
+          onSupportClick={() => startTransition(() => setView('support'))}
         />
         {showAuthModal && (
           <Auth
@@ -2195,6 +2298,9 @@ function App() {
           onChangelogClick={() => startTransition(() => setView('changelog'))}
           onRoadmapClick={() => startTransition(() => setView('roadmap'))}
           onShortcutsClick={() => setShowShortcutsModal(true)}
+          onPrivacyClick={() => startTransition(() => setView('privacy'))}
+          onTermsClick={() => startTransition(() => setView('terms'))}
+          onSupportClick={() => startTransition(() => setView('support'))}
         />
 
         {/* Import Loading Overlay with Progress */}

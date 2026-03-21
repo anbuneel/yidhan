@@ -9,6 +9,9 @@ interface LandingPageProps {
   onThemeToggle: () => void;
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
+  onPrivacyClick: () => void;
+  onTermsClick: () => void;
+  onSupportClick: () => void;
 }
 
 // Sample notes for the app preview (2 cards + writing surface vignette)
@@ -85,7 +88,7 @@ function ShowcaseCard({ note, index }: { note: typeof SAMPLE_NOTES[number]; inde
   );
 }
 
-export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, onChangelogClick, onRoadmapClick }: LandingPageProps) {
+export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, onChangelogClick, onRoadmapClick, onPrivacyClick, onTermsClick, onSupportClick }: LandingPageProps) {
   const { isInstallable, isInstalled, triggerInstall } = useInstallPrompt();
 
   return (
@@ -295,6 +298,27 @@ export function LandingPage({ onStartWriting, onSignIn, theme, onThemeToggle, on
                 >
                   GitHub
                 </a>
+                <span aria-hidden="true">·</span>
+                <button
+                  onClick={onPrivacyClick}
+                  className="landing-nav-link focus-ring hover:underline transition-colors duration-200"
+                >
+                  Privacy
+                </button>
+                <span aria-hidden="true">·</span>
+                <button
+                  onClick={onTermsClick}
+                  className="landing-nav-link focus-ring hover:underline transition-colors duration-200"
+                >
+                  Terms
+                </button>
+                <span aria-hidden="true">·</span>
+                <button
+                  onClick={onSupportClick}
+                  className="landing-nav-link focus-ring hover:underline transition-colors duration-200"
+                >
+                  Support
+                </button>
                 {isInstallable && !isInstalled && (
                   <>
                     <span aria-hidden="true">·</span>

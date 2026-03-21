@@ -4,13 +4,16 @@ interface FooterProps {
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
   onShortcutsClick?: () => void;
+  onPrivacyClick?: () => void;
+  onTermsClick?: () => void;
+  onSupportClick?: () => void;
 }
 
-export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick }: FooterProps) {
+export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick, onPrivacyClick, onTermsClick, onSupportClick }: FooterProps) {
   return (
     <footer className="py-6 px-4 text-center shrink-0">
       <nav
-        className="flex items-center justify-center gap-2 text-sm"
+        className="flex items-center justify-center gap-2 text-sm flex-wrap"
         style={{
           fontFamily: 'var(--font-body)',
           color: 'var(--color-text-tertiary)',
@@ -49,6 +52,39 @@ export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick }: F
         >
           GitHub
         </a>
+        {onPrivacyClick && (
+          <>
+            <span aria-hidden="true">·</span>
+            <button
+              onClick={onPrivacyClick}
+              className="footer-link hover:underline transition-colors duration-200"
+            >
+              Privacy
+            </button>
+          </>
+        )}
+        {onTermsClick && (
+          <>
+            <span aria-hidden="true">·</span>
+            <button
+              onClick={onTermsClick}
+              className="footer-link hover:underline transition-colors duration-200"
+            >
+              Terms
+            </button>
+          </>
+        )}
+        {onSupportClick && (
+          <>
+            <span aria-hidden="true">·</span>
+            <button
+              onClick={onSupportClick}
+              className="footer-link hover:underline transition-colors duration-200"
+            >
+              Support
+            </button>
+          </>
+        )}
       </nav>
     </footer>
   );
