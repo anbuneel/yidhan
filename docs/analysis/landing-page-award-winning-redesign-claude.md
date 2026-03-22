@@ -77,6 +77,43 @@ With no users beyond the creator, priorities shift dramatically:
 
 ---
 
+## Multi-Agent Ideation Summary
+
+3 models (Claude, Codex/GPT-5.4, Gemini) brainstormed, synthesized, and counter-reviewed. Here's the verdict:
+
+### Unanimous Consensus (do these)
+
+1. Kill the split-screen — single atmospheric canvas with radial gradient "warm pool of light"
+2. One header bar — Logo left, theme toggle + Sign In right
+3. Single dominant manuscript — replace two showcase cards with one paper surface, four-layer shadows, intimate writing content
+4. CTA restructure — button → "No credit card. Google, email, or GitHub." → "E2EE from the start." → "or explore the practice space"
+5. Remove Full Name from signup form
+6. Proof rail — `Open source · Offline-first · End-to-end encrypted` in small uppercase, no icons, linked to proof
+7. Modal visual DNA — shares manuscript shadow/glow, sheet-rising animation, reassurance micro-copy
+8. Light theme depth — darker ground, warm terracotta shadows, brighter manuscript
+
+### Signature Details (award-winning touches)
+
+- Horizontal clip-path text reveal on manuscript (handwriting-like, GPU-composited)
+- Kintsugi accent line at manuscript top edge (1px terracotta/gold gradient)
+- Paper fold shadow at corner (wabi-sabi craft detail)
+- Time-contextual manuscript content (morning/afternoon/evening/night)
+- Asymmetric entrance choreography ("heavy objects fall slower")
+
+### Deferred
+
+- Parallax (all 3 models backed away in counter-review)
+- Manuscript-to-modal morph (Codex: "semantically confused")
+- Embedded editor below fold (already have /demo)
+
+### Key Counter-Review Additions (from Codex)
+
+- Mobile-first: the redesign must not be a desktop composition shrunk down
+- Match the real editor: landing page manuscript must use actual editor typography/spacing
+- Performance budget: constrain shadows, noise, blur, clip-paths
+
+---
+
 ## Fresh Analysis: Full Original Review
 
 The following is the complete unedited analysis from the initial fresh review of the landing page screenshots, before cross-referencing with the multi-agent ideation session.
