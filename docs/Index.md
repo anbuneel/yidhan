@@ -38,6 +38,7 @@ Design analysis and feature exploration (Claude-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [landing-page-award-winning-redesign-claude.md](analysis/landing-page-award-winning-redesign-claude.md) | **NEW** Landing page award-winning redesign: fresh analysis, zero-user priorities, "Quiet Room" concept | 2026-03-22 |
 | [editor-calm-delight-review-claude.md](analysis/editor-calm-delight-review-claude.md) | **NEW** Editor calm & delight review: 9 decisions for metadata, toolbar, writing surface polish | 2026-03-09 |
 | [codebase-bloat-audit-codex.md](analysis/codebase-bloat-audit-codex.md) | Quick bloat audit focused on maintainability and velocity risks | 2026-01-27 |
 | [kintsugi-light-mode-enhancements-claude.md](analysis/kintsugi-light-mode-enhancements-claude.md) | **NEW** Light mode enhancements: grain opacity, shadow warmth, card refinements | 2026-01-26 |
