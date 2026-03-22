@@ -179,35 +179,6 @@ The current page passes the "nice app" test. The goal is to pass the "I need to 
 
 ---
 
-## Design Philosophy
-
-The checklist below captures *what* to build. This section captures *how to think* about the decisions.
-
-### Typography as Architecture
-- **Dramatic scale contrast** is the primary hierarchy tool: headline at 6-8rem fluid, subtext at 1rem. The gap itself communicates calm — it's the visual equivalent of a long pause in speech.
-- Consider a **pull quote** somewhere in the composition — a single sentence in large italic Cormorant Garamond, like a page from a book. Something like *"The best ideas arrive in silence."*
-- Footer links should feel like the **colophon of a printed book** — small, bottom-aligned, quietly present. Not a marketing footer.
-
-### Ambient Motion, Not Animation
-- **Slow, continuous drift**: elements that float very slightly, like objects resting on water. Not bouncing, not sliding in — just breathing.
-- Elements **"breathe" rather than "animate"** — extend the cursor breathing language to the whole page's motion vocabulary.
-- **Avoid staggered card reveals** — they feel like a dashboard loading, not a calm space. The entrance choreography (#17) uses differential weight, not staggered delays.
-
-### Mobile as First-Class Experience
-- Full-viewport headline with **even more negative space** on mobile — the small screen makes restraint MORE impactful, not less.
-- The single hero manuscript below the CTA, not a miniaturized afterthought or a rotated peek card.
-- The writing vignette as a **full-width moment** — mobile visitors currently miss it entirely.
-
-### The Share Moment
-Three things that make someone screenshot a landing page:
-1. **A striking visual composition** — the oversized wabi-sabi manuscript floating in atmospheric space
-2. **A resonant phrase** — *"Where thoughts bloom with clarity"* (the existing tagline, currently unused on the landing page)
-3. **An unexpected interaction** — the theme toggle crossfade between Midnight and Kintsugi
-
-At zero users, the landing page IS the marketing. If it's not screenshot-worthy, it's not doing its job.
-
----
-
 ## Combined Redesign Checklist
 
 Sources: Fresh analysis (this doc) + multi-agent ideation session (Claude, Codex/GPT-5.4, Gemini — `.review/report-a7f3c9e1.md`). Adjusted for zero-user stage.
