@@ -2,7 +2,7 @@ import { useState, useMemo, memo } from 'react';
 import type { Note } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
-import { sanitizeText, htmlToPlainText, escapeHtml } from '../utils/sanitize';
+import { sanitizeHtml, sanitizeText, htmlToPlainText, escapeHtml } from '../utils/sanitize';
 
 interface NoteCardProps {
   note: Note;
@@ -16,11 +16,11 @@ interface NoteCardProps {
 export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogglePin, isCompact = false, searchQuery }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Plain text preview for all modes (memoized to avoid repeated DOMPurify calls)
+  // Plain text for compact mode and search (memoized to avoid repeated DOMPurify calls)
   const plainText = useMemo(() => htmlToPlainText(note.content), [note.content]);
-  const preview = isCompact
-    ? plainText.slice(0, 80) + (plainText.length > 80 ? '...' : '')
-    : plainText.slice(0, 200) + (plainText.length > 200 ? '...' : '');
+  const compactPreview = plainText.slice(0, 80) + (plainText.length > 80 ? '...' : '');
+  // Sanitized HTML preview preserves task list checkboxes, formatting structure
+  const htmlPreview = useMemo(() => sanitizeHtml(note.content), [note.content]);
 
   // Search snippet: ~40 chars around the first match with <mark> highlighting
   const searchSnippet = (() => {
@@ -166,16 +166,27 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         />
       </div>
 
-      {/* Preview - Plaintext in all modes (truncated for performance) */}
-      <p
-        className={`flex-1 overflow-hidden ${isCompact ? 'text-sm truncate' : 'note-card-preview'}`}
-        style={{
-          fontFamily: 'var(--font-body)',
-          color: 'var(--color-text-secondary)',
-        }}
-      >
-        {preview || 'No content'}
-      </p>
+      {/* Preview - HTML in full mode (preserves task lists), plain text in compact */}
+      {isCompact ? (
+        <p
+          className="flex-1 overflow-hidden text-sm truncate"
+          style={{
+            fontFamily: 'var(--font-body)',
+            color: 'var(--color-text-secondary)',
+          }}
+        >
+          {compactPreview || 'No content'}
+        </p>
+      ) : (
+        <div
+          className="flex-1 overflow-hidden note-card-preview"
+          style={{
+            fontFamily: 'var(--font-body)',
+            color: 'var(--color-text-secondary)',
+          }}
+          dangerouslySetInnerHTML={{ __html: htmlPreview || 'No content' }}
+        />
+      )}
 
       {/* Search snippet with match highlighting */}
       {searchSnippet && (
