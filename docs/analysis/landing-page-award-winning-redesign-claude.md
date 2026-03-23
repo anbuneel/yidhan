@@ -249,7 +249,7 @@ Pick 3, not 8. A composition problem shouldn't become a decoration problem.
 
 15. **Horizontal clip-path text reveal** — `clip-path: inset(0 100% 0 0)` → `inset(0 0% 0 0)` on the manuscript text. Left-to-right reveal like handwriting being uncovered. GPU-composited. Use once, subtle easing. All counter-reviewers endorsed as "the signature award moment."
 16. **Asymmetric entrance choreography** — "Heavy objects fall slower." Different `translateY` values per element (headline 16px, subtext 12px, CTA 8px, manuscript 24px with longest duration). Ink-settling feel.
-17. **Kintsugi accent line on manuscript** — 1px terracotta/gold gradient at the top edge of the manuscript surface, evoking gold repair. Subtle, not decorative trim.
+17. ~~**Kintsugi accent line on manuscript**~~ — Removed. Tried previously and didn't work in practice. Do not revisit.
 
 ### P2 — Deferred Details (Revisit After Hero Lands)
 

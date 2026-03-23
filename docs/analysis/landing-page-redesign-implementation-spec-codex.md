@@ -192,18 +192,7 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
    - top reassurance: `Your private writing space`
    - bottom reassurance: `Your notes stay encrypted and yours.`
 
-10. **Align modal visual language with the manuscript hero.**
-    Files:
-    - [Auth.tsx](../../src/components/Auth.tsx)
-    - [index.css](../../src/index.css)
-
-    Requirements:
-    - related surface treatment
-    - related shadow logic
-    - related motion language
-    - no generic SaaS popup feel
-
-11. **Use a sheet-rising modal motion, not a snap-in.**
+10. **Use a sheet-rising modal motion, not a snap-in.**
     File:
     - [index.css](../../src/index.css)
 
@@ -214,7 +203,7 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
 
 ### P2: Theme and Signature Detail
 
-12. **Deepen Kintsugi through surroundings, not extra chrome.**
+11. **Deepen Kintsugi through surroundings, not extra chrome.**
     Files:
     - [index.css](../../src/index.css)
     - [LandingPage.tsx](../../src/components/LandingPage.tsx)
@@ -224,13 +213,16 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
     - warmer shadow pocket around the manuscript
     - the manuscript itself must match the real editor's surface and text styling (per P0 #3) — depth comes from the surroundings, not from tweaking the manuscript's internal hierarchy
 
-13. **Keep at most three signature details in phase one.**
-    Recommended shortlist:
+12. **Keep at most two signature details in phase one.**
+    Shortlist:
     - horizontal text reveal on the manuscript (clip-path, GPU-composited)
-    - kintsugi accent line along the manuscript edge (1px terracotta/gold gradient)
     - asymmetric entrance choreography ("heavy objects fall slower" — different `translateY` per element weight)
 
-14. **Review both themes before sign-off.**
+    ~~kintsugi accent line~~ — tried previously and removed. Do not revisit.
+
+    Optional third detail only if the page feels too plain after the above two land. Candidates: cursor glow, paper fold shadow — test in browser.
+
+13. **Review both themes before sign-off.**
     Acceptance criteria:
     - Midnight feels atmospheric and premium
     - Kintsugi feels intentional and tactile, not washed out
@@ -238,8 +230,10 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
 
 ### Deferred
 
-15. **Do not include these in the first implementation pass.**
+14. **Do not include these in the first implementation pass.**
     Deferred ideas:
+    - modal visual DNA alignment (revisit if modal feels disconnected after hero lands)
+    - kintsugi accent line (tried and removed — do not revisit)
     - parallax
     - continuous drift
     - manuscript-to-modal morph
@@ -301,6 +295,6 @@ Specifically superseded from that doc:
 2. Rewrite the CTA cluster and proof rail.
 3. Simplify the signup form and redesign modal hierarchy.
 4. Tune Kintsugi depth after the Midnight composition is stable.
-5. Add at most three signature details.
+5. Add at most two signature details.
 6. Reassess whether a compact below-the-fold proof section is still needed.
 
