@@ -18,7 +18,7 @@
 
 This document is the implementation-ready source of truth for the next landing page redesign pass.
 
-It replaces the mixed analysis in [landing-page-award-winning-redesign-claude.md](C:/anbs-dev/yidhan/docs/analysis/landing-page-award-winning-redesign-claude.md) as the document to execute from.
+It replaces the mixed analysis in [landing-page-award-winning-redesign-claude.md](landing-page-award-winning-redesign-claude.md) as the document to execute from.
 
 That earlier document remains useful as ideation history. It should not be treated as the final decision log because it contains competing strategies and superseded experiments.
 
@@ -89,8 +89,8 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
 
 1. **Replace the split layout with a single-canvas hero.**
    Files:
-   - [LandingPage.tsx](C:/anbs-dev/yidhan/src/components/LandingPage.tsx)
-   - [index.css](C:/anbs-dev/yidhan/src/index.css)
+   - [LandingPage.tsx](../../src/components/LandingPage.tsx)
+   - [index.css](../../src/index.css)
 
    Requirements:
    - one header bar across the full viewport
@@ -100,8 +100,8 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
 
 2. **Replace the two showcase cards and boxed vignette with one dominant manuscript plane.**
    Files:
-   - [LandingPage.tsx](C:/anbs-dev/yidhan/src/components/LandingPage.tsx)
-   - [index.css](C:/anbs-dev/yidhan/src/index.css)
+   - [LandingPage.tsx](../../src/components/LandingPage.tsx)
+   - [index.css](../../src/index.css)
 
    Requirements:
    - one large manuscript object
@@ -112,8 +112,8 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
 
 3. **Match the manuscript to the real editor’s typography and tone.**
    Files:
-   - [LandingPage.tsx](C:/anbs-dev/yidhan/src/components/LandingPage.tsx)
-   - [index.css](C:/anbs-dev/yidhan/src/index.css)
+   - [LandingPage.tsx](../../src/components/LandingPage.tsx)
+   - [index.css](../../src/index.css)
 
    Requirements:
    - reuse the same editorial rhythm as the actual editor surface
@@ -122,7 +122,7 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
 
 4. **Rebuild the CTA cluster for direct signup.**
    File:
-   - [LandingPage.tsx](C:/anbs-dev/yidhan/src/components/LandingPage.tsx)
+   - [LandingPage.tsx](../../src/components/LandingPage.tsx)
 
    Recommended structure:
    - primary button: `Start Writing`
@@ -137,7 +137,7 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
 
 5. **Convert the trust bullets into a compact proof rail.**
    File:
-   - [LandingPage.tsx](C:/anbs-dev/yidhan/src/components/LandingPage.tsx)
+   - [LandingPage.tsx](../../src/components/LandingPage.tsx)
 
    Recommended copy:
    - `Open source · Offline-first · End-to-end encrypted`
@@ -145,12 +145,22 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
    Rules:
    - small, editorial, and calm
    - no icons by default
-   - if linked, links must point to real proof
+   - each claim links to verifiable proof (GitHub repo, encryption spec, etc.)
 
-6. **Make mobile a first-class composition, not a collapsed desktop layout.**
+6. **Stillness after entrance.**
    Files:
-   - [LandingPage.tsx](C:/anbs-dev/yidhan/src/components/LandingPage.tsx)
-   - [index.css](C:/anbs-dev/yidhan/src/index.css)
+   - [LandingPage.tsx](../../src/components/LandingPage.tsx)
+   - [index.css](../../src/index.css)
+
+   Requirements:
+   - after entrance animations complete (~3s), only the cursor breathes
+   - no continuous loops, floating cards, drifting elements, or parallax
+   - `prefers-reduced-motion` must collapse all entrance animations to instant display
+
+7. **Make mobile a first-class composition, not a collapsed desktop layout.**
+   Files:
+   - [LandingPage.tsx](../../src/components/LandingPage.tsx)
+   - [index.css](../../src/index.css)
 
    Requirements:
    - mobile must include the manuscript hero moment, not just text and a button
@@ -159,22 +169,21 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
 
 ### P1: Signup and Modal Refinement
 
-7. **Remove `Full Name` from first-step signup.**
+8. **Remove `Full Name` from first-step signup.**
    Files:
-   - [Auth.tsx](C:/anbs-dev/yidhan/src/components/Auth.tsx)
-   - [AuthContext.tsx](C:/anbs-dev/yidhan/src/contexts/AuthContext.tsx)
+   - [Auth.tsx](../../src/components/Auth.tsx)
+   - [AuthContext.tsx](../../src/contexts/AuthContext.tsx)
 
    Rules:
    - keep OAuth first
    - keep name editable later in Settings
    - preserve existing email fallback for avatar initials
 
-8. **Reduce modal friction and strengthen reassurance.**
+9. **Reduce modal friction and strengthen reassurance.**
    File:
-   - [Auth.tsx](C:/anbs-dev/yidhan/src/components/Auth.tsx)
+   - [Auth.tsx](../../src/components/Auth.tsx)
 
    Requirements:
-   - slightly tighter vertical spacing
    - one calm reassurance line near the top
    - one trust line near the action
    - modal should feel more intimate than the current form
@@ -183,20 +192,20 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
    - top reassurance: `Your private writing space`
    - bottom reassurance: `Your notes stay encrypted and yours.`
 
-9. **Align modal visual language with the manuscript hero.**
-   Files:
-   - [Auth.tsx](C:/anbs-dev/yidhan/src/components/Auth.tsx)
-   - [index.css](C:/anbs-dev/yidhan/src/index.css)
+10. **Align modal visual language with the manuscript hero.**
+    Files:
+    - [Auth.tsx](../../src/components/Auth.tsx)
+    - [index.css](../../src/index.css)
 
-   Requirements:
-   - related surface treatment
-   - related shadow logic
-   - related motion language
-   - no generic SaaS popup feel
+    Requirements:
+    - related surface treatment
+    - related shadow logic
+    - related motion language
+    - no generic SaaS popup feel
 
-10. **Use a sheet-rising modal motion, not a snap-in.**
+11. **Use a sheet-rising modal motion, not a snap-in.**
     File:
-    - [index.css](C:/anbs-dev/yidhan/src/index.css)
+    - [index.css](../../src/index.css)
 
     Recommended motion:
     - `translateY(40px) scale(0.98)` to rest
@@ -205,26 +214,23 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
 
 ### P2: Theme and Signature Detail
 
-11. **Deepen Kintsugi through surroundings, not extra chrome.**
+12. **Deepen Kintsugi through surroundings, not extra chrome.**
     Files:
-    - [index.css](C:/anbs-dev/yidhan/src/index.css)
-    - [LandingPage.tsx](C:/anbs-dev/yidhan/src/components/LandingPage.tsx)
+    - [index.css](../../src/index.css)
+    - [LandingPage.tsx](../../src/components/LandingPage.tsx)
 
     Requirements:
     - stronger separation between background and manuscript
     - warmer shadow pocket around the manuscript
-    - slightly clearer text hierarchy
-    - the manuscript itself should still feel like the real product
+    - the manuscript itself must match the real editor's surface and text styling (per P0 #3) — depth comes from the surroundings, not from tweaking the manuscript's internal hierarchy
 
-12. **Keep only two signature details in phase one.**
+13. **Keep at most three signature details in phase one.**
     Recommended shortlist:
-    - horizontal text reveal on the manuscript
-    - kintsugi accent line along the manuscript edge
+    - horizontal text reveal on the manuscript (clip-path, GPU-composited)
+    - kintsugi accent line along the manuscript edge (1px terracotta/gold gradient)
+    - asymmetric entrance choreography ("heavy objects fall slower" — different `translateY` per element weight)
 
-    Optional third detail only if the page still feels too plain:
-    - subtle cursor-local glow
-
-13. **Review both themes before sign-off.**
+14. **Review both themes before sign-off.**
     Acceptance criteria:
     - Midnight feels atmospheric and premium
     - Kintsugi feels intentional and tactile, not washed out
@@ -232,7 +238,7 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
 
 ### Deferred
 
-14. **Do not include these in the first implementation pass.**
+15. **Do not include these in the first implementation pass.**
     Deferred ideas:
     - parallax
     - continuous drift
@@ -243,6 +249,10 @@ After the entrance finishes, the page returns to stillness. The cursor may breat
     - theme-toggle showpiece transition
     - decorative seam shimmer
     - letterpress effects
+    - cursor-local glow
+    - paper fold shadow
+    - aged bottom-edge gradient
+    - paper noise texture
 
 ---
 
@@ -263,7 +273,7 @@ The redesign is successful when all of the following are true:
 
 ## Appendix: How To Treat The Earlier Analysis
 
-Use [landing-page-award-winning-redesign-claude.md](C:/anbs-dev/yidhan/docs/analysis/landing-page-award-winning-redesign-claude.md) as:
+Use [landing-page-award-winning-redesign-claude.md](landing-page-award-winning-redesign-claude.md) as:
 
 - ideation history
 - rationale archive
@@ -291,6 +301,6 @@ Specifically superseded from that doc:
 2. Rewrite the CTA cluster and proof rail.
 3. Simplify the signup form and redesign modal hierarchy.
 4. Tune Kintsugi depth after the Midnight composition is stable.
-5. Add at most two signature details.
+5. Add at most three signature details.
 6. Reassess whether a compact below-the-fold proof section is still needed.
 
