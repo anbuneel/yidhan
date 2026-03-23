@@ -261,6 +261,7 @@ Sources: Fresh analysis (this doc) + multi-agent ideation session (Claude, Codex
 - **Mobile-first** — The redesign must be composed for mobile, not a desktop composition shrunk down. Full-viewport headline with generous negative space works *better* on small screens.
 - **Performance budget** — Four-layer shadows, noise textures, blur, clip-paths can add up. Constrain total paint cost. Test on mid-range Android. Prefer SVG filter (`feTurbulence`) over image-based noise for paper texture.
 - **Accessibility** — `prefers-reduced-motion` must collapse all entrance animations. Clip-path reveal should degrade to instant display. Maintain WCAG AA contrast.
+- **Both themes are primary** — No "design dark, translate to light." Every decision gets evaluated in both Midnight and Kintsugi before it ships. The theme toggle is a quality gate: if either theme looks like an afterthought, the decision isn't done. This is what makes the toggle transition a showpiece rather than a compromise.
 - **Overlap readability** — If the manuscript overlaps or straddles the headline (synthesis 1.3), use a subtle backdrop-blur or opacity treatment to ensure headline text remains perfectly legible over the manuscript edge.
 - **Terracotta accent discipline** — Use terracotta/gold sparingly and vibrantly: cursor, separator, CTA, kintsugi accent line. Resist spreading it to secondary elements — restraint is what makes the pops register.
 
