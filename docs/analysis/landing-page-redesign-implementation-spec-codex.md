@@ -291,10 +291,34 @@ Specifically superseded from that doc:
 
 ## Recommended Execution Order
 
-1. Rebuild the hero canvas and manuscript composition.
-2. Rewrite the CTA cluster and proof rail.
-3. Simplify the signup form and redesign modal hierarchy.
-4. Tune Kintsugi depth after the Midnight composition is stable.
-5. Add at most two signature details.
-6. Reassess whether a compact below-the-fold proof section is still needed.
+### Phase 0: Playground Prototyping
+
+Build the core composition in a `/playground` dev-only route before touching `LandingPage.tsx`. This gives you:
+- Real theme toggling (Midnight ↔ Kintsugi) to validate both compositions
+- Real CSS variables, fonts, and design tokens — what you see is what you'll get
+- Freedom to iterate on spatial decisions (manuscript size, position, gradient, shadows) without risk to production
+
+The playground should contain only: canvas background, headline, CTA cluster, manuscript surface, proof rail. No auth logic, no real navigation. Throwaway code — delete the route when the composition is finalized.
+
+**Playground answers these open questions:**
+- Where does the headline sit relative to the manuscript?
+- How big is the manuscript and how much negative space surrounds it?
+- What are the radial gradient color stops and position?
+- What are the four-layer shadow values?
+- How does the composition reflow on mobile?
+
+Once the playground composition feels right in both themes, port it into `LandingPage.tsx`.
+
+### Phase 1: Production Implementation
+
+1. Port the playground composition into `LandingPage.tsx` (P0 #1-4).
+2. Rewrite the CTA cluster and proof rail (P0 #5).
+3. Build mobile layout (P0 #7).
+4. Verify stillness after entrance (P0 #6).
+5. Simplify the signup form and add modal micro-copy (P1 #8-9).
+6. Add sheet-rising modal animation (P1 #10).
+7. Tune Kintsugi depth (P2 #11).
+8. Add at most two signature details (P2 #12).
+9. Review both themes (P2 #13).
+10. Reassess whether a compact below-the-fold proof section is still needed.
 
