@@ -116,7 +116,7 @@ With no users beyond the creator, priorities shift dramatically:
 
 ## Fresh Analysis: Full Original Review
 
-The following is the complete unedited analysis from the initial fresh review of the landing page screenshots, before cross-referencing with the multi-agent ideation session.
+The following is the complete original analysis from the initial fresh review of the landing page screenshots, before cross-referencing with the multi-agent ideation session. **Note:** Where this section conflicts with the Combined Redesign Checklist below, the checklist supersedes — it reflects decisions made after cross-referencing all reviews and discussion.
 
 ### Redesign Strategy: "The Quiet Room"
 
@@ -230,8 +230,8 @@ Sources: Fresh analysis (this doc) + multi-agent ideation session (Claude, Codex
 2. **Single header bar** — Logo left, theme toggle + Sign In right, spanning the full viewport. Eliminates duplicated headers.
 3. **Single dominant manuscript surface with strong negative space** — Replace two showcase cards + writing vignette with one large manuscript plane as the hero object. Four-layer box-shadow for physical depth. Intimate writing content (not generic demo text — something personal like *"The light through the kitchen window this morning reminded me of something I'd forgotten..."*). **Strong negative space** around the main surface is essential — the manuscript floating in atmosphere IS the composition. The cursor, kintsugi accent line, and paper fold shadow provide enough compositional detail without adding secondary elements. What to avoid: multiple equal-weight cards, stat strips, floating SaaS panels, fake dashboard energy. *(Test in browser: consider whether a small overlapping note fragment or tag cluster adds depth or just reintroduces visual competition.)*
 4. **Manuscript must match the real editor** — Reuse actual `.editor-writing-area` typography, spacing, and tonal behavior. The landing page must not promise a more beautiful writing surface than the product delivers.
-5. **CTA cluster restructure** — `[Start Writing]` button → "No credit card. Google, email, or GitHub." → "End-to-end encrypted from the start." → "or explore the practice space". E2EE line moves *below* the CTA (reassurance after impulse, not hurdle before).
-6. **Elevate the demo path** — "or explore first" is too hidden at zero users. Make the Practice Space link a co-equal CTA, not a buried dotted-underline link.
+5. **CTA cluster restructure** — `[Start Writing]` button → "Google, GitHub, or email. No credit card." → "End-to-end encrypted from the start." → "or explore the practice space". E2EE line moves *below* the CTA (reassurance after impulse, not hurdle before). Auth method order mirrors the actual signup UI.
+6. **Strengthen the demo path** — "or explore first" is too hidden today. Make the Practice Space link visually stronger (not a buried dotted-underline), but keep it clearly subordinate to the primary "Start Writing" CTA. The goal is direct signup first, demo second.
 7. **Editorial proof rail** — `Open source · Offline-first · End-to-end encrypted` in small uppercase with middot separators. No icons. Each claim links to verifiable proof (GitHub repo, encryption spec, etc.).
 8. **Remove Full Name from signup form** — Defer to post-signup settings. One fewer field = less friction.
 9. **Stillness after entrance** — After entrance animations complete (~3s), only the cursor breathes. No continuous loops, floating cards, or parallax tricks.
@@ -243,25 +243,31 @@ Sources: Fresh analysis (this doc) + multi-agent ideation session (Claude, Codex
 12. **Sheet-rising modal animation** — `translateY(40px) scale(0.98)` → `translateY(0) scale(1)` with exponential ease-out (`cubic-bezier(0.22, 1, 0.36, 1)`), ~400ms. "Reads as rising, not popping."
 13. **Modal reassurance micro-copy** — "Your private writing space" in italic Cormorant Garamond at the top of the signup modal.
 14. **Narrower modal width (400px)** — Down from current 440px. "A 400px modal looks like a letter, not a SaaS popup." (Codex called this "too prescriptive" — worth trying, easy to revert.)
-15. **Theme toggle as delightful micro-moment** — A slow, beautiful crossfade between Midnight and Kintsugi. Low effort, high shareability — the kind of thing that gets screen-recorded and shared.
-
 ### P2 — Signature Details (Award-Winning Touches)
 
-16. **Horizontal clip-path text reveal** — `clip-path: inset(0 100% 0 0)` → `inset(0 0% 0 0)` on the manuscript text. Left-to-right reveal like handwriting being uncovered. GPU-composited. Use once, subtle easing. All counter-reviewers endorsed as "the signature award moment."
-17. **Asymmetric entrance choreography** — "Heavy objects fall slower." Different `translateY` values per element (headline 16px, subtext 12px, CTA 8px, manuscript 24px with longest duration). Ink-settling feel.
-18. **Kintsugi accent line on manuscript** — 1px terracotta/gold gradient at the top edge of the manuscript surface, evoking gold repair. Subtle, not decorative trim.
-19. **Paper fold shadow at corner** — Tiny triangular shadow at top-right corner suggesting a slightly lifted page. "Almost subliminal." Aimed at design-literate reviewers who will screenshot it.
-20. **Breathing cursor with localized warm glow** — Concentrated warm glow at cursor position (120px wide, blur 20px, accent-glow color). Gold for dark mode, terracotta for light. Enhances the existing breathing cursor from a typographic element to a light source.
-21. **Aged bottom-edge gradient on manuscript** — 6-8% accent warmth gradient at the bottom of the manuscript (enhanced version of the product's 3% card gradient). "This paper has been here a while."
-22. **Paper noise texture on landing page background** — 0.06 opacity noise overlay on the atmospheric canvas for tactile "textured paper" feel in screenshots. Use SVG filter (`feTurbulence`) over image-based noise for performance.
-23. **Time-contextual manuscript content** — Different text based on `getHours()` (morning/afternoon/evening/night). Low effort (swap strings), adds an alive/magical quality.
+Pick 3, not 8. A composition problem shouldn't become a decoration problem.
+
+15. **Horizontal clip-path text reveal** — `clip-path: inset(0 100% 0 0)` → `inset(0 0% 0 0)` on the manuscript text. Left-to-right reveal like handwriting being uncovered. GPU-composited. Use once, subtle easing. All counter-reviewers endorsed as "the signature award moment."
+16. **Asymmetric entrance choreography** — "Heavy objects fall slower." Different `translateY` values per element (headline 16px, subtext 12px, CTA 8px, manuscript 24px with longest duration). Ink-settling feel.
+17. **Kintsugi accent line on manuscript** — 1px terracotta/gold gradient at the top edge of the manuscript surface, evoking gold repair. Subtle, not decorative trim.
+
+### P2 — Deferred Details (Revisit After Hero Lands)
+
+These were originally P2 but risk over-decorating if stacked with the signature details above. Revisit individually once the core composition is working.
+
+- **Paper fold shadow at corner** — Tiny triangular shadow at top-right corner suggesting a slightly lifted page. "Almost subliminal."
+- **Breathing cursor with localized warm glow** — Concentrated warm glow at cursor position (120px wide, blur 20px, accent-glow color). Gold for dark, terracotta for light.
+- **Aged bottom-edge gradient on manuscript** — 6-8% accent warmth gradient at the bottom of the manuscript.
+- **Paper noise texture on landing page background** — 0.06 opacity noise overlay. Use SVG filter (`feTurbulence`) over image-based noise for performance.
+- **Time-contextual manuscript content** — Different text based on `getHours()`. Adds cleverness but not conversion value — weakest idea in the set.
+- **Theme toggle as delightful micro-moment** — A slow crossfade between Midnight and Kintsugi. Appealing but not low-effort: the current theme system only transitions `background-color`/`color` on `body`. A full cross-theme interpolation requires declaring transitions on many more properties (card backgrounds, shadows, borders, accents). Worth doing, but not a quick polish item.
 
 ### Constraints
 
 - **Mobile-first** — The redesign must be composed for mobile, not a desktop composition shrunk down. Full-viewport headline with generous negative space works *better* on small screens.
 - **Performance budget** — Four-layer shadows, noise textures, blur, clip-paths can add up. Constrain total paint cost. Test on mid-range Android. Prefer SVG filter (`feTurbulence`) over image-based noise for paper texture.
 - **Accessibility** — `prefers-reduced-motion` must collapse all entrance animations. Clip-path reveal should degrade to instant display. Maintain WCAG AA contrast.
-- **Both themes are primary** — No "design dark, translate to light." Every decision gets evaluated in both Midnight and Kintsugi before it ships. The theme toggle is a quality gate: if either theme looks like an afterthought, the decision isn't done. This is what makes the toggle transition a showpiece rather than a compromise.
+- **Dark leads, light verifies, both ship equal** — Midnight is the default and the stronger composition — use it as the primary art-direction reference. Verify every decision in Kintsugi continuously, not as a follow-up pass. Both themes must ship at the same quality level. If either looks like an afterthought, the decision isn't done.
 - **Overlap readability** — If the manuscript overlaps or straddles the headline (synthesis 1.3), use a subtle backdrop-blur or opacity treatment to ensure headline text remains perfectly legible over the manuscript edge.
 - **Terracotta accent discipline** — Use terracotta/gold sparingly and vibrantly: cursor, separator, CTA, kintsugi accent line. Resist spreading it to secondary elements — restraint is what makes the pops register.
 
@@ -271,7 +277,7 @@ Sources: Fresh analysis (this doc) + multi-agent ideation session (Claude, Codex
 
 ### Deferred (Until Traffic Justifies)
 
-- **Below-the-fold "second act" scroll sections** — *Promote first.* This got the strongest counter-review endorsement of any unique idea: Codex ("the page needs a second act so the redesign doesn't become one beautiful screen with no proof") and Gemini ("the hero hooks, the second act converts") both endorsed it independently. Deferred for zero-user stage, but this should be the first item promoted once the hero redesign ships — a single-viewport page with no scroll journey is problem #4 in the assessment above.
+- **Below-the-fold "second act" scroll sections** — *Promote first.* This got the strongest counter-review endorsement of any unique idea: Codex ("the page needs a second act so the redesign doesn't become one beautiful screen with no proof") and Gemini ("the hero hooks, the second act converts") both endorsed it independently. Deferred for zero-user stage, but this should be the first item promoted once the hero redesign ships — a single-viewport page with no scroll journey is problem #4 in the assessment above. **Design the hero with room below it** so a slim proof section can slot in naturally once the main composition lands.
 - Shared-element CTA-to-modal transition
 - Parallax (all counter-reviewers walked it back)
 - Manuscript-to-modal morph (Codex: "semantically confused")
