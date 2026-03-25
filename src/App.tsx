@@ -21,6 +21,7 @@ const RoadmapPage = lazyWithRetry(() => import('./components/RoadmapPage').then(
 const FadedNotesView = lazyWithRetry(() => import('./components/FadedNotesView').then(module => ({ default: module.FadedNotesView })));
 const SharedNoteView = lazyWithRetry(() => import('./components/SharedNoteView').then(module => ({ default: module.SharedNoteView })));
 const DemoPage = lazyWithRetry(() => import('./pages/DemoPage').then(module => ({ default: module.DemoPage })));
+const PlaygroundPage = lazyWithRetry(() => import('./pages/PlaygroundPage').then(module => ({ default: module.PlaygroundPage })));
 const PrivacyPage = lazyWithRetry(() => import('./components/PrivacyPage').then(module => ({ default: module.PrivacyPage })));
 const TermsPage = lazyWithRetry(() => import('./components/TermsPage').then(module => ({ default: module.TermsPage })));
 const SupportPage = lazyWithRetry(() => import('./components/SupportPage').then(module => ({ default: module.SupportPage })));
@@ -400,8 +401,11 @@ function App() {
   });
   // Sync URL pathname for direct-entry routes
   useEffect(() => {
+    // Don't overwrite /playground or /demo paths
+    const currentPath = window.location.pathname;
+    if (currentPath === '/playground' || currentPath === '/demo') return;
     const expectedPath = routeableViews.includes(view) ? `/${view}` : '/';
-    if (window.location.pathname !== expectedPath) {
+    if (currentPath !== expectedPath) {
       window.history.pushState({}, '', expectedPath);
     }
   }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -542,6 +546,9 @@ function App() {
       }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Playground page state (dev-only, for /playground route — delete after porting)
+  const isPlayground = window.location.pathname === '/playground';
 
   // Demo page state (for /demo route)
   const [isDemo, setIsDemo] = useState<boolean>(() => {
@@ -1952,6 +1959,20 @@ function App() {
             }}
             onChangelogClick={() => startTransition(() => setView('changelog'))}
             onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  // Playground for landing page redesign iteration (dev-only, delete after porting)
+  if (isPlayground) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback />}>
+          <PlaygroundPage
+            theme={theme}
+            onThemeToggle={handleThemeToggle}
           />
         </Suspense>
       </ErrorBoundary>
