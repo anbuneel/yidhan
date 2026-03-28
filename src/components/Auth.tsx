@@ -145,7 +145,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [fullName] = useState(''); // Name collected later in Settings (P1 #8)
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -519,34 +519,6 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Full Name - only shown during sign-up */}
-          {mode === 'signup' && (
-            <div className="mb-4 md:mb-5">
-              <label
-                htmlFor="auth-fullname"
-                className="block text-sm mb-2"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-secondary)',
-                }}
-              >
-                Full Name <span style={{ color: 'var(--color-text-tertiary)' }}>(optional)</span>
-              </label>
-              <input
-                id="auth-fullname"
-                type="text"
-                autoComplete="name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder=""
-                className="w-full px-4 py-3 rounded-lg outline-none transition-all duration-200"
-                style={inputBaseStyles}
-                onFocus={inputFocusHandler}
-                onBlur={inputBlurHandler}
-              />
-            </div>
-          )}
-
           {/* Email - shown for login, signup, forgot */}
           {mode !== 'reset' && (
             <div className="mb-4 md:mb-5">
