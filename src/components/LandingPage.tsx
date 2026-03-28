@@ -81,6 +81,8 @@ export function LandingPage({
         </div>
       </header>
 
+      {/* Content wrapper — centers main + footer in remaining space */}
+      <div className="landing-content-wrap">
       {/* Main composition — two-column desktop, single-column mobile */}
       <main className="landing-main">
         {/* Text column */}
@@ -219,6 +221,7 @@ export function LandingPage({
           </>
         )}
       </nav>
+      </div>{/* end landing-content-wrap */}
 
       <style>{`
         /* ─── Canvas ─── */
@@ -228,12 +231,21 @@ export function LandingPage({
           overflow: hidden;
           display: flex;
           flex-direction: column;
-          justify-content: center;
         }
         .landing-atmosphere {
           position: absolute;
           inset: 0;
           pointer-events: none;
+        }
+
+        /* ─── Content wrapper — centers main+footer below pinned header ─── */
+        .landing-content-wrap {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          position: relative;
+          z-index: 1;
         }
 
         /* ─── Header ─── */
