@@ -11,60 +11,53 @@ interface PlaygroundPageProps {
  * Playground for iterating on the landing page redesign composition.
  * Throwaway component — delete after porting to LandingPage.tsx.
  *
- * Includes a floating control panel with sliders to adjust layout
- * values in real time. Find the right proportions, then tell Claude
- * the values to lock into the code.
+ * Includes a floating control panel (collapsed by default) with sliders
+ * to adjust layout values in real time.
  */
 export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
-  // Tunable layout values — all use viewport-relative units for responsiveness
-  const [textWidth, setTextWidth] = useState(38);       // % of grid
-  const [gap, setGap] = useState(2.5);                  // vw
-  const [sidePadding, setSidePadding] = useState(3);    // vw
-  const [headlineSize, setHeadlineSize] = useState(3.5);// vw (fluid)
-  const [manuscriptPadding, setManuscriptPadding] = useState(2.5); // vw
+  // Tunable layout values
+  const [textWidth, setTextWidth] = useState(40);
+  const [gap, setGap] = useState(5);
+  const [sidePadding, setSidePadding] = useState(1);
+  const [headlineSize, setHeadlineSize] = useState(3.4);
+  const [manuscriptPadding, setManuscriptPadding] = useState(3.8);
   const [gradientIntensity, setGradientIntensity] = useState(6);
   const [shadowIntensity, setShadowIntensity] = useState(1.5);
-  const [maxWidth, setMaxWidth] = useState(0);          // 0 = no limit
-  const [canvasHeight, setCanvasHeight] = useState(100);// vh
-  const [verticalPosition, setVerticalPosition] = useState(20); // lower = higher on page
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [maxWidth, setMaxWidth] = useState(1220);
+  const [panelOpen, setPanelOpen] = useState(false); // collapsed by default
 
-  // Computed styles — responsive units
-  const gridColumns = `${textWidth}% 1fr`;
-  const compositionGap = `${gap}vw`;
-  const compositionPadding = `0 ${sidePadding}vw 2rem ${sidePadding}vw`;
-  const headlineFontSize = `clamp(2rem, ${headlineSize}vw, 5rem)`;
-  const msPadding = `${manuscriptPadding}vw ${manuscriptPadding * 1.2}vw`;
+  const isDark = theme === 'dark';
 
-  const lightGradient = `radial-gradient(
+  // Computed styles
+  const headlineFontSize = `clamp(2rem, ${headlineSize}vw, 4.5rem)`;
+  const msPadding = `${manuscriptPadding}rem ${manuscriptPadding * 1.1}rem`;
+
+  // Atmospheric gradient — subtle warmth radiating from manuscript area
+  const gradient = `radial-gradient(
     ellipse 60% 70% at 62% 48%,
-    color-mix(in srgb, var(--color-accent) ${gradientIntensity}%, var(--color-bg-primary) ${100 - gradientIntensity}%) 0%,
-    var(--color-bg-primary) 60%
-  )`;
-  const darkGradient = `radial-gradient(
-    ellipse 60% 70% at 62% 48%,
-    color-mix(in srgb, var(--color-accent) ${gradientIntensity + 3}%, var(--color-bg-primary) ${97 - gradientIntensity}%) 0%,
+    color-mix(in srgb, var(--color-accent) ${gradientIntensity + (isDark ? 3 : 0)}%, var(--color-bg-primary) ${100 - gradientIntensity - (isDark ? 3 : 0)}%) 0%,
     var(--color-bg-primary) 60%
   )`;
 
-  const lightShadow = `
-    0 1px 2px rgba(120, 80, 60, ${0.08 * shadowIntensity}),
-    0 4px 12px rgba(120, 80, 60, ${0.06 * shadowIntensity}),
-    0 16px 32px rgba(120, 80, 60, ${0.04 * shadowIntensity}),
-    0 32px 64px rgba(120, 80, 60, ${0.03 * shadowIntensity})
-  `;
-  const darkShadow = `
-    0 1px 2px rgba(0, 0, 0, ${0.4 * shadowIntensity}),
-    0 4px 12px rgba(0, 0, 0, ${0.3 * shadowIntensity}),
-    0 16px 32px rgba(0, 0, 0, ${0.25 * shadowIntensity}),
-    0 32px 64px rgba(0, 0, 0, ${0.2 * shadowIntensity})
-  `;
+  // 4-layer shadow for manuscript depth
+  const shadow = isDark
+    ? `0 1px 2px rgba(0, 0, 0, ${0.4 * shadowIntensity}),
+       0 4px 12px rgba(0, 0, 0, ${0.3 * shadowIntensity}),
+       0 16px 32px rgba(0, 0, 0, ${0.25 * shadowIntensity}),
+       0 32px 64px rgba(0, 0, 0, ${0.2 * shadowIntensity})`
+    : `0 1px 2px rgba(120, 80, 60, ${0.08 * shadowIntensity}),
+       0 4px 12px rgba(120, 80, 60, ${0.06 * shadowIntensity}),
+       0 16px 32px rgba(120, 80, 60, ${0.05 * shadowIntensity}),
+       0 32px 64px rgba(120, 80, 60, ${0.04 * shadowIntensity})`;
+
+  // Manuscript surface — matches real editor in both themes (bg-primary)
+  const manuscriptBg = 'var(--color-bg-primary)';
 
   return (
     <div
       className="playground-canvas"
       style={{
-        minHeight: `${canvasHeight}vh`,
+        minHeight: '100vh',
         background: 'var(--color-bg-primary)',
         position: 'relative',
         overflow: 'hidden',
@@ -74,25 +67,24 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
     >
       {/* Atmospheric radial gradient */}
       <div
-        className="playground-atmosphere"
         style={{
           position: 'absolute',
           inset: 0,
           pointerEvents: 'none',
-          background: theme === 'dark' ? darkGradient : lightGradient,
+          background: gradient,
         }}
       />
 
       {/* Single header bar */}
       <header
-        className="flex items-center justify-between px-6 md:px-10 lg:px-16 shrink-0"
-        style={{ height: '64px', position: 'relative', zIndex: 10 }}
+        className="playground-header"
+        style={{ position: 'relative', zIndex: 10 }}
       >
         <Logo variant="header" className="shrink-0" />
         <div className="flex items-center gap-3">
           <button
             onClick={onThemeToggle}
-            className="playground-theme-toggle focus-ring w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300"
+            className="playground-theme-toggle focus-ring"
             aria-label="Toggle theme"
           >
             {theme === 'light' ? (
@@ -106,7 +98,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
             )}
           </button>
           <button
-            className="playground-signin-btn focus-ring px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+            className="playground-signin-btn focus-ring"
             style={{ fontFamily: 'var(--font-body)' }}
           >
             Sign In
@@ -114,42 +106,27 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
         </div>
       </header>
 
-      {/* Main composition */}
+      {/* Main composition — two-column desktop, single-column mobile */}
       <main
+        className="playground-main"
         style={{
-          position: 'relative',
-          zIndex: 1,
-          flex: 1,
-          display: 'grid',
-          gridTemplateColumns: gridColumns,
-          gap: compositionGap,
-          maxWidth: maxWidth === 0 ? 'none' : `${maxWidth}px`,
-          margin: '0 auto',
-          padding: compositionPadding,
-          alignItems: 'center',
-          alignContent: 'start',
-          paddingTop: `${verticalPosition / 10}vh`,
-          width: '100%',
-        }}
+          '--pg-text-width': `${textWidth}%`,
+          '--pg-gap': `${gap}%`,
+          '--pg-side-padding': `${sidePadding}vw`,
+          '--pg-max-width': `${maxWidth}px`,
+        } as React.CSSProperties}
       >
         {/* Text column */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="playground-text-column">
           <h1
-            style={{
-              fontFamily: 'var(--font-display)',
-              color: 'var(--color-text-primary)',
-              letterSpacing: '-0.02em',
-              fontWeight: 300,
-              lineHeight: 1.08,
-              fontSize: headlineFontSize,
-              margin: `0 0 1.75rem`,
-            }}
+            className="playground-headline"
+            style={{ fontSize: headlineFontSize }}
           >
             A quiet space<br />for your thoughts.
           </h1>
 
           {/* CTA cluster */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className="playground-cta-cluster">
             <button
               className="playground-cta-button focus-ring"
               style={{ fontFamily: 'var(--font-body)' }}
@@ -157,27 +134,11 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
               Start Writing
             </button>
 
-            <p
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-tertiary)',
-                fontSize: '0.8rem',
-                margin: 0,
-              }}
-            >
+            <p className="playground-proof-line">
               Google, GitHub, or email. No credit card.
             </p>
 
-            <p
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-accent)',
-                fontSize: '0.8rem',
-                margin: 0,
-                opacity: 0.85,
-                letterSpacing: '0.03em',
-              }}
-            >
+            <p className="playground-encrypt-line">
               End-to-end encrypted from the start.
             </p>
 
@@ -192,18 +153,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           </div>
 
           {/* Proof rail */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.6rem',
-              marginTop: '2.5rem',
-              fontFamily: 'var(--font-body)',
-              fontSize: '0.65rem',
-              textTransform: 'uppercase' as const,
-              letterSpacing: '0.12em',
-              color: 'var(--color-text-tertiary)',
-            }}
-          >
+          <div className="playground-proof-rail">
             <span>Open source</span>
             <span aria-hidden="true">·</span>
             <span>Offline-first</span>
@@ -214,30 +164,17 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
 
         {/* Manuscript */}
         <div
+          className="playground-manuscript"
           style={{
-            position: 'relative',
-            background: theme === 'dark'
-              ? 'color-mix(in srgb, var(--color-bg-primary) 75%, var(--color-bg-secondary) 25%)'
-              : 'color-mix(in srgb, var(--color-bg-primary) 92%, white 8%)',
-            borderRadius: '2px 24px 4px 24px',
+            background: manuscriptBg,
             padding: msPadding,
-            overflow: 'hidden',
-            boxShadow: theme === 'dark' ? darkShadow : lightShadow,
+            boxShadow: shadow,
           }}
         >
           {/* Manuscript glow */}
           <div className="playground-manuscript-glow" />
 
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              fontFamily: 'var(--font-body)',
-              color: 'var(--color-text-primary)',
-              fontSize: '1.125rem',
-              lineHeight: 1.8,
-            }}
-          >
+          <div className="playground-manuscript-content">
             <p style={{ marginBottom: '1.2em' }}>
               The light through the kitchen window this morning reminded me of
               something I&apos;d forgotten — how good it feels to write without
@@ -256,53 +193,23 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
         </div>
       </main>
 
-      {/* ─── Control Panel ─── */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '1rem',
-          right: '1rem',
-          zIndex: 100,
-          fontFamily: 'var(--font-body)',
-        }}
-      >
-        {/* Toggle button */}
+      {/* ─── Control Panel (collapsed by default) ─── */}
+      <div className="playground-controls-container">
+        {/* Toggle button — visible when panel is closed */}
         <button
           onClick={() => setPanelOpen(!panelOpen)}
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            right: 0,
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            background: 'var(--color-cta-bg)',
-            color: 'var(--color-cta-text)',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '1.1rem',
-            display: panelOpen ? 'none' : 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-          }}
-          title="Open controls"
+          className="playground-controls-toggle"
+          style={{ display: panelOpen ? 'none' : 'flex' }}
+          title="Open layout controls"
         >
           ⚙
         </button>
 
         {panelOpen && (
           <div
+            className="playground-controls-panel"
             style={{
-              background: theme === 'dark' ? 'rgba(10,18,11,0.95)' : 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(12px)',
-              borderRadius: '12px',
-              padding: '1rem 1.25rem',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
-              border: '1px solid var(--glass-border)',
-              width: '280px',
-              fontSize: '0.75rem',
-              color: 'var(--color-text-primary)',
+              background: isDark ? 'rgba(10,18,11,0.95)' : 'rgba(255,255,255,0.95)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
@@ -315,85 +222,85 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
               </button>
             </div>
 
-            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>Text width: {textWidth}%</span>
-              <input type="range" min={25} max={50} value={textWidth} onChange={e => setTextWidth(+e.target.value)} style={{ width: '120px' }} />
-            </label>
+            {[
+              { label: 'Text width', value: textWidth, unit: '%', min: 30, max: 55, step: 1, set: setTextWidth },
+              { label: 'Gap', value: gap, unit: '%', min: 1, max: 8, step: 0.5, set: setGap },
+              { label: 'Side pad', value: sidePadding, unit: 'vw', min: 1, max: 10, step: 0.5, set: setSidePadding },
+              { label: 'Headline', value: headlineSize, unit: 'vw', min: 2, max: 5, step: 0.1, set: setHeadlineSize },
+              { label: 'MS pad', value: manuscriptPadding, unit: 'rem', min: 1, max: 5, step: 0.1, set: setManuscriptPadding },
+              { label: 'Gradient', value: gradientIntensity, unit: '%', min: 0, max: 20, step: 1, set: setGradientIntensity },
+              { label: 'Shadow', value: shadowIntensity, unit: '×', min: 0, max: 3, step: 0.1, set: setShadowIntensity },
+              { label: 'Max width', value: maxWidth, unit: 'px', min: 800, max: 1600, step: 20, set: setMaxWidth },
+            ].map(({ label, value, unit, min, max, step, set }) => (
+              <label key={label} className="playground-control-row">
+                <span>{label}: {typeof value === 'number' && value % 1 !== 0 ? value.toFixed(1) : value}{unit}</span>
+                <input type="range" min={min} max={max} step={step} value={value} onChange={e => set(+e.target.value)} />
+              </label>
+            ))}
 
-            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>Gap: {gap}vw</span>
-              <input type="range" min={0.5} max={8} step={0.5} value={gap} onChange={e => setGap(+e.target.value)} style={{ width: '120px' }} />
-            </label>
-
-            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>Side pad: {sidePadding}vw</span>
-              <input type="range" min={1} max={10} step={0.5} value={sidePadding} onChange={e => setSidePadding(+e.target.value)} style={{ width: '120px' }} />
-            </label>
-
-            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>Headline: {headlineSize}vw</span>
-              <input type="range" min={2} max={6} step={0.25} value={headlineSize} onChange={e => setHeadlineSize(+e.target.value)} style={{ width: '120px' }} />
-            </label>
-
-            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>MS pad: {manuscriptPadding}vw</span>
-              <input type="range" min={1} max={5} step={0.25} value={manuscriptPadding} onChange={e => setManuscriptPadding(+e.target.value)} style={{ width: '120px' }} />
-            </label>
-
-            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>Gradient: {gradientIntensity}%</span>
-              <input type="range" min={0} max={20} value={gradientIntensity} onChange={e => setGradientIntensity(+e.target.value)} style={{ width: '120px' }} />
-            </label>
-
-            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>Shadow: {shadowIntensity.toFixed(1)}×</span>
-              <input type="range" min={0} max={3} step={0.1} value={shadowIntensity} onChange={e => setShadowIntensity(+e.target.value)} style={{ width: '120px' }} />
-            </label>
-
-            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>Max width: {maxWidth === 0 ? 'none' : `${maxWidth}px`}</span>
-              <input type="range" min={0} max={2000} step={40} value={maxWidth} onChange={e => setMaxWidth(+e.target.value)} style={{ width: '120px' }} />
-            </label>
-
-            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span>Canvas H: {canvasHeight}vh</span>
-              <input type="range" min={50} max={100} value={canvasHeight} onChange={e => setCanvasHeight(+e.target.value)} style={{ width: '120px' }} />
-            </label>
-
-            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <span>V-position: {verticalPosition}%</span>
-              <input type="range" min={0} max={100} value={verticalPosition} onChange={e => setVerticalPosition(+e.target.value)} style={{ width: '120px' }} />
-            </label>
-
-            {/* Current values summary — copy these back to Claude */}
-            <div
-              style={{
-                background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-                borderRadius: '6px',
-                padding: '0.5rem 0.75rem',
-                fontSize: '0.65rem',
-                fontFamily: 'monospace',
-                lineHeight: 1.6,
-                color: 'var(--color-text-secondary)',
-              }}
-            >
+            {/* Current values summary */}
+            <div className="playground-values-summary">
               textWidth: {textWidth}%<br />
-              gap: {gap}rem<br />
-              sidePadding: {sidePadding}rem<br />
-              headline: {headlineSize}rem<br />
+              gap: {gap}%<br />
+              sidePadding: {sidePadding}vw<br />
+              headline: {headlineSize}vw<br />
               msPadding: {manuscriptPadding}rem<br />
               gradient: {gradientIntensity}%<br />
               shadow: {shadowIntensity.toFixed(1)}×<br />
-              maxWidth: {maxWidth === 0 ? 'none' : `${maxWidth}px`}<br />
-              canvasH: {canvasHeight}vh<br />
-              vPosition: {verticalPosition}%
+              maxWidth: {maxWidth}px
             </div>
           </div>
         )}
       </div>
 
       <style>{`
-        /* CTA button */
+        /* ─── Header ─── */
+        .playground-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 clamp(1rem, 4vw, 4rem);
+          height: 64px;
+        }
+
+        /* ─── Main composition ─── */
+        .playground-main {
+          position: relative;
+          z-index: 1;
+          flex: 1;
+          display: grid;
+          grid-template-columns: var(--pg-text-width) 1fr;
+          gap: var(--pg-gap);
+          max-width: var(--pg-max-width);
+          margin: 0 auto;
+          padding: 0 var(--pg-side-padding);
+          align-items: center;
+          align-content: center;
+          width: 100%;
+        }
+
+        /* ─── Text column ─── */
+        .playground-text-column {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .playground-headline {
+          font-family: var(--font-display);
+          color: var(--color-text-primary);
+          letter-spacing: -0.02em;
+          font-weight: 300;
+          line-height: 1.08;
+          margin: 0 0 2.25rem;
+        }
+
+        /* ─── CTA cluster ─── */
+        .playground-cta-cluster {
+          display: flex;
+          flex-direction: column;
+          gap: 0.6rem;
+        }
+
         .playground-cta-button {
           background: var(--color-cta-bg);
           color: var(--color-cta-text);
@@ -406,7 +313,6 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           width: fit-content;
           box-shadow: 0 4px 20px var(--color-accent-glow);
           transition: all 0.3s ease;
-          margin-bottom: 0.25rem;
         }
         .playground-cta-button:hover {
           background: var(--color-cta-bg-hover);
@@ -414,8 +320,24 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           box-shadow: 0 8px 30px var(--color-accent-glow);
         }
 
-        /* Demo link */
+        .playground-proof-line {
+          font-family: var(--font-body);
+          color: var(--color-text-tertiary);
+          font-size: 0.8rem;
+          margin: 0;
+        }
+
+        .playground-encrypt-line {
+          font-family: var(--font-body);
+          color: var(--color-accent);
+          font-size: 0.8rem;
+          margin: 0;
+          opacity: 0.85;
+          letter-spacing: 0.03em;
+        }
+
         .playground-demo-link {
+          font-family: var(--font-body);
           font-size: 0.8rem;
           color: var(--color-text-tertiary);
           text-decoration: none;
@@ -425,7 +347,6 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           align-items: center;
           gap: 0.25rem;
           transition: all 0.2s ease;
-          margin-top: 0.15rem;
         }
         .playground-demo-link:hover {
           color: var(--color-accent);
@@ -439,26 +360,60 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           transform: translateX(4px);
         }
 
-        /* Manuscript glow */
+        /* ─── Proof rail ─── */
+        .playground-proof-rail {
+          display: flex;
+          gap: 0.6rem;
+          margin-top: 2.5rem;
+          font-family: var(--font-body);
+          font-size: 0.65rem;
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          color: var(--color-text-tertiary);
+        }
+
+        /* ─── Manuscript ─── */
+        .playground-manuscript {
+          position: relative;
+          border-radius: 2px 24px 4px 24px;
+          overflow: hidden;
+        }
+        .playground-manuscript {
+          border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        [data-theme="dark"] .playground-manuscript {
+          border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
         .playground-manuscript-glow {
           position: absolute;
           inset: 0;
           pointer-events: none;
           background: radial-gradient(
             ellipse 80% 50% at 50% 40%,
-            rgba(194, 86, 52, 0.10) 0%,
+            rgba(194, 86, 52, 0.12) 0%,
             transparent 70%
           );
         }
         [data-theme="dark"] .playground-manuscript-glow {
           background: radial-gradient(
-            ellipse 80% 50% at 50% 40%,
-            rgba(212, 175, 55, 0.10) 0%,
+            ellipse 80% 50% at 50% 50%,
+            rgba(212, 175, 55, 0.12) 0%,
             transparent 70%
           );
         }
 
-        /* Breathing cursor */
+        .playground-manuscript-content {
+          position: relative;
+          z-index: 1;
+          font-family: var(--font-body);
+          color: var(--color-text-primary);
+          font-size: 1.2rem;
+          font-weight: 400;
+          line-height: 1.75;
+        }
+
+        /* ─── Breathing cursor ─── */
         .playground-cursor {
           color: var(--color-accent);
           font-size: 1.1rem;
@@ -469,20 +424,35 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           50% { opacity: 0.3; }
         }
 
-        /* Theme toggle */
+        /* ─── Header buttons ─── */
         .playground-theme-toggle {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           color: var(--color-text-secondary);
+          background: none;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s ease;
         }
         .playground-theme-toggle:hover {
           color: var(--color-accent);
           background: var(--color-bg-secondary);
         }
 
-        /* Sign In button */
         .playground-signin-btn {
+          padding: 0.45rem 1.25rem;
+          border-radius: 8px;
+          font-size: 0.85rem;
+          font-weight: 500;
           color: var(--color-accent);
           background: var(--color-bg-secondary);
           border: 1px solid var(--color-accent-muted);
+          cursor: pointer;
+          transition: all 0.2s ease;
         }
         .playground-signin-btn:hover {
           color: var(--color-cta-text);
@@ -490,7 +460,101 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           border-color: var(--color-cta-bg);
         }
 
-        /* Reduced motion */
+        /* ─── Controls ─── */
+        .playground-controls-container {
+          position: fixed;
+          bottom: 1rem;
+          right: 1rem;
+          z-index: 100;
+          font-family: var(--font-body);
+        }
+
+        .playground-controls-toggle {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: var(--color-cta-bg);
+          color: var(--color-cta-text);
+          border: none;
+          cursor: pointer;
+          font-size: 1.1rem;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .playground-controls-panel {
+          backdrop-filter: blur(12px);
+          border-radius: 12px;
+          padding: 0.75rem 1rem;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+          border: 1px solid var(--glass-border);
+          width: 240px;
+          font-size: 0.7rem;
+          color: var(--color-text-primary);
+        }
+
+        .playground-control-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.35rem;
+          font-size: 0.7rem;
+        }
+        .playground-control-row input[type="range"] {
+          width: 100px;
+        }
+
+        .playground-values-summary {
+          background: rgba(128,128,128,0.1);
+          border-radius: 6px;
+          padding: 0.4rem 0.6rem;
+          font-size: 0.6rem;
+          font-family: monospace;
+          line-height: 1.6;
+          color: var(--color-text-secondary);
+          margin-top: 0.5rem;
+        }
+
+        /* ─── Mobile: stack to single column ─── */
+        @media (max-width: 768px) {
+          .playground-main {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            padding: 0 1.5rem;
+            align-items: start;
+          }
+
+          .playground-text-column {
+            padding: 1rem 0 0;
+            text-align: center;
+            align-items: center;
+          }
+
+          .playground-headline {
+            font-size: clamp(2rem, 8vw, 3rem) !important;
+            margin-bottom: 1.5rem;
+          }
+
+          .playground-cta-cluster {
+            align-items: center;
+          }
+
+          .playground-proof-rail {
+            justify-content: center;
+            flex-wrap: wrap;
+          }
+
+          .playground-manuscript {
+            margin-bottom: 2rem;
+          }
+
+          .playground-controls-panel {
+            width: 220px;
+          }
+        }
+
+        /* ─── Reduced motion ─── */
         @media (prefers-reduced-motion: reduce) {
           .playground-cursor { animation: none; opacity: 1; }
           .playground-cta-button { transition: none; }
