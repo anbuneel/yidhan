@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.16.0',
+    date: '2026-03-28',
+    changes: [
+      { type: 'feature', text: 'Redesigned landing page with unified single-canvas composition, manuscript preview matching the real editor, and staggered entrance animations' },
+      { type: 'improvement', text: 'Simplified signup form — Full Name removed, collected later in Settings' },
+      { type: 'improvement', text: 'Auth modal now uses sheet-rising animation with calm reassurance copy' },
+      { type: 'improvement', text: 'Manuscript text reveal effect with horizontal clip-path animation' },
+      { type: 'improvement', text: 'Responsive mobile layout for landing page — single column stack with CTA above fold' },
+      { type: 'fix', text: 'OAuth error messages now properly sanitized instead of showing raw technical errors' },
+    ],
+  },
+  {
     version: '3.15.0',
     date: '2026-03-17',
     changes: [

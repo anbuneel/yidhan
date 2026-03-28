@@ -43,7 +43,7 @@ src/
 │   ├── Header.tsx         # Library header with search, new note button (uses HeaderShell)
 │   ├── HeaderShell.tsx    # Shared header component for consistent layout across all pages
 │   ├── InstallPrompt.tsx  # Zen-styled PWA install prompt (shown after engagement)
-│   ├── LandingPage.tsx    # Split-screen landing page with showcase cards + writing surface vignette
+│   ├── LandingPage.tsx    # Unified single-canvas landing page with manuscript preview, entrance animations, text reveal
 │   ├── LettingGoModal.tsx # Account departure modal with keepsakes export
 │   ├── LoadingFallback.tsx # Shared loading spinner for Suspense boundaries
 │   ├── Logo.tsx           # Shared brand component (compact mark + live wordmark for headers; header variant used consistently across all pages)
@@ -77,7 +77,8 @@ src/
 │       └── InvitationModal.tsx    # Soft signup prompt ("These words are yours") with frosted backdrop
 ├── pages/
 │   ├── DemoPage.tsx       # Full-featured demo experience at /demo route (practice space with first-run welcome, ambient warmth, keyboard shortcuts)
-│   └── LogoTestPage.tsx   # Brand preview page for testing the shipped lockup and compact mark across themes
+│   ├── LogoTestPage.tsx   # Brand preview page for testing the shipped lockup and compact mark across themes
+│   └── PlaygroundPage.tsx # Dev-only landing page playground with tunable layout controls (delete after design iteration)
 ├── data/
 │   ├── changelog.ts       # Version history data
 │   └── roadmap.ts         # Roadmap items with status
