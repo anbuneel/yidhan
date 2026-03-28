@@ -376,7 +376,7 @@ export function LandingPage({
         /* ─── Manuscript ─── */
         .landing-manuscript {
           position: relative;
-          border-radius: 2px 24px 4px 24px;
+          border-radius: var(--radius-card);
           overflow: hidden;
           border: 1px solid rgba(0, 0, 0, 0.06);
         }

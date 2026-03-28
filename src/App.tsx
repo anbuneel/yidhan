@@ -547,8 +547,8 @@ function App() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Playground page state (dev-only, for /playground route — delete after porting)
-  const isPlayground = window.location.pathname === '/playground';
+  // Playground page state (dev-only — delete after design iteration complete)
+  const [isPlayground] = useState(() => import.meta.env.DEV && window.location.pathname === '/playground');
 
   // Demo page state (for /demo route)
   const [isDemo, setIsDemo] = useState<boolean>(() => {

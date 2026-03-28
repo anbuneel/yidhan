@@ -145,7 +145,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName] = useState(''); // Name collected later in Settings (P1 #8)
+  // Full name removed from signup form (P1 #8) — collected later in Settings
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -178,7 +178,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         // Check if form is dirty
-        const isDirty = email.length > 0 || password.length > 0 || fullName.length > 0;
+        const isDirty = email.length > 0 || password.length > 0;
         if (isDirty && !awaitingConfirmation) {
           setShowCloseConfirm(true);
         } else {
@@ -189,7 +189,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isModal, email, password, fullName, awaitingConfirmation, onClose]);
+  }, [isModal, email, password, awaitingConfirmation, onClose]);
 
   const handleResendConfirmation = async () => {
     if (resendCooldown > 0) return;
@@ -198,7 +198,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     setLoading(true);
     try {
       // Re-trigger signup which sends a new confirmation email
-      const { error } = await signUp(email, password, fullName.trim() || undefined);
+      const { error } = await signUp(email, password, undefined);
       if (error) {
         // "User already registered" is expected - email was sent
         if (!error.message.toLowerCase().includes('already registered')) {
@@ -237,7 +237,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           setTrustedDeviceOnLogin(data.user.id);
         }
       } else if (mode === 'signup') {
-        const { error } = await signUp(email, password, fullName.trim() || undefined);
+        const { error } = await signUp(email, password, undefined);
         if (error) {
           setError(sanitizeErrorMessage(error.message));
         } else {
@@ -820,7 +820,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   );
 
   // Check if form has been modified (dirty state)
-  const isDirty = email.length > 0 || password.length > 0 || fullName.length > 0;
+  const isDirty = email.length > 0 || password.length > 0;
 
   const handleModalClose = () => {
     if (isDirty && !awaitingConfirmation) {
