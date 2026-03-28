@@ -2,6 +2,19 @@
 
 Project documentation organized by category.
 
+**Sections:** [Overview](#overview) · [Backlog](#backlog) · [Strategy](#strategy) · [Analysis](#analysis) · [Testing](#testing) · [Security](#security) · [Reviews](#reviews) · [Active Work](#active-work) · [Reference](#reference) · [Setup](#setup) · [Codebase Snapshot](#codebase-snapshot) · [Archive — Plans](#archive---completed-plans) · [Archive — Planning](#archive---historical-planning) · [Quick Reference](#quick-reference) · [Chronological Index](#chronological-index)
+
+---
+
+## Backlog
+
+Exploratory enhancements and deferred ideas — not yet committed to GitHub issues.
+
+| Document | Description | Date |
+|----------|-------------|------|
+| [backlog.md](backlog.md) | Main backlog index (design, editor, mobile, features, infra) | 2026-03-28 |
+| [landing-page-backlog.md](active/landing-page-backlog.md) | Landing page deferred items (proof rail links, second act, signature details) | 2026-03-28 |
+
 ---
 
 ## Overview
@@ -38,8 +51,20 @@ Design analysis and feature exploration (Claude-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [landing-page-award-winning-redesign-claude.md](analysis/landing-page-award-winning-redesign-claude.md) | **NEW** Landing page award-winning redesign: fresh analysis, zero-user priorities, "Quiet Room" concept | 2026-03-22 |
-| [editor-calm-delight-review-claude.md](analysis/editor-calm-delight-review-claude.md) | **NEW** Editor calm & delight review: 9 decisions for metadata, toolbar, writing surface polish | 2026-03-09 |
+| [design-audit-impeccable-skill-claude.md](analysis/design-audit-impeccable-skill-claude.md) | **NEW** Impeccable audit: a11y, performance, theming, responsive — 20 findings, 0 critical | 2026-03-28 |
+| [design-audit-redesign-skill-claude.md](analysis/design-audit-redesign-skill-claude.md) | **NEW** Redesign skill audit: anti-generic checklist, 8/10 overall score | 2026-03-28 |
+| [documentation-audit-codex.md](analysis/documentation-audit-codex.md) | Documentation quality audit (Codex) | 2026-03-09 |
+| [editor-calm-delight-review-claude.md](analysis/editor-calm-delight-review-claude.md) | Editor calm & delight review: 9 decisions for metadata, toolbar, writing surface polish | 2026-03-09 |
+| [quality-audit-v3-impeccable-claude.md](analysis/quality-audit-v3-impeccable-claude.md) | Impeccable quality audit v3 | 2026-03-06 |
+| [quality-audit-v2-impeccable-claude.md](analysis/quality-audit-v2-impeccable-claude.md) | Impeccable quality audit v2 | 2026-03-06 |
+| [quality-audit-impeccable-claude.md](analysis/quality-audit-impeccable-claude.md) | Impeccable quality audit v1 | 2026-03-06 |
+| [design-critique-v2-impeccable-claude.md](analysis/design-critique-v2-impeccable-claude.md) | Impeccable design critique v2 | 2026-03-06 |
+| [design-critique-impeccable-claude.md](analysis/design-critique-impeccable-claude.md) | Impeccable design critique v1 | 2026-03-06 |
+| [editor-excellence-proposal-claude.md](analysis/editor-excellence-proposal-claude.md) | Editor Excellence sprint: Focus Mode + Page Presence + Bottom Toolbar (shipped v3.6.0) | 2026-03-03 |
+| [e2ee-sharing-design-claude.md](analysis/e2ee-sharing-design-claude.md) | E2EE sharing design (Share as Letter encryption model) | 2026-03-02 |
+| [testing-coverage-audit-claude.md](analysis/testing-coverage-audit-claude.md) | Testing coverage audit and gap analysis | 2026-03-01 |
+| [dark-mode-cta-vibrancy-claude.md](analysis/dark-mode-cta-vibrancy-claude.md) | Dark mode CTA vibrancy: gold luminance trap analysis | 2026-02-27 |
+| [landing-page-elevation-claude.md](analysis/landing-page-elevation-claude.md) | Landing page elevation analysis | 2026-02-23 |
 | [codebase-bloat-audit-codex.md](analysis/codebase-bloat-audit-codex.md) | Quick bloat audit focused on maintainability and velocity risks | 2026-01-27 |
 | [kintsugi-light-mode-enhancements-claude.md](analysis/kintsugi-light-mode-enhancements-claude.md) | **NEW** Light mode enhancements: grain opacity, shadow warmth, card refinements | 2026-01-26 |
 | [editor-ux-evaluation-claude.md](analysis/editor-ux-evaluation-claude.md) | **NEW** Editor UI/UX evaluation: typography, toolbar, mobile, 15 quick wins | 2026-01-26 |
@@ -53,6 +78,8 @@ Design analysis and feature exploration (Claude-authored).
 | [ios-native-competitive-analysis-claude.md](analysis/ios-native-competitive-analysis-claude.md) | iOS native apps competitive analysis (Bear, Craft, Apple Notes) | 2026-01-10 |
 | [mobile-ios-gap-analysis-claude.md](analysis/mobile-ios-gap-analysis-claude.md) | Comprehensive mobile/iOS gap analysis with priorities | 2026-01-10 |
 | [frontend-skill-demo-writing-page-claude.md](analysis/frontend-skill-demo-writing-page-claude.md) | Practice Space demo page design (full-featured demo without signup) | 2026-01-09 |
+| [mobile-condensed-view-claude.md](analysis/mobile-condensed-view-claude.md) | Mobile condensed view design exploration | 2026-01-15 |
+| [mobile-capability-spectrum-claude.md](analysis/mobile-capability-spectrum-claude.md) | Mobile capability spectrum: PWA vs native feature mapping | 2026-01-10 |
 | [mobile-readiness-evaluation-claude.md](analysis/mobile-readiness-evaluation-claude.md) | Mobile readiness assessment (iOS/Android) with recommendations | 2026-01-08 |
 | [mobile-strategy-analysis-claude.md](analysis/mobile-strategy-analysis-claude.md) | PWA vs native mobile strategy (Enhanced PWA - Phase 1 complete) | 2025-12-26 |
 | [mobile-touch-targets-claude.md](analysis/mobile-touch-targets-claude.md) | Touch target guidelines and TimeRibbon improvements | 2025-12-29 |
@@ -92,6 +119,7 @@ Security reviews and analysis.
 | [encryption-capability-analysis-claude.md](analysis/encryption-capability-analysis-claude.md) | E2EE encryption capability analysis v3.2 (Codex peer-reviewed) | 2026-02-21 |
 | [zenote-comprehensive-review-Codex.md](reviews/zenote-comprehensive-review-Codex.md) | Comprehensive security/code review by Codex | 2025-12-28 |
 | [share-token-security-analysis-claude.md](analysis/share-token-security-analysis-claude.md) | Share link token security verification | 2025-12-28 |
+| [security-scan-a3f7e91b.md](analysis/security-scan-a3f7e91b.md) | Automated security scan results | 2026-02-25 |
 | [api-retry-logic-analysis-claude.md](analysis/api-retry-logic-analysis-claude.md) | API retry and error handling analysis | 2025-12-28 |
 
 ---
@@ -102,6 +130,7 @@ External reviews and audits.
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [impeccable-design-critique-2026-03-28-claude.md](reviews/impeccable-design-critique-2026-03-28-claude.md) | **NEW** Holistic design critique: anti-patterns pass, 5 priority issues (landing focus, trust badges, mobile, demo onboarding, copy hierarchy) | 2026-03-28 |
 | [landing-page-design-review-claude.md](reviews/landing-page-design-review-claude.md) | Landing page UI/UX and conversion optimization review | 2026-01-09 |
 | [code-review-b7e2f41d.md](reviews/code-review-b7e2f41d.md) | **NEW** Vault unlock UX code review (3 agents, 2 rounds, converged) | 2026-02-23 |
 | [plan-review-8beb39e6.md](reviews/plan-review-8beb39e6.md) | E2EE implementation plan peer review (5 rounds, Codex approved) | 2026-02-21 |
@@ -141,7 +170,8 @@ User-facing behavior specs and feature guides.
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [e2ee-user-experience-claude.md](reference/e2ee-user-experience-claude.md) | **NEW** E2EE user experience: setup, unlock, vault locking, migration, edge cases | 2026-02-24 |
+| [ui-skills-taxonomy-claude.md](reference/ui-skills-taxonomy-claude.md) | **NEW** UI/UX/frontend skills taxonomy: what each skill does, when to use it, workflow | 2026-03-28 |
+| [e2ee-user-experience-claude.md](reference/e2ee-user-experience-claude.md) | E2EE user experience: setup, unlock, vault locking, migration, edge cases | 2026-02-24 |
 | [user-guide-notes.md](reference/user-guide-notes.md) | User-facing feature docs: shortcuts, slash commands, export, faded notes | 2025-12-26 |
 
 ---
@@ -176,6 +206,10 @@ Implementation plans that have been completed.
 
 | Document | Description |
 |----------|-------------|
+| [landing-page-redesign-multi-agent-ideation-claude.md](archive/plans/landing-page-redesign-multi-agent-ideation-claude.md) | Landing page multi-agent ideation: Claude + Codex + Gemini brainstorm (shipped PR #183) |
+| [landing-page-redesign-implementation-spec-codex.md](archive/plans/landing-page-redesign-implementation-spec-codex.md) | Landing page implementation spec (Codex) — authoritative checklist (shipped PR #183) |
+| [landing-page-award-winning-redesign-claude.md](archive/plans/landing-page-award-winning-redesign-claude.md) | Landing page award-winning redesign analysis + combined checklist (shipped PR #183) |
+| [landing-page-conversion-refresh-codex.md](archive/plans/landing-page-conversion-refresh-codex.md) | Landing page conversion refresh brief (Codex) (shipped PR #183) |
 | [editor-excellence-proposal-claude.md](analysis/editor-excellence-proposal-claude.md) | Editor Excellence sprint: Focus Mode + Page Presence + Bottom Toolbar (shipped v3.6.0) |
 | [pwa-native-feel-plan.md](plans/pwa-native-feel-plan.md) | PWA native feel - iOS install guide, swipe gestures, pull-to-refresh, spring animations |
 | [codex-review-action-plan.md](archive/plans/codex-review-action-plan.md) | Codex review fixes (P1/P2/P3 complete) |
@@ -255,5 +289,88 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 
 ---
 
-*Last updated: 2026-03-10 (Launch-critical fixes PR #164 merged)*
+---
+
+## Chronological Index
+
+All analysis, review, and reference docs ordered by creation date (newest first).
+
+### 2026-03 (March)
+
+| Date | Document | Category |
+|------|----------|----------|
+| 03-28 | [design-audit-impeccable-skill-claude.md](analysis/design-audit-impeccable-skill-claude.md) | Design audit |
+| 03-28 | [design-audit-redesign-skill-claude.md](analysis/design-audit-redesign-skill-claude.md) | Design audit |
+| 03-28 | [ui-skills-taxonomy-claude.md](reference/ui-skills-taxonomy-claude.md) | Reference |
+| 03-28 | [impeccable-design-critique-2026-03-28-claude.md](reviews/impeccable-design-critique-2026-03-28-claude.md) | Design review |
+| 03-22 | [landing-page-redesign-multi-agent-ideation-claude.md](archive/plans/landing-page-redesign-multi-agent-ideation-claude.md) | Landing page (archived) |
+| 03-22 | [landing-page-redesign-implementation-spec-codex.md](archive/plans/landing-page-redesign-implementation-spec-codex.md) | Landing page (archived) |
+| 03-22 | [landing-page-award-winning-redesign-claude.md](archive/plans/landing-page-award-winning-redesign-claude.md) | Landing page (archived) |
+| 03-21 | [landing-page-conversion-refresh-codex.md](archive/plans/landing-page-conversion-refresh-codex.md) | Landing page (archived) |
+| 03-09 | [documentation-audit-codex.md](analysis/documentation-audit-codex.md) | Code quality |
+| 03-09 | [editor-calm-delight-review-claude.md](analysis/editor-calm-delight-review-claude.md) | Editor UX |
+| 03-06 | [quality-audit-v3-impeccable-claude.md](analysis/quality-audit-v3-impeccable-claude.md) | Design audit |
+| 03-06 | [quality-audit-v2-impeccable-claude.md](analysis/quality-audit-v2-impeccable-claude.md) | Design audit |
+| 03-06 | [quality-audit-impeccable-claude.md](analysis/quality-audit-impeccable-claude.md) | Design audit |
+| 03-06 | [design-critique-v2-impeccable-claude.md](analysis/design-critique-v2-impeccable-claude.md) | Design review |
+| 03-06 | [design-critique-impeccable-claude.md](analysis/design-critique-impeccable-claude.md) | Design review |
+| 03-03 | [editor-excellence-proposal-claude.md](analysis/editor-excellence-proposal-claude.md) | Editor UX |
+| 03-02 | [e2ee-sharing-design-claude.md](analysis/e2ee-sharing-design-claude.md) | Security |
+| 03-01 | [testing-coverage-audit-claude.md](analysis/testing-coverage-audit-claude.md) | Testing |
+
+### 2026-02 (February)
+
+| Date | Document | Category |
+|------|----------|----------|
+| 02-27 | [dark-mode-cta-vibrancy-claude.md](analysis/dark-mode-cta-vibrancy-claude.md) | Theming |
+| 02-25 | [security-scan-a3f7e91b.md](analysis/security-scan-a3f7e91b.md) | Security |
+| 02-24 | [e2ee-user-experience-claude.md](reference/e2ee-user-experience-claude.md) | Reference |
+| 02-23 | [landing-page-elevation-claude.md](analysis/landing-page-elevation-claude.md) | Landing page |
+
+### 2026-01 (January)
+
+| Date | Document | Category |
+|------|----------|----------|
+| 01-27 | [codebase-bloat-audit-codex.md](analysis/codebase-bloat-audit-codex.md) | Code quality |
+| 01-26 | [kintsugi-light-mode-enhancements-claude.md](analysis/kintsugi-light-mode-enhancements-claude.md) | Theming |
+| 01-26 | [editor-ux-evaluation-claude.md](analysis/editor-ux-evaluation-claude.md) | Editor UX |
+| 01-16 | [mobile-implementation-review-claude.md](analysis/mobile-implementation-review-claude.md) | Mobile |
+| 01-15 | [mobile-condensed-view-claude.md](analysis/mobile-condensed-view-claude.md) | Mobile |
+| 01-14 | [subscription-architecture-claude.md](analysis/subscription-architecture-claude.md) | Architecture |
+| 01-13 | [quiet-intelligence-features-claude.md](analysis/quiet-intelligence-features-claude.md) | Feature design |
+| 01-13 | [auth-comparison-supabase-vs-custom-claude.md](analysis/auth-comparison-supabase-vs-custom-claude.md) | Architecture |
+| 01-12 | [yidhan-brand-evaluation-claude.md](analysis/yidhan-brand-evaluation-claude.md) | Branding |
+| 01-12 | [yidhan-logo-design-claude.md](analysis/yidhan-logo-design-claude.md) | Branding |
+| 01-12 | [branding-modularity-assessment-claude.md](analysis/branding-modularity-assessment-claude.md) | Branding |
+| 01-12 | [landing-page-redesign-unified-demo-claude.md](analysis/landing-page-redesign-unified-demo-claude.md) | Landing page |
+| 01-10 | [ios-native-competitive-analysis-claude.md](analysis/ios-native-competitive-analysis-claude.md) | Mobile |
+| 01-10 | [mobile-ios-gap-analysis-claude.md](analysis/mobile-ios-gap-analysis-claude.md) | Mobile |
+| 01-10 | [mobile-capability-spectrum-claude.md](analysis/mobile-capability-spectrum-claude.md) | Mobile |
+| 01-10 | [encryption-capability-analysis-claude.md](analysis/encryption-capability-analysis-claude.md) | Security |
+| 01-09 | [landing-page-design-review-claude.md](reviews/landing-page-design-review-claude.md) | Landing page |
+| 01-09 | [frontend-skill-demo-writing-page-claude.md](analysis/frontend-skill-demo-writing-page-claude.md) | Feature design |
+| 01-08 | [mobile-readiness-evaluation-claude.md](analysis/mobile-readiness-evaluation-claude.md) | Mobile |
+
+### 2025-12 (December)
+
+| Date | Document | Category |
+|------|----------|----------|
+| 12-30 | [mobile-touch-targets-claude.md](analysis/mobile-touch-targets-claude.md) | Mobile |
+| 12-28 | [zenote-comprehensive-review-Codex.md](reviews/zenote-comprehensive-review-Codex.md) | Code review |
+| 12-28 | [share-token-security-analysis-claude.md](analysis/share-token-security-analysis-claude.md) | Security |
+| 12-28 | [api-retry-logic-analysis-claude.md](analysis/api-retry-logic-analysis-claude.md) | Code quality |
+| 12-27 | [testing-strategy-claude.md](analysis/testing-strategy-claude.md) | Testing |
+| 12-27 | [testing-infrastructure-claude.md](analysis/testing-infrastructure-claude.md) | Testing |
+| 12-26 | [oauth-providers-analysis-claude.md](analysis/oauth-providers-analysis-claude.md) | Architecture |
+| 12-26 | [mobile-strategy-analysis-claude.md](analysis/mobile-strategy-analysis-claude.md) | Mobile |
+| 12-25 | [zenote-ui-ux-review.md](reviews/zenote-ui-ux-review.md) | Design review |
+| 12-25 | [color-theme-final-specification-claude.md](analysis/color-theme-final-specification-claude.md) | Theming |
+| 12-25 | [onboarding-ux-review-claude.md](analysis/onboarding-ux-review-claude.md) | UX design |
+| 12-25 | [offboarding-design-claude.md](analysis/offboarding-design-claude.md) | UX design |
+| 12-25 | [deletion-archiving-design-claude.md](analysis/deletion-archiving-design-claude.md) | Feature design |
+| 12-25 | [offline-support-design-claude.md](analysis/offline-support-design-claude.md) | Architecture |
+| 12-25 | [collaboration-feature-analysis-claude.md](analysis/collaboration-feature-analysis-claude.md) | Feature design |
+| 12-25 | [copy-note-feature-claude.md](analysis/copy-note-feature-claude.md) | Feature design |
+
+*Last updated: 2026-03-28*
 
