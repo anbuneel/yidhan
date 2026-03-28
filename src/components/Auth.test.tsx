@@ -85,14 +85,9 @@ describe('Auth', () => {
       expect(screen.getByText('Password')).toBeInTheDocument();
     });
 
-    it('does not show full name field in login mode', () => {
-      render(<Auth {...defaultProps} />);
-      expect(screen.queryByLabelText(/full name/i)).not.toBeInTheDocument();
-    });
-
-    it('shows full name field in signup mode', () => {
+    it('does not show full name field (removed in P1 #8)', () => {
       render(<Auth {...defaultProps} initialMode="signup" />);
-      expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/full name/i)).not.toBeInTheDocument();
     });
   });
 
@@ -207,7 +202,6 @@ describe('Auth', () => {
       const user = userEvent.setup();
       render(<Auth {...defaultProps} initialMode="signup" />);
 
-      await user.type(screen.getByLabelText(/full name/i), 'Test User');
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
       await user.click(screen.getByRole('button', { name: 'Sign Up' }));
@@ -216,7 +210,7 @@ describe('Auth', () => {
         expect(mockAuthContext.signUp).toHaveBeenCalledWith(
           'test@example.com',
           'password123',
-          'Test User'
+          undefined
         );
       });
     });
@@ -225,8 +219,7 @@ describe('Auth', () => {
       const user = userEvent.setup();
       render(<Auth {...defaultProps} initialMode="signup" />);
 
-      const textboxes = screen.getAllByRole('textbox');
-      await user.type(textboxes[1], 'test@example.com');
+      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
       await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 
@@ -241,8 +234,7 @@ describe('Auth', () => {
       const user = userEvent.setup();
       render(<Auth {...defaultProps} initialMode="signup" />);
 
-      const textboxes = screen.getAllByRole('textbox');
-      await user.type(textboxes[1], 'test@example.com');
+      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
       await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 
@@ -562,8 +554,7 @@ describe('Auth', () => {
 
       render(<Auth {...defaultProps} initialMode="signup" />);
 
-      const textboxes = screen.getAllByRole('textbox');
-      await user.type(textboxes[1], 'test@example.com');
+      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
       await user.click(screen.getByRole('button', { name: 'Sign Up' }));
 

@@ -286,7 +286,6 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     setMessage(null);
     setPassword('');
     setConfirmPassword('');
-    if (newMode !== 'signup') setFullName('');
   };
 
   const handleGoogleSignIn = async () => {
