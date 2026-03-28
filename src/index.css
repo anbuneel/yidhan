@@ -1016,17 +1016,25 @@ body::before {
   max-width: 440px;
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
-  animation: auth-modal-scale-in 0.35s var(--spring-bounce) forwards;
+  animation: auth-modal-sheet-rise 0.35s ease-out forwards;
 }
 
-@keyframes auth-modal-scale-in {
+/* Sheet-rising modal — feels like a page coming forward (P1 #10) */
+@keyframes auth-modal-sheet-rise {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(10px);
+    transform: translateY(40px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* animation: none is more thorough than the global 0.01ms rule — prevents any flash of the start state */
+@media (prefers-reduced-motion: reduce) {
+  .auth-modal-content {
+    animation: none;
   }
 }
 

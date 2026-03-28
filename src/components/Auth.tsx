@@ -145,7 +145,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  // Full name removed from signup form (P1 #8) — collected later in Settings
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -178,7 +178,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         // Check if form is dirty
-        const isDirty = email.length > 0 || password.length > 0 || fullName.length > 0;
+        const isDirty = email.length > 0 || password.length > 0;
         if (isDirty && !awaitingConfirmation) {
           setShowCloseConfirm(true);
         } else {
@@ -189,7 +189,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isModal, email, password, fullName, awaitingConfirmation, onClose]);
+  }, [isModal, email, password, awaitingConfirmation, onClose]);
 
   const handleResendConfirmation = async () => {
     if (resendCooldown > 0) return;
@@ -198,7 +198,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     setLoading(true);
     try {
       // Re-trigger signup which sends a new confirmation email
-      const { error } = await signUp(email, password, fullName.trim() || undefined);
+      const { error } = await signUp(email, password);
       if (error) {
         // "User already registered" is expected - email was sent
         if (!error.message.toLowerCase().includes('already registered')) {
@@ -237,7 +237,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           setTrustedDeviceOnLogin(data.user.id);
         }
       } else if (mode === 'signup') {
-        const { error } = await signUp(email, password, fullName.trim() || undefined);
+        const { error } = await signUp(email, password);
         if (error) {
           setError(sanitizeErrorMessage(error.message));
         } else {
@@ -286,7 +286,6 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     setMessage(null);
     setPassword('');
     setConfirmPassword('');
-    if (newMode !== 'signup') setFullName('');
   };
 
   const handleGoogleSignIn = async () => {
@@ -295,7 +294,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     setGoogleLoading(true);
     const { error } = await signInWithGoogle();
     if (error) {
-      setError(error.message);
+      setError(sanitizeErrorMessage(error.message));
       setGoogleLoading(false);
     }
     // Note: on success, user will be redirected to Google, so no need to setGoogleLoading(false)
@@ -307,7 +306,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     setGithubLoading(true);
     const { error } = await signInWithGitHub();
     if (error) {
-      setError(error.message);
+      setError(sanitizeErrorMessage(error.message));
       setGithubLoading(false);
     }
     // Note: on success, user will be redirected to GitHub, so no need to setGithubLoading(false)
@@ -346,7 +345,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         </h1>
         <h2
           id="auth-modal-title"
-          className="text-center mb-6 md:mb-10"
+          className={`text-center ${!awaitingConfirmation && (mode === 'signup' || mode === 'login') ? 'mb-2' : 'mb-6 md:mb-10'}`}
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-secondary)',
@@ -356,6 +355,19 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         >
           {awaitingConfirmation ? 'Check your inbox' : getTitle()}
         </h2>
+        {/* Top reassurance — calm, intimate (P1 #9) */}
+        {!awaitingConfirmation && (mode === 'signup' || mode === 'login') && (
+          <p
+            className="text-center mb-6 md:mb-10"
+            style={{
+              fontFamily: 'var(--font-body)',
+              color: 'var(--color-text-tertiary)',
+              fontSize: '0.8rem',
+            }}
+          >
+            Your private writing space
+          </p>
+        )}
 
         {/* Confirmation waiting state */}
         {awaitingConfirmation ? (
@@ -519,34 +531,6 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Full Name - only shown during sign-up */}
-          {mode === 'signup' && (
-            <div className="mb-4 md:mb-5">
-              <label
-                htmlFor="auth-fullname"
-                className="block text-sm mb-2"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-secondary)',
-                }}
-              >
-                Full Name <span style={{ color: 'var(--color-text-tertiary)' }}>(optional)</span>
-              </label>
-              <input
-                id="auth-fullname"
-                type="text"
-                autoComplete="name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder=""
-                className="w-full px-4 py-3 rounded-lg outline-none transition-all duration-200"
-                style={inputBaseStyles}
-                onFocus={inputFocusHandler}
-                onBlur={inputBlurHandler}
-              />
-            </div>
-          )}
-
           {/* Email - shown for login, signup, forgot */}
           {mode !== 'reset' && (
             <div className="mb-4 md:mb-5">
@@ -828,7 +812,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             letterSpacing: '0.03em',
           }}
         >
-          End-to-end encrypted. Your thoughts belong only to you.
+          Your notes stay encrypted and yours.
         </p>
         </>
         )}
@@ -836,7 +820,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   );
 
   // Check if form has been modified (dirty state)
-  const isDirty = email.length > 0 || password.length > 0 || fullName.length > 0;
+  const isDirty = email.length > 0 || password.length > 0;
 
   const handleModalClose = () => {
     if (isDirty && !awaitingConfirmation) {
