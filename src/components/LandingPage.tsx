@@ -160,7 +160,7 @@ export function LandingPage({
               I used to keep a notebook by the bed. This feels like that,
               but the pages never
             </p>
-            <span className="landing-cursor" style={{ animationDelay: '1.3s' }}>▎</span>
+            <span className="landing-cursor" style={{ animationDelay: '1.3s, 1.7s' }}>▎</span>
           </div>
         </div>
       </main>
