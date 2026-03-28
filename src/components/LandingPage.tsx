@@ -228,6 +228,7 @@ export function LandingPage({
           overflow: hidden;
           display: flex;
           flex-direction: column;
+          justify-content: center;
         }
         .landing-atmosphere {
           position: absolute;
@@ -250,15 +251,13 @@ export function LandingPage({
         .landing-main {
           position: relative;
           z-index: 1;
-          flex: 1;
           display: grid;
           grid-template-columns: 40% 1fr;
           gap: 5%;
           max-width: 1220px;
           margin: 0 auto;
-          padding: 0 1vw;
+          padding: 2rem 1vw;
           align-items: center;
-          align-content: center;
           width: 100%;
         }
 
