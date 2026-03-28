@@ -346,7 +346,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         </h1>
         <h2
           id="auth-modal-title"
-          className="text-center mb-6 md:mb-10"
+          className="text-center mb-2"
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-secondary)',
@@ -356,6 +356,19 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         >
           {awaitingConfirmation ? 'Check your inbox' : getTitle()}
         </h2>
+        {/* Top reassurance — calm, intimate (P1 #9) */}
+        {!awaitingConfirmation && (mode === 'signup' || mode === 'login') && (
+          <p
+            className="text-center mb-6 md:mb-10"
+            style={{
+              fontFamily: 'var(--font-body)',
+              color: 'var(--color-text-tertiary)',
+              fontSize: '0.8rem',
+            }}
+          >
+            Your private writing space
+          </p>
+        )}
 
         {/* Confirmation waiting state */}
         {awaitingConfirmation ? (
@@ -800,7 +813,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             letterSpacing: '0.03em',
           }}
         >
-          End-to-end encrypted. Your thoughts belong only to you.
+          Your notes stay encrypted and yours.
         </p>
         </>
         )}
