@@ -345,7 +345,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         </h1>
         <h2
           id="auth-modal-title"
-          className="text-center mb-2"
+          className={`text-center ${!awaitingConfirmation && (mode === 'signup' || mode === 'login') ? 'mb-2' : 'mb-6 md:mb-10'}`}
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-secondary)',

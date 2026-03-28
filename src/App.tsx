@@ -1968,7 +1968,7 @@ function App() {
   }
 
   // Playground for landing page redesign iteration (dev-only, delete after porting)
-  if (isPlayground) {
+  if (isPlayground && PlaygroundPage) {
     return (
       <ErrorBoundary>
         <Suspense fallback={<LoadingFallback />}>
