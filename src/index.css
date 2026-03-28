@@ -1031,6 +1031,7 @@ body::before {
   }
 }
 
+/* animation: none is more thorough than the global 0.01ms rule — prevents any flash of the start state */
 @media (prefers-reduced-motion: reduce) {
   .auth-modal-content {
     animation: none;

@@ -209,8 +209,7 @@ describe('Auth', () => {
       await waitFor(() => {
         expect(mockAuthContext.signUp).toHaveBeenCalledWith(
           'test@example.com',
-          'password123',
-          undefined
+          'password123'
         );
       });
     });

@@ -21,7 +21,9 @@ const RoadmapPage = lazyWithRetry(() => import('./components/RoadmapPage').then(
 const FadedNotesView = lazyWithRetry(() => import('./components/FadedNotesView').then(module => ({ default: module.FadedNotesView })));
 const SharedNoteView = lazyWithRetry(() => import('./components/SharedNoteView').then(module => ({ default: module.SharedNoteView })));
 const DemoPage = lazyWithRetry(() => import('./pages/DemoPage').then(module => ({ default: module.DemoPage })));
-const PlaygroundPage = lazyWithRetry(() => import('./pages/PlaygroundPage').then(module => ({ default: module.PlaygroundPage })));
+const PlaygroundPage = import.meta.env.DEV
+  ? lazyWithRetry(() => import('./pages/PlaygroundPage').then(module => ({ default: module.PlaygroundPage })))
+  : null;
 const PrivacyPage = lazyWithRetry(() => import('./components/PrivacyPage').then(module => ({ default: module.PrivacyPage })));
 const TermsPage = lazyWithRetry(() => import('./components/TermsPage').then(module => ({ default: module.TermsPage })));
 const SupportPage = lazyWithRetry(() => import('./components/SupportPage').then(module => ({ default: module.SupportPage })));
@@ -547,8 +549,8 @@ function App() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Playground page state (dev-only — delete after design iteration complete)
-  const [isPlayground] = useState(() => import.meta.env.DEV && window.location.pathname === '/playground');
+  // Playground route (dev-only — delete after design iteration complete)
+  const isPlayground = import.meta.env.DEV && window.location.pathname === '/playground';
 
   // Demo page state (for /demo route)
   const [isDemo, setIsDemo] = useState<boolean>(() => {

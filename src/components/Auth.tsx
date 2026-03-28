@@ -198,7 +198,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     setLoading(true);
     try {
       // Re-trigger signup which sends a new confirmation email
-      const { error } = await signUp(email, password, undefined);
+      const { error } = await signUp(email, password);
       if (error) {
         // "User already registered" is expected - email was sent
         if (!error.message.toLowerCase().includes('already registered')) {
@@ -237,7 +237,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           setTrustedDeviceOnLogin(data.user.id);
         }
       } else if (mode === 'signup') {
-        const { error } = await signUp(email, password, undefined);
+        const { error } = await signUp(email, password);
         if (error) {
           setError(sanitizeErrorMessage(error.message));
         } else {
@@ -294,7 +294,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     setGoogleLoading(true);
     const { error } = await signInWithGoogle();
     if (error) {
-      setError(error.message);
+      setError(sanitizeErrorMessage(error.message));
       setGoogleLoading(false);
     }
     // Note: on success, user will be redirected to Google, so no need to setGoogleLoading(false)
@@ -306,7 +306,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     setGithubLoading(true);
     const { error } = await signInWithGitHub();
     if (error) {
-      setError(error.message);
+      setError(sanitizeErrorMessage(error.message));
       setGithubLoading(false);
     }
     // Note: on success, user will be redirected to GitHub, so no need to setGithubLoading(false)

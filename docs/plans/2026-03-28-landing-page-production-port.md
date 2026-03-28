@@ -13,7 +13,7 @@
 **Reference files:**
 - Spec: `docs/analysis/landing-page-redesign-implementation-spec-codex.md`
 - Playground (source of truth for composition): `src/pages/PlaygroundPage.tsx`
-- Backup of old landing page: `src/components/LandingPage.backup.tsx`
+- Backup of old landing page: preserved in git history (commit `83705a7`, deleted in simplification pass)
 - App integration: `src/App.tsx:2176-2205` (prop wiring)
 
 ---
