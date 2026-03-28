@@ -147,20 +147,20 @@ export function LandingPage({
         >
           <div className="landing-manuscript-glow" />
           <div className="landing-manuscript-content">
-            <p style={{ marginBottom: '1.2em' }}>
+            <p className="landing-text-reveal" style={{ marginBottom: '1.2em', animationDelay: '0.4s' }}>
               The light through the kitchen window this morning reminded me of
               something I&apos;d forgotten — how good it feels to write without
               worrying where the words will end up.
             </p>
-            <p style={{ marginBottom: '1.2em' }}>
+            <p className="landing-text-reveal" style={{ marginBottom: '1.2em', animationDelay: '0.7s' }}>
               No folders to choose, no tags to assign. Just a quiet surface
               and the freedom to think out loud.
             </p>
-            <p style={{ marginBottom: 0 }}>
+            <p className="landing-text-reveal" style={{ marginBottom: 0, animationDelay: '1.0s' }}>
               I used to keep a notebook by the bed. This feels like that,
               but the pages never
             </p>
-            <span className="landing-cursor">▎</span>
+            <span className="landing-cursor" style={{ animationDelay: '1.3s' }}>▎</span>
           </div>
         </div>
       </main>
@@ -412,11 +412,27 @@ export function LandingPage({
           line-height: 1.75;
         }
 
-        /* ─── Breathing cursor ─── */
+        /* ─── Horizontal text reveal (P2 #12) — clip-path, GPU-composited ─── */
+        .landing-text-reveal {
+          clip-path: inset(0 100% 0 0);
+          animation: landing-text-reveal 0.8s ease-out forwards;
+          will-change: clip-path;
+        }
+        @keyframes landing-text-reveal {
+          from { clip-path: inset(0 100% 0 0); }
+          to { clip-path: inset(0 0% 0 0); }
+        }
+
+        /* ─── Breathing cursor — appears after text reveal ─── */
         .landing-cursor {
           color: var(--color-accent);
           font-size: 1.1rem;
-          animation: landing-cursor-breathe 3s ease-in-out infinite;
+          opacity: 0;
+          animation: landing-cursor-appear 0.4s ease-out forwards, landing-cursor-breathe 3s ease-in-out 1.7s infinite;
+        }
+        @keyframes landing-cursor-appear {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         @keyframes landing-cursor-breathe {
           0%, 100% { opacity: 1; }
@@ -548,6 +564,7 @@ export function LandingPage({
         @media (prefers-reduced-motion: reduce) {
           .landing-entrance,
           .landing-entrance-manuscript { animation: none; }
+          .landing-text-reveal { animation: none; clip-path: none; }
           .landing-cursor { animation: none; opacity: 1; }
           .landing-cta-button { transition: none; }
           .landing-cta-button:hover { transform: none; }
