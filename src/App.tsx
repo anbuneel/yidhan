@@ -403,9 +403,9 @@ function App() {
   });
   // Sync URL pathname for direct-entry routes
   useEffect(() => {
-    // Don't overwrite /playground or /demo paths
+    // Don't overwrite /demo path; /playground is dev-only and gated separately
     const currentPath = window.location.pathname;
-    if (currentPath === '/playground' || currentPath === '/demo') return;
+    if (currentPath === '/demo' || (import.meta.env.DEV && currentPath === '/playground')) return;
     const expectedPath = routeableViews.includes(view) ? `/${view}` : '/';
     if (currentPath !== expectedPath) {
       window.history.pushState({}, '', expectedPath);
