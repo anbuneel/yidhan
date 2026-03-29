@@ -111,7 +111,7 @@ These items are tracked in [landing-page-backlog.md](landing-page-backlog.md) �
 | # | Item | Category | Source(s) | Status |
 |---|------|----------|-----------|--------|
 | 1 | **No skip-to-content link** | A11y (WCAG A) | Audit H4, Redesign 5b | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) |
-| 2 | **No 404 page** | UX | Redesign 5a | ⬜ Open — needs discussion (brand voice for error state) |
+| 2 | **No 404 page** | UX | Redesign 5a | 🔧 Decided: quiet on-brand page ("This path leads nowhere. Your notes are waiting.") |
 | 3 | **Modal fixed widths break on narrow phones** | Responsive | Audit H3 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) |
 | 4 | **Dropdown menus overflow narrow viewports** | Responsive | Audit H5 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) |
 
@@ -120,20 +120,20 @@ These items are tracked in [landing-page-backlog.md](landing-page-backlog.md) �
 | # | Item | Category | Source(s) | Status |
 |---|------|----------|-----------|--------|
 | 5 | **Editor title auto-resize layout thrashing** | Performance | Audit H1 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — scroll handler already used rAF; title auto-resize batched |
-| 6 | **Focus-mode animates layout properties** | Performance | Audit H2 | ⬜ Open — needs discussion (`grid-template-rows` approach needs testing) |
-| 7 | **Landing: manuscript preview steals CTA focus** | Conversion | Critique P1 | ⬜ Open — needs discussion (blur/fade/mask tradeoffs) |
-| 8 | **Trust badges still too subtle** | Conversion | Critique P2, Redesign 1c | ⬜ Open — needs discussion (pill treatment vs repositioning) |
-| 9 | **Mobile landing: card preview disconnected** | UX | Critique P3, Redesign 3a, 5c | ⬜ Open — needs discussion (hide cards? peek effect?) |
-| 10 | **Demo Practice Space first impression** | Onboarding | Critique P4 | ⬜ Open — needs discussion (change filter logic vs different content) |
-| 11 | **Copy hierarchy below headline is flat** | Typography | Critique P5, Redesign 1a | ⬜ Open — needs discussion (size/weight steps, headline weight) |
-| 11b | **CTA cluster needs breathing room** | Layout | Redesign 3b | ⬜ Open — near-mechanical (increase gap) |
+| 6 | **Focus-mode animates layout properties** | Performance | Audit H2 | ✅ Closed — one-shot toggle, negligible perf impact, keep as-is |
+| 7 | **Landing: manuscript preview steals CTA focus** | Conversion | Critique P1 | ✅ Closed — PR #183 redesign validated, revisit with analytics post-launch |
+| 8 | **Trust badges still too subtle** | Conversion | Critique P2, Redesign 1c | ✅ Closed — already amplified once, further changes risk breaking calm tone |
+| 9 | **Mobile landing: card preview disconnected** | UX | Critique P3, Redesign 3a, 5c | ✅ Closed — floating bar serves returning users, card below fold is a bonus |
+| 10 | **Demo Practice Space first impression** | Onboarding | Critique P4 | 🔧 Decided: show all starters on first visit (change filter logic) |
+| 11 | **Copy hierarchy below headline is flat** | Typography | Critique P5, Redesign 1a | ✅ Closed — landing page redesign hasn't been live long enough to evaluate |
+| 11b | **CTA cluster needs breathing room** | Layout | Redesign 3b | 🔧 Decided: increase gap to 1rem |
 
 ### Medium Priority (Quality + Polish)
 
 | # | Item | Category | Source(s) | Status |
 |---|------|----------|-----------|--------|
 | 12 | **Hardcoded colors outside theme tokens** | Theming | Audit M1, Redesign 2b | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — App.tsx overlay + LandingPage manuscriptShadow → CSS tokens. BottomSheet/ErrorBoundary/PlaygroundPage verified as exceptions |
-| 13 | **Inline style objects recreated every render** (48 in Auth.tsx) | Performance | Audit M2 | ⬜ Open — deferred to separate PR (large scope) |
+| 13 | **Inline style objects recreated every render** (48 in Auth.tsx) | Performance | Audit M2 | 🔧 Decided: extract to module-level constants and CSS classes |
 | 14 | **Small touch targets: ChapterNav dots** | A11y | Audit M3 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — 24px hit area with visual dot child |
 | 15 | **Small touch targets: TagPill buttons** | A11y | Audit M4 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — w-4 → w-7 with negative margin |
 | 16 | **Missing `will-change` on key animations** | Performance | Audit M5 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — added to modal-enter, card-delete, focus-mode, landing-entrance |
@@ -144,31 +144,31 @@ These items are tracked in [landing-page-backlog.md](landing-page-backlog.md) �
 | 21 | **Dark theme shadows untinted** | Theming | Redesign 2a | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — tinted with forest green `rgba(5,20,10,...)` |
 | 22 | **Delete animation uses fragile `setTimeout`** | Code quality | Redesign 4b | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — replaced with `animationend` event |
 | 23 | **Missing `text-wrap: balance` on headlines** | Typography | Redesign 1b | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — also removed manual `<br />` |
-| 24 | **Three styling approaches in one codebase** | Maintainability | Redesign 6a | ⬜ Open — needs discussion (architectural decision) |
-| 25 | **Inconsistent icon stroke widths** | Visual consistency | Redesign 6b | ⬜ Open — needs discussion (standardize to 1.5 or 2?) |
+| 24 | **Three styling approaches in one codebase** | Maintainability | Redesign 6a | 🔧 Decided: document convention in CLAUDE.md (Tailwind-first, inline for dynamic, `<style>` for complex selectors) |
+| 25 | **Inconsistent icon stroke widths** | Visual consistency | Redesign 6b | 🔧 Decided: standardize to 1.5 |
 | 26 | **`!important` on mobile headline** | Code quality | Redesign 6c | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — fixed via `.landing-canvas .landing-headline` specificity bump |
 
 ### Low Priority (Nice-to-Have)
 
 | # | Item | Category | Source(s) | Status |
 |---|------|----------|-----------|--------|
-| 27 | **Search placeholder generic** | Copy | Audit L4, Redesign 4c | ⬜ Open — needs copy decision |
+| 27 | **Search placeholder generic** | Copy | Audit L4, Redesign 4c | 🔧 Decided: change to "Search your thoughts..." |
 | 28 | **`--spring-bounce` naming misleading** | Code quality | Audit L3 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — renamed to `--ease-out-quint` (5 files) |
-| 29 | **Sidebar toolbar italic icon legibility** | UX | Critique minor | ⬜ Open — needs discussion |
-| 30 | **"Practice Space" breadcrumb label** | UX | Critique minor | ⬜ Open — needs discussion |
-| 31 | **Footer link density** | UX | Critique minor | ⬜ Open — needs discussion |
+| 29 | **Sidebar toolbar italic icon legibility** | UX | Critique minor | ✅ Closed — recognizable in context next to B, H1, H2, H3 |
+| 30 | **"Practice Space" breadcrumb label** | UX | Critique minor | ✅ Closed — italic serif is part of brand identity, label is descriptive not interactive |
+| 31 | **Footer link density** | UX | Critique minor | ✅ Closed — all links serve a purpose (Privacy/Terms legally required, others functional) |
 | 32 | **Dark mode card borders too opaque** | Visual | Critique minor | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — reduced from 8% to 5% opacity |
-| 33 | **Timestamps ALL CAPS** | Typography | Critique minor | ⬜ Open — needs discussion |
+| 33 | **Timestamps ALL CAPS** | Typography | Critique minor | ✅ Closed — deliberate typographic choice, changing would affect whole app |
 
 ### Creative Exploration (Revisit for design refresh)
 
 | # | Item | Source |
 |---|------|--------|
-| 34 | **Post-reveal manuscript ambient effect** | Redesign 7a — subtle glow breathing after entrance animation |
-| 35 | **Theme toggle metaphor** | Redesign 7b — candle/window or dusk/dawn instead of sun/moon |
-| 36 | **Entrance stagger timing** | Redesign 7c — delays 0.08s/0.16s/0.24s → 0.12s/0.25s/0.4s for more ceremony |
-| 37 | **E2EE as hero instead of tagline** | Critique question — "Your thoughts belong only to you" as primary headline |
-| 38 | **Sidebar toolbar auto-hide** | Critique question — show only on hover/selection for true distraction-free |
+| 34 | **Post-reveal manuscript ambient effect** | Redesign 7a — subtle glow breathing after entrance animation | 📋 Backlog |
+| 35 | **Theme toggle metaphor** | Redesign 7b — candle/window or dusk/dawn instead of sun/moon | ✅ Closed — sun/moon is universal, custom metaphors add learning cost |
+| 36 | **Entrance stagger timing** | Redesign 7c — delays 0.08s/0.16s/0.24s → 0.12s/0.25s/0.4s for more ceremony | 📋 Backlog |
+| 37 | **E2EE as hero instead of tagline** | Critique question — "Your thoughts belong only to you" as primary headline | ✅ Closed — "A quiet space" is the brand, E2EE is a supporting point |
+| 38 | **Sidebar toolbar auto-hide** | Critique question — show only on hover/selection for true distraction-free | ✅ Closed — focus mode already addresses this |
 
 ### Verified (No Change Needed — Round 3)
 
@@ -185,14 +185,15 @@ These items are tracked in [landing-page-backlog.md](landing-page-backlog.md) �
 
 ## Item Count Summary
 
-| Priority | Total | ✅ Done (PR #184) | ⬜ Open |
-|----------|-------|-------------------|--------|
-| Pre-Launch | 4 | 3 | 1 (404 page) |
-| High | 8 | 1 | 7 (all need discussion) |
-| Medium | 15 | 11 | 4 (inline styles, styling approaches, stroke widths, + inline hover #157) |
-| Low | 7 | 2 | 5 |
-| Creative | 5 | 0 | 5 |
-| Verified (no action) | 6 | — | — |
-| **Total** | **39** | **17** | **22** |
+| Priority | Total | ✅ Done/Closed | 🔧 Next PR | 📋 Backlog |
+|----------|-------|---------------|-----------|-----------|
+| Pre-Launch | 4 | 3 (PR #184) | 1 (#2 404 page) | 0 |
+| High | 8 | 6 (1 PR #184 + 5 closed) | 2 (#10 demo starters, #11b CTA gap) | 0 |
+| Medium | 15 | 11 (PR #184) | 3 (#13 inline styles, #24 doc convention, #25 stroke widths) | 0 |
+| Low | 7 | 6 (2 PR #184 + 4 closed) | 1 (#27 search placeholder) | 0 |
+| Creative | 5 | 3 (closed) | 0 | 2 (#34, #36) |
+| Verified | 6 | 6 | 0 | 0 |
+| **Total** | **39** | **29** | **7** | **2** |
+| | | | + #157 (GitHub) | |
 
-PR #184 addresses 17 of 39 items. Remaining 22 items all require design discussion or are deferred.
+**PR #184:** 17 items implemented. **Discussion round:** 12 items closed (keep as-is). **Next PR:** 7 items decided. **Backlog:** 2 creative explorations.
