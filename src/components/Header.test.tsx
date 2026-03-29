@@ -52,7 +52,7 @@ describe('Header', () => {
     rerender(<Header {...defaultProps} searchFocusToken={101} />);
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Search...')).toHaveFocus();
+      expect(screen.getByPlaceholderText('Search your thoughts...')).toHaveFocus();
     });
   });
 
@@ -77,13 +77,13 @@ describe('Header', () => {
     await user.click(screen.getByRole('button', { name: 'Request focus' }));
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Search...')).toHaveFocus();
+      expect(screen.getByPlaceholderText('Search your thoughts...')).toHaveFocus();
     });
 
     await user.click(screen.getByRole('button', { name: 'Toggle header' }));
     await user.click(screen.getByRole('button', { name: 'Toggle header' }));
 
-    expect(screen.getByPlaceholderText('Search...')).not.toHaveFocus();
+    expect(screen.getByPlaceholderText('Search your thoughts...')).not.toHaveFocus();
   });
 
   it('clears and blurs search on Escape', async () => {
