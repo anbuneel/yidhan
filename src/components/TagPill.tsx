@@ -17,6 +17,7 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
     <div
       role="button"
       tabIndex={0}
+      aria-label={`Filter by ${tag.name}`}
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {

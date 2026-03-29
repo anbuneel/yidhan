@@ -261,7 +261,14 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
                   onClick={() => setCurrentStep(index)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && setCurrentStep(index)}
+                  aria-label={`Step ${index + 1}: ${step.title}`}
+                  aria-current={currentStep === index ? 'step' : undefined}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setCurrentStep(index);
+                    }
+                  }}
                 >
                   {/* Step number */}
                   <div
