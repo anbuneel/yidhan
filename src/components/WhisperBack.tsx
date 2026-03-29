@@ -103,7 +103,7 @@ export function WhisperBack({ scrollContainerRef }: WhisperBackProps) {
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeWidth={2}
+          strokeWidth={1.5}
           d="M5 15l7-7 7 7"
         />
       </svg>

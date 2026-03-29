@@ -1152,7 +1152,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
+                strokeWidth={1.5}
                 d="M19 14l-7 7m0 0l-7-7m7 7V3"
               />
             </svg>
@@ -1186,7 +1186,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
+                  strokeWidth={1.5}
                   d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
                 />
               </svg>

@@ -129,7 +129,7 @@ export function SyncIndicator({
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeWidth={2}
+            strokeWidth={1.5}
             d="M18.5 5.5l-3 3m0-3l3 3"
           />
         </svg>
