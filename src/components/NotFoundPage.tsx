@@ -22,27 +22,20 @@ export function NotFoundPage({ onGoHome }: NotFoundPageProps) {
         This path leads nowhere.
       </h1>
       <p
-        className="mb-8"
+        className="mb-8 text-lg"
         style={{
           fontFamily: 'var(--font-body)',
           color: 'var(--color-text-secondary)',
-          fontSize: '1.1rem',
         }}
       >
         Your notes are waiting.
       </p>
       <button
         onClick={onGoHome}
-        className="focus-ring"
+        className="focus-ring bg-transparent border-none text-base cursor-pointer underline underline-offset-4"
         style={{
           fontFamily: 'var(--font-body)',
           color: 'var(--color-accent)',
-          background: 'none',
-          border: 'none',
-          fontSize: '1rem',
-          cursor: 'pointer',
-          textDecoration: 'underline',
-          textUnderlineOffset: '4px',
         }}
       >
         Return home

@@ -416,15 +416,12 @@ export function getDemoDataForMigration(): {
   tags: DemoTag[];
 } {
   const state = getDemoState();
-  const userHasState = hasDemoState();
   return {
-    // First visit (no user-created notes, no edits): include all notes
-    // Once the user has created or edited something: exclude unedited starters
-    notes: userHasState
-      ? state.notes.filter(
-          (n) => !STARTER_NOTE_IDS.has(n.localId) || hasStarterNoteBeenEdited(n)
-        )
-      : state.notes,
+    // Migration only runs when hasDemoState() is true (user has created or edited notes).
+    // Exclude unedited starters so only the user's real work migrates.
+    notes: state.notes.filter(
+      (n) => !STARTER_NOTE_IDS.has(n.localId) || hasStarterNoteBeenEdited(n)
+    ),
     tags: state.tags,
   };
 }

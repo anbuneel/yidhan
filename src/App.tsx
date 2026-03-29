@@ -428,8 +428,22 @@ function App() {
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname.replace(/\/$/, '') || '/';
-      const match = routeableViews.find(v => path === `/${v}`);
+
+      // Recompute 404 state for the new URL (mirrors the useState initializer)
+      const isKnownRoute =
+        path === '/' ||
+        routeableViews.some(v => path === `/${v}`) ||
+        path === '/demo' ||
+        path.startsWith('/s/') ||
+        (import.meta.env.DEV && path === '/playground');
+
+      if (!isKnownRoute) {
+        setNotFound(true);
+        return;
+      }
+
       setNotFound(false);
+      const match = routeableViews.find(v => path === `/${v}`);
       setView(match || 'library');
     };
     window.addEventListener('popstate', handlePopState);

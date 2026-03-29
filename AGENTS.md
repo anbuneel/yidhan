@@ -47,6 +47,7 @@ src/
 │   ├── LettingGoModal.tsx # Account departure modal with keepsakes export
 │   ├── LoadingFallback.tsx # Shared loading spinner for Suspense boundaries
 │   ├── Logo.tsx           # Shared brand component (compact mark + live wordmark for headers; header variant used consistently across all pages)
+│   ├── NotFoundPage.tsx   # 404 page for unrecognized routes
 │   ├── NoteCard.tsx       # Individual note card with tag badges
 │   ├── ShareModal.tsx     # Modal for creating/managing E2EE share links (capability-link model)
 │   ├── ShareModal.test.tsx # 18 tests: rendering, create flow, revoke, modal interactions

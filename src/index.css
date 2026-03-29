@@ -1124,6 +1124,7 @@ body::before {
 }
 
 /* Auth component utilities */
+/* Explicit body font for elements that may inherit display font */
 .auth-text {
   font-family: var(--font-body);
 }
@@ -1167,6 +1168,18 @@ body::before {
 }
 
 .auth-btn-secondary:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.auth-btn-ghost {
+  font-family: var(--font-body);
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.auth-btn-ghost:hover:not(:disabled) {
   border-color: var(--color-accent);
 }
 

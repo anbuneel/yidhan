@@ -744,8 +744,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               <div className="flex justify-center gap-3">
                 <button
                   onClick={() => setShowCloseConfirm(false)}
-                  className="auth-btn-secondary px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                  style={{ background: 'transparent' }}
+                  className="auth-btn-ghost px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                 >
                   Keep Editing
                 </button>
