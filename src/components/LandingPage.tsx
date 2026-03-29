@@ -505,6 +505,7 @@ export function LandingPage({
 
         /* ─── Entrance animations ─── */
         .landing-entrance {
+          will-change: opacity, transform;
           animation: landing-fade-up 0.6s ease-out backwards;
         }
         .landing-entrance-1 { animation-delay: 0.08s; }
