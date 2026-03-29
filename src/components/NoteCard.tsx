@@ -47,9 +47,20 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
     if (!isDeleting) return;
     const el = cardRef.current;
     if (!el) return;
-    const handleAnimationEnd = () => onDelete(note.id);
+    const noteId = note.id;
+    const deleteNote = onDelete;
+    let completed = false;
+    const handleAnimationEnd = () => {
+      completed = true;
+      deleteNote(noteId);
+    };
     el.addEventListener('animationend', handleAnimationEnd, { once: true });
-    return () => el.removeEventListener('animationend', handleAnimationEnd);
+    return () => {
+      el.removeEventListener('animationend', handleAnimationEnd);
+      if (!completed) {
+        deleteNote(noteId);
+      }
+    };
   }, [isDeleting, note.id, onDelete]);
 
   const handlePinClick = (e: React.MouseEvent) => {

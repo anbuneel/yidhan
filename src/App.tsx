@@ -2450,6 +2450,9 @@ function App() {
   if (view === 'editor' && selectedNote) {
     return (
       <>
+        <a href="#main-content" className="skip-to-content">
+          Skip to content
+        </a>
         <ErrorBoundary>
           <Suspense fallback={<LoadingFallback message="Loading editor..." />}>
             <Editor

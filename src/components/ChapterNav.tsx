@@ -130,7 +130,7 @@ export function ChapterNav({
               aria-current={isActive ? 'true' : undefined}
             >
               <span
-                className={`rounded-full transition-all duration-300 ${isActive ? 'w-3 h-3' : 'w-2 h-2'}`}
+                className={`block rounded-full transition-all duration-300 ${isActive ? 'w-3 h-3' : 'w-2 h-2'}`}
                 style={{
                   background: isActive
                     ? 'var(--color-accent)'

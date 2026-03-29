@@ -576,10 +576,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     setTitle(e.target.value);
     // Auto-resize
     if (titleRef.current) {
-      titleRef.current.style.height = 'auto';
+      const el = titleRef.current;
+      el.style.height = 'auto';
       requestAnimationFrame(() => {
-        if (titleRef.current) {
-          titleRef.current.style.height = titleRef.current.scrollHeight + 'px';
+        if (el) {
+          el.style.height = el.scrollHeight + 'px';
         }
       });
     }
@@ -1246,7 +1247,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       )}
 
       {/* Editor Content */}
-      <main onTouchStart={handleTouchStart} onTouchEnd={handleTapEnd}>
+      <main id="main-content" onTouchStart={handleTouchStart} onTouchEnd={handleTapEnd}>
         <div className="max-w-[900px] mx-auto px-4 sm:px-10 pt-2 pb-12 editor-writing-area">
           {/* Viewport-following manuscript glow — position updated via ref, not state */}
           <div
