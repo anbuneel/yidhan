@@ -28,17 +28,6 @@ export function LandingPage({
   const { isInstallable, isInstalled, triggerInstall } = useInstallPrompt();
   const isDark = theme === 'dark';
 
-  // 4-layer shadow — warm light tones / deep dark tones (intensity 1.5×)
-  const manuscriptShadow = isDark
-    ? `0 1px 2px rgba(0, 0, 0, 0.6),
-       0 4px 12px rgba(0, 0, 0, 0.45),
-       0 16px 32px rgba(0, 0, 0, 0.375),
-       0 32px 64px rgba(0, 0, 0, 0.3)`
-    : `0 1px 2px rgba(120, 80, 60, 0.12),
-       0 4px 12px rgba(120, 80, 60, 0.09),
-       0 16px 32px rgba(120, 80, 60, 0.075),
-       0 32px 64px rgba(120, 80, 60, 0.06)`;
-
   // Atmospheric gradient centered on manuscript area
   const gradientPct = isDark ? 9 : 6;
   const atmosphere = `radial-gradient(
@@ -88,7 +77,7 @@ export function LandingPage({
         {/* Text column */}
         <div className="landing-text-column">
           <h1 className="landing-headline landing-entrance">
-            A quiet space<br />for your thoughts.
+            A quiet space for your thoughts.
           </h1>
 
           {/* CTA cluster */}
@@ -142,7 +131,7 @@ export function LandingPage({
           style={{
             background: 'var(--color-bg-primary)',
             padding: '3.8rem 4.18rem',
-            boxShadow: manuscriptShadow,
+            boxShadow: 'var(--shadow-manuscript)',
           }}
         >
           <div className="landing-manuscript-glow" />
@@ -287,6 +276,7 @@ export function LandingPage({
           line-height: 1.08;
           font-size: clamp(2rem, 3.4vw, 4.5rem);
           margin: 0 0 2.25rem;
+          text-wrap: balance;
         }
 
         /* ─── CTA cluster ─── */
@@ -381,7 +371,7 @@ export function LandingPage({
           border: 1px solid rgba(0, 0, 0, 0.06);
         }
         [data-theme="dark"] .landing-manuscript {
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .landing-manuscript-glow {
@@ -505,6 +495,7 @@ export function LandingPage({
 
         /* ─── Entrance animations ─── */
         .landing-entrance {
+          will-change: opacity, transform;
           animation: landing-fade-up 0.6s ease-out backwards;
         }
         .landing-entrance-1 { animation-delay: 0.08s; }
@@ -540,8 +531,8 @@ export function LandingPage({
             align-items: center;
           }
 
-          .landing-headline {
-            font-size: clamp(2rem, 8vw, 3rem) !important;
+          .landing-canvas .landing-headline {
+            font-size: clamp(2rem, 8vw, 3rem);
             margin-bottom: 1.5rem;
           }
 

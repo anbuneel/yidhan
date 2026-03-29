@@ -93,7 +93,7 @@ export function ChapterNav({
                   absolute right-full mr-3
                   px-3 py-1.5
                   rounded-lg
-                  whitespace-nowrap
+                  whitespace-nowrap max-w-[200px] truncate
                   pointer-events-none
                   animate-fade-in
                 "
@@ -115,28 +115,33 @@ export function ChapterNav({
               onClick={() => onChapterClick(chapter.key)}
               onMouseEnter={() => setHoveredChapter(chapter.key)}
               onMouseLeave={() => setHoveredChapter(null)}
-              className={`
+              className="
                 relative
+                min-w-[24px] min-h-[24px]
+                flex items-center justify-center
                 rounded-full
                 transition-all duration-300
                 focus:outline-none
                 focus:ring-2
                 focus:ring-[var(--color-accent)]
                 focus:ring-offset-2
-                ${isActive ? 'w-3 h-3' : 'w-2 h-2'}
-              `}
-              style={{
-                background: isActive
-                  ? 'var(--color-accent)'
-                  : 'var(--color-text-tertiary)',
-                opacity: isActive ? 1 : 0.5,
-                boxShadow: isActive
-                  ? '0 0 8px var(--color-accent-glow)'
-                  : 'none',
-              }}
+              "
               aria-label={`Jump to ${CHAPTER_LABELS[chapter.key]}`}
               aria-current={isActive ? 'true' : undefined}
-            />
+            >
+              <span
+                className={`block rounded-full transition-all duration-300 ${isActive ? 'w-3 h-3' : 'w-2 h-2'}`}
+                style={{
+                  background: isActive
+                    ? 'var(--color-accent)'
+                    : 'var(--color-text-tertiary)',
+                  opacity: isActive ? 1 : 0.5,
+                  boxShadow: isActive
+                    ? '0 0 8px var(--color-accent-glow)'
+                    : 'none',
+                }}
+              />
+            </button>
           </div>
         );
       })}

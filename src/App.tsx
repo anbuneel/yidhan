@@ -2242,6 +2242,9 @@ function App() {
   if (view === 'library') {
     return (
       <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg-primary)' }}>
+        <a href="#main-content" className="skip-to-content">
+          Skip to content
+        </a>
         <Header
           theme={theme}
           onThemeToggle={handleThemeToggle}
@@ -2260,7 +2263,7 @@ function App() {
           matchedCount={matchedNoteIds?.size}
           totalCount={displayNotes.length}
         />
-        <div className="w-full flex-1 flex flex-col" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div id="main-content" className="w-full flex-1 flex flex-col" style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <TagFilterBar
           tags={tags}
           selectedTagIds={selectedTagIds}
@@ -2350,8 +2353,7 @@ function App() {
         {/* Import Loading Overlay with Progress */}
         {importProgress && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)' }}
+            className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
           >
             <div
               className="px-8 py-6 rounded-lg text-center min-w-[280px]"
@@ -2448,6 +2450,9 @@ function App() {
   if (view === 'editor' && selectedNote) {
     return (
       <>
+        <a href="#main-content" className="skip-to-content">
+          Skip to content
+        </a>
         <ErrorBoundary>
           <Suspense fallback={<LoadingFallback message="Loading editor..." />}>
             <Editor

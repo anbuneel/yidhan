@@ -1,4 +1,4 @@
-import { useState, useMemo, memo } from 'react';
+import { useState, useMemo, useRef, useEffect, memo } from 'react';
 import type { Note } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
@@ -15,6 +15,7 @@ interface NoteCardProps {
 
 export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogglePin, isCompact = false, searchQuery }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const cardRef = useRef<HTMLElement>(null);
 
   // Plain text for compact mode and search (memoized to avoid repeated DOMPurify calls)
   const plainText = useMemo(() => htmlToPlainText(note.content), [note.content]);
@@ -39,13 +40,31 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Start fade animation
     setIsDeleting(true);
-    // After animation completes, trigger actual delete
-    setTimeout(() => {
-      onDelete(note.id);
-    }, 300);
   };
+
+  useEffect(() => {
+    if (!isDeleting) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const noteId = note.id;
+    const deleteNote = onDelete;
+    let called = false;
+    const handleAnimationEnd = () => {
+      if (!called) {
+        called = true;
+        deleteNote(noteId);
+      }
+    };
+    el.addEventListener('animationend', handleAnimationEnd, { once: true });
+    return () => {
+      el.removeEventListener('animationend', handleAnimationEnd);
+      if (!called) {
+        called = true;
+        deleteNote(noteId);
+      }
+    };
+  }, [isDeleting, note.id, onDelete]);
 
   const handlePinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -54,6 +73,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
 
   return (
     <article
+      ref={cardRef}
       className={`
         group
         note-card
@@ -75,7 +95,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         border: '1px solid var(--glass-border)',
         borderRadius: 'var(--radius-card)',
         boxShadow: isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)',
-        transitionTimingFunction: 'var(--spring-bounce)',
+        transitionTimingFunction: 'var(--ease-out-quint)',
         minHeight: isCompact ? 'auto' : '280px',
         maxHeight: isCompact ? '120px' : '300px',
       }}

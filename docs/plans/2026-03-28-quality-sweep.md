@@ -1,5 +1,18 @@
 # Quality Sweep — Mechanical Fixes
 
+**Version:** 1.0
+**Last Updated:** 2026-03-28
+**Status:** Complete
+**Author:** Claude (Opus 4.6)
+
+---
+
+## Original Prompt
+
+> Address 18 mechanical fixes from the design critique tracker (items #1, 3-5, 14-23, 26, 28, 32) in a single quality sweep PR.
+
+---
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Address 18 mechanical fixes from the design critique tracker (items #1, 3-5, 14-23, 26, 28, 32) in a single quality sweep PR.
