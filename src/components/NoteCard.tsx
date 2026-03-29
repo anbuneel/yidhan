@@ -49,15 +49,18 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
     if (!el) return;
     const noteId = note.id;
     const deleteNote = onDelete;
-    let completed = false;
+    let called = false;
     const handleAnimationEnd = () => {
-      completed = true;
-      deleteNote(noteId);
+      if (!called) {
+        called = true;
+        deleteNote(noteId);
+      }
     };
     el.addEventListener('animationend', handleAnimationEnd, { once: true });
     return () => {
       el.removeEventListener('animationend', handleAnimationEnd);
-      if (!completed) {
+      if (!called) {
+        called = true;
         deleteNote(noteId);
       }
     };

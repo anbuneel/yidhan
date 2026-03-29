@@ -41,12 +41,6 @@
   --shadow-sm: 0 2px 8px rgba(120, 80, 60, 0.18);
   --shadow-md: 0 4px 12px rgba(120, 80, 60, 0.12), 0 20px 40px -10px rgba(120, 80, 60, 0.38);
   --shadow-lg: 0 4px 12px rgba(120, 80, 60, 0.15), 0 10px 40px rgba(120, 80, 60, 0.38);
-  /* Manuscript shadow — managed directly in CSS, not via theme:generate.
-     If adding a new theme, define --shadow-manuscript in its [data-theme] block. */
-  --shadow-manuscript: 0 1px 2px rgba(120, 80, 60, 0.12),
-                       0 4px 12px rgba(120, 80, 60, 0.09),
-                       0 16px 32px rgba(120, 80, 60, 0.075),
-                       0 32px 64px rgba(120, 80, 60, 0.06);
   --noise-opacity: 0.11;
   --noise-filter: sepia(65%) saturate(140%) brightness(0.93);
 }
@@ -83,14 +77,25 @@
   --shadow-sm: 0 2px 8px rgba(5, 20, 10, 0.4);
   --shadow-md: 0 4px 12px rgba(5, 20, 10, 0.2), 0 10px 40px -10px rgba(5, 20, 10, 0.55);
   --shadow-lg: 0 4px 12px rgba(5, 20, 10, 0.25), 0 20px 50px -10px rgba(5, 20, 10, 0.65);
-  --shadow-manuscript: 0 1px 2px rgba(5, 20, 10, 0.6),
-                       0 4px 12px rgba(5, 20, 10, 0.45),
-                       0 16px 32px rgba(5, 20, 10, 0.375),
-                       0 32px 64px rgba(5, 20, 10, 0.3);
   --noise-opacity: 0.05;
   --noise-filter: grayscale(100%);
 }
 /* THEME-END */
+
+/* Manuscript shadow — managed directly in CSS, not via theme:generate.
+   If adding a new theme, define --shadow-manuscript in its [data-theme] block. */
+:root {
+  --shadow-manuscript: 0 1px 2px rgba(120, 80, 60, 0.12),
+                       0 4px 12px rgba(120, 80, 60, 0.09),
+                       0 16px 32px rgba(120, 80, 60, 0.075),
+                       0 32px 64px rgba(120, 80, 60, 0.06);
+}
+[data-theme="dark"] {
+  --shadow-manuscript: 0 1px 2px rgba(5, 20, 10, 0.6),
+                       0 4px 12px rgba(5, 20, 10, 0.45),
+                       0 16px 32px rgba(5, 20, 10, 0.375),
+                       0 32px 64px rgba(5, 20, 10, 0.3);
+}
 
 /* ============================================
    DESIGN TOKENS (Static - not theme-dependent)
@@ -1389,7 +1394,7 @@ body::before {
    ============================================ */
 
 .focus-mode-target {
-  will-change: opacity, max-height;
+  will-change: opacity;
   max-height: 200px; /* Ceiling for smooth collapse transition */
   /* Exit: smooth expand + fade-in together */
   transition: opacity 300ms ease,
