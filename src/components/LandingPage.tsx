@@ -283,7 +283,7 @@ export function LandingPage({
         .landing-cta-cluster {
           display: flex;
           flex-direction: column;
-          gap: 0.6rem;
+          gap: 1rem;
         }
 
         .landing-cta-button {
