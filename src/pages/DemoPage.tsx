@@ -619,7 +619,7 @@ function DemoHeader({
                 }}
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setIsSearchFocused(false)}
-                placeholder="Search..."
+                placeholder="Search your thoughts..."
                 aria-label="Search notes"
                 className="flex-1 bg-transparent border-none outline-none text-sm min-w-0"
                 style={{

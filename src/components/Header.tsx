@@ -165,7 +165,7 @@ export function Header({
             }}
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setIsSearchFocused(false)}
-            placeholder="Search..."
+            placeholder="Search your thoughts..."
             className="flex-1 bg-transparent border-none outline-none text-sm min-w-0"
             style={{
               fontFamily: 'var(--font-body)',
