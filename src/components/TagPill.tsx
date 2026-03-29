@@ -73,7 +73,7 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
           }}
           className="
             ml-1
-            w-4 h-4
+            w-7 h-7 -m-1.5
             flex items-center justify-center
             rounded-full
             opacity-0
@@ -101,7 +101,7 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
           }}
           className="
             ml-1
-            w-4 h-4
+            w-7 h-7 -m-1.5
             flex items-center justify-center
             rounded-full
             opacity-0
