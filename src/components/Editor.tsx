@@ -577,7 +577,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // Auto-resize
     if (titleRef.current) {
       titleRef.current.style.height = 'auto';
-      titleRef.current.style.height = titleRef.current.scrollHeight + 'px';
+      requestAnimationFrame(() => {
+        if (titleRef.current) {
+          titleRef.current.style.height = titleRef.current.scrollHeight + 'px';
+        }
+      });
     }
   };
 
@@ -623,12 +627,16 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   useEffect(() => {
     if (titleRef.current) {
       titleRef.current.style.height = 'auto';
-      titleRef.current.style.height = titleRef.current.scrollHeight + 'px';
-
-      // Focus title if note is empty (new note)
-      if (!hasContent) {
-        titleRef.current.focus();
-      }
+      const el = titleRef.current;
+      const shouldFocus = !hasContent;
+      requestAnimationFrame(() => {
+        if (el) {
+          el.style.height = el.scrollHeight + 'px';
+          if (shouldFocus) {
+            el.focus();
+          }
+        }
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
