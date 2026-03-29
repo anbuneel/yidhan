@@ -443,7 +443,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                   {showPrivacyTip && (
                     <div
                       id="share-privacy-tip"
-                      className="absolute left-0 top-6 z-10 w-64 p-3 rounded-lg shadow-lg text-xs"
+                      className="absolute left-0 top-6 z-10 w-64 max-w-[calc(100vw-2rem)] p-3 rounded-lg shadow-lg text-xs"
                       role="tooltip"
                       style={{
                         background: 'var(--color-bg-tertiary)',

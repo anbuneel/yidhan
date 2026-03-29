@@ -93,7 +93,7 @@ export function ChapterNav({
                   absolute right-full mr-3
                   px-3 py-1.5
                   rounded-lg
-                  whitespace-nowrap
+                  whitespace-nowrap max-w-[200px] truncate
                   pointer-events-none
                   animate-fade-in
                 "
