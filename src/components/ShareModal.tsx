@@ -218,7 +218,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
     >
       <div
         className="
-          w-[420px]
+          w-full max-w-[420px] mx-4
           p-8
           shadow-2xl
           animate-[modal-enter_300ms_ease-out]

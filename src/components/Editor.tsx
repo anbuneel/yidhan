@@ -1406,7 +1406,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             aria-labelledby="delete-dialog-title"
             aria-describedby="delete-dialog-description"
             className="
-              w-[400px]
+              w-full max-w-[400px] mx-4
               p-8
               shadow-2xl
             "
