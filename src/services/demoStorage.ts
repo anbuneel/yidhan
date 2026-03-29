@@ -416,11 +416,15 @@ export function getDemoDataForMigration(): {
   tags: DemoTag[];
 } {
   const state = getDemoState();
+  const userHasState = hasDemoState();
   return {
-    // Include starter notes only if they have been edited, exclude if unchanged
-    notes: state.notes.filter(
-      (n) => !STARTER_NOTE_IDS.has(n.localId) || hasStarterNoteBeenEdited(n)
-    ),
+    // First visit (no user-created notes, no edits): include all notes
+    // Once the user has created or edited something: exclude unedited starters
+    notes: userHasState
+      ? state.notes.filter(
+          (n) => !STARTER_NOTE_IDS.has(n.localId) || hasStarterNoteBeenEdited(n)
+        )
+      : state.notes,
     tags: state.tags,
   };
 }
