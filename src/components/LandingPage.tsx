@@ -28,17 +28,6 @@ export function LandingPage({
   const { isInstallable, isInstalled, triggerInstall } = useInstallPrompt();
   const isDark = theme === 'dark';
 
-  // 4-layer shadow — warm light tones / deep dark tones (intensity 1.5×)
-  const manuscriptShadow = isDark
-    ? `0 1px 2px rgba(0, 0, 0, 0.6),
-       0 4px 12px rgba(0, 0, 0, 0.45),
-       0 16px 32px rgba(0, 0, 0, 0.375),
-       0 32px 64px rgba(0, 0, 0, 0.3)`
-    : `0 1px 2px rgba(120, 80, 60, 0.12),
-       0 4px 12px rgba(120, 80, 60, 0.09),
-       0 16px 32px rgba(120, 80, 60, 0.075),
-       0 32px 64px rgba(120, 80, 60, 0.06)`;
-
   // Atmospheric gradient centered on manuscript area
   const gradientPct = isDark ? 9 : 6;
   const atmosphere = `radial-gradient(
@@ -142,7 +131,7 @@ export function LandingPage({
           style={{
             background: 'var(--color-bg-primary)',
             padding: '3.8rem 4.18rem',
-            boxShadow: manuscriptShadow,
+            boxShadow: 'var(--shadow-manuscript)',
           }}
         >
           <div className="landing-manuscript-glow" />

@@ -2353,8 +2353,7 @@ function App() {
         {/* Import Loading Overlay with Progress */}
         {importProgress && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)' }}
+            className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
           >
             <div
               className="px-8 py-6 rounded-lg text-center min-w-[280px]"
