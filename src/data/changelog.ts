@@ -8,6 +8,22 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.17.0',
+    date: '2026-03-29',
+    changes: [
+      { type: 'improvement', text: 'Skip-to-content keyboard navigation link for screen readers (WCAG 2.4.1)' },
+      { type: 'improvement', text: 'Touch targets enlarged on chapter navigation dots and tag pill buttons' },
+      { type: 'improvement', text: 'ARIA labels added to tag filter and iOS install guide steps' },
+      { type: 'fix', text: 'Modals now adapt to narrow phone screens instead of overflowing' },
+      { type: 'fix', text: 'Dropdown menus and tooltips no longer extend off-screen' },
+      { type: 'fix', text: 'Dark theme shadows tinted with forest green instead of pure black' },
+      { type: 'fix', text: 'Delete animation uses reliable event-based timing instead of fixed timeout' },
+      { type: 'improvement', text: 'Manuscript shadow and overlay colors now use design system tokens' },
+      { type: 'improvement', text: 'Headlines use text-wrap: balance for better line distribution' },
+      { type: 'improvement', text: 'Performance hints added to key animations for smoother rendering' },
+    ],
+  },
+  {
     version: '3.16.0',
     date: '2026-03-28',
     changes: [

@@ -74,13 +74,28 @@
   --color-change-improvement: #87A878;
   --color-change-fix: #9A9890;
   --glass-border: rgba(212, 175, 55, 0.25);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 20px 50px -10px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 2px 8px rgba(5, 20, 10, 0.4);
+  --shadow-md: 0 4px 12px rgba(5, 20, 10, 0.2), 0 10px 40px -10px rgba(5, 20, 10, 0.55);
+  --shadow-lg: 0 4px 12px rgba(5, 20, 10, 0.25), 0 20px 50px -10px rgba(5, 20, 10, 0.65);
   --noise-opacity: 0.05;
   --noise-filter: grayscale(100%);
 }
 /* THEME-END */
+
+/* Manuscript shadow — managed directly in CSS, not via theme:generate.
+   If adding a new theme, define --shadow-manuscript in its [data-theme] block. */
+:root {
+  --shadow-manuscript: 0 1px 2px rgba(120, 80, 60, 0.12),
+                       0 4px 12px rgba(120, 80, 60, 0.09),
+                       0 16px 32px rgba(120, 80, 60, 0.075),
+                       0 32px 64px rgba(120, 80, 60, 0.06);
+}
+[data-theme="dark"] {
+  --shadow-manuscript: 0 1px 2px rgba(5, 20, 10, 0.6),
+                       0 4px 12px rgba(5, 20, 10, 0.45),
+                       0 16px 32px rgba(5, 20, 10, 0.375),
+                       0 32px 64px rgba(5, 20, 10, 0.3);
+}
 
 /* ============================================
    DESIGN TOKENS (Static - not theme-dependent)
@@ -114,9 +129,37 @@
   --ease-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
 
   /* iOS-style Spring Animations */
-  --spring-bounce: cubic-bezier(0.22, 1, 0.36, 1);     /* Smooth deceleration (ease-out-quint) */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --spring-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);   /* Smooth ease-out */
   --spring-snappy: cubic-bezier(0.4, 0, 0.2, 1);       /* Quick, responsive */
+}
+
+/* Skip to content link (a11y) */
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 9999;
+  padding: 1rem 1.5rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--color-cta-text);
+  background: var(--color-cta-bg);
+  border-radius: 0 0 8px 0;
+  text-decoration: none;
+}
+
+.skip-to-content:focus {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 /* Base styles */
@@ -157,6 +200,10 @@ body {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+.modal-backdrop > [class*="animate-"] {
+  will-change: transform, opacity;
 }
 
 /* ============================================
@@ -384,7 +431,7 @@ body::before {
 }
 
 .note-card-entrance {
-  animation: rising-wave 0.2s var(--spring-bounce) backwards;
+  animation: rising-wave 0.2s var(--ease-out-quint) backwards;
 }
 
 /* Search: fade non-matching cards */
@@ -442,6 +489,7 @@ body::before {
 }
 
 .note-card.deleting {
+  will-change: transform, opacity, filter;
   animation: card-delete 0.3s ease-out forwards;
   pointer-events: none;
 }
@@ -1346,6 +1394,7 @@ body::before {
    ============================================ */
 
 .focus-mode-target {
+  will-change: opacity;
   max-height: 200px; /* Ceiling for smooth collapse transition */
   /* Exit: smooth expand + fade-in together */
   transition: opacity 300ms ease,

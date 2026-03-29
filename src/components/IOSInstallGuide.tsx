@@ -112,7 +112,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
           background: 'var(--color-bg-primary)',
           borderRadius: 'var(--radius-card)',
           boxShadow: 'var(--shadow-lg)',
-          transition: 'transform 0.4s var(--spring-bounce), opacity 0.3s ease-out',
+          transition: 'transform 0.4s var(--ease-out-quint), opacity 0.3s ease-out',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -261,7 +261,14 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
                   onClick={() => setCurrentStep(index)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && setCurrentStep(index)}
+                  aria-label={`Step ${index + 1}: ${step.title}`}
+                  aria-current={currentStep === index ? 'step' : undefined}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setCurrentStep(index);
+                    }
+                  }}
                 >
                   {/* Step number */}
                   <div

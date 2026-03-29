@@ -105,7 +105,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
     >
       <div
         className="
-          w-[400px]
+          w-full max-w-[400px] mx-4
           p-8
           shadow-2xl
           animate-[modal-enter_300ms_ease-out]

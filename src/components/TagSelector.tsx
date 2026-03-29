@@ -39,7 +39,7 @@ export function TagSelector({
         <div
           className="
             absolute left-0 top-full mt-2
-            min-w-[200px]
+            min-w-[200px] max-w-[calc(100vw-2rem)]
             py-2
             rounded-lg
             shadow-lg

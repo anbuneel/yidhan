@@ -54,9 +54,9 @@ export const midnight: ThemeConfig = {
 
     // Borders and shadows (dark with gold tint)
     glassBorder: 'rgba(212, 175, 55, 0.25)',
-    shadowSm: '0 2px 8px rgba(0, 0, 0, 0.3)',
-    shadowMd: '0 10px 40px -10px rgba(0, 0, 0, 0.5)',
-    shadowLg: '0 20px 50px -10px rgba(0, 0, 0, 0.6)',
+    shadowSm: '0 2px 8px rgba(5, 20, 10, 0.4)',
+    shadowMd: '0 4px 12px rgba(5, 20, 10, 0.2), 0 10px 40px -10px rgba(5, 20, 10, 0.55)',
+    shadowLg: '0 4px 12px rgba(5, 20, 10, 0.25), 0 20px 50px -10px rgba(5, 20, 10, 0.65)',
 
     // Effects
     noiseOpacity: '0.05',

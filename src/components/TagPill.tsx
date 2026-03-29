@@ -17,6 +17,7 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
     <div
       role="button"
       tabIndex={0}
+      aria-label={`Filter by ${tag.name}`}
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -73,7 +74,7 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
           }}
           className="
             ml-1
-            w-4 h-4
+            w-7 h-7 -m-1.5
             flex items-center justify-center
             rounded-full
             opacity-0
@@ -101,7 +102,7 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
           }}
           className="
             ml-1
-            w-4 h-4
+            w-7 h-7 -m-1.5
             flex items-center justify-center
             rounded-full
             opacity-0

@@ -1,6 +1,6 @@
 # Design Critique Tracker
 
-**Version:** 2.0
+**Version:** 2.1
 **Last Updated:** 2026-03-28
 **Status:** Living Document
 **Author:** Claude (Opus 4.6)
@@ -108,57 +108,57 @@ These items are tracked in [landing-page-backlog.md](landing-page-backlog.md) �
 
 ### Pre-Launch (Accessibility + Core UX)
 
-| # | Item | Category | Source(s) | Fix |
-|---|------|----------|-----------|-----|
-| 1 | **No skip-to-content link** | A11y (WCAG A) | Audit H4, Redesign 5b | Add visually hidden `<a>` linking to `#main-content`, visible on focus |
-| 2 | **No 404 page** | UX | Redesign 5a | Create a brand-appropriate 404 component |
-| 3 | **Modal fixed widths break on narrow phones** | Responsive | Audit H3 | ShareModal `w-[420px]`, TagModal `w-[400px]`, Editor delete `w-[400px]` → `w-full max-w-[420px]` |
-| 4 | **Dropdown menus overflow narrow viewports** | Responsive | Audit H5 | TagSelector, HeaderShell, Editor dropdowns need `max-w-[calc(100vw-2rem)]` |
+| # | Item | Category | Source(s) | Status |
+|---|------|----------|-----------|--------|
+| 1 | **No skip-to-content link** | A11y (WCAG A) | Audit H4, Redesign 5b | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) |
+| 2 | **No 404 page** | UX | Redesign 5a | ⬜ Open — needs discussion (brand voice for error state) |
+| 3 | **Modal fixed widths break on narrow phones** | Responsive | Audit H3 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) |
+| 4 | **Dropdown menus overflow narrow viewports** | Responsive | Audit H5 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) |
 
 ### High Priority (Performance + UX)
 
-| # | Item | Category | Source(s) | Fix |
-|---|------|----------|-----------|-----|
-| 5 | **Layout thrashing in Editor scroll handler** | Performance | Audit H1 | Reads `scrollTop`/`offsetTop` then writes `style.top` synchronously. Wrap in `requestAnimationFrame` |
-| 6 | **Focus-mode animates layout properties** | Performance | Audit H2 | `max-height`, `margin`, `padding` transitions → use `grid-template-rows: 1fr → 0fr` |
-| 7 | **Landing: manuscript preview steals CTA focus** | Conversion | Critique P1 | Cards are too readable — blur/fade/mask to make them atmosphere not content. **Not in landing-page-backlog** (noted as "not a landing page item" but never placed elsewhere) |
-| 8 | **Trust badges still too subtle** | Conversion | Critique P2, Redesign 1c | Previously bumped text-sm→text-base (completed). Critique v3 says still insufficient — consider pill treatment, closer CTA proximity. Also in landing-page-backlog |
-| 9 | **Mobile landing: card preview disconnected** | UX | Critique P3, Redesign 3a, 5c | Sign In + theme toggle bar between content and cards creates visual break. Consider hiding cards on mobile or adding scroll affordance. Also in landing-page-backlog |
-| 10 | **Demo Practice Space first impression** | Onboarding | Critique P4 | 4 starter notes exist in code but `demoStorage.ts:420` filters out unedited ones — first visit shows 1 welcome card + 80% void. Show all starters on first visit or change filtering logic |
-| 11 | **Copy hierarchy below headline is flat** | Typography | Critique P5, Redesign 1a | Size/weight stepping insufficient: headline → value prop → E2EE line → badges all similar weight. Also: headline `font-weight: 300` is too thin for Cormorant Garamond — bump to 400 or 500 for physical presence. Also in landing-page-backlog |
-| 11b | **CTA cluster needs breathing room** | Layout | Redesign 3b | `gap: 0.6rem` between "Start Writing" button and trust lines below is too tight — button doesn't feel like a primary action. Increase to at least `1rem` |
+| # | Item | Category | Source(s) | Status |
+|---|------|----------|-----------|--------|
+| 5 | **Editor title auto-resize layout thrashing** | Performance | Audit H1 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — scroll handler already used rAF; title auto-resize batched |
+| 6 | **Focus-mode animates layout properties** | Performance | Audit H2 | ⬜ Open — needs discussion (`grid-template-rows` approach needs testing) |
+| 7 | **Landing: manuscript preview steals CTA focus** | Conversion | Critique P1 | ⬜ Open — needs discussion (blur/fade/mask tradeoffs) |
+| 8 | **Trust badges still too subtle** | Conversion | Critique P2, Redesign 1c | ⬜ Open — needs discussion (pill treatment vs repositioning) |
+| 9 | **Mobile landing: card preview disconnected** | UX | Critique P3, Redesign 3a, 5c | ⬜ Open — needs discussion (hide cards? peek effect?) |
+| 10 | **Demo Practice Space first impression** | Onboarding | Critique P4 | ⬜ Open — needs discussion (change filter logic vs different content) |
+| 11 | **Copy hierarchy below headline is flat** | Typography | Critique P5, Redesign 1a | ⬜ Open — needs discussion (size/weight steps, headline weight) |
+| 11b | **CTA cluster needs breathing room** | Layout | Redesign 3b | ⬜ Open — near-mechanical (increase gap) |
 
 ### Medium Priority (Quality + Polish)
 
-| # | Item | Category | Source(s) | Fix |
-|---|------|----------|-----------|-----|
-| 12 | **Hardcoded colors outside theme tokens** (8 files) | Theming | Audit M1, Redesign 2b | `App.tsx`, `BottomSheet.tsx`, `main.tsx`, `IOSInstallGuide.tsx`, `LandingPage.tsx` (incl. `manuscriptShadow`), `PlaygroundPage.tsx`, `ErrorBoundary.tsx`, `LogoTestPage.tsx` — create `--color-overlay`, `--color-border-subtle` tokens |
-| 13 | **Inline style objects recreated every render** (20+ instances) | Performance | Audit M2 | `Auth.tsx` (6+), `TagFilterBar.tsx`, `NoteCard.tsx`, `Header.tsx` — extract to module-level constants |
-| 14 | **Small touch targets: ChapterNav dots** | A11y | Audit M3 | `w-2 h-2` (8px) → ensure clickable `<button>` wrapper is ≥44×44px |
-| 15 | **Small touch targets: TagPill buttons** | A11y | Audit M4 | `w-4 h-4` (16px) edit/remove → increase to `w-8 h-8` with `p-2` |
-| 16 | **Missing `will-change` on key animations** | Performance | Audit M5 | Only `landing-text-reveal` declares it. Add to modal-enter, rising-wave, card-delete, focus-mode. Remove after animation completes |
-| 17 | **TagPill missing aria-label** | A11y | Audit M6 | `<div role="button">` needs `aria-label={`Filter by ${tag.name}`}` |
-| 18 | **IOSInstallGuide step cards missing aria-label** | A11y | Audit M7 | Interactive `role="button"` divs lack accessible names |
-| 19 | **ShareModal tooltip can overflow viewport** | Responsive | Audit M8 | `w-64` with `absolute left-0` → add `max-w-[calc(100vw-2rem)]` |
-| 20 | **ChapterNav tooltip overflow** | Responsive | Audit M9 | `whitespace-nowrap` without truncation → add `max-w-[200px] truncate` |
-| 21 | **Dark theme shadows untinted** | Theming | Redesign 2a | Light theme correctly tints shadows warm. Dark theme uses `rgba(0,0,0,...)` — tint with forest green `rgba(5,20,10,...)` |
-| 22 | **Delete animation uses fragile `setTimeout`** | Code quality | Redesign 4b | `setTimeout(() => onDelete(note.id), 300)` → use `onAnimationEnd` or `onTransitionEnd` |
-| 23 | **Missing `text-wrap: balance` on headlines** | Typography | Redesign 1b | Prevents orphaned words at certain breakpoints. One CSS property |
-| 24 | **Three styling approaches in one codebase** | Maintainability | Redesign 6a | Tailwind + inline styles + CSS-in-JSX `<style>` blocks (LandingPage ~350 lines). Document preferred approach, migrate incrementally |
-| 25 | **Inconsistent icon stroke widths** | Visual consistency | Redesign 6b | Some SVGs use `strokeWidth={1.5}`, others `{2}`. Standardize |
-| 26 | **`!important` on mobile headline** | Code quality | Redesign 6c | `.landing-headline { font-size: clamp(...) !important; }` — investigate specificity conflict root cause |
+| # | Item | Category | Source(s) | Status |
+|---|------|----------|-----------|--------|
+| 12 | **Hardcoded colors outside theme tokens** | Theming | Audit M1, Redesign 2b | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — App.tsx overlay + LandingPage manuscriptShadow → CSS tokens. BottomSheet/ErrorBoundary/PlaygroundPage verified as exceptions |
+| 13 | **Inline style objects recreated every render** (48 in Auth.tsx) | Performance | Audit M2 | ⬜ Open — deferred to separate PR (large scope) |
+| 14 | **Small touch targets: ChapterNav dots** | A11y | Audit M3 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — 24px hit area with visual dot child |
+| 15 | **Small touch targets: TagPill buttons** | A11y | Audit M4 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — w-4 → w-7 with negative margin |
+| 16 | **Missing `will-change` on key animations** | Performance | Audit M5 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — added to modal-enter, card-delete, focus-mode, landing-entrance |
+| 17 | **TagPill missing aria-label** | A11y | Audit M6 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) |
+| 18 | **IOSInstallGuide step cards missing aria-label** | A11y | Audit M7 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — also added Space key + aria-current |
+| 19 | **ShareModal tooltip can overflow viewport** | Responsive | Audit M8 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) |
+| 20 | **ChapterNav tooltip overflow** | Responsive | Audit M9 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) |
+| 21 | **Dark theme shadows untinted** | Theming | Redesign 2a | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — tinted with forest green `rgba(5,20,10,...)` |
+| 22 | **Delete animation uses fragile `setTimeout`** | Code quality | Redesign 4b | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — replaced with `animationend` event |
+| 23 | **Missing `text-wrap: balance` on headlines** | Typography | Redesign 1b | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — also removed manual `<br />` |
+| 24 | **Three styling approaches in one codebase** | Maintainability | Redesign 6a | ⬜ Open — needs discussion (architectural decision) |
+| 25 | **Inconsistent icon stroke widths** | Visual consistency | Redesign 6b | ⬜ Open — needs discussion (standardize to 1.5 or 2?) |
+| 26 | **`!important` on mobile headline** | Code quality | Redesign 6c | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — fixed via `.landing-canvas .landing-headline` specificity bump |
 
 ### Low Priority (Nice-to-Have)
 
-| # | Item | Category | Source(s) | Fix |
-|---|------|----------|-----------|-----|
-| 27 | **Search placeholder generic** | Copy | Audit L4, Redesign 4c | "Search..." → "Search your thoughts..." or "Find a note..." |
-| 28 | **`--spring-bounce` naming misleading** | Code quality | Audit L3 | Variable name suggests bounce but uses ease-out-quint. Rename to `--ease-out-quint` |
-| 29 | **Sidebar toolbar italic icon legibility** | UX | Critique minor | `I` at 14px is hard to distinguish from a vertical line |
-| 30 | **"Practice Space" breadcrumb label** | UX | Critique minor | Italic serif treatment is aesthetically nice but harder to parse as navigation |
-| 31 | **Footer link density** | UX | Critique minor | 7 links high for a "calm, minimal" app — consider grouping |
-| 32 | **Dark mode card borders too opaque** | Visual | Critique minor | Gold-tinted borders on dark mode landing → reduce 10-20% |
-| 33 | **Timestamps ALL CAPS** | Typography | Critique minor | Uppercase small caps feels loud. Lowercase + letterspacing might be calmer |
+| # | Item | Category | Source(s) | Status |
+|---|------|----------|-----------|--------|
+| 27 | **Search placeholder generic** | Copy | Audit L4, Redesign 4c | ⬜ Open — needs copy decision |
+| 28 | **`--spring-bounce` naming misleading** | Code quality | Audit L3 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — renamed to `--ease-out-quint` (5 files) |
+| 29 | **Sidebar toolbar italic icon legibility** | UX | Critique minor | ⬜ Open — needs discussion |
+| 30 | **"Practice Space" breadcrumb label** | UX | Critique minor | ⬜ Open — needs discussion |
+| 31 | **Footer link density** | UX | Critique minor | ⬜ Open — needs discussion |
+| 32 | **Dark mode card borders too opaque** | Visual | Critique minor | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — reduced from 8% to 5% opacity |
+| 33 | **Timestamps ALL CAPS** | Typography | Critique minor | ⬜ Open — needs discussion |
 
 ### Creative Exploration (Revisit for design refresh)
 
@@ -185,12 +185,14 @@ These items are tracked in [landing-page-backlog.md](landing-page-backlog.md) �
 
 ## Item Count Summary
 
-| Priority | Count | Status |
-|----------|-------|--------|
-| Pre-Launch | 4 | New — accessibility + responsive gaps |
-| High | 8 | Mix of new + re-flagged items (incl. 11b CTA breathing room) |
-| Medium | 15 | New from audit + redesign |
-| Low | 7 | Nice-to-have polish |
-| Creative | 5 | Future exploration |
-| Verified (no action) | 6 | Confirmed OK |
-| **Total unique items** | **39** | (+ 1 tracked in GitHub, + 4 in landing-page-backlog) |
+| Priority | Total | ✅ Done (PR #184) | ⬜ Open |
+|----------|-------|-------------------|--------|
+| Pre-Launch | 4 | 3 | 1 (404 page) |
+| High | 8 | 1 | 7 (all need discussion) |
+| Medium | 15 | 11 | 4 (inline styles, styling approaches, stroke widths, + inline hover #157) |
+| Low | 7 | 2 | 5 |
+| Creative | 5 | 0 | 5 |
+| Verified (no action) | 6 | — | — |
+| **Total** | **39** | **17** | **22** |
+
+PR #184 addresses 17 of 39 items. Remaining 22 items all require design discussion or are deferred.
