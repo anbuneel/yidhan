@@ -1,4 +1,4 @@
-import { useState, useMemo, memo } from 'react';
+import { useState, useMemo, useRef, useEffect, memo } from 'react';
 import type { Note } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
@@ -15,6 +15,7 @@ interface NoteCardProps {
 
 export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogglePin, isCompact = false, searchQuery }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const cardRef = useRef<HTMLElement>(null);
 
   // Plain text for compact mode and search (memoized to avoid repeated DOMPurify calls)
   const plainText = useMemo(() => htmlToPlainText(note.content), [note.content]);
@@ -39,13 +40,17 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Start fade animation
     setIsDeleting(true);
-    // After animation completes, trigger actual delete
-    setTimeout(() => {
-      onDelete(note.id);
-    }, 300);
   };
+
+  useEffect(() => {
+    if (!isDeleting) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const handleAnimationEnd = () => onDelete(note.id);
+    el.addEventListener('animationend', handleAnimationEnd, { once: true });
+    return () => el.removeEventListener('animationend', handleAnimationEnd);
+  }, [isDeleting, note.id, onDelete]);
 
   const handlePinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -54,6 +59,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
 
   return (
     <article
+      ref={cardRef}
       className={`
         group
         note-card
