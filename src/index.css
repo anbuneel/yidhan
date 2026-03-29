@@ -1123,6 +1123,83 @@ body::before {
   color: var(--color-text-primary);
 }
 
+/* Auth component utilities */
+.auth-text {
+  font-family: var(--font-body);
+}
+
+.auth-text-secondary {
+  font-family: var(--font-body);
+  color: var(--color-text-secondary);
+}
+
+.auth-text-tertiary {
+  font-family: var(--font-body);
+  color: var(--color-text-tertiary);
+}
+
+.auth-text-accent {
+  color: var(--color-accent);
+}
+
+.auth-text-destructive {
+  color: var(--color-destructive);
+}
+
+.auth-btn-cta {
+  font-family: var(--font-body);
+  background: var(--color-cta-bg);
+  color: var(--color-cta-text);
+  cursor: pointer;
+  border: none;
+}
+
+.auth-btn-cta:hover:not(:disabled) {
+  background: var(--color-cta-bg-hover);
+}
+
+.auth-btn-secondary {
+  font-family: var(--font-body);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--glass-border);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.auth-btn-secondary:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.auth-input {
+  font-family: var(--font-body);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--glass-border);
+  color: var(--color-text-primary);
+}
+
+.auth-input:focus {
+  border-color: var(--color-accent);
+}
+
+.auth-divider-line {
+  background: var(--glass-border);
+}
+
+.auth-link {
+  font-family: var(--font-body);
+  color: var(--color-text-secondary);
+}
+
+.auth-link:hover {
+  color: var(--color-accent);
+}
+
+.auth-card {
+  background: var(--color-card-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+}
+
 /* Masonry Grid Layout */
 .masonry-grid {
   display: flex;
