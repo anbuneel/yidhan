@@ -122,7 +122,7 @@
   --ease-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
 
   /* iOS-style Spring Animations */
-  --spring-bounce: cubic-bezier(0.22, 1, 0.36, 1);     /* Smooth deceleration (ease-out-quint) */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --spring-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);   /* Smooth ease-out */
   --spring-snappy: cubic-bezier(0.4, 0, 0.2, 1);       /* Quick, responsive */
 }
@@ -424,7 +424,7 @@ body::before {
 }
 
 .note-card-entrance {
-  animation: rising-wave 0.2s var(--spring-bounce) backwards;
+  animation: rising-wave 0.2s var(--ease-out-quint) backwards;
 }
 
 /* Search: fade non-matching cards */

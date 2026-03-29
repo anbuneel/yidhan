@@ -77,7 +77,7 @@ export function LandingPage({
         {/* Text column */}
         <div className="landing-text-column">
           <h1 className="landing-headline landing-entrance">
-            A quiet space<br />for your thoughts.
+            A quiet space for your thoughts.
           </h1>
 
           {/* CTA cluster */}
@@ -276,6 +276,7 @@ export function LandingPage({
           line-height: 1.08;
           font-size: clamp(2rem, 3.4vw, 4.5rem);
           margin: 0 0 2.25rem;
+          text-wrap: balance;
         }
 
         /* ─── CTA cluster ─── */
@@ -530,8 +531,8 @@ export function LandingPage({
             align-items: center;
           }
 
-          .landing-headline {
-            font-size: clamp(2rem, 8vw, 3rem) !important;
+          .landing-canvas .landing-headline {
+            font-size: clamp(2rem, 8vw, 3rem);
             margin-bottom: 1.5rem;
           }
 

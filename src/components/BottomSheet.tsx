@@ -179,7 +179,7 @@ export function BottomSheet({
           `}
           style={{
             background: 'var(--color-bg-primary)',
-            animation: 'modal-enter 0.3s var(--spring-bounce) forwards',
+            animation: 'modal-enter 0.3s var(--ease-out-quint) forwards',
           }}
           onClick={(e) => e.stopPropagation()}
         >

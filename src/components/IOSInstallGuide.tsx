@@ -112,7 +112,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
           background: 'var(--color-bg-primary)',
           borderRadius: 'var(--radius-card)',
           boxShadow: 'var(--shadow-lg)',
-          transition: 'transform 0.4s var(--spring-bounce), opacity 0.3s ease-out',
+          transition: 'transform 0.4s var(--ease-out-quint), opacity 0.3s ease-out',
         }}
         onClick={(e) => e.stopPropagation()}
       >

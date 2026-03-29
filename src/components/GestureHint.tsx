@@ -187,7 +187,7 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
         style={{
           background: 'var(--color-bg-primary)',
           boxShadow: 'var(--shadow-lg)',
-          transitionTimingFunction: 'var(--spring-bounce)',
+          transitionTimingFunction: 'var(--ease-out-quint)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
