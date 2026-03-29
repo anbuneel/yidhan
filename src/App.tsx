@@ -2242,6 +2242,9 @@ function App() {
   if (view === 'library') {
     return (
       <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg-primary)' }}>
+        <a href="#main-content" className="skip-to-content">
+          Skip to content
+        </a>
         <Header
           theme={theme}
           onThemeToggle={handleThemeToggle}
@@ -2260,7 +2263,7 @@ function App() {
           matchedCount={matchedNoteIds?.size}
           totalCount={displayNotes.length}
         />
-        <div className="w-full flex-1 flex flex-col" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div id="main-content" className="w-full flex-1 flex flex-col" style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <TagFilterBar
           tags={tags}
           selectedTagIds={selectedTagIds}

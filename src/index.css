@@ -119,6 +119,34 @@
   --spring-snappy: cubic-bezier(0.4, 0, 0.2, 1);       /* Quick, responsive */
 }
 
+/* Skip to content link (a11y) */
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 9999;
+  padding: 1rem 1.5rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--color-cta-text);
+  background: var(--color-cta-bg);
+  border-radius: 0 0 8px 0;
+  text-decoration: none;
+}
+
+.skip-to-content:focus {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 /* Base styles */
 * {
   box-sizing: border-box;
