@@ -74,9 +74,9 @@
   --color-change-improvement: #87A878;
   --color-change-fix: #9A9890;
   --glass-border: rgba(212, 175, 55, 0.25);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 20px 50px -10px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 2px 8px rgba(5, 20, 10, 0.4);
+  --shadow-md: 0 4px 12px rgba(5, 20, 10, 0.2), 0 10px 40px -10px rgba(5, 20, 10, 0.55);
+  --shadow-lg: 0 4px 12px rgba(5, 20, 10, 0.25), 0 20px 50px -10px rgba(5, 20, 10, 0.65);
   --noise-opacity: 0.05;
   --noise-filter: grayscale(100%);
 }
