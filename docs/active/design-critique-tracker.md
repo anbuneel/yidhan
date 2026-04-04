@@ -1,7 +1,7 @@
 # Design Critique Tracker
 
-**Version:** 2.1
-**Last Updated:** 2026-03-28
+**Version:** 2.2
+**Last Updated:** 2026-04-04
 **Status:** Living Document
 **Author:** Claude (Opus 4.6)
 
@@ -111,7 +111,7 @@ These items are tracked in [landing-page-backlog.md](landing-page-backlog.md) �
 | # | Item | Category | Source(s) | Status |
 |---|------|----------|-----------|--------|
 | 1 | **No skip-to-content link** | A11y (WCAG A) | Audit H4, Redesign 5b | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) |
-| 2 | **No 404 page** | UX | Redesign 5a | 🔧 Decided: quiet on-brand page ("This path leads nowhere. Your notes are waiting.") |
+| 2 | **No 404 page** | UX | Redesign 5a | ✅ [PR #185](https://github.com/anbuneel/yidhan/pull/185) — on-brand NotFoundPage with lazy loading |
 | 3 | **Modal fixed widths break on narrow phones** | Responsive | Audit H3 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) |
 | 4 | **Dropdown menus overflow narrow viewports** | Responsive | Audit H5 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) |
 
@@ -124,16 +124,16 @@ These items are tracked in [landing-page-backlog.md](landing-page-backlog.md) �
 | 7 | **Landing: manuscript preview steals CTA focus** | Conversion | Critique P1 | ✅ Closed — PR #183 redesign validated, revisit with analytics post-launch |
 | 8 | **Trust badges still too subtle** | Conversion | Critique P2, Redesign 1c | ✅ Closed — already amplified once, further changes risk breaking calm tone |
 | 9 | **Mobile landing: card preview disconnected** | UX | Critique P3, Redesign 3a, 5c | ✅ Closed — floating bar serves returning users, card below fold is a bonus |
-| 10 | **Demo Practice Space first impression** | Onboarding | Critique P4 | 🔧 Decided: show all starters on first visit (change filter logic) |
+| 10 | **Demo Practice Space first impression** | Onboarding | Critique P4 | ✅ [PR #185](https://github.com/anbuneel/yidhan/pull/185) — all starters visible on first visit |
 | 11 | **Copy hierarchy below headline is flat** | Typography | Critique P5, Redesign 1a | ✅ Closed — landing page redesign hasn't been live long enough to evaluate |
-| 11b | **CTA cluster needs breathing room** | Layout | Redesign 3b | 🔧 Decided: increase gap to 1rem |
+| 11b | **CTA cluster needs breathing room** | Layout | Redesign 3b | ✅ [PR #185](https://github.com/anbuneel/yidhan/pull/185) — gap increased to 1rem |
 
 ### Medium Priority (Quality + Polish)
 
 | # | Item | Category | Source(s) | Status |
 |---|------|----------|-----------|--------|
 | 12 | **Hardcoded colors outside theme tokens** | Theming | Audit M1, Redesign 2b | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — App.tsx overlay + LandingPage manuscriptShadow → CSS tokens. BottomSheet/ErrorBoundary/PlaygroundPage verified as exceptions |
-| 13 | **Inline style objects recreated every render** (48 in Auth.tsx) | Performance | Audit M2 | 🔧 Decided: extract to module-level constants and CSS classes |
+| 13 | **Inline style objects recreated every render** (48 in Auth.tsx) | Performance | Audit M2 | ✅ [PR #185](https://github.com/anbuneel/yidhan/pull/185) — 42 inline styles → 12 CSS classes |
 | 14 | **Small touch targets: ChapterNav dots** | A11y | Audit M3 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — 24px hit area with visual dot child |
 | 15 | **Small touch targets: TagPill buttons** | A11y | Audit M4 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — w-4 → w-7 with negative margin |
 | 16 | **Missing `will-change` on key animations** | Performance | Audit M5 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — added to modal-enter, card-delete, focus-mode, landing-entrance |
@@ -144,15 +144,15 @@ These items are tracked in [landing-page-backlog.md](landing-page-backlog.md) �
 | 21 | **Dark theme shadows untinted** | Theming | Redesign 2a | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — tinted with forest green `rgba(5,20,10,...)` |
 | 22 | **Delete animation uses fragile `setTimeout`** | Code quality | Redesign 4b | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — replaced with `animationend` event |
 | 23 | **Missing `text-wrap: balance` on headlines** | Typography | Redesign 1b | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — also removed manual `<br />` |
-| 24 | **Three styling approaches in one codebase** | Maintainability | Redesign 6a | 🔧 Decided: document convention in CLAUDE.md (Tailwind-first, inline for dynamic, `<style>` for complex selectors) |
-| 25 | **Inconsistent icon stroke widths** | Visual consistency | Redesign 6b | 🔧 Decided: standardize to 1.5 |
+| 24 | **Three styling approaches in one codebase** | Maintainability | Redesign 6a | ✅ [PR #185](https://github.com/anbuneel/yidhan/pull/185) — convention documented in CLAUDE.md |
+| 25 | **Inconsistent icon stroke widths** | Visual consistency | Redesign 6b | ✅ [PR #185](https://github.com/anbuneel/yidhan/pull/185) — standardized to 1.5 across 21 files |
 | 26 | **`!important` on mobile headline** | Code quality | Redesign 6c | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — fixed via `.landing-canvas .landing-headline` specificity bump |
 
 ### Low Priority (Nice-to-Have)
 
 | # | Item | Category | Source(s) | Status |
 |---|------|----------|-----------|--------|
-| 27 | **Search placeholder generic** | Copy | Audit L4, Redesign 4c | 🔧 Decided: change to "Search your thoughts..." |
+| 27 | **Search placeholder generic** | Copy | Audit L4, Redesign 4c | ✅ [PR #185](https://github.com/anbuneel/yidhan/pull/185) — changed to "Search your thoughts..." |
 | 28 | **`--spring-bounce` naming misleading** | Code quality | Audit L3 | ✅ [PR #184](https://github.com/anbuneel/yidhan/pull/184) — renamed to `--ease-out-quint` (5 files) |
 | 29 | **Sidebar toolbar italic icon legibility** | UX | Critique minor | ✅ Closed — recognizable in context next to B, H1, H2, H3 |
 | 30 | **"Practice Space" breadcrumb label** | UX | Critique minor | ✅ Closed — italic serif is part of brand identity, label is descriptive not interactive |
@@ -185,15 +185,15 @@ These items are tracked in [landing-page-backlog.md](landing-page-backlog.md) �
 
 ## Item Count Summary
 
-| Priority | Total | ✅ Done/Closed | 🔧 Next PR | 📋 Backlog |
-|----------|-------|---------------|-----------|-----------|
-| Pre-Launch | 4 | 3 (PR #184) | 1 (#2 404 page) | 0 |
-| High | 8 | 6 (1 PR #184 + 5 closed) | 2 (#10 demo starters, #11b CTA gap) | 0 |
-| Medium | 15 | 11 (PR #184) | 3 (#13 inline styles, #24 doc convention, #25 stroke widths) | 0 |
-| Low | 7 | 6 (2 PR #184 + 4 closed) | 1 (#27 search placeholder) | 0 |
-| Creative | 5 | 3 (closed) | 0 | 2 (#34, #36) |
-| Verified | 6 | 6 | 0 | 0 |
-| **Total** | **39** | **29** | **7** | **2** |
-| | | | + #157 (GitHub) | |
+| Priority | Total | ✅ Done/Closed | 📋 Backlog |
+|----------|-------|---------------|-----------|
+| Pre-Launch | 4 | 4 (PR #184 + #185) | 0 |
+| High | 8 | 8 (PR #184 + #185 + 5 closed) | 0 |
+| Medium | 15 | 14 (PR #184 + #185) | 0 |
+| Low | 7 | 7 (PR #184 + #185 + 4 closed) | 0 |
+| Creative | 5 | 3 (closed) | 2 (#34, #36) |
+| Verified | 6 | 6 | 0 |
+| **Total** | **39** | **36** | **2** |
+| | | + #157 (GitHub issue) | |
 
 **PR #184:** 17 items implemented. **Discussion round:** 12 items closed (keep as-is). **Next PR:** 7 items decided. **Backlog:** 2 creative explorations.
