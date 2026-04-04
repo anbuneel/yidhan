@@ -313,8 +313,9 @@ describe('ShareModal', () => {
 
       const { container } = render(<ShareModal {...defaultProps} onClose={onClose} />);
 
+      // Wait for loading to finish — backdrop onClick is disabled while isProcessing
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: 'Share as Letter' })).toBeInTheDocument();
+        expect(screen.getByText('Link expires in')).toBeInTheDocument();
       });
 
       // Click the backdrop (the outermost fixed div) using fireEvent to bypass coordinate issues
