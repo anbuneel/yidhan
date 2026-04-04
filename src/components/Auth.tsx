@@ -63,22 +63,6 @@ interface AuthProps {
   onClose?: () => void;
 }
 
-// Shared input field styles and handlers to reduce repetition
-const inputBaseStyles: React.CSSProperties = {
-  fontFamily: 'var(--font-body)',
-  background: 'var(--color-bg-secondary)',
-  border: '1px solid var(--glass-border)',
-  color: 'var(--color-text-primary)',
-};
-
-const inputFocusHandler = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.currentTarget.style.borderColor = 'var(--color-accent)';
-};
-
-const inputBlurHandler = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.currentTarget.style.borderColor = 'var(--glass-border)';
-};
-
 // Reusable OAuth button component
 interface OAuthButtonProps {
   provider: 'google' | 'github';
@@ -114,21 +98,7 @@ function OAuthButton({ provider, onClick, loading, disabled }: OAuthButtonProps)
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex-1 py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
-      style={{
-        fontFamily: 'var(--font-body)',
-        background: 'var(--color-bg-secondary)',
-        border: '1px solid var(--glass-border)',
-        color: 'var(--color-text-primary)',
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled) {
-          e.currentTarget.style.borderColor = 'var(--color-accent)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--glass-border)';
-      }}
+      className="auth-btn-secondary flex-1 py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
     >
       {loading ? 'Redirecting...' : (
         <>
@@ -332,12 +302,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   // Auth card content (shared between modal and full page)
   const authCard = (
     <div
-        className="w-full max-w-[440px] p-6 md:p-10 mx-auto"
-        style={{
-          background: 'var(--color-card-bg)',
-          border: '1px solid var(--glass-border)',
-          borderRadius: 'var(--radius-card)',
-        }}
+        className="auth-card w-full max-w-[440px] p-6 md:p-10 mx-auto"
       >
         {/* Logo/Title */}
         <h1 className="mb-2 flex justify-center">
@@ -345,10 +310,8 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         </h1>
         <h2
           id="auth-modal-title"
-          className={`text-center ${!awaitingConfirmation && (mode === 'signup' || mode === 'login') ? 'mb-2' : 'mb-6 md:mb-10'}`}
+          className={`auth-text-secondary text-center ${!awaitingConfirmation && (mode === 'signup' || mode === 'login') ? 'mb-2' : 'mb-6 md:mb-10'}`}
           style={{
-            fontFamily: 'var(--font-body)',
-            color: 'var(--color-text-secondary)',
             fontSize: '0.95rem',
             fontWeight: 'normal',
           }}
@@ -358,12 +321,8 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         {/* Top reassurance — calm, intimate (P1 #9) */}
         {!awaitingConfirmation && (mode === 'signup' || mode === 'login') && (
           <p
-            className="text-center mb-6 md:mb-10"
-            style={{
-              fontFamily: 'var(--font-body)',
-              color: 'var(--color-text-tertiary)',
-              fontSize: '0.8rem',
-            }}
+            className="auth-text-tertiary text-center mb-6 md:mb-10"
+            style={{ fontSize: '0.8rem' }}
           >
             Your private writing space
           </p>
@@ -374,15 +333,13 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           <div className="text-center">
             {/* Email icon */}
             <div
-              className="mx-auto mb-6 w-16 h-16 rounded-full flex items-center justify-center"
-              style={{ background: 'var(--color-bg-secondary)' }}
+              className="mx-auto mb-6 w-16 h-16 rounded-full flex items-center justify-center bg-[var(--color-bg-secondary)]"
             >
               <svg
-                className="w-8 h-8"
+                className="w-8 h-8 text-[var(--color-accent)]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
-                style={{ color: 'var(--color-accent)' }}
               >
                 <path
                   strokeLinecap="round"
@@ -394,20 +351,12 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             </div>
 
             <p
-              className="mb-2"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-primary)',
-              }}
+              className="auth-text mb-2 text-[var(--color-text-primary)]"
             >
               We sent a confirmation link to
             </p>
             <p
-              className="mb-6 font-medium"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-accent)',
-              }}
+              className="auth-text-accent auth-text mb-6 font-medium"
             >
               {email}
             </p>
@@ -415,16 +364,14 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             {/* Success/Error Messages */}
             {error && (
               <p
-                className="mb-4 text-sm"
-                style={{ color: 'var(--color-destructive)' }}
+                className="auth-text-destructive mb-4 text-sm"
               >
                 {error}
               </p>
             )}
             {message && (
               <p
-                className="mb-4 text-sm"
-                style={{ color: 'var(--color-accent)' }}
+                className="auth-text-accent mb-4 text-sm"
               >
                 {message}
               </p>
@@ -432,11 +379,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
 
             {/* Helpful tip */}
             <p
-              className="mb-6 text-sm"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-tertiary)',
-              }}
+              className="auth-text-tertiary mb-6 text-sm"
             >
               Check your spam folder if you don't see it
             </p>
@@ -447,20 +390,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 type="button"
                 onClick={handleResendConfirmation}
                 disabled={loading || resendCooldown > 0}
-                className="w-full py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  background: 'var(--color-cta-bg)',
-                  color: 'var(--color-cta-text)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!loading && resendCooldown === 0) {
-                    e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--color-cta-bg)';
-                }}
+                className="auth-btn-cta w-full py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50"
               >
                 {loading && 'Sending...'}
                 {!loading && resendCooldown > 0 && `Resend in ${resendCooldown}s`}
@@ -469,19 +399,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               <button
                 type="button"
                 onClick={handleChangeEmail}
-                className="w-full py-3 rounded-lg font-medium transition-all duration-200"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  background: 'var(--color-bg-secondary)',
-                  border: '1px solid var(--glass-border)',
-                  color: 'var(--color-text-primary)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-accent)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--glass-border)';
-                }}
+                className="auth-btn-secondary w-full py-3 rounded-lg font-medium transition-all duration-200"
               >
                 Use a different email
               </button>
@@ -510,21 +428,15 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             {/* Divider */}
             <div className="flex items-center mb-4 md:mb-6">
               <div
-                className="flex-1 h-px"
-                style={{ background: 'var(--glass-border)' }}
+                className="auth-divider-line flex-1 h-px"
               />
               <span
-                className="px-4 text-sm"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-secondary)',
-                }}
+                className="auth-text-secondary px-4 text-sm"
               >
                 or continue with email
               </span>
               <div
-                className="flex-1 h-px"
-                style={{ background: 'var(--glass-border)' }}
+                className="auth-divider-line flex-1 h-px"
               />
             </div>
           </>
@@ -536,11 +448,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             <div className="mb-4 md:mb-5">
               <label
                 htmlFor="auth-email"
-                className="block text-sm mb-2"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-secondary)',
-                }}
+                className="auth-text-secondary block text-sm mb-2"
               >
                 Email
               </label>
@@ -551,10 +459,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-lg outline-none transition-all duration-200"
-                style={inputBaseStyles}
-                onFocus={inputFocusHandler}
-                onBlur={inputBlurHandler}
+                className="auth-input w-full px-4 py-3 rounded-lg outline-none transition-all duration-200"
               />
             </div>
           )}
@@ -564,11 +469,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             <div className="mb-4 md:mb-5">
               <label
                 htmlFor="auth-password"
-                className="block text-sm mb-2"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-secondary)',
-                }}
+                className="auth-text-secondary block text-sm mb-2"
               >
                 {mode === 'reset' ? 'New Password' : 'Password'}
               </label>
@@ -580,18 +481,11 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
-                className="w-full px-4 py-3 rounded-lg outline-none transition-all duration-200"
-                style={inputBaseStyles}
-                onFocus={inputFocusHandler}
-                onBlur={inputBlurHandler}
+                className="auth-input w-full px-4 py-3 rounded-lg outline-none transition-all duration-200"
               />
               {(mode === 'signup' || mode === 'reset') && (
                 <p
-                  className="text-xs mt-1.5"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-tertiary)',
-                  }}
+                  className="auth-text-tertiary text-xs mt-1.5"
                 >
                   8+ characters
                 </p>
@@ -604,11 +498,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             <div className="mb-4 md:mb-5">
               <label
                 htmlFor="auth-confirm-password"
-                className="block text-sm mb-2"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-secondary)',
-                }}
+                className="auth-text-secondary block text-sm mb-2"
               >
                 Confirm Password
               </label>
@@ -620,10 +510,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={8}
-                className="w-full px-4 py-3 rounded-lg outline-none transition-all duration-200"
-                style={inputBaseStyles}
-                onFocus={inputFocusHandler}
-                onBlur={inputBlurHandler}
+                className="auth-input w-full px-4 py-3 rounded-lg outline-none transition-all duration-200"
               />
             </div>
           )}
@@ -633,11 +520,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             <div className="mb-4 md:mb-6 flex items-center justify-between">
               {/* Keep me signed in checkbox */}
               <label
-                className="flex items-center gap-2 cursor-pointer select-none"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-secondary)',
-                }}
+                className="auth-text-secondary flex items-center gap-2 cursor-pointer select-none"
               >
                 <input
                   type="checkbox"
@@ -652,17 +535,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               <button
                 type="button"
                 onClick={() => switchMode('forgot')}
-                className="text-sm transition-colors"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-secondary)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = 'var(--color-accent)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'var(--color-text-secondary)';
-                }}
+                className="auth-link text-sm transition-colors"
               >
                 Forgot password?
               </button>
@@ -672,8 +545,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           {/* Error Message */}
           {error && (
             <p
-              className="mb-4 text-sm text-center"
-              style={{ color: 'var(--color-destructive)' }}
+              className="auth-text-destructive mb-4 text-sm text-center"
             >
               {error}
             </p>
@@ -682,8 +554,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           {/* Success Message */}
           {message && (
             <p
-              className="mb-4 text-sm text-center"
-              style={{ color: 'var(--color-accent)' }}
+              className="auth-text-accent mb-4 text-sm text-center"
             >
               {message}
             </p>
@@ -694,6 +565,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             type="submit"
             disabled={loading}
             className="
+              auth-btn-cta
               w-full py-3
               rounded-lg
               font-medium
@@ -701,18 +573,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               disabled:opacity-50
             "
             style={{
-              fontFamily: 'var(--font-body)',
-              background: 'var(--color-cta-bg)',
-              color: 'var(--color-cta-text)',
               boxShadow: '0 4px 20px var(--color-accent-glow)',
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--color-cta-bg)';
             }}
           >
             {loading ? (
@@ -746,15 +607,14 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
         </form>
 
         {/* Footer Links */}
-        <div className="text-center mt-4 md:mt-6 text-sm" style={{ fontFamily: 'var(--font-body)' }}>
+        <div className="auth-text text-center mt-4 md:mt-6 text-sm">
           {mode === 'login' && (
-            <p style={{ color: 'var(--color-text-secondary)' }}>
+            <p className="auth-text-secondary">
               Don't have an account?{' '}
               <button
                 type="button"
                 onClick={() => switchMode('signup')}
-                className="underline transition-colors"
-                style={{ color: 'var(--color-accent)' }}
+                className="auth-text-accent underline transition-colors"
               >
                 Sign Up
               </button>
@@ -762,13 +622,12 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           )}
 
           {mode === 'signup' && (
-            <p style={{ color: 'var(--color-text-secondary)' }}>
+            <p className="auth-text-secondary">
               Already have an account?{' '}
               <button
                 type="button"
                 onClick={() => switchMode('login')}
-                className="underline transition-colors"
-                style={{ color: 'var(--color-accent)' }}
+                className="auth-text-accent underline transition-colors"
               >
                 Sign In
               </button>
@@ -776,13 +635,12 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           )}
 
           {mode === 'forgot' && (
-            <p style={{ color: 'var(--color-text-secondary)' }}>
+            <p className="auth-text-secondary">
               Remember your password?{' '}
               <button
                 type="button"
                 onClick={() => switchMode('login')}
-                className="underline transition-colors"
-                style={{ color: 'var(--color-accent)' }}
+                className="auth-text-accent underline transition-colors"
               >
                 Sign In
               </button>
@@ -790,12 +648,11 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           )}
 
           {mode === 'reset' && (
-            <p style={{ color: 'var(--color-text-secondary)' }}>
+            <p className="auth-text-secondary">
               <button
                 type="button"
                 onClick={() => switchMode('login')}
-                className="underline transition-colors"
-                style={{ color: 'var(--color-accent)' }}
+                className="auth-text-accent underline transition-colors"
               >
                 Back to Sign In
               </button>
@@ -805,12 +662,8 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
 
         {/* E2EE Trust Signal */}
         <p
-          className="text-center mt-6 text-xs"
-          style={{
-            fontFamily: 'var(--font-body)',
-            color: 'var(--color-text-tertiary)',
-            letterSpacing: '0.03em',
-          }}
+          className="auth-text-tertiary text-center mt-6 text-xs"
+          style={{ letterSpacing: '0.03em' }}
         >
           Your notes stay encrypted and yours.
         </p>
@@ -853,7 +706,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
           {authCard}
@@ -884,35 +737,20 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 Discard changes?
               </h3>
               <p
-                className="text-sm mb-6"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-secondary)',
-                }}
+                className="auth-text-secondary text-sm mb-6"
               >
                 You have unsaved changes that will be lost.
               </p>
               <div className="flex justify-center gap-3">
                 <button
                   onClick={() => setShowCloseConfirm(false)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-secondary)',
-                    background: 'transparent',
-                    border: '1px solid var(--glass-border)',
-                  }}
+                  className="auth-btn-ghost px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                 >
                   Keep Editing
                 </button>
                 <button
                   onClick={handleConfirmClose}
-                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-cta-text)',
-                    background: 'var(--color-cta-bg)',
-                  }}
+                  className="auth-btn-cta px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                 >
                   Discard
                 </button>
@@ -927,8 +765,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   // Full page mode: wrap in page container with theme toggle
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4 relative"
-      style={{ background: 'var(--color-bg-primary)' }}
+      className="min-h-screen flex items-center justify-center px-4 relative bg-[var(--color-bg-primary)]"
     >
       {/* Theme Toggle */}
       <button
@@ -943,12 +780,10 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           focus:outline-none
           focus:ring-2
           focus:ring-[var(--color-accent)]
+          text-[var(--color-text-secondary)]
           hover:text-[var(--color-accent)]
           hover:-translate-y-0.5
         "
-        style={{
-          color: 'var(--color-text-secondary)',
-        }}
         aria-label="Toggle theme"
       >
         {theme === 'light' ? (

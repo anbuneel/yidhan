@@ -27,6 +27,7 @@ const PlaygroundPage = import.meta.env.DEV
 const PrivacyPage = lazyWithRetry(() => import('./components/PrivacyPage').then(module => ({ default: module.PrivacyPage })));
 const TermsPage = lazyWithRetry(() => import('./components/TermsPage').then(module => ({ default: module.TermsPage })));
 const SupportPage = lazyWithRetry(() => import('./components/SupportPage').then(module => ({ default: module.SupportPage })));
+const NotFoundPage = lazyWithRetry(() => import('./components/NotFoundPage').then(module => ({ default: module.NotFoundPage })));
 
 import { TagFilterBar } from './components/TagFilterBar';
 import { WelcomeBackPrompt } from './components/WelcomeBackPrompt';
@@ -401,20 +402,47 @@ function App() {
     const match = routeableViews.find(v => path === `/${v}`);
     return match || 'library';
   });
+  // Detect unrecognized paths for 404 page
+  const [notFound, setNotFound] = useState<boolean>(() => {
+    const path = window.location.pathname.replace(/\/$/, '') || '/';
+    if (path === '/') return false;
+    if (routeableViews.some(v => path === `/${v}`)) return false;
+    if (path === '/demo') return false;
+    if (path.startsWith('/s/')) return false;
+    if (import.meta.env.DEV && path === '/playground') return false;
+    return true;
+  });
   // Sync URL pathname for direct-entry routes
   useEffect(() => {
     // Don't overwrite /demo path; /playground is dev-only and gated separately
     const currentPath = window.location.pathname;
     if (currentPath === '/demo' || (import.meta.env.DEV && currentPath === '/playground')) return;
+    // Don't overwrite 404 path — keep the bad URL visible for debugging
+    if (notFound) return;
     const expectedPath = routeableViews.includes(view) ? `/${view}` : '/';
     if (currentPath !== expectedPath) {
       window.history.pushState({}, '', expectedPath);
     }
-  }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [view, notFound]); // eslint-disable-line react-hooks/exhaustive-deps
   // Handle browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname.replace(/\/$/, '') || '/';
+
+      // Recompute 404 state for the new URL (mirrors the useState initializer)
+      const isKnownRoute =
+        path === '/' ||
+        routeableViews.some(v => path === `/${v}`) ||
+        path === '/demo' ||
+        path.startsWith('/s/') ||
+        (import.meta.env.DEV && path === '/playground');
+
+      if (!isKnownRoute) {
+        setNotFound(true);
+        return;
+      }
+
+      setNotFound(false);
       const match = routeableViews.find(v => path === `/${v}`);
       setView(match || 'library');
     };
@@ -1961,6 +1989,23 @@ function App() {
             }}
             onChangelogClick={() => startTransition(() => setView('changelog'))}
             onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  // 404 page for unrecognized routes
+  if (notFound) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback />}>
+          <NotFoundPage
+            onGoHome={() => {
+              setNotFound(false);
+              setView('library');
+              window.history.replaceState({}, '', '/');
+            }}
           />
         </Suspense>
       </ErrorBoundary>

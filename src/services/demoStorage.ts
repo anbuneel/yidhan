@@ -417,7 +417,8 @@ export function getDemoDataForMigration(): {
 } {
   const state = getDemoState();
   return {
-    // Include starter notes only if they have been edited, exclude if unchanged
+    // Migration only runs when hasDemoState() is true (user has created or edited notes).
+    // Exclude unedited starters so only the user's real work migrates.
     notes: state.notes.filter(
       (n) => !STARTER_NOTE_IDS.has(n.localId) || hasStarterNoteBeenEdited(n)
     ),

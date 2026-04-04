@@ -47,6 +47,7 @@ src/
 │   ├── LettingGoModal.tsx # Account departure modal with keepsakes export
 │   ├── LoadingFallback.tsx # Shared loading spinner for Suspense boundaries
 │   ├── Logo.tsx           # Shared brand component (compact mark + live wordmark for headers; header variant used consistently across all pages)
+│   ├── NotFoundPage.tsx   # 404 page for unrecognized routes
 │   ├── NoteCard.tsx       # Individual note card with tag badges
 │   ├── ShareModal.tsx     # Modal for creating/managing E2EE share links (capability-link model)
 │   ├── ShareModal.test.tsx # 18 tests: rendering, create flow, revoke, modal interactions
@@ -387,6 +388,14 @@ See `src/data/changelog.ts` for full feature history. See `src/data/roadmap.ts` 
 2. Use CSS variables for theming (never hardcode colors)
 3. Match the wabi-sabi aesthetic (subtle animations, warm tones)
 4. Use asymmetric border-radius: `2px 12px 4px 12px` for small elements
+
+### Styling convention
+Three approaches coexist — use the right tool for the job:
+- **Tailwind classes** (preferred default): layout, spacing, responsive breakpoints, common utilities
+- **Inline `style` props**: only for dynamic values that depend on state/props, or one-off CSS variable references not worth a class (e.g., `style={{ boxShadow: 'var(--shadow-manuscript)' }}`)
+- **CSS-in-JSX `<style>` blocks**: complex selectors, keyframes, or media queries that Tailwind can't express (e.g., LandingPage entrance animations)
+
+Avoid: creating new inline `style={{}}` objects for static values that could be a Tailwind class or a CSS class in `index.css`. Inline SVGs use `strokeWidth={1.5}` consistently.
 
 ### Modifying the editor
 - Toolbar buttons are in `EditorToolbar.tsx` with `variant` prop: `'inline'` (desktop, sticky in header zone) or `'bottom'` (mobile, fixed at thumb zone)

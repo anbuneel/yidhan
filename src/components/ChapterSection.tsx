@@ -209,7 +209,7 @@ export const ChapterSection = memo(function ChapterSection({
               viewBox="0 0 24 24"
               style={{ color: 'var(--color-text-tertiary)' }}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
             </svg>
           )}
 
