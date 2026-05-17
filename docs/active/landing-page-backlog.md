@@ -1,8 +1,14 @@
 # Landing Page Backlog
 
-**Last Updated:** 2026-03-28
+**Last Updated:** 2026-05-17
 **Status:** Living Document
-**Phase:** Post-redesign (PR #183 merged)
+**Phase:** Post-redesign (PR #183 merged) — synthesis proposal pending decision
+
+---
+
+## Pending Decision (2026-05-17)
+
+User reviewing a new direction that supersedes most items below: **["The Page Becomes the Manuscript"](../analysis/landing-page-the-page-becomes-manuscript-claude.md)** — kill the manuscript card, make the whole canvas the manuscript page, marketing copy IS the prose. Live prototype at `/playground` (dev-only). Decision deferred by one day. If approved, the Actionable Gaps and most Design Critique Findings below become moot (the new direction eliminates the manuscript card entirely).
 
 ---
 
