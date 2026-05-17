@@ -55,7 +55,6 @@ src/
 │   ├── SyncIndicator.tsx  # Subtle offline/sync status indicator with blocked-change retry state
 │   ├── ConflictModal.tsx  # "Two Paths" conflict resolution modal
 │   ├── ConflictModal.test.tsx # 17 tests: rendering, resolution buttons, escape, backdrop, error recovery
-│   ├── ReloadPrompt.tsx   # PWA service worker update prompt (non-disruptive refresh banner)
 │   ├── RichTextEditor.tsx # Tiptap editor content wrapper (toolbar extracted to EditorToolbar)
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
 │   ├── SettingsModal.tsx  # Settings modal (profile, password, security tab, theme, offboarding)
@@ -142,7 +141,7 @@ src/
 │   ├── shareRoute.ts      # Shared-note route parsing + session-backed share-key preservation across reloads
 │   ├── shareRoute.test.ts # 5 tests: fragment parsing, session fallback, non-share routes, storage failure handling
 │   ├── temporalGrouping.ts # Group notes by time (Pinned, This Week, Last Week, etc.) + WATERLINE_TEXT map for chapter-aware waterline text
-│   ├── updateBanner.ts    # Persistent update banner for chunk errors / app version updates
+│   ├── updateRecovery.ts  # Quiet stale-chunk recovery with guarded reloads
 │   ├── validation.ts      # Note title/content validation and length limits
 │   ├── validation.test.ts # 17 tests: title sanitization, XSS, length limits, unicode
 │   └── withRetry.ts       # Retry utility with exponential backoff and error discrimination

@@ -8,6 +8,13 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.17.1',
+    date: '2026-05-17',
+    changes: [
+      { type: 'fix', text: 'App updates now stay quiet: service worker updates wait for the next clean load, and stale chunks recover with one guarded reload instead of showing version prompts' },
+    ],
+  },
+  {
     version: '3.17.0',
     date: '2026-03-29',
     changes: [

@@ -144,15 +144,6 @@ function migrateLocalStorageKeys(): void {
       localStorage.removeItem(oldKey);
     }
   });
-
-  // Also migrate sessionStorage
-  const oldSessionKey = 'zenote-chunk-reload-attempted';
-  const sessionKey = 'yidhan-chunk-reload-attempted';
-  const sessionValue = sessionStorage.getItem(oldSessionKey);
-  if (sessionValue !== null && sessionStorage.getItem(sessionKey) === null) {
-    sessionStorage.setItem(sessionKey, sessionValue);
-    sessionStorage.removeItem(oldSessionKey);
-  }
 }
 
 // Run migration on module load (before React renders)

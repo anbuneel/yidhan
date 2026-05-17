@@ -61,8 +61,8 @@ Category 1 is the most dangerous for launch: users forgive missing features but 
 **Evidence:**
 - [`App.tsx:433`](../../src/App.tsx#L433) — share key parsed into `useState` on mount
 - [`App.tsx:439`](../../src/App.tsx#L439) — `replaceState` strips `#k=` from URL
-- [`ReloadPrompt.tsx:40`](../../src/components/ReloadPrompt.tsx#L40) — SW update triggers `location.reload()`
-- [`ErrorBoundary.tsx:57`](../../src/components/ErrorBoundary.tsx#L57) — error recovery triggers `location.reload()`
+- [`updateRecovery.ts`](../../src/utils/updateRecovery.ts) - stale chunk recovery triggers a guarded reload
+- [`ErrorBoundary.tsx`](../../src/components/ErrorBoundary.tsx) - error recovery uses the same share-preserving reload path
 
 **Fix:** Before stripping `#k=`, persist the share key in `sessionStorage` keyed by token. `SharedNoteView` reads from sessionStorage as fallback. One `sessionStorage.setItem` + one `getItem` — quick, high-value fix.
 

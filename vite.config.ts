@@ -27,7 +27,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Keep a new worker waiting until the next clean page load. Auto-activating
+      // while React is running can invalidate lazy chunk URLs and force prompts.
+      registerType: 'prompt',
       includeAssets: ['favicon.png', 'robots.txt'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],

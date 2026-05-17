@@ -2,6 +2,7 @@ import { Component } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
 import * as Sentry from '@sentry/react';
 import { reloadWithPreservedShareContext } from '../utils/shareRoute';
+import { isChunkLoadError, reloadForUpdatedApp } from '../utils/updateRecovery';
 
 interface Props {
   children: ReactNode;
@@ -12,20 +13,6 @@ interface State {
   hasError: boolean;
   error: Error | null;
   isChunkError: boolean;
-}
-
-/**
- * Detect if an error is a chunk/module loading failure
- * This happens when the app is open and a new deployment occurs
- */
-function isChunkLoadError(error: Error): boolean {
-  const message = error.message || '';
-  return (
-    message.includes('Failed to fetch dynamically imported module') ||
-    message.includes('Loading chunk') ||
-    message.includes('Loading CSS chunk') ||
-    message.includes("Importing a module script failed")
-  );
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -46,13 +33,16 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
 
     // Don't report chunk loading errors to Sentry - they're expected during deployments
-    if (!isChunkLoadError(error)) {
-      Sentry.captureException(error, {
-        extra: {
-          componentStack: errorInfo.componentStack,
-        },
-      });
+    if (isChunkLoadError(error)) {
+      reloadForUpdatedApp({ reload: this.props.onReload });
+      return;
     }
+
+    Sentry.captureException(error, {
+      extra: {
+        componentStack: errorInfo.componentStack,
+      },
+    });
   }
 
   handleReload = (): void => {
@@ -130,7 +120,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 color: 'var(--color-text-primary, #f5f5f0)',
               }}
             >
-              {isChunkError ? 'New version available' : 'Something went wrong'}
+              {isChunkError ? "Couldn't finish loading" : 'Something went wrong'}
             </h1>
             <p
               className="mb-6"
@@ -142,7 +132,7 @@ export class ErrorBoundary extends Component<Props, State> {
               }}
             >
               {isChunkError
-                ? 'Yidhan has been updated since you last loaded the page. Please refresh to get the latest version.'
+                ? 'Refresh the page to recover this session.'
                 : "We're sorry, but something unexpected happened. Please try refreshing the page."}
             </p>
 
@@ -194,7 +184,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 e.currentTarget.style.background = 'var(--color-cta-bg, #D4AF37)';
               }}
             >
-              {isChunkError ? 'Refresh to Update' : 'Refresh Page'}
+              Refresh Page
             </button>
           </div>
         </div>

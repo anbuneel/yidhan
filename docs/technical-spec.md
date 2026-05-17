@@ -641,7 +641,8 @@ jobs:
 ```javascript
 // Workbox configuration (vite-plugin-pwa)
 {
-  registerType: 'autoUpdate',
+  // Updates install quietly and activate on the next clean page load.
+  registerType: 'prompt',
   workbox: {
     globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
     runtimeCaching: [

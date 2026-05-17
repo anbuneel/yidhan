@@ -11,6 +11,10 @@ function ThrowError({ shouldThrow }: { shouldThrow: boolean }) {
   return <div>No error</div>;
 }
 
+function ThrowChunkError() {
+  throw new Error('Failed to fetch dynamically imported module: /assets/Editor.js');
+}
+
 describe('ErrorBoundary', () => {
   // Suppress console.error for these tests since we expect errors
   const originalError = console.error;
@@ -71,5 +75,20 @@ describe('ErrorBoundary', () => {
 
     await user.click(screen.getByRole('button', { name: /refresh/i }));
     expect(reloadMock).toHaveBeenCalled();
+  });
+
+  it('quietly starts reload recovery for chunk errors without a version prompt', () => {
+    const reloadMock = vi.fn();
+
+    render(
+      <ErrorBoundary onReload={reloadMock}>
+        <ThrowChunkError />
+      </ErrorBoundary>
+    );
+
+    expect(reloadMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('New version available')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Yidhan has been updated/)).not.toBeInTheDocument();
+    expect(screen.getByText("Couldn't finish loading")).toBeInTheDocument();
   });
 });
