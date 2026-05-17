@@ -110,10 +110,12 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         }
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-3px)';
+        if (!isCompact) {
+          e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+        }
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)';
       }}
     >
       {/* Pin button - top-right corner (only in full mode) */}
@@ -125,29 +127,16 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
             w-10 h-10
             rounded-full
             flex items-center justify-center
-            transition-all duration-200
+            transition-opacity duration-200
             focus:outline-none
             focus:ring-2
             focus:ring-[var(--color-accent)]
-            focus:opacity-100
-            hover:scale-110
-            ${note.pinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+            focus-visible:opacity-100
+            ${note.pinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-40 hover:!opacity-85'}
           `}
           style={{
-            background: note.pinned ? 'var(--color-accent-glow)' : 'var(--color-bg-secondary)',
+            background: note.pinned ? 'var(--color-accent-glow)' : 'transparent',
             color: note.pinned ? 'var(--color-accent-muted)' : 'var(--color-text-tertiary)',
-          }}
-          onMouseEnter={(e) => {
-            if (!note.pinned) {
-              e.currentTarget.style.color = 'var(--color-accent)';
-              e.currentTarget.style.background = 'color-mix(in srgb, var(--color-accent) 10%, transparent)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!note.pinned) {
-              e.currentTarget.style.color = 'var(--color-text-tertiary)';
-              e.currentTarget.style.background = 'var(--color-bg-secondary)';
-            }
           }}
           aria-label={note.pinned ? 'Unpin note' : 'Pin note'}
           title={note.pinned ? 'Unpin note' : 'Pin note'}
@@ -260,28 +249,20 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
               rounded-full
               flex items-center justify-center
               opacity-0
-              group-hover:opacity-100
-              transition-all duration-200
+              group-hover:opacity-40
+              hover:!opacity-85
+              transition-opacity duration-200
               focus:outline-none
               focus:ring-2
               focus:ring-[var(--color-accent)]
-              focus:opacity-100
-              hover:scale-110
+              focus-visible:opacity-100
               ml-2
               -mr-2
               shrink-0
             "
             style={{
-              background: 'var(--color-bg-secondary)',
+              background: 'transparent',
               color: 'var(--color-text-tertiary)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--color-destructive)';
-              e.currentTarget.style.background = 'var(--color-error-light)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--color-text-tertiary)';
-              e.currentTarget.style.background = 'var(--color-bg-secondary)';
             }}
             aria-label="Delete note"
             title="Delete note"

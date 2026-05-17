@@ -21,7 +21,7 @@ interface ChapterSectionProps {
   onTogglePin: (id: string, pinned: boolean) => void;
   isCompact?: boolean;
   searchQuery?: string;
-  matchedNoteIds?: Set<string>;
+  isSearching?: boolean;
 }
 
 // Visual treatment based on chapter age (subtle opacity reduction for older notes)
@@ -45,7 +45,7 @@ export const ChapterSection = memo(function ChapterSection({
   onTogglePin,
   isCompact = false,
   searchQuery,
-  matchedNoteIds,
+  isSearching = false,
 }: ChapterSectionProps) {
   // Detect touch capability for swipe gestures
   const isTouchDevice = useTouchCapable();
@@ -79,26 +79,23 @@ export const ChapterSection = memo(function ChapterSection({
     }
   }
 
-  // Search is "active" only after debounce settles (matchedNoteIds is defined)
-  const isSearchActive = matchedNoteIds !== undefined;
-
   // Determine if this section should be collapsible
   const isCollapsible = !isPinned && notes.length >= 20;
 
   // Force-expand during search so matches in collapsed chapters are visible
-  const effectiveExpanded = isSearchActive
+  const effectiveExpanded = isSearching
     ? true
     : isCollapsible
       ? isExpanded
       : true;
 
-  const displayNotes = isSearchActive ? notes : notes.slice(0, visibleCount);
-  const hasMore = !isSearchActive && visibleCount < notes.length;
+  const displayNotes = isSearching ? notes : notes.slice(0, visibleCount);
+  const hasMore = !isSearching && visibleCount < notes.length;
   const remainingCount = Math.max(0, notes.length - visibleCount);
 
   // IntersectionObserver for progressive loading
   useEffect(() => {
-    if (!sentinelRef.current || isSearchActive) return;
+    if (!sentinelRef.current || isSearching) return;
 
     readyRef.current = false;
     const sentinel = sentinelRef.current;
@@ -147,7 +144,7 @@ export const ChapterSection = memo(function ChapterSection({
       clearTimeout(timer);
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [isSearchActive, notes.length, fingerprint, effectiveExpanded]);
+  }, [isSearching, notes.length, fingerprint, effectiveExpanded]);
 
   const opacity = CHAPTER_OPACITY[chapterKey];
 
@@ -176,19 +173,19 @@ export const ChapterSection = memo(function ChapterSection({
           flex items-center
           px-6 md:px-12
           py-1
-          ${isCollapsible && !isSearchActive ? 'cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors duration-200' : ''}
+          ${isCollapsible && !isSearching ? 'cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors duration-200' : ''}
         `}
         style={{
           borderLeft: '2px solid var(--color-accent-muted)',
           marginLeft: '1rem',
           paddingLeft: 'calc(1.5rem - 2px)',
         }}
-        onClick={isCollapsible && !isSearchActive ? () => setIsExpanded(!isExpanded) : undefined}
-        role={isCollapsible && !isSearchActive ? 'button' : undefined}
-        aria-expanded={isCollapsible && !isSearchActive ? effectiveExpanded : undefined}
-        aria-controls={isCollapsible && !isSearchActive ? `chapter-content-${chapterKey}` : undefined}
-        tabIndex={isCollapsible && !isSearchActive ? 0 : undefined}
-        onKeyDown={isCollapsible && !isSearchActive ? (e) => {
+        onClick={isCollapsible && !isSearching ? () => setIsExpanded(!isExpanded) : undefined}
+        role={isCollapsible && !isSearching ? 'button' : undefined}
+        aria-expanded={isCollapsible && !isSearching ? effectiveExpanded : undefined}
+        aria-controls={isCollapsible && !isSearching ? `chapter-content-${chapterKey}` : undefined}
+        tabIndex={isCollapsible && !isSearching ? 0 : undefined}
+        onKeyDown={isCollapsible && !isSearching ? (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             setIsExpanded(!isExpanded);
@@ -197,7 +194,7 @@ export const ChapterSection = memo(function ChapterSection({
       >
         {/* Label with optional chevron for collapsible sections */}
         <div className="flex items-center gap-2 shrink-0">
-          {isCollapsible && !isSearchActive && (
+          {isCollapsible && !isSearching && (
             <svg
               className={`
                 w-3 h-3
@@ -273,41 +270,35 @@ export const ChapterSection = memo(function ChapterSection({
             className="masonry-grid px-6 md:px-12"
             columnClassName="masonry-grid-column"
           >
-            {displayNotes.map((note, index) => {
-              const isFaded = isSearchActive && matchedNoteIds && !matchedNoteIds.has(note.id);
-              const isMatch = isSearchActive && matchedNoteIds && matchedNoteIds.has(note.id);
-
-              return (
-                <div
-                  key={note.id}
-                  className={`note-card-entrance${isFaded ? ' note-card-search-fade' : ''}${isMatch ? ' note-card-search-match' : ''}`}
-                  style={{
-                    animationDelay: `${Math.min(index * 0.06, 0.6)}s`,
-                  }}
-                  {...(isFaded ? { 'aria-hidden': true, inert: true } : {})}
-                >
-                  {isTouchDevice ? (
-                    <SwipeableNoteCard
-                      note={note}
-                      onClick={onNoteClick}
-                      onDelete={onNoteDelete}
-                      onTogglePin={onTogglePin}
-                      isCompact={isCompact}
-                      searchQuery={isMatch ? searchQuery : undefined}
-                    />
-                  ) : (
-                    <NoteCard
-                      note={note}
-                      onClick={onNoteClick}
-                      onDelete={onNoteDelete}
-                      onTogglePin={onTogglePin}
-                      isCompact={isCompact}
-                      searchQuery={isMatch ? searchQuery : undefined}
-                    />
-                  )}
-                </div>
-              );
-            })}
+            {displayNotes.map((note, index) => (
+              <div
+                key={note.id}
+                className="note-card-entrance"
+                style={{
+                  animationDelay: `${Math.min(index * 0.06, 0.6)}s`,
+                }}
+              >
+                {isTouchDevice ? (
+                  <SwipeableNoteCard
+                    note={note}
+                    onClick={onNoteClick}
+                    onDelete={onNoteDelete}
+                    onTogglePin={onTogglePin}
+                    isCompact={isCompact}
+                    searchQuery={isSearching ? searchQuery : undefined}
+                  />
+                ) : (
+                  <NoteCard
+                    note={note}
+                    onClick={onNoteClick}
+                    onDelete={onNoteDelete}
+                    onTogglePin={onTogglePin}
+                    isCompact={isCompact}
+                    searchQuery={isSearching ? searchQuery : undefined}
+                  />
+                )}
+              </div>
+            ))}
           </Masonry>
 
           {/* Sentinel for IntersectionObserver */}
@@ -333,7 +324,7 @@ export const ChapterSection = memo(function ChapterSection({
   prev.isPinned === next.isPinned &&
   prev.isCompact === next.isCompact &&
   prev.searchQuery === next.searchQuery &&
-  prev.matchedNoteIds === next.matchedNoteIds &&
+  prev.isSearching === next.isSearching &&
   prev.onNoteClick === next.onNoteClick &&
   prev.onNoteDelete === next.onNoteDelete &&
   prev.onTogglePin === next.onTogglePin

@@ -3,7 +3,7 @@ import lockup1200 from '../assets/brand/yidhan-logo-lockup-tight-1200.webp';
 import mark256 from '../assets/brand/yidhan-logo-mark-256.webp';
 import mark512 from '../assets/brand/yidhan-logo-mark-512.webp';
 
-type LogoVariant = 'header' | 'hero' | 'auth' | 'editor';
+type LogoVariant = 'header' | 'hero' | 'auth';
 
 interface LogoProps {
   className?: string;
@@ -24,23 +24,13 @@ const lockupSizes: Record<'hero' | 'auth', string> = {
   auth: '(max-width: 640px) 150px, 178px',
 };
 
-const compactImageClasses: Record<'header' | 'editor', string> = {
-  header: 'h-[26px] sm:h-[30px]',
-  editor: 'h-[23px] sm:h-[26px]',
-};
-
-const compactWordClasses: Record<'header' | 'editor', string> = {
-  header: 'text-[1.7rem] sm:text-[1.95rem] -ml-[0.16rem] sm:-ml-[0.2rem]',
-  editor: 'text-[1.52rem] sm:text-[1.68rem] -ml-[0.14rem] sm:-ml-[0.18rem]',
-};
-
-const compactImageSizes: Record<'header' | 'editor', string> = {
-  header: '(max-width: 640px) 26px, 30px',
-  editor: '(max-width: 640px) 23px, 26px',
-};
+const compactImageClass = 'h-[26px] sm:h-[30px]';
+const compactWordClass =
+  'text-[1.7rem] sm:text-[1.95rem] -ml-[0.16rem] sm:-ml-[0.2rem]';
+const compactImageSizes = '(max-width: 640px) 26px, 30px';
 
 const buttonClassName =
-  'inline-flex items-center rounded-[14px] motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:-translate-y-px motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]';
+  'inline-flex items-center rounded-[14px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]';
 
 function isLockupVariant(variant: LogoVariant): variant is 'hero' | 'auth' {
   return variant === 'hero' || variant === 'auth';
@@ -101,10 +91,10 @@ export function Logo({
     <img
       src={mark512}
       srcSet={`${mark256} 256w, ${mark512} 512w`}
-      sizes={compactImageSizes[variant]}
+      sizes={compactImageSizes}
       alt=""
       aria-hidden="true"
-      className={`${compactImageClasses[variant]} w-auto shrink-0 select-none ${imageClassName}`.trim()}
+      className={`${compactImageClass} w-auto shrink-0 select-none ${imageClassName}`.trim()}
       decoding="async"
       loading={priority ? 'eager' : 'lazy'}
       fetchPriority={priority ? 'high' : 'auto'}
@@ -115,7 +105,7 @@ export function Logo({
 
   const compactWord = (
     <span
-      className={`${compactWordClasses[variant]} leading-none tracking-[-0.045em]`.trim()}
+      className={`${compactWordClass} leading-none tracking-[-0.045em]`.trim()}
       style={{
         fontFamily: 'var(--font-display)',
         color: 'color-mix(in srgb, var(--color-text-primary) 90%, var(--color-accent) 10%)',

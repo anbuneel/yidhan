@@ -792,7 +792,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const leftContent = (
     <div className="flex items-center min-w-0">
       {/* Clickable Logo */}
-      <Logo onClick={handleLogoClick} variant="editor" className="shrink-0" />
+      <Logo onClick={handleLogoClick} className="shrink-0" />
 
       {/* Separator - visible on desktop */}
       <span
