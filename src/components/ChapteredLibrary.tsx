@@ -23,7 +23,7 @@ interface ChapteredLibraryProps {
   onNewNote?: () => void;
   onRefresh?: () => Promise<void>;
   searchQuery?: string;
-  matchedNoteIds?: Set<string>;
+  isSearching?: boolean;
 }
 
 export function ChapteredLibrary({
@@ -34,7 +34,7 @@ export function ChapteredLibrary({
   onNewNote,
   onRefresh,
   searchQuery,
-  matchedNoteIds,
+  isSearching = false,
 }: ChapteredLibraryProps) {
   // Auto-detect compact mode based on viewport width (mobile = compact)
   const [isCompact, setIsCompact] = useState(() => {
@@ -123,8 +123,36 @@ export function ChapteredLibrary({
     return chapters.map((c) => ({ key: c.key as ChapterKey, label: c.label }));
   }, [chapters]);
 
-  // Is search active with no matches?
-  const isSearchNoMatches = !!(searchQuery && searchQuery.trim().length > 0 && matchedNoteIds && matchedNoteIds.size === 0);
+  // Search-active empty state — show distinct "No thoughts found" message
+  if (notes.length === 0 && isSearching) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center">
+          <p
+            className="text-2xl mb-3"
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'var(--color-text-primary)',
+              fontWeight: 400,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            No thoughts found
+          </p>
+          <p
+            className="text-base"
+            style={{
+              fontFamily: 'var(--font-body)',
+              color: 'var(--color-text-tertiary)',
+              lineHeight: 1.6,
+            }}
+          >
+            Try a different search
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Empty state (no notes at all)
   if (notes.length === 0) {
@@ -245,27 +273,9 @@ export function ChapteredLibrary({
           onTogglePin={onTogglePin}
           isCompact={isCompact}
           searchQuery={searchQuery}
-          matchedNoteIds={matchedNoteIds}
+          isSearching={isSearching}
         />
       ))}
-
-      {/* "No thoughts found" overlay — centered on faded library */}
-      {isSearchNoMatches && (
-        <div
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          style={{ zIndex: 5 }}
-        >
-          <p
-            className="text-lg"
-            style={{
-              fontFamily: 'var(--font-display)',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
-            No thoughts found
-          </p>
-        </div>
-      )}
     </main>
   );
 

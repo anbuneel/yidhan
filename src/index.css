@@ -434,20 +434,6 @@ body::before {
   animation: rising-wave 0.2s var(--ease-out-quint) backwards;
 }
 
-/* Search: fade non-matching cards */
-.note-card-search-fade {
-  opacity: 0.12;
-  pointer-events: none;
-  transition: opacity 200ms ease;
-}
-
-/* Search: highlight matching cards */
-.note-card-search-match {
-  transform: scale(1.02);
-  transition: transform 200ms ease, filter 200ms ease;
-  filter: drop-shadow(0 0 8px var(--color-accent-glow));
-}
-
 /* Waterline affordance */
 .waterline {
   position: relative;

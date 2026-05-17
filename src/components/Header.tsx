@@ -23,8 +23,6 @@ interface HeaderProps {
   fadedNotesCount: number;
   onRetryBlockedChanges?: () => Promise<void>;
   isRetryingBlockedChanges?: boolean;
-  matchedCount?: number;
-  totalCount?: number;
 }
 
 export function Header({
@@ -42,8 +40,6 @@ export function Header({
   fadedNotesCount,
   onRetryBlockedChanges,
   isRetryingBlockedChanges = false,
-  matchedCount,
-  totalCount,
 }: HeaderProps) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -199,20 +195,6 @@ export function Header({
           )}
         </div>
 
-        {/* Search result count */}
-        {searchQuery && matchedCount !== undefined && totalCount !== undefined && (
-          <p
-            className="text-center mt-1"
-            style={{
-              fontFamily: 'var(--font-body)',
-              color: 'var(--color-text-tertiary)',
-              fontSize: '0.7rem',
-            }}
-            aria-live="polite"
-          >
-            {matchedCount} of {totalCount} thoughts
-          </p>
-        )}
       </div>
     </div>
   );

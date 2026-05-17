@@ -1104,8 +1104,8 @@ function App() {
     });
   }, [notes]);
 
-  // Determine which notes to display (tag-filtered only; search uses highlight, not filtering)
-  const displayNotes = useMemo(() => {
+  // Tag-filtered notes (pre-search baseline)
+  const tagFilteredNotes = useMemo(() => {
     if (selectedTagIds.length === 0) return sortedNotes;
 
     return sortedNotes.filter((note) => {
@@ -1553,7 +1553,7 @@ function App() {
 
   // Tag filter handlers
   const handleTagToggle = (tagId: string) => {
-    // Tag toggle preserves search query — matchedNoteIds recomputes via useEffect
+    // Tag toggle preserves search query — displayNotes re-filters via useMemo
     setSelectedTagIds((prev) =>
       prev.includes(tagId)
         ? prev.filter((id) => id !== tagId)
@@ -1682,20 +1682,17 @@ function App() {
     };
   }, []);
 
-  // Compute matchedNoteIds from debounced query (stable reference via useMemo)
-  const matchedNoteIds = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) return undefined;
-    const q = debouncedSearchQuery.toLowerCase();
-    const matched = new Set<string>();
-    for (const note of displayNotes) {
-      const titleMatch = note.title.toLowerCase().includes(q);
-      const contentMatch = htmlToPlainText(note.content).toLowerCase().includes(q);
-      if (titleMatch || contentMatch) {
-        matched.add(note.id);
-      }
-    }
-    return matched;
-  }, [debouncedSearchQuery, displayNotes]);
+  // Apply debounced search on top of tag-filtered notes
+  const displayNotes = useMemo(() => {
+    const q = debouncedSearchQuery.trim().toLowerCase();
+    if (!q) return tagFilteredNotes;
+    return tagFilteredNotes.filter((note) => {
+      if (note.title.toLowerCase().includes(q)) return true;
+      return htmlToPlainText(note.content).toLowerCase().includes(q);
+    });
+  }, [debouncedSearchQuery, tagFilteredNotes]);
+
+  const isSearching = debouncedSearchQuery.trim().length > 0;
 
   // Export to JSON
   const handleExportJSON = useCallback(() => {
@@ -2296,8 +2293,6 @@ function App() {
           fadedNotesCount={fadedNotesCount}
           onRetryBlockedChanges={handleRetryBlockedChanges}
           isRetryingBlockedChanges={isRetryingBlockedChanges}
-          matchedCount={matchedNoteIds?.size}
-          totalCount={displayNotes.length}
         />
         <div id="main-content" className="w-full flex-1 flex flex-col" style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <TagFilterBar
@@ -2316,7 +2311,7 @@ function App() {
           onNewNote={handleNewNote}
           onRefresh={handleRefresh}
           searchQuery={searchQuery}
-          matchedNoteIds={matchedNoteIds}
+          isSearching={isSearching}
         />
         </div>
 

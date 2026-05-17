@@ -118,8 +118,8 @@ export function DemoPage({
     return notes.find((n) => n.id === selectedNoteId) ?? null;
   }, [notes, selectedNoteId]);
 
-  // Determine which notes to display (tag-filtered only; search uses highlight, not filtering)
-  const displayNotes = useMemo(() => {
+  // Tag-filtered notes (pre-search baseline)
+  const tagFilteredNotes = useMemo(() => {
     if (selectedTagIds.length === 0) return notes;
 
     return notes.filter((note) => {
@@ -128,7 +128,7 @@ export function DemoPage({
     });
   }, [notes, selectedTagIds]);
 
-  // Debounced search handler (focused-gaze: highlights, doesn't filter)
+  // Debounced search handler
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
 
@@ -155,20 +155,17 @@ export function DemoPage({
     };
   }, []);
 
-  // Compute matchedNoteIds from debounced query (stable reference via useMemo)
-  const matchedNoteIds = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) return undefined;
-    const q = debouncedSearchQuery.toLowerCase();
-    const matched = new Set<string>();
-    for (const note of displayNotes) {
-      const titleMatch = note.title.toLowerCase().includes(q);
-      const contentMatch = htmlToPlainText(note.content).toLowerCase().includes(q);
-      if (titleMatch || contentMatch) {
-        matched.add(note.id);
-      }
-    }
-    return matched;
-  }, [debouncedSearchQuery, displayNotes]);
+  // Apply debounced search on top of tag-filtered notes
+  const displayNotes = useMemo(() => {
+    const q = debouncedSearchQuery.trim().toLowerCase();
+    if (!q) return tagFilteredNotes;
+    return tagFilteredNotes.filter((note) => {
+      if (note.title.toLowerCase().includes(q)) return true;
+      return htmlToPlainText(note.content).toLowerCase().includes(q);
+    });
+  }, [debouncedSearchQuery, tagFilteredNotes]);
+
+  const isSearching = debouncedSearchQuery.trim().length > 0;
 
   // Handlers - defined before effects that use them
   const handleNewNote = useCallback(() => {
@@ -258,7 +255,7 @@ export function DemoPage({
 
   // Tag filter handlers
   const handleTagToggle = (tagId: string) => {
-    // Tag toggle preserves search query — matchedNoteIds recomputes via useMemo
+    // Tag toggle preserves search query — displayNotes re-filters via useMemo
     setSelectedTagIds((prev) =>
       prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
     );
@@ -394,8 +391,6 @@ export function DemoPage({
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
           onSignIn={onSignIn}
-          matchedCount={matchedNoteIds?.size}
-          totalCount={displayNotes.length}
         />
 
         <div
@@ -461,7 +456,7 @@ export function DemoPage({
           onTogglePin={handleTogglePin}
           onNewNote={handleNewNote}
           searchQuery={searchQuery}
-          matchedNoteIds={matchedNoteIds}
+          isSearching={isSearching}
         />
         </div>
 
@@ -492,8 +487,6 @@ interface DemoHeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onSignIn: () => void;
-  matchedCount?: number;
-  totalCount?: number;
 }
 
 function DemoHeader({
@@ -504,8 +497,6 @@ function DemoHeader({
   searchQuery,
   onSearchChange,
   onSignIn,
-  matchedCount,
-  totalCount,
 }: DemoHeaderProps) {
   const searchRef = useRef<HTMLInputElement>(null);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -655,20 +646,6 @@ function DemoHeader({
               )}
             </div>
 
-            {/* Search result count */}
-            {searchQuery && matchedCount !== undefined && totalCount !== undefined && (
-              <p
-                className="text-center mt-1"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-tertiary)',
-                  fontSize: '0.7rem',
-                }}
-                aria-live="polite"
-              >
-                {matchedCount} of {totalCount} thoughts
-              </p>
-            )}
           </div>
         </div>
       }
