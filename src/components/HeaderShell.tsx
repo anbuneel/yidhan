@@ -93,10 +93,7 @@ export function HeaderShell({
   }, [isProfileMenuOpen]);
 
   return (
-    <header
-      className="px-4 md:px-12 shrink-0"
-      style={{ background: 'var(--color-bg-primary)' }}
-    >
+    <header className="px-4 md:px-12 shrink-0">
       {/* Row 1: Logo + Center (desktop) + Right actions */}
       <div className="h-16 flex items-center">
         {/* Left Zone - Custom content or default Logo */}
@@ -323,7 +320,7 @@ export function HeaderShell({
           onSignIn && (
             <button
               onClick={onSignIn}
-              className="px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+              className="h-9 px-3 md:px-4 inline-flex items-center rounded-lg text-sm font-medium transition-all duration-200"
               style={{
                 fontFamily: 'var(--font-body)',
                 color: 'var(--color-accent)',

@@ -1,6 +1,6 @@
 import type { MouseEvent } from 'react';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
-import { Logo } from './Logo';
+import { HeaderShell } from './HeaderShell';
 import type { Theme } from '../types';
 
 interface LandingPageProps {
@@ -60,34 +60,12 @@ export function LandingPage({
       {/* Atmospheric radial gradient */}
       <div className="landing-atmosphere" style={{ background: atmosphere }} />
 
-      {/* Single header bar */}
-      <header className="landing-header">
-        <Logo variant="header" className="shrink-0" />
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onThemeToggle}
-            className="landing-theme-toggle focus-ring"
-            aria-label="Toggle theme"
-          >
-            {theme === 'light' ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            )}
-          </button>
-          <button
-            onClick={onSignIn}
-            className="landing-signin-btn focus-ring"
-            style={{ fontFamily: 'var(--font-body)' }}
-          >
-            Sign In
-          </button>
-        </div>
-      </header>
+      {/* Shared header */}
+      <HeaderShell
+        theme={theme}
+        onThemeToggle={onThemeToggle}
+        onSignIn={onSignIn}
+      />
 
       {/* Content wrapper — centers main + footer in remaining space */}
       <div className="landing-content-wrap">
@@ -245,6 +223,7 @@ export function LandingPage({
           position: absolute;
           inset: 0;
           pointer-events: none;
+          z-index: -1;
         }
 
         /* ─── Content wrapper — centers main+footer below pinned header ─── */
@@ -255,17 +234,6 @@ export function LandingPage({
           justify-content: center;
           position: relative;
           z-index: 1;
-        }
-
-        /* ─── Header ─── */
-        .landing-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 0 clamp(1rem, 4vw, 4rem);
-          height: 64px;
-          position: relative;
-          z-index: 10;
         }
 
         /* ─── Main composition ─── */
@@ -447,42 +415,6 @@ export function LandingPage({
         @keyframes landing-cursor-breathe {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.3; }
-        }
-
-        /* ─── Header buttons ─── */
-        .landing-theme-toggle {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--color-text-secondary);
-          background: none;
-          border: none;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .landing-theme-toggle:hover {
-          color: var(--color-accent);
-          background: var(--color-bg-secondary);
-        }
-
-        .landing-signin-btn {
-          padding: 0.45rem 1.25rem;
-          border-radius: 8px;
-          font-size: 0.85rem;
-          font-weight: 500;
-          color: var(--color-accent);
-          background: var(--color-bg-secondary);
-          border: 1px solid var(--color-accent-muted);
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .landing-signin-btn:hover {
-          color: var(--color-cta-text);
-          background: var(--color-cta-bg);
-          border-color: var(--color-cta-bg);
         }
 
         /* ─── Footer ─── */

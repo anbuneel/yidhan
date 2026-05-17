@@ -169,6 +169,9 @@
 
 html {
   overflow-x: hidden;
+  /* Reserve scrollbar gutter so viewport width stays constant whether or
+     not a page scrolls — prevents header right-edge shift between pages. */
+  scrollbar-gutter: stable;
   /* Disable rubber-band overscroll on iOS Safari */
   overscroll-behavior: none;
 }
