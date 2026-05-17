@@ -8,6 +8,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.18.0',
+    date: '2026-05-16',
+    changes: [
+      { type: 'improvement', text: 'Logo now identical across every page — same size, position, and stillness on hover' },
+      { type: 'improvement', text: 'Search filters notes instead of fading non-matches; "No thoughts found" empty state replaces the in-place ghosted library' },
+      { type: 'improvement', text: 'Note cards hold still on hover — only the shadow deepens, no more 3px lift' },
+      { type: 'improvement', text: 'Pin and delete buttons fade in calmly; no scale-up, no red flash on delete hover' },
+      { type: 'improvement', text: 'Removed the "X of Y thoughts" counter under the search bar (was causing layout shift)' },
+    ],
+  },
+  {
     version: '3.17.1',
     date: '2026-05-17',
     changes: [
