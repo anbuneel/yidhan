@@ -5,8 +5,16 @@ import { Header } from './components/Header';
 import { ChapteredLibrary } from './components/ChapteredLibrary';
 import { Auth } from './components/Auth';
 import { LandingPage } from './components/LandingPage';
+import { DemoPage } from './pages/DemoPage';
+import { ChangelogPage } from './components/ChangelogPage';
+import { RoadmapPage } from './components/RoadmapPage';
+import { PrivacyPage } from './components/PrivacyPage';
+import { TermsPage } from './components/TermsPage';
+import { SupportPage } from './components/SupportPage';
+import { NotFoundPage } from './components/NotFoundPage';
 import { sanitizeText, htmlToPlainText } from './utils/sanitize';
 import { lazyWithRetry } from './utils/lazyWithRetry';
+import { getLoadedEditorComponent, loadEditorComponent } from './utils/editorLoader';
 import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
 import {
   clearPersistedShareKey,
@@ -14,20 +22,15 @@ import {
   preserveShareKeyFromLocation,
 } from './utils/shareRoute';
 
+const ROUTEABLE_VIEWS: readonly ViewMode[] = ['changelog', 'roadmap', 'privacy', 'terms', 'support'];
+
 // Lazy load heavy components with smart retry (auto-reloads on chunk errors when safe)
-const Editor = lazyWithRetry(() => import('./components/Editor').then(module => ({ default: module.Editor })));
-const ChangelogPage = lazyWithRetry(() => import('./components/ChangelogPage').then(module => ({ default: module.ChangelogPage })));
-const RoadmapPage = lazyWithRetry(() => import('./components/RoadmapPage').then(module => ({ default: module.RoadmapPage })));
+const Editor = lazyWithRetry(loadEditorComponent);
 const FadedNotesView = lazyWithRetry(() => import('./components/FadedNotesView').then(module => ({ default: module.FadedNotesView })));
 const SharedNoteView = lazyWithRetry(() => import('./components/SharedNoteView').then(module => ({ default: module.SharedNoteView })));
-const DemoPage = lazyWithRetry(() => import('./pages/DemoPage').then(module => ({ default: module.DemoPage })));
 const PlaygroundPage = import.meta.env.DEV
   ? lazyWithRetry(() => import('./pages/PlaygroundPage').then(module => ({ default: module.PlaygroundPage })))
   : null;
-const PrivacyPage = lazyWithRetry(() => import('./components/PrivacyPage').then(module => ({ default: module.PrivacyPage })));
-const TermsPage = lazyWithRetry(() => import('./components/TermsPage').then(module => ({ default: module.TermsPage })));
-const SupportPage = lazyWithRetry(() => import('./components/SupportPage').then(module => ({ default: module.SupportPage })));
-const NotFoundPage = lazyWithRetry(() => import('./components/NotFoundPage').then(module => ({ default: module.NotFoundPage })));
 
 import { TagFilterBar } from './components/TagFilterBar';
 import { WelcomeBackPrompt } from './components/WelcomeBackPrompt';
@@ -386,18 +389,19 @@ function App() {
   const [showAppLoader, setShowAppLoader] = useState(appLoading);
   const appLoaderStartedAtRef = useRef<number | null>(null);
   const appLoaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Views that map to direct-entry URL routes
-  const routeableViews: readonly ViewMode[] = ['changelog', 'roadmap', 'privacy', 'terms', 'support'];
   const [view, setView] = useState<ViewMode>(() => {
     const path = window.location.pathname.replace(/\/$/, '') || '/';
-    const match = routeableViews.find(v => path === `/${v}`);
+    const match = ROUTEABLE_VIEWS.find(v => path === `/${v}`);
     return match || 'library';
+  });
+  const [isDemo, setIsDemo] = useState<boolean>(() => {
+    return window.location.pathname === '/demo';
   });
   // Detect unrecognized paths for 404 page
   const [notFound, setNotFound] = useState<boolean>(() => {
     const path = window.location.pathname.replace(/\/$/, '') || '/';
     if (path === '/') return false;
-    if (routeableViews.some(v => path === `/${v}`)) return false;
+    if (ROUTEABLE_VIEWS.some(v => path === `/${v}`)) return false;
     if (path === '/demo') return false;
     if (path.startsWith('/s/')) return false;
     if (import.meta.env.DEV && path === '/playground') return false;
@@ -405,16 +409,85 @@ function App() {
   });
   // Sync URL pathname for direct-entry routes
   useEffect(() => {
-    // Don't overwrite /demo path; /playground is dev-only and gated separately
+    // Don't overwrite /demo path while the demo is active; /playground is dev-only and gated separately
     const currentPath = window.location.pathname;
-    if (currentPath === '/demo' || (import.meta.env.DEV && currentPath === '/playground')) return;
+    if (isDemo || (import.meta.env.DEV && currentPath === '/playground')) return;
     // Don't overwrite 404 path — keep the bad URL visible for debugging
     if (notFound) return;
-    const expectedPath = routeableViews.includes(view) ? `/${view}` : '/';
+    const expectedPath = ROUTEABLE_VIEWS.includes(view) ? `/${view}` : '/';
     if (currentPath !== expectedPath) {
       window.history.pushState({}, '', expectedPath);
     }
-  }, [view, notFound]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [view, notFound, isDemo]);
+
+  const navigateToDemo = useCallback(() => {
+    startTransition(() => {
+      setNotFound(false);
+      setView('library');
+      setIsDemo(true);
+      if (window.location.pathname !== '/demo') {
+        window.history.pushState({}, '', '/demo');
+      }
+    });
+  }, [startTransition]);
+
+  const navigateHome = useCallback(() => {
+    startTransition(() => {
+      setNotFound(false);
+      setView('library');
+      setIsDemo(false);
+      if (window.location.pathname !== '/') {
+        window.history.pushState({}, '', '/');
+      }
+    });
+  }, [startTransition]);
+
+  const navigateToPublicView = useCallback((nextView: ViewMode) => {
+    const expectedPath = ROUTEABLE_VIEWS.includes(nextView) ? `/${nextView}` : '/';
+    startTransition(() => {
+      setNotFound(false);
+      setIsDemo(false);
+      setView(nextView);
+      if (window.location.pathname !== expectedPath) {
+        window.history.pushState({}, '', expectedPath);
+      }
+    });
+  }, [startTransition]);
+
+  const navigateToChangelog = useCallback(() => navigateToPublicView('changelog'), [navigateToPublicView]);
+  const navigateToRoadmap = useCallback(() => navigateToPublicView('roadmap'), [navigateToPublicView]);
+  const navigateToPrivacy = useCallback(() => navigateToPublicView('privacy'), [navigateToPublicView]);
+  const navigateToTerms = useCallback(() => navigateToPublicView('terms'), [navigateToPublicView]);
+  const navigateToSupport = useCallback(() => navigateToPublicView('support'), [navigateToPublicView]);
+
+  const [LoadedEditor, setLoadedEditor] = useState(() => getLoadedEditorComponent());
+  const preloadEditorRoute = useCallback(async () => {
+    if (getLoadedEditorComponent()) {
+      return;
+    }
+
+    try {
+      await loadEditorComponent();
+    } catch {
+      // Fall back to the lazy boundary if the chunk cannot be preloaded.
+    }
+  }, []);
+
+  const warmEditorRoute = useCallback(async () => {
+    const loadedEditor = getLoadedEditorComponent();
+    if (loadedEditor) {
+      setLoadedEditor(() => loadedEditor);
+      return;
+    }
+
+    await preloadEditorRoute();
+
+    const preloadedEditor = getLoadedEditorComponent();
+    if (preloadedEditor) {
+      setLoadedEditor(() => preloadedEditor);
+    }
+  }, [preloadEditorRoute]);
+
   // Handle browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
@@ -423,23 +496,31 @@ function App() {
       // Recompute 404 state for the new URL (mirrors the useState initializer)
       const isKnownRoute =
         path === '/' ||
-        routeableViews.some(v => path === `/${v}`) ||
+        ROUTEABLE_VIEWS.some(v => path === `/${v}`) ||
         path === '/demo' ||
         path.startsWith('/s/') ||
         (import.meta.env.DEV && path === '/playground');
 
       if (!isKnownRoute) {
+        setIsDemo(false);
         setNotFound(true);
         return;
       }
 
       setNotFound(false);
-      const match = routeableViews.find(v => path === `/${v}`);
+      if (path === '/demo') {
+        setIsDemo(true);
+        setView('library');
+        return;
+      }
+
+      setIsDemo(false);
+      const match = ROUTEABLE_VIEWS.find(v => path === `/${v}`);
       setView(match || 'library');
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- routeableViews is a stable const
+  }, []);
 
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   // Ref for selectedNoteId — used in realtime handlers to avoid re-creating
@@ -571,11 +652,6 @@ function App() {
   // Playground route (dev-only — delete after design iteration complete)
   const isPlayground = import.meta.env.DEV && window.location.pathname === '/playground';
 
-  // Demo page state (for /demo route)
-  const [isDemo, setIsDemo] = useState<boolean>(() => {
-    return window.location.pathname === '/demo';
-  });
-
   // Navigation state persistence (2E) — survives page refresh within same tab
   const pendingNavRestoreRef = useRef<{ view: ViewMode; selectedNoteId: string | null } | null>(null);
   // Track previous userId so we can distinguish initial null (auth hydrating)
@@ -611,6 +687,12 @@ function App() {
       setIsDemo(false);
     }
   }, [isDemo, user]);
+
+  useEffect(() => {
+    if (user && isEncryptionSetup && isUnlocked && view === 'library') {
+      void preloadEditorRoute();
+    }
+  }, [user, isEncryptionSetup, isUnlocked, view, preloadEditorRoute]);
 
   // Show WelcomeBackPrompt when user signs in during grace period
   useEffect(() => {
@@ -1117,11 +1199,13 @@ function App() {
   const selectedNote = notes.find((n) => n.id === selectedNoteId);
 
   const handleNoteClick = useCallback((id: string) => {
-    startTransition(() => {
-      setSelectedNoteId(id);
-      setView('editor');
+    void warmEditorRoute().then(() => {
+      startTransition(() => {
+        setSelectedNoteId(id);
+        setView('editor');
+      });
     });
-  }, [startTransition]);
+  }, [startTransition, warmEditorRoute]);
 
   const handleBack = () => {
     startTransition(() => {
@@ -1148,6 +1232,7 @@ function App() {
     try {
       const newNote = await createEncryptedNote(user.id, '', '', keys);
       trackNoteCreated(); // Track for install prompt engagement
+      await warmEditorRoute();
       startTransition(() => {
         setNotes((prev) => [newNote, ...prev]);
         setSelectedNoteId(newNote.id);
@@ -1156,7 +1241,7 @@ function App() {
     } catch (error) {
       console.error('Failed to create note:', error);
     }
-  }, [user, keys, startTransition, trackNoteCreated]);
+  }, [user, keys, startTransition, trackNoteCreated, warmEditorRoute]);
 
   // Keyboard shortcut: Cmd/Ctrl + N to create new note
   useEffect(() => {
@@ -2030,8 +2115,12 @@ function App() {
             }}
             theme={theme}
             onThemeToggle={handleThemeToggle}
-            onChangelogClick={() => startTransition(() => setView('changelog'))}
-            onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+            onHomeClick={navigateHome}
+            onChangelogClick={navigateToChangelog}
+            onRoadmapClick={navigateToRoadmap}
+            onPrivacyClick={navigateToPrivacy}
+            onTermsClick={navigateToTerms}
+            onSupportClick={navigateToSupport}
           />
         </Suspense>
         {showAuthModal && (
@@ -2060,8 +2149,11 @@ function App() {
                 setAuthModalMode('login');
                 setShowAuthModal(true);
               }}
-              onLogoClick={() => startTransition(() => setView('library'))}
-              onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+              onLogoClick={navigateHome}
+              onRoadmapClick={navigateToRoadmap}
+              onPrivacyClick={navigateToPrivacy}
+              onTermsClick={navigateToTerms}
+              onSupportClick={navigateToSupport}
               onSettingsClick={() => setShowSettingsModal(true)}
             />
           </Suspense>
@@ -2091,8 +2183,11 @@ function App() {
                 setAuthModalMode('login');
                 setShowAuthModal(true);
               }}
-              onLogoClick={() => startTransition(() => setView('library'))}
-              onChangelogClick={() => startTransition(() => setView('changelog'))}
+              onLogoClick={navigateHome}
+              onChangelogClick={navigateToChangelog}
+              onPrivacyClick={navigateToPrivacy}
+              onTermsClick={navigateToTerms}
+              onSupportClick={navigateToSupport}
               onSettingsClick={() => setShowSettingsModal(true)}
             />
           </Suspense>
@@ -2122,9 +2217,12 @@ function App() {
                 setAuthModalMode('login');
                 setShowAuthModal(true);
               }}
-              onLogoClick={() => startTransition(() => setView('library'))}
-              onChangelogClick={() => startTransition(() => setView('changelog'))}
-              onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+              onLogoClick={navigateHome}
+              onChangelogClick={navigateToChangelog}
+              onRoadmapClick={navigateToRoadmap}
+              onPrivacyClick={navigateToPrivacy}
+              onTermsClick={navigateToTerms}
+              onSupportClick={navigateToSupport}
               onSettingsClick={() => setShowSettingsModal(true)}
             />
           </Suspense>
@@ -2154,10 +2252,12 @@ function App() {
                 setAuthModalMode('login');
                 setShowAuthModal(true);
               }}
-              onLogoClick={() => startTransition(() => setView('library'))}
-              onChangelogClick={() => startTransition(() => setView('changelog'))}
-              onRoadmapClick={() => startTransition(() => setView('roadmap'))}
-              onPrivacyClick={() => startTransition(() => setView('privacy'))}
+              onLogoClick={navigateHome}
+              onChangelogClick={navigateToChangelog}
+              onRoadmapClick={navigateToRoadmap}
+              onPrivacyClick={navigateToPrivacy}
+              onTermsClick={navigateToTerms}
+              onSupportClick={navigateToSupport}
               onSettingsClick={() => setShowSettingsModal(true)}
             />
           </Suspense>
@@ -2187,9 +2287,12 @@ function App() {
                 setAuthModalMode('login');
                 setShowAuthModal(true);
               }}
-              onLogoClick={() => startTransition(() => setView('library'))}
-              onChangelogClick={() => startTransition(() => setView('changelog'))}
-              onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+              onLogoClick={navigateHome}
+              onChangelogClick={navigateToChangelog}
+              onRoadmapClick={navigateToRoadmap}
+              onPrivacyClick={navigateToPrivacy}
+              onTermsClick={navigateToTerms}
+              onSupportClick={navigateToSupport}
               onSettingsClick={() => setShowSettingsModal(true)}
             />
           </Suspense>
@@ -2222,11 +2325,12 @@ function App() {
           }}
           theme={theme}
           onThemeToggle={handleThemeToggle}
-          onChangelogClick={() => startTransition(() => setView('changelog'))}
-          onRoadmapClick={() => startTransition(() => setView('roadmap'))}
-          onPrivacyClick={() => startTransition(() => setView('privacy'))}
-          onTermsClick={() => startTransition(() => setView('terms'))}
-          onSupportClick={() => startTransition(() => setView('support'))}
+          onDemoClick={navigateToDemo}
+          onChangelogClick={navigateToChangelog}
+          onRoadmapClick={navigateToRoadmap}
+          onPrivacyClick={navigateToPrivacy}
+          onTermsClick={navigateToTerms}
+          onSupportClick={navigateToSupport}
         />
         {showAuthModal && (
           <Auth
@@ -2376,9 +2480,12 @@ function App() {
 
         {/* Footer */}
         <Footer
-          onChangelogClick={() => startTransition(() => setView('changelog'))}
-          onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+          onChangelogClick={navigateToChangelog}
+          onRoadmapClick={navigateToRoadmap}
           onShortcutsClick={() => setShowShortcutsModal(true)}
+          onPrivacyClick={navigateToPrivacy}
+          onTermsClick={navigateToTerms}
+          onSupportClick={navigateToSupport}
         />
 
         {/* Import Loading Overlay with Progress */}
@@ -2485,8 +2592,8 @@ function App() {
           Skip to content
         </a>
         <ErrorBoundary>
-          <Suspense fallback={<LoadingFallback message="Loading editor..." />}>
-            <Editor
+          {LoadedEditor ? (
+            <LoadedEditor
               note={selectedNote}
               tags={tags}
               userId={user.id}
@@ -2501,7 +2608,25 @@ function App() {
               onSettingsClick={() => setShowSettingsModal(true)}
               noteSyncStatus={selectedNote.syncStatus}
             />
-          </Suspense>
+          ) : (
+            <Suspense fallback={<LoadingFallback message="Loading editor..." />}>
+              <Editor
+                note={selectedNote}
+                tags={tags}
+                userId={user.id}
+                onBack={handleBack}
+                onRequestSearch={requestLibrarySearch}
+                onUpdate={handleNoteUpdate}
+                onDelete={handleNoteDelete}
+                onToggleTag={handleNoteTagToggle}
+                onCreateTag={handleAddTag}
+                theme={theme}
+                onThemeToggle={handleThemeToggle}
+                onSettingsClick={() => setShowSettingsModal(true)}
+                noteSyncStatus={selectedNote.syncStatus}
+              />
+            </Suspense>
+          )}
         </ErrorBoundary>
         {/* Tag Modal */}
         {showTagModal && (

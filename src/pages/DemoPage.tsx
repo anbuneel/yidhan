@@ -24,11 +24,10 @@ import { Logo } from '../components/Logo';
 import { DEMO_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
 import { htmlToPlainText } from '../utils/sanitize';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
+import { getLoadedEditorComponent, loadEditorComponent } from '../utils/editorLoader';
 
 // Lazy load heavy components
-const Editor = lazyWithRetry(() =>
-  import('../components/Editor').then((module) => ({ default: module.Editor }))
-);
+const Editor = lazyWithRetry(loadEditorComponent);
 const TagModal = lazyWithRetry(() =>
   import('../components/TagModal').then((module) => ({ default: module.TagModal }))
 );
@@ -45,8 +44,12 @@ interface DemoPageProps {
   onSignIn: () => void;
   theme: Theme;
   onThemeToggle: () => void;
+  onHomeClick: () => void;
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
+  onPrivacyClick: () => void;
+  onTermsClick: () => void;
+  onSupportClick: () => void;
 }
 
 export function DemoPage({
@@ -54,8 +57,12 @@ export function DemoPage({
   onSignIn,
   theme,
   onThemeToggle,
+  onHomeClick,
   onChangelogClick,
   onRoadmapClick,
+  onPrivacyClick,
+  onTermsClick,
+  onSupportClick,
 }: DemoPageProps) {
   // Demo state management
   const {
@@ -118,6 +125,40 @@ export function DemoPage({
     return notes.find((n) => n.id === selectedNoteId) ?? null;
   }, [notes, selectedNoteId]);
 
+  const [LoadedEditor, setLoadedEditor] = useState(() => getLoadedEditorComponent());
+  const preloadEditorRoute = useCallback(async () => {
+    if (getLoadedEditorComponent()) {
+      return;
+    }
+
+    try {
+      await loadEditorComponent();
+    } catch {
+      // Fall back to the lazy boundary if the chunk cannot be preloaded.
+    }
+  }, []);
+
+  const warmEditorRoute = useCallback(async () => {
+    const loadedEditor = getLoadedEditorComponent();
+    if (loadedEditor) {
+      setLoadedEditor(() => loadedEditor);
+      return;
+    }
+
+    await preloadEditorRoute();
+
+    const preloadedEditor = getLoadedEditorComponent();
+    if (preloadedEditor) {
+      setLoadedEditor(() => preloadedEditor);
+    }
+  }, [preloadEditorRoute]);
+
+  useEffect(() => {
+    if (view === 'library') {
+      void preloadEditorRoute();
+    }
+  }, [view, preloadEditorRoute]);
+
   // Tag-filtered notes (pre-search baseline)
   const tagFilteredNotes = useMemo(() => {
     if (selectedTagIds.length === 0) return notes;
@@ -168,16 +209,17 @@ export function DemoPage({
   const isSearching = debouncedSearchQuery.trim().length > 0;
 
   // Handlers - defined before effects that use them
-  const handleNewNote = useCallback(() => {
+  const handleNewNote = useCallback(async () => {
     const newNote = createNote({
       title: '',
       content: '',
       pinned: false,
       tagIds: [],
     });
+    await warmEditorRoute();
     setSelectedNoteId(newNote.id);
     setView('editor');
-  }, [createNote]);
+  }, [createNote, warmEditorRoute]);
 
   // Keyboard shortcut: Cmd/Ctrl + N to create new note
   useEffect(() => {
@@ -193,10 +235,12 @@ export function DemoPage({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [view, handleNewNote]);
 
-  const handleNoteClick = (id: string) => {
-    setSelectedNoteId(id);
-    setView('editor');
-  };
+  const handleNoteClick = useCallback((id: string) => {
+    void warmEditorRoute().then(() => {
+      setSelectedNoteId(id);
+      setView('editor');
+    });
+  }, [warmEditorRoute]);
 
   const handleBack = () => {
     setView('library');
@@ -348,8 +392,8 @@ export function DemoPage({
   if (view === 'editor' && selectedNote) {
     return (
       <>
-        <Suspense fallback={<LoadingFallback message="Loading editor..." />}>
-          <Editor
+        {LoadedEditor ? (
+          <LoadedEditor
             note={selectedNote}
             tags={tags}
             userId={DEMO_USER_ID}
@@ -364,7 +408,25 @@ export function DemoPage({
             onSettingsClick={onSignUp} // Settings opens signup in demo
             isDemo // Hide share functionality
           />
-        </Suspense>
+        ) : (
+          <Suspense fallback={<LoadingFallback message="Loading editor..." />}>
+            <Editor
+              note={selectedNote}
+              tags={tags}
+              userId={DEMO_USER_ID}
+              onBack={handleBack}
+              onRequestSearch={handleRequestSearch}
+              onUpdate={handleNoteUpdate}
+              onDelete={handleNoteDelete}
+              onToggleTag={handleNoteTagToggle}
+              onCreateTag={handleAddTag}
+              theme={theme}
+              onThemeToggle={onThemeToggle}
+              onSettingsClick={onSignUp} // Settings opens signup in demo
+              isDemo // Hide share functionality
+            />
+          </Suspense>
+        )}
         {sharedModals}
       </>
     );
@@ -391,6 +453,7 @@ export function DemoPage({
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
           onSignIn={onSignIn}
+          onHomeClick={onHomeClick}
         />
 
         <div
@@ -465,6 +528,9 @@ export function DemoPage({
           onChangelogClick={onChangelogClick}
           onRoadmapClick={onRoadmapClick}
           onShortcutsClick={() => setShowShortcutsModal(true)}
+          onPrivacyClick={onPrivacyClick}
+          onTermsClick={onTermsClick}
+          onSupportClick={onSupportClick}
         />
       </div>
       {sharedModals}
@@ -487,6 +553,7 @@ interface DemoHeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onSignIn: () => void;
+  onHomeClick: () => void;
 }
 
 function DemoHeader({
@@ -497,6 +564,7 @@ function DemoHeader({
   searchQuery,
   onSearchChange,
   onSignIn,
+  onHomeClick,
 }: DemoHeaderProps) {
   const searchRef = useRef<HTMLInputElement>(null);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -552,7 +620,7 @@ function DemoHeader({
           className="flex items-center gap-2 sm:gap-3"
           style={{ userSelect: 'none' }}
         >
-          <Logo onClick={() => { window.location.href = '/'; }} />
+          <Logo onClick={onHomeClick} />
           <span
             className="hidden sm:inline text-base italic"
             style={{

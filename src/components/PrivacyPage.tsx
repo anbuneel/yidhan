@@ -9,10 +9,24 @@ interface PrivacyPageProps {
   onLogoClick: () => void;
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
+  onPrivacyClick?: () => void;
+  onTermsClick?: () => void;
+  onSupportClick?: () => void;
   onSettingsClick?: () => void;
 }
 
-export function PrivacyPage({ theme, onThemeToggle, onSignIn, onLogoClick, onChangelogClick, onRoadmapClick, onSettingsClick }: PrivacyPageProps) {
+export function PrivacyPage({
+  theme,
+  onThemeToggle,
+  onSignIn,
+  onLogoClick,
+  onChangelogClick,
+  onRoadmapClick,
+  onPrivacyClick,
+  onTermsClick,
+  onSupportClick,
+  onSettingsClick,
+}: PrivacyPageProps) {
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -220,6 +234,9 @@ export function PrivacyPage({ theme, onThemeToggle, onSignIn, onLogoClick, onCha
       <Footer
         onChangelogClick={onChangelogClick}
         onRoadmapClick={onRoadmapClick}
+        onPrivacyClick={onPrivacyClick}
+        onTermsClick={onTermsClick}
+        onSupportClick={onSupportClick}
       />
     </div>
   );

@@ -4,9 +4,50 @@ interface FooterProps {
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
   onShortcutsClick?: () => void;
+  onPrivacyClick?: () => void;
+  onTermsClick?: () => void;
+  onSupportClick?: () => void;
 }
 
-export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick }: FooterProps) {
+function FooterItem({
+  href,
+  onClick,
+  children,
+}: {
+  href: string;
+  onClick?: () => void;
+  children: string;
+}) {
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="footer-link hover:underline transition-colors duration-200"
+      >
+        {children}
+      </button>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      className="footer-link hover:underline transition-colors duration-200"
+    >
+      {children}
+    </a>
+  );
+}
+
+export function Footer({
+  onChangelogClick,
+  onRoadmapClick,
+  onShortcutsClick,
+  onPrivacyClick,
+  onTermsClick,
+  onSupportClick,
+}: FooterProps) {
   return (
     <footer className="py-6 px-4 text-center shrink-0">
       <nav
@@ -17,6 +58,7 @@ export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick }: F
         }}
       >
         <button
+          type="button"
           onClick={onChangelogClick}
           className="footer-link hover:underline transition-colors duration-200"
         >
@@ -24,6 +66,7 @@ export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick }: F
         </button>
         <span aria-hidden="true">·</span>
         <button
+          type="button"
           onClick={onRoadmapClick}
           className="footer-link hover:underline transition-colors duration-200"
         >
@@ -33,6 +76,7 @@ export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick }: F
           <>
             <span aria-hidden="true">·</span>
             <button
+              type="button"
               onClick={onShortcutsClick}
               className="footer-link hover:underline transition-colors duration-200"
             >
@@ -50,26 +94,17 @@ export function Footer({ onChangelogClick, onRoadmapClick, onShortcutsClick }: F
           GitHub
         </a>
         <span aria-hidden="true">·</span>
-        <a
-          href="/privacy"
-          className="footer-link hover:underline transition-colors duration-200"
-        >
+        <FooterItem href="/privacy" onClick={onPrivacyClick}>
           Privacy
-        </a>
+        </FooterItem>
         <span aria-hidden="true">·</span>
-        <a
-          href="/terms"
-          className="footer-link hover:underline transition-colors duration-200"
-        >
+        <FooterItem href="/terms" onClick={onTermsClick}>
           Terms
-        </a>
+        </FooterItem>
         <span aria-hidden="true">·</span>
-        <a
-          href="/support"
-          className="footer-link hover:underline transition-colors duration-200"
-        >
+        <FooterItem href="/support" onClick={onSupportClick}>
           Support
-        </a>
+        </FooterItem>
       </nav>
     </footer>
   );

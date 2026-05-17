@@ -10,6 +10,9 @@ interface RoadmapPageProps {
   onSignIn: () => void;
   onLogoClick: () => void;
   onChangelogClick: () => void;
+  onPrivacyClick?: () => void;
+  onTermsClick?: () => void;
+  onSupportClick?: () => void;
   onSettingsClick?: () => void;
 }
 
@@ -98,7 +101,17 @@ function useScrollReveal() {
   return observe;
 }
 
-export function RoadmapPage({ theme, onThemeToggle, onSignIn, onLogoClick, onChangelogClick, onSettingsClick }: RoadmapPageProps) {
+export function RoadmapPage({
+  theme,
+  onThemeToggle,
+  onSignIn,
+  onLogoClick,
+  onChangelogClick,
+  onPrivacyClick,
+  onTermsClick,
+  onSupportClick,
+  onSettingsClick,
+}: RoadmapPageProps) {
   const observe = useScrollReveal();
 
   // Group items by status
@@ -229,6 +242,9 @@ export function RoadmapPage({ theme, onThemeToggle, onSignIn, onLogoClick, onCha
       <Footer
         onChangelogClick={onChangelogClick}
         onRoadmapClick={() => {}}
+        onPrivacyClick={onPrivacyClick}
+        onTermsClick={onTermsClick}
+        onSupportClick={onSupportClick}
       />
 
       {/* Roadmap-specific styles */}

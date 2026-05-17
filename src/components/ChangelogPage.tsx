@@ -10,6 +10,9 @@ interface ChangelogPageProps {
   onSignIn: () => void;
   onLogoClick: () => void;
   onRoadmapClick: () => void;
+  onPrivacyClick?: () => void;
+  onTermsClick?: () => void;
+  onSupportClick?: () => void;
   onSettingsClick?: () => void;
 }
 
@@ -71,7 +74,17 @@ function useScrollReveal() {
   return observe;
 }
 
-export function ChangelogPage({ theme, onThemeToggle, onSignIn, onLogoClick, onRoadmapClick, onSettingsClick }: ChangelogPageProps) {
+export function ChangelogPage({
+  theme,
+  onThemeToggle,
+  onSignIn,
+  onLogoClick,
+  onRoadmapClick,
+  onPrivacyClick,
+  onTermsClick,
+  onSupportClick,
+  onSettingsClick,
+}: ChangelogPageProps) {
   const observe = useScrollReveal();
 
   return (
@@ -203,6 +216,9 @@ export function ChangelogPage({ theme, onThemeToggle, onSignIn, onLogoClick, onR
       <Footer
         onChangelogClick={() => {}}
         onRoadmapClick={onRoadmapClick}
+        onPrivacyClick={onPrivacyClick}
+        onTermsClick={onTermsClick}
+        onSupportClick={onSupportClick}
       />
 
       {/* Changelog-specific styles */}

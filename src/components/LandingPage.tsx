@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { Logo } from './Logo';
 import type { Theme } from '../types';
@@ -7,6 +8,7 @@ interface LandingPageProps {
   onSignIn: () => void;
   theme: Theme;
   onThemeToggle: () => void;
+  onDemoClick: () => void;
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
   onPrivacyClick: () => void;
@@ -19,6 +21,7 @@ export function LandingPage({
   onSignIn,
   theme,
   onThemeToggle,
+  onDemoClick,
   onChangelogClick,
   onRoadmapClick,
   onPrivacyClick,
@@ -27,6 +30,22 @@ export function LandingPage({
 }: LandingPageProps) {
   const { isInstallable, isInstalled, triggerInstall } = useInstallPrompt();
   const isDark = theme === 'dark';
+
+  const handleDemoClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    onDemoClick();
+  };
 
   // Atmospheric gradient centered on manuscript area
   const gradientPct = isDark ? 9 : 6;
@@ -100,6 +119,7 @@ export function LandingPage({
 
             <a
               href="/demo"
+              onClick={handleDemoClick}
               className="landing-demo-link"
               style={{ fontFamily: 'var(--font-body)' }}
             >
@@ -330,7 +350,7 @@ export function LandingPage({
           display: inline-flex;
           align-items: center;
           gap: 0.25rem;
-          transition: all 0.2s ease;
+          transition: color 0.2s ease, border-bottom-color 0.2s ease;
         }
         .landing-demo-link:hover {
           color: var(--color-accent);

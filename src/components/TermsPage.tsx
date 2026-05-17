@@ -10,10 +10,23 @@ interface TermsPageProps {
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
   onPrivacyClick: () => void;
+  onTermsClick?: () => void;
+  onSupportClick?: () => void;
   onSettingsClick?: () => void;
 }
 
-export function TermsPage({ theme, onThemeToggle, onSignIn, onLogoClick, onChangelogClick, onRoadmapClick, onPrivacyClick, onSettingsClick }: TermsPageProps) {
+export function TermsPage({
+  theme,
+  onThemeToggle,
+  onSignIn,
+  onLogoClick,
+  onChangelogClick,
+  onRoadmapClick,
+  onPrivacyClick,
+  onTermsClick,
+  onSupportClick,
+  onSettingsClick,
+}: TermsPageProps) {
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -235,6 +248,9 @@ export function TermsPage({ theme, onThemeToggle, onSignIn, onLogoClick, onChang
       <Footer
         onChangelogClick={onChangelogClick}
         onRoadmapClick={onRoadmapClick}
+        onPrivacyClick={onPrivacyClick}
+        onTermsClick={onTermsClick}
+        onSupportClick={onSupportClick}
       />
     </div>
   );
