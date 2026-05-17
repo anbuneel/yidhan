@@ -218,6 +218,9 @@ export function LandingPage({
           overflow: hidden;
           display: flex;
           flex-direction: column;
+          /* Stacking context so z-index: -1 on atmosphere paints above the
+             canvas background but below the header/content above it. */
+          isolation: isolate;
         }
         .landing-atmosphere {
           position: absolute;
