@@ -215,7 +215,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
                   onClick={() => {
                     navigator.clipboard.writeText(window.location.href);
                   }}
-                  className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 hover:scale-105 active:scale-95"
+                  className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 active:scale-95"
                   style={{
                     background: 'var(--color-cta-bg)',
                     color: 'var(--color-cta-text)',
@@ -248,7 +248,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
                   className={`
                     flex items-start gap-4 p-4 rounded-lg
                     transition-all duration-300 cursor-pointer
-                    ${currentStep === index ? 'scale-[1.02]' : 'hover:scale-[1.01]'}
+                    ${currentStep === index ? 'scale-[1.02]' : ''}
                   `}
                   style={{
                     background: currentStep === index

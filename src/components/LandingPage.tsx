@@ -292,7 +292,6 @@ export function LandingPage({
         }
         .landing-cta-button:hover {
           background: var(--color-cta-bg-hover);
-          transform: translateY(-2px);
           box-shadow: 0 8px 30px var(--color-accent-glow);
         }
 
@@ -513,7 +512,6 @@ export function LandingPage({
           .landing-text-reveal { animation: none; clip-path: none; }
           .landing-cursor { animation: none; opacity: 1; }
           .landing-cta-button { transition: none; }
-          .landing-cta-button:hover { transform: none; }
         }
       `}</style>
     </div>

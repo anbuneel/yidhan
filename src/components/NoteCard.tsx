@@ -257,7 +257,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
               focus:ring-[var(--color-accent)]
               focus-visible:opacity-100
               ml-2
-              -mr-2
+              -mr-4
               shrink-0
             "
             style={{

@@ -1132,7 +1132,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               text-xs
               rounded-full
               transition-all duration-300
-              hover:scale-105
               active:scale-95
               animate-fade-in
             "

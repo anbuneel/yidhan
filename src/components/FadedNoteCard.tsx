@@ -95,7 +95,6 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
           focus:ring-2
           focus:ring-[var(--color-accent)]
           focus:opacity-100
-          hover:scale-110
           opacity-0 group-hover:opacity-100
         "
         style={{
@@ -196,7 +195,6 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
             focus:ring-2
             focus:ring-[var(--color-accent)]
             focus:opacity-100
-            hover:scale-110
             ml-2
             -mr-2
             shrink-0

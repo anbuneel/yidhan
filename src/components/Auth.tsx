@@ -782,7 +782,6 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           focus:ring-[var(--color-accent)]
           text-[var(--color-text-secondary)]
           hover:text-[var(--color-accent)]
-          hover:-translate-y-0.5
         "
         aria-label="Toggle theme"
       >

@@ -212,7 +212,6 @@ export function Header({
         focus:ring-2
         focus:ring-[var(--color-accent)]
         focus:ring-offset-2
-        hover:-translate-y-0.5
         shrink-0
         touch-press
       "
@@ -221,6 +220,14 @@ export function Header({
         color: 'var(--color-cta-text)',
         boxShadow: '0 4px 20px var(--color-accent-glow)',
         fontFamily: 'var(--font-body)',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
+        e.currentTarget.style.boxShadow = '0 6px 24px var(--color-accent-glow)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'var(--color-cta-bg)';
+        e.currentTarget.style.boxShadow = '0 4px 20px var(--color-accent-glow)';
       }}
       aria-label="New note"
     >

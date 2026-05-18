@@ -34,7 +34,6 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
         text-xs sm:text-sm font-medium
         transition-all duration-300
         focus-ring
-        hover:-translate-y-0.5
         shrink-0
       "
       style={{
@@ -141,7 +140,6 @@ export function AllNotesPill({ isActive, onClick }: AllNotesPillProps) {
         focus:ring-2
         focus:ring-[var(--color-accent)]
         focus:ring-offset-1
-        hover:-translate-y-0.5
         shrink-0
       "
       style={{
@@ -184,7 +182,6 @@ export function AddTagPill({ onClick }: AddTagPillProps) {
         focus:ring-2
         focus:ring-[var(--color-accent)]
         focus:ring-offset-1
-        hover:-translate-y-0.5
         hover:border-[var(--color-accent)]
         shrink-0
       "
