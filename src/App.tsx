@@ -387,6 +387,7 @@ function App() {
   const APP_LOADER_MIN_MS = 200;
   const appLoading = authLoading || loading;
   const [showAppLoader, setShowAppLoader] = useState(appLoading);
+  const hasCompletedInitialAppLoadRef = useRef(false);
   const appLoaderStartedAtRef = useRef<number | null>(null);
   const appLoaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [view, setView] = useState<ViewMode>(() => {
@@ -540,9 +541,14 @@ function App() {
     return 'dark';
   });
 
-  // Hold the app loader briefly to avoid flashing on fast auth/note loads.
+  // Hold the app loader only for the initial cold boot. Post-login note priming
+  // should keep the current shell visible instead of flashing a blocking screen.
   useEffect(() => {
     if (appLoading) {
+      if (hasCompletedInitialAppLoadRef.current) {
+        return;
+      }
+
       if (appLoaderTimerRef.current) {
         clearTimeout(appLoaderTimerRef.current);
         appLoaderTimerRef.current = null;
@@ -555,6 +561,8 @@ function App() {
       }
       return;
     }
+
+    hasCompletedInitialAppLoadRef.current = true;
 
     if (!showAppLoader) {
       appLoaderStartedAtRef.current = null;
@@ -2416,6 +2424,7 @@ function App() {
           onRefresh={handleRefresh}
           searchQuery={searchQuery}
           isSearching={isSearching}
+          isLoading={loading && notes.length === 0}
         />
         </div>
 

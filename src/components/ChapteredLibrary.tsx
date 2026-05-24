@@ -24,6 +24,7 @@ interface ChapteredLibraryProps {
   onRefresh?: () => Promise<void>;
   searchQuery?: string;
   isSearching?: boolean;
+  isLoading?: boolean;
 }
 
 export function ChapteredLibrary({
@@ -35,6 +36,7 @@ export function ChapteredLibrary({
   onRefresh,
   searchQuery,
   isSearching = false,
+  isLoading = false,
 }: ChapteredLibraryProps) {
   // Auto-detect compact mode based on viewport width (mobile = compact)
   const [isCompact, setIsCompact] = useState(() => {
@@ -122,6 +124,17 @@ export function ChapteredLibrary({
   const navChapters = useMemo(() => {
     return chapters.map((c) => ({ key: c.key as ChapterKey, label: c.label }));
   }, [chapters]);
+
+  if (isLoading && notes.length === 0) {
+    return (
+      <main
+        className="flex-1 overflow-y-auto pb-32 relative"
+        style={{ scrollbarWidth: 'none' }}
+        data-testid="library-view"
+        aria-busy="true"
+      />
+    );
+  }
 
   // Search-active empty state — show distinct "No thoughts found" message
   if (notes.length === 0 && isSearching) {

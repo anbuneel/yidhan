@@ -155,6 +155,14 @@ describe('ChapteredLibrary', () => {
       // With 0 notes, shows the standard empty state (focused-gaze search only applies when notes exist)
       expect(screen.getByText('Your notes await')).toBeInTheDocument();
     });
+
+    it('keeps the library surface quiet while notes are loading', () => {
+      render(<ChapteredLibrary {...defaultProps} isLoading />);
+
+      expect(screen.getByTestId('library-view')).toHaveAttribute('aria-busy', 'true');
+      expect(screen.queryByText('Your notes await')).not.toBeInTheDocument();
+      expect(screen.queryByText('Create your first note')).not.toBeInTheDocument();
+    });
   });
 
   describe('with notes', () => {
