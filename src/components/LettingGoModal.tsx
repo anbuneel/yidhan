@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { REAUTH_FOR_SENSITIVE_ACTIONS } from '../config/featureFlags';
 import { ReAuthModal } from './ReAuthModal';
 import {
   exportNotesToJSON,
@@ -45,13 +46,12 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
   const handleExportFullBackup = () => {
     if (!user) return;
 
-    // Check if recently re-authenticated (grace window)
-    if (isRecentlyReauthed()) {
-      performFullBackup();
-    } else {
+    if (REAUTH_FOR_SENSITIVE_ACTIONS && !isRecentlyReauthed()) {
       // Require re-auth first
       setPendingAction('fullBackup');
       setShowReAuthModal(true);
+    } else {
+      performFullBackup();
     }
   };
 
@@ -88,13 +88,12 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
 
   // Initiate account departure - requires re-auth
   const handleLetGo = () => {
-    // Check if recently re-authenticated (grace window)
-    if (isRecentlyReauthed()) {
-      performLetGo();
-    } else {
+    if (REAUTH_FOR_SENSITIVE_ACTIONS && !isRecentlyReauthed()) {
       // Require re-auth first
       setPendingAction('letGo');
       setShowReAuthModal(true);
+    } else {
+      performLetGo();
     }
   };
 
