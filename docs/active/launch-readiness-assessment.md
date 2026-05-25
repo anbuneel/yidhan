@@ -132,6 +132,8 @@ Category 1 is the most dangerous for launch: users forgive missing features but 
 
 **Why defer:** With offboarding disabled (item 1), the main action gated by re-auth is full backup export. Low user count at launch = low risk. Build proper `signInWithOAuth({ prompt: 'consent' })` step-up auth as part of the offboarding trust workstream.
 
+**Update (2026-05-25, PR #187):** The ReAuthModal is now gated behind `REAUTH_FOR_SENSITIVE_ACTIONS` in [`src/config/featureFlags.ts`](../../src/config/featureFlags.ts), defaulted to `false` to remove friction during solo pre-launch use. Before any public launch, flip the flag to `true` so Full Backup and "Let Go" require re-auth again.
+
 ### 8. Cross-device tag sync (DEFERRED)
 
 **Problem:** `pullRemoteChanges()` only reconciles `notes` and `tags`, not `note_tags`. Multi-device tag assignments drift until full hydration.
@@ -200,6 +202,7 @@ Category 1 is the most dangerous for launch: users forgive missing features but 
 
 ### Remaining before launch
 - **Item 1:** Hide offboarding link in SettingsModal (~30 min)
+- **Re-auth flag:** Flip `REAUTH_FOR_SENSITIVE_ACTIONS` to `true` in `src/config/featureFlags.ts` (~1 min) — disabled for pre-launch solo use, see Item 7
 - **Item 12:** Manually audit live Supabase sharing policies
 
 ---
