@@ -108,6 +108,8 @@ src/
 │   ├── demoStorage.ts     # localStorage operations for demo mode (4 starter notes + 3 tags, no auth required)
 │   ├── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, encrypted note creation)
 │   └── demoMigration.test.ts # 9 tests: empty state, encrypted notes, tag dedup, sanitization
+├── config/
+│   └── featureFlags.ts    # Hardcoded pre-launch toggles (e.g. REAUTH_FOR_SENSITIVE_ACTIONS) — flip when ready for the extra friction
 ├── types/
 │   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares, fetch_shared_note RPC)
 ├── hooks/
