@@ -213,6 +213,7 @@ export function PassphraseUnlock() {
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
               placeholder="Enter your passphrase"
+              autoFocus
               className="w-full px-3 py-2 text-sm focus-ring"
               style={{
                 background: 'var(--color-bg-primary)',

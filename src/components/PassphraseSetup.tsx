@@ -206,6 +206,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
               placeholder="At least 8 characters"
+              autoFocus
               className="w-full px-3 py-2 text-sm focus-ring"
               style={{
                 background: 'var(--color-bg-primary)',

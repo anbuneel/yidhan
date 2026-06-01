@@ -32,7 +32,7 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
         background: isActive
           ? `${colorValue}20`
           : 'var(--color-card-bg)',
-        backdropFilter: 'blur(10px)',
+        backdropFilter: 'blur(20px)',
         border: isActive
           ? `1px solid ${colorValue}`
           : '1px solid var(--glass-border)',
