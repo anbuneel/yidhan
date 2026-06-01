@@ -483,7 +483,10 @@ body::before {
   pointer-events: none;
 }
 
-/* View Transitions API - smooth page transitions */
+/* View Transitions API CSS — kept for future re-enablement.
+   Note: document.startViewTransition() is not currently called (replaced with
+   React.startTransition in useViewTransition.ts), so these selectors are
+   currently inactive. Re-enable the JS side to restore animated transitions. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 250ms;

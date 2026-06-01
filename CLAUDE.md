@@ -120,7 +120,7 @@ src/
 │   ├── useSyncEngine.ts    # Sync engine React integration, outcome mapping, delete-aware conflict resolution
 │   ├── useSyncEngine.test.ts # 4 tests: hard-delete conflict recovery paths (local/server/both + online fallback)
 │   ├── useSyncStatus.ts    # Sync state for UI (pending + blocked counts, online status)
-│   ├── useViewTransition.ts # View Transitions API wrapper for smooth page transitions
+│   ├── useViewTransition.ts # React concurrent transition scheduler wrapper (previously used View Transitions API; removed to avoid flushSync anti-pattern)
 │   ├── useInstallPrompt.ts  # PWA install prompt with engagement tracking
 │   ├── useShareTarget.ts    # Handle incoming shares from Share Target API
 │   ├── useDemoState.ts      # React state management for demo mode (localStorage)
