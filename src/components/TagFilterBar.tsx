@@ -12,13 +12,15 @@ interface TagFilterBarProps {
   onEditTag: (tag: Tag) => void;
 }
 
+const subscribeToResize = (notify: () => void) => {
+  window.addEventListener('resize', notify, { passive: true });
+  return () => window.removeEventListener('resize', notify);
+};
+
 // Hook to detect mobile breakpoint
 function useIsMobile() {
   return useSyncExternalStore(
-    (notify) => {
-      window.addEventListener('resize', notify, { passive: true });
-      return () => window.removeEventListener('resize', notify);
-    },
+    subscribeToResize,
     () => window.innerWidth < 640,
     () => false
   );

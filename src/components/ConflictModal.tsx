@@ -29,7 +29,7 @@ function getPlainTextPreview(html: string, maxLength: number = 200): string {
 }
 
 function formatDate(timestamp: number | string) {
-  const date = typeof timestamp === 'string' ? new Date(timestamp) : new Date(timestamp);
+  const date = new Date(timestamp);
   return date.toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
