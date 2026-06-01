@@ -302,7 +302,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Computed: is the user in departure grace period?
-  const departingAt = user?.user_metadata?.departing_at as string | undefined;
+  const rawDeparting = user?.user_metadata?.departing_at;
+  const departingAt = typeof rawDeparting === 'string' ? rawDeparting : undefined;
   const isDeparting = Boolean(departingAt);
 
   // Computed: days until account release (null if not departing)

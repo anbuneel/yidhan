@@ -713,7 +713,10 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           {authCard}
         </dialog>
 
-        {/* Close confirmation modal */}
+        {/* Close confirmation modal — rendered as a sibling dialog (not nested) at z-[60].
+            Note: both this and the outer auth dialog carry aria-modal="true" simultaneously,
+            which some AT handle inconsistently. A future improvement would be to portal this
+            dialog to document.body and use showModal() for native focus trapping. */}
         {showCloseConfirm && (
           <div
             className="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-backdrop"

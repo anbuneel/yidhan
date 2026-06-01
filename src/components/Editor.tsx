@@ -231,7 +231,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     if (!editor || pendingEditorContentRef.current === null) return;
     editor.commands.setContent(pendingEditorContentRef.current, { emitUpdate: false });
     pendingEditorContentRef.current = null;
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, note.id]);
 
   const resumeNoteIdRef = useRef(note.id);
   if (resumeNoteIdRef.current !== note.id) {

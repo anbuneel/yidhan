@@ -1191,7 +1191,7 @@ function App() {
 
   // Sort notes: pinned first, then by most recent (memoized to avoid O(n log n) on every render)
   const sortedNotes = useMemo(() => {
-    return [...notes].sort((a: Note, b: Note) => {
+    return [...notes].sort((a, b) => {
       // Pinned notes come first
       if (a.pinned && !b.pinned) return -1;
       if (!a.pinned && b.pinned) return 1;

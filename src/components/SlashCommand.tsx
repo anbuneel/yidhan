@@ -267,6 +267,7 @@ export const SlashCommand = Extension.create({
             onStart: (props: SuggestionProps) => {
               component = new ReactRenderer(CommandList, {
                 props: {
+                  // Tiptap's Suggestion types items as unknown[]; they are SlashCommandItem[] because filterItems() supplies them
                   items: props.items as SlashCommandItem[],
                   command: (item: SlashCommandItem) => {
                     props.command(item);
@@ -291,6 +292,7 @@ export const SlashCommand = Extension.create({
             onUpdate: (props: SuggestionProps) => {
               if (component) {
                 component.updateProps({
+                  // Same Tiptap Suggestion type widening — safe because filterItems() produces SlashCommandItem[]
                   items: props.items as SlashCommandItem[],
                   command: (item: SlashCommandItem) => {
                     props.command(item);
