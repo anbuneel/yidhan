@@ -15,7 +15,7 @@ interface NoteCardProps {
 
 export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogglePin, isCompact = false, searchQuery }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const cardRef = useRef<HTMLElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // Plain text for compact mode and search (memoized to avoid repeated DOMPurify calls)
   const plainText = useMemo(() => htmlToPlainText(note.content), [note.content]);
@@ -72,7 +72,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
   };
 
   return (
-    <article
+    <div
       ref={cardRef}
       className={`
         group
@@ -99,16 +99,6 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         minHeight: isCompact ? 'auto' : '280px',
         maxHeight: isCompact ? '120px' : '300px',
       }}
-      role="button"
-      tabIndex={0}
-      aria-label={`Open note: ${note.title || 'Untitled'}`}
-      onClick={() => onClick(note.id)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick(note.id);
-        }
-      }}
       onMouseEnter={(e) => {
         if (!isCompact) {
           e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
@@ -118,13 +108,21 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         e.currentTarget.style.boxShadow = isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)';
       }}
     >
+      <button
+        type="button"
+        className="absolute inset-0 z-10 h-full w-full rounded-[inherit] border-0 bg-transparent p-0 focus-ring"
+        aria-label={`Open note: ${note.title || 'Untitled'}`}
+        onClick={() => onClick(note.id)}
+      />
+
       {/* Pin button - top-right corner (only in full mode) */}
       {!isCompact && (
-        <button
+        <button type="button"
           onClick={handlePinClick}
           className={`
             absolute top-2 right-2
-            w-10 h-10
+            z-20
+            size-10
             rounded-full
             flex items-center justify-center
             transition-opacity duration-200
@@ -141,7 +139,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
           aria-label={note.pinned ? 'Unpin note' : 'Pin note'}
           title={note.pinned ? 'Unpin note' : 'Pin note'}
         >
-          <svg className="w-4 h-4" fill={note.pinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="size-4" fill={note.pinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
         </button>
@@ -152,7 +150,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         {/* Inline pin icon (compact mode only) */}
         {isCompact && note.pinned && (
           <svg
-            className="w-3.5 h-3.5 shrink-0"
+            className="size-3.5 shrink-0"
             fill="currentColor"
             viewBox="0 0 24 24"
             style={{ color: 'var(--color-accent)' }}
@@ -242,10 +240,11 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
 
         {/* Delete button - hidden in compact mode (use swipe instead) */}
         {!isCompact && (
-          <button
+          <button type="button"
             onClick={handleDeleteClick}
             className="
-              w-10 h-10
+              relative z-20
+              size-10
               rounded-full
               flex items-center justify-center
               opacity-0
@@ -267,13 +266,13 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
             aria-label="Delete note"
             title="Delete note"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </button>
         )}
       </div>
 
-    </article>
+    </div>
   );
 }, (prev, next) => prev.note === next.note && prev.isCompact === next.isCompact && prev.searchQuery === next.searchQuery);

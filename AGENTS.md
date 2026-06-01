@@ -47,6 +47,7 @@ src/
 │   ├── LettingGoModal.tsx # Account departure modal with keepsakes export
 │   ├── LoadingFallback.tsx # Shared loading spinner for Suspense boundaries
 │   ├── Logo.tsx           # Shared brand component (compact mark + live wordmark for headers; header variant used consistently across all pages)
+│   ├── ModalBackdropButton.tsx # Shared accessible button for dismissing modal overlays (tabIndex=-1, aria-label prop)
 │   ├── NotFoundPage.tsx   # 404 page for unrecognized routes
 │   ├── NoteCard.tsx       # Individual note card with tag badges
 │   ├── ShareModal.tsx     # Modal for creating/managing E2EE share links (capability-link model)
@@ -59,9 +60,11 @@ src/
 │   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
 │   ├── SettingsModal.tsx  # Settings modal (profile, password, security tab, theme, offboarding)
 │   ├── SlashCommand.tsx   # Tiptap slash command extension (/, timestamps, dividers)
+│   ├── SlashCommandList.tsx # Extracted slash command list component (CommandList, CommandListRef, SlashCommandItem exports)
 │   ├── ReAuthModal.tsx    # Re-authentication modal for sensitive actions (step-up auth)
 │   ├── TagBadge.tsx       # Small tag badge for note cards
 │   ├── TagFilterBar.tsx   # Horizontal tag filter strip with edit support
+│   ├── TagFilterPills.tsx # AllNotesPill and AddTagPill components (extracted from TagFilterBar)
 │   ├── TagModal.tsx       # Modal for creating/editing/deleting tags
 │   ├── TagPill.tsx        # Tag pill component with edit button
 │   ├── TagSelector.tsx    # Dropdown for assigning tags in editor
@@ -117,7 +120,7 @@ src/
 │   ├── useSyncEngine.ts    # Sync engine React integration, outcome mapping, delete-aware conflict resolution
 │   ├── useSyncEngine.test.ts # 4 tests: hard-delete conflict recovery paths (local/server/both + online fallback)
 │   ├── useSyncStatus.ts    # Sync state for UI (pending + blocked counts, online status)
-│   ├── useViewTransition.ts # View Transitions API wrapper for smooth page transitions
+│   ├── useViewTransition.ts # React concurrent transition scheduler wrapper (previously used View Transitions API; removed to avoid flushSync anti-pattern)
 │   ├── useInstallPrompt.ts  # PWA install prompt with engagement tracking
 │   ├── useShareTarget.ts    # Handle incoming shares from Share Target API
 │   ├── useDemoState.ts      # React state management for demo mode (localStorage)

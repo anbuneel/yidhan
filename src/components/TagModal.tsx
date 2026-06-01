@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Tag, TagColor } from '../types';
 import { TAG_COLORS } from '../types';
+import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface TagModalProps {
   isOpen: boolean;
@@ -21,31 +22,40 @@ const COLOR_OPTIONS: TagColor[] = [
   'sage',
   'plum',
 ];
+const EMPTY_TAGS: Tag[] = [];
 
-export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existingTags = [] }: TagModalProps) {
+export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existingTags = EMPTY_TAGS }: TagModalProps) {
   const [name, setName] = useState('');
   const [color, setColor] = useState<TagColor>('stone');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const formKeyRef = useRef<string | null>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const isLoading = isSaving || isDeleting;
 
-  // Reset form when modal opens/closes or editing tag changes
+  // Focus the name input when modal opens
   useEffect(() => {
     if (isOpen) {
-      if (editingTag) {
-        setName(editingTag.name);
-        setColor(editingTag.color);
-      } else {
-        setName('');
-        setColor('stone');
-      }
+      const timer = setTimeout(() => nameInputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  const openFormKey = isOpen
+    ? `${editingTag?.id ?? 'new'}:${editingTag?.name ?? ''}:${editingTag?.color ?? 'stone'}`
+    : null;
+  if (formKeyRef.current !== openFormKey) {
+    formKeyRef.current = openFormKey;
+    if (openFormKey) {
+      setName(editingTag?.name ?? '');
+      setColor(editingTag?.color ?? 'stone');
       setError(null);
       setIsSaving(false);
       setIsDeleting(false);
     }
-  }, [isOpen, editingTag]);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,24 +111,29 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
-      onClick={isLoading ? undefined : onClose}
     >
-      <div
+      <ModalBackdropButton label="Close tag dialog" disabled={isLoading} onClick={onClose} />
+      <dialog
+        open
         className="
-          w-full max-w-[400px] mx-4
+          relative z-10 w-full max-w-[400px] mx-4
           p-8
           shadow-2xl
           animate-[modal-enter_300ms_ease-out]
+          border-0
         "
         style={{
           background: 'var(--color-bg-primary)',
           borderRadius: 'var(--radius-card)',
           border: '1px solid var(--glass-border)',
+          margin: 0,
         }}
-        onClick={(e) => e.stopPropagation()}
+        aria-modal="true"
+        aria-labelledby="tag-modal-title"
       >
         {/* Header */}
         <h3
+          id="tag-modal-title"
           className="text-xl font-semibold mb-6"
           style={{
             fontFamily: 'var(--font-display)',
@@ -132,6 +147,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
           {/* Name input */}
           <div className="mb-6">
             <label
+              htmlFor="tag-name"
               className="block text-sm mb-2"
               style={{
                 fontFamily: 'var(--font-body)',
@@ -141,6 +157,8 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
               Name
             </label>
             <input
+              id="tag-name"
+              ref={nameInputRef}
               type="text"
               value={name}
               onChange={(e) => {
@@ -149,11 +167,10 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
               }}
               placeholder="e.g., Work, Personal, Ideas"
               maxLength={20}
-              autoFocus
               className="
                 w-full px-4 py-3
                 rounded-lg
-                outline-none
+                focus-ring
                 transition-all duration-200
               "
               style={{
@@ -187,7 +204,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
 
           {/* Color picker */}
           <div className="mb-8">
-            <label
+            <span
               className="block text-sm mb-3"
               style={{
                 fontFamily: 'var(--font-body)',
@@ -195,7 +212,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
               }}
             >
               Color
-            </label>
+            </span>
             <div className="flex flex-wrap gap-3">
               {COLOR_OPTIONS.map((colorOption) => {
                 const colorValue = TAG_COLORS[colorOption];
@@ -207,7 +224,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
                     type="button"
                     onClick={() => setColor(colorOption)}
                     className="
-                      w-8 h-8
+                      size-8
                       rounded-full
                       transition-all duration-200
                       focus:outline-none
@@ -231,7 +248,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
 
           {/* Preview */}
           <div className="mb-8">
-            <label
+            <span
               className="block text-sm mb-3"
               style={{
                 fontFamily: 'var(--font-body)',
@@ -239,7 +256,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
               }}
             >
               Preview
-            </label>
+            </span>
             <div
               className="
                 inline-flex items-center gap-2
@@ -254,7 +271,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
               }}
             >
               <span
-                className="w-2 h-2 rounded-full"
+                className="size-2 rounded-full"
                 style={{ background: TAG_COLORS[color] }}
               />
               {name || 'Tag name'}
@@ -292,7 +309,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
               >
                 {isDeleting && (
                   <span
-                    className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                    className="size-3 border-2 border-t-transparent rounded-full animate-spin"
                     style={{ borderColor: 'var(--color-destructive)', borderTopColor: 'transparent' }}
                   />
                 )}
@@ -358,7 +375,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
               >
                 {isSaving && (
                   <span
-                    className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                    className="size-3 border-2 border-t-transparent rounded-full animate-spin"
                     style={{ borderColor: 'var(--color-cta-text)', borderTopColor: 'transparent' }}
                   />
                 )}
@@ -371,7 +388,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
             </div>
           </div>
         </form>
-      </div>
+      </dialog>
     </div>
   );
 }

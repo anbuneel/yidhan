@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.18.1',
+    date: '2026-06-01',
+    changes: [
+      { type: 'improvement', text: 'Modals now use semantic <dialog> elements with proper ARIA roles, improving accessibility for screen reader users' },
+      { type: 'improvement', text: 'All interactive elements consistently use native button semantics (type="button"), preventing accidental form submissions' },
+      { type: 'improvement', text: 'Keyboard event listeners migrated to useEffectEvent, eliminating stale closure bugs in long-running sessions' },
+      { type: 'improvement', text: 'Auth and Encryption context values memoized, reducing unnecessary re-renders for all dependent components' },
+    ],
+  },
+  {
     version: '3.18.0',
     date: '2026-05-16',
     changes: [

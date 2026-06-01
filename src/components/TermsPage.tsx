@@ -82,7 +82,7 @@ export function TermsPage({
               </h2>
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
-                  Yidhan is a free, open-source note-taking application with end-to-end encryption. It is offered as-is, without warranty of any kind. We do our best to keep it running, secure, and improving — but we're a small project, not a corporation with an SLA.
+                  Yidhan is a free, open-source note-taking application with end-to-end encryption. It is offered as-is, without warranty of any kind. We do our best to keep it running, secure, and improving, but we're a small project, not a corporation with an SLA.
                 </p>
               </div>
             </section>
@@ -102,7 +102,7 @@ export function TermsPage({
               </h2>
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
-                  You own everything you write in Yidhan. We don't claim any rights over your content. We can't read it anyway — it's encrypted with your passphrase, which we never see.
+                  You own everything you write in Yidhan. We don't claim any rights over your content. We can't read it anyway; it's encrypted with your passphrase, which we never see.
                 </p>
                 <p>
                   You can export your notes and leave at any time. There are no lock-in mechanisms.
@@ -168,7 +168,7 @@ export function TermsPage({
               </h2>
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
-                  We aim to keep Yidhan available, but we can't guarantee 100% uptime. The app works offline — your notes are stored locally and sync when connectivity returns. If we ever need to shut down the service, we'll give advance notice so you can export your data.
+                  We aim to keep Yidhan available, but we can't guarantee 100% uptime. The app works offline, your notes are stored locally and sync when connectivity returns. If we ever need to shut down the service, we'll give advance notice so you can export your data.
                 </p>
               </div>
             </section>
@@ -218,7 +218,7 @@ export function TermsPage({
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   How we handle your data is covered in our{' '}
-                  <button
+                  <button type="button"
                     onClick={onPrivacyClick}
                     style={{ color: 'var(--color-accent)', textDecoration: 'underline', textUnderlineOffset: '3px', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
                   >

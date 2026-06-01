@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useEffectEvent, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface ReAuthModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export function ReAuthModal({
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const wasOpenRef = useRef(isOpen);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Check if user signed up with OAuth (Google, GitHub, etc.)
@@ -36,32 +38,34 @@ export function ReAuthModal({
     provider === 'github' ||
     user?.identities?.some((identity) => identity.provider !== 'email');
 
-  // Reset state when modal opens
-  useEffect(() => {
+  if (isOpen !== wasOpenRef.current) {
+    wasOpenRef.current = isOpen;
     if (isOpen) {
       setInput('');
       setError(null);
       setIsLoading(false);
-      // Focus input after a brief delay for animation
-      setTimeout(() => inputRef.current?.focus(), 100);
     }
+  }
+
+  // Focus input when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    const focusTimer = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(focusTimer);
   }, [isOpen]);
 
   // Handle Escape key to close modal (accessibility)
-  const handleEscapeKey = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onCancel();
-      }
-    },
-    [onCancel]
-  );
+  const handleEscapeKey = useEffectEvent((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onCancel();
+    }
+  });
 
   useEffect(() => {
     if (!isOpen) return;
     document.addEventListener('keydown', handleEscapeKey);
     return () => document.removeEventListener('keydown', handleEscapeKey);
-  }, [isOpen, handleEscapeKey]);
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,20 +107,24 @@ export function ReAuthModal({
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center px-4 modal-backdrop"
-      onClick={onCancel}
     >
-      <div
+      <ModalBackdropButton label="Cancel verification" onClick={onCancel} />
+      <dialog
+        open
         className="
-          w-full max-w-sm
+          relative z-10 w-full max-w-sm
           shadow-2xl
           animate-[modal-enter_300ms_ease-out]
+          p-0 border-0
         "
         style={{
           background: 'var(--color-bg-primary)',
           borderRadius: 'var(--radius-card)',
           border: '1px solid var(--glass-border)',
+          margin: 0,
         }}
-        onClick={(e) => e.stopPropagation()}
+        aria-modal="true"
+        aria-labelledby="reauth-title"
       >
         {/* Header */}
         <div
@@ -125,6 +133,7 @@ export function ReAuthModal({
         >
           <div className="flex items-center justify-between">
             <h2
+              id="reauth-title"
               className="text-xl italic"
               style={{
                 fontFamily: 'var(--font-display)',
@@ -133,10 +142,10 @@ export function ReAuthModal({
             >
               A Moment of Verification
             </h2>
-            <button
+            <button type="button"
               onClick={onCancel}
               className="
-                w-8 h-8
+                size-8
                 flex items-center justify-center
                 rounded-full
                 transition-colors duration-200
@@ -150,7 +159,7 @@ export function ReAuthModal({
               }}
               aria-label="Cancel"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -292,7 +301,7 @@ export function ReAuthModal({
             </button>
           </div>
         </form>
-      </div>
+      </dialog>
     </div>
   );
 }

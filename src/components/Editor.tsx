@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import type { Note, Tag, Theme } from '../types';
 import { RichTextEditor } from './RichTextEditor';
@@ -10,6 +10,7 @@ import { formatShortDate, formatRelativeTime } from '../utils/formatTime';
 import { HeaderShell } from './HeaderShell';
 import { Logo } from './Logo';
 import { WhisperBack } from './WhisperBack';
+import { ModalBackdropButton } from './ModalBackdropButton';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import {
@@ -91,6 +92,24 @@ function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): bo
   return a !== null && b !== null && a.title === b.title && a.content === b.content;
 }
 
+function handleTitleKeyDown(e: React.KeyboardEvent) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    // Focus will move to the editor naturally.
+  }
+}
+
+function getSaveStatusStyle(status: SaveStatus): { color: string; background: string } {
+  switch (status) {
+    case 'saving':
+      return { color: 'var(--color-accent)', background: 'var(--color-accent-glow)' };
+    case 'error':
+      return { color: 'var(--color-error)', background: 'var(--color-error-light)' };
+    default:
+      return { color: 'var(--color-success)', background: 'var(--color-success-glow)' };
+  }
+}
+
 export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus }: EditorProps) {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
@@ -100,7 +119,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showResumeChip, setShowResumeChip] = useState(false);
-  const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
+  const savedScrollPositionRef = useRef<number | null>(null);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const isMobile = useMobileDetect();
   useKeyboardHeight(); // Sets --keyboard-height CSS var for bottom toolbar positioning
@@ -113,6 +132,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const throttledScrollSaveRef = useRef<ThrottledSave | null>(null);
+  const flushPendingScrollSave = useCallback(() => {
+    throttledScrollSaveRef.current?.flush();
+  }, []);
   // Store pending scroll save data (captured at scroll time, not timer execution time)
   // This prevents saving wrong scroll position if note switches before timer fires
   const pendingScrollSaveRef = useRef<{ noteId: string; scroll: number } | null>(null);
@@ -125,52 +147,49 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // Separate refs for save indicator phases to avoid nested timeout issues
   const savePhaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingEditorContentRef = useRef<string | null>(null);
   // Track in-flight save promise to await on navigation
   const inFlightSaveRef = useRef<Promise<boolean> | null>(null);
-  const [currentNoteId, setCurrentNoteId] = useState(note.id);
+  const currentNoteIdRef = useRef(note.id);
 
   // Remote update tracking (2B): detect when the note prop changes from
   // another device's sync, distinguish from our own save echoing back
-  const committedSnapshotRef = useRef(buildSnapshot(note.title, note.content, note.tags));
+  const committedSnapshotRef = useRef<NoteSnapshot | null>(null);
+  if (committedSnapshotRef.current === null) {
+    committedSnapshotRef.current = buildSnapshot(note.title, note.content, note.tags);
+  }
   const inFlightSnapshotRef = useRef<NoteSnapshot | null>(null);
   const [remoteUpdate, setRemoteUpdate] = useState<NoteSnapshot | null>(null);
   // Track the last dismissed remote version so the detection effect
   // doesn't re-show the banner after the next sync rehydration
   const dismissedRemoteRef = useRef<NoteSnapshot | null>(null);
 
-  // Reset local state when switching to a different note
-  useEffect(() => {
-    if (currentNoteId !== note.id) {
-      // Flush any pending scroll save for the previous note before switching
-      throttledScrollSaveRef.current?.flush();
+  if (currentNoteIdRef.current !== note.id) {
+    // Flush any pending scroll save for the previous note before switching
+    throttledScrollSaveRef.current?.flush();
 
-      setCurrentNoteId(note.id);
-      setTitle(note.title);
-      setContent(note.content);
-      committedSnapshotRef.current = buildSnapshot(note.title, note.content, note.tags);
-      inFlightSnapshotRef.current = null;
-      setRemoteUpdate(null);
-      dismissedRemoteRef.current = null;
-      // Reset resume chip, scroll save, and focus mode for new note
-      setShowResumeChip(false);
-      setSavedScrollPosition(null);
-      setIsFocusMode(false);
-      resumeChipShownAtRef.current = 0;
-      throttledScrollSaveRef.current = null;
-      pendingScrollSaveRef.current = null; // Clear pending data for old note
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note.id, note.title, note.content, note.tags]);
+    currentNoteIdRef.current = note.id;
+    setTitle(note.title);
+    setContent(note.content);
+    committedSnapshotRef.current = buildSnapshot(note.title, note.content, note.tags);
+    inFlightSnapshotRef.current = null;
+    setRemoteUpdate(null);
+    dismissedRemoteRef.current = null;
+    // Reset resume chip, scroll save, and focus mode for new note
+    setShowResumeChip(false);
+    savedScrollPositionRef.current = null;
+    setIsFocusMode(false);
+    resumeChipShownAtRef.current = 0;
+    throttledScrollSaveRef.current = null;
+    pendingScrollSaveRef.current = null; // Clear pending data for old note
+  }
 
   // Detect remote updates to the currently open note (2B)
   // When the note prop changes (from sync rehydration) while the same note is open:
   // - Self-echo: incoming matches what we last saved → ignore
   // - Clean editor: no unsaved changes → silently update local state
   // - Dirty editor: user has unsaved changes → show "Updated on another device" banner
-  useEffect(() => {
-    // Only watch for changes when the note ID hasn't changed (same note open)
-    if (note.id !== currentNoteId) return;
-
+  if (note.id === currentNoteIdRef.current) {
     const incomingSnapshot = buildSnapshot(note.title, note.content, note.tags);
     const committedSnapshot = committedSnapshotRef.current;
     const activeInFlightSnapshot = inFlightSnapshotRef.current;
@@ -184,50 +203,53 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       if (!sameSnapshot(committedSnapshot, incomingSnapshot)) {
         committedSnapshotRef.current = incomingSnapshot;
       }
-      return;
+    } else if (
+      titleOrContentChangedAgainstInFlight &&
+      !sameSnapshot(dismissedRemoteRef.current, incomingSnapshot)
+    ) {
+      const hasUnsavedChanges =
+        title !== committedSnapshot.title ||
+        content !== committedSnapshot.content;
+
+      if (hasUnsavedChanges) {
+        if (!sameSnapshot(remoteUpdate, incomingSnapshot)) {
+          setRemoteUpdate(incomingSnapshot);
+        }
+      } else {
+        if (title !== note.title) setTitle(note.title);
+        if (content !== note.content) {
+          setContent(note.content);
+          pendingEditorContentRef.current = note.content;
+        }
+        committedSnapshotRef.current = incomingSnapshot;
+        if (remoteUpdate !== null) setRemoteUpdate(null);
+      }
     }
+  }
 
-    if (!titleOrContentChangedAgainstInFlight) {
-      return;
-    }
-
-    if (sameSnapshot(dismissedRemoteRef.current, incomingSnapshot)) {
-      return;
-    }
-
-    const hasUnsavedChanges =
-      title !== committedSnapshot.title ||
-      content !== committedSnapshot.content;
-
-    if (hasUnsavedChanges) {
-      setRemoteUpdate(incomingSnapshot);
-      return;
-    }
-
-    setTitle(note.title);
-    setContent(note.content);
-    committedSnapshotRef.current = incomingSnapshot;
-    setRemoteUpdate(null);
-    if (editor) {
-      editor.commands.setContent(note.content, { emitUpdate: false });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note.title, note.content, note.id, note.tags]);
-
-  // Load saved scroll position and show Resume chip if far from top
   useEffect(() => {
+    if (!editor || pendingEditorContentRef.current === null) return;
+    editor.commands.setContent(pendingEditorContentRef.current, { emitUpdate: false });
+    pendingEditorContentRef.current = null;
+  // note.content included so same-note remote updates also trigger this effect (not just note switches)
+  }, [editor, note.id, note.content]);
+
+  // null sentinel ensures the block fires on first mount, not just note switches
+  const resumeNoteIdRef = useRef<string | null>(null);
+  if (resumeNoteIdRef.current !== note.id) {
+    resumeNoteIdRef.current = note.id;
     const stored = getEditorPosition(note.id);
 
     if (stored && stored.scroll > RESUME_SCROLL_THRESHOLD_PX) {
-      setSavedScrollPosition(stored.scroll);
+      savedScrollPositionRef.current = stored.scroll;
       setShowResumeChip(true);
       resumeChipShownAtRef.current = Date.now(); // Track when chip was shown
     } else {
-      setSavedScrollPosition(null);
+      savedScrollPositionRef.current = null;
       setShowResumeChip(false);
       resumeChipShownAtRef.current = 0;
     }
-  }, [note.id]);
+  }
 
   // Track scroll position (throttled save to localStorage)
   useEffect(() => {
@@ -277,9 +299,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // Flush any pending scroll save on cleanup (component unmount or note switch)
     return () => {
       container.removeEventListener('scroll', handleScroll);
-      throttledScrollSaveRef.current?.flush();
+      flushPendingScrollSave();
     };
-  }, [note.id, showResumeChip]);
+  }, [note.id, showResumeChip, flushPendingScrollSave]);
 
   // Update manuscript glow position on scroll — direct DOM mutation, no re-renders
   useEffect(() => {
@@ -314,14 +336,14 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
   // Handle resume button click
   const handleResumeScroll = useCallback(() => {
-    if (savedScrollPosition && scrollContainerRef.current) {
+    if (savedScrollPositionRef.current && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTo({
-        top: savedScrollPosition,
+        top: savedScrollPositionRef.current,
         behavior: 'smooth',
       });
       setShowResumeChip(false);
     }
-  }, [savedScrollPosition]);
+  }, []);
 
   const cancelPendingAutoSave = useCallback(() => {
     if (autoSaveTimeoutRef.current) {
@@ -472,64 +494,65 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     };
   }, [cancelPendingAutoSave, title, content, note.title, note.content, performSave]);
 
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      // Cmd/Ctrl+Shift+F: toggle focus mode
-      if (e.key.toLowerCase() === 'f' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
-        e.preventDefault();
-        setIsFocusMode((prev) => !prev);
-        return;
-      }
-      // Escape: exit focus mode first, then save and go back
-      if (e.key === 'Escape') {
-        if (isFocusMode) {
-          setIsFocusMode(false);
-          return;
-        }
-        cancelPendingAutoSave();
-        // First await any existing in-flight save
-        if (inFlightSaveRef.current) {
-          await inFlightSaveRef.current;
-        }
-        // Then trigger a new save if needed and await it
-        await performSave();
-        onBack();
-      }
-      // Cmd/Ctrl+Shift+C: copy note to clipboard
-      if (e.key === 'c' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
-        e.preventDefault();
-        const currentNote = { ...note, title, content };
-        copyNoteToClipboard(currentNote).then(() => {
-          showCopiedIndicator();
-        });
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cancelPendingAutoSave, performSave, onBack, note, title, content, isFocusMode]);
-
-  useEffect(() => {
-    const handleSearchShortcut = async (e: KeyboardEvent) => {
-      const isSearchKey = e.code === 'KeyK' || e.key.toLowerCase() === 'k';
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || !isSearchKey) {
-        return;
-      }
-
+  const handleEditorShortcut = useEffectEvent(async (e: KeyboardEvent) => {
+    // Cmd/Ctrl+Shift+F: toggle focus mode
+    if (e.key.toLowerCase() === 'f' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
       e.preventDefault();
+      setIsFocusMode((prev) => !prev);
+      return;
+    }
+    // Escape: exit focus mode first, then save and go back
+    if (e.key === 'Escape') {
+      if (isFocusMode) {
+        setIsFocusMode(false);
+        return;
+      }
       cancelPendingAutoSave();
+      // First await any existing in-flight save
       if (inFlightSaveRef.current) {
         await inFlightSaveRef.current;
       }
-      const didSave = await performSave();
-      if (didSave) {
-        onRequestSearch();
-      }
-    };
+      // Then trigger a new save if needed and await it
+      await performSave();
+      onBack();
+    }
+    // Cmd/Ctrl+Shift+C: copy note to clipboard
+    if (e.key === 'c' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+      e.preventDefault();
+      const currentNote = { ...note, title, content };
+      void copyNoteToClipboard(currentNote).then(() => {
+        showCopiedIndicator();
+      });
+    }
+  });
 
+  const handleSearchShortcut = useEffectEvent(async (e: KeyboardEvent) => {
+    const isSearchKey = e.code === 'KeyK' || e.key.toLowerCase() === 'k';
+    if (!(e.metaKey || e.ctrlKey) || e.altKey || !isSearchKey) {
+      return;
+    }
+
+    e.preventDefault();
+    cancelPendingAutoSave();
+    if (inFlightSaveRef.current) {
+      await inFlightSaveRef.current;
+    }
+    const didSave = await performSave();
+    if (didSave) {
+      onRequestSearch();
+    }
+  });
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    window.addEventListener('keydown', handleEditorShortcut);
+    return () => window.removeEventListener('keydown', handleEditorShortcut);
+  }, []);
+
+  useEffect(() => {
     document.addEventListener('keydown', handleSearchShortcut, true);
     return () => document.removeEventListener('keydown', handleSearchShortcut, true);
-  }, [cancelPendingAutoSave, performSave, onRequestSearch]);
+  }, []);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -552,25 +575,37 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // to 'synced', briefly show the "Saved" status as confirmation.
   // Only fires when the editor is idle to avoid interrupting active save indicators.
   const prevSyncStatusRef = useRef(noteSyncStatus);
-  useEffect(() => {
-    const prev = prevSyncStatusRef.current;
+  const shouldStartSyncedStatusTimerRef = useRef(false);
+  const shouldShowSyncedStatus =
+    prevSyncStatusRef.current === 'pending' &&
+    noteSyncStatus === 'synced' &&
+    saveStatus === 'idle';
+  if (prevSyncStatusRef.current !== noteSyncStatus) {
     prevSyncStatusRef.current = noteSyncStatus;
-
-    if (
-      prev === 'pending' &&
-      noteSyncStatus === 'synced' &&
-      saveStatus === 'idle'
-    ) {
-      // Clear any existing indicator timeouts
+    if (shouldShowSyncedStatus) {
       if (savePhaseTimeoutRef.current) clearTimeout(savePhaseTimeoutRef.current);
       if (hideIndicatorTimeoutRef.current) clearTimeout(hideIndicatorTimeoutRef.current);
-
+      shouldStartSyncedStatusTimerRef.current = true;
       setSaveStatus('saved');
-      hideIndicatorTimeoutRef.current = setTimeout(() => {
-        setSaveStatus('idle');
-      }, 2000);
     }
-  }, [noteSyncStatus, saveStatus]);
+  }
+
+  useEffect(() => {
+    if (saveStatus !== 'saved' || !shouldStartSyncedStatusTimerRef.current) return;
+    shouldStartSyncedStatusTimerRef.current = false;
+
+    hideIndicatorTimeoutRef.current = setTimeout(() => {
+      hideIndicatorTimeoutRef.current = null;
+      setSaveStatus('idle');
+    }, 2000);
+
+    return () => {
+      if (hideIndicatorTimeoutRef.current) {
+        clearTimeout(hideIndicatorTimeoutRef.current);
+        hideIndicatorTimeoutRef.current = null;
+      }
+    };
+  }, [saveStatus]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setTitle(e.target.value);
@@ -588,13 +623,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
   const handleContentChange = (newContent: string) => {
     setContent(newContent);
-  };
-
-  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      // Focus will move to the editor naturally
-    }
   };
 
   // Remote update banner handlers (2B)
@@ -639,8 +667,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         }
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [note.id, hasContent]);
 
   const handleDelete = () => {
     setShowDeleteConfirm(true);
@@ -698,18 +725,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     setShowExportMenu(false);
     showCopiedIndicator();
   };
-
-  // Get save status styling based on current status
-  function getSaveStatusStyle(status: SaveStatus): { color: string; background: string } {
-    switch (status) {
-      case 'saving':
-        return { color: 'var(--color-accent)', background: 'var(--color-accent-glow)' };
-      case 'error':
-        return { color: 'var(--color-error)', background: 'var(--color-error-light)' };
-      default:
-        return { color: 'var(--color-success)', background: 'var(--color-success-glow)' };
-    }
-  }
 
   const showCopiedIndicator = () => {
     // Clear any existing indicator timeouts
@@ -803,7 +818,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       </span>
 
       {/* Note Title - visible on desktop, clicks to scroll to top */}
-      <button
+      <button type="button"
         onClick={handleScrollToTop}
         className="hidden sm:inline truncate text-xl max-w-[200px] md:max-w-[300px] py-1 hover:text-[var(--color-accent)] transition-colors duration-200"
         style={{
@@ -825,7 +840,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
   // Center content: Mobile note title only (clicks to scroll to top)
   const centerContent = (
-    <button
+    <button type="button"
       onClick={handleScrollToTop}
       className="sm:hidden flex items-center min-w-0"
       style={{ background: 'none', border: 'none', cursor: 'pointer' }}
@@ -862,15 +877,15 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           {saveStatus === 'saving' && (
             <>
               <span
-                className="w-2 h-2 rounded-full animate-pulse"
+                className="size-2 rounded-full animate-pulse"
                 style={{ background: 'var(--color-accent)' }}
               />
-              Saving...
+              Saving&hellip;
             </>
           )}
           {saveStatus === 'error' && (
             <>
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
               Save failed
@@ -878,7 +893,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           )}
           {saveStatus === 'copied' && (
             <>
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
               Copied
@@ -886,7 +901,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           )}
           {saveStatus === 'saved' && (
             <>
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
               Saved
@@ -897,10 +912,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
       {/* Export button with dropdown */}
       <div className="relative" ref={exportMenuRef}>
-        <button
+        <button type="button"
           onClick={() => setShowExportMenu(!showExportMenu)}
           className="
-            w-9 h-9
+            size-9
             rounded-full
             flex items-center justify-center
             transition-all duration-200
@@ -927,7 +942,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           aria-label="Export note"
           title="Export note"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
           </svg>
         </button>
@@ -942,7 +957,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             }}
           >
             {/* Copy options */}
-            <button
+            <button type="button"
               onClick={handleCopyPlainText}
               className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
               style={{
@@ -956,12 +971,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 e.currentTarget.style.background = 'transparent';
               }}
             >
-              <svg className="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="size-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
               </svg>
               Copy as text
             </button>
-            <button
+            <button type="button"
               onClick={handleCopyWithFormatting}
               className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
               style={{
@@ -975,7 +990,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 e.currentTarget.style.background = 'transparent';
               }}
             >
-              <svg className="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="size-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Copy with formatting
@@ -990,7 +1005,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                   style={{ borderTop: '1px solid var(--glass-border)' }}
                 />
 
-                <button
+                <button type="button"
                   onClick={async () => {
                     setShowExportMenu(false);
                     // Flush any unsaved edits so ShareModal encrypts the latest content
@@ -1010,7 +1025,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                     e.currentTarget.style.background = 'transparent';
                   }}
                 >
-                  <svg className="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="size-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                   </svg>
                   Share as Letter
@@ -1025,7 +1040,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             />
 
             {/* Export options */}
-            <button
+            <button type="button"
               onClick={handleExportMarkdown}
               className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
               style={{
@@ -1039,12 +1054,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 e.currentTarget.style.background = 'transparent';
               }}
             >
-              <svg className="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="size-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               Download (.md)
             </button>
-            <button
+            <button type="button"
               onClick={handleExportJSON}
               className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
               style={{
@@ -1058,7 +1073,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 e.currentTarget.style.background = 'transparent';
               }}
             >
-              <svg className="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="size-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               Download (.json)
@@ -1068,10 +1083,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       </div>
 
       {/* Delete button */}
-      <button
+      <button type="button"
         onClick={handleDelete}
         className="
-          w-9 h-9
+          size-9
           rounded-full
           flex items-center justify-center
           transition-all duration-200
@@ -1091,7 +1106,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         aria-label="Delete note"
         title="Delete note"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
         </svg>
       </button>
@@ -1123,7 +1138,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {/* Resume chip - shown when reopening a note with saved scroll position */}
       {showResumeChip && (
         <div className="flex justify-center py-2 focus-mode-target">
-          <button
+          <button type="button"
             onClick={handleResumeScroll}
             aria-label="Resume editing at your last position"
             className="
@@ -1143,7 +1158,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             }}
           >
             <svg
-              className="w-3.5 h-3.5"
+              className="size-3.5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1176,7 +1191,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           >
             <div className="flex items-center gap-2 min-w-0">
               <svg
-                className="w-4 h-4 shrink-0"
+                className="size-4 shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -1200,7 +1215,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               </span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button
+              <button type="button"
                 onClick={handleKeepMine}
                 className="text-xs px-3 py-1.5 rounded-md transition-colors duration-200"
                 style={{
@@ -1218,7 +1233,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               >
                 Keep mine
               </button>
-              <button
+              <button type="button"
                 onClick={handleLoadRemoteChanges}
                 className="text-xs px-3 py-1.5 rounded-md transition-colors duration-200"
                 style={{
@@ -1261,6 +1276,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             <textarea
               ref={titleRef}
               value={title}
+              aria-label="Note title"
               onChange={handleTitleChange}
               onKeyDown={handleTitleKeyDown}
               onBlur={performSave}
@@ -1328,13 +1344,13 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         >
           {/* Decorative dots - like end of a letter */}
           <div className="flex gap-2 opacity-40">
-            <span className="w-1 h-1 rounded-full bg-current" />
-            <span className="w-1 h-1 rounded-full bg-current" />
-            <span className="w-1 h-1 rounded-full bg-current" />
+            <span className="size-1 rounded-full bg-current" />
+            <span className="size-1 rounded-full bg-current" />
+            <span className="size-1 rounded-full bg-current" />
           </div>
 
           {/* Return link - larger touch target on mobile */}
-          <button
+          <button type="button"
             onClick={handleLogoClick}
             className="
               flex items-center gap-2
@@ -1351,7 +1367,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             }}
           >
             <svg
-              className="w-4 h-4"
+              className="size-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1387,11 +1403,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {!isFocusMode && <WhisperBack scrollContainerRef={scrollContainerRef} />}
 
       {/* Focus Mode indicator pill + screen reader announcement */}
-      <div role="status" aria-live="polite" className="sr-only">
+      <output aria-live="polite" className="sr-only">
         {isFocusMode ? 'Focus mode on' : 'Focus mode off'}
-      </div>
+      </output>
       {isFocusMode && (
-        <button
+        <button type="button"
           onClick={() => setIsFocusMode(false)}
           className="focus-mode-indicator"
           aria-label="Exit focus mode"
@@ -1406,24 +1422,29 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {showDeleteConfirm && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
-          onClick={() => setShowDeleteConfirm(false)}
         >
-          <div
+          <ModalBackdropButton
+            label="Cancel deleting note"
+            onClick={() => setShowDeleteConfirm(false)}
+          />
+          <dialog
+            open
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="delete-dialog-title"
             aria-describedby="delete-dialog-description"
             className="
-              w-full max-w-[400px] mx-4
+              relative z-10 w-full max-w-[400px] mx-4
               p-8
               shadow-2xl
+              border-0
             "
             style={{
               background: 'var(--color-bg-secondary)',
               borderRadius: 'var(--radius-card)',
               border: '1px solid var(--glass-border)',
+              margin: 0,
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             <h3
               id="delete-dialog-title"
@@ -1450,7 +1471,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 : 'It will rest in Faded Notes for 30 days, then quietly disappear.'}
             </p>
             <div className="flex gap-3 justify-end">
-              <button
+              <button type="button"
                 onClick={() => setShowDeleteConfirm(false)}
                 className="
                   px-5 py-2.5
@@ -1473,7 +1494,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               >
                 Keep writing
               </button>
-              <button
+              <button type="button"
                 onClick={confirmDelete}
                 className="
                   px-5 py-2.5
@@ -1496,7 +1517,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 Let it fade
               </button>
             </div>
-          </div>
+          </dialog>
         </div>
       )}
 

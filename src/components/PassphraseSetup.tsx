@@ -187,7 +187,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
         >
           Set a passphrase to encrypt your notes end-to-end.
           Keep it somewhere safe before continuing.
-          Only you can read them — not even the server.
+          Only you can read them, not even the server.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -207,14 +207,13 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
               onChange={(e) => setPassphrase(e.target.value)}
               placeholder="At least 8 characters"
               autoFocus
-              className="w-full px-3 py-2 text-sm"
+              className="w-full px-3 py-2 text-sm focus-ring"
               style={{
                 background: 'var(--color-bg-primary)',
                 color: 'var(--color-text-primary)',
                 border: '1px solid var(--glass-border)',
                 borderRadius: '2px 12px 4px 12px',
                 fontFamily: 'var(--font-body)',
-                outline: 'none',
               }}
             />
             {passphraseStrength && (
@@ -260,14 +259,13 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="Re-enter passphrase"
-              className="w-full px-3 py-2 text-sm"
+              className="w-full px-3 py-2 text-sm focus-ring"
               style={{
                 background: 'var(--color-bg-primary)',
                 color: 'var(--color-text-primary)',
                 border: '1px solid var(--glass-border)',
                 borderRadius: '2px 12px 4px 12px',
                 fontFamily: 'var(--font-body)',
-                outline: 'none',
               }}
             />
             {confirm && passphrase !== confirm && (
@@ -297,7 +295,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
             className="text-xs"
             style={{ color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-body)' }}
           >
-            Note: Tag names are not encrypted — only note titles and content are protected.
+            Note: Tag names are not encrypted; only note titles and content are protected.
           </p>
 
           {error && (

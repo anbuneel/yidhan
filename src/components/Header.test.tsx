@@ -65,8 +65,8 @@ describe('Header', () => {
 
       return (
         <>
-          <button onClick={() => setSearchFocusToken((prev) => prev + 1000)}>Request focus</button>
-          <button onClick={() => setShowHeader((prev) => !prev)}>Toggle header</button>
+          <button type="button" onClick={() => setSearchFocusToken((prev) => prev + 1000)}>Request focus</button>
+          <button type="button" onClick={() => setShowHeader((prev) => !prev)}>Toggle header</button>
           {showHeader ? <Header {...defaultProps} searchFocusToken={searchFocusToken} /> : null}
         </>
       );

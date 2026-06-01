@@ -83,11 +83,11 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
     >
 
       {/* Restore button - top-right corner */}
-      <button
+      <button type="button"
         onClick={handleRestoreClick}
         className="
           absolute top-2 right-2
-          w-10 h-10
+          size-10
           rounded-full
           flex items-center justify-center
           transition-all duration-200
@@ -112,7 +112,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
         aria-label="Restore note"
         title="Restore note"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
         </svg>
       </button>
@@ -182,10 +182,10 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
         </div>
 
         {/* Permanent delete button */}
-        <button
+        <button type="button"
           onClick={handleDeleteClick}
           className="
-            w-10 h-10
+            size-10
             rounded-full
             flex items-center justify-center
             opacity-0
@@ -214,7 +214,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
           aria-label="Release note"
           title="Release note"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -257,7 +257,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
             This is a gentle goodbye.
           </p>
           <div className="flex gap-2">
-            <button
+            <button type="button"
               onClick={handleCancelDelete}
               className="
                 px-4 py-2
@@ -280,7 +280,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
             >
               Keep Resting
             </button>
-            <button
+            <button type="button"
               onClick={handleConfirmDelete}
               className="
                 px-4 py-2

@@ -111,7 +111,7 @@ export function ChapterNav({
             )}
 
             {/* Dot button */}
-            <button
+            <button type="button"
               onClick={() => onChapterClick(chapter.key)}
               onMouseEnter={() => setHoveredChapter(chapter.key)}
               onMouseLeave={() => setHoveredChapter(null)}
@@ -130,7 +130,7 @@ export function ChapterNav({
               aria-current={isActive ? 'true' : undefined}
             >
               <span
-                className={`block rounded-full transition-all duration-300 ${isActive ? 'w-3 h-3' : 'w-2 h-2'}`}
+                className={`block rounded-full transition-all duration-300 ${isActive ? 'size-3' : 'size-2'}`}
                 style={{
                   background: isActive
                     ? 'var(--color-accent)'

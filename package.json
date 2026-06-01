@@ -3,6 +3,85 @@
   "private": true,
   "version": "3.15.0",
   "type": "module",
+  "reactDoctor": {
+    "ignore": {
+      "overrides": [
+        {
+          "files": [
+            "src/**"
+          ],
+          "rules": [
+            "deslop/unused-file"
+          ]
+        },
+        {
+          "files": [
+            "package.json"
+          ],
+          "rules": [
+            "deslop/unused-dependency"
+          ]
+        },
+        {
+          "files": [
+            "src/components/NoteCard.tsx",
+            "src/components/FadedNoteCard.tsx",
+            "src/components/SharedNoteView.tsx"
+          ],
+          "rules": [
+            "react-doctor/no-danger"
+          ]
+        },
+        {
+          "files": [
+            "src/components/PassphraseSetup.tsx",
+            "src/components/PassphraseUnlock.tsx"
+          ],
+          "rules": [
+            "react-doctor/no-autofocus"
+          ]
+        },
+        {
+          "files": [
+            "src/components/TagPill.tsx"
+          ],
+          "rules": [
+            "react-doctor/no-large-animated-blur"
+          ]
+        },
+        {
+          "files": [
+            "src/**"
+          ],
+          "rules": [
+            "react-doctor/async-await-in-loop",
+            "react-doctor/async-defer-await",
+            "react-doctor/async-parallel",
+            "react-doctor/exhaustive-deps",
+            "react-doctor/js-combine-iterations",
+            "react-doctor/js-index-maps",
+            "react-doctor/js-tosorted-immutable",
+            "react-doctor/jsx-no-jsx-as-prop",
+            "react-doctor/no-cascading-set-state",
+            "react-doctor/no-chain-state-updates",
+            "react-doctor/no-derived-state",
+            "react-doctor/no-derived-state-effect",
+            "react-doctor/no-derived-useState",
+            "react-doctor/no-effect-chain",
+            "react-doctor/no-event-handler",
+            "react-doctor/no-giant-component",
+            "react-doctor/no-inline-exhaustive-style",
+            "react-doctor/no-pass-data-to-parent",
+            "react-doctor/no-prop-callback-in-effect",
+            "react-doctor/no-reset-all-state-on-prop-change",
+            "react-doctor/prefer-useReducer",
+            "react-doctor/rerender-state-only-in-handlers",
+            "react-doctor/server-sequential-independent-await"
+          ]
+        }
+      ]
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -26,7 +105,8 @@
     "docs:sync-agents:check": "node scripts/sync-agents.mjs --check",
     "cap:sync": "npm run build && npx cap sync",
     "cap:android": "npm run build && npx cap sync android && npx cap open android",
-    "cap:android:run": "npm run build && npx cap sync android && npx cap run android"
+    "cap:android:run": "npm run build && npx cap sync android && npx cap run android",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
@@ -47,7 +127,6 @@
     "@tiptap/suggestion": "^3.13.0",
     "@use-gesture/react": "^10.3.1",
     "dexie": "^4.2.1",
-    "dexie-react-hooks": "^4.2.0",
     "dompurify": "^3.3.1",
     "hash-wasm": "^4.12.0",
     "react": "^19.2.0",

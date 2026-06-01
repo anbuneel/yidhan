@@ -73,7 +73,7 @@ export class ErrorBoundary extends Component<Props, State> {
           >
             {/* Decorative icon */}
             <div
-              className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center"
+              className="size-12 mx-auto mb-4 rounded-full flex items-center justify-center"
               style={{
                 background: isChunkError
                   ? 'var(--color-accent-glow, rgba(212, 175, 55, 0.15))'
@@ -83,7 +83,7 @@ export class ErrorBoundary extends Component<Props, State> {
               {isChunkError ? (
                 // Refresh/update icon for chunk errors
                 <svg
-                  className="w-6 h-6"
+                  className="size-6"
                   fill="none"
                   stroke="var(--color-accent, #D4AF37)"
                   viewBox="0 0 24 24"
@@ -98,7 +98,7 @@ export class ErrorBoundary extends Component<Props, State> {
               ) : (
                 // Warning icon for other errors
                 <svg
-                  className="w-6 h-6"
+                  className="size-6"
                   fill="none"
                   stroke="var(--color-error, #DC2626)"
                   viewBox="0 0 24 24"
@@ -169,7 +169,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </details>
             )}
 
-            <button
+            <button type="button"
               onClick={this.handleReload}
               className="px-6 py-3 rounded-lg font-medium transition-all duration-200"
               style={{

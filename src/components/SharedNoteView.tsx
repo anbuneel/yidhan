@@ -22,6 +22,51 @@ interface SharedNoteViewProps {
 
 type LoadingState = 'loading' | 'decrypting' | 'success' | 'error' | 'expired' | 'incomplete';
 
+interface SharedNoteHeaderProps {
+  theme: Theme;
+  onThemeToggle: () => void;
+}
+
+function SharedNoteHeader({ theme, onThemeToggle }: SharedNoteHeaderProps) {
+  return (
+    <header
+      className="px-4 md:px-12 shrink-0"
+      style={{ background: 'var(--color-bg-primary)' }}
+    >
+      <div className="h-16 flex items-center justify-between">
+        <Logo variant="header" />
+
+        <button type="button"
+          onClick={onThemeToggle}
+          className="
+            size-9
+            rounded-full
+            flex items-center justify-center
+            transition-all duration-300
+            focus:outline-none
+            focus:ring-2
+            focus:ring-[var(--color-accent)]
+            hover:text-[var(--color-accent)]
+            hover:bg-[var(--color-bg-secondary)]
+          "
+          style={{ color: 'var(--color-text-secondary)' }}
+          aria-label="Toggle theme"
+        >
+          {theme === 'light' ? (
+            <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          ) : (
+            <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          )}
+        </button>
+      </div>
+    </header>
+  );
+}
+
 export function SharedNoteView({
   token,
   shareKey,
@@ -110,47 +155,6 @@ export function SharedNoteView({
     };
   }, [token, shareKey, keyValid]);
 
-  // Render header (simplified, no auth)
-  const renderHeader = () => (
-    <header
-      className="px-4 md:px-12 shrink-0"
-      style={{ background: 'var(--color-bg-primary)' }}
-    >
-      <div className="h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Logo variant="header" />
-
-        {/* Theme Toggle */}
-        <button
-          onClick={onThemeToggle}
-          className="
-            w-9 h-9
-            rounded-full
-            flex items-center justify-center
-            transition-all duration-300
-            focus:outline-none
-            focus:ring-2
-            focus:ring-[var(--color-accent)]
-            hover:text-[var(--color-accent)]
-            hover:bg-[var(--color-bg-secondary)]
-          "
-          style={{ color: 'var(--color-text-secondary)' }}
-          aria-label="Toggle theme"
-        >
-          {theme === 'light' ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          )}
-        </button>
-      </div>
-    </header>
-  );
-
   // Loading / decrypting state
   if (loadingState === 'loading' || loadingState === 'decrypting') {
     return (
@@ -158,11 +162,11 @@ export function SharedNoteView({
         className="min-h-screen flex flex-col"
         style={{ background: 'var(--color-bg-primary)' }}
       >
-        {renderHeader()}
+        <SharedNoteHeader theme={theme} onThemeToggle={onThemeToggle} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div
-              className="w-8 h-8 mx-auto mb-4 border-2 border-t-transparent rounded-full animate-spin"
+              className="size-8 mx-auto mb-4 border-2 border-t-transparent rounded-full animate-spin"
               style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
             />
             <p style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}>
@@ -181,7 +185,7 @@ export function SharedNoteView({
         className="min-h-screen flex flex-col"
         style={{ background: 'var(--color-bg-primary)' }}
       >
-        {renderHeader()}
+        <SharedNoteHeader theme={theme} onThemeToggle={onThemeToggle} />
         <div className="flex-1 flex items-center justify-center px-4">
           <div
             className="text-center max-w-md p-8"
@@ -192,11 +196,11 @@ export function SharedNoteView({
             }}
           >
             <div
-              className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center"
+              className="size-16 mx-auto mb-6 rounded-full flex items-center justify-center"
               style={{ background: 'var(--color-bg-tertiary)' }}
             >
               <svg
-                className="w-8 h-8"
+                className="size-8"
                 style={{ color: 'var(--color-text-tertiary)' }}
                 fill="none"
                 stroke="currentColor"
@@ -229,7 +233,7 @@ export function SharedNoteView({
             >
               The full link is needed to read this note. Please ask the sender for the complete link, including the `#k=` key fragment.
             </p>
-            <button
+            <button type="button"
               onClick={onInvalidToken}
               className="
                 px-5 py-2.5
@@ -265,7 +269,7 @@ export function SharedNoteView({
         className="min-h-screen flex flex-col"
         style={{ background: 'var(--color-bg-primary)' }}
       >
-        {renderHeader()}
+        <SharedNoteHeader theme={theme} onThemeToggle={onThemeToggle} />
         <div className="flex-1 flex items-center justify-center px-4">
           <div
             className="text-center max-w-md p-8"
@@ -277,11 +281,11 @@ export function SharedNoteView({
           >
             {/* Decorative icon */}
             <div
-              className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center"
+              className="size-16 mx-auto mb-6 rounded-full flex items-center justify-center"
               style={{ background: 'var(--color-bg-tertiary)' }}
             >
               <svg
-                className="w-8 h-8"
+                className="size-8"
                 style={{ color: 'var(--color-text-tertiary)' }}
                 fill="none"
                 stroke="currentColor"
@@ -316,7 +320,7 @@ export function SharedNoteView({
                 ? 'The shared note has expired or been removed by its author.'
                 : 'We couldn\'t load this shared note. Please check the link and try again.'}
             </p>
-            <button
+            <button type="button"
               onClick={onInvalidToken}
               className="
                 px-5 py-2.5
@@ -351,7 +355,7 @@ export function SharedNoteView({
       className="min-h-screen flex flex-col"
       style={{ background: 'var(--color-bg-primary)' }}
     >
-      {renderHeader()}
+      <SharedNoteHeader theme={theme} onThemeToggle={onThemeToggle} />
 
       {/* Note content */}
       <main className="flex-1">
@@ -372,11 +376,11 @@ export function SharedNoteView({
           {/* Tags */}
           {payload?.tags && payload.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-6">
-              {payload.tags.map((tag, idx) => {
+              {payload.tags.map((tag) => {
                 const safeColor = VALID_TAG_COLORS.has(tag.color) ? tag.color : 'stone';
                 return (
                   <span
-                    key={idx}
+                    key={`${tag.name}-${safeColor}`}
                     className="px-2.5 py-0.5 text-xs rounded-full"
                     style={{
                       fontFamily: 'var(--font-body)',

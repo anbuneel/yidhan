@@ -63,7 +63,7 @@ export function PrivacyPage({
               fontStyle: 'italic',
             }}
           >
-            How Yidhan handles your data — honestly and simply.
+            How Yidhan handles your data, honestly and simply.
           </p>
 
           <div className="space-y-10" style={{ fontFamily: 'var(--font-body)' }}>
@@ -82,10 +82,10 @@ export function PrivacyPage({
               </h2>
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
-                  Yidhan uses end-to-end encryption (AES-256-GCM) to protect your notes. Your passphrase never leaves your device — it is used locally to derive encryption keys via Argon2id. Note titles and content are encrypted before they reach our servers.
+                  Yidhan uses end-to-end encryption (AES-256-GCM) to protect your notes. Your passphrase never leaves your device; it is used locally to derive encryption keys via Argon2id. Note titles and content are encrypted before they reach our servers.
                 </p>
                 <p>
-                  We cannot read your notes. No one at Yidhan, Supabase, or anywhere else can decrypt them without your passphrase. If you forget your passphrase, your notes cannot be recovered — this is the tradeoff of real encryption.
+                  We cannot read your notes. No one at Yidhan, Supabase, or anywhere else can decrypt them without your passphrase. If you forget your passphrase, your notes cannot be recovered; this is the tradeoff of real encryption.
                 </p>
               </div>
             </section>
@@ -104,7 +104,7 @@ export function PrivacyPage({
                 What we store
               </h2>
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
-                <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Encrypted:</strong> Note titles and content (stored as encrypted blobs — unreadable without your passphrase).</p>
+                <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Encrypted:</strong> Note titles and content (stored as encrypted blobs, unreadable without your passphrase).</p>
                 <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Not encrypted:</strong> Tag names, timestamps (created/updated), and whether a note is pinned. These remain in plaintext to enable sorting and filtering.</p>
                 <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Account:</strong> Your email address, display name (optional), and authentication credentials managed by Supabase.</p>
               </div>
@@ -148,7 +148,7 @@ export function PrivacyPage({
               </h2>
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
-                  Yidhan uses Sentry for error tracking to help us find and fix bugs. Sentry receives crash reports and basic performance data. It does not receive your note content — encrypted fields are stripped before any data reaches Sentry.
+                  Yidhan uses Sentry for error tracking to help us find and fix bugs. Sentry receives crash reports and basic performance data. It does not receive your note content; encrypted fields are stripped before any data reaches Sentry.
                 </p>
                 <p>
                   Session replay (if sampled) masks all text and blocks note card elements to prevent accidental capture of decrypted content.
@@ -170,10 +170,10 @@ export function PrivacyPage({
                 Third-party services
               </h2>
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
-                <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Supabase</strong> — Database, authentication, and real-time sync. Your encrypted data is stored on Supabase's infrastructure with row-level security.</p>
-                <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Sentry</strong> — Error monitoring (no note content). Optional — Yidhan works without it.</p>
-                <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Google Fonts</strong> — Typography (Cormorant Garamond, Source Sans 3). Google may log font requests.</p>
-                <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Vercel</strong> — Hosting and deployment.</p>
+                <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Supabase</strong>: Database, authentication, and real-time sync. Your encrypted data is stored on Supabase's infrastructure with row-level security.</p>
+                <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Sentry</strong>: Error monitoring (no note content). Optional; Yidhan works without it.</p>
+                <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Google Fonts</strong>: Typography (Cormorant Garamond, Source Sans 3). Google may log font requests.</p>
+                <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Vercel</strong>: Hosting and deployment.</p>
               </div>
             </section>
 
@@ -210,7 +210,7 @@ export function PrivacyPage({
               </h2>
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
-                  You can export all your notes at any time (JSON or Markdown). You can delete your account and all associated data through Settings. Deletion is permanent — we don't keep backups of your data after you leave.
+                  You can export all your notes at any time (JSON or Markdown). You can delete your account and all associated data through Settings. Deletion is permanent; we don't keep backups of your data after you leave.
                 </p>
               </div>
             </section>

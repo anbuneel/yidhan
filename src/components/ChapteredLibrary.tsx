@@ -175,7 +175,7 @@ export function ChapteredLibrary({
             <>
               {/* Notebook icon */}
               <svg
-                className="w-16 h-16 mx-auto mb-6"
+                className="size-16 mx-auto mb-6"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -210,7 +210,7 @@ export function ChapteredLibrary({
                 A quiet space for your thoughts
               </p>
               {onNewNote && (
-                <button
+                <button type="button"
                   onClick={onNewNote}
                   className="px-6 py-3 rounded-lg font-medium transition-all duration-300 mb-4 touch-press"
                   style={{

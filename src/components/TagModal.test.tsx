@@ -317,11 +317,7 @@ describe('TagModal', () => {
       const onClose = vi.fn();
       render(<TagModal {...defaultProps} onClose={onClose} />);
 
-      // Click the backdrop (the outer div with the dark overlay)
-      const backdrop = screen.getByRole('heading', { name: 'Create Tag' }).parentElement?.parentElement;
-      if (backdrop) {
-        await user.click(backdrop);
-      }
+      await user.click(screen.getByLabelText('Close tag dialog'));
 
       expect(onClose).toHaveBeenCalled();
     });

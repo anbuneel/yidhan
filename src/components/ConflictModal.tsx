@@ -5,10 +5,11 @@
  * Displays both versions side-by-side with clear resolution options.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useEffectEvent, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import type { ConflictInfo, NoteConflictServerVersion } from '../services/syncEngine';
 import { escapeHtml } from '../utils/sanitize';
+import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface ConflictModalProps {
   conflict: ConflictInfo | null;
@@ -27,18 +28,33 @@ function getPlainTextPreview(html: string, maxLength: number = 200): string {
   return plainText.slice(0, maxLength).trim() + '...';
 }
 
+function formatDate(timestamp: number | string) {
+  const date = new Date(timestamp);
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalProps) {
   const [isResolving, setIsResolving] = useState(false);
   const [resolvedChoice, setResolvedChoice] = useState<'local' | 'server' | 'both' | null>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDialogElement>(null);
+  const dismissFromEscape = useEffectEvent(() => {
+    if (!isResolving) {
+      onDismiss();
+    }
+  });
 
   // Focus trap and escape key handling
   useEffect(() => {
     if (!conflict) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isResolving) {
-        onDismiss();
+      if (e.key === 'Escape') {
+        dismissFromEscape();
       }
     };
 
@@ -46,7 +62,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
     modalRef.current?.focus();
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [conflict, isResolving, onDismiss]);
+  }, [conflict]);
 
   // Reset state when conflict changes
   useEffect(() => {
@@ -104,31 +120,24 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
     }
   };
 
-  const formatDate = (timestamp: number | string) => {
-    const date = typeof timestamp === 'string' ? new Date(timestamp) : new Date(timestamp);
-    return date.toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  };
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop"
-      onClick={isResolving ? undefined : onDismiss}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="conflict-title"
     >
-      <div
+      <ModalBackdropButton
+        label="Dismiss conflict dialog"
+        disabled={isResolving}
+        onClick={onDismiss}
+      />
+      <dialog
+        open
         ref={modalRef}
         tabIndex={-1}
         className={`
-          w-full max-w-3xl max-h-[90vh] overflow-y-auto
+          relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto
           p-6 md:p-8
           shadow-2xl
+          border-0
           ${resolvedChoice ? 'animate-[kintsugi-glow_600ms_ease-out]' : 'animate-[modal-enter_300ms_ease-out]'}
         `}
         style={{
@@ -137,8 +146,10 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
           border: resolvedChoice
             ? '2px solid var(--color-accent)'
             : '1px solid var(--glass-border)',
+          margin: 0,
         }}
-        onClick={(e) => e.stopPropagation()}
+        aria-modal="true"
+        aria-labelledby="conflict-title"
       >
         {/* Header - Zen messaging */}
         <div className="text-center mb-8">
@@ -208,7 +219,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
             >
               {getPlainTextPreview(localNote.content)}
             </p>
-            <button
+            <button type="button"
               onClick={() => handleResolve('local')}
               disabled={isResolving}
               className="
@@ -240,7 +251,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               {isResolving && resolvedChoice === 'local' ? (
                 <span className="flex items-center justify-center gap-2">
                   <span
-                    className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+                    className="size-4 border-2 border-t-transparent rounded-full animate-spin"
                     style={{ borderColor: 'var(--color-on-accent)', borderTopColor: 'transparent' }}
                   />
                   {localResolvingLabel}
@@ -294,7 +305,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
             >
               {serverPreview}
             </p>
-            <button
+            <button type="button"
               onClick={() => handleResolve('server')}
               disabled={isResolving}
               className="
@@ -326,7 +337,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               {isResolving && resolvedChoice === 'server' ? (
                 <span className="flex items-center justify-center gap-2">
                   <span
-                    className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+                    className="size-4 border-2 border-t-transparent rounded-full animate-spin"
                     style={{ borderColor: 'var(--color-on-accent)', borderTopColor: 'transparent' }}
                   />
                   {serverResolvingLabel}
@@ -340,7 +351,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
 
         {/* Keep both option */}
         <div className="text-center">
-          <button
+          <button type="button"
             onClick={() => handleResolve('both')}
             disabled={isResolving}
             className="
@@ -370,10 +381,10 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
             {isResolving && resolvedChoice === 'both' ? (
               <span className="flex items-center justify-center gap-2">
                 <span
-                  className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+                  className="size-4 border-2 border-t-transparent rounded-full animate-spin"
                   style={{ borderColor: 'var(--color-on-accent)', borderTopColor: 'transparent' }}
                 />
-                Creating copy...
+                Creating copy&hellip;
               </span>
             ) : (
               bothActionLabel
@@ -386,7 +397,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
             {bothHelperText}
           </p>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

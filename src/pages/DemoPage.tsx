@@ -9,7 +9,7 @@
  * (3+ notes AND 5+ minutes).
  */
 
-import { useState, useCallback, useEffect, useMemo, Suspense, useRef } from 'react';
+import { useState, useCallback, useEffect, useEffectEvent, useMemo, Suspense, useRef } from 'react';
 import type { Note, Tag, Theme, TagColor } from '../types';
 import { useDemoState } from '../hooks/useDemoState';
 import { useSoftPrompt } from '../hooks/useSoftPrompt';
@@ -108,6 +108,12 @@ export function DemoPage({
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [searchFocusToken, setSearchFocusToken] = useState(0);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearSearchTimeout = useCallback(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+  }, []);
 
   // Tag filter state
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -173,9 +179,7 @@ export function DemoPage({
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
 
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
+    clearSearchTimeout();
 
     if (!query.trim()) {
       setDebouncedSearchQuery('');
@@ -183,18 +187,15 @@ export function DemoPage({
     }
 
     searchTimeoutRef.current = setTimeout(() => {
+      searchTimeoutRef.current = null;
       setDebouncedSearchQuery(query);
     }, 300);
-  }, []);
+  }, [clearSearchTimeout]);
 
   // Clean up search timeout on unmount
   useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, []);
+    return clearSearchTimeout;
+  }, [clearSearchTimeout]);
 
   // Apply debounced search on top of tag-filtered notes
   const displayNotes = useMemo(() => {
@@ -220,20 +221,19 @@ export function DemoPage({
     setSelectedNoteId(newNote.id);
     setView('editor');
   }, [createNote, warmEditorRoute]);
+  const handleCreateNoteShortcut = useEffectEvent((e: KeyboardEvent) => {
+    if (view !== 'library') return;
+    if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+      e.preventDefault();
+      void handleNewNote();
+    }
+  });
 
   // Keyboard shortcut: Cmd/Ctrl + N to create new note
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (view !== 'library') return;
-      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
-        e.preventDefault();
-        handleNewNote();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [view, handleNewNote]);
+    window.addEventListener('keydown', handleCreateNoteShortcut);
+    return () => window.removeEventListener('keydown', handleCreateNoteShortcut);
+  }, []);
 
   const handleNoteClick = useCallback((id: string) => {
     void warmEditorRoute().then(() => {
@@ -497,7 +497,7 @@ export function DemoPage({
                 letterSpacing: '-0.01em',
               }}
             >
-              Write freely — no account needed
+              Write freely, no account needed
             </p>
             <p
               className="text-sm mt-1.5"
@@ -655,7 +655,7 @@ function DemoHeader({
               }}
             >
               <svg
-                className="w-4 h-4 shrink-0"
+                className="size-4 shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -687,16 +687,16 @@ function DemoHeader({
                 }}
               />
               {searchQuery ? (
-                <button
+                <button type="button"
                   onClick={() => onSearchChange('')}
-                  className="w-5 h-5 rounded-full flex items-center justify-center transition-colors duration-200 shrink-0"
+                  className="size-5 rounded-full flex items-center justify-center transition-colors duration-200 shrink-0"
                   style={{
                     background: 'var(--color-bg-tertiary)',
                     color: 'var(--color-text-secondary)',
                   }}
                   aria-label="Clear search"
                 >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -718,7 +718,7 @@ function DemoHeader({
         </div>
       }
       rightActions={
-        <button
+        <button type="button"
           onClick={onNewNote}
           className="
             p-2 sm:px-4 sm:py-2
@@ -748,7 +748,7 @@ function DemoHeader({
           }}
           aria-label="New note"
         >
-          <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="size-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
           </svg>
           <span className="hidden sm:inline text-sm font-medium">New Note</span>

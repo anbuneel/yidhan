@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomSheet } from './BottomSheet';
 import type { UseSessionSettingsResult } from '../hooks/useSessionSettings';
@@ -43,11 +43,13 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [securityMessage, setSecurityMessage] = useState<{ text: string } | null>(null);
+  const formOwnerRef = useRef<string | null>(null);
 
-  // Initialize form with user data
-  useEffect(() => {
-    if (isOpen && user) {
-      setFullName(user.user_metadata?.full_name || '');
+  const openFormOwner = isOpen && user ? user.id : null;
+  if (formOwnerRef.current !== openFormOwner) {
+    formOwnerRef.current = openFormOwner;
+    if (openFormOwner) {
+      setFullName(user?.user_metadata?.full_name || '');
       setProfileMessage(null);
       setPasswordMessage(null);
       setSecurityMessage(null);
@@ -55,7 +57,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
       setNewPassword('');
       setConfirmPassword('');
     }
-  }, [isOpen, user]);
+  }
 
   function handleRememberBrowserToggle() {
     if (!vaultSettings) return;
@@ -144,7 +146,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
         className="flex gap-1 px-6 py-3 border-b"
         style={{ borderColor: 'var(--glass-border)' }}
       >
-        <button
+        <button type="button"
           onClick={() => setActiveTab('profile')}
           className="
             px-4 py-2
@@ -162,7 +164,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
           Profile
         </button>
         {!isOAuthUser && (
-          <button
+          <button type="button"
             onClick={() => setActiveTab('password')}
             className="
               px-4 py-2
@@ -180,7 +182,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
             Password
           </button>
         )}
-        <button
+        <button type="button"
           onClick={() => setActiveTab('security')}
           className="
             px-4 py-2
@@ -221,6 +223,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   type="email"
                   value={user?.email || ''}
                   disabled
+                  readOnly
                   className="
                     w-full px-4 py-3
                     rounded-lg
@@ -279,7 +282,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
 
               {/* Theme Toggle */}
               <div className="mb-6">
-                <label
+                <span
                   className="block text-sm mb-2"
                   style={{
                     fontFamily: 'var(--font-body)',
@@ -287,7 +290,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   }}
                 >
                   Theme
-                </label>
+                </span>
                 <button
                   type="button"
                   onClick={onThemeToggle}
@@ -312,11 +315,11 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 >
                   <span className="flex items-center gap-3">
                     {theme === 'light' ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                       </svg>
                     ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                       </svg>
                     )}
@@ -651,7 +654,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       )}
                     </div>
                     {isVaultUnlocked && onLockVault && (
-                      <button
+                      <button type="button"
                         onClick={onLockVault}
                         className="
                           px-3 py-1.5
@@ -680,6 +683,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   {/* Vault Auto-Lock */}
                   <div>
                     <label
+                      htmlFor="vault-auto-lock"
                       className="block text-sm mb-2"
                       style={{
                         fontFamily: 'var(--font-body)',
@@ -689,6 +693,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       Vault auto-lock
                     </label>
                     <select
+                      id="vault-auto-lock"
                       value={String(vaultSettings.settings.autoLockMinutes)}
                       onChange={(e) => {
                         const parsed = parseInt(e.target.value, 10);
@@ -735,8 +740,12 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
 
                   {/* Remember This Browser Toggle */}
                   <div className="mt-4">
-                    <div
-                      className="flex items-center justify-between cursor-pointer"
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between text-left cursor-pointer focus-ring"
+                      role="switch"
+                      aria-checked={vaultSettings.settings.rememberBrowser}
+                      aria-label="Remember this browser"
                       onClick={handleRememberBrowserToggle}
                       style={{
                         fontFamily: 'var(--font-body)',
@@ -752,21 +761,17 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                           Stay unlocked across sessions. Only use on personal devices.
                         </span>
                       </div>
-                      <button
-                        type="button"
+                      <span
                         className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer shrink-0 ml-4 focus-ring"
                         style={{
                           background: vaultSettings.settings.rememberBrowser
                             ? 'var(--color-accent)'
                             : 'var(--color-bg-tertiary)',
                         }}
-                        role="switch"
-                        aria-checked={vaultSettings.settings.rememberBrowser}
-                        aria-label="Remember this browser"
-                        onClick={(e) => { e.stopPropagation(); handleRememberBrowserToggle(); }}
+                        aria-hidden="true"
                       >
-                        <div
-                          className="absolute top-0.5 w-5 h-5 rounded-full shadow transition-transform duration-200"
+                        <span
+                          className="absolute top-0.5 size-5 rounded-full shadow transition-transform duration-200"
                           style={{
                             background: 'var(--color-text-primary)',
                             transform: vaultSettings.settings.rememberBrowser
@@ -774,8 +779,8 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                               : 'translateX(2px)',
                           }}
                         />
-                      </button>
-                    </div>
+                      </span>
+                    </button>
                     {securityMessage && (
                       <p
                         className="mt-2 text-xs"
@@ -806,6 +811,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 {/* Session Timeout */}
                 <div className="mb-5">
                   <label
+                    htmlFor="session-timeout"
                     className="block text-sm mb-2"
                     style={{
                       fontFamily: 'var(--font-body)',
@@ -815,6 +821,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                     Session timeout
                   </label>
                   <select
+                    id="session-timeout"
                     value={sessionSettings.settings.timeoutMinutes === null ? 'null' : String(sessionSettings.settings.timeoutMinutes)}
                     onChange={(e) => {
                       const value = e.target.value === 'null' ? null : parseInt(e.target.value, 10);
@@ -859,8 +866,12 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
 
                 {/* Trusted Device Toggle */}
                 <div className="mb-5">
-                  <div
-                    className="flex items-center justify-between cursor-pointer"
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between text-left cursor-pointer focus-ring"
+                    role="switch"
+                    aria-checked={sessionSettings.settings.isTrustedDevice}
+                    aria-label="This is a trusted device"
                     onClick={sessionSettings.toggleTrustedDevice}
                     style={{
                       fontFamily: 'var(--font-body)',
@@ -876,21 +887,17 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         Extends session to 14 days. Only use on personal devices.
                       </span>
                     </div>
-                    <button
-                      type="button"
+                    <span
                       className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer shrink-0 ml-4 focus-ring"
                       style={{
                         background: sessionSettings.settings.isTrustedDevice
                           ? 'var(--color-accent)'
                           : 'var(--color-bg-tertiary)',
                       }}
-                      role="switch"
-                      aria-checked={sessionSettings.settings.isTrustedDevice}
-                      aria-label="This is a trusted device"
-                      onClick={(e) => { e.stopPropagation(); sessionSettings.toggleTrustedDevice(); }}
+                      aria-hidden="true"
                     >
-                      <div
-                        className="absolute top-0.5 w-5 h-5 rounded-full shadow transition-transform duration-200"
+                      <span
+                        className="absolute top-0.5 size-5 rounded-full shadow transition-transform duration-200"
                         style={{
                           background: 'var(--color-bg-primary)',
                           transform: sessionSettings.settings.isTrustedDevice
@@ -898,8 +905,8 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                             : 'translateX(2px)',
                         }}
                       />
-                    </button>
-                  </div>
+                    </span>
+                  </button>
                   {sessionSettings.settings.isTrustedDevice && sessionSettings.settings.trustedAt && (
                     <p
                       className="text-xs mt-2"

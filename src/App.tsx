@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from 'react';
+import { useState, useEffect, useCallback, useEffectEvent, useRef, Suspense, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import type { Note, Tag, ViewMode, Theme } from './types';
 import { Header } from './components/Header';
@@ -280,24 +280,24 @@ function App() {
   // Coalesced sync trigger: after a save, wait 2s then trigger sync.
   // Reset on each save to prevent flooding during rapid typing.
   const coalescedSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const triggerCoalescedSync = useCallback(() => {
+  const clearCoalescedSyncTimeout = useCallback(() => {
     if (coalescedSyncTimeoutRef.current) {
       clearTimeout(coalescedSyncTimeoutRef.current);
+      coalescedSyncTimeoutRef.current = null;
     }
+  }, []);
+  const triggerCoalescedSync = useCallback(() => {
+    clearCoalescedSyncTimeout();
     coalescedSyncTimeoutRef.current = setTimeout(() => {
       coalescedSyncTimeoutRef.current = null;
       triggerSync();
     }, 2000);
-  }, [triggerSync]);
+  }, [clearCoalescedSyncTimeout, triggerSync]);
 
   // Clean up coalesced sync timeout on unmount
   useEffect(() => {
-    return () => {
-      if (coalescedSyncTimeoutRef.current) {
-        clearTimeout(coalescedSyncTimeoutRef.current);
-      }
-    };
-  }, []);
+    return clearCoalescedSyncTimeout;
+  }, [clearCoalescedSyncTimeout]);
 
   // View transitions for smooth navigation
   const { startTransition } = useViewTransition();
@@ -583,20 +583,20 @@ function App() {
       clearTimeout(appLoaderTimerRef.current);
     }
 
-    appLoaderTimerRef.current = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       appLoaderTimerRef.current = null;
       appLoaderStartedAtRef.current = null;
       setShowAppLoader(false);
     }, remaining);
-  }, [appLoading, showAppLoader]);
+    appLoaderTimerRef.current = timeoutId;
 
-  useEffect(() => {
     return () => {
-      if (appLoaderTimerRef.current) {
-        clearTimeout(appLoaderTimerRef.current);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        appLoaderTimerRef.current = null;
       }
     };
-  }, []);
+  }, [appLoading, showAppLoader]);
 
   // Search state (focused-gaze model: highlights matches instead of filtering)
   const [searchQuery, setSearchQuery] = useState('');
@@ -655,7 +655,7 @@ function App() {
         window.history.replaceState({}, '', window.location.pathname);
       }
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [shareRoute]);
 
   // Playground route (dev-only — delete after design iteration complete)
   const isPlayground = import.meta.env.DEV && window.location.pathname === '/playground';
@@ -668,6 +668,12 @@ function App() {
 
   // Debounce timer refs
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearSearchTimeout = useCallback(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+  }, []);
 
   // Ref for stable delete callback (avoid re-creating handler on every notes change)
   const notesRef = useRef(notes);
@@ -1251,57 +1257,57 @@ function App() {
     }
   }, [user, keys, startTransition, trackNoteCreated, warmEditorRoute]);
 
-  // Keyboard shortcut: Cmd/Ctrl + N to create new note
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only trigger in library view when user is logged in
-      if (!user || view !== 'library') return;
+  const handleCreateNoteShortcut = useEffectEvent((e: KeyboardEvent) => {
+    // Only trigger in library view when user is logged in
+    if (!user || view !== 'library') return;
 
-      // Check for Cmd+N (Mac) or Ctrl+N (Windows/Linux)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
-        e.preventDefault();
-        handleNewNote();
-      }
-    };
+    // Check for Cmd+N (Mac) or Ctrl+N (Windows/Linux)
+    if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+      e.preventDefault();
+      handleNewNote();
+    }
+  });
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [user, view, handleNewNote]);
-
-  useEffect(() => {
+  const handleLibrarySearchShortcut = useEffectEvent((e: KeyboardEvent) => {
     if (!user || view === 'editor') return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isSearchKey = e.code === 'KeyK' || e.key.toLowerCase() === 'k';
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || !isSearchKey) {
-        return;
-      }
+    const isSearchKey = e.code === 'KeyK' || e.key.toLowerCase() === 'k';
+    if (!(e.metaKey || e.ctrlKey) || e.altKey || !isSearchKey) {
+      return;
+    }
 
-      const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT' ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
+    const target = e.target as HTMLElement | null;
+    if (
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable)
+    ) {
+      return;
+    }
 
-      e.preventDefault();
+    e.preventDefault();
 
-      if (view === 'library') {
-        setSearchFocusToken((prev) => prev + 1);
-        scheduleSearchFocus(LIBRARY_SEARCH_INPUT_ID);
-        return;
-      }
+    if (view === 'library') {
+      setSearchFocusToken((prev) => prev + 1);
+      scheduleSearchFocus(LIBRARY_SEARCH_INPUT_ID);
+      return;
+    }
 
-      requestLibrarySearch();
-    };
+    requestLibrarySearch();
+  });
 
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [user, view, requestLibrarySearch]);
+  // Keyboard shortcut: Cmd/Ctrl + N to create new note
+  useEffect(() => {
+    window.addEventListener('keydown', handleCreateNoteShortcut);
+    return () => window.removeEventListener('keydown', handleCreateNoteShortcut);
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleLibrarySearchShortcut, true);
+    return () => document.removeEventListener('keydown', handleLibrarySearchShortcut, true);
+  }, []);
 
   // Keyboard shortcut: ? to show keyboard shortcuts modal
   useEffect(() => {
@@ -1392,7 +1398,7 @@ function App() {
         (t) => (
           <div className="flex items-center gap-3">
             <span>Note moved to Faded Notes</span>
-            <button
+            <button type="button"
               onClick={async () => {
                 toast.dismiss(t.id);
                 try {
@@ -1752,9 +1758,7 @@ function App() {
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
 
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
+    clearSearchTimeout();
 
     if (!query.trim()) {
       setDebouncedSearchQuery('');
@@ -1762,18 +1766,15 @@ function App() {
     }
 
     searchTimeoutRef.current = setTimeout(() => {
+      searchTimeoutRef.current = null;
       setDebouncedSearchQuery(query);
     }, 300);
-  }, []);
+  }, [clearSearchTimeout]);
 
   // Clean up search timeout on unmount
   useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, []);
+    return clearSearchTimeout;
+  }, [clearSearchTimeout]);
 
   // Apply debounced search on top of tag-filtered notes
   const displayNotes = useMemo(() => {
@@ -2510,7 +2511,7 @@ function App() {
               }}
             >
               <div
-                className="w-8 h-8 mx-auto mb-4 border-2 border-t-transparent rounded-full animate-spin"
+                className="size-8 mx-auto mb-4 border-2 border-t-transparent rounded-full animate-spin"
                 style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
               />
               <p style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-body)' }}>

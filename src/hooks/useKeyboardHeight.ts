@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useEffectEvent } from 'react';
 
 /**
  * Hook to track virtual keyboard height using the Visual Viewport API.
@@ -19,7 +19,7 @@ import { useState, useEffect, useCallback } from 'react';
 export function useKeyboardHeight(): number {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  const updateKeyboardHeight = useCallback(() => {
+  const updateKeyboardHeight = useEffectEvent(() => {
     const viewport = window.visualViewport;
     if (!viewport) return;
 
@@ -45,7 +45,7 @@ export function useKeyboardHeight(): number {
       }
       return prev;
     });
-  }, []);
+  });
 
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -60,7 +60,7 @@ export function useKeyboardHeight(): number {
 
     // Listen for viewport changes (keyboard open/close, resize)
     viewport.addEventListener('resize', updateKeyboardHeight);
-    viewport.addEventListener('scroll', updateKeyboardHeight);
+    viewport.addEventListener('scroll', updateKeyboardHeight, { passive: true });
 
     // Also listen on window for orientation changes
     window.addEventListener('resize', updateKeyboardHeight);
@@ -75,7 +75,7 @@ export function useKeyboardHeight(): number {
       document.documentElement.style.setProperty('--keyboard-height', '0px');
       document.documentElement.style.setProperty('--keyboard-visible', '0');
     };
-  }, [updateKeyboardHeight]);
+  }, []);
 
   return keyboardHeight;
 }

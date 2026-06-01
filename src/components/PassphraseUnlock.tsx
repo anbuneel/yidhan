@@ -214,14 +214,13 @@ export function PassphraseUnlock() {
               onChange={(e) => setPassphrase(e.target.value)}
               placeholder="Enter your passphrase"
               autoFocus
-              className="w-full px-3 py-2 text-sm"
+              className="w-full px-3 py-2 text-sm focus-ring"
               style={{
                 background: 'var(--color-bg-primary)',
                 color: 'var(--color-text-primary)',
                 border: '1px solid var(--glass-border)',
                 borderRadius: '2px 12px 4px 12px',
                 fontFamily: 'var(--font-body)',
-                outline: 'none',
               }}
             />
           </div>

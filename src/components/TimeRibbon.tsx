@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useEffectEvent, useRef } from 'react';
 import { type ChapterKey } from '../utils/temporalGrouping';
 
 interface TimeRibbonProps {
@@ -59,13 +59,16 @@ export function TimeRibbon({
     setIsVisible(true);
     resetHideTimer();
   }, [resetHideTimer]);
+  const handleRibbonActivity = useEffectEvent(() => {
+    showRibbon();
+  });
 
   // Track previous chapter for section change detection
-  const [prevChapter, setPrevChapter] = useState<ChapterKey | null>(currentChapter);
+  const prevChapterRef = useRef<ChapterKey | null>(currentChapter);
 
   // Show on section change (using render-time comparison to avoid lint warning)
-  if (currentChapter !== prevChapter && currentChapter !== null) {
-    setPrevChapter(currentChapter);
+  if (currentChapter !== prevChapterRef.current && currentChapter !== null) {
+    prevChapterRef.current = currentChapter;
     setIsVisible(true);
     // Reset timer will be handled by the effect below
   }
@@ -77,19 +80,15 @@ export function TimeRibbon({
 
       // Show on scroll UP (user seeking/navigating)
       if (currentScrollY < lastScrollY.current - 10) {
-        showRibbon();
+        handleRibbonActivity();
       }
 
       lastScrollY.current = currentScrollY;
     };
 
-    const handleTouch = () => {
-      showRibbon();
-    };
-
     // Show on scroll or touch
     window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('touchstart', handleTouch, { passive: true });
+    window.addEventListener('touchstart', handleRibbonActivity, { passive: true });
 
     // Initial hide (longer for first-time users)
     const initialTimeout = getHideTimeout();
@@ -99,12 +98,12 @@ export function TimeRibbon({
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('touchstart', handleTouch);
+      window.removeEventListener('touchstart', handleRibbonActivity);
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
       }
     };
-  }, [getHideTimeout, showRibbon]);
+  }, [getHideTimeout]);
 
   const handleChapterClick = useCallback(
     (key: ChapterKey) => {
@@ -146,7 +145,6 @@ export function TimeRibbon({
         boxShadow: 'var(--shadow-lg)',
       }}
       aria-label="Time navigation"
-      onClick={showRibbon}
     >
       {/* Timeline track */}
       <div className="flex items-center gap-3">
@@ -154,7 +152,7 @@ export function TimeRibbon({
           const isActive = currentChapter === chapter.key;
 
           return (
-            <button
+            <button type="button"
               key={chapter.key}
               onClick={() => handleChapterClick(chapter.key)}
               className="
@@ -172,7 +170,7 @@ export function TimeRibbon({
                 className={`
                   block rounded-full
                   transition-all duration-300
-                  ${isActive ? 'w-3 h-3' : 'w-2 h-2'}
+                  ${isActive ? 'size-3' : 'size-2'}
                 `}
                 style={{
                   background: isActive

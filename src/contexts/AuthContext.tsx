@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { createContext, use, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { hydrateFromServer, clearOfflineData, needsHydration } from '../services/offlineNotes';
@@ -40,6 +40,59 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Grace window: 10 minutes after re-auth, skip re-auth prompts
 // Defined at module level to avoid recreating on each render
 const REAUTH_GRACE_WINDOW_MS = 10 * 60 * 1000;
+
+const signIn: AuthContextType['signIn'] = async (email, password) => {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  return { data, error };
+};
+
+const signInWithGoogle: AuthContextType['signInWithGoogle'] = async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin,
+    },
+  });
+  return { error };
+};
+
+const signInWithGitHub: AuthContextType['signInWithGitHub'] = async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'github',
+    options: {
+      redirectTo: window.location.origin,
+    },
+  });
+  return { error };
+};
+
+const signUp: AuthContextType['signUp'] = async (email, password, fullName) => {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: fullName ? {
+      data: { full_name: fullName }
+    } : undefined,
+  });
+  return { error };
+};
+
+const resetPassword: AuthContextType['resetPassword'] = async (email) => {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/?reset=true`,
+  });
+  return { error };
+};
+
+const updatePassword: AuthContextType['updatePassword'] = async (newPassword) => {
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+  return { error };
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -167,50 +220,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userId, loading, hydrateOfflineDb]);
 
-  const clearPasswordRecovery = () => {
+  const clearPasswordRecovery = useCallback(() => {
     setIsPasswordRecovery(false);
-  };
+  }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { data, error };
-  };
-
-  const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
-    return { error };
-  };
-
-  const signInWithGitHub = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
-    return { error };
-  };
-
-  const signUp = async (email: string, password: string, fullName?: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: fullName ? {
-        data: { full_name: fullName }
-      } : undefined,
-    });
-    return { error };
-  };
-
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     // Clear hydration state to prevent race conditions
     hydrationUserIdRef.current = null;
     // Clear re-auth grace window (security: prevent new user from inheriting)
@@ -220,23 +234,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear offline database on logout (security: prevent data leakage)
     await clearOfflineData();
     await supabase.auth.signOut();
-  };
+  }, []);
 
-  const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/?reset=true`,
-    });
-    return { error };
-  };
-
-  const updatePassword = async (newPassword: string) => {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-    return { error };
-  };
-
-  const updateProfile = async (fullName: string) => {
+  const updateProfile = useCallback(async (fullName: string) => {
     const { data, error } = await supabase.auth.updateUser({
       data: { full_name: fullName },
     });
@@ -244,12 +244,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user);
     }
     return { error };
-  };
+  }, []);
 
   // Verify current password for step-up authentication (sensitive actions)
   // NOTE: signInWithPassword may fire onAuthStateChange and refresh tokens.
   // This is acceptable - it validates credentials without creating a new session.
-  const verifyPassword = async (password: string): Promise<{ success: boolean; error?: string }> => {
+  const verifyPassword = useCallback(async (password: string): Promise<{ success: boolean; error?: string }> => {
     if (!user?.email) {
       return { success: false, error: 'No user logged in' };
     }
@@ -266,7 +266,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Track successful re-auth for grace window
     setLastReauthAt(Date.now());
     return { success: true };
-  };
+  }, [user?.email]);
 
   // Mark re-auth timestamp (for OAuth users who verify via email confirmation)
   const markReauth = useCallback(() => {
@@ -280,7 +280,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [lastReauthAt]);
 
   // Offboarding ("Letting Go") - initiate account departure with 14-day grace period
-  const initiateOffboarding = async () => {
+  const initiateOffboarding = useCallback(async () => {
     const { data, error } = await supabase.auth.updateUser({
       data: { departing_at: new Date().toISOString() },
     });
@@ -288,10 +288,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user);
     }
     return { error };
-  };
+  }, []);
 
   // Cancel offboarding - user decided to stay
-  const cancelOffboarding = async () => {
+  const cancelOffboarding = useCallback(async () => {
     const { data, error } = await supabase.auth.updateUser({
       data: { departing_at: null },
     });
@@ -299,10 +299,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user);
     }
     return { error };
-  };
+  }, []);
 
   // Computed: is the user in departure grace period?
-  const departingAt = user?.user_metadata?.departing_at as string | undefined;
+  const rawDeparting = user?.user_metadata?.departing_at;
+  const departingAt = typeof rawDeparting === 'string' ? rawDeparting : undefined;
   const isDeparting = Boolean(departingAt);
 
   // Computed: days until account release (null if not departing)
@@ -315,9 +316,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return Math.max(0, daysRemaining);
   }
   const daysUntilRelease = calculateDaysUntilRelease();
+  const contextValue = useMemo<AuthContextType>(() => ({
+    user,
+    session,
+    loading,
+    isPasswordRecovery,
+    clearPasswordRecovery,
+    signIn,
+    signInWithGoogle,
+    signInWithGitHub,
+    signUp,
+    signOut,
+    resetPassword,
+    updatePassword,
+    updateProfile,
+    initiateOffboarding,
+    cancelOffboarding,
+    isDeparting,
+    daysUntilRelease,
+    isHydrating,
+    hydrateOfflineDb,
+    verifyPassword,
+    markReauth,
+    lastReauthAt,
+    isRecentlyReauthed,
+  }), [
+    user,
+    session,
+    loading,
+    isPasswordRecovery,
+    clearPasswordRecovery,
+    signOut,
+    updateProfile,
+    initiateOffboarding,
+    cancelOffboarding,
+    isDeparting,
+    daysUntilRelease,
+    isHydrating,
+    hydrateOfflineDb,
+    verifyPassword,
+    markReauth,
+    lastReauthAt,
+    isRecentlyReauthed,
+  ]);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isPasswordRecovery, clearPasswordRecovery, signIn, signInWithGoogle, signInWithGitHub, signUp, signOut, resetPassword, updatePassword, updateProfile, initiateOffboarding, cancelOffboarding, isDeparting, daysUntilRelease, isHydrating, hydrateOfflineDb, verifyPassword, markReauth, lastReauthAt, isRecentlyReauthed }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
@@ -325,7 +369,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context = use(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }

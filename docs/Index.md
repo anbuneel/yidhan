@@ -47,10 +47,11 @@ Business strategy, competitive positioning, and launch planning.
 
 ## Analysis
 
-Design analysis and feature exploration (Claude-authored).
+Design analysis and feature exploration (AI-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [react-doctor-100-fixes-codex.md](analysis/react-doctor-100-fixes-codex.md) | React Doctor 100 cleanup summary: semantic fixes, small extractions, validation, and remaining lint gap | 2026-06-01 |
 | [design-audit-impeccable-skill-claude.md](analysis/design-audit-impeccable-skill-claude.md) | **NEW** Impeccable audit: a11y, performance, theming, responsive — 20 findings, 0 critical | 2026-03-28 |
 | [design-audit-redesign-skill-claude.md](analysis/design-audit-redesign-skill-claude.md) | **NEW** Redesign skill audit: anti-generic checklist, 8/10 overall score | 2026-03-28 |
 | [documentation-audit-codex.md](analysis/documentation-audit-codex.md) | Documentation quality audit (Codex) | 2026-03-09 |
@@ -294,6 +295,12 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 ## Chronological Index
 
 All analysis, review, and reference docs ordered by creation date (newest first).
+
+### 2026-06 (June)
+
+| Date | Document | Category |
+|------|----------|----------|
+| 06-01 | [react-doctor-100-fixes-codex.md](analysis/react-doctor-100-fixes-codex.md) | Code quality |
 
 ### 2026-03 (March)
 

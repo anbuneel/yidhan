@@ -39,7 +39,8 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
   };
 
   return (
-    <div
+    <dialog
+      open
       className={`
         fixed bottom-6 left-1/2 -translate-x-1/2
         px-6 py-4
@@ -47,6 +48,7 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
         shadow-lg
         transition-all duration-300 ease-out
         z-50
+        m-0 border-0
         ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
       `}
       style={{
@@ -54,17 +56,16 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
         border: '1px solid var(--glass-border)',
         borderRadius: 'var(--radius-card)',
       }}
-      role="dialog"
       aria-labelledby="install-prompt-title"
     >
       <div className="flex items-start gap-4">
         {/* Icon */}
         <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+          className="size-10 rounded-lg flex items-center justify-center shrink-0"
           style={{ background: 'var(--color-accent-glow)' }}
         >
           <svg
-            className="w-5 h-5"
+            className="size-5"
             style={{ color: 'var(--color-accent)' }}
             fill="none"
             stroke="currentColor"
@@ -105,14 +106,14 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
         </div>
 
         {/* Close button */}
-        <button
+        <button type="button"
           onClick={handleDismiss}
-          className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-colors duration-200 hover:opacity-70"
+          className="size-6 rounded-full flex items-center justify-center shrink-0 transition-colors duration-200 hover:opacity-70"
           style={{ color: 'var(--color-text-tertiary)' }}
           aria-label="Dismiss"
         >
           <svg
-            className="w-4 h-4"
+            className="size-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -129,7 +130,7 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
       </div>
 
       {/* Action button */}
-      <button
+      <button type="button"
         onClick={handleInstall}
         disabled={isInstalling}
         aria-busy={isInstalling}
@@ -143,18 +144,18 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
         {isInstalling ? (
           <>
             <span
-              className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+              className="size-4 border-2 border-t-transparent rounded-full animate-spin"
               style={{
                 borderColor: 'var(--color-cta-text)',
                 borderTopColor: 'transparent',
               }}
             />
-            Installing...
+            Installing&hellip;
           </>
         ) : (
           <>
             <svg
-              className="w-4 h-4"
+              className="size-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -171,6 +172,6 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
           </>
         )}
       </button>
-    </div>
+    </dialog>
   );
 }

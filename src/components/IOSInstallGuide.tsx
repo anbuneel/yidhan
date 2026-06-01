@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { ModalBackdropButton } from './ModalBackdropButton';
 
 // Animation timing constants
 const ENTRANCE_DELAY = 300; // Delay before showing guide
@@ -25,6 +26,24 @@ function detectIOSBrowser(): 'safari' | 'chrome' | 'firefox' | 'edge' | 'other' 
 
   return 'other';
 }
+
+const INSTALL_STEPS = [
+  {
+    icon: <ShareIcon />,
+    title: 'Tap the Share button',
+    description: 'Find the share icon in Safari\'s toolbar',
+  },
+  {
+    icon: <AddToHomeIcon />,
+    title: 'Scroll and tap "Add to Home Screen"',
+    description: 'It\'s in the action list below',
+  },
+  {
+    icon: <ConfirmIcon />,
+    title: 'Tap "Add" to confirm',
+    description: 'Yidhan will appear on your home screen',
+  },
+];
 
 /**
  * Visual tutorial for iOS users to install Yidhan as a PWA.
@@ -72,24 +91,6 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
     setTimeout(onDismiss, SPRING_TRANSITION_DURATION);
   };
 
-  const steps = [
-    {
-      icon: <ShareIcon />,
-      title: 'Tap the Share button',
-      description: 'Find the share icon in Safari\'s toolbar',
-    },
-    {
-      icon: <AddToHomeIcon />,
-      title: 'Scroll and tap "Add to Home Screen"',
-      description: 'It\'s in the action list below',
-    },
-    {
-      icon: <ConfirmIcon />,
-      title: 'Tap "Add" to confirm',
-      description: 'Yidhan will appear on your home screen',
-    },
-  ];
-
   return (
     <div
       className={`
@@ -97,15 +98,13 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
         transition-all duration-300 modal-backdrop
         ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}
       `}
-      onClick={handleDismiss}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="ios-guide-title"
     >
+      <ModalBackdropButton label="Dismiss iOS install guide" onClick={handleDismiss} />
       {/* Guide panel */}
-      <div
+      <dialog
+        open
         className={`
-          w-full max-w-md mx-4 mb-4 p-6
+          relative z-10 w-full max-w-md mx-4 mb-4 p-6 border-0
           ${isVisible ? 'translate-y-0' : 'translate-y-8'}
         `}
         style={{
@@ -113,8 +112,10 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
           borderRadius: 'var(--radius-card)',
           boxShadow: 'var(--shadow-lg)',
           transition: 'transform 0.4s var(--ease-out-quint), opacity 0.3s ease-out',
+          margin: 0,
         }}
-        onClick={(e) => e.stopPropagation()}
+        aria-modal="true"
+        aria-labelledby="ios-guide-title"
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
@@ -142,16 +143,16 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
             </p>
           </div>
 
-          <button
+          <button type="button"
             onClick={handleDismiss}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:opacity-70"
+            className="size-8 rounded-full flex items-center justify-center transition-colors hover:opacity-70"
             style={{
               background: 'var(--color-bg-secondary)',
               color: 'var(--color-text-secondary)',
             }}
             aria-label="Close guide"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -170,7 +171,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
               {/* Safari icon */}
               <div className="flex justify-center mb-4">
                 <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                  className="size-16 rounded-2xl flex items-center justify-center"
                   style={{
                     background: 'linear-gradient(135deg, #0066CC 0%, #00A8E8 100%)',
                   }}
@@ -211,7 +212,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
                 >
                   {typeof window !== 'undefined' ? window.location.href : 'yidhan.vercel.app'}
                 </span>
-                <button
+                <button type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(window.location.href);
                   }}
@@ -242,8 +243,9 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
           /* Safari install steps */
           <>
             <div className="space-y-4">
-              {steps.map((step, index) => (
-                <div
+          {INSTALL_STEPS.map((step, index) => (
+                <button
+                  type="button"
                   key={step.title}
                   className={`
                     flex items-start gap-4 p-4 rounded-lg
@@ -259,8 +261,6 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
                       : '1px solid transparent',
                   }}
                   onClick={() => setCurrentStep(index)}
-                  role="button"
-                  tabIndex={0}
                   aria-label={`Step ${index + 1}: ${step.title}`}
                   aria-current={currentStep === index ? 'step' : undefined}
                   onKeyDown={(e) => {
@@ -272,7 +272,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
                 >
                   {/* Step number */}
                   <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-medium"
+                    className="size-8 rounded-full flex items-center justify-center shrink-0 text-sm font-medium"
                     style={{
                       background: currentStep === index ? 'var(--color-accent)' : 'var(--color-bg-tertiary)',
                       color: currentStep === index ? 'var(--color-bg-primary)' : 'var(--color-text-secondary)',
@@ -286,7 +286,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span
-                        className="w-5 h-5"
+                        className="size-5"
                         style={{ color: 'var(--color-accent)' }}
                       >
                         {step.icon}
@@ -311,7 +311,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
                       {step.description}
                     </p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
 
@@ -327,7 +327,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
             </p>
           </>
         )}
-      </div>
+      </dialog>
     </div>
   );
 }
@@ -363,7 +363,7 @@ function ConfirmIcon() {
 // Safari Compass Icon (for non-Safari browser message)
 function SafariIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="white" className="w-8 h-8">
+    <svg viewBox="0 0 24 24" fill="white" className="size-8">
       {/* Compass needle */}
       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fillOpacity={0.3} />
       <path d="M12 12l-4 6 6-4 4-6-6 4z" />

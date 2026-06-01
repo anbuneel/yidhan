@@ -53,7 +53,7 @@ export function WhisperBack({ scrollContainerRef }: WhisperBackProps) {
   };
 
   return (
-    <button
+    <button type="button"
       onClick={handleScrollToTop}
       className={`
         fixed z-20
@@ -65,7 +65,7 @@ export function WhisperBack({ scrollContainerRef }: WhisperBackProps) {
 
         /* Mobile: bottom-right, icon only, larger touch target */
         right-4 bottom-4
-        w-12 h-12
+        size-12
         flex items-center justify-center
         rounded-full
 
@@ -95,7 +95,7 @@ export function WhisperBack({ scrollContainerRef }: WhisperBackProps) {
       aria-label="Scroll to top"
     >
       <svg
-        className="w-5 h-5"
+        className="size-5"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

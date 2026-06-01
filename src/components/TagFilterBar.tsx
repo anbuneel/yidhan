@@ -1,6 +1,7 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useLayoutEffect, useSyncExternalStore } from 'react';
 import type { Tag } from '../types';
-import { TagPill, AllNotesPill, AddTagPill } from './TagPill';
+import { TagPill } from './TagPill';
+import { AllNotesPill, AddTagPill } from './TagFilterPills';
 
 interface TagFilterBarProps {
   tags: Tag[];
@@ -11,24 +12,18 @@ interface TagFilterBarProps {
   onEditTag: (tag: Tag) => void;
 }
 
+const subscribeToResize = (notify: () => void) => {
+  window.addEventListener('resize', notify, { passive: true });
+  return () => window.removeEventListener('resize', notify);
+};
+
 // Hook to detect mobile breakpoint
 function useIsMobile() {
-  // Initialize with actual value if window is available (avoids hydration mismatch)
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth < 640;
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 640);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  return isMobile;
+  return useSyncExternalStore(
+    subscribeToResize,
+    () => window.innerWidth < 640,
+    () => false
+  );
 }
 
 export function TagFilterBar({
@@ -73,7 +68,7 @@ export function TagFilterBar({
   }, [isExpanded, collapsedHeight]);
 
   // Recalculate on tags change, expansion state, or resize
-  useEffect(() => {
+  useLayoutEffect(() => {
     calculateHiddenCount();
 
     // Also recalculate on resize
@@ -106,7 +101,6 @@ export function TagFilterBar({
           maxHeight: '108px',
           overflow: 'hidden',
         } : {}),
-        transition: 'max-height 0.3s ease-out',
       }}
     >
       {/* Wrap container */}
@@ -150,7 +144,7 @@ export function TagFilterBar({
 
         {/* Expand button - shows on desktop when tags overflow */}
         {!isMobile && !isExpanded && hiddenCount > 0 && (
-          <button
+          <button type="button"
             onClick={() => setIsExpanded(true)}
             className="
               px-2 py-1 sm:px-3 sm:py-1.5
@@ -172,7 +166,7 @@ export function TagFilterBar({
             aria-label={`Show ${hiddenCount} more tags`}
           >
             +{hiddenCount}
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
@@ -180,7 +174,7 @@ export function TagFilterBar({
 
         {/* Collapse button when expanded (desktop only) */}
         {!isMobile && isExpanded && (
-          <button
+          <button type="button"
             onClick={() => setIsExpanded(false)}
             className="
               px-2 py-1 sm:px-3 sm:py-1.5
@@ -199,7 +193,7 @@ export function TagFilterBar({
             aria-expanded="true"
             aria-label="Collapse tags"
           >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 15l7-7 7 7" />
             </svg>
           </button>

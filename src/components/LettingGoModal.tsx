@@ -11,6 +11,7 @@ import {
 } from '../utils/exportImport';
 import { fetchAllNoteShares } from '../services/notes';
 import type { Note, Tag } from '../types';
+import { ModalBackdropButton } from './ModalBackdropButton';
 
 type PendingAction = 'fullBackup' | 'letGo' | null;
 
@@ -171,20 +172,24 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
 
       <div
       className="fixed inset-0 z-50 flex items-center justify-center px-4 modal-backdrop"
-      onClick={onClose}
     >
-      <div
+      <ModalBackdropButton label="Close letting go dialog" onClick={onClose} />
+      <dialog
+        open
         className="
-          w-full max-w-md
+          relative z-10 w-full max-w-md
           shadow-2xl
           animate-[modal-enter_300ms_ease-out]
+          p-0 border-0
         "
         style={{
           background: 'var(--color-bg-primary)',
           borderRadius: 'var(--radius-card)',
           border: '1px solid var(--glass-border)',
+          margin: 0,
         }}
-        onClick={(e) => e.stopPropagation()}
+        aria-modal="true"
+        aria-labelledby="letting-go-title"
       >
         {/* Header */}
         <div
@@ -193,6 +198,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
         >
           <div className="flex items-center justify-between">
             <h2
+              id="letting-go-title"
               className="text-2xl italic"
               style={{
                 fontFamily: 'var(--font-display)',
@@ -201,10 +207,11 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
             >
               Letting Go
             </h2>
-            <button
+            <button type="button"
               onClick={onClose}
+              aria-label="Close account departure dialog"
               className="
-                w-8 h-8
+                size-8
                 flex items-center justify-center
                 rounded-full
                 transition-colors duration-200
@@ -217,7 +224,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 e.currentTarget.style.background = 'transparent';
               }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -277,7 +284,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               Your words belong to you.
             </p>
             <div className="flex gap-2 mb-2">
-              <button
+              <button type="button"
                 onClick={handleExportMarkdown}
                 className="
                   flex-1 py-2 px-3
@@ -300,7 +307,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               >
                 Markdown
               </button>
-              <button
+              <button type="button"
                 onClick={handleExportJSON}
                 className="
                   flex-1 py-2 px-3
@@ -324,7 +331,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 JSON
               </button>
             </div>
-            <button
+            <button type="button"
               onClick={handleExportFullBackup}
               disabled={isExportingFull}
               className="
@@ -364,7 +371,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
 
           {/* Action buttons */}
           <div className="flex gap-3">
-            <button
+            <button type="button"
               onClick={onClose}
               className="
                 flex-1 py-3
@@ -389,7 +396,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
             >
               Stay a while
             </button>
-            <button
+            <button type="button"
               onClick={handleLetGo}
               disabled={isLoading}
               className="
@@ -419,7 +426,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
             </button>
           </div>
         </div>
-      </div>
+      </dialog>
     </div>
     </>
   );

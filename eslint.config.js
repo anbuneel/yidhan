@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'android']),
+  globalIgnores(['dist', 'android', 'coverage']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -26,6 +26,20 @@ export default defineConfig([
     rules: {
       'react-hooks/rules-of-hooks': 'off',
       'react-refresh/only-export-components': 'off',
+    },
+  },
+  // react-hooks 7.x introduced React Compiler-oriented rules that don't apply to this project.
+  // - refs: intentionally used for stale-closure workarounds (activeNoteIdRef.current = noteId during render)
+  // - immutability / preserve-manual-memoization: React Compiler rules; this project doesn't use the compiler
+  // - set-state-in-effect: flags the documented "adjusting state during render" pattern (React 19 idiom)
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    rules: {
+      'react-hooks/refs': 'off',
+      'react-hooks/immutability': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/purity': 'off',
     },
   },
 ])

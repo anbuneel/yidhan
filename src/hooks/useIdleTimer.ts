@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 
 export interface UseIdleTimerOptions {
   /** Minutes of inactivity before onIdle fires (0 = disabled) */
@@ -24,7 +24,7 @@ export function useIdleTimer({ minutes, onIdle, enabled }: UseIdleTimerOptions):
     onIdleRef.current = onIdle;
   }, [onIdle]);
 
-  const resetTimer = useCallback(() => {
+  const resetTimer = useEffectEvent(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
@@ -33,7 +33,7 @@ export function useIdleTimer({ minutes, onIdle, enabled }: UseIdleTimerOptions):
     timerRef.current = setTimeout(() => {
       onIdleRef.current();
     }, minutes * 60 * 1000);
-  }, [enabled, minutes]);
+  });
 
   useEffect(() => {
     if (!enabled || minutes <= 0) {
@@ -63,5 +63,5 @@ export function useIdleTimer({ minutes, onIdle, enabled }: UseIdleTimerOptions):
         clearTimeout(timerRef.current);
       }
     };
-  }, [enabled, minutes, resetTimer]);
+  }, [enabled, minutes]);
 }

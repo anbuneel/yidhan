@@ -30,7 +30,7 @@ export function NotFoundPage({ onGoHome }: NotFoundPageProps) {
       >
         Your notes are waiting.
       </p>
-      <button
+      <button type="button"
         onClick={onGoHome}
         className="focus-ring bg-transparent border-none text-base cursor-pointer underline underline-offset-4"
         style={{

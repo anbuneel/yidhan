@@ -35,9 +35,9 @@ vi.mock('./ChapterSection', () => ({
       <span data-testid={`${chapterKey}-count`}>{notes.length} notes</span>
       {notes.map((note) => (
         <div key={note.id} data-testid={`note-${note.id}`}>
-          <button onClick={() => onNoteClick(note.id)}>Click {note.id}</button>
-          <button onClick={() => onNoteDelete(note.id)}>Delete {note.id}</button>
-          <button onClick={() => onTogglePin(note.id, true)}>Pin {note.id}</button>
+          <button type="button" onClick={() => onNoteClick(note.id)}>Click {note.id}</button>
+          <button type="button" onClick={() => onNoteDelete(note.id)}>Delete {note.id}</button>
+          <button type="button" onClick={() => onTogglePin(note.id, true)}>Pin {note.id}</button>
         </div>
       ))}
     </div>
@@ -56,7 +56,7 @@ vi.mock('./ChapterNav', () => ({
   }) => (
     <nav data-testid="chapter-nav">
       {chapters.map((c) => (
-        <button
+        <button type="button"
           key={c.key}
           data-testid={`nav-${c.key}`}
           data-current={currentChapter === c.key}
@@ -81,7 +81,7 @@ vi.mock('./TimeRibbon', () => ({
   }) => (
     <div data-testid="time-ribbon">
       {chapters.map((c) => (
-        <button
+        <button type="button"
           key={c.key}
           data-testid={`ribbon-${c.key}`}
           data-current={currentChapter === c.key}
