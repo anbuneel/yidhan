@@ -1,8 +1,12 @@
 import { startTransition as scheduleTransition, useCallback } from 'react';
 
 /**
- * Hook to schedule non-urgent view changes without forcing synchronous DOM
- * snapshots. CSS transitions still provide the visual motion.
+ * Hook to schedule non-urgent view changes using React's concurrent transition
+ * scheduler. CSS transitions provide the visual motion.
+ *
+ * Note: Previously used `document.startViewTransition` + `flushSync`, but
+ * `flushSync` is an anti-pattern in concurrent React. The View Transitions API
+ * integration was removed to align with React 19 concurrent rendering.
  */
 export function useViewTransition() {
   /**

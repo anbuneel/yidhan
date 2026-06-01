@@ -234,7 +234,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // note.content included so same-note remote updates also trigger this effect (not just note switches)
   }, [editor, note.id, note.content]);
 
-  const resumeNoteIdRef = useRef(note.id);
+  // null sentinel ensures the block fires on first mount, not just note switches
+  const resumeNoteIdRef = useRef<string | null>(null);
   if (resumeNoteIdRef.current !== note.id) {
     resumeNoteIdRef.current = note.id;
     const stored = getEditorPosition(note.id);
