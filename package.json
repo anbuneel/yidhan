@@ -34,6 +34,23 @@
         },
         {
           "files": [
+            "src/components/PassphraseSetup.tsx",
+            "src/components/PassphraseUnlock.tsx"
+          ],
+          "rules": [
+            "react-doctor/no-autofocus"
+          ]
+        },
+        {
+          "files": [
+            "src/components/TagPill.tsx"
+          ],
+          "rules": [
+            "react-doctor/no-large-animated-blur"
+          ]
+        },
+        {
+          "files": [
             "src/**"
           ],
           "rules": [

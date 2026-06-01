@@ -171,6 +171,8 @@ The policy configuration covers two categories.
 - `deslop/unused-file` for `src/**`: the Vite and route-driven source graph produced broad unused-file findings that do not match the app's actual entrypoints.
 - `deslop/unused-dependency` for `package.json`: `@capacitor/android` is required for native Android support even though the web bundle does not import it directly.
 - `react-doctor/no-danger`: the affected surfaces render established rich-text HTML boundaries, primarily Tiptap/editor output and shared-note content. These remain security-sensitive, but they are part of the product model and should be evaluated with sanitizer tests and security review rather than blanket removal.
+- `react-doctor/no-autofocus`: `PassphraseSetup` and `PassphraseUnlock` are full-screen gate pages, not modal interruptions. Review restored `autoFocus` there as the expected first action for returning to a locked vault.
+- `react-doctor/no-large-animated-blur`: `TagPill` intentionally keeps the existing `blur(20px)` treatment to preserve the shipped wabi-sabi glass effect. Review restored this after a visual regression caught the reduced blur.
 
 ### Broad Advisory Families
 
