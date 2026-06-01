@@ -499,7 +499,7 @@ describe('Auth', () => {
 
     it('closes when clicking backdrop without dirty form', async () => {
       const onClose = vi.fn();
-      const { container } = render(<Auth {...defaultProps} isModal onClose={onClose} />);
+      render(<Auth {...defaultProps} isModal onClose={onClose} />);
 
       fireEvent.click(screen.getByLabelText('Close sign in dialog'));
 

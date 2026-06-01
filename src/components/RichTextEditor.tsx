@@ -213,6 +213,8 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
       pendingCursorSaveRef.current = null;
     }
     prevNoteIdRef.current = noteId;
+  // content and flushPendingCursorSave included for exhaustive-deps; the prevNoteIdRef
+  // guard ensures setContent only fires on actual note switches, not on content changes.
   }, [noteId, editor, content, flushPendingCursorSave]);
 
   // Flush any pending cursor save on unmount

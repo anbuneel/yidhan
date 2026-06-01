@@ -297,7 +297,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   };
 
   const getTitle = () => AUTH_TITLES[mode];
-  const getButtonText = () => loading ? 'Loading...' : AUTH_BUTTON_TEXTS[mode];
+  const getButtonText = () => AUTH_BUTTON_TEXTS[mode];
 
   // Auth card content (shared between modal and full page)
   const authCard = (

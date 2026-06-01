@@ -171,8 +171,6 @@ export function useSessionSettings(userId: string | null): UseSessionSettingsRes
         });
       }
 
-      // Sync state with external store - this is the intended use case
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync with localStorage
       setSettings(result.settings);
     }
   }, [userId]);

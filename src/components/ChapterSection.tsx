@@ -241,7 +241,7 @@ export const ChapterSection = memo(function ChapterSection({
         <div
           className="
             relative z-10
-            flex items-center
+            flex w-[calc(100%-1rem)] items-center
             px-6 md:px-12
             py-1
           "

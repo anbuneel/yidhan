@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Tag, TagColor } from '../types';
 import { TAG_COLORS } from '../types';
 import { ModalBackdropButton } from './ModalBackdropButton';
@@ -31,8 +31,17 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const formKeyRef = useRef<string | null>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const isLoading = isSaving || isDeleting;
+
+  // Focus the name input when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => nameInputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   const openFormKey = isOpen
     ? `${editingTag?.id ?? 'new'}:${editingTag?.name ?? ''}:${editingTag?.color ?? 'stone'}`
@@ -149,6 +158,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
             </label>
             <input
               id="tag-name"
+              ref={nameInputRef}
               type="text"
               value={name}
               onChange={(e) => {
