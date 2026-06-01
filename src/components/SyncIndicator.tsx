@@ -47,16 +47,16 @@ export function SyncIndicator({
 
   if (blockedCount > 0) {
     return (
-      <div
+      <output
         className="flex items-center gap-2 px-2 py-1 rounded-md"
         style={{
           background: 'var(--color-bg-tertiary)',
         }}
-        role="status"
+        aria-live="polite"
         aria-label={`${blockedCount} change${blockedCount === 1 ? '' : 's'} blocked and awaiting retry`}
       >
         <span
-          className="w-2 h-2 rounded-full"
+          className="size-2 rounded-full"
           style={{ background: 'var(--color-destructive)' }}
           aria-hidden="true"
         />
@@ -97,23 +97,23 @@ export function SyncIndicator({
             Reconnect to retry
           </span>
         )}
-      </div>
+      </output>
     );
   }
 
   // Offline state
   if (!isOnline) {
     return (
-      <div
+      <output
         className="flex items-center gap-1.5 px-2 py-1 rounded-md"
         style={{
           background: 'var(--color-bg-tertiary)',
         }}
-        role="status"
+        aria-live="polite"
         aria-label="Offline - changes saved locally"
       >
         <svg
-          className="w-4 h-4"
+          className="size-4"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -142,24 +142,24 @@ export function SyncIndicator({
         >
           Offline
         </span>
-      </div>
+      </output>
     );
   }
 
   // Pending changes — only shown when stuck (30s+ without syncing)
   if (isStuck && pendingCount > 0) {
     return (
-      <div
+      <output
         className="flex items-center gap-1.5 px-2 py-1 rounded-md"
         style={{
           background: 'var(--color-bg-tertiary)',
         }}
-        role="status"
+        aria-live="polite"
         aria-label={`${pendingCount} change${pendingCount === 1 ? '' : 's'} pending sync`}
       >
         {/* Ink dot */}
         <span
-          className="w-2 h-2 rounded-full animate-pulse"
+          className="size-2 rounded-full animate-pulse"
           style={{ background: 'var(--color-accent)' }}
           aria-hidden="true"
         />
@@ -172,7 +172,7 @@ export function SyncIndicator({
         >
           {pendingCount} pending
         </span>
-      </div>
+      </output>
     );
   }
 

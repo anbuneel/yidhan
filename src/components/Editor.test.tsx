@@ -30,7 +30,7 @@ vi.mock('./EditorToolbar', () => ({
 vi.mock('./TagSelector', () => ({
   TagSelector: ({ onCreateTag }: { onCreateTag?: () => void }) => (
     <div data-testid="tag-selector">
-      {onCreateTag && <button onClick={onCreateTag}>Create Tag</button>}
+      {onCreateTag && <button type="button" onClick={onCreateTag}>Create Tag</button>}
     </div>
   ),
 }));
@@ -43,7 +43,7 @@ vi.mock('./WhisperBack', () => ({
 
 vi.mock('./ShareModal', () => ({
   ShareModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
-    isOpen ? <div data-testid="share-modal"><button onClick={onClose}>Close</button></div> : null,
+    isOpen ? <div data-testid="share-modal"><button type="button" onClick={onClose}>Close</button></div> : null,
 }));
 
 vi.mock('./HeaderShell', () => ({
@@ -59,7 +59,7 @@ vi.mock('./HeaderShell', () => ({
   }) => (
     <div data-testid="header-shell">
       <div data-testid="header-left">{leftContent}</div>
-      <button onClick={onThemeToggle}>Toggle Theme</button>
+      <button type="button" onClick={onThemeToggle}>Toggle Theme</button>
       <div data-testid="header-right">{rightActions}</div>
     </div>
   ),
@@ -309,11 +309,7 @@ describe('Editor', () => {
 
       await user.click(screen.getByLabelText('Delete note'));
 
-      // Click backdrop
-      const backdrop = screen.getByText('Let this note fade?').closest('.fixed');
-      if (backdrop) {
-        fireEvent.click(backdrop);
-      }
+      fireEvent.click(screen.getByLabelText('Cancel deleting note'));
 
       expect(screen.queryByText('Let this note fade?')).not.toBeInTheDocument();
     });
@@ -524,8 +520,8 @@ describe('Editor', () => {
         vi.advanceTimersByTime(1500);
       });
 
-      // Should show "Saving..." while save is in progress
-      expect(screen.getByText('Saving...')).toBeInTheDocument();
+      // Should show "Saving…" while save is in progress
+      expect(screen.getByText('Saving…')).toBeInTheDocument();
 
       // Resolve the save
       await act(async () => {
@@ -623,15 +619,15 @@ describe('Editor', () => {
         vi.advanceTimersByTime(800);
       });
 
-      expect(screen.getByText('Saving...')).toBeInTheDocument();
+      expect(screen.getByText('Saving…')).toBeInTheDocument();
 
-      // Now transition sync status — should NOT override the 'Saving...' indicator
+      // Now transition sync status — should NOT override the 'Saving…' indicator
       rerender(
         <Editor {...defaultProps} onUpdate={onUpdate} noteSyncStatus="synced" />
       );
 
-      // Still showing Saving... not Saved
-      expect(screen.getByText('Saving...')).toBeInTheDocument();
+      // Still showing Saving… not Saved
+      expect(screen.getByText('Saving…')).toBeInTheDocument();
 
       // Cleanup
       await act(async () => {

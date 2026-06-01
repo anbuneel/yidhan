@@ -17,7 +17,7 @@ export function LoadingFallback({ message = 'Loading...' }: LoadingFallbackProps
     >
       <div className="text-center">
         <div
-          className="w-8 h-8 mx-auto mb-4 border-2 border-t-transparent rounded-full animate-spin"
+          className="size-8 mx-auto mb-4 border-2 border-t-transparent rounded-full animate-spin"
           style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
         />
         <p style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}>

@@ -213,12 +213,21 @@ export function useSyncEngine(
 
   // Sync on reconnect
   useEffect(() => {
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
     const cleanup = onReconnect(() => {
       // Small delay to ensure network is stable
-      setTimeout(doSync, 1000);
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      reconnectTimeout = setTimeout(doSync, 1000);
     });
 
-    return cleanup;
+    return () => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      cleanup();
+    };
   }, [onReconnect, doSync]);
 
   // Initial sync after hydration

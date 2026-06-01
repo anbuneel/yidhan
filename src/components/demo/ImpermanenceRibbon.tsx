@@ -53,7 +53,7 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
       >
         {/* Pulsing dot indicator */}
         <span
-          className="w-1 h-1 rounded-full flex-shrink-0"
+          className="size-1 rounded-full flex-shrink-0"
           style={{
             background: 'var(--color-accent)',
             animation: 'demo-ribbon-pulse 3s ease-in-out infinite',
@@ -72,7 +72,7 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
           Your notes live in this browser
           <span className="hidden sm:inline">
             {' '}&middot;{' '}
-            <button
+            <button type="button"
               onClick={onSignUp}
               className="transition-colors duration-200"
               style={{
@@ -95,7 +95,7 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
         </span>
 
         {/* Mobile sign up link */}
-        <button
+        <button type="button"
           onClick={onSignUp}
           className="sm:hidden text-xs transition-colors duration-200"
           style={{
@@ -111,14 +111,14 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
         </button>
 
         {/* Dismiss button */}
-        <button
+        <button type="button"
           onClick={handleDismiss}
           className="absolute right-3 sm:right-4 p-0.5 rounded opacity-30 hover:opacity-100 transition-opacity duration-200"
           style={{ color: 'var(--color-text-tertiary)' }}
           aria-label="Dismiss"
         >
           <svg
-            className="w-3 h-3"
+            className="size-3"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

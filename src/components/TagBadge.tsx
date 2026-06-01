@@ -26,7 +26,7 @@ export function TagBadge({ tag }: TagBadgeProps) {
       }}
     >
       <span
-        className="w-1.5 h-1.5 rounded-full"
+        className="size-1.5 rounded-full"
         style={{ background: colorValue }} // Colored dot remains
       />
       {tag.name}

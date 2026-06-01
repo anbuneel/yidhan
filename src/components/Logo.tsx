@@ -144,8 +144,6 @@ export function Logo({
   return (
     <span
       className={`inline-flex items-center ${className}`.trim()}
-      role="img"
-      aria-label={alt}
     >
       {compactLogo}
     </span>

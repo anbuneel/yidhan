@@ -50,7 +50,7 @@ export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: Welcome
         }}
       >
         {/* Content */}
-        <div className="px-8 py-8 text-center">
+        <div className="p-8 text-center">
           {/* Welcome back header */}
           <h2
             className="text-2xl mb-6"
@@ -86,7 +86,7 @@ export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: Welcome
 
           {/* Action buttons */}
           <div className="flex gap-3">
-            <button
+            <button type="button"
               onClick={handleContinue}
               className="
                 flex-1 py-3
@@ -111,7 +111,7 @@ export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: Welcome
             >
               Continue letting go
             </button>
-            <button
+            <button type="button"
               onClick={handleStay}
               disabled={isLoading}
               className="

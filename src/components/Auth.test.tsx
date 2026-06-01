@@ -176,7 +176,7 @@ describe('Auth', () => {
       await user.type(getPasswordInput(), 'password123');
       await user.click(screen.getByRole('button', { name: 'Sign In' }));
 
-      expect(screen.getByText('Loading...')).toBeInTheDocument();
+      expect(screen.getByText('Loading…')).toBeInTheDocument();
     });
 
     it('shows error on login failure', async () => {
@@ -501,10 +501,7 @@ describe('Auth', () => {
       const onClose = vi.fn();
       const { container } = render(<Auth {...defaultProps} isModal onClose={onClose} />);
 
-      const overlay = container.querySelector('.auth-modal-overlay');
-      if (overlay) {
-        fireEvent.click(overlay);
-      }
+      fireEvent.click(screen.getByLabelText('Close sign in dialog'));
 
       expect(onClose).toHaveBeenCalled();
     });

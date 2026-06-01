@@ -1,32 +1,15 @@
-import { useCallback } from 'react';
-import { flushSync } from 'react-dom';
+import { startTransition as scheduleTransition, useCallback } from 'react';
 
 /**
- * Hook to wrap state changes in View Transitions API for smooth page transitions.
- * Falls back gracefully to instant transitions in unsupported browsers.
- *
- * Uses flushSync to ensure React synchronously updates the DOM before the
- * transition captures it, preventing stale snapshots.
- *
- * @see https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API
+ * Hook to schedule non-urgent view changes without forcing synchronous DOM
+ * snapshots. CSS transitions still provide the visual motion.
  */
 export function useViewTransition() {
   /**
-   * Wraps a callback in a view transition if the browser supports it.
-   * In unsupported browsers (e.g., Firefox), the callback runs immediately.
+   * Wraps a callback in React's transition scheduler.
    */
   const startTransition = useCallback((callback: () => void) => {
-    // Check if View Transitions API is supported
-    if (!document.startViewTransition) {
-      callback();
-      return;
-    }
-
-    // Start view transition with flushSync to ensure DOM is updated
-    // synchronously before the transition captures the new state
-    document.startViewTransition(() => {
-      flushSync(callback);
-    });
+    scheduleTransition(callback);
   }, []);
 
   return { startTransition };

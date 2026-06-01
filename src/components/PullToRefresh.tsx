@@ -213,7 +213,7 @@ export function PullToRefresh({
         }}
       >
         <animated.div
-          className="w-full h-full rounded-full flex items-center justify-center shadow-lg"
+          className="size-full rounded-full flex items-center justify-center shadow-lg"
           style={{
             transform: rotate.to((r) => `rotate(${r}deg)`),
             background: 'var(--color-bg-secondary)',
@@ -222,7 +222,7 @@ export function PullToRefresh({
         >
           {/* Yidhan refresh icon */}
           <svg
-            className="w-5 h-5"
+            className="size-5"
             style={{ color: 'var(--color-accent)' }}
             fill="none"
             stroke="currentColor"

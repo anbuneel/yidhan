@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
+import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface KeyboardShortcutsModalProps {
   isOpen: boolean;
@@ -72,22 +73,21 @@ const shortcuts: ShortcutSection[] = [
  * Platform-aware: shows the macOS command symbol on Mac, Ctrl on Windows/Linux.
  */
 export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDialogElement>(null);
+  const handleEscapeKey = useEffectEvent((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+    }
+  });
 
   // Handle Escape key to close
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+    window.addEventListener('keydown', handleEscapeKey);
+    return () => window.removeEventListener('keydown', handleEscapeKey);
+  }, [isOpen]);
 
   // Focus modal on open for accessibility
   useEffect(() => {
@@ -101,25 +101,26 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center px-4 modal-backdrop"
-      onClick={onClose}
     >
-      <div
+      <ModalBackdropButton label="Close keyboard shortcuts" onClick={onClose} />
+      <dialog
+        open
         ref={modalRef}
         tabIndex={-1}
-        role="dialog"
         aria-modal="true"
         aria-labelledby="shortcuts-title"
         className="
-          w-full max-w-lg max-h-[80vh] overflow-y-auto
+          relative z-10 w-full max-w-lg max-h-[80vh] overflow-y-auto
           shadow-2xl
           animate-[modal-enter_300ms_ease-out]
+          p-0 border-0
         "
         style={{
           background: 'var(--color-bg-primary)',
           borderRadius: 'var(--radius-card)',
           border: '1px solid var(--glass-border)',
+          margin: 0,
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
@@ -140,10 +141,10 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
             >
               Quiet Shortcuts
             </h2>
-            <button
+            <button type="button"
               onClick={onClose}
               className="
-                w-8 h-8
+                size-8
                 flex items-center justify-center
                 rounded-full
                 transition-colors duration-200
@@ -157,7 +158,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
               }}
               aria-label="Close"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -178,9 +179,9 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                 {section.title}
               </h3>
               <div className="space-y-2">
-                {section.items.map((item, itemIndex) => (
+                {section.items.map((item) => (
                   <div
-                    key={itemIndex}
+                    key={`${section.title}-${item.description}`}
                     className="flex items-center justify-between py-1"
                   >
                     <span
@@ -193,9 +194,9 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                       {item.description}
                     </span>
                     <div className="flex items-center gap-1">
-                      {item.keys.map((key, keyIndex) => (
+                      {item.keys.map((key) => (
                         <kbd
-                          key={keyIndex}
+                          key={`${item.description}-${key}`}
                           className="px-2 py-1 text-xs rounded"
                           style={{
                             fontFamily: 'var(--font-body)',
@@ -231,7 +232,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
             >Esc</kbd> or click outside to close
           </p>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

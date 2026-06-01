@@ -213,9 +213,7 @@ describe('ConflictModal', () => {
     const onDismiss = vi.fn();
     render(<ConflictModal {...defaultProps} onDismiss={onDismiss} />);
 
-    // Click on the backdrop (outer dialog element)
-    const dialog = screen.getByRole('dialog');
-    fireEvent.click(dialog);
+    fireEvent.click(screen.getByLabelText('Dismiss conflict dialog'));
 
     expect(onDismiss).toHaveBeenCalled();
   });

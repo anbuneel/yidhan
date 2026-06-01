@@ -1,3 +1,5 @@
+import { ModalBackdropButton } from './ModalBackdropButton';
+
 interface SessionTimeoutModalProps {
   isOpen: boolean;
   onStay: () => void;
@@ -29,20 +31,24 @@ export function SessionTimeoutModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center px-4 modal-backdrop"
-      onClick={onStay} // Clicking backdrop counts as staying
     >
-      <div
+      <ModalBackdropButton label="Stay signed in" onClick={onStay} />
+      <dialog
+        open
         className="
-          w-full max-w-sm
+          relative z-10 w-full max-w-sm
           shadow-2xl
           animate-[modal-enter_300ms_ease-out]
+          p-0 border-0
         "
         style={{
           background: 'var(--color-bg-primary)',
           borderRadius: 'var(--radius-card)',
           border: '1px solid var(--glass-border)',
+          margin: 0,
         }}
-        onClick={(e) => e.stopPropagation()}
+        aria-modal="true"
+        aria-labelledby="session-timeout-title"
       >
         {/* Header */}
         <div
@@ -51,6 +57,7 @@ export function SessionTimeoutModal({
         >
           <div className="flex items-center justify-between">
             <h2
+              id="session-timeout-title"
               className="text-xl italic"
               style={{
                 fontFamily: 'var(--font-display)',
@@ -59,10 +66,10 @@ export function SessionTimeoutModal({
             >
               A Gentle Pause
             </h2>
-            <button
+            <button type="button"
               onClick={onStay}
               className="
-                w-8 h-8
+                size-8
                 flex items-center justify-center
                 rounded-full
                 transition-colors duration-200
@@ -76,7 +83,7 @@ export function SessionTimeoutModal({
               }}
               aria-label="Stay signed in"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -111,7 +118,7 @@ export function SessionTimeoutModal({
 
           {/* Action buttons */}
           <div className="flex gap-3">
-            <button
+            <button type="button"
               onClick={onSignOut}
               className="
                 flex-1 py-3
@@ -136,7 +143,7 @@ export function SessionTimeoutModal({
             >
               Sign out now
             </button>
-            <button
+            <button type="button"
               onClick={onStay}
               className="
                 flex-1 py-3
@@ -160,7 +167,7 @@ export function SessionTimeoutModal({
             </button>
           </div>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import Masonry from 'react-masonry-css';
 import type { Note, Theme } from '../types';
 import { FadedNoteCard } from './FadedNoteCard';
 import { HeaderShell } from './HeaderShell';
+import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface FadedNotesViewProps {
   notes: Note[];
@@ -30,7 +31,7 @@ export function FadedNotesView({
   const [showEmptyConfirm, setShowEmptyConfirm] = useState(false);
 
   const rightActions = !isLoading && notes.length > 0 ? (
-    <button
+    <button type="button"
       onClick={() => setShowEmptyConfirm(true)}
       className="
         px-4 py-2
@@ -98,7 +99,7 @@ export function FadedNotesView({
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
             <div
-              className="w-8 h-8 mx-auto mb-4 animate-spin rounded-full border-2"
+              className="size-8 mx-auto mb-4 animate-spin rounded-full border-2"
               style={{
                 borderColor: 'var(--color-bg-tertiary)',
                 borderTopColor: 'var(--color-accent)',
@@ -111,7 +112,7 @@ export function FadedNotesView({
                 color: 'var(--color-text-tertiary)',
               }}
             >
-              Loading faded notes...
+              Loading faded notes&hellip;
             </p>
           </div>
         </div>
@@ -119,13 +120,13 @@ export function FadedNotesView({
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
             <div
-              className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
+              className="size-16 mx-auto mb-4 rounded-full flex items-center justify-center"
               style={{
                 background: 'var(--color-bg-secondary)',
                 color: 'var(--color-text-tertiary)',
               }}
             >
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.5 }}>
+              <svg className="size-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.5 }}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 12a8 8 0 11-16 0 8 8 0 0116 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l2 2" />
               </svg>
@@ -184,23 +185,31 @@ export function FadedNotesView({
             flex items-center justify-center
             p-4 modal-backdrop
           "
-          onClick={() => setShowEmptyConfirm(false)}
         >
-          <div
+          <ModalBackdropButton
+            label="Cancel releasing all notes"
+            onClick={() => setShowEmptyConfirm(false)}
+          />
+          <dialog
+            open
             className="
-              w-full max-w-sm
+              relative z-10 w-full max-w-sm
               p-6
               text-center
+              border-0
             "
             style={{
               background: 'var(--color-bg-primary)',
               border: '1px solid var(--glass-border)',
               borderRadius: 'var(--radius-card)',
               boxShadow: 'var(--shadow-lg)',
+              margin: 0,
             }}
-            onClick={(e) => e.stopPropagation()}
+            aria-modal="true"
+            aria-labelledby="empty-faded-notes-title"
           >
             <h3
+              id="empty-faded-notes-title"
               className="text-lg font-semibold mb-2"
               style={{
                 fontFamily: 'var(--font-display)',
@@ -219,7 +228,7 @@ export function FadedNotesView({
               {notes.length} note{notes.length === 1 ? '' : 's'} will be gone. This is a gentle goodbye.
             </p>
             <div className="flex justify-center gap-3">
-              <button
+              <button type="button"
                 onClick={() => setShowEmptyConfirm(false)}
                 className="
                   px-4 py-2
@@ -236,7 +245,7 @@ export function FadedNotesView({
               >
                 Keep Resting
               </button>
-              <button
+              <button type="button"
                 onClick={handleEmptyAll}
                 className="
                   px-4 py-2
@@ -253,7 +262,7 @@ export function FadedNotesView({
                 Release All
               </button>
             </div>
-          </div>
+          </dialog>
         </div>
       )}
     </div>

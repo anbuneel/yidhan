@@ -27,7 +27,7 @@ describe('InstallPrompt', () => {
     render(<InstallPrompt onInstall={mockOnInstall} onDismiss={mockOnDismiss} />);
 
     // Initially not visible (opacity-0)
-    const container = screen.getByText('Add Yidhan to your device').closest('div[class*="fixed"]');
+    const container = screen.getByText('Add Yidhan to your device').closest('dialog');
     expect(container).toHaveClass('opacity-0');
 
     // Advance timer to trigger animation (wrapped in act)
@@ -73,7 +73,7 @@ describe('InstallPrompt', () => {
     fireEvent.click(screen.getByRole('button', { name: /install/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Installing...')).toBeInTheDocument();
+      expect(screen.getByText('Installing…')).toBeInTheDocument();
     });
   });
 

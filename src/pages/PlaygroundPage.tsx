@@ -87,10 +87,11 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           <div className={`page-editor-title-slot ${editorArrived ? 'arrived' : ''}`}>
             <input
               type="text"
+              aria-label="Note title preview"
               className="page-editor-title-input"
               placeholder="Untitled"
               tabIndex={editorArrived ? 0 : -1}
-              aria-hidden={!editorArrived}
+              disabled={!editorArrived}
             />
           </div>
 
@@ -109,7 +110,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
               Yidhan is for the half-formed sentence that becomes a paragraph at midnight. No folders. No tags. No app to learn. Just a soft surface and room to think.
             </p>
             <p>
-              Everything you write is yours alone — encrypted before it leaves your hands, kept on every device.
+              Everything you write is yours alone: encrypted before it leaves your hands, kept on every device.
             </p>
             <p className="page-prose-trailing">
               It begins the moment you <span className="page-cursor" aria-hidden="true">▎</span>

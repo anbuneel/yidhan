@@ -6,7 +6,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
-import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useMemo, useCallback, useState } from 'react';
 import { SlashCommand } from './SlashCommand';
 import {
   saveCursorPosition as persistCursorPosition,
@@ -69,6 +69,9 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
   const selectionListenerSetupRef = useRef(false);
   // Throttled localStorage save (created once per noteId)
   const throttledPersistRef = useRef<ThrottledSave | null>(null);
+  const flushPendingCursorSave = useCallback(() => {
+    throttledPersistRef.current?.flush();
+  }, []);
   // Store pending cursor save data (captured at selection time, not timer execution time)
   // This prevents saving wrong data if note switches before timer fires
   const pendingCursorSaveRef = useRef<{ noteId: string; cursor: CursorPosition } | null>(null);
@@ -137,7 +140,7 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
   // Save cursor position whenever selection changes
   // This allows restoring position when editor remounts (e.g., after tab switch)
   // Also persists to localStorage (throttled) for cross-session restoration
-  const saveCursorPosition = useCallback(() => {
+  const saveCursorPosition = useEffectEvent(() => {
     // Ignore selection events from stale handlers during DOM reflow
     // The activeNoteIdRef is updated synchronously during render, before effects cleanup
     if (noteId !== activeNoteIdRef.current) return;
@@ -170,7 +173,7 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
         // Ignore errors if editor state is not accessible
       }
     }
-  }, [editor, noteId]);
+  });
 
   // Set up selection change listener to continuously save cursor position
   useEffect(() => {
@@ -183,7 +186,7 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
       editor.off('selectionUpdate', saveCursorPosition);
       selectionListenerSetupRef.current = false;
     };
-  }, [editor, noteId, saveCursorPosition]);
+  }, [editor, noteId]);
 
   // Notify parent when editor is ready
   useEffect(() => {
@@ -197,7 +200,7 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
   useEffect(() => {
     if (editor && noteId && prevNoteIdRef.current !== noteId) {
       // Flush any pending cursor save for the previous note
-      throttledPersistRef.current?.flush();
+      flushPendingCursorSave();
 
       editor.commands.setContent(content);
       // Clear initial focus flag for previous note so it will focus at end when reopened
@@ -210,15 +213,12 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
       pendingCursorSaveRef.current = null;
     }
     prevNoteIdRef.current = noteId;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteId, editor]);
+  }, [noteId, editor, content, flushPendingCursorSave]);
 
   // Flush any pending cursor save on unmount
   useEffect(() => {
-    return () => {
-      throttledPersistRef.current?.flush();
-    };
-  }, []);
+    return flushPendingCursorSave;
+  }, [flushPendingCursorSave]);
 
   // Restore cursor position or focus at end for new notes
   useEffect(() => {

@@ -8,6 +8,7 @@ import {
   updateNoteShareExpiration,
   revokeNoteShare,
 } from '../services/notes';
+import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -23,6 +24,74 @@ const EXPIRATION_OPTIONS: { value: ExpirationOption; label: string }[] = [
   { value: 7, label: '7 days' },
   { value: 30, label: '30 days' },
 ];
+
+interface ShareActionBarProps {
+  revokeLabel: string;
+  isRevoking: boolean;
+  onRevoke: () => void;
+  onClose: () => void;
+}
+
+function ShareActionBar({ revokeLabel, isRevoking, onRevoke, onClose }: ShareActionBarProps) {
+  return (
+    <div className="flex items-center justify-between pt-2">
+      <button type="button"
+        onClick={onRevoke}
+        disabled={isRevoking}
+        className="
+          px-4 py-2
+          text-sm font-medium
+          transition-colors duration-200
+          rounded-lg
+          disabled:opacity-50
+          flex items-center gap-2
+        "
+        style={{
+          fontFamily: 'var(--font-body)',
+          color: 'var(--color-destructive)',
+        }}
+        onMouseEnter={(e) => {
+          if (!isRevoking) {
+            e.currentTarget.style.background = 'var(--color-error-light)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+        }}
+      >
+        {isRevoking && (
+          <span
+            className="size-3 border-2 border-t-transparent rounded-full animate-spin"
+            style={{ borderColor: 'var(--color-destructive)', borderTopColor: 'transparent' }}
+          />
+        )}
+        {isRevoking ? 'Revoking...' : revokeLabel}
+      </button>
+      <button type="button"
+        onClick={onClose}
+        className="
+          px-5 py-2.5
+          rounded-lg
+          text-sm font-medium
+          transition-all duration-200
+        "
+        style={{
+          fontFamily: 'var(--font-body)',
+          color: 'var(--color-cta-text)',
+          background: 'var(--color-cta-bg)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'var(--color-cta-bg)';
+        }}
+      >
+        Close share dialog
+      </button>
+    </div>
+  );
+}
 
 /** Lowercase, hyphenate, truncate to 60 chars — cosmetic URL slug for share links */
 function generateSlug(title: string): string {
@@ -45,18 +114,28 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
   const [includeSlug, setIncludeSlug] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showPrivacyTip, setShowPrivacyTip] = useState(false);
+  const shareContextKeyRef = useRef<string | null>(null);
   const privacyTipRef = useRef<HTMLDivElement>(null);
+
+  const openShareContextKey = isOpen ? note.id : null;
+  if (shareContextKeyRef.current !== openShareContextKey) {
+    shareContextKeyRef.current = openShareContextKey;
+    if (openShareContextKey) {
+      setIsLoading(true);
+      setCopied(false);
+      setShareUrl(null);
+      setShare(null);
+    }
+  }
 
   // Fetch existing share on modal open
   useEffect(() => {
     if (!isOpen) return;
 
-    setIsLoading(true);
-    setCopied(false);
-    setShareUrl(null);
-    setShare(null);
+    let isCurrent = true;
     getNoteShare(note.id)
       .then((existingShare) => {
+        if (!isCurrent) return;
         setShare(existingShare);
         if (existingShare?.expiresAt) {
           const daysRemaining = Math.ceil(
@@ -68,10 +147,17 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
         }
       })
       .catch((error) => {
+        if (!isCurrent) return;
         console.error('Failed to check existing share:', error);
         toast.error('Could not load share status');
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (isCurrent) setIsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
   }, [isOpen, note.id]);
 
   // Build share URL from token + key
@@ -151,88 +237,37 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
   // If a share exists but we don't have the URL (reopened modal), the key is gone
   const existingShareNoKey = share && !shareUrl;
 
-  // Shared action bar: revoke button (destructive) + done button (CTA)
-  const renderActionBar = (revokeLabel: string) => (
-    <div className="flex items-center justify-between pt-2">
-      <button
-        onClick={handleRevoke}
-        disabled={isRevoking}
-        className="
-          px-4 py-2
-          text-sm font-medium
-          transition-colors duration-200
-          rounded-lg
-          disabled:opacity-50
-          flex items-center gap-2
-        "
-        style={{
-          fontFamily: 'var(--font-body)',
-          color: 'var(--color-destructive)',
-        }}
-        onMouseEnter={(e) => {
-          if (!isRevoking) {
-            e.currentTarget.style.background = 'var(--color-error-light)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent';
-        }}
-      >
-        {isRevoking && (
-          <span
-            className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
-            style={{ borderColor: 'var(--color-destructive)', borderTopColor: 'transparent' }}
-          />
-        )}
-        {isRevoking ? 'Revoking...' : revokeLabel}
-      </button>
-      <button
-        onClick={onClose}
-        className="
-          px-5 py-2.5
-          rounded-lg
-          text-sm font-medium
-          transition-all duration-200
-        "
-        style={{
-          fontFamily: 'var(--font-body)',
-          color: 'var(--color-cta-text)',
-          background: 'var(--color-cta-bg)',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'var(--color-cta-bg)';
-        }}
-      >
-        Done
-      </button>
-    </div>
-  );
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
-      onClick={isProcessing ? undefined : onClose}
     >
-      <div
+      <ModalBackdropButton
+        label="Close share dialog"
+        disabled={isProcessing}
+        onClick={onClose}
+      />
+      <dialog
+        open
         className="
-          w-full max-w-[420px] mx-4
+          relative z-10 w-full max-w-[420px] mx-4
           p-8
           shadow-2xl
           animate-[modal-enter_300ms_ease-out]
+          border-0
         "
         style={{
           background: 'var(--color-bg-primary)',
           borderRadius: 'var(--radius-card)',
           border: '1px solid var(--glass-border)',
+          margin: 0,
         }}
-        onClick={(e) => e.stopPropagation()}
+        aria-modal="true"
+        aria-labelledby="share-modal-title"
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h3
+            id="share-modal-title"
             className="text-xl font-semibold"
             style={{
               fontFamily: 'var(--font-display)',
@@ -241,11 +276,11 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
           >
             Share as Letter
           </h3>
-          <button
+          <button type="button"
             onClick={onClose}
             disabled={isProcessing}
             className="
-              w-8 h-8
+              size-8
               rounded-full
               flex items-center justify-center
               transition-colors duration-200
@@ -262,7 +297,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
             }}
             aria-label="Close"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -277,14 +312,14 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
             lineHeight: 1.6,
           }}
         >
-          Create an end-to-end encrypted, read-only view. The decryption key is embedded in the link — only someone with the full link can read it.
+          Create an end-to-end encrypted, read-only view. The decryption key is embedded in the link; only someone with the full link can read it.
         </p>
 
         {/* Loading state */}
         {isLoading && (
           <div className="flex items-center justify-center py-8">
             <div
-              className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
+              className="size-6 border-2 border-t-transparent rounded-full animate-spin"
               style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
             />
           </div>
@@ -295,7 +330,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
           <div className="space-y-6">
             {/* Expiration selector */}
             <div>
-              <label
+              <span
                 className="block text-sm mb-2"
                 style={{
                   fontFamily: 'var(--font-body)',
@@ -303,10 +338,10 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                 }}
               >
                 Link expires in
-              </label>
+              </span>
               <div className="flex gap-2 flex-wrap">
                 {EXPIRATION_OPTIONS.map((option) => (
-                  <button
+                  <button type="button"
                     key={option.value}
                     onClick={() => setSelectedExpiration(option.value)}
                     className="
@@ -346,7 +381,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                 type="checkbox"
                 checked={includeSlug}
                 onChange={(e) => setIncludeSlug(e.target.checked)}
-                className="w-4 h-4 rounded accent-[var(--color-accent)]"
+                className="size-4 rounded accent-[var(--color-accent)]"
               />
               Include note title in link
             </label>
@@ -363,7 +398,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
             </p>
 
             {/* Create button */}
-            <button
+            <button type="button"
               onClick={handleCreateShare}
               disabled={isCreating}
               className="
@@ -391,7 +426,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
             >
               {isCreating && (
                 <span
-                  className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+                  className="size-4 border-2 border-t-transparent rounded-full animate-spin"
                   style={{ borderColor: 'var(--color-cta-text)', borderTopColor: 'transparent' }}
                 />
               )}
@@ -407,6 +442,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <label
+                  htmlFor="share-url"
                   className="text-sm"
                   style={{
                     fontFamily: 'var(--font-body)',
@@ -429,14 +465,14 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                         setShowPrivacyTip(false);
                       }
                     }}
-                    className="w-4 h-4 rounded-full flex items-center justify-center transition-colors"
+                    className="size-4 rounded-full flex items-center justify-center transition-colors"
                     style={{
                       color: 'var(--color-text-tertiary)',
                     }}
                     aria-label="Privacy information"
                     aria-describedby={showPrivacyTip ? 'share-privacy-tip' : undefined}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </button>
@@ -452,7 +488,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                         fontFamily: 'var(--font-body)',
                       }}
                     >
-                      This note is encrypted end-to-end. The decryption key is in the link itself — our server never sees your content. Anyone with the complete link can read it.
+                      This note is encrypted end-to-end. The decryption key is in the link itself; our server never sees your content. Anyone with the complete link can read it.
                     </div>
                   )}
                 </div>
@@ -465,6 +501,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                 }}
               >
                 <input
+                  id="share-url"
                   type="text"
                   value={shareUrl}
                   readOnly
@@ -474,7 +511,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                     color: 'var(--color-text-primary)',
                   }}
                 />
-                <button
+                <button type="button"
                   onClick={handleCopy}
                   className="
                     px-3 py-1.5
@@ -496,7 +533,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
 
             {/* Expiration selector */}
             <div>
-              <label
+              <span
                 className="block text-sm mb-2"
                 style={{
                   fontFamily: 'var(--font-body)',
@@ -504,10 +541,10 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                 }}
               >
                 Expires in
-              </label>
+              </span>
               <div className="flex gap-2 flex-wrap">
                 {EXPIRATION_OPTIONS.map((option) => (
-                  <button
+                  <button type="button"
                     key={option.value}
                     onClick={() => handleExpirationChange(option.value)}
                     className="
@@ -535,7 +572,12 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
               </div>
             </div>
 
-            {renderActionBar('Revoke Link')}
+            <ShareActionBar
+              revokeLabel="Revoke Link"
+              isRevoking={isRevoking}
+              onRevoke={handleRevoke}
+              onClose={onClose}
+            />
           </div>
         )}
 
@@ -552,7 +594,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                 lineHeight: 1.6,
               }}
             >
-              A share link was created previously. The complete link was shown when created — it cannot be recovered because the decryption key is never stored on the server.
+              A share link was created previously. The complete link was shown when created; it cannot be recovered because the decryption key is never stored on the server.
               <br /><br />
               To create a new link, revoke the existing one first.
             </div>
@@ -570,10 +612,15 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
               </p>
             )}
 
-            {renderActionBar('Revoke & Re-create')}
+            <ShareActionBar
+              revokeLabel="Revoke & Re-create"
+              isRevoking={isRevoking}
+              onRevoke={handleRevoke}
+              onClose={onClose}
+            />
           </div>
         )}
-      </div>
+      </dialog>
     </div>
   );
 }

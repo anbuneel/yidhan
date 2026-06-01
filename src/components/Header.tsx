@@ -67,7 +67,7 @@ export function Header({
         {
           label: 'Export (JSON)',
           icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
           ),
@@ -76,7 +76,7 @@ export function Header({
         {
           label: 'Export (Markdown)',
           icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
           ),
@@ -85,7 +85,7 @@ export function Header({
         {
           label: 'Import Notes',
           icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
           ),
@@ -94,7 +94,7 @@ export function Header({
         {
           label: 'Faded Notes',
           icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.6 }}>
+            <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.6 }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           ),
@@ -138,7 +138,7 @@ export function Header({
           }}
         >
           <svg
-            className="w-4 h-4 shrink-0"
+            className="size-4 shrink-0"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -150,6 +150,7 @@ export function Header({
             id={LIBRARY_SEARCH_INPUT_ID}
             ref={searchRef}
             type="text"
+            aria-label="Search notes"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             onKeyDown={(e) => {
@@ -169,15 +170,16 @@ export function Header({
             }}
           />
           {searchQuery ? (
-            <button
+            <button type="button"
               onClick={() => onSearchChange('')}
-              className="w-5 h-5 rounded-full flex items-center justify-center transition-colors duration-200 shrink-0"
+              aria-label="Clear search"
+              className="size-5 rounded-full flex items-center justify-center transition-colors duration-200 shrink-0"
               style={{
                 background: 'var(--color-bg-tertiary)',
                 color: 'var(--color-text-secondary)',
               }}
             >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -201,7 +203,7 @@ export function Header({
 
   // New Note button (shown in header row 1)
   const newNoteButton = (
-    <button
+    <button type="button"
       onClick={onNewNote}
       className="
         p-2 sm:px-4 sm:py-2
@@ -231,7 +233,7 @@ export function Header({
       }}
       aria-label="New note"
     >
-      <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="size-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
       </svg>
       <span className="hidden sm:inline text-sm font-medium">New Note</span>
@@ -264,6 +266,7 @@ export function Header({
       <input
         ref={fileInputRef}
         type="file"
+        aria-label="Import notes file"
         accept=".json,.md,.markdown"
         className="hidden"
         onChange={(e) => {

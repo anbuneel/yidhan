@@ -1,8 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useEffectEvent, useState, type ReactNode } from 'react';
 import { useDrag } from '@use-gesture/react';
 import { useSpring, animated, config } from '@react-spring/web';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
+import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -21,9 +22,9 @@ interface BottomSheetProps {
 /** Reusable close button for modal headers */
 function CloseButton({ onClick }: { onClick: () => void }): ReactNode {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
-      className="w-8 h-8 flex items-center justify-center rounded-full transition-colors duration-200 touch-press-light"
+      className="size-8 flex items-center justify-center rounded-full transition-colors duration-200 touch-press-light"
       style={{ color: 'var(--color-text-secondary)' }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = 'var(--color-bg-tertiary)';
@@ -33,7 +34,7 @@ function CloseButton({ onClick }: { onClick: () => void }): ReactNode {
       }}
       aria-label="Close"
     >
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
       </svg>
     </button>
@@ -67,6 +68,9 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const isMobile = useMobileDetect();
   const keyboardHeight = useKeyboardHeight();
+  const closeFromEscape = useEffectEvent(() => {
+    onClose();
+  });
 
   // Track whether component should render (allows animation to complete before unmount)
   const [shouldRender, setShouldRender] = useState(isOpen);
@@ -106,13 +110,13 @@ export function BottomSheet({
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        closeFromEscape();
       }
     };
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // Drag to dismiss gesture - bound to handle area only
   const bind = useDrag(
@@ -169,19 +173,23 @@ export function BottomSheet({
     return (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
-        onClick={onClose}
       >
-        <div
+        <ModalBackdropButton label="Close sheet" onClick={onClose} />
+        <dialog
+          open
           className={`
-            w-full max-w-md mx-4 max-h-[85vh] overflow-hidden
+            relative z-10 w-full max-w-md mx-4 max-h-[85vh] overflow-hidden
             rounded-2xl shadow-2xl
+            p-0 border-0
             ${className}
           `}
           style={{
             background: 'var(--color-bg-primary)',
             animation: 'modal-enter 0.3s var(--ease-out-quint) forwards',
+            margin: 0,
           }}
-          onClick={(e) => e.stopPropagation()}
+          aria-modal="true"
+          aria-labelledby={title ? 'bottom-sheet-title' : undefined}
         >
           {/* Header with title and close button */}
           <div
@@ -190,9 +198,10 @@ export function BottomSheet({
           >
             {/* Spacer for centering */}
             <div className="w-8" />
-            {title && (
-              <h2
-                className="text-lg font-medium text-center flex-1"
+                {title && (
+                  <h2
+                    id="bottom-sheet-title"
+                    className="text-lg font-medium text-center flex-1"
                 style={{
                   fontFamily: 'var(--font-display)',
                   color: 'var(--color-text-primary)',
@@ -206,7 +215,7 @@ export function BottomSheet({
           <div className="overflow-y-auto max-h-[calc(85vh-60px)]">
             {children}
           </div>
-        </div>
+        </dialog>
       </div>
     );
   }

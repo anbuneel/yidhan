@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useEffectEvent, useCallback, type ReactNode } from 'react';
+import { ModalBackdropButton } from './ModalBackdropButton';
 
 const STORAGE_KEY = 'yidhan-gesture-hint-seen';
 // Delay before showing hint - allows user to see the library first
@@ -14,7 +15,7 @@ interface GestureHintProps {
 function SwipeArrow({ direction }: { direction: 'left' | 'right' }): ReactNode {
   return (
     <svg
-      className="w-5 h-5"
+      className="size-5"
       style={{ color: 'var(--color-text-tertiary)' }}
       fill="none"
       stroke="currentColor"
@@ -51,16 +52,16 @@ function GestureItem({ direction, icon, iconColor, description }: GestureItemPro
         border: '1px solid var(--glass-border)',
       }}
     >
-      <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+      <div className="relative size-12 flex items-center justify-center shrink-0">
         {/* Animated swipe indicator */}
         <div
-          className={`absolute w-8 h-8 rounded-lg ${direction === 'left' ? 'animate-swipe-left' : 'animate-swipe-right'}`}
+          className={`absolute size-8 rounded-lg ${direction === 'left' ? 'animate-swipe-left' : 'animate-swipe-right'}`}
           style={{
             background: 'var(--color-bg-tertiary)',
             border: '1px solid var(--glass-border)',
           }}
         />
-        <div className="w-5 h-5 relative z-10" style={{ color: iconColor }}>
+        <div className="size-5 relative z-10" style={{ color: iconColor }}>
           {icon}
         </div>
       </div>
@@ -91,7 +92,7 @@ function GestureItem({ direction, icon, iconColor, description }: GestureItemPro
 
 /** Pin icon for swipe right gesture */
 const PinIcon = (
-  <svg fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
+  <svg fill="currentColor" viewBox="0 0 24 24" className="size-5">
     <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
   </svg>
 );
@@ -149,6 +150,9 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
       }
     }, 300);
   }, []);
+  const dismissFromEscape = useEffectEvent(() => {
+    handleDismiss();
+  });
 
   // Handle ESC key to dismiss (accessibility)
   useEffect(() => {
@@ -156,13 +160,13 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        handleDismiss();
+        dismissFromEscape();
       }
     };
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isVisible, handleDismiss]);
+  }, [isVisible]);
 
   if (!isVisible) return null;
 
@@ -173,14 +177,12 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
         transition-opacity duration-300 modal-backdrop
         ${hasAnimatedIn ? 'opacity-100' : 'opacity-0'}
       `}
-      onClick={handleDismiss}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="gesture-hint-title"
     >
-      <div
+      <ModalBackdropButton label="Dismiss gesture hint" onClick={handleDismiss} />
+      <dialog
+        open
         className={`
-          max-w-sm w-full p-6 rounded-2xl
+          relative z-10 max-w-sm w-full p-6 rounded-2xl border-0 m-0
           transition-all duration-300
           ${hasAnimatedIn ? 'translate-y-0 scale-100' : 'translate-y-4 scale-95'}
         `}
@@ -189,7 +191,8 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
           boxShadow: 'var(--shadow-lg)',
           transitionTimingFunction: 'var(--ease-out-quint)',
         }}
-        onClick={(e) => e.stopPropagation()}
+        aria-modal="true"
+        aria-labelledby="gesture-hint-title"
       >
         {/* Title */}
         <h2
@@ -214,7 +217,7 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
         </div>
 
         {/* Dismiss button */}
-        <button
+        <button type="button"
           onClick={handleDismiss}
           className="w-full py-3 rounded-xl text-sm font-medium transition-all duration-200 touch-press"
           style={{
@@ -236,7 +239,7 @@ export function GestureHint({ enabled = true }: GestureHintProps) {
         >
           Pull down to refresh your notes
         </p>
-      </div>
+      </dialog>
     </div>
   );
 }

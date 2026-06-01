@@ -6,6 +6,8 @@
  * Follows Yidhan's calm philosophy - invitation, not demand.
  */
 
+import { ModalBackdropButton } from '../ModalBackdropButton';
+
 interface InvitationModalProps {
   noteCount: number;
   onSignUp: () => void;
@@ -16,18 +18,18 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
   return (
     <div
       className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={onDismiss}
     >
-      <div
-        className="w-full max-w-[400px] p-8 sm:p-10 text-center"
+      <ModalBackdropButton label="Dismiss invitation" onClick={onDismiss} />
+      <dialog
+        open
+        className="relative z-10 w-full max-w-[400px] p-8 sm:p-10 text-center border-0"
         style={{
           background: 'var(--color-card-bg)',
           border: '1px solid var(--glass-border)',
           borderRadius: '2px 24px 4px 24px',
           animation: 'modal-enter 0.4s ease-out',
+          margin: 0,
         }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
         aria-modal="true"
         aria-labelledby="invitation-title"
         aria-describedby="invitation-body"
@@ -74,7 +76,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
         </p>
 
         {/* Primary CTA */}
-        <button
+        <button type="button"
           onClick={onSignUp}
           className="w-full py-3.5 px-6 rounded-lg text-base font-medium transition-all duration-300"
           style={{
@@ -98,7 +100,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
         </button>
 
         {/* Dismiss link */}
-        <button
+        <button type="button"
           onClick={onDismiss}
           className="mt-4 text-sm transition-colors duration-200"
           style={{
@@ -120,7 +122,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
         >
           Not yet
         </button>
-      </div>
+      </dialog>
     </div>
   );
 }

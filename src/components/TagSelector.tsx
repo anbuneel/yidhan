@@ -67,7 +67,7 @@ export function TagSelector({
               const colorValue = TAG_COLORS[tag.color];
 
               return (
-                <button
+                <button type="button"
                   key={tag.id}
                   onClick={() => onToggleTag(tag.id)}
                   className="
@@ -85,7 +85,7 @@ export function TagSelector({
                   {/* Checkbox */}
                   <span
                     className="
-                      w-4 h-4
+                      size-4
                       rounded
                       flex items-center justify-center
                       transition-colors duration-150
@@ -96,7 +96,7 @@ export function TagSelector({
                     }}
                   >
                     {isSelected && (
-                      <svg className="w-3 h-3" fill="none" stroke={colorValue} viewBox="0 0 24 24">
+                      <svg className="size-3" fill="none" stroke={colorValue} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
                       </svg>
                     )}
@@ -104,7 +104,7 @@ export function TagSelector({
 
                   {/* Color dot */}
                   <span
-                    className="w-2 h-2 rounded-full shrink-0"
+                    className="size-2 rounded-full shrink-0"
                     style={{ background: colorValue }}
                   />
 
@@ -122,7 +122,7 @@ export function TagSelector({
                 style={{ borderTop: '1px solid var(--glass-border)' }}
               />
 
-              <button
+              <button type="button"
                 onClick={() => {
                   setIsOpen(false);
                   onCreateTag();
@@ -139,7 +139,7 @@ export function TagSelector({
                   color: 'var(--color-accent)',
                 }}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
                 </svg>
                 Create new tag
@@ -168,7 +168,7 @@ export function TagSelector({
             aria-expanded={isOpen}
           >
             <span
-              className="w-1.5 h-1.5 rounded-full"
+              className="size-1.5 rounded-full"
               style={{ background: TAG_COLORS[tag.color] }}
               aria-hidden="true"
             />
@@ -187,7 +187,7 @@ export function TagSelector({
             color: 'var(--color-text-tertiary)',
           }}
         >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
           </svg>
           {selectedTags.length === 0 && <span>Add tag</span>}
@@ -201,7 +201,7 @@ export function TagSelector({
   return (
     <div className="relative" ref={containerRef}>
       {/* Selected tags display + trigger */}
-      <button
+      <button type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -218,7 +218,7 @@ export function TagSelector({
           color: 'var(--color-text-secondary)',
         }}
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
         </svg>
 
@@ -242,7 +242,7 @@ export function TagSelector({
                 }}
               >
                 <span
-                  className="w-1.5 h-1.5 rounded-full"
+                  className="size-1.5 rounded-full"
                   style={{ background: TAG_COLORS[tag.color] }}
                 />
                 {tag.name}
@@ -255,7 +255,7 @@ export function TagSelector({
         )}
 
         <svg
-          className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          className={`size-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

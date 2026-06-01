@@ -311,18 +311,14 @@ describe('ShareModal', () => {
     it('closes when backdrop is clicked', async () => {
       const onClose = vi.fn();
 
-      const { container } = render(<ShareModal {...defaultProps} onClose={onClose} />);
+      render(<ShareModal {...defaultProps} onClose={onClose} />);
 
       // Wait for loading to finish — backdrop onClick is disabled while isProcessing
       await waitFor(() => {
         expect(screen.getByText('Link expires in')).toBeInTheDocument();
       });
 
-      // Click the backdrop (the outermost fixed div) using fireEvent to bypass coordinate issues
-      const backdrop = container.querySelector('.fixed.inset-0');
-      if (backdrop) {
-        fireEvent.click(backdrop);
-      }
+      fireEvent.click(screen.getByLabelText('Close share dialog'));
 
       expect(onClose).toHaveBeenCalled();
     });

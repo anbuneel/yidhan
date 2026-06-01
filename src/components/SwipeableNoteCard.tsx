@@ -159,7 +159,7 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
           className="flex flex-col items-center"
         >
           <svg
-            className="w-7 h-7"
+            className="size-7"
             fill={note.pinned ? 'none' : 'currentColor'}
             stroke="currentColor"
             viewBox="0 0 24 24"

@@ -154,6 +154,55 @@ export const ChapterSection = memo(function ChapterSection({
     .map((n) => n.title || 'Untitled')
     .join(' · ');
 
+  const isHeaderInteractive = isCollapsible && !isSearching;
+  const toggleExpanded = () => setIsExpanded((expanded) => !expanded);
+  const headerContent = (
+    <>
+      <div className="flex items-center gap-2 shrink-0">
+        {isHeaderInteractive && (
+          <svg
+            className={`
+              size-3
+              transition-transform duration-200
+              ${isExpanded ? 'rotate-0' : '-rotate-90'}
+            `}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            style={{ color: 'var(--color-text-tertiary)' }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
+          </svg>
+        )}
+
+        <span
+          className="text-base font-medium"
+          style={{
+            fontFamily: 'var(--font-display)',
+            color: 'var(--color-text-primary)',
+          }}
+        >
+          {label}
+        </span>
+      </div>
+
+      <div
+        className="flex-1 mx-3 border-b border-dashed"
+        style={{ borderColor: 'var(--glass-border)' }}
+      />
+
+      <span
+        className="text-xs shrink-0"
+        style={{
+          fontFamily: 'var(--font-body)',
+          color: 'var(--color-text-tertiary)',
+        }}
+      >
+        {notes.length} {notes.length === 1 ? 'note' : 'notes'}
+      </span>
+    </>
+  );
+
   return (
     <section
       id={`chapter-${chapterKey}`}
@@ -167,77 +216,44 @@ export const ChapterSection = memo(function ChapterSection({
       } : undefined}
     >
       {/* Whisper Header */}
-      <div
-        className={`
-          relative z-10
-          flex items-center
-          px-6 md:px-12
-          py-1
-          ${isCollapsible && !isSearching ? 'cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors duration-200' : ''}
-        `}
-        style={{
-          borderLeft: '2px solid var(--color-accent-muted)',
-          marginLeft: '1rem',
-          paddingLeft: 'calc(1.5rem - 2px)',
-        }}
-        onClick={isCollapsible && !isSearching ? () => setIsExpanded(!isExpanded) : undefined}
-        role={isCollapsible && !isSearching ? 'button' : undefined}
-        aria-expanded={isCollapsible && !isSearching ? effectiveExpanded : undefined}
-        aria-controls={isCollapsible && !isSearching ? `chapter-content-${chapterKey}` : undefined}
-        tabIndex={isCollapsible && !isSearching ? 0 : undefined}
-        onKeyDown={isCollapsible && !isSearching ? (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            setIsExpanded(!isExpanded);
-          }
-        } : undefined}
-      >
-        {/* Label with optional chevron for collapsible sections */}
-        <div className="flex items-center gap-2 shrink-0">
-          {isCollapsible && !isSearching && (
-            <svg
-              className={`
-                w-3 h-3
-                transition-transform duration-200
-                ${isExpanded ? 'rotate-0' : '-rotate-90'}
-              `}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              style={{ color: 'var(--color-text-tertiary)' }}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
-            </svg>
-          )}
-
-          <span
-            className="text-base font-medium"
-            style={{
-              fontFamily: 'var(--font-display)',
-              color: 'var(--color-text-primary)',
-            }}
-          >
-            {label}
-          </span>
-        </div>
-
-        {/* Dashed line separator */}
-        <div
-          className="flex-1 mx-3 border-b border-dashed"
-          style={{ borderColor: 'var(--glass-border)' }}
-        />
-
-        {/* Note count */}
-        <span
-          className="text-xs shrink-0"
+      {isHeaderInteractive ? (
+        <button
+          type="button"
+          className="
+            relative z-10
+            flex w-[calc(100%-1rem)] items-center text-left
+            px-6 md:px-12
+            py-1
+            cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors duration-200
+          "
           style={{
-            fontFamily: 'var(--font-body)',
-            color: 'var(--color-text-tertiary)',
+            borderLeft: '2px solid var(--color-accent-muted)',
+            marginLeft: '1rem',
+            paddingLeft: 'calc(1.5rem - 2px)',
+          }}
+          onClick={toggleExpanded}
+          aria-expanded={effectiveExpanded}
+          aria-controls={`chapter-content-${chapterKey}`}
+        >
+          {headerContent}
+        </button>
+      ) : (
+        <div
+          className="
+            relative z-10
+            flex items-center
+            px-6 md:px-12
+            py-1
+          "
+          style={{
+            borderLeft: '2px solid var(--color-accent-muted)',
+            marginLeft: '1rem',
+            paddingLeft: 'calc(1.5rem - 2px)',
           }}
         >
-          {notes.length} {notes.length === 1 ? 'note' : 'notes'}
-        </span>
-      </div>
+          {headerContent}
+        </div>
+      )}
 
       {/* Collapsed Preview (only for collapsible sections when not searching) */}
       {isCollapsible && !effectiveExpanded && previewTitles && (

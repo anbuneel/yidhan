@@ -74,7 +74,7 @@ interface MockAuthProviderProps {
 
 // We'll create a simple context mock that can be used in tests
 // The actual AuthContext import is avoided to prevent Supabase initialization
-import { createContext, useContext } from 'react';
+import { createContext, use } from 'react';
 
 const MockAuthContext = createContext<MockAuthContextValue | undefined>(undefined);
 
@@ -88,7 +88,7 @@ export function MockAuthProvider({ children, value = {} }: MockAuthProviderProps
 }
 
 export function useMockAuth() {
-  const context = useContext(MockAuthContext);
+  const context = use(MockAuthContext);
   if (context === undefined) {
     throw new Error('useMockAuth must be used within a MockAuthProvider');
   }

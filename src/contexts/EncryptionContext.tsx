@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { createContext, use, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 import type { DerivedKeys, KeyCheckVersion, SessionKeyBlob } from '../lib/encryption';
@@ -61,6 +61,12 @@ function clearSession(userId: string | null): void {
   } catch (err) {
     console.error('[EncryptionContext] Failed to clear vault session from sessionStorage:', err);
   }
+}
+
+function clearKeyMaterial(keys: DerivedKeys | null): void {
+  if (!keys) return;
+  keys.rawEncryptionKey.fill(0);
+  keys.rawHashKey.fill(0);
 }
 
 /** Try to restore keys from sessionStorage */
@@ -301,18 +307,18 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
   // Clear keyState when user signs out or switches accounts.
   // Uses React's "adjusting state during render" pattern (not an effect).
-  const [prevUserId, setPrevUserId] = useState<string | null>(null);
-  if (prevUserId !== currentUserId) {
-    setPrevUserId(currentUserId);
+  const prevUserIdRef = useRef<string | null>(null);
+  if (prevUserIdRef.current !== currentUserId) {
+    const previousUserId = prevUserIdRef.current;
+    prevUserIdRef.current = currentUserId;
     // Always clear sessionStorage for the old user (even if in-memory keys are
     // null — an in-flight restore may not have completed yet).
-    if (prevUserId) {
-      clearSession(prevUserId);
-      clearLocal(prevUserId);
+    if (previousUserId) {
+      clearSession(previousUserId);
+      clearLocal(previousUserId);
     }
     if (keyState.keys !== null) {
-      keyState.keys.rawEncryptionKey.fill(0);
-      keyState.keys.rawHashKey.fill(0);
+      clearKeyMaterial(keyState.keys);
       setKeyState({ keys: null, userId: null });
     }
   }
@@ -650,8 +656,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
    */
   const lockVault = useCallback((reason: LockReason = 'manual') => {
     if (keyState.keys) {
-      keyState.keys.rawEncryptionKey.fill(0);
-      keyState.keys.rawHashKey.fill(0);
+      clearKeyMaterial(keyState.keys);
     }
     // Use currentUserId (from auth) instead of keyState.userId for storage cleanup.
     // After auto-lock, keyState.userId is null but currentUserId still holds the
@@ -680,8 +685,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     return false;
   }, [keyState.keys, keyState.userId]);
 
-  return (
-    <EncryptionContext.Provider value={{
+  const contextValue = useMemo<EncryptionContextType>(() => ({
       keys,
       isUnlocked,
       isEncryptionSetup,
@@ -689,7 +693,18 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       unlockWithPassphrase,
       lockVault,
       persistToLocal,
-    }}>
+  }), [
+    keys,
+    isUnlocked,
+    isEncryptionSetup,
+    setupPassphrase,
+    unlockWithPassphrase,
+    lockVault,
+    persistToLocal,
+  ]);
+
+  return (
+    <EncryptionContext.Provider value={contextValue}>
       {children}
     </EncryptionContext.Provider>
   );
@@ -697,7 +712,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useEncryption() {
-  const context = useContext(EncryptionContext);
+  const context = use(EncryptionContext);
   if (context === undefined) {
     throw new Error('useEncryption must be used within an EncryptionProvider');
   }

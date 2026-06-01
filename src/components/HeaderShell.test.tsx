@@ -43,7 +43,7 @@ describe('HeaderShell', () => {
   describe('rendering', () => {
     it('renders the logo by default', () => {
       render(<HeaderShell {...defaultProps} />);
-      expect(screen.getByRole('img', { name: 'Yidhan' })).toBeInTheDocument();
+      expect(screen.getByText('Yidhan')).toBeInTheDocument();
     });
 
     it('renders clickable logo when onLogoClick is provided', async () => {

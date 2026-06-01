@@ -79,7 +79,7 @@ export function LandingPage({
 
           {/* CTA cluster */}
           <div className="landing-cta-cluster landing-entrance landing-entrance-1">
-            <button
+            <button type="button"
               onClick={onStartWriting}
               className="landing-cta-button focus-ring"
               style={{ fontFamily: 'var(--font-body)' }}
@@ -136,7 +136,7 @@ export function LandingPage({
           <div className="landing-manuscript-content">
             <p className="landing-text-reveal" style={{ marginBottom: '1.2em', animationDelay: '0.4s' }}>
               The light through the kitchen window this morning reminded me of
-              something I&apos;d forgotten — how good it feels to write without
+              something I&apos;d forgotten: how good it feels to write without
               worrying where the words will end up.
             </p>
             <p className="landing-text-reveal" style={{ marginBottom: '1.2em', animationDelay: '0.7s' }}>
@@ -154,11 +154,11 @@ export function LandingPage({
 
       {/* Footer nav */}
       <nav className="landing-footer landing-entrance landing-entrance-3">
-        <button onClick={onChangelogClick} className="landing-nav-link focus-ring">
+        <button type="button" onClick={onChangelogClick} className="landing-nav-link focus-ring">
           Changelog
         </button>
         <span aria-hidden="true">·</span>
-        <button onClick={onRoadmapClick} className="landing-nav-link focus-ring">
+        <button type="button" onClick={onRoadmapClick} className="landing-nav-link focus-ring">
           Roadmap
         </button>
         <span aria-hidden="true">·</span>
@@ -171,26 +171,26 @@ export function LandingPage({
           GitHub
         </a>
         <span aria-hidden="true">·</span>
-        <button onClick={onPrivacyClick} className="landing-nav-link focus-ring">
+        <button type="button" onClick={onPrivacyClick} className="landing-nav-link focus-ring">
           Privacy
         </button>
         <span aria-hidden="true">·</span>
-        <button onClick={onTermsClick} className="landing-nav-link focus-ring">
+        <button type="button" onClick={onTermsClick} className="landing-nav-link focus-ring">
           Terms
         </button>
         <span aria-hidden="true">·</span>
-        <button onClick={onSupportClick} className="landing-nav-link focus-ring">
+        <button type="button" onClick={onSupportClick} className="landing-nav-link focus-ring">
           Support
         </button>
         {isInstallable && !isInstalled && (
           <>
             <span aria-hidden="true">·</span>
-            <button
+            <button type="button"
               onClick={triggerInstall}
               className="landing-nav-link focus-ring flex items-center gap-1.5"
             >
               <svg
-                className="w-3.5 h-3.5"
+                className="size-3.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
