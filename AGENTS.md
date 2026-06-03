@@ -15,167 +15,6 @@ Yidhan is a calm, distraction-free note-taking application — where thoughts bl
 - **Native:** Capacitor (Android, iOS planned)
 - **Fonts:** Cormorant Garamond (display), Source Sans 3 (body)
 
-## Project Structure
-```
-src/
-├── assets/
-│   └── brand/             # Optimized WebP logo assets (lockup 720/1200, mark 256/512)
-├── components/
-│   ├── Auth.tsx           # Login/signup/Google OAuth/password reset UI (supports modal mode)
-│   ├── ChangelogPage.tsx  # Version history page with categorized changes
-│   ├── Editor.tsx         # Note editor with rich text + tag selector + save/sync indicator + E2EE sharing + focus mode + mobile bottom toolbar + manuscript glow
-│   ├── PassphraseSetup.tsx # First-time E2EE passphrase setup screen + 4 starter notes + Recipes tag
-│   ├── PassphraseSetup.test.tsx # 12 tests: form validation, setup flow, starter notes + tag, error states, strength indicator
-│   ├── PassphraseUnlock.tsx # Returning user E2EE unlock screen with client-side lockout after repeated failures
-│   ├── PassphraseUnlock.test.tsx # 18 tests: unlock flow, error states, sign-out, remember browser, lockout enforcement
-│   ├── EditorToolbar.tsx  # Formatting toolbar (variant: 'inline' desktop / 'bottom' mobile, HeadingCycleButton, OverflowMenu with direction)
-│   ├── EditorSidebar.tsx  # Vertical sidebar toolbar (≥1100px) — frosted glass, 10 formatting buttons + focus mode toggle
-│   ├── ErrorBoundary.tsx  # Error boundary with chunk error detection (deployment handling)
-│   ├── Footer.tsx         # Minimal footer with changelog/roadmap/shortcuts/GitHub links
-│   ├── KeyboardShortcutsModal.tsx # Help modal showing all keyboard shortcuts and gestures
-│   ├── SessionTimeoutModal.tsx # Session timeout warning modal (zen "session fading" messaging)
-│   ├── ChapteredLibrary.tsx # Temporal chapters note organization (Pinned, This Week, Last Week, etc.) + "No thoughts found" empty state during search
-│   ├── ChapterNav.tsx     # Desktop dot navigation sidebar for chapter jumping
-│   ├── ChapterSection.tsx # Collapsible chapter section with masonry grid, progressive rendering (6-card batches via IntersectionObserver), waterline affordance, React.memo
-│   ├── FadedNoteCard.tsx  # Card for soft-deleted notes (restore/permanent delete)
-│   ├── FadedNotesView.tsx # View for recovering soft-deleted notes
-│   ├── TimeRibbon.tsx     # Mobile chapter scrubber navigation
-│   ├── Header.tsx         # Library header with search, new note button (uses HeaderShell)
-│   ├── HeaderShell.tsx    # Shared header component for consistent layout across all pages
-│   ├── InstallPrompt.tsx  # Zen-styled PWA install prompt (shown after engagement)
-│   ├── LandingPage.tsx    # Unified single-canvas landing page with manuscript preview, entrance animations, text reveal
-│   ├── LettingGoModal.tsx # Account departure modal with keepsakes export
-│   ├── LoadingFallback.tsx # Shared loading spinner for Suspense boundaries
-│   ├── Logo.tsx           # Shared brand component (compact mark + live wordmark for headers; header variant used consistently across all pages)
-│   ├── ModalBackdropButton.tsx # Shared accessible button for dismissing modal overlays (tabIndex=-1, aria-label prop)
-│   ├── NotFoundPage.tsx   # 404 page for unrecognized routes
-│   ├── NoteCard.tsx       # Individual note card with tag badges
-│   ├── ShareModal.tsx     # Modal for creating/managing E2EE share links (capability-link model)
-│   ├── ShareModal.test.tsx # 18 tests: rendering, create flow, revoke, modal interactions
-│   ├── SharedNoteView.tsx # Public read-only view with client-side decryption for shared notes
-│   ├── SyncIndicator.tsx  # Subtle offline/sync status indicator with blocked-change retry state
-│   ├── ConflictModal.tsx  # "Two Paths" conflict resolution modal
-│   ├── ConflictModal.test.tsx # 17 tests: rendering, resolution buttons, escape, backdrop, error recovery
-│   ├── RichTextEditor.tsx # Tiptap editor content wrapper (toolbar extracted to EditorToolbar)
-│   ├── RoadmapPage.tsx    # Public roadmap with status-grouped features
-│   ├── SettingsModal.tsx  # Settings modal (profile, password, security tab, theme, offboarding)
-│   ├── SlashCommand.tsx   # Tiptap slash command extension (/, timestamps, dividers)
-│   ├── SlashCommandList.tsx # Extracted slash command list component (CommandList, CommandListRef, SlashCommandItem exports)
-│   ├── ReAuthModal.tsx    # Re-authentication modal for sensitive actions (step-up auth)
-│   ├── TagBadge.tsx       # Small tag badge for note cards
-│   ├── TagFilterBar.tsx   # Horizontal tag filter strip with edit support
-│   ├── TagFilterPills.tsx # AllNotesPill and AddTagPill components (extracted from TagFilterBar)
-│   ├── TagModal.tsx       # Modal for creating/editing/deleting tags
-│   ├── TagPill.tsx        # Tag pill component with edit button
-│   ├── TagSelector.tsx    # Dropdown for assigning tags in editor
-│   ├── WelcomeBackPrompt.tsx # Prompt shown when departing user signs in during grace period
-│   ├── WhisperBack.tsx    # Floating back button for long notes (scroll-triggered)
-│   ├── IOSInstallGuide.tsx # Visual 3-step tutorial for iOS Safari PWA installation
-│   ├── SwipeableNoteCard.tsx # Note card wrapper with swipe gesture (pin/unpin only)
-│   ├── PullToRefresh.tsx  # Pull-to-refresh wrapper with spring physics
-│   ├── GestureHint.tsx    # One-time swipe gesture tutorial overlay (mobile)
-│   ├── BottomSheet.tsx    # iOS-style bottom sheet modal component
-│   └── demo/              # Demo mode components (Practice Space)
-│       ├── ImpermanenceRibbon.tsx # Editorial subheader reminding notes are browser-local (entry/exit animations)
-│       └── InvitationModal.tsx    # Soft signup prompt ("These words are yours") with frosted backdrop
-├── pages/
-│   ├── DemoPage.tsx       # Full-featured demo experience at /demo route (practice space with first-run welcome, ambient warmth, keyboard shortcuts)
-│   ├── LogoTestPage.tsx   # Brand preview page for testing the shipped lockup and compact mark across themes
-│   └── PlaygroundPage.tsx # Dev-only landing page playground with tunable layout controls (delete after design iteration)
-├── data/
-│   ├── changelog.ts       # Version history data
-│   └── roadmap.ts         # Roadmap items with status
-├── contexts/
-│   ├── AuthContext.tsx    # Auth state management (login, signup, Google OAuth, password reset, profile, offboarding)
-│   ├── EncryptionContext.tsx # E2EE key management (derive, unlock, lock, remembered browser restore, telemetry)
-│   └── EncryptionContext.test.tsx # 15 tests: vault state machine, blob checksum verification, v1→v2 upgrade, multi-tab key cleanup, legacy key-check upgrade
-├── lib/
-│   ├── encryption.ts      # Core E2EE crypto: Argon2id + AES-256-GCM + HMAC-SHA-256 + share encryption + SessionKeyBlob v2 checksum + key-check AAD versioning
-│   ├── __tests__/
-│   │   ├── encryption.test.ts # 27 crypto unit tests (roundtrip, tamper, wrong key/AAD, blob checksum, v1 compat, key-check AAD, salt validation)
-│   │   └── shareEncryption.test.ts # 26 tests: base64url, token/key gen, encrypt/decrypt roundtrip, AAD
-│   ├── supabase.ts        # Supabase client instance + fetchAllPaginated helper
-│   └── offlineDb.ts       # Dexie IndexedDB schema for offline storage (v5 with blocked queue state + hydration metadata)
-├── services/
-│   ├── notes.ts           # CRUD operations for notes (with tags) + E2EE share functions
-│   ├── notes.test.ts      # 65 tests: CRUD, search, soft-delete, share encryption, RPC
-│   ├── tags.ts            # CRUD operations for tags
-│   ├── offlineNotes.ts    # Offline-aware note CRUD with sync queue, safe hydration, and blocked-entry recovery helpers
-│   ├── offlineNotes.test.ts # 46 tests: offline CRUD, sync queue, server upsert, timestamp preservation, hard-delete conflict
-│   ├── offlineTags.ts     # Offline-aware tag operations
-│   ├── offlineTags.test.ts  # 18 tests: create/update/delete, dedup, queue compaction
-│   ├── encryptedNotes.ts  # Encrypt/decrypt wrapper over offlineNotes (E2EE service layer + decryption telemetry)
-│   ├── encryptedNotes.test.ts # 25 tests: roundtrip, batch, key mismatch, AAD binding
-│   ├── syncEngine.ts      # Queue processor with batched concurrency, blocked-entry recovery, stale cleanup, HMAC conflict detection, encrypted push/pull sync
-│   ├── syncEngine.test.ts # 52 tests: processQueue, pause/resume, conflict, pull, fullSync, timestamp forwarding, batching, stale cleanup
-│   ├── demoStorage.ts     # localStorage operations for demo mode (4 starter notes + 3 tags, no auth required)
-│   ├── demoMigration.ts   # Demo-to-account migration logic (handles tag dedup, encrypted note creation)
-│   └── demoMigration.test.ts # 9 tests: empty state, encrypted notes, tag dedup, sanitization
-├── config/
-│   └── featureFlags.ts    # Hardcoded pre-launch toggles (e.g. REAUTH_FOR_SENSITIVE_ACTIONS) — flip when ready for the extra friction
-├── types/
-│   └── database.ts        # Supabase DB types (notes, tags, note_tags, note_shares, fetch_shared_note RPC)
-├── hooks/
-│   ├── useNetworkStatus.ts # Network connectivity monitoring (singleton pattern)
-│   ├── useSyncEngine.ts    # Sync engine React integration, outcome mapping, delete-aware conflict resolution
-│   ├── useSyncEngine.test.ts # 4 tests: hard-delete conflict recovery paths (local/server/both + online fallback)
-│   ├── useSyncStatus.ts    # Sync state for UI (pending + blocked counts, online status)
-│   ├── useViewTransition.ts # React concurrent transition scheduler wrapper (previously used View Transitions API; removed to avoid flushSync anti-pattern)
-│   ├── useInstallPrompt.ts  # PWA install prompt with engagement tracking
-│   ├── useShareTarget.ts    # Handle incoming shares from Share Target API
-│   ├── useDemoState.ts      # React state management for demo mode (localStorage)
-│   ├── useSoftPrompt.ts     # Soft prompt trigger logic (note count + time thresholds)
-│   ├── useMobileDetect.ts   # Touch device detection (useMobileDetect, useTouchCapable)
-│   ├── useSessionTimeout.ts # Session inactivity monitor (configurable timeout with warning)
-│   ├── useSessionTimeout.test.ts # 13 tests: timeout, warning, activity reset, cleanup
-│   ├── useSessionSettings.ts # Session timeout & trusted device settings (per-user localStorage)
-│   ├── useSessionSettings.test.ts # 24 tests: localStorage persistence, 90-day TTL, effective timeout
-│   ├── useKeyboardHeight.ts # Visual Viewport API for keyboard height tracking
-│   ├── useVaultSettings.ts  # Per-user vault settings (auto-lock minutes, remember browser)
-│   ├── useVaultSettings.test.ts # 15 tests: defaults, persistence, user switching, key cleanup, fail-closed remember
-│   ├── useIdleTimer.ts      # Simple idle timer hook (fires onIdle after N minutes of inactivity)
-│   └── useIdleTimer.test.ts # 9 tests: timer fire, disable, activity reset, cleanup
-├── utils/
-│   ├── editorPosition.ts  # Cross-session cursor/scroll position persistence (localStorage)
-│   ├── exportImport.ts    # Export/import utilities (JSON, Markdown) with validation + timestamp preservation
-│   ├── exportImport.test.ts # 96 tests: JSON/Markdown export/import, validation, timestamp handling
-│   ├── formatTime.ts      # Relative time formatting
-│   ├── lazyWithRetry.ts   # Smart lazy loading with retry and auto-reload on version updates
-│   ├── reliabilityTelemetry.ts # Shared Sentry breadcrumb/error helpers for hydration, sync, vault, and sharing reliability events
-│   ├── sanitize.ts        # HTML/text sanitization (XSS prevention)
-│   ├── shareRoute.ts      # Shared-note route parsing + session-backed share-key preservation across reloads
-│   ├── shareRoute.test.ts # 5 tests: fragment parsing, session fallback, non-share routes, storage failure handling
-│   ├── temporalGrouping.ts # Group notes by time (Pinned, This Week, Last Week, etc.) + WATERLINE_TEXT map for chapter-aware waterline text
-│   ├── updateRecovery.ts  # Quiet stale-chunk recovery with guarded reloads
-│   ├── validation.ts      # Note title/content validation and length limits
-│   ├── validation.test.ts # 17 tests: title sanitization, XSS, length limits, unicode
-│   └── withRetry.ts       # Retry utility with exponential backoff and error discrimination
-├── themes/
-│   ├── index.ts           # Theme exports and utilities
-│   ├── types.ts           # ThemeConfig type definitions
-│   ├── kintsugi.ts        # Light theme: Kintsugi (current)
-│   ├── midnight.ts        # Dark theme: Midnight (current)
-│   ├── washi.ts           # Light theme: Washi (proposed)
-│   └── mori.ts            # Dark theme: Mori (proposed)
-├── test/
-│   └── setup.ts           # Vitest test setup (localStorage/sessionStorage mocks, Web Crypto polyfill)
-├── App.tsx                # Main app component with state management (passphrase gate, encrypted note calls)
-├── App.css                # Additional app styles
-├── index.css              # Design system + Tiptap styles
-├── types.ts               # App types (Note, Tag, Theme, ViewMode, TagColor) + encryption fields
-├── main.tsx               # Entry point with AuthProvider, EncryptionProvider, Sentry breadcrumb scrubbing
-└── logo-test-main.tsx     # Isolated entrypoint for brand test page (logo-test.html)
-
-e2e/
-├── fixtures.ts            # Playwright test fixtures and helpers
-├── auth.spec.ts           # Authentication E2E tests
-├── notes.spec.ts          # Note CRUD E2E tests
-├── tags.spec.ts           # Tag management E2E tests
-├── sharing.spec.ts        # Share link E2E tests
-├── export-import.spec.ts  # Export/Import E2E tests
-└── settings.spec.ts       # Settings E2E tests
-```
-
 ## Key Commands
 ```bash
 npm run dev      # Start development server
@@ -249,7 +88,6 @@ Run `npm run test:coverage` locally to check thresholds before pushing.
 **IMPORTANT:** When making significant enhancements, fixes, or changes, update these files:
 
 1. **`CLAUDE.md`** - Update relevant sections:
-   - Project Structure (add new files/components)
    - UI Layout (document new UI patterns)
    - Any affected documentation sections
 
@@ -258,10 +96,7 @@ Run `npm run test:coverage` locally to check thresholds before pushing.
    - Usage examples
    - Feature descriptions visible to users
 
-3. **`src/data/changelog.ts`** - Add new version entry with:
-   - Version number (semantic versioning)
-   - Date
-   - Changes array with type ('feature' | 'improvement' | 'fix') and description
+3. **`src/data/changelog.ts`** - Add new version entry with type (`'feature' | 'improvement' | 'fix'`) and description.
 
 4. **`docs/prd.md`** - Update when implementing key features:
    - Move features from "Planned" to "Implemented" sections
@@ -270,19 +105,6 @@ Run `npm run test:coverage` locally to check thresholds before pushing.
    - Update technical constraints if architecture changes
 
 Note: `AGENTS.md` is synced from `CLAUDE.md`. Run `npm run docs:sync-agents` (or `npm run docs:sync-agents:check` in CI). A pre-commit hook in `.githooks/pre-commit` keeps it updated when `core.hooksPath` is set to `.githooks`.
-
-Example changelog entry:
-```typescript
-{
-  version: '1.x.0',
-  date: '2025-XX-XX',
-  changes: [
-    { type: 'feature', text: 'Description of new feature' },
-    { type: 'improvement', text: 'Description of improvement' },
-    { type: 'fix', text: 'Description of bug fix' },
-  ],
-},
-```
 
 ## AI-Generated Documentation Standards
 
@@ -475,11 +297,7 @@ content...
 - Google/GitHub OAuth use Supabase's `signInWithOAuth` with redirect back to app origin
 - OAuth-first layout: OAuth buttons appear FIRST, then "or continue with email" divider, then email form
 - Production OAuth requires Supabase Site URL and Redirect URLs to match deployment domain
-- Extensive code splitting reduces initial bundle (596KB → 332KB, -44%):
-  - Editor: lazy-loaded (415KB chunk)
-  - Views: ChangelogPage, RoadmapPage, FadedNotesView, SharedNoteView
-  - Modals: SettingsModal, LettingGoModal, TagModal
-  - Vendors: Supabase (189KB), Sentry (18KB), React (4KB) in separate chunks
+- Extensive code splitting: Editor lazy-loaded (415KB chunk), views/modals in separate chunks, initial bundle 332KB (-44% from 596KB)
 - Auth component supports modal mode (`isModal` prop) for landing page overlay
 
 ## Deployment
@@ -499,25 +317,16 @@ When deploying to a new domain, update in Supabase Dashboard → Authentication 
 
 Yidhan can be built as a native Android app using Capacitor. The same React codebase is wrapped in a native WebView.
 
-**Requirements:**
-- Android Studio (for Android builds)
-- Xcode on macOS (for iOS builds - not available on Windows)
+**Requirements:** Android Studio (Android builds), Xcode on macOS (iOS builds — not available on Windows)
 
-**Development:**
 ```bash
 npm run cap:android     # Open in Android Studio
 npm run cap:android:run # Run on connected device/emulator
 npm run cap:sync        # Sync web assets after code changes
 ```
 
-**Project structure:**
 - `capacitor.config.ts` - Capacitor configuration
 - `android/` - Android Studio project (gitignore excludes build artifacts)
-
-**Distribution options:**
-- Debug APK: `android/app/build/outputs/apk/debug/app-debug.apk`
-- Play Store: Requires $25 one-time Google Play Developer fee
-- App Store (iOS): Requires $99/year Apple Developer fee + Mac
 
 See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 
@@ -600,20 +409,20 @@ Opening Yidhan should feel like:
 ## Database Migrations
 
 SQL migrations are stored in `supabase/migrations/`:
-- `create_welcome_note_trigger.sql` - Auto-creates welcome note for new users
-- `security_audit_checklist.sql` - RLS audit queries and rate limiting docs
-- `add_pinned_column.sql` - Add pinned column to notes table
-- `add_soft_delete.sql` - Add deleted_at column for soft-delete feature
-- `add_note_shares.sql` - Add note_shares table for "Share as Letter" feature
-- `add_shared_note_public_access.sql` - RLS policy for unauthenticated shared note viewing
-- `add_faded_notes_cleanup_cron.sql` - Cron job for auto-deleting expired faded notes (requires Pro plan)
-- `add_tags_updated_at.sql` - Add updated_at column to tags table for incremental sync
-- `add_notes_updated_at_trigger.sql` - Server-side trigger enforcing updated_at on notes (clock-skew prevention)
-- `add_updated_at_indexes.sql` - Composite indexes on (user_id, updated_at) for incremental sync queries
-- `expire_shares_for_e2ee.sql` - Delete all share links (E2EE prerequisite)
-- `enable_e2ee_sharing.sql` - Re-enable sharing with E2EE: encrypted_payload, iv, encryption_version, revoked_at columns + fetch_shared_note RPC
-- `disable_welcome_note_trigger.sql` - Remove server-side welcome note trigger (replaced by client-side encrypted welcome)
-- `add_encryption_columns.sql` - Add encrypted_payload, encryption_iv, encryption_version, content_hash columns
-- `add_restore_timestamps_rpc.sql` - RPC to restore note timestamps after E2EE migration (bypasses updated_at trigger)
-- `fix_note_shares_rls_ownership.sql` - Add WITH CHECK to enforce note ownership on note_shares INSERT/UPDATE (prevents DoS via UNIQUE constraint)
-- `update_notes_display_updated_at.sql` - Add display_updated_at column for import timestamp preservation (bypasses updated_at trigger)
+- `create_welcome_note_trigger.sql`
+- `security_audit_checklist.sql`
+- `add_pinned_column.sql`
+- `add_soft_delete.sql`
+- `add_note_shares.sql`
+- `add_shared_note_public_access.sql`
+- `add_faded_notes_cleanup_cron.sql`
+- `add_tags_updated_at.sql`
+- `add_notes_updated_at_trigger.sql`
+- `add_updated_at_indexes.sql`
+- `expire_shares_for_e2ee.sql`
+- `enable_e2ee_sharing.sql`
+- `disable_welcome_note_trigger.sql` — replaced by client-side encrypted welcome
+- `add_encryption_columns.sql`
+- `add_restore_timestamps_rpc.sql`
+- `fix_note_shares_rls_ownership.sql`
+- `update_notes_display_updated_at.sql`
