@@ -171,18 +171,6 @@ export function createMockTag(overrides: Partial<Tag> = {}): Tag {
 }
 
 /**
- * Create multiple mock tags
- */
-export function createMockTags(count: number, overrides: Partial<Tag> = {}): Tag[] {
-  return Array.from({ length: count }, (_, i) =>
-    createMockTag({
-      name: `Tag ${i + 1}`,
-      ...overrides,
-    })
-  );
-}
-
-/**
  * Create a mock Note with sensible defaults
  */
 export function createMockNote(overrides: Partial<Note> = {}): Note {
@@ -198,18 +186,6 @@ export function createMockNote(overrides: Partial<Note> = {}): Note {
     deletedAt: null,
     ...overrides,
   };
-}
-
-/**
- * Create multiple mock notes
- */
-export function createMockNotes(count: number, overrides: Partial<Note> = {}): Note[] {
-  return Array.from({ length: count }, (_, i) =>
-    createMockNote({
-      title: `Note ${i + 1}`,
-      ...overrides,
-    })
-  );
 }
 
 /**
@@ -240,55 +216,6 @@ export function createMockNoteShare(overrides: Partial<NoteShare> = {}): NoteSha
     expiresAt: null,
     createdAt: new Date('2024-01-15T12:00:00'),
     revokedAt: null,
-    ...overrides,
-  };
-}
-
-/**
- * Create a mock User object (for auth testing)
- */
-export interface MockUser {
-  id: string;
-  email: string;
-  user_metadata: {
-    full_name?: string;
-    departing_at?: string | null;
-  };
-  created_at: string;
-}
-
-export function createMockUser(overrides: Partial<MockUser> = {}): MockUser {
-  return {
-    id: generateId(),
-    email: 'test@example.com',
-    user_metadata: {
-      full_name: 'Test User',
-      departing_at: null,
-    },
-    created_at: new Date('2024-01-01T12:00:00').toISOString(),
-    ...overrides,
-  };
-}
-
-/**
- * Create a mock Session object (for auth testing)
- */
-export interface MockSession {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  expires_at: number;
-  user: MockUser;
-}
-
-export function createMockSession(overrides: Partial<MockSession> = {}): MockSession {
-  const user = overrides.user ?? createMockUser();
-  return {
-    access_token: 'mock-access-token',
-    refresh_token: 'mock-refresh-token',
-    expires_in: 3600,
-    expires_at: Date.now() + 3600000,
-    user,
     ...overrides,
   };
 }

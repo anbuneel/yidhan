@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo, type ClipboardEvent, type MouseEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, type MouseEvent } from 'react';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { HeaderShell } from './HeaderShell';
 import { createDemoStarterPreviewState, DEMO_CONTENT_STORAGE_KEY } from '../services/demoStorage';
@@ -75,7 +75,7 @@ export function LandingPage({
   const [hasWritten, setHasWritten] = useState(false);
   const [draftSaveError, setDraftSaveError] = useState(false);
   const landingRootRef = useRef<HTMLDivElement>(null);
-  const editableRef = useRef<HTMLDivElement>(null);
+  const editableRef = useRef<HTMLTextAreaElement>(null);
   const hasEditedDraftRef = useRef(false);
   const focusTimeoutRef = useRef<number | null>(null);
   const closeStartTimeoutRef = useRef<number | null>(null);
@@ -127,7 +127,7 @@ export function LandingPage({
 
   const getDraftText = () => {
     const el = editableRef.current;
-    return (el?.innerText || el?.textContent || '').trim();
+    return (el?.value || '').trim();
   };
 
   const handleInput = () => {
@@ -135,15 +135,6 @@ export function LandingPage({
     hasEditedDraftRef.current = true;
     setHasWritten(text.length > 0);
     setDraftSaveError(false);
-  };
-
-  const handlePaste = (event: ClipboardEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const text = event.clipboardData.getData('text/plain');
-    if (!text) return;
-
-    document.execCommand('insertText', false, text);
-    handleInput();
   };
 
   const saveDraftBeforeAuth = () => {
@@ -272,18 +263,16 @@ export function LandingPage({
           <div className="landing-hero-editor-wrap" aria-hidden={!isWriting}>
             <div className="landing-hero-editor">
               <div className="landing-hero-glow" aria-hidden="true" />
-              <div
+              <textarea
                 ref={editableRef}
                 className="landing-hero-doc"
-                contentEditable={isWriting}
-                suppressContentEditableWarning
-                role="textbox"
                 aria-multiline="true"
                 aria-label="Your writing"
+                placeholder="Begin where you are..."
                 spellCheck={isWriting}
                 data-empty={!hasWritten}
                 onInput={handleInput}
-                onPaste={handlePaste}
+                readOnly={!isWriting}
               />
               <div className="landing-hero-foot">
                 <span className={`landing-seal${hasWritten ? ' show' : ''}`}>
@@ -588,24 +577,28 @@ export function LandingPage({
         }
         .landing-hero-doc {
           position: relative; z-index: 1;
+          display: block;
+          width: 100%;
           font-family: var(--font-body);
           font-weight: 400;
           font-size: 1.2rem;
           line-height: 1.75;
+          background: transparent;
+          border: 0;
           color: var(--color-text-primary);
           outline: none;
           caret-color: var(--color-accent);
           min-height: 5.5em;
+          resize: none;
           white-space: pre-wrap;
           overflow-wrap: anywhere;
           word-break: break-word;
         }
-        .landing-hero-doc[data-empty="true"]::before {
-          content: "Begin where you are\\2026";
+        .landing-hero-doc::placeholder {
           color: var(--color-text-tertiary);
           font-style: italic;
           font-weight: 300;
-          pointer-events: none;
+          opacity: 1;
         }
         .landing-hero-foot {
           position: relative; z-index: 1;

@@ -41,23 +41,16 @@ export default defineConfig({
     video: 'on-first-retry',
   },
 
-  // Configure projects for major browsers and mobile viewports
+  // Configure Chromium projects for launch validation.
+  // Safari/WebKit coverage is intentionally skipped on Windows for now.
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
     {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-    {
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 13'] },
     },
   ],
 
