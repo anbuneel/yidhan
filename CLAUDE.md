@@ -249,6 +249,7 @@ Avoid: creating new inline `style={{}}` objects for static values that could be 
 - Soft-delete (Faded Notes) functions are in `src/services/notes.ts`
 - Share as Letter (E2EE) functions are in `src/services/notes.ts` — uses capability-link model with per-share keys
 - Demo/Practice Space (`/demo`): `src/services/demoStorage.ts`, `src/hooks/useDemoState.ts`, `src/pages/DemoPage.tsx`
+- Landing hero drafts save to `DEMO_CONTENT_STORAGE_KEY` (`yidhan-demo-content`) before signup; `App.tsx` migrates them into an encrypted "My first note" after auth/unlock
 - Demo-to-account migration runs on signup in `App.tsx` via `migrateDemoToAccount()` (creates encrypted notes)
 
 ## UI Layout

@@ -205,17 +205,21 @@ Zenote aims to be the antithesis of feature-bloated productivity tools. Where ot
 ### 1. New User Onboarding
 
 ```
-Landing Page → "Start Writing" CTA → Auth Modal (Sign Up)
+Landing Page → "Start writing" CTA → Desktop hero writing surface
+                                      Mobile Practice Space (/demo)
                                             ↓
-                                    Email Confirmation
+                         "Continue in Yidhan" / Sign Up
                                             ↓
-                                    Library (with welcome note)
+                                    Email Confirmation + vault unlock
+                                            ↓
+                    Library/editor with encrypted migrated first note
 ```
 
-**Demo-to-Signup Flow:**
-- User types in demo editor on landing page
-- "Save this note" CTA appears after typing
-- Demo content auto-migrates as first note after signup
+**Landing Draft-to-Signup Flow:**
+- On desktop, user types in the lightweight landing manuscript surface
+- "Continue in Yidhan" appears after typing and saves the draft locally under `yidhan-demo-content`
+- After signup and vault unlock, `App.tsx` migrates that draft into an encrypted "My first note"
+- On mobile, the primary CTA routes to Practice Space instead of opening the in-place editor
 
 ### 1b. Practice Space Flow (New)
 

@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.19.0',
+    date: '2026-06-07',
+    changes: [
+      { type: 'feature', text: 'Landing page reimagined as a quiet hero that becomes a lightweight writing surface on desktop, with first drafts carried into signup' },
+      { type: 'improvement', text: 'Landing page now follows the hero with a real-product gallery showing the writing surface, Practice Space starter notes, and encryption/offline/open-source promise' },
+      { type: 'improvement', text: 'Mobile landing CTA now opens the Practice Space directly to avoid soft-keyboard viewport jumps during the hero reveal' },
+    ],
+  },
+  {
     version: '3.18.1',
     date: '2026-06-01',
     changes: [

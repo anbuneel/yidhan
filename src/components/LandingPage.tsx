@@ -1,7 +1,9 @@
-import type { MouseEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, type MouseEvent } from 'react';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { HeaderShell } from './HeaderShell';
-import type { Theme } from '../types';
+import { createDemoStarterPreviewState, DEMO_CONTENT_STORAGE_KEY } from '../services/demoStorage';
+import { NoteCard } from './NoteCard';
+import type { Note, Tag, Theme } from '../types';
 
 interface LandingPageProps {
   onStartWriting: () => void;
@@ -29,7 +31,145 @@ export function LandingPage({
   onSupportClick,
 }: LandingPageProps) {
   const { isInstallable, isInstalled, triggerInstall } = useInstallPrompt();
-  const isDark = theme === 'dark';
+  const previewNotes = useMemo<Note[]>(() => {
+    const demoState = createDemoStarterPreviewState();
+    const tagsById = new Map<string, Tag>(
+      demoState.tags.map((tag) => [
+        tag.localId,
+        {
+          id: tag.localId,
+          name: tag.name,
+          color: tag.color,
+          createdAt: new Date(tag.createdAt),
+        },
+      ])
+    );
+
+    return demoState.notes.map((note) => ({
+      id: note.localId,
+      title: note.title,
+      content: note.content,
+      createdAt: new Date(note.createdAt),
+      updatedAt: new Date(note.updatedAt),
+      tags: note.tagIds
+        .map((tagId) => tagsById.get(tagId))
+        .filter((tag): tag is Tag => Boolean(tag)),
+      pinned: note.pinned,
+      deletedAt: null,
+      syncStatus: 'synced',
+    }));
+  }, []);
+
+  // The hero quietly becomes a real writing surface on desktop. On phones we
+  // route to the Practice Space instead — the in-place reveal fights the mobile
+  // keyboard (viewport shift), so we reserve the signature moment for desktop.
+  const [isWriting, setIsWriting] = useState(false);
+  const [hasWritten, setHasWritten] = useState(false);
+  const [draftSaveError, setDraftSaveError] = useState(false);
+  const landingRootRef = useRef<HTMLDivElement>(null);
+  const editableRef = useRef<HTMLDivElement>(null);
+  const hasEditedDraftRef = useRef(false);
+  const focusTimeoutRef = useRef<number | null>(null);
+  const closeStartTimeoutRef = useRef<number | null>(null);
+
+  const isMobile = () =>
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(max-width: 768px)').matches === true;
+
+  const prefersReducedMotion = () =>
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+  const enterWriting = useCallback(() => {
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLElement &&
+      landingRootRef.current?.contains(activeElement)
+    ) {
+      activeElement.blur();
+    }
+
+    setIsWriting(true);
+    if (focusTimeoutRef.current !== null) {
+      window.clearTimeout(focusTimeoutRef.current);
+    }
+    const focusDelay = prefersReducedMotion() ? 0 : 360;
+    focusTimeoutRef.current = window.setTimeout(() => {
+      editableRef.current?.focus();
+      focusTimeoutRef.current = null;
+    }, focusDelay);
+  }, []);
+
+  const handleStartWriting = () => {
+    if (isMobile()) {
+      onDemoClick();
+      return;
+    }
+    enterWriting();
+  };
+
+  const handleCloseStart = () => {
+    if (isMobile()) {
+      onDemoClick();
+      return;
+    }
+    const reducedMotion = prefersReducedMotion();
+    window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+    if (closeStartTimeoutRef.current !== null) {
+      window.clearTimeout(closeStartTimeoutRef.current);
+    }
+    const revealDelay = reducedMotion ? 0 : 520;
+    closeStartTimeoutRef.current = window.setTimeout(() => {
+      enterWriting();
+      closeStartTimeoutRef.current = null;
+    }, revealDelay);
+  };
+
+  const getDraftText = () => {
+    const el = editableRef.current;
+    return (el?.innerText || el?.textContent || '').trim();
+  };
+
+  const handleInput = () => {
+    const text = getDraftText();
+    hasEditedDraftRef.current = true;
+    setHasWritten(text.length > 0);
+    setDraftSaveError(false);
+  };
+
+  const saveDraftBeforeAuth = () => {
+    const text = getDraftText();
+
+    try {
+      if (!text) {
+        if (hasEditedDraftRef.current) {
+          localStorage.removeItem(DEMO_CONTENT_STORAGE_KEY);
+        }
+        setDraftSaveError(false);
+        return true;
+      }
+
+      localStorage.setItem(DEMO_CONTENT_STORAGE_KEY, text);
+      setDraftSaveError(false);
+      return true;
+    } catch (error) {
+      console.warn('Failed to save landing draft before signup:', error);
+      setDraftSaveError(true);
+      return false;
+    }
+  };
+
+  const handleContinue = () => {
+    if (saveDraftBeforeAuth()) {
+      onStartWriting();
+    }
+  };
+
+  const handleSignIn = () => {
+    if (saveDraftBeforeAuth()) {
+      onSignIn();
+    }
+  };
 
   const handleDemoClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (
@@ -42,118 +182,223 @@ export function LandingPage({
     ) {
       return;
     }
-
     event.preventDefault();
     onDemoClick();
   };
 
-  // Atmospheric gradient centered on manuscript area
-  const gradientPct = isDark ? 9 : 6;
-  const atmosphere = `radial-gradient(
-    ellipse 60% 70% at 62% 48%,
-    color-mix(in srgb, var(--color-accent) ${gradientPct}%, var(--color-bg-primary) ${100 - gradientPct}%) 0%,
-    var(--color-bg-primary) 60%
-  )`;
+  // Scroll-reveal for the gallery "second act".
+  useEffect(() => {
+    const root = landingRootRef.current;
+    if (!root) return;
+
+    const els = Array.from(root.querySelectorAll<HTMLElement>('.landing-reveal'));
+    if (!('IntersectionObserver' in window)) {
+      els.forEach((el) => el.classList.add('in'));
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in');
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.18 }
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (focusTimeoutRef.current !== null) {
+        window.clearTimeout(focusTimeoutRef.current);
+      }
+      if (closeStartTimeoutRef.current !== null) {
+        window.clearTimeout(closeStartTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const hiddenHeroTabIndex = isWriting ? -1 : undefined;
 
   return (
-    <div className="landing-canvas" style={{ background: 'var(--color-bg-primary)' }}>
-      {/* Atmospheric radial gradient */}
-      <div className="landing-atmosphere" style={{ background: atmosphere }} />
+    <div ref={landingRootRef} className="landing-canvas">
+      <HeaderShell theme={theme} onThemeToggle={onThemeToggle} onSignIn={handleSignIn} />
 
-      {/* Shared header */}
-      <HeaderShell
-        theme={theme}
-        onThemeToggle={onThemeToggle}
-        onSignIn={onSignIn}
-      />
-
-      {/* Content wrapper — centers main + footer in remaining space */}
-      <div className="landing-content-wrap">
-      {/* Main composition — two-column desktop, single-column mobile */}
-      <main className="landing-main">
-        {/* Text column */}
-        <div className="landing-text-column">
-          <h1 className="landing-headline landing-entrance">
-            A quiet space for your thoughts.
-          </h1>
-
-          {/* CTA cluster */}
-          <div className="landing-cta-cluster landing-entrance landing-entrance-1">
-            <button type="button"
-              onClick={onStartWriting}
-              className="landing-cta-button focus-ring"
-              style={{ fontFamily: 'var(--font-body)' }}
+      {/* ─── Hero fold — quiet, and it becomes the editor ─── */}
+      <section className={`landing-hero${isWriting ? ' writing' : ''}`}>
+        <div className="landing-stack">
+          {/* Marketing prose */}
+          <div className="landing-prose" aria-hidden={isWriting}>
+            <h1 className="landing-headline">
+              Begin where you <em>are.</em>
+            </h1>
+            <p className="landing-sub">
+              A quiet space for the half-formed thought. No folders. No tags. Nothing to
+              learn — just room to think.
+            </p>
+            <button
+              type="button"
+              onClick={handleStartWriting}
+              className="landing-cta focus-ring"
+              tabIndex={hiddenHeroTabIndex}
             >
-              Start Writing
+              Start writing
             </button>
-
-            <p className="landing-proof-line">
-              Google, GitHub, or email. No credit card.
-            </p>
-
-            <p className="landing-encrypt-line">
-              End-to-end encrypted from the start.
-            </p>
-
+            <p className="landing-micro">No account needed to start.</p>
             <a
               href="/demo"
               onClick={handleDemoClick}
-              className="landing-demo-link"
-              style={{ fontFamily: 'var(--font-body)' }}
+              className="landing-demo-link focus-ring"
+              tabIndex={hiddenHeroTabIndex}
             >
               Explore the Practice Space
               <span className="landing-demo-arrow" aria-hidden="true">→</span>
             </a>
           </div>
 
-          {/* Proof rail — spec P0 #5: each claim links to verifiable proof */}
-          <div className="landing-proof-rail landing-entrance landing-entrance-2">
-            <a
-              href="https://github.com/anbuneel/yidhan"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="landing-proof-rail-link"
-            >
-              Open source
-            </a>
-            <span aria-hidden="true">·</span>
-            <span>Offline-first</span>
-            <span aria-hidden="true">·</span>
-            <span>End-to-end encrypted</span>
+          {/* The real writing surface, revealed in the hero's place (desktop) */}
+          <div className="landing-hero-editor-wrap" aria-hidden={!isWriting}>
+            <div className="landing-hero-editor">
+              <div className="landing-hero-glow" aria-hidden="true" />
+              <div
+                ref={editableRef}
+                className="landing-hero-doc"
+                contentEditable={isWriting}
+                suppressContentEditableWarning
+                role="textbox"
+                aria-multiline="true"
+                aria-label="Your writing"
+                spellCheck={isWriting}
+                onInput={handleInput}
+              />
+              <div className="landing-hero-foot">
+                <span className={`landing-seal${hasWritten ? ' show' : ''}`}>
+                  <span className="landing-seal-dot" aria-hidden="true" />
+                  Locked before it leaves your hands.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleContinue}
+                  className={`landing-continue focus-ring${hasWritten ? ' show' : ''}`}
+                  disabled={!hasWritten}
+                  aria-hidden={!hasWritten}
+                  tabIndex={hasWritten ? 0 : -1}
+                >
+                  Continue in Yidhan →
+                </button>
+              </div>
+              {draftSaveError && (
+                <p className="landing-draft-error" role="alert">
+                  This browser blocked local saving. Copy your words before continuing.
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Manuscript — matches real editor surface */}
-        <div
-          className="landing-manuscript landing-entrance-manuscript"
-          style={{
-            background: 'var(--color-bg-primary)',
-            padding: '3.8rem 4.18rem',
-            boxShadow: 'var(--shadow-manuscript)',
-          }}
+        <a
+          className="landing-scrollcue focus-ring"
+          href="#landing-surface"
+          aria-hidden={isWriting}
+          tabIndex={hiddenHeroTabIndex}
         >
-          <div className="landing-manuscript-glow" />
-          <div className="landing-manuscript-content">
-            <p className="landing-text-reveal" style={{ marginBottom: '1.2em', animationDelay: '0.4s' }}>
-              The light through the kitchen window this morning reminded me of
-              something I&apos;d forgotten: how good it feels to write without
-              worrying where the words will end up.
-            </p>
-            <p className="landing-text-reveal" style={{ marginBottom: '1.2em', animationDelay: '0.7s' }}>
-              No folders to choose, no tags to assign. Just a quiet surface
-              and the freedom to think out loud.
-            </p>
-            <p className="landing-text-reveal" style={{ marginBottom: 0, animationDelay: '1.0s' }}>
-              I used to keep a notebook by the bed. This feels like that,
-              but the pages never
-            </p>
-            <span className="landing-cursor" style={{ animationDelay: '1.3s, 1.7s' }}>▎</span>
-          </div>
-        </div>
-      </main>
+          <span>Or see how it feels</span>
+          <span className="landing-scrollcue-arrow" aria-hidden="true">↓</span>
+        </a>
+      </section>
 
-      {/* Footer nav */}
-      <nav className="landing-footer landing-entrance landing-entrance-3">
+      {/* ─── Gallery — the honest "second act": the real product ─── */}
+      <div className="landing-gallery">
+        {/* The surface */}
+        <section className="landing-piece landing-reveal" id="landing-surface">
+          <div className="landing-caption">
+            <p className="landing-kicker">The surface</p>
+            <h2 className="landing-piece-title">A page that gets out of the way.</h2>
+            <p className="landing-piece-body">
+              No sidebars. No menus crowding the margins. Write in focus mode and the
+              interface recedes — leaving only your words and a soft manuscript glow around
+              the page.
+            </p>
+          </div>
+          <div className="landing-mock-editor" aria-hidden="true">
+            <div className="landing-mock-glow" />
+            <div className="landing-mock-doc">
+              <div className="landing-mock-title">Four Thousand Weeks</div>
+              <p>
+                Started it last night. The bit about how we&rsquo;ll never &ldquo;get on
+                top of everything&rdquo; was oddly freeing.<span className="landing-car" />
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* What accumulates */}
+        <section className="landing-piece flip landing-reveal">
+          <div className="landing-caption">
+            <p className="landing-kicker">What accumulates</p>
+            <h2 className="landing-piece-title">Your thoughts, gathered like pages.</h2>
+            <p className="landing-piece-body">
+              Notes settle into a quiet, asymmetric arrangement — no rigid grid, no pressure
+              to organize. Tag them, or don&rsquo;t. They wait for you, exactly as you left
+              them.
+            </p>
+          </div>
+          <div className="landing-grid" aria-hidden="true">
+            {previewNotes.map((note) => (
+              <div key={note.id} className="landing-note-card-wrap">
+                <NoteCard
+                  note={note}
+                  onClick={() => undefined}
+                  onDelete={() => undefined}
+                  onTogglePin={() => undefined}
+                  isDecorative
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* What stays yours */}
+        <section className="landing-piece landing-reveal">
+          <div className="landing-caption">
+            <p className="landing-kicker">What stays yours</p>
+            <h2 className="landing-piece-title">Locked before it leaves your hands.</h2>
+            <p className="landing-piece-body">
+              Every word is encrypted on your device before it syncs — so it reaches your
+              other screens, but never ours readable. It works offline, and the code is open
+              for anyone to check.
+            </p>
+          </div>
+          <div className="landing-vault" aria-hidden="true">
+            <span className="landing-vault-ring" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <rect x="5" y="11" width="14" height="9" rx="2.2" />
+              <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+              <circle cx="12" cy="15.5" r="1.4" fill="currentColor" stroke="none" />
+            </svg>
+          </div>
+        </section>
+      </div>
+
+      {/* ─── Close — echoes the hero ─── */}
+      <section className="landing-close landing-reveal">
+        <h2 className="landing-close-title">
+          Your page is <em>waiting.</em>
+        </h2>
+        <button type="button" onClick={handleCloseStart} className="landing-cta focus-ring">
+          Start writing
+        </button>
+        <p className="landing-micro">
+          No account needed — your first words stay on this device.
+        </p>
+      </section>
+
+      {/* ─── Footer nav ─── */}
+      <nav className="landing-footer">
         <button type="button" onClick={onChangelogClick} className="landing-nav-link focus-ring">
           Changelog
         </button>
@@ -185,17 +430,12 @@ export function LandingPage({
         {isInstallable && !isInstalled && (
           <>
             <span aria-hidden="true">·</span>
-            <button type="button"
+            <button
+              type="button"
               onClick={triggerInstall}
               className="landing-nav-link focus-ring flex items-center gap-1.5"
             >
-              <svg
-                className="size-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
+              <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -208,310 +448,356 @@ export function LandingPage({
           </>
         )}
       </nav>
-      </div>{/* end landing-content-wrap */}
 
       <style>{`
-        /* ─── Canvas ─── */
         .landing-canvas {
+          position: relative;
           min-height: 100vh;
-          position: relative;
-          overflow: hidden;
+          min-height: 100dvh;
           display: flex;
           flex-direction: column;
-          /* Stacking context so z-index: -1 on atmosphere paints above the
-             canvas background but below the header/content above it. */
-          isolation: isolate;
-        }
-        .landing-atmosphere {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          z-index: -1;
+          background: var(--color-bg-primary);
+          overflow-x: hidden;
         }
 
-        /* ─── Content wrapper — centers main+footer below pinned header ─── */
-        .landing-content-wrap {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
+        /* ─── Hero ─── */
+        .landing-hero {
           position: relative;
-          z-index: 1;
-        }
-
-        /* ─── Main composition ─── */
-        .landing-main {
-          position: relative;
-          z-index: 1;
+          min-height: calc(100vh - 4.5rem);
+          min-height: calc(100dvh - 4.5rem);
           display: grid;
-          grid-template-columns: 40% 1fr;
-          gap: 5%;
-          max-width: 1220px;
-          margin: 0 auto;
-          padding: 2rem 1vw;
-          align-items: center;
-          width: 100%;
+          place-items: center;
+          text-align: center;
+          padding: 2rem clamp(1.4rem, 5vw, 3rem) 4rem;
+          background: radial-gradient(
+            ellipse 70% 60% at 50% 44%,
+            color-mix(in srgb, var(--color-accent) 7%, var(--color-bg-primary) 93%) 0%,
+            var(--color-bg-primary) 62%
+          );
         }
-
-        /* ─── Text column ─── */
-        .landing-text-column {
-          display: flex;
-          flex-direction: column;
+        .landing-stack {
+          display: grid;
+          width: min(680px, 100%);
         }
+        .landing-stack > * { grid-area: 1 / 1; }
 
+        /* Marketing prose */
+        .landing-prose {
+          animation: landing-fade-up 0.7s var(--ease-out-quint, ease-out) backwards;
+          transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1), filter 0.7s ease;
+        }
         .landing-headline {
           font-family: var(--font-display);
-          color: var(--color-text-primary);
-          letter-spacing: -0.02em;
           font-weight: 300;
-          line-height: 1.08;
-          font-size: clamp(2rem, 3.4vw, 4.5rem);
-          margin: 0 0 2.25rem;
+          font-size: 4.75rem;
+          line-height: 1.03;
+          letter-spacing: 0;
+          margin: 0 0 1.6rem;
           text-wrap: balance;
+          color: var(--color-text-primary);
         }
-
-        /* ─── CTA cluster ─── */
-        .landing-cta-cluster {
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
+        .landing-headline em { font-style: italic; color: var(--color-accent); font-weight: 400; }
+        .landing-sub {
+          font-family: var(--font-body);
+          font-weight: 300;
+          font-size: 1.1rem;
+          line-height: 1.7;
+          color: var(--color-text-secondary);
+          max-width: 40ch;
+          margin: 0 auto 2.4rem;
         }
-
-        .landing-cta-button {
+        .landing-cta {
+          font-family: var(--font-body);
+          font-size: 1rem;
+          font-weight: 500;
           background: var(--color-cta-bg);
           color: var(--color-cta-text);
-          padding: 0.9rem 2.5rem;
-          border-radius: 8px;
-          font-size: 1.05rem;
-          font-weight: 500;
           border: none;
+          border-radius: 2px 16px 4px 16px;
+          padding: 0.9rem 2.4rem;
           cursor: pointer;
-          width: fit-content;
-          box-shadow: 0 4px 20px var(--color-accent-glow);
-          transition: all 0.3s ease;
+          box-shadow: 0 6px 24px var(--color-accent-glow);
+          transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
         }
-        .landing-cta-button:hover {
+        .landing-cta:hover {
+          transform: translateY(-1px);
           background: var(--color-cta-bg-hover);
-          box-shadow: 0 8px 30px var(--color-accent-glow);
+          box-shadow: 0 10px 34px var(--color-accent-glow);
         }
-
-        .landing-proof-line {
+        .landing-micro {
+          margin: 1.1rem 0 0;
           font-family: var(--font-body);
+          font-size: 0.76rem;
           color: var(--color-text-tertiary);
-          font-size: 0.8rem;
-          margin: 0;
         }
-
-        .landing-encrypt-line {
-          font-family: var(--font-body);
-          color: var(--color-accent);
-          font-size: 0.8rem;
-          margin: 0;
-          opacity: 0.85;
-          letter-spacing: 0.03em;
-        }
-
         .landing-demo-link {
-          font-size: 0.8rem;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.3rem;
+          margin-top: 1.6rem;
+          font-family: var(--font-body);
+          font-size: 0.82rem;
           color: var(--color-text-tertiary);
           text-decoration: none;
           border-bottom: 1px dotted var(--color-text-tertiary);
-          width: fit-content;
-          display: inline-flex;
-          align-items: center;
-          gap: 0.25rem;
           transition: color 0.2s ease, border-bottom-color 0.2s ease;
         }
-        .landing-demo-link:hover {
-          color: var(--color-accent);
-          border-bottom-color: var(--color-accent);
-        }
-        .landing-demo-arrow {
-          display: inline-block;
-          transition: transform 0.2s ease;
-        }
-        .landing-demo-link:hover .landing-demo-arrow {
-          transform: translateX(4px);
-        }
+        .landing-demo-link:hover { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+        .landing-demo-arrow { display: inline-block; transition: transform 0.2s ease; }
+        .landing-demo-link:hover .landing-demo-arrow { transform: translateX(4px); }
 
-        /* ─── Proof rail ─── */
-        .landing-proof-rail {
-          display: flex;
-          gap: 0.6rem;
-          margin-top: 2.5rem;
-          font-family: var(--font-body);
-          font-size: 0.65rem;
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
-          color: var(--color-text-tertiary);
-        }
-        .landing-proof-rail-link {
-          color: inherit;
-          text-decoration: none;
-        }
-        .landing-proof-rail-link:hover {
-          color: var(--color-accent);
-        }
-
-        /* ─── Manuscript ─── */
-        .landing-manuscript {
-          position: relative;
-          border-radius: var(--radius-card);
-          overflow: hidden;
-          border: 1px solid rgba(0, 0, 0, 0.06);
-        }
-        [data-theme="dark"] .landing-manuscript {
-          border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .landing-manuscript-glow {
-          position: absolute;
-          inset: 0;
+        /* Hero editor (revealed) — matches the real manuscript surface */
+        .landing-hero-editor-wrap {
+          opacity: 0;
+          transform: translateY(10px);
           pointer-events: none;
-          background: radial-gradient(
-            ellipse 80% 50% at 50% 40%,
-            rgba(194, 86, 52, 0.12) 0%,
-            transparent 70%
-          );
+          transition: opacity 0.8s ease 0.12s, transform 0.8s cubic-bezier(0.22,1,0.36,1) 0.12s;
         }
-        [data-theme="dark"] .landing-manuscript-glow {
-          background: radial-gradient(
-            ellipse 80% 50% at 50% 50%,
-            rgba(212, 175, 55, 0.12) 0%,
-            transparent 70%
-          );
+        .landing-hero-editor {
+          position: relative;
+          text-align: left;
+          background: var(--color-bg-primary);
+          border: 1px solid var(--glass-border);
+          border-radius: var(--radius-card);
+          box-shadow: var(--shadow-manuscript);
+          padding: clamp(2.2rem, 4.5vw, 3.4rem) clamp(1.8rem, 4.5vw, 3.8rem);
+          min-height: 300px;
+          overflow: hidden;
+          transition: border-color 0.25s ease, box-shadow 0.25s ease;
         }
-
-        .landing-manuscript-content {
+        .landing-hero-editor:focus-within {
+          border-color: var(--color-accent-muted);
+          box-shadow:
+            var(--shadow-manuscript),
+            0 0 0 2px color-mix(in srgb, var(--color-accent) 26%, transparent);
+        }
+        .landing-hero-glow {
+          position: absolute; inset: 0; pointer-events: none;
+          background: radial-gradient(ellipse 80% 50% at 50% 36%, var(--color-accent-glow) 0%, transparent 70%);
+        }
+        .landing-hero-doc {
+          position: relative; z-index: 1;
+          font-family: var(--font-body);
+          font-weight: 400;
+          font-size: 1.2rem;
+          line-height: 1.75;
+          color: var(--color-text-primary);
+          outline: none;
+          caret-color: var(--color-accent);
+          min-height: 5.5em;
+          white-space: pre-wrap;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+        .landing-hero-doc:empty::before {
+          content: "Begin where you are\\2026";
+          color: var(--color-text-tertiary);
+          font-style: italic;
+          font-weight: 300;
+          pointer-events: none;
+        }
+        .landing-hero-foot {
+          position: relative; z-index: 1;
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 1rem; margin-top: 1.6rem;
+        }
+        .landing-seal {
+          font-family: var(--font-body);
+          font-size: 0.72rem; letter-spacing: 0.04em;
+          color: var(--color-text-tertiary);
+          display: inline-flex; align-items: center; gap: 0.5rem;
+          opacity: 0; transform: translateY(4px);
+          transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .landing-seal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent); }
+        .landing-seal.show { opacity: 0.9; transform: none; }
+        .landing-continue {
+          font-family: var(--font-body);
+          font-size: 0.8rem;
+          color: var(--color-text-secondary);
+          background: none;
+          border: 1px solid var(--glass-border);
+          border-radius: 2px 12px 4px 12px;
+          padding: 0.45rem 1rem;
+          cursor: pointer;
+          opacity: 0; transform: translateY(4px);
+          pointer-events: none;
+          transition: opacity 0.6s ease, transform 0.6s ease, color 0.25s ease, border-color 0.25s ease;
+        }
+        .landing-continue.show { opacity: 1; transform: none; pointer-events: auto; }
+        .landing-continue:hover { color: var(--color-accent); border-color: var(--color-accent); }
+        .landing-draft-error {
           position: relative;
           z-index: 1;
+          margin: 1rem 0 0;
           font-family: var(--font-body);
-          color: var(--color-text-primary);
-          font-size: 1.2rem;
-          font-weight: 400;
-          line-height: 1.75;
+          font-size: 0.78rem;
+          line-height: 1.5;
+          color: var(--color-destructive);
         }
 
-        /* ─── Horizontal text reveal (P2 #12) — clip-path, GPU-composited ─── */
-        .landing-text-reveal {
-          clip-path: inset(0 100% 0 0);
-          animation: landing-text-reveal 0.8s ease-out forwards;
-          will-change: clip-path;
+        /* writing state cross-fade */
+        .landing-hero.writing .landing-prose { opacity: 0; transform: translateY(-8px); filter: blur(2px); pointer-events: none; }
+        .landing-hero.writing .landing-hero-editor-wrap { opacity: 1; transform: none; pointer-events: auto; }
+        .landing-hero.writing .landing-scrollcue { opacity: 0; pointer-events: none; }
+
+        .landing-scrollcue {
+          position: absolute; left: 50%; bottom: 2.2rem; transform: translateX(-50%);
+          display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+          font-family: var(--font-body);
+          font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.18em;
+          color: var(--color-text-tertiary); text-decoration: none;
+          animation: landing-float 3.4s ease-in-out infinite;
+          transition: opacity 0.5s ease;
         }
-        @keyframes landing-text-reveal {
-          from { clip-path: inset(0 100% 0 0); }
-          to { clip-path: inset(0 0% 0 0); }
+        .landing-scrollcue:hover { color: var(--color-accent); }
+        .landing-scrollcue-arrow { font-size: 1rem; }
+
+        /* ─── Gallery ─── */
+        .landing-gallery {
+          width: 100%;
+          max-width: 1080px;
+          margin: 0 auto;
+          padding: clamp(3rem, 10vw, 9rem) clamp(1.4rem, 6vw, 4rem);
+        }
+        .landing-piece {
+          display: grid;
+          gap: clamp(2rem, 5vw, 4.5rem);
+          align-items: center;
+          margin-bottom: clamp(6rem, 16vw, 13rem);
+        }
+        .landing-piece:last-child { margin-bottom: 0; }
+        @media (min-width: 860px) {
+          .landing-piece { grid-template-columns: 1fr 1fr; }
+          .landing-piece.flip .landing-caption { order: 2; }
+        }
+        .landing-kicker {
+          font-family: var(--font-body);
+          font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.18em;
+          color: var(--color-accent); margin: 0 0 1rem;
+        }
+        .landing-piece-title {
+          font-family: var(--font-display); font-weight: 300;
+          font-size: 2.65rem; line-height: 1.1; letter-spacing: 0;
+          margin: 0 0 1rem; color: var(--color-text-primary);
+        }
+        .landing-piece-body {
+          font-family: var(--font-body);
+          font-size: 1.02rem; line-height: 1.75;
+          color: var(--color-text-secondary); max-width: 42ch; margin: 0;
         }
 
-        /* ─── Breathing cursor — appears after text reveal ─── */
-        .landing-cursor {
-          color: var(--color-accent);
-          font-size: 1.1rem;
-          opacity: 0;
-          animation: landing-cursor-appear 0.4s ease-out forwards, landing-cursor-breathe 3s ease-in-out 1.7s infinite;
+        /* Surface mock editor */
+        .landing-mock-editor {
+          position: relative;
+          background: var(--color-bg-primary);
+          border: 1px solid var(--glass-border);
+          border-radius: var(--radius-card);
+          box-shadow: var(--shadow-manuscript);
+          padding: clamp(2rem, 4vw, 3.2rem);
+          overflow: hidden;
         }
-        @keyframes landing-cursor-appear {
-          from { opacity: 0; }
-          to { opacity: 1; }
+        .landing-mock-glow {
+          position: absolute; inset: 0; pointer-events: none;
+          background: radial-gradient(ellipse 80% 50% at 50% 36%, var(--color-accent-glow) 0%, transparent 70%);
         }
-        @keyframes landing-cursor-breathe {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
+        .landing-mock-doc { position: relative; z-index: 1; }
+        .landing-mock-title {
+          font-family: var(--font-display); font-weight: 600;
+          font-size: 1.9rem; line-height: 1.3; letter-spacing: 0;
+          color: var(--color-text-primary); margin-bottom: 0.8rem;
         }
+        .landing-mock-doc p {
+          font-family: var(--font-body); font-weight: 400;
+          font-size: 1.16rem; line-height: 1.85;
+          color: var(--color-text-primary); margin: 0;
+        }
+
+        /* Note grid - rendered with the real NoteCard in decorative mode */
+        .landing-grid { columns: 2; column-gap: 1rem; }
+        @media (max-width: 520px) { .landing-grid { columns: 1; } }
+        .landing-note-card-wrap { break-inside: avoid; margin-bottom: 1rem; display: block; }
+        /* Vault */
+        .landing-vault {
+          position: relative; display: grid; place-items: center;
+          aspect-ratio: 1 / 1; max-width: 360px; width: 100%; margin: 0 auto;
+          border-radius: var(--radius-card);
+          background: radial-gradient(circle at 50% 42%, var(--color-accent-glow), transparent 60%), var(--color-bg-secondary);
+          border: 1px solid var(--glass-border);
+        }
+        .landing-vault svg { width: 38%; height: 38%; color: var(--color-accent); }
+        .landing-vault-ring {
+          position: absolute; inset: 14%; border-radius: 50%;
+          border: 1px dashed color-mix(in srgb, var(--color-accent) 40%, transparent);
+        }
+
+        /* ─── Close ─── */
+        .landing-close {
+          text-align: center;
+          padding: clamp(5rem, 14vw, 11rem) 1.4rem clamp(3rem, 8vw, 6rem);
+        }
+        .landing-close-title {
+          font-family: var(--font-display); font-weight: 300;
+          font-size: 3.4rem; line-height: 1.06;
+          margin: 0 0 2.2rem; color: var(--color-text-primary);
+        }
+        .landing-close-title em { font-style: italic; color: var(--color-accent); font-weight: 400; }
 
         /* ─── Footer ─── */
         .landing-footer {
-          position: relative;
-          z-index: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          padding: 1.5rem clamp(1rem, 4vw, 4rem);
-          font-family: var(--font-body);
-          font-size: 0.8rem;
+          display: flex; align-items: center; justify-content: center;
+          gap: 0.5rem; flex-wrap: wrap;
+          padding: 2.5rem clamp(1rem, 4vw, 4rem) 3rem;
+          margin-top: auto;
+          font-family: var(--font-body); font-size: 0.78rem;
           color: var(--color-text-tertiary);
-          flex-wrap: wrap;
         }
         .landing-nav-link {
-          color: inherit;
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-family: inherit;
-          font-size: inherit;
-          padding: 0;
-          transition: color 0.2s ease;
+          color: inherit; background: none; border: none; cursor: pointer;
+          font-family: inherit; font-size: inherit; padding: 0;
+          transition: color 0.2s ease; text-decoration: none;
         }
-        .landing-nav-link:hover {
-          color: var(--color-accent);
+        .landing-nav-link:hover { color: var(--color-accent); }
+
+        /* ─── Reveal ─── */
+        .landing-reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.22,1,0.36,1); }
+        .landing-reveal.in { opacity: 1; transform: none; }
+
+        .landing-car {
+          display: inline-block; width: 2px; height: 1.05em; vertical-align: -0.16em;
+          margin-left: 0.1em; border-radius: 1px; background: var(--color-accent);
+          animation: landing-blink 2.6s ease-in-out infinite;
         }
 
-        /* ─── Entrance animations ─── */
-        .landing-entrance {
-          will-change: opacity, transform;
-          animation: landing-fade-up 0.6s ease-out backwards;
-        }
-        .landing-entrance-1 { animation-delay: 0.08s; }
-        .landing-entrance-2 { animation-delay: 0.16s; }
-        .landing-entrance-3 { animation-delay: 0.24s; }
-        /* Manuscript is heavier — slower entrance, larger travel */
-        .landing-entrance-manuscript {
-          animation: landing-fade-up-heavy 0.9s ease-out backwards;
-          animation-delay: 0.15s;
-        }
+        @keyframes landing-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+        @keyframes landing-float { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 6px); } }
+        @keyframes landing-fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-        @keyframes landing-fade-up {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes landing-fade-up-heavy {
-          from { opacity: 0; transform: translateY(24px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ─── Mobile: stack to single column ─── */
         @media (max-width: 768px) {
-          .landing-main {
-            grid-template-columns: 1fr;
-            gap: 2rem;
-            padding: 0 1.5rem;
-            align-items: start;
-          }
-
-          .landing-text-column {
-            padding: 1rem 0 0;
-            text-align: center;
-            align-items: center;
-          }
-
-          .landing-canvas .landing-headline {
-            font-size: clamp(2rem, 8vw, 3rem);
-            margin-bottom: 1.5rem;
-          }
-
-          .landing-cta-cluster {
-            align-items: center;
-          }
-
-          .landing-proof-rail {
-            justify-content: center;
-            flex-wrap: wrap;
-          }
-
-          .landing-manuscript {
-            margin-bottom: 1rem;
-            padding: 2rem 1.5rem !important;
-          }
+          .landing-hero { min-height: calc(100vh - 4.5rem); }
+          .landing-hero { min-height: calc(100svh - 4.5rem); }
+          .landing-scrollcue { display: none; }
+          .landing-headline { font-size: 3.2rem; }
+          .landing-sub { font-size: 1rem; }
+          .landing-piece-title { font-size: 2.2rem; }
+          .landing-close-title { font-size: 2.6rem; }
         }
 
-        /* ─── Reduced motion — stillness ─── */
+        @media (max-width: 420px) {
+          .landing-headline { font-size: 2.75rem; }
+          .landing-piece-title { font-size: 2rem; }
+          .landing-close-title { font-size: 2.3rem; }
+        }
+
         @media (prefers-reduced-motion: reduce) {
-          .landing-entrance,
-          .landing-entrance-manuscript { animation: none; }
-          .landing-text-reveal { animation: none; clip-path: none; }
-          .landing-cursor { animation: none; opacity: 1; }
-          .landing-cta-button { transition: none; }
+          .landing-prose,
+          .landing-hero-editor-wrap,
+          .landing-scrollcue,
+          .landing-seal,
+          .landing-continue,
+          .landing-car,
+          .landing-reveal { animation: none !important; transition: none !important; }
+          .landing-reveal { opacity: 1; transform: none; }
         }
       `}</style>
     </div>

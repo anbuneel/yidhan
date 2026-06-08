@@ -10,10 +10,19 @@ interface NoteCardProps {
   onDelete: (id: string) => void;
   onTogglePin: (id: string, pinned: boolean) => void;
   isCompact?: boolean;
+  isDecorative?: boolean;
   searchQuery?: string;
 }
 
-export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogglePin, isCompact = false, searchQuery }: NoteCardProps) {
+export const NoteCard = memo(function NoteCard({
+  note,
+  onClick,
+  onDelete,
+  onTogglePin,
+  isCompact = false,
+  isDecorative = false,
+  searchQuery
+}: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -79,14 +88,13 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         note-card
         relative
         overflow-hidden
-        cursor-pointer
         flex flex-col
         transition-all duration-300
         focus:outline-none
         focus:ring-2
         focus:ring-[var(--color-accent)]
         focus:ring-offset-2
-        active:scale-[0.98]
+        ${isDecorative ? '' : 'cursor-pointer active:scale-[0.98]'}
         ${isDeleting ? 'deleting' : ''}
         ${isCompact ? 'note-card-compact p-3' : 'p-6 pb-5'}
       `}
@@ -100,7 +108,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         maxHeight: isCompact ? '120px' : '300px',
       }}
       onMouseEnter={(e) => {
-        if (!isCompact) {
+        if (!isCompact && !isDecorative) {
           e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
         }
       }}
@@ -108,15 +116,17 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         e.currentTarget.style.boxShadow = isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)';
       }}
     >
-      <button
-        type="button"
-        className="absolute inset-0 z-10 h-full w-full rounded-[inherit] border-0 bg-transparent p-0 focus-ring"
-        aria-label={`Open note: ${note.title || 'Untitled'}`}
-        onClick={() => onClick(note.id)}
-      />
+      {!isDecorative && (
+        <button
+          type="button"
+          className="absolute inset-0 z-10 h-full w-full rounded-[inherit] border-0 bg-transparent p-0 focus-ring"
+          aria-label={`Open note: ${note.title || 'Untitled'}`}
+          onClick={() => onClick(note.id)}
+        />
+      )}
 
       {/* Pin button - top-right corner (only in full mode) */}
-      {!isCompact && (
+      {!isCompact && !isDecorative && (
         <button type="button"
           onClick={handlePinClick}
           className={`
@@ -143,6 +153,17 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
         </button>
+      )}
+      {!isCompact && isDecorative && note.pinned && (
+        <span
+          className="absolute top-4 right-4 z-20 flex size-6 items-center justify-center"
+          style={{ color: 'var(--color-accent-muted)' }}
+          aria-hidden="true"
+        >
+          <svg className="size-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+          </svg>
+        </span>
       )}
 
       {/* Title row - with inline pin in compact mode */}
@@ -239,7 +260,7 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
         </time>
 
         {/* Delete button - hidden in compact mode (use swipe instead) */}
-        {!isCompact && (
+        {!isCompact && !isDecorative && (
           <button type="button"
             onClick={handleDeleteClick}
             className="
@@ -275,4 +296,9 @@ export const NoteCard = memo(function NoteCard({ note, onClick, onDelete, onTogg
 
     </div>
   );
-}, (prev, next) => prev.note === next.note && prev.isCompact === next.isCompact && prev.searchQuery === next.searchQuery);
+}, (prev, next) =>
+  prev.note === next.note &&
+  prev.isCompact === next.isCompact &&
+  prev.isDecorative === next.isDecorative &&
+  prev.searchQuery === next.searchQuery
+);

@@ -2,64 +2,90 @@
 
 Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detailed layout work.
 
-## Landing Page (Split-Screen)
+## Landing Page (Hero Becomes Editor)
 
-**Desktop (≥768px):**
+**Desktop (>=768px), initial hero:**
 ```
-┌─────────────────────────────────┬─────────────────────────────────────────────┐
-│ Yidhan                          │                          [🌙] [Sign In]     │
-├─────────────────────────────────┼─────────────────────────────────────────────┤
-│                                 │  ┌─────────────┐  ┌─────────────┐          │
-│  A quiet space                  │  │ Sample Note │  │ Sample Note │          │
-│  for your notes.                │  │ [tag] TIME  │  │ [tag] TIME  │          │
-│                                 │  └─────────────┘  └─────────────┘          │
-│  The distraction-free...        │  ┌─────────────┐  ┌─────────────┐          │
-│                                 │  │ Sample Note │  │ Sample Note │          │
-│  [Start Writing]  For free      │  │ [tag] TIME  │  │ [tag] TIME  │          │
-│                                 │  └─────────────┘  └─────────────┘          │
-│  or explore without signing up→ │                                            │
-│                                 │                                            │
-│  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─         │                                            │
-│  ✦ Open source                  │                                            │
-│  ✦ Works offline                │                                            │
-│  ✦ Your data stays yours        │                                            │
-└─────────────────────────────────┴─────────────────────────────────────────────┘
++--------------------------------------------------------------------------+
+| Yidhan                                               [theme] [Sign In]   |
++--------------------------------------------------------------------------+
+|                                                                          |
+|                         Begin where you are.                             |
+|                                                                          |
+|      A quiet space for the half-formed thought. No folders. No tags.     |
+|      Nothing to learn -- just room to think.                              |
+|                                                                          |
+|                         [ Start writing ]                                |
+|                         No account needed to start.                      |
+|                         Explore the Practice Space ->                    |
+|                                                                          |
+|                         Or see how it feels                               |
+|                                  v                                       |
++--------------------------------------------------------------------------+
+```
+
+**Desktop, after Start writing:**
+```
++--------------------------------------------------------------------------+
+| Yidhan                                               [theme] [Sign In]   |
++--------------------------------------------------------------------------+
+|                                                                          |
+|               +--------------------------------------------------+       |
+|               |                                                  |       |
+|               |  Begin where you are...                          |       |
+|               |                                                  |       |
+|               |                                                  |       |
+|               |  Locked before it leaves your hands.             |       |
+|               |                         [Continue in Yidhan ->]  |       |
+|               +--------------------------------------------------+       |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+**Gallery second act:**
+```
++--------------------------------------------------------------------------+
+| The surface                                                              |
+| A page that gets out of the way.                    [editor surface]      |
+|                                                                          |
+| What accumulates                                                         |
+| [real starter note card masonry]                    Your thoughts...      |
+|                                                                          |
+| What stays yours                                                         |
+| Locked before it leaves your hands.                 [vault mark]          |
+|                                                                          |
+| Your page is waiting.                               [Start writing]       |
+| Changelog . Roadmap . GitHub . Privacy . Terms . Support                 |
++--------------------------------------------------------------------------+
 ```
 
 **Mobile (<768px):**
 ```
-┌─────────────────────────────────┐
-│ Yidhan            [🌙] [Sign In]│
-├─────────────────────────────────┤
-│                                 │
-│   A quiet space                 │
-│   for your notes.               │
-│                                 │
-│   [Start Writing]  For free     │
-│                                 │
-│   or explore first →            │
-│                                 │
-│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─        │
-│   ✦ Open source                 │
-│   ✦ Works offline               │
-│   ✦ Your data stays yours       │
-│                                 │
-│   ┌─────────────────────────┐   │
-│   │ Sample Note             │   │
-│   │ [tag]            TIME   │   │
-│   └─────────────────────────┘   │
-│                                 │
-│   Changelog · Roadmap · GitHub  │
-└─────────────────────────────────┘
++---------------------------------+
+| Yidhan          [theme] [Sign In]|
++---------------------------------+
+|                                 |
+|       Begin where you are.      |
+|                                 |
+|   A quiet space for the         |
+|   half-formed thought.          |
+|                                 |
+|       [ Start writing ]         |  -> routes to /demo
+|       No account needed         |
+|       Explore Practice Space -> |
+|                                 |
+|   (gallery follows below)       |
+|                                 |
++---------------------------------+
 ```
 
-- True 50-50 split on desktop (each panel has its own header)
-- Left panel: Hero + CTA + secondary "explore" link + trust signals
-- Right panel: 4 static sample note cards in 2x2 grid (no interactive demo)
-- Secondary CTA links to /demo (Practice Space / "Explore" mode)
-- Trust signals: Open source, Works offline, Your data stays yours
-- Auth opens as modal overlay (responsive, scrollable on mobile)
-- Mobile: Stacked layout with single sample card
+- Desktop primary CTA reveals a lightweight `contentEditable` manuscript in place.
+- The first typed draft is saved to `yidhan-demo-content` before signup and migrated by `App.tsx` into an encrypted "My first note" after auth/unlock.
+- Hidden hero controls and scroll cue leave the tab order after the editor reveal.
+- Mobile primary CTA routes directly to `/demo` to avoid soft-keyboard viewport shifts.
+- Gallery uses three museum-spaced proof pieces: writing surface, starter-note grid, and encryption/offline/open-source promise.
+- Gallery starter notes mirror the Practice Space seed notes.
+- Auth opens as modal overlay from `Continue in Yidhan`.
 
 ## Auth Modal (OAuth-First Layout)
 

@@ -48,6 +48,7 @@ export interface DemoState {
 // ============================================================================
 
 export const DEMO_STORAGE_KEY = 'yidhan-demo-state';
+export const DEMO_CONTENT_STORAGE_KEY = 'yidhan-demo-content';
 export const DEMO_STORAGE_VERSION = 1;
 
 const STARTER_NOTES: DemoNote[] = [
@@ -129,6 +130,10 @@ function createDefaultState(): DemoState {
       ribbonDismissedAt: null,
     },
   };
+}
+
+export function createDemoStarterPreviewState(): DemoState {
+  return createDefaultState();
 }
 
 // ============================================================================
