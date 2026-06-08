@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Yidhan — Concept B · Quiet hero, gallery below</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --color-bg-primary: #EBE8E4;
+    --color-bg-secondary: #E5E2DD;
+    --color-card-bg: rgba(252, 248, 238, 0.92);
+    --color-text-primary: #3E3B36;
+    --color-text-secondary: #6B6862;
+    --color-text-tertiary: #7D7974;
+    --color-accent: #C25634;
+    --color-cta-bg: #B04A2C;
+    --color-cta-text: #fff;
+    --color-glow: rgba(194, 86, 52, 0.12);
+    --shadow-manuscript: 0 1px 2px rgba(120,80,60,.12), 0 4px 12px rgba(120,80,60,.09), 0 16px 32px rgba(120,80,60,.075), 0 32px 64px rgba(120,80,60,.06);
+    --shadow-card: 0 4px 12px rgba(120,80,60,.12), 0 20px 40px -10px rgba(120,80,60,.30);
+    --noise-opacity: 0.10;
+    --hairline: rgba(62, 59, 54, 0.14);
+    --tag-terra: #C25634; --tag-gold: #B8902A; --tag-forest: #4F7355; --tag-stone: #7D7974;
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Source Sans 3', system-ui, sans-serif;
+    --radius-card: 2px 24px 4px 24px;
+  }
+  [data-theme="dark"] {
+    --color-bg-primary: #050A06;
+    --color-bg-secondary: #0A120B;
+    --color-card-bg: rgba(20, 30, 20, 0.88);
+    --color-text-primary: #EAE6D8;
+    --color-text-secondary: #A3ABA3;
+    --color-text-tertiary: #8E9A8E;
+    --color-accent: #D4AF37;
+    --color-cta-bg: #D4AF37;
+    --color-cta-text: #16161F;
+    --color-glow: rgba(212, 175, 55, 0.12);
+    --shadow-manuscript: 0 1px 2px rgba(5,20,10,.6), 0 4px 12px rgba(5,20,10,.45), 0 16px 32px rgba(5,20,10,.375), 0 32px 64px rgba(5,20,10,.3);
+    --shadow-card: 0 4px 12px rgba(5,20,10,.25), 0 20px 50px -10px rgba(5,20,10,.6);
+    --noise-opacity: 0.06;
+    --hairline: rgba(212, 175, 55, 0.16);
+    --tag-terra: #E07A5F; --tag-gold: #D4AF37; --tag-forest: #87A878; --tag-stone: #9A9890;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  html, body { margin: 0; }
+  body {
+    font-family: var(--font-body); font-weight: 300;
+    background: var(--color-bg-primary); color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    transition: background-color .6s ease, color .6s ease;
+    overflow-x: hidden;
+  }
+  .grain {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    opacity: var(--noise-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  header.bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: clamp(1rem, 2.4vw, 1.6rem) clamp(1.4rem, 5vw, 4rem);
+    background: linear-gradient(to bottom, var(--color-bg-primary) 30%, transparent);
+  }
+  .wordmark { font-family: var(--font-display); font-weight: 500; font-size: 1.3rem; color: var(--color-text-primary); display: inline-flex; align-items: center; gap: .55rem; }
+  .wordmark .seed { width: 9px; height: 9px; border-radius: 60% 40% 55% 45%; background: var(--color-accent); transform: rotate(8deg); }
+  .signin { font-family: var(--font-body); font-size: .82rem; color: var(--color-text-secondary); background: none; border: 1px solid var(--hairline); border-radius: 2px 12px 4px 12px; padding: .5rem 1.1rem; cursor: pointer; transition: color .25s, border-color .25s; }
+  .signin:hover { color: var(--color-accent); border-color: var(--color-accent); }
+
+  section { position: relative; z-index: 1; }
+
+  /* ============ Hero fold (pure calm) ============ */
+  .hero {
+    min-height: 100dvh; display: grid; place-items: center; text-align: center;
+    padding: 6rem clamp(1.4rem, 5vw, 3rem) 4rem;
+    background: radial-gradient(ellipse 70% 60% at 50% 44%,
+      color-mix(in srgb, var(--color-accent) 7%, var(--color-bg-primary) 93%) 0%,
+      var(--color-bg-primary) 62%);
+  }
+  .hero-inner { max-width: 640px; }
+  .hero h1 {
+    font-family: var(--font-display); font-weight: 300;
+    font-size: clamp(2.8rem, 7vw, 5rem); line-height: 1.03; letter-spacing: -.02em;
+    margin: 0 0 1.6rem; text-wrap: balance; color: var(--color-text-primary);
+  }
+  .hero h1 em { font-style: italic; color: var(--color-accent); font-weight: 400; }
+  .hero .car { color: var(--color-accent); font-style: normal; animation: blink 2.6s ease-in-out infinite; }
+  .hero .sub { font-size: clamp(1rem, 1.6vw, 1.18rem); line-height: 1.7; color: var(--color-text-secondary); max-width: 40ch; margin: 0 auto 2.6rem; }
+  .cta {
+    font-family: var(--font-body); font-size: 1rem; font-weight: 500;
+    background: var(--color-cta-bg); color: var(--color-cta-text);
+    border: none; border-radius: 2px 16px 4px 16px;
+    padding: .9rem 2.4rem; cursor: pointer; box-shadow: 0 6px 24px var(--color-glow);
+    transition: transform .3s ease, box-shadow .3s ease;
+  }
+  .cta:hover { transform: translateY(-1px); box-shadow: 0 10px 34px var(--color-glow); }
+  .micro { margin-top: 1.1rem; font-size: .76rem; color: var(--color-text-tertiary); }
+
+  .scrollcue {
+    position: absolute; left: 50%; bottom: 2.2rem; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: .5rem;
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .18em;
+    color: var(--color-text-tertiary); text-decoration: none;
+    animation: float 3.4s ease-in-out infinite;
+  }
+  .scrollcue:hover { color: var(--color-accent); }
+  .scrollcue .arr { font-size: 1rem; }
+
+  /* ============ Gallery ============ */
+  .gallery { padding: clamp(3rem, 10vw, 9rem) clamp(1.4rem, 6vw, 4rem); max-width: 1080px; margin: 0 auto; }
+  .piece { display: grid; gap: clamp(2rem, 5vw, 4.5rem); align-items: center; margin-bottom: clamp(6rem, 16vw, 13rem); }
+  .piece:last-child { margin-bottom: 0; }
+  @media (min-width: 860px) {
+    .piece { grid-template-columns: 1fr 1fr; }
+    .piece.flip .caption { order: 2; }
+  }
+  .caption .kicker { font-size: .68rem; text-transform: uppercase; letter-spacing: .18em; color: var(--color-accent); margin: 0 0 1rem; }
+  .caption h2 { font-family: var(--font-display); font-weight: 300; font-size: clamp(1.9rem, 3.4vw, 2.9rem); line-height: 1.1; letter-spacing: -.01em; margin: 0 0 1rem; color: var(--color-text-primary); }
+  .caption p { font-size: 1.02rem; line-height: 1.75; color: var(--color-text-secondary); max-width: 42ch; margin: 0; }
+
+  /* — Piece 1: the editor surface — */
+  .editor {
+    position: relative; background: var(--color-bg-primary);
+    border: 1px solid var(--hairline); border-radius: var(--radius-card);
+    box-shadow: var(--shadow-manuscript);
+    padding: clamp(2rem, 4vw, 3.2rem); overflow: hidden;
+  }
+  .editor::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 80% 50% at 50% 36%, var(--color-glow) 0%, transparent 70%); }
+  .editor .doc { position: relative; z-index: 1; font-size: 1.16rem; line-height: 1.85; color: var(--color-text-primary); }
+  .editor .doc .dim { color: var(--color-text-tertiary); }
+  .editor .car { color: var(--color-accent); animation: blink 2.6s ease-in-out infinite; }
+
+  /* — Piece 2: the note grid (wabi-sabi cards) — */
+  .grid { columns: 2; column-gap: 1rem; }
+  @media (max-width: 520px) { .grid { columns: 1; } }
+  .card {
+    break-inside: avoid; margin-bottom: 1rem;
+    background: var(--color-card-bg); border: 1px solid var(--hairline);
+    border-radius: var(--radius-card); box-shadow: var(--shadow-card);
+    padding: 1.2rem 1.3rem 1.3rem; position: relative;
+  }
+  .card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(to bottom, transparent 70%, var(--color-glow)); opacity: .6; }
+  .card h3 { font-family: var(--font-display); font-weight: 500; font-size: 1.15rem; margin: 0 0 .5rem; color: var(--color-text-primary); }
+  .card p { font-size: .92rem; line-height: 1.6; color: var(--color-text-secondary); margin: 0; }
+  .card .frag { color: var(--color-text-tertiary); }
+  .card .car { color: var(--color-accent); animation: blink 2.6s ease-in-out infinite; }
+  .card .tags { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .85rem; }
+  .pill { font-size: .64rem; letter-spacing: .04em; padding: .2rem .6rem; border-radius: 2px 8px 3px 8px; color: var(--color-text-primary); background: color-mix(in srgb, var(--tag) 22%, transparent); border: 1px solid color-mix(in srgb, var(--tag) 45%, transparent); }
+
+  /* — Piece 3: what stays yours — */
+  .vault {
+    position: relative; display: grid; place-items: center;
+    aspect-ratio: 1 / 1; max-width: 360px; margin: 0 auto; width: 100%;
+    border-radius: var(--radius-card);
+    background:
+      radial-gradient(circle at 50% 42%, var(--color-glow), transparent 60%),
+      var(--color-bg-secondary);
+    border: 1px solid var(--hairline);
+  }
+  .vault svg { width: 38%; height: 38%; color: var(--color-accent); }
+  .vault .ring { position: absolute; inset: 14%; border: 1px dashed color-mix(in srgb, var(--color-accent) 40%, transparent); border-radius: 50%; }
+
+  /* ============ Close ============ */
+  .close { text-align: center; padding: clamp(5rem, 14vw, 11rem) 1.4rem clamp(3rem, 8vw, 6rem); }
+  .close h2 { font-family: var(--font-display); font-weight: 300; font-size: clamp(2.2rem, 5vw, 3.6rem); line-height: 1.06; margin: 0 0 2.2rem; color: var(--color-text-primary); }
+  .close h2 em { font-style: italic; color: var(--color-accent); font-weight: 400; }
+  footer.nav { display: flex; align-items: center; justify-content: center; gap: .8rem; flex-wrap: wrap; padding: 2.5rem 1.4rem 3rem; font-size: .76rem; color: var(--color-text-tertiary); }
+  footer.nav a { color: inherit; text-decoration: none; }
+  footer.nav a:hover { color: var(--color-accent); }
+  footer.nav .sep { opacity: .5; }
+
+  /* ============ Scroll reveal ============ */
+  .reveal { opacity: 0; transform: translateY(26px); transition: opacity .9s ease, transform .9s cubic-bezier(.22,1,.36,1); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+  @keyframes float { 0%,100%{transform:translate(-50%,0)} 50%{transform:translate(-50%,6px)} }
+
+  /* prototype chrome */
+  .proto { position: fixed; right: 14px; bottom: 14px; z-index: 50; display: flex; align-items: center; gap: 8px; font-family: var(--font-body); font-size: .72rem; background: color-mix(in srgb, var(--color-bg-secondary) 88%, transparent); border: 1px solid var(--hairline); border-radius: 10px; padding: 6px 8px; backdrop-filter: blur(8px); }
+  .proto button, .proto a { font: inherit; color: var(--color-text-secondary); background: none; border: 1px solid var(--hairline); border-radius: 7px; padding: 4px 9px; cursor: pointer; text-decoration: none; transition: color .2s, border-color .2s; }
+  .proto button:hover, .proto a:hover { color: var(--color-accent); border-color: var(--color-accent); }
+  .proto .tag2 { color: var(--color-text-tertiary); padding-left: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before { transition: none !important; animation: none !important; }
+    .reveal { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="bar">
+    <span class="wordmark"><span class="seed" aria-hidden="true"></span>Yidhan</span>
+    <button class="signin" type="button">Sign in</button>
+  </header>
+
+  <!-- Hero fold -->
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Begin where you <em>are.</em><span class="car" aria-hidden="true">&#9614;</span></h1>
+      <p class="sub">A quiet space for the half-formed thought. No folders. No tags. Nothing to learn — just room to think.</p>
+      <button class="cta" type="button">Start writing</button>
+      <p class="micro">Google, GitHub, or email · No credit card</p>
+    </div>
+    <a class="scrollcue" href="#surface"><span>See how it feels</span><span class="arr" aria-hidden="true">↓</span></a>
+  </section>
+
+  <!-- Gallery -->
+  <div class="gallery">
+
+    <!-- Piece 1 -->
+    <section class="piece reveal" id="surface">
+      <div class="caption">
+        <p class="kicker">The surface</p>
+        <h2>A page that gets out of the way.</h2>
+        <p>No sidebars. No menus crowding the margins. Type, and the interface recedes — leaving only your words and a soft manuscript glow that follows your cursor.</p>
+      </div>
+      <div class="editor" aria-hidden="true">
+        <div class="doc">
+          The thought arrives unfinished, and that is fine.<br />
+          <span class="dim">You keep writing, and the page keeps making room</span><span class="car">&#9614;</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Piece 2 -->
+    <section class="piece flip reveal">
+      <div class="caption">
+        <p class="kicker">What accumulates</p>
+        <h2>Your thoughts, gathered like pages.</h2>
+        <p>Notes settle into a quiet, asymmetric arrangement — no rigid grid, no pressure to organize. Tag them, or don't. They wait for you, exactly as you left them.</p>
+      </div>
+      <div class="grid" aria-hidden="true">
+        <div class="card">
+          <h3>Morning, three lines</h3>
+          <p class="frag">Before the coffee, before the noise. Whatever surfaces first.&nbsp;<span class="car">&#9614;</span></p>
+          <div class="tags"><span class="pill" style="--tag:var(--tag-gold)">ritual</span></div>
+        </div>
+        <div class="card">
+          <h3>From a book</h3>
+          <p>"Fill your paper with the breathings of your heart." — Wordsworth</p>
+          <div class="tags"><span class="pill" style="--tag:var(--tag-forest)">quotes</span></div>
+        </div>
+        <div class="card">
+          <h3>Loose ends</h3>
+          <p class="frag">— call back about the door<br />— the word for that blue<br />— finish this later</p>
+        </div>
+        <div class="card">
+          <h3>2:14 a.m.</h3>
+          <p class="frag">An idea I don't want to lose&nbsp;<span class="car">&#9614;</span></p>
+          <div class="tags"><span class="pill" style="--tag:var(--tag-terra)">spark</span><span class="pill" style="--tag:var(--tag-stone)">later</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Piece 3 -->
+    <section class="piece reveal">
+      <div class="caption">
+        <p class="kicker">What stays yours</p>
+        <h2>Locked before it leaves your hands.</h2>
+        <p>Every word is encrypted on your device before it syncs — so it reaches your other screens, but never ours readable. It works offline, and the code is open for anyone to check.</p>
+      </div>
+      <div class="vault" aria-hidden="true">
+        <span class="ring"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="5" y="11" width="14" height="9" rx="2.2" />
+          <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+          <circle cx="12" cy="15.5" r="1.4" fill="currentColor" stroke="none" />
+        </svg>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Close -->
+  <section class="close reveal">
+    <h2>Your page is <em>waiting.</em></h2>
+    <button class="cta" type="button">Start writing</button>
+    <p class="micro">No account needed to try the Practice Space.</p>
+  </section>
+
+  <footer class="nav">
+    <a href="#">Changelog</a><span class="sep">·</span>
+    <a href="#">Roadmap</a><span class="sep">·</span>
+    <a href="#">GitHub</a><span class="sep">·</span>
+    <a href="#">Privacy</a><span class="sep">·</span>
+    <a href="#">Terms</a>
+  </footer>
+
+  <!-- prototype controls -->
+  <div class="proto">
+    <span class="tag2">B · gallery below</span>
+    <button id="themeBtn" type="button">Light</button>
+    <a href="landing-a-becomes-editor.html">See A →</a>
+  </div>
+
+<script>
+  // Scroll reveal
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.18 });
+  document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+  // theme toggle
+  const html = document.documentElement;
+  const themeBtn = document.getElementById('themeBtn');
+  function syncLabel() { themeBtn.textContent = html.getAttribute('data-theme') === 'dark' ? 'Light' : 'Dark'; }
+  themeBtn.addEventListener('click', () => {
+    html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    syncLabel();
+  });
+  syncLabel();
+</script>
+</body>
+</html>
