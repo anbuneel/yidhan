@@ -20,7 +20,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Light & Dark Themes** - Kintsugi (warm light) and Midnight (forest green dark) themes
 - **Tag Organization** - Organize notes with colorful tags and filter by multiple tags
 - **Tag Management** - Create, edit, and delete tags with a beautiful color picker
-- **Landing Page** - Unified single-canvas composition with manuscript preview matching the real editor, staggered entrance animations, and horizontal text reveal
+- **Landing Page** - Quiet hero that becomes a lightweight writing surface on desktop, saves the first draft into signup, and follows with a real-product gallery
 - **Practice Space** - Full-featured demo at `/demo` without signup; notes persist in localStorage
 - **Seamless Onboarding** - Demo content auto-saves after signup, email confirmation with resend options
 - **Export/Import** - Backup notes to JSON or Markdown, restore from backups
@@ -175,7 +175,7 @@ src/
 │   ├── EditorToolbar.tsx  # Sticky formatting toolbar
 │   ├── ErrorBoundary.tsx  # Error boundary for graceful error handling
 │   ├── Footer.tsx         # Footer with changelog/roadmap/GitHub links
-│   ├── LandingPage.tsx    # Split-screen landing with interactive demo
+│   ├── LandingPage.tsx    # Landing hero/editor reveal with product gallery
 │   ├── Header.tsx         # App header with search, profile menu
 │   ├── Library.tsx        # Notes grid view
 │   ├── SimpleHeader.tsx   # Simple header with clickable logo

@@ -97,7 +97,7 @@ import {
   ValidationError,
   MAX_IMPORT_FILE_SIZE,
 } from './utils/exportImport';
-import { hasDemoState } from './services/demoStorage';
+import { DEMO_CONTENT_STORAGE_KEY, hasDemoState } from './services/demoStorage';
 import { migrateDemoToAccount } from './services/demoMigration';
 import { sanitizeHtml } from './utils/sanitize';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
@@ -120,8 +120,6 @@ import { IOSInstallGuide } from './components/IOSInstallGuide';
 import { SessionTimeoutModal } from './components/SessionTimeoutModal';
 import { reportReliabilityIssue } from './utils/reliabilityTelemetry';
 import './App.css';
-
-const DEMO_STORAGE_KEY = 'yidhan-demo-content';
 
 /**
  * Migrate localStorage keys from old 'zenote-' prefix to new 'yidhan-' prefix
@@ -989,11 +987,14 @@ function App() {
   // 2. We only care about identity (userId), not other user metadata
   // 3. String comparison is stable; object reference changes on every auth state update
   useEffect(() => {
-    if (!userId || hasMigratedDemoContent.current) return;
+    if (!userId) {
+      hasMigratedDemoContent.current = false;
+      return;
+    }
+    if (hasMigratedDemoContent.current) return;
 
-    const demoContent = localStorage.getItem(DEMO_STORAGE_KEY);
+    const demoContent = localStorage.getItem(DEMO_CONTENT_STORAGE_KEY);
     if (!demoContent?.trim()) {
-      hasMigratedDemoContent.current = true;
       return;
     }
 
@@ -1010,9 +1011,9 @@ function App() {
     createEncryptedNote(userId, 'My first note', htmlContent, keys)
       .then((newNote) => {
         // Clear demo content from localStorage
-        localStorage.removeItem(DEMO_STORAGE_KEY);
+        localStorage.removeItem(DEMO_CONTENT_STORAGE_KEY);
         // Show toast notification
-        toast.success('Your demo note has been saved!');
+        toast.success('Your first note has been saved!');
         // Add to notes list
         setNotes((prev) => [newNote, ...prev]);
         // Open the note in editor
@@ -1034,7 +1035,11 @@ function App() {
   useEffect(() => {
     // Gate on hydration complete to avoid race conditions
     if (isHydrating) return;
-    if (!userId || hasMigratedDemoNotes.current) return;
+    if (!userId) {
+      hasMigratedDemoNotes.current = false;
+      return;
+    }
+    if (hasMigratedDemoNotes.current) return;
 
     // Wait for encryption keys before migrating — without this,
     // migrateDemoToAccount would create plaintext notes via createNoteOffline

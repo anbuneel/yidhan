@@ -11,22 +11,26 @@ test.describe('Authentication', () => {
 
   test.describe('Landing Page', () => {
     test('shows landing page for unauthenticated users', async ({ page }) => {
-      await expect(page.getByRole('heading', { name: /a quiet space/i })).toBeVisible();
-      await expect(page.getByRole('button', { name: /start writing/i })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /begin where you are/i })).toBeVisible();
+      await expect(page.getByRole('button', { name: /start writing/i }).first()).toBeVisible();
       await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
     });
 
-    test('has interactive demo editor', async ({ page }) => {
-      const demoEditor = page.getByTestId('demo-editor');
-      await expect(demoEditor).toBeVisible();
+    test('starts writing from the landing page', async ({ page }) => {
+      await page.getByRole('button', { name: /start writing/i }).first().click();
 
-      // Type in demo
-      await demoEditor.click();
-      await page.keyboard.type('Testing the demo editor');
+      const isMobileViewport = (page.viewportSize()?.width ?? 0) <= 768;
+      if (isMobileViewport) {
+        await expect(page).toHaveURL(/\/demo/);
+        await expect(page.getByRole('heading', { name: /practice space/i })).toBeVisible();
+        return;
+      }
 
-      // Should persist (localStorage)
-      await page.reload();
-      await expect(page.getByText('Testing the demo editor')).toBeVisible();
+      const landingEditor = page.getByRole('textbox', { name: /your writing/i });
+      await expect(landingEditor).toBeVisible();
+      await landingEditor.fill('Testing the landing editor');
+      await expect(page.locator('.landing-seal')).toBeVisible();
+      await expect(page.getByRole('button', { name: /continue in yidhan/i })).toBeVisible();
     });
   });
 
