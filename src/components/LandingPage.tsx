@@ -337,28 +337,30 @@ export function LandingPage({
         </section>
 
         {/* What accumulates */}
-        <section className="landing-piece flip landing-reveal">
-          <div className="landing-caption">
-            <p className="landing-kicker">What accumulates</p>
-            <h2 className="landing-piece-title">Your thoughts, gathered like pages.</h2>
-            <p className="landing-piece-body">
-              Notes settle into a quiet, asymmetric arrangement — no rigid grid, no pressure
-              to organize. Tag them, or don&rsquo;t. They wait for you, exactly as you left
-              them.
-            </p>
-          </div>
-          <div className="landing-grid" aria-hidden="true">
-            {previewNotes.map((note) => (
-              <div key={note.id} className="landing-note-card-wrap">
-                <NoteCard
-                  note={note}
-                  onClick={() => undefined}
-                  onDelete={() => undefined}
-                  onTogglePin={() => undefined}
-                  isDecorative
-                />
-              </div>
-            ))}
+        <section className="landing-piece-wide">
+          <div className="landing-wide-inner landing-reveal">
+            <div className="landing-caption">
+              <p className="landing-kicker">What accumulates</p>
+              <h2 className="landing-piece-title">Your thoughts, gathered like pages.</h2>
+              <p className="landing-piece-body">
+                Notes settle into a quiet, asymmetric arrangement — no rigid grid, no pressure
+                to organize. Tag them, or don&rsquo;t. They wait for you, exactly as you left
+                them.
+              </p>
+            </div>
+            <div className="landing-grid" aria-hidden="true">
+              {previewNotes.map((note) => (
+                <div key={note.id} className="landing-note-card-wrap">
+                  <NoteCard
+                    note={note}
+                    onClick={() => undefined}
+                    onDelete={() => undefined}
+                    onTogglePin={() => undefined}
+                    isDecorative
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -714,9 +716,25 @@ export function LandingPage({
         }
 
         /* Note grid - rendered with the real NoteCard in decorative mode */
-        .landing-grid { columns: 2; column-gap: 1rem; }
-        @media (max-width: 520px) { .landing-grid { columns: 1; } }
-        .landing-note-card-wrap { break-inside: avoid; margin-bottom: 1rem; display: block; }
+        /* "What accumulates" steps out of the editorial 2-col split: a centered
+           caption above a centered 2-up masonry. Cards render at app-true width
+           (~410px, same as the real library) and the staggered heights give the
+           "asymmetric, no rigid grid" arrangement the copy promises. */
+        .landing-piece-wide { margin-bottom: clamp(6rem, 16vw, 13rem); }
+        .landing-piece-wide .landing-caption {
+          text-align: center;
+          max-width: 48ch;
+          margin: 0 auto clamp(2.5rem, 5vw, 3.5rem);
+        }
+        .landing-piece-wide .landing-piece-body { margin-left: auto; margin-right: auto; }
+        .landing-grid {
+          columns: 2;
+          column-gap: 1.5rem;
+          max-width: 846px;
+          margin: 0 auto;
+        }
+        @media (max-width: 700px) { .landing-grid { columns: 1; max-width: 420px; } }
+        .landing-note-card-wrap { break-inside: avoid; margin-bottom: 1.5rem; display: block; }
         /* Vault */
         .landing-vault {
           position: relative; display: grid; place-items: center;

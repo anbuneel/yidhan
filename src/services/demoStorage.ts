@@ -73,7 +73,7 @@ const STARTER_NOTES: DemoNote[] = [
 </ul>
 <p>Started Four Thousand Weeks last night. The bit about how we'll never "get on top of everything" was oddly freeing.</p>`,
     pinned: false,
-    tagIds: [],
+    tagIds: ['tag-ideas'],
     createdAt: Date.now(),
     updatedAt: Date.now(),
   },
@@ -96,7 +96,7 @@ const STARTER_NOTES: DemoNote[] = [
 <li>Try that new coffee place on 5th</li>
 </ul>`,
     pinned: false,
-    tagIds: [],
+    tagIds: ['tag-journal'],
     createdAt: Date.now(),
     updatedAt: Date.now(),
   },
