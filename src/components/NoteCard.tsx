@@ -113,6 +113,7 @@ export const NoteCard = memo(function NoteCard({
         }
       }}
       onMouseLeave={(e) => {
+        if (isDecorative) return;
         e.currentTarget.style.boxShadow = isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)';
       }}
     >

@@ -106,7 +106,7 @@
     "cap:sync": "npm run build && npx cap sync",
     "cap:android": "npm run build && npx cap sync android && npx cap open android",
     "cap:android:run": "npm run build && npx cap sync android && npx cap run android",
-    "doctor": "npx react-doctor@latest"
+    "doctor": "npx -y react-doctor@0.4.2 --no-telemetry"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

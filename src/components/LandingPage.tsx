@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo, type MouseEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, type ClipboardEvent, type MouseEvent } from 'react';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { HeaderShell } from './HeaderShell';
 import { createDemoStarterPreviewState, DEMO_CONTENT_STORAGE_KEY } from '../services/demoStorage';
@@ -17,6 +17,14 @@ interface LandingPageProps {
   onTermsClick: () => void;
   onSupportClick: () => void;
 }
+
+const isMobileViewport = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia?.('(max-width: 768px)').matches === true;
+
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 
 export function LandingPage({
   onStartWriting,
@@ -72,14 +80,6 @@ export function LandingPage({
   const focusTimeoutRef = useRef<number | null>(null);
   const closeStartTimeoutRef = useRef<number | null>(null);
 
-  const isMobile = () =>
-    typeof window !== 'undefined' &&
-    window.matchMedia?.('(max-width: 768px)').matches === true;
-
-  const prefersReducedMotion = () =>
-    typeof window !== 'undefined' &&
-    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
-
   const enterWriting = useCallback(() => {
     const activeElement = document.activeElement;
     if (
@@ -101,7 +101,7 @@ export function LandingPage({
   }, []);
 
   const handleStartWriting = () => {
-    if (isMobile()) {
+    if (isMobileViewport()) {
       onDemoClick();
       return;
     }
@@ -109,7 +109,7 @@ export function LandingPage({
   };
 
   const handleCloseStart = () => {
-    if (isMobile()) {
+    if (isMobileViewport()) {
       onDemoClick();
       return;
     }
@@ -135,6 +135,15 @@ export function LandingPage({
     hasEditedDraftRef.current = true;
     setHasWritten(text.length > 0);
     setDraftSaveError(false);
+  };
+
+  const handlePaste = (event: ClipboardEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const text = event.clipboardData.getData('text/plain');
+    if (!text) return;
+
+    document.execCommand('insertText', false, text);
+    handleInput();
   };
 
   const saveDraftBeforeAuth = () => {
@@ -166,9 +175,8 @@ export function LandingPage({
   };
 
   const handleSignIn = () => {
-    if (saveDraftBeforeAuth()) {
-      onSignIn();
-    }
+    setDraftSaveError(false);
+    onSignIn();
   };
 
   const handleDemoClick = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -273,23 +281,24 @@ export function LandingPage({
                 aria-multiline="true"
                 aria-label="Your writing"
                 spellCheck={isWriting}
+                data-empty={!hasWritten}
                 onInput={handleInput}
+                onPaste={handlePaste}
               />
               <div className="landing-hero-foot">
                 <span className={`landing-seal${hasWritten ? ' show' : ''}`}>
                   <span className="landing-seal-dot" aria-hidden="true" />
                   Locked before it leaves your hands.
                 </span>
-                <button
-                  type="button"
-                  onClick={handleContinue}
-                  className={`landing-continue focus-ring${hasWritten ? ' show' : ''}`}
-                  disabled={!hasWritten}
-                  aria-hidden={!hasWritten}
-                  tabIndex={hasWritten ? 0 : -1}
-                >
-                  Continue in Yidhan →
-                </button>
+                {hasWritten && (
+                  <button
+                    type="button"
+                    onClick={handleContinue}
+                    className="landing-continue focus-ring show"
+                  >
+                    Continue in Yidhan →
+                  </button>
+                )}
               </div>
               {draftSaveError && (
                 <p className="landing-draft-error" role="alert">
@@ -300,15 +309,15 @@ export function LandingPage({
           </div>
         </div>
 
-        <a
-          className="landing-scrollcue focus-ring"
-          href="#landing-surface"
-          aria-hidden={isWriting}
-          tabIndex={hiddenHeroTabIndex}
-        >
-          <span>Or see how it feels</span>
-          <span className="landing-scrollcue-arrow" aria-hidden="true">↓</span>
-        </a>
+        {!isWriting && (
+          <a
+            className="landing-scrollcue focus-ring"
+            href="#landing-surface"
+          >
+            <span>Or see how it feels</span>
+            <span className="landing-scrollcue-arrow" aria-hidden="true">↓</span>
+          </a>
+        )}
       </section>
 
       {/* ─── Gallery — the honest "second act": the real product ─── */}
@@ -591,7 +600,7 @@ export function LandingPage({
           overflow-wrap: anywhere;
           word-break: break-word;
         }
-        .landing-hero-doc:empty::before {
+        .landing-hero-doc[data-empty="true"]::before {
           content: "Begin where you are\\2026";
           color: var(--color-text-tertiary);
           font-style: italic;
