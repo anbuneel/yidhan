@@ -12,7 +12,7 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 |                                                                          |
 |                         Begin where you are.                             |
 |                                                                          |
-|      A quiet space for the half-formed thought. No folders. No tags.     |
+|   A quiet space for the half-formed thought. No folders. No organizing.  |
 |      Nothing to learn -- just room to think.                              |
 |                                                                          |
 |                         [ Start writing ]                                |
