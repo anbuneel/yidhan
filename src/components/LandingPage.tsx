@@ -237,8 +237,8 @@ export function LandingPage({
               Begin where you <em>are.</em>
             </h1>
             <p className="landing-sub">
-              A quiet space for the half-formed thought. No folders. No tags. Nothing to
-              learn — just room to think.
+              A quiet space for the half-formed thought. No folders. No organizing.
+              Nothing to learn — just room to think.
             </p>
             <button
               type="button"
