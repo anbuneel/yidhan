@@ -147,6 +147,14 @@ export type NoteConflictServerVersion =
   | (ServerNoteVersion & { hard_deleted?: false })
   | HardDeletedServerNoteVersion;
 
+function isEncryptedServerNote(note: ServerNoteVersion): boolean {
+  return Boolean(note.encrypted_payload && note.encryption_iv && note.encryption_version != null && note.content_hash);
+}
+
+function createPlaintextServerNoteError(noteId: string): Error {
+  return new Error(`Refusing to store plaintext server note ${noteId}`);
+}
+
 function getDisplayUpdatedAt(
   note: Pick<ServerNoteVersion, 'updated_at' | 'display_updated_at'>
 ): string {
@@ -1024,6 +1032,11 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
 
   // Always process whatever data was fetched (even partial on mid-pagination error)
   for (const serverNote of updatedNotes) {
+    if (!isEncryptedServerNote(serverNote)) {
+      errors.push({ entity: 'notes', operation: 'data', error: createPlaintextServerNoteError(serverNote.id) });
+      continue;
+    }
+
     const localNote = await db.notes.get(serverNote.id);
 
     // Skip if local has pending or conflict changes

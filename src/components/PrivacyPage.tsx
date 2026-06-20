@@ -210,7 +210,7 @@ export function PrivacyPage({
               </h2>
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
-                  You can export all your notes at any time (JSON or Markdown). You can delete your account and all associated data through Settings. Deletion is permanent; we don't keep backups of your data after you leave.
+                  You can export all your notes at any time (JSON or Markdown). Self-serve account deletion is paused for public launch until a server-owned deletion workflow is available; contact support if you need account removal before that flow returns.
                 </p>
               </div>
             </section>

@@ -1104,6 +1104,10 @@ export async function upsertNoteFromServer(
   userId: string,
   note: Note
 ): Promise<void> {
+  if (!note.encryptedPayload || !note.encryptionIv || note.encryptionVersion == null || !note.contentHash) {
+    throw new Error(`Refusing to persist plaintext server note ${note.id}`);
+  }
+
   const db = getOfflineDb(userId);
   // Use server timestamp to keep all sync comparisons in same clock domain
   const serverTime = note.updatedAt.getTime();

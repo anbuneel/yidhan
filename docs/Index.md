@@ -117,6 +117,7 @@ Security reviews and analysis.
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [security-launch-assessment-codex-2026-06-08.md](analysis/security-launch-assessment-codex-2026-06-08.md) | Public launch security assessment: E2EE validation, launch blockers, dependency scan, and hardening checklist | 2026-06-08 |
 | [encryption-capability-analysis-claude.md](analysis/encryption-capability-analysis-claude.md) | E2EE encryption capability analysis v3.2 (Codex peer-reviewed) | 2026-02-21 |
 | [zenote-comprehensive-review-Codex.md](reviews/zenote-comprehensive-review-Codex.md) | Comprehensive security/code review by Codex | 2025-12-28 |
 | [share-token-security-analysis-claude.md](analysis/share-token-security-analysis-claude.md) | Share link token security verification | 2025-12-28 |

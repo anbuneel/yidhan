@@ -8,6 +8,25 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.19.2',
+    date: '2026-06-20',
+    changes: [
+      { type: 'improvement', text: 'Launch database hardening now enforces encrypted-only server note rows and canonical owner-scoped RLS policies' },
+      { type: 'improvement', text: 'Share links are restricted to ciphertext-only RPC access with 30-day maximum expiry enforcement and tighter function grants' },
+      { type: 'improvement', text: 'Temporary legacy encryption repair can encrypt pre-E2EE plaintext notes in place before applying the strict launch migration' },
+      { type: 'fix', text: 'Self-serve account offboarding is hidden until server-owned account deletion is available, and public support/privacy copy no longer promises deletion through Settings' },
+    ],
+  },
+  {
+    version: '3.19.1',
+    date: '2026-06-08',
+    changes: [
+      { type: 'fix', text: 'Encrypted note paths now fail closed on plaintext note rows during encrypted reads, realtime persistence, sync pulls, conflict resolution, and imports' },
+      { type: 'improvement', text: 'E2EE passphrase setup now enforces a 12-character minimum plus strength policy in both the setup screen and EncryptionContext' },
+      { type: 'improvement', text: 'Security headers now apply app-wide, with tighter rich HTML sanitization, safer rich clipboard output, and recursive Sentry event scrubbing' },
+    ],
+  },
+  {
     version: '3.19.0',
     date: '2026-06-07',
     changes: [

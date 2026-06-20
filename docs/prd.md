@@ -111,7 +111,7 @@ Zenote aims to be the antithesis of feature-bloated productivity tools. Where ot
 | Google OAuth | One-click sign-in via Google | P0 |
 | GitHub OAuth | One-click sign-in via GitHub | P1 |
 | Profile Management | Display name, avatar (initials-based) | P1 |
-| Account Offboarding | "Letting Go" with 14-day grace period | P2 |
+| Account Offboarding | Paused for public launch until server-owned deletion workflow is available | P2 |
 
 #### 4. Data Portability
 
@@ -128,7 +128,7 @@ Zenote aims to be the antithesis of feature-bloated productivity tools. Where ot
 | Feature | Description | Priority |
 |---------|-------------|----------|
 | Share as Letter | Temporary read-only share links | P1 |
-| Configurable Expiration | 1 day, 7 days, 30 days, or never | P1 |
+| Configurable Expiration | 1 day, 7 days, or 30 days | P1 |
 | Public View | Beautiful read-only view for recipients | P1 |
 
 #### 6. Theme System
@@ -191,7 +191,7 @@ Zenote aims to be the antithesis of feature-bloated productivity tools. Where ot
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Zero-Knowledge E2EE | Planning | Full end-to-end encryption (Standard Notes-style) |
+| Zero-Knowledge E2EE | Implemented | Full end-to-end encryption with encrypted-only launch enforcement |
 | Image Attachments | Coming Soon | Add images and diagrams to notes |
 | Virtual Scrolling | Coming Soon | Performance for large note collections |
 | Public Garden | Exploring | Toggle notes as minimal public blog |
@@ -320,7 +320,7 @@ Offline → Make edits → Save to IndexedDB (sync queue)
 | Data Isolation | Row Level Security (RLS) on all tables |
 | XSS Prevention | DOMPurify sanitization on all user content with restricted attributes and inline styles |
 | Auth Security | Supabase Auth with secure session handling |
-| Share Links | Cryptographically secure 32-character tokens |
+| Share Links | 128-bit base64url tokens, 30-day maximum TTL, ciphertext-only RPC lookup |
 
 ### Accessibility
 
@@ -425,7 +425,7 @@ Offline → Make edits → Save to IndexedDB (sync queue)
 | Faded Notes | Soft-deleted notes awaiting permanent release |
 | Temporal Chapters | Automatic grouping of notes by time period |
 | Kintsugi | Art of repairing broken pottery with gold (light theme name) |
-| Letting Go | Account offboarding flow with grace period |
+| Letting Go | Account offboarding concept; paused until server-owned deletion is implemented |
 | Practice Space | Full-featured demo mode at /demo requiring no signup |
 | Two Paths | Conflict resolution modal for concurrent edits (offline sync) |
 | Impermanence Ribbon | Gentle reminder that demo notes aren't synced to cloud |

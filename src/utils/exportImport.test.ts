@@ -884,6 +884,26 @@ describe('exportImport', () => {
       const writeCall = vi.mocked(navigator.clipboard.write).mock.calls[0][0];
       expect(writeCall).toHaveLength(1);
     });
+
+    it('sanitizes rich HTML before writing to clipboard', async () => {
+      const note = createMockNote({
+        title: '<script>Title</script>',
+        content: '<p onclick="alert(1)">Content</p><script>alert("xss")</script>',
+        tags: [createMockTag({ name: '<tag>' })],
+      });
+
+      await copyNoteWithFormatting(note);
+
+      const writeCall = vi.mocked(navigator.clipboard.write).mock.calls[0][0];
+      expect(writeCall).toHaveLength(1);
+
+      const html = formatNoteForClipboardHtml(note);
+      expect(html).toContain('&lt;script&gt;Title&lt;/script&gt;');
+      expect(html).toContain('Tags: &lt;tag&gt;');
+      expect(html).toContain('<p>Content</p>');
+      expect(html).not.toContain('onclick');
+      expect(html).not.toContain('<script>');
+    });
   });
 
   describe('downloadFile', () => {

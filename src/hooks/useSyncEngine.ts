@@ -340,6 +340,12 @@ export async function resolveConflict(
 
   const isEncrypted = Boolean(localNote.encryptedPayload);
   const isHardDeletedConflict = serverNote.hard_deleted === true;
+  const serverIsEncrypted = Boolean(
+    serverNote.encrypted_payload &&
+    serverNote.encryption_iv &&
+    serverNote.encryption_version != null &&
+    serverNote.content_hash
+  );
 
   const logHardDeleteRecreateFallback = (error: unknown): void => {
     const reason = error instanceof Error ? error.message : String(error);
@@ -512,6 +518,9 @@ export async function resolveConflict(
         await deleteOriginalNoteLocalState();
         break;
       }
+      if (!serverIsEncrypted) {
+        throw new Error(`Refusing to keep plaintext server note ${serverNote.id}`);
+      }
 
       // Apply server version locally — include encrypted fields from server
       const serverTime = new Date(serverNote.updated_at).getTime();
@@ -616,6 +625,9 @@ export async function resolveConflict(
       if (isHardDeletedConflict) {
         await deleteOriginalNoteLocalState();
         break;
+      }
+      if (!serverIsEncrypted) {
+        throw new Error(`Refusing to keep plaintext server note ${serverNote.id}`);
       }
 
       // Update original with server version (including encrypted fields)

@@ -2,7 +2,7 @@
 
 Exploratory enhancements and deferred ideas — not committed work. Items graduate to GitHub issues when ready for implementation.
 
-**Sections:** [Landing Page](#landing-page) · [Design & Polish](#design--polish) · [Editor](#editor) · [Mobile & Native](#mobile--native) · [Features](#features) · [Infrastructure](#infrastructure)
+**Sections:** [Landing Page](#landing-page) · [Design & Polish](#design--polish) · [Editor](#editor) · [Mobile & Native](#mobile--native) · [Features](#features) · [Security & Trust](#security--trust) · [Infrastructure](#infrastructure)
 
 ---
 
@@ -50,6 +50,14 @@ Key open items: proof rail links, below-the-fold second act, 6 deferred signatur
 | Quiet Tasks — surface buried tasks/intentions | P3 | [Quiet Tasks plan](plans/quiet-tasks-implementation-plan.md) |
 | Quiet Intelligence — reflective AI features | Deferred | [Quiet Intelligence analysis](analysis/quiet-intelligence-features-claude.md) |
 | Subscription & feature gating (Bloom tier) | Deferred | [Subscription architecture](analysis/subscription-architecture-claude.md) |
+
+---
+
+## Security & Trust
+
+| Item | Priority | Source |
+|------|----------|--------|
+| Restore self-serve offboarding only after real server-owned account deletion exists. Launch hardening paused the flow with `ACCOUNT_OFFBOARDING_ENABLED = false`, hid "Letting Go" from Settings, and removed deletion promises from Privacy/Support copy. | P1 | [Security launch assessment](analysis/security-launch-assessment-codex-2026-06-08.md) |
 
 ---
 

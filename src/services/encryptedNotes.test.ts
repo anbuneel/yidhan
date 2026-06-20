@@ -447,7 +447,7 @@ describe('encryptedNotes', () => {
       expect(decrypted.content).toBe('<p>From server</p>');
     });
 
-    it('should return unencrypted note as-is', async () => {
+    it('should reject unencrypted server notes', async () => {
       const { decryptNoteFromServer } = await import('./encryptedNotes');
 
       const plainNote = {
@@ -461,10 +461,9 @@ describe('encryptedNotes', () => {
         deletedAt: null,
       };
 
-      const result = await decryptNoteFromServer(plainNote, TEST_USER_ID, keys);
-
-      expect(result.title).toBe('Plain Title');
-      expect(result.content).toBe('<p>Plain content</p>');
+      await expect(
+        decryptNoteFromServer(plainNote, TEST_USER_ID, keys)
+      ).rejects.toThrow('is not encrypted');
     });
 
     it('should throw on partial encryption state (payload but no IV)', async () => {

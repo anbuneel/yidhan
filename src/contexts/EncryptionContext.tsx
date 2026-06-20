@@ -16,6 +16,7 @@ import {
   addReliabilityBreadcrumb,
   reportReliabilityIssue,
 } from '../utils/reliabilityTelemetry';
+import { validatePassphrasePolicy } from '../utils/passphrasePolicy';
 
 export type LockReason = 'auto-lock' | 'manual' | 'sign-out';
 
@@ -524,6 +525,11 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
    */
   const setupPassphrase = useCallback(async (passphrase: string): Promise<DerivedKeys> => {
     if (!user) throw new Error('Must be logged in to set up encryption');
+
+    const policyError = validatePassphrasePolicy(passphrase);
+    if (policyError) {
+      throw new Error(policyError);
+    }
 
     // Derive keys with a new random salt
     const derivedKeys = await deriveKeys(passphrase);

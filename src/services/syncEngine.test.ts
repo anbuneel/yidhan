@@ -199,6 +199,15 @@ function buildEntry(overrides: Partial<SyncQueueEntry> = {}): SyncQueueEntry {
   };
 }
 
+function encryptedServerFields(seed: string) {
+  return {
+    encrypted_payload: `ciphertext-${seed}`,
+    encryption_iv: `iv-${seed}`,
+    encryption_version: 1,
+    content_hash: `hash-${seed}`,
+  };
+}
+
 function buildResult(overrides: Partial<FullSyncResult> = {}): FullSyncResult {
   return {
     processed: 0,
@@ -1383,16 +1392,13 @@ describe('pullRemoteChanges behavior', () => {
   it('should apply pulled notes to IndexedDB', async () => {
     const serverNote = {
       id: 'pulled-note-1',
-      title: 'Server Note',
-      content: '<p>From server</p>',
+      title: '',
+      content: '',
       pinned: false,
       deleted_at: null,
       created_at: '2026-01-10T00:00:00Z',
       updated_at: '2026-01-15T00:00:00Z',
-      encrypted_payload: null,
-      encryption_iv: null,
-      encryption_version: null,
-      content_hash: null,
+      ...encryptedServerFields('pulled-note-1'),
     };
 
     // Notes data pull
@@ -1410,24 +1416,52 @@ describe('pullRemoteChanges behavior', () => {
     const db = getOfflineDb(TEST_USER_ID);
     const stored = await db.notes.get('pulled-note-1');
     expect(stored).toBeDefined();
-    expect(stored!.title).toBe('Server Note');
+    expect(stored!.title).toBe('');
+    expect(stored!.encryptedPayload).toBe('ciphertext-pulled-note-1');
     expect(stored!.syncStatus).toBe('synced');
+  });
+
+  it('should reject plaintext notes pulled from the server', async () => {
+    const serverNote = {
+      id: 'plaintext-pulled-note',
+      title: 'Plaintext',
+      content: '<p>Server content</p>',
+      pinned: false,
+      deleted_at: null,
+      created_at: '2026-01-10T00:00:00Z',
+      updated_at: '2026-01-15T00:00:00Z',
+      encrypted_payload: null,
+      encryption_iv: null,
+      encryption_version: null,
+      content_hash: null,
+    };
+
+    mockFetchAllPaginated
+      .mockResolvedValueOnce({ data: [serverNote], error: null })
+      .mockResolvedValueOnce({ data: [{ id: 'plaintext-pulled-note' }], error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
+
+    const result = await pullRemoteChanges(TEST_USER_ID);
+
+    expect(result.pulledNotes).toBe(0);
+    expect(result.errors[0]?.error.message).toContain('Refusing to store plaintext server note');
+
+    const db = getOfflineDb(TEST_USER_ID);
+    await expect(db.notes.get('plaintext-pulled-note')).resolves.toBeUndefined();
   });
 
   it('should keep display chronology separate from the sync cursor when pulling notes', async () => {
     const serverNote = {
       id: 'pulled-imported-note',
-      title: 'Imported elsewhere',
-      content: '<p>From backup</p>',
+      title: '',
+      content: '',
       pinned: false,
       deleted_at: null,
       created_at: '2024-01-10T00:00:00Z',
       display_updated_at: '2024-01-12T00:00:00Z',
       updated_at: '2026-03-12T00:00:00Z',
-      encrypted_payload: null,
-      encryption_iv: null,
-      encryption_version: null,
-      content_hash: null,
+      ...encryptedServerFields('pulled-imported-note'),
     };
 
     mockFetchAllPaginated
@@ -1470,16 +1504,13 @@ describe('pullRemoteChanges behavior', () => {
 
     const serverNote = {
       id: 'pending-note',
-      title: 'Server Version',
-      content: '<p>Server content</p>',
+      title: '',
+      content: '',
       pinned: false,
       deleted_at: null,
       created_at: '2026-01-10T00:00:00Z',
       updated_at: '2026-01-15T00:00:00Z',
-      encrypted_payload: null,
-      encryption_iv: null,
-      encryption_version: null,
-      content_hash: null,
+      ...encryptedServerFields('pending-note'),
     };
 
     mockFetchAllPaginated
@@ -1582,16 +1613,13 @@ describe('fullSync', () => {
   it('should combine pull and push results', async () => {
     const serverNote = {
       id: 'full-sync-note',
-      title: 'Pulled',
+      title: '',
       content: '',
       pinned: false,
       deleted_at: null,
       created_at: '2026-01-10T00:00:00Z',
       updated_at: '2026-01-15T00:00:00Z',
-      encrypted_payload: null,
-      encryption_iv: null,
-      encryption_version: null,
-      content_hash: null,
+      ...encryptedServerFields('full-sync-note'),
     };
 
     // Pull phase: return 1 note

@@ -36,18 +36,37 @@ async function decryptNoteIfNeeded(
 ): Promise<Note> {
   const hasPayload = Boolean(note.encryptedPayload);
   const hasIv = Boolean(note.encryptionIv);
+  const hasVersion = note.encryptionVersion != null;
+  const hasHash = Boolean(note.contentHash);
 
   // Detect partial encryption state — this should never happen
-  if (hasPayload !== hasIv) {
-    throw new Error(
-      `Note ${note.id} has corrupted encryption state: ` +
-      `payload=${hasPayload}, iv=${hasIv}`
-    );
+  if (!hasPayload && !hasIv && !hasVersion && !hasHash) {
+    const error = new Error(`Note ${note.id} is not encrypted; refusing to load plaintext note content`);
+    reportReliabilityIssue({
+      category: 'vault',
+      message: 'Encrypted note decryption failed',
+      level: 'warning',
+      data: {
+        source: 'note_decryption',
+      },
+    }, error);
+    throw error;
   }
 
-  if (!hasPayload) {
-    // Not encrypted — return as-is (legacy note or already decrypted)
-    return note;
+  if (!hasPayload || !hasIv || !hasVersion || !hasHash) {
+    const error = new Error(
+      `Note ${note.id} has corrupted encryption state: ` +
+      `payload=${hasPayload}, iv=${hasIv}, version=${hasVersion}, hash=${hasHash}`
+    );
+    reportReliabilityIssue({
+      category: 'vault',
+      message: 'Encrypted note decryption failed',
+      level: 'warning',
+      data: {
+        source: 'note_decryption',
+      },
+    }, error);
+    throw error;
   }
 
   try {
