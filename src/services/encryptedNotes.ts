@@ -20,6 +20,7 @@ import { getOfflineDb, createPendingSyncQueueEntry } from '../lib/offlineDb';
 import { validateNoteTitle, validateNoteContentLength } from '../utils/validation';
 import { sanitizeHtml } from '../utils/sanitize';
 import { reportReliabilityIssue } from '../utils/reliabilityTelemetry';
+import { hasEmptyPlaintextColumns } from '../utils/noteEncryptionInvariant';
 
 /**
  * Decrypt a single note in-place if it has encrypted fields.
@@ -36,18 +37,50 @@ async function decryptNoteIfNeeded(
 ): Promise<Note> {
   const hasPayload = Boolean(note.encryptedPayload);
   const hasIv = Boolean(note.encryptionIv);
+  const hasVersion = note.encryptionVersion != null;
+  const hasHash = Boolean(note.contentHash);
 
   // Detect partial encryption state — this should never happen
-  if (hasPayload !== hasIv) {
-    throw new Error(
-      `Note ${note.id} has corrupted encryption state: ` +
-      `payload=${hasPayload}, iv=${hasIv}`
-    );
+  if (!hasPayload && !hasIv && !hasVersion && !hasHash) {
+    const error = new Error(`Note ${note.id} is not encrypted; refusing to load plaintext note content`);
+    reportReliabilityIssue({
+      category: 'vault',
+      message: 'Encrypted note decryption failed',
+      level: 'warning',
+      data: {
+        source: 'note_decryption',
+      },
+    }, error);
+    throw error;
   }
 
-  if (!hasPayload) {
-    // Not encrypted — return as-is (legacy note or already decrypted)
-    return note;
+  if (!hasPayload || !hasIv || !hasVersion || !hasHash) {
+    const error = new Error(
+      `Note ${note.id} has corrupted encryption state: ` +
+      `payload=${hasPayload}, iv=${hasIv}, version=${hasVersion}, hash=${hasHash}`
+    );
+    reportReliabilityIssue({
+      category: 'vault',
+      message: 'Encrypted note decryption failed',
+      level: 'warning',
+      data: {
+        source: 'note_decryption',
+      },
+    }, error);
+    throw error;
+  }
+
+  if (!hasEmptyPlaintextColumns(note)) {
+    const error = new Error(`Note ${note.id} has encrypted fields but still contains plaintext columns`);
+    reportReliabilityIssue({
+      category: 'vault',
+      message: 'Encrypted note decryption failed',
+      level: 'warning',
+      data: {
+        source: 'note_decryption',
+      },
+    }, error);
+    throw error;
   }
 
   try {
@@ -248,8 +281,8 @@ export async function updateEncryptedNote(
 /**
  * Fetch all notes and decrypt them.
  *
- * Uses Promise.allSettled so one corrupted note doesn't block access
- * to the rest. Failed notes are logged and excluded from the result.
+ * Fails closed if any note cannot be decrypted so the UI never silently
+ * hides notes or exports partial data.
  */
 export async function fetchDecryptedNotes(
   userId: string,
@@ -273,8 +306,8 @@ export async function fetchDecryptedNotes(
   }
 
   if (failedCount > 0) {
-    console.warn(
-      `Decryption summary: ${decrypted.length} succeeded, ${failedCount} failed out of ${notes.length} total`
+    throw new Error(
+      `Failed to decrypt ${failedCount} of ${notes.length} notes. Lock and unlock your vault, then try again.`
     );
   }
 
@@ -283,7 +316,7 @@ export async function fetchDecryptedNotes(
 
 /**
  * Fetch faded (soft-deleted) notes and decrypt them.
- * Same resilience pattern as fetchDecryptedNotes — corrupted notes are skipped.
+ * Same fail-closed pattern as fetchDecryptedNotes.
  */
 export async function fetchDecryptedFadedNotes(
   userId: string,
@@ -307,8 +340,8 @@ export async function fetchDecryptedFadedNotes(
   }
 
   if (failedCount > 0) {
-    console.warn(
-      `Faded notes decryption: ${decrypted.length} succeeded, ${failedCount} failed out of ${notes.length} total`
+    throw new Error(
+      `Failed to decrypt ${failedCount} of ${notes.length} faded notes. Lock and unlock your vault, then try again.`
     );
   }
 

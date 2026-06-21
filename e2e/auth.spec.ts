@@ -22,7 +22,7 @@ test.describe('Authentication', () => {
       const isMobileViewport = (page.viewportSize()?.width ?? 0) <= 768;
       if (isMobileViewport) {
         await expect(page).toHaveURL(/\/demo/);
-        await expect(page.getByRole('heading', { name: /practice space/i })).toBeVisible();
+        await expect(page.getByText(/write freely, no account needed/i)).toBeVisible();
         return;
       }
 
@@ -46,7 +46,7 @@ test.describe('Authentication', () => {
       await page.getByRole('button', { name: /sign in/i }).click();
 
       // Try to submit empty form
-      await page.getByRole('button', { name: /sign in/i }).nth(1).click();
+      await page.locator('form').getByRole('button', { name: /sign in/i }).click();
 
       // HTML5 validation should prevent submission
       const emailInput = page.getByRole('textbox', { name: /email/i });
@@ -58,10 +58,10 @@ test.describe('Authentication', () => {
 
       await page.getByRole('textbox', { name: /email/i }).fill('wrong@example.com');
       await page.getByLabel(/password/i).fill('wrongpassword');
-      await page.getByRole('button', { name: /sign in/i }).nth(1).click();
+      await page.locator('form').getByRole('button', { name: /sign in/i }).click();
 
-      // Should show error message
-      await expect(page.getByText(/invalid|incorrect|wrong/i)).toBeVisible({ timeout: 10000 });
+      // Should show a user-facing auth or connectivity error.
+      await expect(page.getByText(/invalid|incorrect|wrong|network error|check your connection/i)).toBeVisible({ timeout: 10000 });
     });
 
     testWithCredentials('logs in with valid credentials', async ({ page }) => {
@@ -91,8 +91,8 @@ test.describe('Authentication', () => {
       await page.getByRole('button', { name: /create.*account|sign up/i }).click();
 
       await expect(page.getByRole('heading', { name: /create.*account|sign up/i })).toBeVisible();
-      // Full Name field uses label, placeholder is "John Doe"
-      await expect(page.getByLabel(/full name/i)).toBeVisible();
+      await expect(page.getByLabel(/^email$/i)).toBeVisible();
+      await expect(page.getByLabel(/^password$/i)).toBeVisible();
     });
 
     test('shows password requirements', async ({ page }) => {

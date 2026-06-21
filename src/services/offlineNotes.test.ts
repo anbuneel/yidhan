@@ -32,6 +32,15 @@ import { supabase } from '../lib/supabase';
 
 const TEST_USER_ID = 'test-user-offline-notes';
 
+function encryptedNoteFields(seed: string) {
+  return {
+    encryptedPayload: `ciphertext-${seed}`,
+    encryptionIv: `iv-${seed}`,
+    encryptionVersion: 1,
+    contentHash: `hash-${seed}`,
+  };
+}
+
 /** Seed a synced tag in IndexedDB with minimal boilerplate */
 async function seedTag(id: string, name: string, color: string): Promise<void> {
   const db = getOfflineDb(TEST_USER_ID);
@@ -757,16 +766,16 @@ describe('offlineNotes', () => {
                   {
                     id: 'conflict-note',
                     user_id: TEST_USER_ID,
-                    title: 'Server wins only if safe',
-                    content: '<p>Server</p>',
+                    title: '',
+                    content: '',
                     pinned: true,
                     deleted_at: null,
                     created_at: new Date('2026-03-01T00:00:00Z').toISOString(),
                     updated_at: new Date('2026-03-10T00:00:00Z').toISOString(),
-                    encrypted_payload: null,
-                    encryption_iv: null,
-                    encryption_version: null,
-                    content_hash: null,
+                    encrypted_payload: 'ciphertext-conflict-note',
+                    encryption_iv: 'iv-conflict-note',
+                    encryption_version: 1,
+                    content_hash: 'hash-conflict-note',
                   },
                 ],
                 error: null,
@@ -824,18 +833,36 @@ describe('offlineNotes', () => {
   // ──────────────────────────────────────────────────
 
   describe('upsertNoteFromServer', () => {
+    it('rejects plaintext notes from server', async () => {
+      const { upsertNoteFromServer } = await import('./offlineNotes');
+
+      await expect(
+        upsertNoteFromServer(TEST_USER_ID, {
+          id: 'plaintext-server-note',
+          title: 'Plain',
+          content: '<p>Plain</p>',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          tags: [],
+          pinned: false,
+          deletedAt: null,
+        })
+      ).rejects.toThrow('Refusing to persist server note for unsafe plaintext note');
+    });
+
     it('should insert new note from server', async () => {
       const { upsertNoteFromServer } = await import('./offlineNotes');
 
       const serverNote = {
         id: 'server-note-1',
-        title: 'From Server',
-        content: '<p>Server content</p>',
+        title: '',
+        content: '',
         createdAt: new Date(),
         updatedAt: new Date(),
         tags: [],
         pinned: false,
         deletedAt: null,
+        ...encryptedNoteFields('server-note-1'),
       };
 
       await upsertNoteFromServer(TEST_USER_ID, serverNote);
@@ -844,7 +871,8 @@ describe('offlineNotes', () => {
       const stored = await db.notes.get('server-note-1');
 
       expect(stored).toBeDefined();
-      expect(stored!.title).toBe('From Server');
+      expect(stored!.title).toBe('');
+      expect(stored!.encryptedPayload).toBe('ciphertext-server-note-1');
       expect(stored!.syncStatus).toBe('synced');
     });
 
@@ -859,19 +887,21 @@ describe('offlineNotes', () => {
 
       const serverNote = {
         id: local.id,
-        title: 'Updated From Server',
-        content: '<p>Server version</p>',
+        title: '',
+        content: '',
         createdAt: local.createdAt,
         updatedAt: new Date(Date.now() + 10000), // newer
         tags: [],
         pinned: true,
         deletedAt: null,
+        ...encryptedNoteFields('updated-server'),
       };
 
       await upsertNoteFromServer(TEST_USER_ID, serverNote);
 
       const stored = await db.notes.get(local.id);
-      expect(stored!.title).toBe('Updated From Server');
+      expect(stored!.title).toBe('');
+      expect(stored!.encryptedPayload).toBe('ciphertext-updated-server');
       expect(stored!.pinned).toBe(true);
     });
 
@@ -882,13 +912,14 @@ describe('offlineNotes', () => {
 
       const serverNote = {
         id: local.id,
-        title: 'Server Override',
-        content: '<p>Override</p>',
+        title: '',
+        content: '',
         createdAt: local.createdAt,
         updatedAt: new Date(Date.now() + 10000),
         tags: [],
         pinned: false,
         deletedAt: null,
+        ...encryptedNoteFields('pending-server'),
       };
 
       await upsertNoteFromServer(TEST_USER_ID, serverNote);
@@ -900,8 +931,9 @@ describe('offlineNotes', () => {
       // is newer than local. But syncStatus stays 'pending' so the sync queue
       // will still push the local version when processQueue runs next.
       expect(stored!.syncStatus).toBe('pending');
-      expect(stored!.title).toBe('Server Override');
-      expect(stored!.content).toBe('<p>Override</p>');
+      expect(stored!.title).toBe('');
+      expect(stored!.content).toBe('');
+      expect(stored!.encryptedPayload).toBe('ciphertext-pending-server');
     });
 
     it('should not create sync queue entries (server → local path)', async () => {
@@ -909,13 +941,14 @@ describe('offlineNotes', () => {
 
       const serverNote = {
         id: 'no-queue-note',
-        title: 'No Queue',
-        content: '<p>NQ</p>',
+        title: '',
+        content: '',
         createdAt: new Date(),
         updatedAt: new Date(),
         tags: [],
         pinned: false,
         deletedAt: null,
+        ...encryptedNoteFields('no-queue-note'),
       };
 
       await upsertNoteFromServer(TEST_USER_ID, serverNote);

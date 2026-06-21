@@ -10,7 +10,7 @@ import type { ThemeConfig } from './types';
  * This theme refines the current dark direction with more
  * intentional green undertones and a slightly warmer gold.
  */
-export const mori: ThemeConfig = {
+const mori: ThemeConfig = {
   name: 'mori',
   displayName: 'Mori',
   description: 'Deep forest at dusk with aged gold accents',

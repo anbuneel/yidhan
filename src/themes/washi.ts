@@ -10,7 +10,7 @@ import type { ThemeConfig } from './types';
  * This theme addresses the "grey background" concern by using
  * warm cream tones that feel authentically wabi-sabi.
  */
-export const washi: ThemeConfig = {
+const washi: ThemeConfig = {
   name: 'washi',
   displayName: 'Washi',
   description: 'Warm handmade paper with persimmon tannin accents',

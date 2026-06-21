@@ -11,7 +11,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 
 ## Features
 
-- **End-to-End Encryption** - Note titles and content encrypted client-side with AES-256-GCM before reaching the server; passphrase-derived keys via Argon2id with optional "Remember this browser" persistence
+- **End-to-End Encryption** - Note titles and content encrypted client-side with AES-256-GCM before reaching the server; passphrase-derived keys via Argon2id, fail-closed plaintext handling, and optional "Remember this browser" persistence
 - **Rich Text Editor** - Format your notes with bold, italic, headers, lists, quotes, code blocks, and task lists with checkboxes
 - **Cross-Device Sync** - Notes sync across devices in ~3 seconds with incremental pull, server-authoritative timestamps, and pagination
 - **Recoverable Sync Failures** - Repeated sync failures move into a blocked state with a visible retry action instead of silently dropping local changes
@@ -34,7 +34,7 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Secure** - User authentication with row-level security
 - **Error Boundary** - Graceful error handling with user-friendly recovery UI
 - **Starter Notes** - New users receive 4 starter notes and a Recipes tag to make the library feel alive from the first moment
-- **Security Hardened** - XSS prevention, input validation, sanitized error messages
+- **Security Hardened** - XSS prevention, input validation, sanitized error messages, app-wide security headers, and encrypted-only server note enforcement
 - **Pin Notes** - Pin important notes to the top of your library
 - **Toast Notifications** - Modern, non-intrusive feedback for all actions
 - **Network Detection** - Alerts when you go offline or come back online
@@ -263,6 +263,7 @@ Yidhan implements several security measures:
 - **Error Sanitization** - Technical errors are mapped to user-friendly messages
 - **Password Policy** - Minimum 8 character passwords required
 - **Row-Level Security** - Database policies ensure users can only access their own data
+- **Launch E2EE Enforcement** - Server notes must have encrypted payload metadata and empty plaintext title/content columns
 
 For security audits, see `supabase/migrations/security_audit_checklist.sql`.
 

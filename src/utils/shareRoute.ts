@@ -31,7 +31,7 @@ function decodeShareKey(shareKeyBase64Url: string): Uint8Array {
   }
 }
 
-export function getShareTokenFromPath(pathname: string): string | null {
+function getShareTokenFromPath(pathname: string): string | null {
   return pathname.match(SHARE_ROUTE_PATTERN)?.[1] ?? null;
 }
 
@@ -39,7 +39,7 @@ export function getShareKeyStorageKey(token: string): string {
   return `${SHARE_KEY_SESSION_PREFIX}${token}`;
 }
 
-export function persistShareKeyToSession(token: string, shareKeyBase64Url: string): boolean {
+function persistShareKeyToSession(token: string, shareKeyBase64Url: string): boolean {
   const storage = getSessionStorage();
   if (!storage) return false;
 

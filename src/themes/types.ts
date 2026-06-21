@@ -66,7 +66,7 @@ export interface ThemeConfig {
 /**
  * Converts a ThemeConfig to CSS variable declarations
  */
-export function themeToCssVariables(theme: ThemeColors): Record<string, string> {
+function themeToCssVariables(theme: ThemeColors): Record<string, string> {
   return {
     '--color-bg-primary': theme.bgPrimary,
     '--color-bg-secondary': theme.bgSecondary,

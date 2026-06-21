@@ -33,6 +33,20 @@ DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   if (tagName === 'a' && node.getAttribute('target') === '_blank') {
     node.setAttribute('rel', 'noopener noreferrer');
   }
+
+  if (tagName === 'input') {
+    const inputType = node.getAttribute('type')?.toLowerCase();
+    if (inputType !== 'checkbox') {
+      node.parentNode?.removeChild(node);
+      return;
+    }
+
+    node.setAttribute('type', 'checkbox');
+    node.setAttribute('disabled', '');
+    if (node.getAttribute('checked') !== null) {
+      node.setAttribute('checked', '');
+    }
+  }
 });
 
 /**

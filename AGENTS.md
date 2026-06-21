@@ -248,6 +248,8 @@ Avoid: creating new inline `style={{}}` objects for static values that could be 
 ### Soft-delete, sharing, and demo mode
 - Soft-delete (Faded Notes) functions are in `src/services/notes.ts`
 - Share as Letter (E2EE) functions are in `src/services/notes.ts` — uses capability-link model with per-share keys
+- Account offboarding ("Letting Go") is hidden for public launch via `ACCOUNT_OFFBOARDING_ENABLED = false` until a server-owned deletion workflow exists
+- Legacy plaintext repair tooling was removed after the pre-launch repair and `launch_security_hardening.sql` verification. Do not reintroduce plaintext-note compatibility for launch builds.
 - Demo/Practice Space (`/demo`): `src/services/demoStorage.ts`, `src/hooks/useDemoState.ts`, `src/pages/DemoPage.tsx`
 - Landing hero drafts save to `DEMO_CONTENT_STORAGE_KEY` (`yidhan-demo-content`) before signup; `App.tsx` migrates them into an encrypted "My first note" after auth/unlock
 - Demo-to-account migration runs on signup in `App.tsx` via `migrateDemoToAccount()` (creates encrypted notes)
@@ -280,15 +282,17 @@ content...
 
 ## Notes
 - Content is stored as HTML (from Tiptap's `getHTML()`), encrypted client-side before storage
-- **E2EE**: Title + content encrypted as JSON blob using AES-256-GCM with AAD (`noteId:userId`). Tags remain plaintext. Keys derived from passphrase via Argon2id (`hash-wasm` WASM). Keys held in React state + sessionStorage (survives refresh, cleared on tab close/signout/vault lock).
+- **E2EE**: Title + content encrypted as JSON blob using AES-256-GCM with AAD (`noteId:userId`). Tags remain plaintext. Keys derived from passphrase via Argon2id (`hash-wasm` WASM). Keys held in React state + sessionStorage (survives refresh, cleared on tab close/signout/vault lock). Encrypted reads, realtime upserts, sync pulls, conflict resolution, and authenticated imports fail closed on plaintext note payloads.
 - **Blocked sync recovery:** Sync queue entries now use `pending` / `blocked` state so repeated failures remain recoverable instead of being dropped.
 - **Safe hydration:** Startup hydration uses local metadata and merge behavior to avoid clearing queued local work during recovery paths.
 - Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase (all payloads encrypted)
+- Legacy plaintext offline note write helpers are disabled in non-test builds; launch code must use `encryptedNotes` so plaintext never enters IndexedDB or the sync queue.
 - Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps. Import timestamps (`createdAt`/`updatedAt`) are forwarded through the sync queue to Supabase INSERT to preserve note chronology. Queue processing uses `buildQueueBatches()` for parallel execution with bounded concurrency (`SYNC_BATCH_CONCURRENCY_LIMIT = 6`); noteTag entries force batch barriers. Stale entries (>24h, 3+ retries, non-create) are auto-blocked to prevent permanent "pending" state. Typed `SyncConflictError` enables clean conflict routing without retry logic.
 - Server-side `notes_updated_at_trigger` prevents client clock skew issues (fires on UPDATE only; INSERT preserves client-supplied timestamps)
 - Self-echo suppression via `pendingMutations` set prevents realtime re-applying own changes
 - Realtime subscriptions update IndexedDB + React state for cross-device changes
 - All note/tag operations are scoped to authenticated user via RLS
+- Launch database hardening (`supabase/migrations/launch_security_hardening.sql`) resets core RLS policies, removes public table-read share policies, enforces encrypted-only note rows, caps share writes at 30 days, and revokes normal-client access to global SECURITY DEFINER cleanup/migration functions
 - Tags support many-to-many relationship with notes
 - Tag filtering uses AND logic (notes must have ALL selected tags)
 - **Search**: Filters `displayNotes` by debounced query (title + plaintext content). Tag toggle preserves search query. Progressive rendering suspends during search so all matches render at once. Search-empty state shows "No thoughts found" (distinct from library-empty "Your notes await"). `Ctrl+Shift+K` focuses search bar.
@@ -306,7 +310,7 @@ content...
 ### Production (Vercel)
 - **URL:** https://yidhan.vercel.app
 - **Host:** Vercel (auto-deploys from `main` branch)
-- **Config:** `vercel.json` — rewrites for `/s/*` share routes, security headers (CSP, Cache-Control, Referrer-Policy) on shared note pages
+- **Config:** `vercel.json` — rewrites for `/s/*` share routes, app-wide security headers (CSP, Referrer-Policy, frame/object restrictions), and no-store cache headers on shared note pages
 - **Environment Variables:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SENTRY_DSN` (optional)
 
 ### Supabase Auth Configuration (for OAuth)
@@ -356,20 +360,24 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Key storage:** React state in `EncryptionContext` + sessionStorage for tab-refresh persistence (raw key bytes exported/imported via `exportSessionKeys`/`importSessionKeys`). Optional localStorage persistence via "Remember this browser" (opt-in, default off). `SessionKeyBlob` v2 includes FNV-1a checksum for corruption detection (not a cryptographic MAC — `verifyKeyCheck()` is the security gate). Legacy v1 blobs accepted and auto-upgraded to v2 on successful restore.
 - **Remember this browser:** When enabled, persists `SessionKeyBlob` in localStorage (survives browser restarts). All restore paths, including refresh-time `sessionStorage`, verify `encryption_key_check` before unlocking to detect stale keys after passphrase change. Key-check metadata is versioned; v2 binds the ciphertext to `userId` via AES-GCM AAD, and legacy key-checks auto-upgrade after a successful verify. Activity-gated restore after auto-lock keeps keys out of memory during idle. Cleared on manual lock, sign-out, or user switch. **Fails closed:** if localStorage is unavailable (quota exceeded, privacy mode), the preference is not enabled and the user sees an inline error.
 - **Vault lock:** Manual lock button + configurable auto-lock timer (0/15/60 min idle). Lock reason differentiates behavior: `auto-lock` preserves localStorage (silent re-unlock on user return), `manual`/`sign-out` clears all storage.
-- **Passphrase entry hardening:** Returning-user unlock applies a short client-side lockout after repeated failures, and first-time setup shows a lightweight strength indicator while keeping the minimum at 8 characters.
+- **Passphrase entry hardening:** Returning-user unlock applies a short client-side lockout after repeated failures, and first-time setup enforces a 12-character minimum plus strength policy in both UI and `EncryptionContext`.
 - **Reliability telemetry:** Sentry breadcrumbs/reports track hydration starts/failures, blocked sync entries, vault restore issues, note decryption failures, and shared-link decryption failures.
 - **What's encrypted:** Title + content as JSON blob in `encrypted_payload`
 - **What's NOT encrypted:** Tags (plaintext), metadata (timestamps, pinned)
 - **Salt + key-check:** Stored in Supabase `user_metadata` for passphrase verification
 - **Sentry:** Breadcrumb scrubber strips encrypted fields before sending to Sentry
 - **Share as Letter:** E2EE-compatible sharing via capability links. Per-share random AES-256-GCM key in URL fragment (`#k=<base64url>`). Server stores only ciphertext via `fetch_shared_note` RPC. Max 30-day TTL, soft-delete revocation. URL format: `/s/<token>/<slug>#k=<key>`
+- **Database enforcement:** Public launch hardening requires server note rows to contain encrypted payload metadata and empty plaintext `title`/`content` columns. The launch migration intentionally fails if existing rows still violate that invariant.
+- **Legacy repair status:** Pre-launch plaintext rows were repaired or removed before hardening. If preflight ever reports unsafe rows again, treat that as a data incident; the launch app should fail closed rather than expose a repair UI.
+- **Account offboarding:** Self-serve "Letting Go" is disabled for public launch. Do not promise account deletion until a backend/service-role deletion workflow exists.
 
 ### Password Policy
-- Minimum 8 characters (enforced in Auth.tsx and SettingsModal.tsx)
+- Account passwords: minimum 8 characters (enforced in Auth.tsx and SettingsModal.tsx). E2EE passphrases: minimum 12 characters plus strength policy (enforced in PassphraseSetup.tsx and EncryptionContext.tsx).
 
 ### Database Security
 - Row Level Security (RLS) enabled on all tables
 - Users can only access their own notes and tags
+- Core RLS policies are captured in `supabase/migrations/launch_security_hardening.sql`; public share access goes through the ciphertext-only `fetch_shared_note` RPC, not public table SELECT policies
 - See `supabase/migrations/security_audit_checklist.sql` for audit queries
 
 ## Design Context

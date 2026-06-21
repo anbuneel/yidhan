@@ -84,6 +84,18 @@ describe('sanitizeHtml', () => {
     expect(output).toContain('checked=""');
     expect(output).toContain('disabled=""');
   });
+
+  it('forces task list checkboxes to be disabled', () => {
+    const input = '<input type="checkbox" checked>';
+    const output = sanitizeHtml(input);
+    expect(output).toContain('type="checkbox"');
+    expect(output).toContain('disabled=""');
+  });
+
+  it('removes non-checkbox inputs', () => {
+    const input = '<p>Before</p><input type="text" value="secret"><p>After</p>';
+    expect(sanitizeHtml(input)).toBe('<p>Before</p><p>After</p>');
+  });
 });
 
 describe('escapeHtml', () => {

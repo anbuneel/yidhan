@@ -54,14 +54,10 @@ import {
 } from './services/notes';
 import { subscribeToTags } from './services/tags';
 import {
-  fetchNotesOffline,
-  createNoteOffline,
-  createNotesBatchOffline,
   toggleNotePinOffline,
   softDeleteNoteOffline,
   restoreNoteOffline,
   permanentDeleteNoteOffline,
-  fetchFadedNotesOffline,
   countFadedNotesOffline,
   addTagToNoteOffline,
   removeTagFromNoteOffline,
@@ -190,10 +186,9 @@ function App() {
   const handleSyncComplete = useCallback(async () => {
     const uid = user?.id;
     if (!uid) return;
+    if (!keys) return;
     try {
-      const refreshedNotes = keys
-        ? await fetchDecryptedNotes(uid, keys)
-        : await fetchNotesOffline(uid);
+      const refreshedNotes = await fetchDecryptedNotes(uid, keys);
       setNotes(refreshedNotes);
       const refreshedTags = await fetchTagsOffline(uid);
       setTags(refreshedTags);
@@ -811,10 +806,12 @@ function App() {
     }
 
     setLoading(true);
-    const fetchNotes = keys
-      ? fetchDecryptedNotes(userId, keys)
-      : fetchNotesOffline(userId);
-    fetchNotes
+    if (!keys) {
+      setNotes([]);
+      setLoading(false);
+      return;
+    }
+    fetchDecryptedNotes(userId, keys)
       .then((loadedNotes) => {
         setNotes(loadedNotes);
 
@@ -832,7 +829,11 @@ function App() {
           }
         }
       })
-      .catch(console.error)
+      .catch((error) => {
+        console.error('Failed to decrypt notes:', error);
+        setNotes([]);
+        toast.error('Could not decrypt your notes. Lock and unlock your vault, then try again.');
+      })
       .finally(() => {
         pendingNavRestoreRef.current = null;
         setLoading(false);
@@ -958,28 +959,7 @@ function App() {
     );
 
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keys accessed via keysRef (avoids channel churn on vault lock/unlock); selectedNoteId via selectedNoteIdRef (avoids resubscribe on note selection)
-  }, [userId, isHydrating, hydrationBypassed, reportRealtimeDisplayFailure, reportRealtimePersistenceFailure]);
-
-  // Re-fetch notes when encryption keys become available (vault unlock).
-  // Separate from the main fetch effect to avoid resubscribing realtime channels.
-  // The main effect runs with keys=null (showing empty notes from IDB),
-  // then this effect re-fetches with decryption once the user enters their passphrase.
-  const hasRefetchedForKeysRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!userId || !keys) {
-      hasRefetchedForKeysRef.current = null;
-      return;
-    }
-    // Only re-fetch once per userId+keys combination
-    const keyId = `${userId}`;
-    if (hasRefetchedForKeysRef.current === keyId) return;
-    hasRefetchedForKeysRef.current = keyId;
-
-    fetchDecryptedNotes(userId, keys)
-      .then(setNotes)
-      .catch(console.error);
-  }, [userId, keys]);
+  }, [userId, keys, isHydrating, hydrationBypassed, reportRealtimeDisplayFailure, reportRealtimePersistenceFailure]);
 
   // Migrate demo content from landing page to user's first note
   // Dependency: userId (string) instead of user (object) because:
@@ -998,9 +978,7 @@ function App() {
       return;
     }
 
-    // Wait for encryption keys before creating note.
-    // Without this guard, the fallback to createNoteOffline would create
-    // a plaintext note before the passphrase gate renders.
+    // Wait for encryption keys before creating note so demo content is encrypted.
     if (!keys) return;
 
     hasMigratedDemoContent.current = true;
@@ -1041,8 +1019,7 @@ function App() {
     }
     if (hasMigratedDemoNotes.current) return;
 
-    // Wait for encryption keys before migrating — without this,
-    // migrateDemoToAccount would create plaintext notes via createNoteOffline
+    // Wait for encryption keys before migrating so demo notes are encrypted.
     if (!keys) return;
 
     // Check if user has demo notes to migrate
@@ -1488,15 +1465,17 @@ function App() {
   // Navigate to Faded Notes view
   const handleFadedNotesClick = async () => {
     if (!user) return;
+    if (!keys) {
+      toast.error('Please unlock your vault first');
+      return;
+    }
 
     startTransition(() => {
       setView('faded');
     });
     setFadedNotesLoading(true);
     try {
-      const faded = keys
-        ? await fetchDecryptedFadedNotes(user.id, keys)
-        : await fetchFadedNotesOffline(user.id);
+      const faded = await fetchDecryptedFadedNotes(user.id, keys);
       setFadedNotes(faded);
     } catch (error) {
       console.error('Failed to fetch faded notes:', error);
@@ -1532,18 +1511,20 @@ function App() {
   // Conflict resolution handler
   const handleConflictResolve = async (choice: 'local' | 'server' | 'both') => {
     if (!activeConflict || !user) return;
+    if (!keys) {
+      toast.error('Please unlock your vault before resolving sync conflicts');
+      return;
+    }
 
     const conflictToResolve = activeConflict;
 
     try {
-      await resolveConflict(user.id, conflictToResolve, choice, keys ?? undefined);
+      await resolveConflict(user.id, conflictToResolve, choice, keys);
       removeConflict(conflictToResolve.entityId);
       setActiveConflict(null);
 
       // Refresh notes from IndexedDB after conflict resolution
-      const refreshedNotes = keys
-        ? await fetchDecryptedNotes(user.id, keys)
-        : await fetchNotesOffline(user.id);
+      const refreshedNotes = await fetchDecryptedNotes(user.id, keys);
       setNotes(refreshedNotes);
 
       const resolvedOriginalMissing = !refreshedNotes.some(
@@ -1576,15 +1557,17 @@ function App() {
   // Pull-to-refresh handler - syncs with server first, then rehydrates state
   const handleRefresh = useCallback(async () => {
     if (!user) return;
+    if (!keys) {
+      toast.error('Please unlock your vault first');
+      return;
+    }
 
     try {
       // Sync with server first (push + pull)
       const { outcome } = await triggerSync();
 
       // Rehydrate React state from IndexedDB (now has fresh server data)
-      const refreshedNotes = keys
-        ? await fetchDecryptedNotes(user.id, keys)
-        : await fetchNotesOffline(user.id);
+      const refreshedNotes = await fetchDecryptedNotes(user.id, keys);
       setNotes(refreshedNotes);
       const refreshedTags = await fetchTagsOffline(user.id);
       setTags(refreshedTags);
@@ -1810,6 +1793,10 @@ function App() {
   // Import file (JSON or Markdown)
   const handleImportFile = useCallback(async (file: File) => {
     if (!user) return;
+    if (!keys) {
+      toast.error('Please unlock your vault before importing notes');
+      return;
+    }
 
     // Validate file size before reading
     if (file.size > MAX_IMPORT_FILE_SIZE) {
@@ -1856,13 +1843,11 @@ function App() {
           };
         });
 
-        // Batch insert notes with progress callback (encrypted if keys available)
+        // Batch insert notes with progress callback. Authenticated imports must be encrypted.
         const progressCb = (completed: number, total: number) => {
           setImportProgress({ isImporting: true, current: completed, total, phase: 'importing' });
         };
-        const createdNotes = keys
-          ? await createEncryptedNotesBatch(user.id, notesToImport, keys, progressCb)
-          : await createNotesBatchOffline(user.id, notesToImport, progressCb);
+        const createdNotes = await createEncryptedNotesBatch(user.id, notesToImport, keys, progressCb);
 
         // Add tags to notes (this still needs to be sequential due to junction table)
         setImportProgress({ isImporting: true, current: 0, total: createdNotes.length, phase: 'finalizing' });
@@ -1881,9 +1866,7 @@ function App() {
         toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
 
         // Refresh notes from IndexedDB
-        const refreshedNotes = keys
-          ? await fetchDecryptedNotes(user.id, keys)
-          : await fetchNotesOffline(user.id);
+        const refreshedNotes = await fetchDecryptedNotes(user.id, keys);
         setNotes(refreshedNotes);
 
       } else if (isMarkdown) {
@@ -1925,13 +1908,11 @@ function App() {
             };
           });
 
-          // Batch insert notes with progress callback (encrypted if keys available)
+          // Batch insert notes with progress callback. Authenticated imports must be encrypted.
           const mdProgressCb = (completed: number, total: number) => {
             setImportProgress({ isImporting: true, current: completed, total, phase: 'importing' });
           };
-          const createdNotes = keys
-            ? await createEncryptedNotesBatch(user.id, notesToImport, keys, mdProgressCb)
-            : await createNotesBatchOffline(user.id, notesToImport, mdProgressCb);
+          const createdNotes = await createEncryptedNotesBatch(user.id, notesToImport, keys, mdProgressCb);
 
           // Add tags to notes if any tags were present
           if (tagMap.size > 0) {
@@ -1950,9 +1931,7 @@ function App() {
           }
 
           // Refresh notes from IndexedDB
-          const refreshedNotes2 = keys
-            ? await fetchDecryptedNotes(user.id, keys)
-            : await fetchNotesOffline(user.id);
+          const refreshedNotes2 = await fetchDecryptedNotes(user.id, keys);
           setNotes(refreshedNotes2);
 
           toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
@@ -2003,10 +1982,7 @@ function App() {
           // Convert markdown to HTML and sanitize
           const htmlContent = sanitizeHtml(markdownToHtml(noteContent));
 
-          // Create the note (encrypted if keys available)
-          const newNote = keys
-            ? await createEncryptedNote(user.id, title, htmlContent, keys)
-            : await createNoteOffline(user.id, title, htmlContent);
+          const newNote = await createEncryptedNote(user.id, title, htmlContent, keys);
 
           // Add tags to the note
           for (const tagName of noteTags) {
@@ -2017,9 +1993,7 @@ function App() {
           }
 
           // Refresh from IndexedDB to get the note with tags
-          const refreshedNotesAll = keys
-            ? await fetchDecryptedNotes(user.id, keys)
-            : await fetchNotesOffline(user.id);
+          const refreshedNotesAll = await fetchDecryptedNotes(user.id, keys);
           setNotes(refreshedNotesAll);
 
           toast.success(`Imported "${title}"`);

@@ -122,7 +122,7 @@ export function SupportPage({
                   },
                   {
                     q: 'How do I delete my account?',
-                    a: 'Open Settings, scroll to the bottom, and select "Let go." This permanently deletes your account and all associated data. There is a short grace period if you change your mind.',
+                    a: 'Account deletion is paused for public launch until the server-owned deletion workflow is available. Export your notes from Settings first; then contact support if you need account removal before the self-serve flow returns.',
                   },
                   {
                     q: 'Does Yidhan work offline?',

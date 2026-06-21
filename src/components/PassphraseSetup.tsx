@@ -4,54 +4,24 @@ import { useEncryption } from '../contexts/EncryptionContext';
 import { createEncryptedNote } from '../services/encryptedNotes';
 import { createTagOffline } from '../services/offlineTags';
 import { addTagToNoteOffline } from '../services/offlineNotes';
+import {
+  evaluatePassphraseStrength,
+  MIN_PASSPHRASE_LENGTH,
+  validatePassphrasePolicy,
+  type PassphraseStrengthLabel,
+} from '../utils/passphrasePolicy';
 
 interface PassphraseSetupProps {
   onComplete?: () => void;
 }
 
-interface PassphraseStrength {
-  label: 'Too short' | 'Weak' | 'Fair' | 'Good' | 'Strong';
-  score: number;
-  color: string;
-}
-
-function evaluatePassphraseStrength(passphrase: string): PassphraseStrength | null {
-  if (!passphrase) {
-    return null;
-  }
-
-  if (passphrase.length < 8) {
-    return { label: 'Too short', score: 1, color: 'var(--color-destructive)' };
-  }
-
-  let score = 0;
-  if (passphrase.length >= 8) score++;
-  if (passphrase.length >= 12) score++;
-  if (passphrase.length >= 16) score++;
-
-  const characterClasses = [
-    /[a-z]/.test(passphrase),
-    /[A-Z]/.test(passphrase),
-    /\d/.test(passphrase),
-    /[^A-Za-z0-9]/.test(passphrase),
-  ].filter(Boolean).length;
-
-  if (characterClasses >= 2) score++;
-  if (characterClasses >= 3) score++;
-  if (characterClasses === 4) score++;
-
-  if (score <= 2) {
-    return { label: 'Weak', score: 1, color: 'var(--color-destructive)' };
-  }
-  if (score <= 4) {
-    return { label: 'Fair', score: 2, color: 'var(--color-accent)' };
-  }
-  if (score <= 5) {
-    return { label: 'Good', score: 3, color: 'var(--color-cta-bg)' };
-  }
-
-  return { label: 'Strong', score: 4, color: 'var(--color-cta-bg)' };
-}
+const STRENGTH_COLORS: Record<PassphraseStrengthLabel, string> = {
+  'Too short': 'var(--color-destructive)',
+  Weak: 'var(--color-destructive)',
+  Fair: 'var(--color-accent)',
+  Good: 'var(--color-cta-bg)',
+  Strong: 'var(--color-cta-bg)',
+};
 
 const STARTER_NOTES = [
   {
@@ -102,7 +72,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const passphraseStrength = evaluatePassphraseStrength(passphrase);
 
-  const isValid = passphrase.length >= 8 &&
+  const isValid = validatePassphrasePolicy(passphrase) === null &&
                   passphrase === confirm &&
                   acknowledged;
 
@@ -115,8 +85,9 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
       return;
     }
 
-    if (passphrase.length < 8) {
-      setError('Passphrase must be at least 8 characters');
+    const policyError = validatePassphrasePolicy(passphrase);
+    if (policyError) {
+      setError(policyError);
       return;
     }
 
@@ -205,7 +176,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
               autoComplete="new-password"
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
-              placeholder="At least 8 characters"
+              placeholder={`At least ${MIN_PASSPHRASE_LENGTH} characters`}
               autoFocus
               className="w-full px-3 py-2 text-sm focus-ring"
               style={{
@@ -220,7 +191,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
               <div className="mt-2 space-y-1">
                 <div
                   className="text-xs"
-                  style={{ color: passphraseStrength.color, fontFamily: 'var(--font-body)' }}
+                  style={{ color: STRENGTH_COLORS[passphraseStrength.label], fontFamily: 'var(--font-body)' }}
                 >
                   Strength: {passphraseStrength.label}
                 </div>
@@ -234,7 +205,7 @@ export function PassphraseSetup({ onComplete }: PassphraseSetupProps) {
                       className="h-1 rounded-full"
                       style={{
                         background: index < passphraseStrength.score
-                          ? passphraseStrength.color
+                          ? STRENGTH_COLORS[passphraseStrength.label]
                           : 'var(--glass-border)',
                       }}
                     />

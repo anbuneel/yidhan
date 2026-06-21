@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomSheet } from './BottomSheet';
+import { ACCOUNT_OFFBOARDING_ENABLED } from '../config/featureFlags';
 import type { UseSessionSettingsResult } from '../hooks/useSessionSettings';
 import type { UseVaultSettingsResult } from '../hooks/useVaultSettings';
 import type { Theme } from '../types';
@@ -377,44 +378,45 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 {profileLoading ? 'Saving...' : 'Save Profile'}
               </button>
 
-              {/* Let go section - offboarding link */}
-              <div
-                className="mt-8 pt-6 text-center"
-                style={{ borderTop: '1px solid var(--glass-border)' }}
-              >
-                <p
-                  className="text-sm mb-2"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-tertiary)',
-                  }}
+              {ACCOUNT_OFFBOARDING_ENABLED && (
+                <div
+                  className="mt-8 pt-6 text-center"
+                  style={{ borderTop: '1px solid var(--glass-border)' }}
                 >
-                  Ready to move on?
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onLetGoClick();
-                  }}
-                  className="text-sm transition-colors duration-200"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-tertiary)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = 'var(--color-text-secondary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'var(--color-text-tertiary)';
-                  }}
-                >
-                  Let go of Yidhan →
-                </button>
-              </div>
+                  <p
+                    className="text-sm mb-2"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      color: 'var(--color-text-tertiary)',
+                    }}
+                  >
+                    Ready to move on?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onLetGoClick();
+                    }}
+                    className="text-sm transition-colors duration-200"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      color: 'var(--color-text-tertiary)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--color-text-secondary)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--color-text-tertiary)';
+                    }}
+                  >
+                    Let go of Yidhan →
+                  </button>
+                </div>
+              )}
             </form>
           )}
 

@@ -3,6 +3,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import Dexie from 'dexie';
 import { getOfflineDb, type LocalNote } from '../lib/offlineDb';
 import type { ConflictInfo } from '../services/syncEngine';
+import type { DerivedKeys } from '../lib/encryption';
 
 const upsertSingleMock = vi.fn();
 const upsertSelectMock = vi.fn(() => ({ single: upsertSingleMock }));
@@ -27,7 +28,27 @@ vi.mock('../lib/supabase', () => ({
   },
 }));
 
+vi.mock('../lib/encryption', () => ({
+  decryptNote: vi.fn().mockResolvedValue({
+    title: 'Copied draft',
+    content: '<p>Keep me as a copy</p>',
+  }),
+  encryptNote: vi.fn().mockResolvedValue({
+    ciphertext: 'ciphertext-copy',
+    iv: 'iv-copy',
+    version: 1,
+    contentHash: 'hash-copy',
+  }),
+}));
+
 const TEST_USER_ID = 'test-user-sync-engine-conflicts';
+const TEST_KEYS = {
+  encryptionKey: {} as CryptoKey,
+  hashKey: {} as CryptoKey,
+  salt: new Uint8Array(16),
+  rawEncryptionKey: new Uint8Array(32),
+  rawHashKey: new Uint8Array(32),
+} satisfies DerivedKeys;
 
 function buildHardDeleteConflict(localNote: LocalNote): ConflictInfo {
   const now = new Date().toISOString();
@@ -90,8 +111,8 @@ describe('resolveConflict hard-delete handling', () => {
     const localNote: LocalNote = {
       id: 'note-hard-delete-local',
       userId: TEST_USER_ID,
-      title: 'Recovered draft',
-      content: '<p>Keep this</p>',
+      title: '',
+      content: '',
       pinned: true,
       deletedAt: null,
       createdAt: now - 5000,
@@ -100,10 +121,10 @@ describe('resolveConflict hard-delete handling', () => {
       lastSyncedAt: now - 10000,
       serverUpdatedAt: now - 10000,
       localUpdatedAt: now,
-      encryptedPayload: null,
-      encryptionIv: null,
-      encryptionVersion: null,
-      contentHash: null,
+      encryptedPayload: 'ciphertext-hard-delete-local',
+      encryptionIv: 'iv-hard-delete-local',
+      encryptionVersion: 1,
+      contentHash: 'hash-hard-delete-local',
     };
 
     await db.notes.add(localNote);
@@ -118,7 +139,15 @@ describe('resolveConflict hard-delete handling', () => {
       operation: 'update',
       entityType: 'note',
       entityId: localNote.id,
-      payload: { title: localNote.title, content: localNote.content, pinned: localNote.pinned },
+      payload: {
+        title: '',
+        content: '',
+        pinned: localNote.pinned,
+        encrypted_payload: localNote.encryptedPayload,
+        encryption_iv: localNote.encryptionIv,
+        encryption_version: localNote.encryptionVersion,
+        content_hash: localNote.contentHash,
+      },
       createdAt: now - 1000,
       retryCount: 3,
       status: 'blocked',
@@ -148,8 +177,8 @@ describe('resolveConflict hard-delete handling', () => {
     const localNote: LocalNote = {
       id: 'note-hard-delete-online-fallback',
       userId: TEST_USER_ID,
-      title: 'Recovered online draft',
-      content: '<p>Queue me if restore fails</p>',
+      title: '',
+      content: '',
       pinned: false,
       deletedAt: null,
       createdAt: now - 5000,
@@ -158,10 +187,10 @@ describe('resolveConflict hard-delete handling', () => {
       lastSyncedAt: now - 10000,
       serverUpdatedAt: now - 10000,
       localUpdatedAt: now,
-      encryptedPayload: null,
-      encryptionIv: null,
-      encryptionVersion: null,
-      contentHash: null,
+      encryptedPayload: 'ciphertext-hard-delete-online-fallback',
+      encryptionIv: 'iv-hard-delete-online-fallback',
+      encryptionVersion: 1,
+      contentHash: 'hash-hard-delete-online-fallback',
     };
 
     await db.notes.add(localNote);
@@ -201,8 +230,8 @@ describe('resolveConflict hard-delete handling', () => {
     const localNote: LocalNote = {
       id: 'note-hard-delete-server',
       userId: TEST_USER_ID,
-      title: 'Discarded draft',
-      content: '<p>Remove me</p>',
+      title: '',
+      content: '',
       pinned: false,
       deletedAt: null,
       createdAt: now - 5000,
@@ -211,10 +240,10 @@ describe('resolveConflict hard-delete handling', () => {
       lastSyncedAt: now - 10000,
       serverUpdatedAt: now - 10000,
       localUpdatedAt: now,
-      encryptedPayload: null,
-      encryptionIv: null,
-      encryptionVersion: null,
-      contentHash: null,
+      encryptedPayload: 'ciphertext-hard-delete-server',
+      encryptionIv: 'iv-hard-delete-server',
+      encryptionVersion: 1,
+      contentHash: 'hash-hard-delete-server',
     };
 
     await db.notes.add(localNote);
@@ -229,7 +258,14 @@ describe('resolveConflict hard-delete handling', () => {
       operation: 'update',
       entityType: 'note',
       entityId: localNote.id,
-      payload: { title: localNote.title, content: localNote.content },
+      payload: {
+        title: '',
+        content: '',
+        encrypted_payload: localNote.encryptedPayload,
+        encryption_iv: localNote.encryptionIv,
+        encryption_version: localNote.encryptionVersion,
+        content_hash: localNote.contentHash,
+      },
       createdAt: now - 1000,
       retryCount: 1,
       status: 'blocked',
@@ -254,8 +290,8 @@ describe('resolveConflict hard-delete handling', () => {
     const localNote: LocalNote = {
       id: 'note-hard-delete-both',
       userId: TEST_USER_ID,
-      title: 'Copied draft',
-      content: '<p>Keep me as a copy</p>',
+      title: '',
+      content: '',
       pinned: true,
       deletedAt: null,
       createdAt: now - 5000,
@@ -264,10 +300,10 @@ describe('resolveConflict hard-delete handling', () => {
       lastSyncedAt: now - 10000,
       serverUpdatedAt: now - 10000,
       localUpdatedAt: now,
-      encryptedPayload: null,
-      encryptionIv: null,
-      encryptionVersion: null,
-      contentHash: null,
+      encryptedPayload: 'ciphertext-hard-delete-both',
+      encryptionIv: 'iv-hard-delete-both',
+      encryptionVersion: 1,
+      contentHash: 'hash-hard-delete-both',
     };
 
     await db.notes.add(localNote);
@@ -282,13 +318,20 @@ describe('resolveConflict hard-delete handling', () => {
       operation: 'update',
       entityType: 'note',
       entityId: localNote.id,
-      payload: { title: localNote.title, content: localNote.content },
+      payload: {
+        title: '',
+        content: '',
+        encrypted_payload: localNote.encryptedPayload,
+        encryption_iv: localNote.encryptionIv,
+        encryption_version: localNote.encryptionVersion,
+        content_hash: localNote.contentHash,
+      },
       createdAt: now - 1000,
       retryCount: 1,
       status: 'blocked',
     });
 
-    await resolveConflict(TEST_USER_ID, buildHardDeleteConflict(localNote), 'both');
+    await resolveConflict(TEST_USER_ID, buildHardDeleteConflict(localNote), 'both', TEST_KEYS);
 
     const original = await db.notes.get(localNote.id);
     expect(original).toBeUndefined();
@@ -296,10 +339,14 @@ describe('resolveConflict hard-delete handling', () => {
     const notes = await db.notes.toArray();
     expect(notes).toHaveLength(1);
     expect(notes[0]).toMatchObject({
-      title: 'Copied draft (copy)',
-      content: '<p>Keep me as a copy</p>',
+      title: '',
+      content: '',
       syncStatus: 'pending',
       userId: TEST_USER_ID,
+      encryptedPayload: 'ciphertext-copy',
+      encryptionIv: 'iv-copy',
+      encryptionVersion: 1,
+      contentHash: 'hash-copy',
     });
     expect(notes[0].id).not.toBe(localNote.id);
 

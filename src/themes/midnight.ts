@@ -8,7 +8,7 @@ import type { ThemeConfig } from './types';
  *
  * This is the ORIGINAL dark theme - kept as backup.
  */
-export const midnight: ThemeConfig = {
+const midnight: ThemeConfig = {
   name: 'midnight',
   displayName: 'Midnight',
   description: 'Deep forest green with antique gold accents',

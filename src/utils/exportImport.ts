@@ -1,5 +1,6 @@
 import type { Note, Tag, TagColor } from '../types';
 import { TAG_COLORS } from '../types';
+import { escapeHtml, sanitizeHtml } from './sanitize';
 
 // Maximum file size for imports (10MB)
 export const MAX_IMPORT_FILE_SIZE = 10 * 1024 * 1024;
@@ -688,13 +689,14 @@ export function formatNoteForClipboard(note: Note): string {
  * Format a note for clipboard with HTML formatting
  */
 export function formatNoteForClipboardHtml(note: Note): string {
-  const title = note.title || 'Untitled';
+  const title = escapeHtml(note.title || 'Untitled');
   const tagsHtml =
     note.tags.length > 0
-      ? `<p style="color: #666; font-size: 0.9em;">Tags: ${note.tags.map((t) => t.name).join(', ')}</p>`
+      ? `<p style="color: #666; font-size: 0.9em;">Tags: ${note.tags.map((t) => escapeHtml(t.name)).join(', ')}</p>`
       : '';
+  const content = sanitizeHtml(note.content);
 
-  return `<h1>${title}</h1>${tagsHtml}${note.content}`;
+  return `<h1>${title}</h1>${tagsHtml}${content}`;
 }
 
 /**

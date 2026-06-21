@@ -8,6 +8,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { EncryptionProvider } from './contexts/EncryptionContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { isChunkLoadError, reloadForUpdatedApp } from './utils/updateRecovery'
+import { scrubSensitiveData, scrubShareSecrets } from './utils/sentryScrubber'
 
 // Handle chunk loading errors (happens when app is open during deployment)
 // These errors occur outside React's error boundary, so we catch them globally
@@ -48,39 +49,32 @@ if (sentryDsn) {
     // E2EE: Strip note title/content and URL fragments from error reports
     beforeSend(event) {
       if (event.extra) {
-        delete event.extra.title
-        delete event.extra.content
-        delete event.extra.noteTitle
-        delete event.extra.noteContent
+        event.extra = scrubSensitiveData(event.extra) as Record<string, unknown>
+      }
+      if (event.contexts) {
+        event.contexts = scrubSensitiveData(event.contexts) as typeof event.contexts
       }
       // Strip URL fragments (may contain share decryption keys)
       // Also scrub /s/<token> path segments — token is a capability credential
-      const scrubSharePath = (url: string) =>
-        url.replace(/#.*$/, '').replace(/\/s\/[A-Za-z0-9_-]{16,}(\/[^?#]*)?/, '/s/[REDACTED]')
       if (event.request?.url) {
-        event.request.url = scrubSharePath(event.request.url)
+        event.request.url = scrubShareSecrets(event.request.url)
       }
       // Strip fragments and share tokens from stack frame filenames (defense in depth)
       if (event.exception?.values) {
         event.exception.values.forEach(ex => {
+          if (ex.value) ex.value = scrubShareSecrets(ex.value)
           ex.stacktrace?.frames?.forEach(frame => {
-            if (frame.filename) frame.filename = scrubSharePath(frame.filename)
-            if (frame.abs_path) frame.abs_path = scrubSharePath(frame.abs_path)
+            if (frame.filename) frame.filename = scrubShareSecrets(frame.filename)
+            if (frame.abs_path) frame.abs_path = scrubShareSecrets(frame.abs_path)
           })
         })
       }
       // Scrub breadcrumb data that might contain note content or share URLs
       if (event.breadcrumbs) {
         event.breadcrumbs = event.breadcrumbs.map(bc => {
+          if (bc.message) bc.message = scrubShareSecrets(bc.message)
           if (bc.data) {
-            delete bc.data.title
-            delete bc.data.content
-            delete bc.data.noteTitle
-            delete bc.data.noteContent
-            // Strip share tokens and URL fragments from navigation breadcrumbs
-            if (typeof bc.data.url === 'string') bc.data.url = scrubSharePath(bc.data.url)
-            if (typeof bc.data.from === 'string') bc.data.from = scrubSharePath(bc.data.from)
-            if (typeof bc.data.to === 'string') bc.data.to = scrubSharePath(bc.data.to)
+            bc.data = scrubSensitiveData(bc.data) as Record<string, unknown>
           }
           return bc
         })

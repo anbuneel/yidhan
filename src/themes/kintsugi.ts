@@ -8,7 +8,7 @@ import type { ThemeConfig } from './types';
  *
  * This is the ORIGINAL light theme - kept as backup.
  */
-export const kintsugi: ThemeConfig = {
+const kintsugi: ThemeConfig = {
   name: 'kintsugi',
   displayName: 'Kintsugi',
   description: 'Warm paper backgrounds with terracotta accents',

@@ -27,6 +27,12 @@ import {
   reportReliabilityIssue,
 } from '../utils/reliabilityTelemetry';
 import type { Database } from '../types/database';
+import {
+  hasEmptyPlaintextColumns,
+  hasRequiredCamelEncryptionFields,
+  isLaunchEncryptedDbNote,
+  requireEncryptedQueuePayload,
+} from '../utils/noteEncryptionInvariant';
 
 // Lazy check for native platform (avoids issues at module initialization)
 let _isNative: boolean | null = null;
@@ -146,6 +152,22 @@ export interface HardDeletedServerNoteVersion extends ServerNoteVersion {
 export type NoteConflictServerVersion =
   | (ServerNoteVersion & { hard_deleted?: false })
   | HardDeletedServerNoteVersion;
+
+function isEncryptedServerNote(note: ServerNoteVersion): boolean {
+  return isLaunchEncryptedDbNote(note);
+}
+
+function createPlaintextServerNoteError(noteId: string): Error {
+  return new Error(`Refusing to store plaintext server note ${noteId}`);
+}
+
+function createPlaintextLocalNoteError(noteId: string): Error {
+  return new Error(`Refusing to sync plaintext local note ${noteId}`);
+}
+
+function isEncryptedLocalNote(note: LocalNote): boolean {
+  return hasEmptyPlaintextColumns(note) && hasRequiredCamelEncryptionFields(note);
+}
 
 function getDisplayUpdatedAt(
   note: Pick<ServerNoteVersion, 'updated_at' | 'display_updated_at'>
@@ -321,6 +343,8 @@ async function processNoteOperation(
 
   switch (operation) {
     case 'create': {
+      const encryptedPayload = requireEncryptedQueuePayload(data, noteId, 'create');
+
       // Check if note already exists on server (idempotency)
       const { data: existing } = await supabase
         .from('notes')
@@ -337,13 +361,10 @@ async function processNoteOperation(
       const insertPayload: Database['public']['Tables']['notes']['Insert'] = {
         id: noteId,
         user_id: userId,
-        title: (data.title as string) ?? '',
-        content: (data.content as string) ?? '',
+        title: '',
+        content: '',
         pinned: (data.pinned as boolean) ?? false,
-        encrypted_payload: (data.encrypted_payload as string | null) ?? null,
-        encryption_iv: (data.encryption_iv as string | null) ?? null,
-        encryption_version: (data.encryption_version as number | null) ?? null,
-        content_hash: (data.content_hash as string | null) ?? null,
+        ...encryptedPayload,
       };
 
       if (typeof data.createdAt === 'string') {
@@ -368,6 +389,11 @@ async function processNoteOperation(
       // Check for conflicts before updating
       const localNote = await db.notes.get(noteId);
       if (!localNote) return true; // Note deleted locally
+      if (!isEncryptedLocalNote(localNote)) {
+        throw createPlaintextLocalNoteError(noteId);
+      }
+
+      const encryptedPayload = requireEncryptedQueuePayload(data, noteId, 'update');
 
       const { data: serverNote } = await supabase
         .from('notes')
@@ -376,21 +402,16 @@ async function processNoteOperation(
         .maybeSingle();
 
       if (serverNote && localNote.lastSyncedAt) {
+        if (!isEncryptedServerNote(serverNote)) {
+          throw createPlaintextServerNoteError(noteId);
+        }
+
         const serverUpdatedAt = new Date(serverNote.updated_at).getTime();
         // Conflict: server was updated after our last sync
         if (serverUpdatedAt > localNote.lastSyncedAt) {
-          // Safety check: compare actual content before triggering conflict
-          // If content is identical, no real conflict - just timestamp drift
-          // For E2EE notes, compare content_hash instead of plaintext.
-          // Fallback to plaintext comparison ONLY for unencrypted notes —
-          // encrypted notes always have empty title/content in storage,
-          // so plaintext comparison would always return true (false negative).
-          const isEncrypted = Boolean(localNote.contentHash || serverNote.content_hash);
-          const contentIdentical = isEncrypted
-            ? (localNote.contentHash != null && serverNote.content_hash != null &&
-               serverNote.content_hash === localNote.contentHash)
-            : serverNote.title === localNote.title &&
-              serverNote.content === localNote.content;
+          // Compare encrypted content hashes only. Plaintext notes are blocked
+          // before this branch.
+          const contentIdentical = serverNote.content_hash === localNote.contentHash;
 
           if (contentIdentical) {
             // No actual conflict - update lastSyncedAt to server time and continue
@@ -414,18 +435,13 @@ async function processNoteOperation(
         }
       }
 
-      // Build the update payload — include encrypted fields when present
+      // Build the update payload with encrypted fields only.
       const updatePayload: Record<string, unknown> = {
-        title: data.title as string,
-        content: data.content as string,
+        title: '',
+        content: '',
+        ...encryptedPayload,
         // updated_at is set by server-side trigger (notes_updated_at_trigger)
       };
-      if (data.encrypted_payload !== undefined) {
-        updatePayload.encrypted_payload = data.encrypted_payload;
-        updatePayload.encryption_iv = data.encryption_iv;
-        updatePayload.encryption_version = data.encryption_version;
-        updatePayload.content_hash = data.content_hash;
-      }
 
       const { data: updated, error } = await supabase
         .from('notes')
@@ -1024,6 +1040,11 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
 
   // Always process whatever data was fetched (even partial on mid-pagination error)
   for (const serverNote of updatedNotes) {
+    if (!isEncryptedServerNote(serverNote)) {
+      errors.push({ entity: 'notes', operation: 'data', error: createPlaintextServerNoteError(serverNote.id) });
+      continue;
+    }
+
     const localNote = await db.notes.get(serverNote.id);
 
     // Skip if local has pending or conflict changes
@@ -1037,8 +1058,8 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
     await db.notes.put({
       id: serverNote.id,
       userId,
-      title: serverNote.title,
-      content: serverNote.content,
+      title: '',
+      content: '',
       pinned: serverNote.pinned ?? false,
       deletedAt: serverNote.deleted_at
         ? new Date(serverNote.deleted_at).getTime()

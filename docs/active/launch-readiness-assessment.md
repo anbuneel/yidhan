@@ -52,6 +52,8 @@ Category 1 is the most dangerous for launch: users forgive missing features but 
 
 **Fix:** Hide the offboarding link from SettingsModal for launch. Ship proper server-side deletion (edge function + cron) as a dedicated trust workstream later.
 
+**2026-06-20 update:** Addressed on `codex/security-launch-hardening` with `ACCOUNT_OFFBOARDING_ENABLED = false`; the Settings entry point is hidden and public support/privacy copy no longer promises self-serve deletion.
+
 **Effort:** Small (hide feature) / Large (build real backend)
 
 ### 2. Persist share key in sessionStorage
@@ -192,7 +194,7 @@ Category 1 is the most dangerous for launch: users forgive missing features but 
 
 | Item | Effort | Status | Notes |
 |------|--------|--------|-------|
-| 1. Disable "Letting Go" | 30 min | **NOT DONE** | Feature still accessible in SettingsModal |
+| 1. Disable "Letting Go" | 30 min | **Done on branch** | Hidden behind `ACCOUNT_OFFBOARDING_ENABLED = false`; backend deletion workstream still required before re-enabling |
 | 2. Share key sessionStorage | 1 hour | **Done** | New `shareRoute.ts` module, all reload paths covered |
 | 3. Fix backup copy | 15 min | **Partial** | Removed "(includes share links)" — label now just "Full Backup" |
 | 4. Social metadata | 15 min | **Done** | OG URL updated to yidhan.vercel.app |
@@ -201,7 +203,6 @@ Category 1 is the most dangerous for launch: users forgive missing features but 
 | 12. Audit Supabase policies | 1 hour (manual) | **Not started** | Manual verification needed |
 
 ### Remaining before launch
-- **Item 1:** Hide offboarding link in SettingsModal (~30 min)
 - **Re-auth flag:** Flip `REAUTH_FOR_SENSITIVE_ACTIONS` to `true` in `src/config/featureFlags.ts` (~1 min) — disabled for pre-launch solo use, see Item 7
 - **Item 12:** Manually audit live Supabase sharing policies
 
