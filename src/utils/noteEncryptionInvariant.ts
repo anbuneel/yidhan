@@ -98,14 +98,16 @@ export function requireEncryptedQueuePayload(
   noteId: string,
   operation: string
 ): EncryptedQueuePayload {
-  if (!isLaunchEncryptedDbNote(payload)) {
+  const encryptionVersion = normalizeEncryptionVersion(payload.encryption_version as EncryptionVersionValue);
+
+  if (!isLaunchEncryptedDbNote(payload) || encryptionVersion == null) {
     throw new Error(`Refusing ${operation} sync for unsafe plaintext note ${noteId}`);
   }
 
   return {
     encrypted_payload: payload.encrypted_payload as string,
     encryption_iv: payload.encryption_iv as string,
-    encryption_version: normalizeEncryptionVersion(payload.encryption_version as EncryptionVersionValue)!,
+    encryption_version: encryptionVersion,
     content_hash: payload.content_hash as string,
   };
 }
