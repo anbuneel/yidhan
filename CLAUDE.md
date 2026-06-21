@@ -249,7 +249,7 @@ Avoid: creating new inline `style={{}}` objects for static values that could be 
 - Soft-delete (Faded Notes) functions are in `src/services/notes.ts`
 - Share as Letter (E2EE) functions are in `src/services/notes.ts` — uses capability-link model with per-share keys
 - Account offboarding ("Letting Go") is hidden for public launch via `ACCOUNT_OFFBOARDING_ENABLED = false` until a server-owned deletion workflow exists
-- Temporary legacy encryption repair is available in Settings > Security when `LEGACY_PLAINTEXT_REPAIR_ENABLED` is true (`import.meta.env.DEV` or `VITE_ENABLE_LEGACY_REPAIR=true`). Use it before `launch_security_hardening.sql` when live Supabase has pre-E2EE plaintext notes.
+- Legacy plaintext repair tooling was removed after the pre-launch repair and `launch_security_hardening.sql` verification. Do not reintroduce plaintext-note compatibility for launch builds.
 - Demo/Practice Space (`/demo`): `src/services/demoStorage.ts`, `src/hooks/useDemoState.ts`, `src/pages/DemoPage.tsx`
 - Landing hero drafts save to `DEMO_CONTENT_STORAGE_KEY` (`yidhan-demo-content`) before signup; `App.tsx` migrates them into an encrypted "My first note" after auth/unlock
 - Demo-to-account migration runs on signup in `App.tsx` via `migrateDemoToAccount()` (creates encrypted notes)
@@ -367,7 +367,7 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Sentry:** Breadcrumb scrubber strips encrypted fields before sending to Sentry
 - **Share as Letter:** E2EE-compatible sharing via capability links. Per-share random AES-256-GCM key in URL fragment (`#k=<base64url>`). Server stores only ciphertext via `fetch_shared_note` RPC. Max 30-day TTL, soft-delete revocation. URL format: `/s/<token>/<slug>#k=<key>`
 - **Database enforcement:** Public launch hardening requires server note rows to contain encrypted payload metadata and empty plaintext `title`/`content` columns. The launch migration intentionally fails if existing rows still violate that invariant.
-- **Legacy repair path:** If preflight reports plaintext legacy notes, unlock the vault and run the temporary Settings > Security repair tool before applying `launch_security_hardening.sql`. It encrypts repairable plaintext rows in place with the user's vault key and clears plaintext columns.
+- **Legacy repair status:** Pre-launch plaintext rows were repaired or removed before hardening. If preflight ever reports unsafe rows again, treat that as a data incident; the launch app should fail closed rather than expose a repair UI.
 - **Account offboarding:** Self-serve "Letting Go" is disabled for public launch. Do not promise account deletion until a backend/service-role deletion workflow exists.
 
 ### Password Policy

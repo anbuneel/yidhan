@@ -13,7 +13,7 @@ export const changelog: ChangelogEntry[] = [
     changes: [
       { type: 'improvement', text: 'Launch database hardening now enforces encrypted-only server note rows and canonical owner-scoped RLS policies' },
       { type: 'improvement', text: 'Share links are restricted to ciphertext-only RPC access with 30-day maximum expiry enforcement and tighter function grants' },
-      { type: 'improvement', text: 'Temporary legacy encryption repair can encrypt pre-E2EE plaintext notes in place before applying the strict launch migration' },
+      { type: 'improvement', text: 'One-time legacy note repair is complete and the temporary repair UI/env flag has been removed from the launch build' },
       { type: 'fix', text: 'Self-serve account offboarding is hidden until server-owned account deletion is available, and public support/privacy copy no longer promises deletion through Settings' },
     ],
   },

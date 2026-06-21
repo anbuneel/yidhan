@@ -1,18 +1,7 @@
 import { useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useEncryption } from '../contexts/EncryptionContext';
 import { BottomSheet } from './BottomSheet';
-import {
-  ACCOUNT_OFFBOARDING_ENABLED,
-  LEGACY_PLAINTEXT_REPAIR_ENABLED,
-} from '../config/featureFlags';
-import {
-  inspectLegacyPlaintextNotes,
-  repairLegacyPlaintextNotes,
-  type LegacyRepairInspection,
-  type LegacyRepairProgress,
-  type LegacyRepairResult,
-} from '../services/legacyEncryptionRepair';
+import { ACCOUNT_OFFBOARDING_ENABLED } from '../config/featureFlags';
 import type { UseSessionSettingsResult } from '../hooks/useSessionSettings';
 import type { UseVaultSettingsResult } from '../hooks/useVaultSettings';
 import type { Theme } from '../types';
@@ -34,7 +23,6 @@ type SettingsTab = 'profile' | 'password' | 'security';
 
 export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, sessionSettings, vaultSettings, isVaultUnlocked, onLockVault, onPersistToLocal }: SettingsModalProps) {
   const { user, updateProfile, updatePassword, verifyPassword } = useAuth();
-  const { keys } = useEncryption();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
 
   // Check if user signed up with OAuth (Google, GitHub, etc.)
@@ -56,10 +44,6 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [securityMessage, setSecurityMessage] = useState<{ text: string } | null>(null);
-  const [legacyInspection, setLegacyInspection] = useState<LegacyRepairInspection | null>(null);
-  const [legacyRepairResult, setLegacyRepairResult] = useState<LegacyRepairResult | null>(null);
-  const [legacyRepairProgress, setLegacyRepairProgress] = useState<LegacyRepairProgress | null>(null);
-  const [legacyRepairLoading, setLegacyRepairLoading] = useState(false);
   const formOwnerRef = useRef<string | null>(null);
 
   const openFormOwner = isOpen && user ? user.id : null;
@@ -70,67 +54,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
       setProfileMessage(null);
       setPasswordMessage(null);
       setSecurityMessage(null);
-      setLegacyInspection(null);
-      setLegacyRepairResult(null);
-      setLegacyRepairProgress(null);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    }
-  }
-
-  async function handleLegacyRepairScan() {
-    if (!user) return;
-
-    setSecurityMessage(null);
-    setLegacyRepairResult(null);
-    setLegacyRepairProgress(null);
-    setLegacyRepairLoading(true);
-
-    try {
-      const inspection = await inspectLegacyPlaintextNotes(user.id);
-      setLegacyInspection(inspection);
-    } catch (error) {
-      setSecurityMessage({
-        text: error instanceof Error
-          ? error.message
-          : 'Could not scan legacy notes. Please try again.',
-      });
-    } finally {
-      setLegacyRepairLoading(false);
-    }
-  }
-
-  async function handleLegacyRepairRun() {
-    if (!user || !keys) return;
-
-    const confirmed = window.confirm(
-      'Repair legacy notes now? This encrypts repairable plaintext rows in Supabase with your unlocked vault key and clears the plaintext columns.'
-    );
-    if (!confirmed) return;
-
-    setSecurityMessage(null);
-    setLegacyRepairResult(null);
-    setLegacyRepairProgress(null);
-    setLegacyRepairLoading(true);
-
-    try {
-      const result = await repairLegacyPlaintextNotes(user.id, keys, setLegacyRepairProgress);
-      setLegacyRepairResult(result);
-      setLegacyInspection(result);
-      setSecurityMessage({
-        text: result.failed === 0
-          ? 'Legacy note repair complete. Refresh the app, then rerun the Supabase preflight.'
-          : `Repair finished with ${result.failed} failure(s). Review the result before continuing.`,
-      });
-    } catch (error) {
-      setSecurityMessage({
-        text: error instanceof Error
-          ? error.message
-          : 'Legacy note repair failed. Please try again.',
-      });
-    } finally {
-      setLegacyRepairLoading(false);
     }
   }
 
@@ -869,142 +795,6 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       </p>
                     )}
                   </div>
-                </div>
-              )}
-
-              {LEGACY_PLAINTEXT_REPAIR_ENABLED && (
-                <div
-                  className="mb-6 pb-5"
-                  style={{ borderBottom: '1px solid var(--glass-border)' }}
-                >
-                  <h3
-                    className="text-sm font-medium mb-3"
-                    style={{
-                      fontFamily: 'var(--font-body)',
-                      color: 'var(--color-text-primary)',
-                    }}
-                  >
-                    Legacy Encryption Repair
-                  </h3>
-                  <p
-                    className="text-xs mb-3"
-                    style={{
-                      fontFamily: 'var(--font-body)',
-                      color: 'var(--color-text-tertiary)',
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    Temporary pre-launch tool. Scans your own Supabase notes,
-                    encrypts repairable plaintext rows with the unlocked vault key,
-                    and clears plaintext columns on the same rows.
-                  </p>
-
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleLegacyRepairScan}
-                      disabled={legacyRepairLoading || !user}
-                      className="
-                        flex-1 px-3 py-2
-                        rounded-lg
-                        text-xs font-medium
-                        transition-all duration-200
-                        disabled:opacity-50
-                      "
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        background: 'var(--color-bg-secondary)',
-                        border: '1px solid var(--glass-border)',
-                        color: 'var(--color-text-secondary)',
-                      }}
-                    >
-                      {legacyRepairLoading ? 'Working...' : 'Scan legacy notes'}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleLegacyRepairRun}
-                      disabled={
-                        legacyRepairLoading ||
-                        !user ||
-                        !keys ||
-                        !legacyInspection ||
-                        legacyInspection.repairablePlaintextNotes + legacyInspection.encryptedRowsNeedingScrub === 0 ||
-                        legacyInspection.irreparableNotes > 0 ||
-                        legacyInspection.pendingLocalNoteMutations > 0
-                      }
-                      className="
-                        flex-1 px-3 py-2
-                        rounded-lg
-                        text-xs font-medium
-                        transition-all duration-200
-                        disabled:opacity-50
-                      "
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        background: 'var(--color-cta-bg)',
-                        color: 'var(--color-cta-text)',
-                        border: '1px solid transparent',
-                      }}
-                    >
-                      Repair now
-                    </button>
-                  </div>
-
-                  {!keys && (
-                    <p
-                      className="text-xs mt-2"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text-tertiary)',
-                      }}
-                    >
-                      Unlock the vault before running repair.
-                    </p>
-                  )}
-
-                  {legacyInspection && (
-                    <div
-                      className="mt-3 grid grid-cols-2 gap-2 text-xs"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text-secondary)',
-                      }}
-                    >
-                      <span>Total notes: {legacyInspection.totalNotes}</span>
-                      <span>Unsafe: {legacyInspection.unsafeNotes}</span>
-                      <span>Repairable: {legacyInspection.repairablePlaintextNotes}</span>
-                      <span>Scrub only: {legacyInspection.encryptedRowsNeedingScrub}</span>
-                      <span>Irreparable: {legacyInspection.irreparableNotes}</span>
-                      <span>Queued local edits: {legacyInspection.pendingLocalNoteMutations}</span>
-                    </div>
-                  )}
-
-                  {legacyRepairProgress && legacyRepairProgress.total > 0 && (
-                    <p
-                      className="text-xs mt-2"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text-tertiary)',
-                      }}
-                    >
-                      Repairing {legacyRepairProgress.completed} of {legacyRepairProgress.total}
-                    </p>
-                  )}
-
-                  {legacyRepairResult && (
-                    <p
-                      className="text-xs mt-2"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: legacyRepairResult.failed === 0
-                          ? 'var(--color-accent)'
-                          : 'var(--color-destructive)',
-                      }}
-                    >
-                      Repaired {legacyRepairResult.repaired}, scrubbed {legacyRepairResult.scrubbed}, failed {legacyRepairResult.failed}.
-                    </p>
-                  )}
                 </div>
               )}
 

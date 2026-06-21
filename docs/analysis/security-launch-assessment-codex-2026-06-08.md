@@ -85,7 +85,7 @@ On 2026-06-20, branch `codex/security-launch-hardening` added repo-level backend
 - Added encrypted share-row constraints and a trigger preventing direct API writes from extending share expiry beyond 30 days from the write.
 - Revoked normal-client access to global `SECURITY DEFINER` cleanup and timestamp-restore functions, leaving them for service-owned execution.
 - Hid self-serve "Letting Go" offboarding behind a disabled launch flag and corrected public support/privacy copy so the app no longer promises account deletion before a server-owned deletion workflow exists.
-- Added a temporary legacy encryption repair tool for the pre-hardening window. When enabled with `VITE_ENABLE_LEGACY_REPAIR=true` or in local dev, Settings > Security can scan the authenticated user's own legacy plaintext rows, encrypt repairable rows in place with the unlocked vault key, clear plaintext columns, and refuse to run if local note mutations are still queued.
+- Used a temporary legacy encryption repair tool for the pre-hardening window, then removed the runtime repair surface after all retained accounts had encrypted rows and `launch_security_hardening.sql` verification passed.
 
 This does not replace live Supabase verification. Before public launch, the migration must be applied to the production project and RLS/function grants should be verified against the live database.
 
