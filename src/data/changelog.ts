@@ -12,6 +12,7 @@ export const changelog: ChangelogEntry[] = [
     date: '2026-06-20',
     changes: [
       { type: 'improvement', text: 'Launch database hardening now enforces encrypted-only server note rows and canonical owner-scoped RLS policies' },
+      { type: 'improvement', text: 'Sync, hydration, realtime, and decryption paths now reject ciphertext rows that leak plaintext or queued note writes without encryption metadata' },
       { type: 'improvement', text: 'Share links are restricted to ciphertext-only RPC access with 30-day maximum expiry enforcement and tighter function grants' },
       { type: 'improvement', text: 'One-time legacy note repair is complete and the temporary repair UI/env flag has been removed from the launch build' },
       { type: 'fix', text: 'Self-serve account offboarding is hidden until server-owned account deletion is available, and public support/privacy copy no longer promises deletion through Settings' },

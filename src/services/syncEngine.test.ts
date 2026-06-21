@@ -180,13 +180,10 @@ function buildEntry(overrides: Partial<SyncQueueEntry> = {}): SyncQueueEntry {
     entityType: 'note',
     entityId: 'note-1',
     payload: {
-      title: 'Test Note',
-      content: '<p>Hello</p>',
+      title: '',
+      content: '',
       pinned: false,
-      encrypted_payload: null,
-      encryption_iv: null,
-      encryption_version: null,
-      content_hash: null,
+      ...encryptedServerFields('note-1'),
     },
     createdAt: Date.now(),
     retryCount: 0,
@@ -315,7 +312,7 @@ describe('syncEngine', () => {
       await db.notes.put({
         id: 'note-synced',
         userId: TEST_USER_ID,
-        title: 'Synced',
+        title: '',
         content: '',
         pinned: false,
         deletedAt: null,
@@ -325,15 +322,15 @@ describe('syncEngine', () => {
         lastSyncedAt: 1234,
         serverUpdatedAt: 1234,
         localUpdatedAt: 1234,
-        encryptedPayload: null,
-        encryptionIv: null,
-        encryptionVersion: null,
-        contentHash: null,
+        encryptedPayload: 'ciphertext-note-synced',
+        encryptionIv: 'iv-note-synced',
+        encryptionVersion: 1,
+        contentHash: 'hash-note-synced',
       });
       await db.notes.put({
         id: 'note-pending',
         userId: TEST_USER_ID,
-        title: 'Pending',
+        title: '',
         content: '',
         pinned: false,
         deletedAt: null,
@@ -343,10 +340,10 @@ describe('syncEngine', () => {
         lastSyncedAt: 9999,
         serverUpdatedAt: 9999,
         localUpdatedAt: 9999,
-        encryptedPayload: null,
-        encryptionIv: null,
-        encryptionVersion: null,
-        contentHash: null,
+        encryptedPayload: 'ciphertext-note-pending',
+        encryptionIv: 'iv-note-pending',
+        encryptionVersion: 1,
+        contentHash: 'hash-note-pending',
       });
       await db.tags.put({
         id: 'tag-synced',
@@ -614,15 +611,12 @@ describe('processQueue behavior', () => {
       entityType: 'note',
       entityId: 'note-abc',
       payload: {
-        title: 'Imported note',
-        content: '<p>Hello</p>',
+        title: '',
+        content: '',
         pinned: false,
         createdAt: importedCreatedAt,
         updatedAt: importedUpdatedAt,
-        encrypted_payload: null,
-        encryption_iv: null,
-        encryption_version: null,
-        content_hash: null,
+        ...encryptedServerFields('note-abc'),
       },
     });
     mockGetPendingSyncQueue.mockResolvedValue([entry]);
@@ -694,13 +688,10 @@ describe('processQueue behavior', () => {
       entityType: 'note',
       entityId: 'note-batch',
       payload: {
-        title: 'Batch Note',
-        content: '<p>Hello</p>',
+        title: '',
+        content: '',
         pinned: false,
-        encrypted_payload: null,
-        encryption_iv: null,
-        encryption_version: null,
-        content_hash: null,
+        ...encryptedServerFields('note-batch'),
       },
     });
     const tagEntry = buildEntry({
@@ -776,13 +767,10 @@ describe('processQueue behavior', () => {
         entityType: 'note',
         entityId: `note-batch-cap-${index}`,
         payload: {
-          title: `Batch ${index}`,
-          content: '<p>Hello</p>',
+          title: '',
+          content: '',
           pinned: false,
-          encrypted_payload: null,
-          encryption_iv: null,
-          encryption_version: null,
-          content_hash: null,
+          ...encryptedServerFields(`note-batch-cap-${index}`),
         },
       })
     );
@@ -889,7 +877,7 @@ describe('processQueue behavior', () => {
     await db.notes.put({
       id: 'note-exhausted',
       userId: TEST_USER_ID,
-      title: 'Test',
+      title: '',
       content: '',
       pinned: false,
       deletedAt: null,
@@ -899,10 +887,10 @@ describe('processQueue behavior', () => {
       lastSyncedAt: null,
       serverUpdatedAt: null,
       localUpdatedAt: Date.now(),
-      encryptedPayload: null,
-      encryptionIv: null,
-      encryptionVersion: null,
-      contentHash: null,
+      encryptedPayload: 'ciphertext-note-exhausted',
+      encryptionIv: 'iv-note-exhausted',
+      encryptionVersion: 1,
+      contentHash: 'hash-note-exhausted',
     });
 
     // Make server call throw a retryable error
@@ -1486,8 +1474,8 @@ describe('pullRemoteChanges behavior', () => {
     await db.notes.put({
       id: 'pending-note',
       userId: TEST_USER_ID,
-      title: 'Local Edit',
-      content: '<p>My local changes</p>',
+      title: '',
+      content: '',
       pinned: false,
       deletedAt: null,
       createdAt: Date.now(),
@@ -1496,10 +1484,10 @@ describe('pullRemoteChanges behavior', () => {
       lastSyncedAt: null,
       serverUpdatedAt: null,
       localUpdatedAt: Date.now(),
-      encryptedPayload: null,
-      encryptionIv: null,
-      encryptionVersion: null,
-      contentHash: null,
+      encryptedPayload: 'ciphertext-pending-note',
+      encryptionIv: 'iv-pending-note',
+      encryptionVersion: 1,
+      contentHash: 'hash-pending-note',
     });
 
     const serverNote = {
@@ -1526,7 +1514,7 @@ describe('pullRemoteChanges behavior', () => {
 
     // Local version should be preserved
     const stored = await db.notes.get('pending-note');
-    expect(stored!.title).toBe('Local Edit');
+    expect(stored!.encryptedPayload).toBe('ciphertext-pending-note');
     expect(stored!.syncStatus).toBe('pending');
   });
 
@@ -1537,7 +1525,7 @@ describe('pullRemoteChanges behavior', () => {
     await db.notes.put({
       id: 'deleted-on-server',
       userId: TEST_USER_ID,
-      title: 'Gone',
+      title: '',
       content: '',
       pinned: false,
       deletedAt: null,
@@ -1547,10 +1535,10 @@ describe('pullRemoteChanges behavior', () => {
       lastSyncedAt: Date.now(),
       serverUpdatedAt: Date.now(),
       localUpdatedAt: Date.now(),
-      encryptedPayload: null,
-      encryptionIv: null,
-      encryptionVersion: null,
-      contentHash: null,
+      encryptedPayload: 'ciphertext-deleted-on-server',
+      encryptionIv: 'iv-deleted-on-server',
+      encryptionVersion: 1,
+      contentHash: 'hash-deleted-on-server',
     });
 
     mockFetchAllPaginated

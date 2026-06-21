@@ -766,16 +766,16 @@ describe('offlineNotes', () => {
                   {
                     id: 'conflict-note',
                     user_id: TEST_USER_ID,
-                    title: 'Server wins only if safe',
-                    content: '<p>Server</p>',
+                    title: '',
+                    content: '',
                     pinned: true,
                     deleted_at: null,
                     created_at: new Date('2026-03-01T00:00:00Z').toISOString(),
                     updated_at: new Date('2026-03-10T00:00:00Z').toISOString(),
-                    encrypted_payload: null,
-                    encryption_iv: null,
-                    encryption_version: null,
-                    content_hash: null,
+                    encrypted_payload: 'ciphertext-conflict-note',
+                    encryption_iv: 'iv-conflict-note',
+                    encryption_version: 1,
+                    content_hash: 'hash-conflict-note',
                   },
                 ],
                 error: null,
@@ -847,7 +847,7 @@ describe('offlineNotes', () => {
           pinned: false,
           deletedAt: null,
         })
-      ).rejects.toThrow('Refusing to persist plaintext server note');
+      ).rejects.toThrow('Refusing to persist server note for unsafe plaintext note');
     });
 
     it('should insert new note from server', async () => {

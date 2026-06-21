@@ -286,6 +286,7 @@ content...
 - **Blocked sync recovery:** Sync queue entries now use `pending` / `blocked` state so repeated failures remain recoverable instead of being dropped.
 - **Safe hydration:** Startup hydration uses local metadata and merge behavior to avoid clearing queued local work during recovery paths.
 - Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase (all payloads encrypted)
+- Legacy plaintext offline note write helpers are disabled in non-test builds; launch code must use `encryptedNotes` so plaintext never enters IndexedDB or the sync queue.
 - Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps. Import timestamps (`createdAt`/`updatedAt`) are forwarded through the sync queue to Supabase INSERT to preserve note chronology. Queue processing uses `buildQueueBatches()` for parallel execution with bounded concurrency (`SYNC_BATCH_CONCURRENCY_LIMIT = 6`); noteTag entries force batch barriers. Stale entries (>24h, 3+ retries, non-create) are auto-blocked to prevent permanent "pending" state. Typed `SyncConflictError` enables clean conflict routing without retry logic.
 - Server-side `notes_updated_at_trigger` prevents client clock skew issues (fires on UPDATE only; INSERT preserves client-supplied timestamps)
 - Self-echo suppression via `pendingMutations` set prevents realtime re-applying own changes

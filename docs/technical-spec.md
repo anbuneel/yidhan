@@ -126,12 +126,25 @@ App.tsx (State Container)
 CREATE TABLE notes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  title TEXT NOT NULL DEFAULT '',
-  content TEXT NOT NULL DEFAULT '',  -- HTML from Tiptap
+  title TEXT NOT NULL DEFAULT '',    -- Must stay empty in launch builds
+  content TEXT NOT NULL DEFAULT '',  -- Must stay empty in launch builds
   pinned BOOLEAN DEFAULT FALSE NOT NULL,
   deleted_at TIMESTAMPTZ DEFAULT NULL,  -- Soft-delete
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+  display_updated_at TIMESTAMPTZ DEFAULT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  encrypted_payload TEXT NOT NULL,
+  encryption_iv TEXT NOT NULL,
+  encryption_version INTEGER NOT NULL,
+  content_hash TEXT NOT NULL,
+  CONSTRAINT notes_launch_encrypted_only CHECK (
+    title = '' AND
+    content = '' AND
+    encrypted_payload <> '' AND
+    encryption_iv <> '' AND
+    encryption_version IS NOT NULL AND
+    content_hash <> ''
+  )
 );
 
 -- Tags table
@@ -157,9 +170,18 @@ CREATE TABLE note_shares (
   note_id UUID REFERENCES notes(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   share_token VARCHAR(32) UNIQUE NOT NULL,
-  expires_at TIMESTAMPTZ,  -- NULL = never expires
+  encrypted_payload TEXT NOT NULL,
+  encryption_iv TEXT NOT NULL,
+  encryption_version INTEGER NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  UNIQUE(note_id)
+  CONSTRAINT note_shares_launch_encrypted_only CHECK (
+    encrypted_payload <> '' AND
+    encryption_iv <> '' AND
+    encryption_version IS NOT NULL AND
+    expires_at <= created_at + INTERVAL '30 days'
+  )
 );
 ```
 
@@ -369,6 +391,13 @@ CREATE POLICY "Anyone can read shares by token"
 ON note_shares FOR SELECT
 USING (true);
 ```
+
+### Launch Encryption Invariants
+
+- Note `title` and `content` columns remain present for compatibility, but launch builds require them to be empty at rest.
+- Note plaintext lives only in the unlocked client runtime. Supabase and IndexedDB store `encrypted_payload`, `encryption_iv`, `encryption_version`, and `content_hash`.
+- Share links store encrypted payloads only. The decryption key is delivered in the URL fragment and never reaches Supabase. Share expiration is required and capped at 30 days.
+- Sync, hydration, realtime cache writes, conflict resolution, and decrypted fetches fail closed when a note row is missing encryption fields or leaks plaintext into `title`/`content`.
 
 ### Input Sanitization
 

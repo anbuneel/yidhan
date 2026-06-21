@@ -22,6 +22,11 @@ import {
   type NoteConflictServerVersion,
 } from '../services/syncEngine';
 import { getPendingSyncCount } from '../services/offlineNotes';
+import {
+  hasEmptyPlaintextColumns,
+  hasRequiredCamelEncryptionFields,
+  isLaunchEncryptedDbNote,
+} from '../utils/noteEncryptionInvariant';
 
 // On native platforms, always attempt sync (let API calls fail naturally)
 const isNative = Capacitor.isNativePlatform();
@@ -338,14 +343,9 @@ export async function resolveConflict(
   const localNote = conflict.localVersion;
   const serverNote: NoteConflictServerVersion = conflict.serverVersion;
 
-  const isEncrypted = Boolean(localNote.encryptedPayload);
+  const isEncrypted = hasEmptyPlaintextColumns(localNote) && hasRequiredCamelEncryptionFields(localNote);
   const isHardDeletedConflict = serverNote.hard_deleted === true;
-  const serverIsEncrypted = Boolean(
-    serverNote.encrypted_payload &&
-    serverNote.encryption_iv &&
-    serverNote.encryption_version != null &&
-    serverNote.content_hash
-  );
+  const serverIsEncrypted = isLaunchEncryptedDbNote(serverNote);
 
   const logHardDeleteRecreateFallback = (error: unknown): void => {
     const reason = error instanceof Error ? error.message : String(error);
@@ -391,21 +391,19 @@ export async function resolveConflict(
     case 'local': {
       const { queueSyncOperation } = await import('../services/offlineNotes');
       const localNoteTags = await getOriginalNoteTagLinks();
-      const notePayload = isEncrypted
-        ? {
-            title: '' as string,
-            content: '' as string,
-            pinned: localNote.pinned,
-            encrypted_payload: localNote.encryptedPayload,
-            encryption_iv: localNote.encryptionIv,
-            encryption_version: localNote.encryptionVersion,
-            content_hash: localNote.contentHash,
-          }
-        : {
-            title: localNote.title,
-            content: localNote.content,
-            pinned: localNote.pinned,
-          };
+      if (!isEncrypted) {
+        throw new Error(`Refusing to keep plaintext local note ${localNote.id}`);
+      }
+
+      const notePayload = {
+        title: '',
+        content: '',
+        pinned: localNote.pinned,
+        encrypted_payload: localNote.encryptedPayload,
+        encryption_iv: localNote.encryptionIv,
+        encryption_version: localNote.encryptionVersion,
+        content_hash: localNote.contentHash,
+      };
 
       const queueTagRestores = async (): Promise<void> => {
         for (const noteTag of localNoteTags) {
@@ -526,8 +524,8 @@ export async function resolveConflict(
       const serverTime = new Date(serverNote.updated_at).getTime();
       const displayTime = new Date(getDisplayUpdatedAt(serverNote)).getTime();
       await db.notes.update(serverNote.id, {
-        title: serverNote.title,
-        content: serverNote.content,
+        title: '',
+        content: '',
         pinned: serverNote.pinned,
         deletedAt: serverNote.deleted_at
           ? new Date(serverNote.deleted_at).getTime()
@@ -546,96 +544,69 @@ export async function resolveConflict(
     }
 
     case 'both': {
+      if (!isHardDeletedConflict && !serverIsEncrypted) {
+        throw new Error(`Refusing to keep plaintext server note ${serverNote.id}`);
+      }
+      if (!isEncrypted || !keys) {
+        throw new Error(`Refusing to copy plaintext local note ${localNote.id}`);
+      }
+
       // Keep both: update local with server version, create new note with local content
       const { queueSyncOperation } = await import('../services/offlineNotes');
       const newNoteId = crypto.randomUUID();
       const now = Date.now();
 
-      if (isEncrypted && keys) {
-        // Encrypted note: decrypt local content, re-encrypt with new noteId
-        // (AAD includes noteId, so a raw copy would fail decryption)
-        const { decryptNote, encryptNote } = await import('../lib/encryption');
-        const { title, content } = await decryptNote(
-          localNote.id, userId,
-          { ciphertext: localNote.encryptedPayload!, iv: localNote.encryptionIv! },
-          keys.encryptionKey
-        );
-        const reEncrypted = await encryptNote(
-          newNoteId, userId, `${title} (copy)`, content, keys
-        );
+      // Encrypted note: decrypt local content, re-encrypt with new noteId
+      // (AAD includes noteId, so a raw copy would fail decryption)
+      const { decryptNote, encryptNote } = await import('../lib/encryption');
+      const { title, content } = await decryptNote(
+        localNote.id, userId,
+        { ciphertext: localNote.encryptedPayload!, iv: localNote.encryptionIv! },
+        keys.encryptionKey
+      );
+      const reEncrypted = await encryptNote(
+        newNoteId, userId, `${title} (copy)`, content, keys
+      );
 
-        await db.notes.add({
-          id: newNoteId,
-          userId,
-          title: '',
-          content: '',
-          pinned: false,
-          deletedAt: null,
-          createdAt: now,
-          updatedAt: now,
-          syncStatus: 'pending',
-          lastSyncedAt: null,
-          serverUpdatedAt: null,
-          localUpdatedAt: now,
-          encryptedPayload: reEncrypted.ciphertext,
-          encryptionIv: reEncrypted.iv,
-          encryptionVersion: reEncrypted.version,
-          contentHash: reEncrypted.contentHash,
-        });
+      await db.notes.add({
+        id: newNoteId,
+        userId,
+        title: '',
+        content: '',
+        pinned: false,
+        deletedAt: null,
+        createdAt: now,
+        updatedAt: now,
+        syncStatus: 'pending',
+        lastSyncedAt: null,
+        serverUpdatedAt: null,
+        localUpdatedAt: now,
+        encryptedPayload: reEncrypted.ciphertext,
+        encryptionIv: reEncrypted.iv,
+        encryptionVersion: reEncrypted.version,
+        contentHash: reEncrypted.contentHash,
+      });
 
-        await queueSyncOperation(userId, 'create', 'note', newNoteId, {
-          title: '',
-          content: '',
-          pinned: false,
-          encrypted_payload: reEncrypted.ciphertext,
-          encryption_iv: reEncrypted.iv,
-          encryption_version: reEncrypted.version,
-          content_hash: reEncrypted.contentHash,
-        });
-      } else {
-        // Unencrypted note: copy plaintext directly
-        const copyTitle = `${localNote.title} (copy)`;
-
-        await db.notes.add({
-          id: newNoteId,
-          userId,
-          title: copyTitle,
-          content: localNote.content,
-          pinned: false,
-          deletedAt: null,
-          createdAt: now,
-          updatedAt: now,
-          syncStatus: 'pending',
-          lastSyncedAt: null,
-          serverUpdatedAt: null,
-          localUpdatedAt: now,
-          encryptedPayload: null,
-          encryptionIv: null,
-          encryptionVersion: null,
-          contentHash: null,
-        });
-
-        await queueSyncOperation(userId, 'create', 'note', newNoteId, {
-          title: copyTitle,
-          content: localNote.content,
-          pinned: false,
-        });
-      }
+      await queueSyncOperation(userId, 'create', 'note', newNoteId, {
+        title: '',
+        content: '',
+        pinned: false,
+        encrypted_payload: reEncrypted.ciphertext,
+        encryption_iv: reEncrypted.iv,
+        encryption_version: reEncrypted.version,
+        content_hash: reEncrypted.contentHash,
+      });
 
       if (isHardDeletedConflict) {
         await deleteOriginalNoteLocalState();
         break;
       }
-      if (!serverIsEncrypted) {
-        throw new Error(`Refusing to keep plaintext server note ${serverNote.id}`);
-      }
-
       // Update original with server version (including encrypted fields)
       const serverUpdatedTime = new Date(serverNote.updated_at).getTime();
       const displayUpdatedTime = new Date(getDisplayUpdatedAt(serverNote)).getTime();
       await db.notes.update(serverNote.id, {
-        title: serverNote.title,
-        content: serverNote.content,
+        title: '',
+        content: '',
         pinned: serverNote.pinned,
         deletedAt: serverNote.deleted_at
           ? new Date(serverNote.deleted_at).getTime()

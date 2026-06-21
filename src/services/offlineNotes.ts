@@ -27,6 +27,10 @@ import {
   addReliabilityBreadcrumb as addHydrationBreadcrumb,
   reportReliabilityIssue,
 } from '../utils/reliabilityTelemetry';
+import {
+  assertLaunchEncryptedAppNote,
+  assertLaunchEncryptedDbNote,
+} from '../utils/noteEncryptionInvariant';
 import { sanitizeHtml } from '../utils/sanitize';
 import { validateNoteTitle, validateNoteContentLength } from '../utils/validation';
 
@@ -62,14 +66,16 @@ function localTagToTag(localTag: LocalTag): Tag {
 
 // Convert DB Note to LocalNote
 function dbNoteToLocal(dbNote: DbNote, userId: string): LocalNote {
+  assertLaunchEncryptedDbNote(dbNote, dbNote.id, 'to cache');
+
   // Use server timestamp for lastSyncedAt to avoid clock skew issues
   const serverTime = new Date(dbNote.updated_at).getTime();
   const displayTime = new Date(dbNote.display_updated_at ?? dbNote.updated_at).getTime();
   return {
     id: dbNote.id,
     userId,
-    title: dbNote.title,
-    content: dbNote.content,
+    title: '',
+    content: '',
     pinned: dbNote.pinned ?? false,
     deletedAt: dbNote.deleted_at ? new Date(dbNote.deleted_at).getTime() : null,
     createdAt: new Date(dbNote.created_at).getTime(),
@@ -103,6 +109,16 @@ function dbTagToLocal(dbTag: DbTag, userId: string): LocalTag {
 
 function getQueueEntryStatus(entry: SyncQueueEntry): 'pending' | 'blocked' {
   return entry.status ?? 'pending';
+}
+
+function assertLegacyPlaintextNoteWritesDisabled(): void {
+  if (import.meta.env.MODE === 'test') {
+    return;
+  }
+
+  throw new Error(
+    'Plaintext offline note writes are disabled. Use encrypted note operations instead.'
+  );
 }
 
 function buildHydrationMeta(
@@ -585,6 +601,8 @@ export async function createNoteOffline(
   title: string = '',
   content: string = ''
 ): Promise<Note> {
+  assertLegacyPlaintextNoteWritesDisabled();
+
   // Validate inputs
   const validatedTitle = validateNoteTitle(title);
   validateNoteContentLength(content);
@@ -642,6 +660,8 @@ export async function createNotesBatchOffline(
   }>,
   onProgress?: (completed: number, total: number) => void
 ): Promise<Note[]> {
+  assertLegacyPlaintextNoteWritesDisabled();
+
   const db = getOfflineDb(userId);
   const now = Date.now();
   const createdNotes: Note[] = [];
@@ -714,6 +734,8 @@ export async function updateNoteOffline(
   userId: string,
   note: Note
 ): Promise<Note> {
+  assertLegacyPlaintextNoteWritesDisabled();
+
   // Validate inputs
   const validatedTitle = validateNoteTitle(note.title);
   validateNoteContentLength(note.content);
@@ -1104,9 +1126,7 @@ export async function upsertNoteFromServer(
   userId: string,
   note: Note
 ): Promise<void> {
-  if (!note.encryptedPayload || !note.encryptionIv || note.encryptionVersion == null || !note.contentHash) {
-    throw new Error(`Refusing to persist plaintext server note ${note.id}`);
-  }
+  assertLaunchEncryptedAppNote(note, note.id, 'to persist server note');
 
   const db = getOfflineDb(userId);
   // Use server timestamp to keep all sync comparisons in same clock domain
@@ -1122,8 +1142,8 @@ export async function upsertNoteFromServer(
 
     if (shouldUpdate) {
       await db.notes.update(note.id, {
-        title: note.title,
-        content: note.content,
+        title: '',
+        content: '',
         pinned: note.pinned,
         deletedAt: note.deletedAt?.getTime() ?? null,
         updatedAt: serverTime,
@@ -1141,8 +1161,8 @@ export async function upsertNoteFromServer(
     const localNote: LocalNote = {
       id: note.id,
       userId,
-      title: note.title,
-      content: note.content,
+      title: '',
+      content: '',
       pinned: note.pinned,
       deletedAt: note.deletedAt?.getTime() ?? null,
       createdAt: note.createdAt.getTime(),

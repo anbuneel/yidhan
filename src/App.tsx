@@ -829,7 +829,11 @@ function App() {
           }
         }
       })
-      .catch(console.error)
+      .catch((error) => {
+        console.error('Failed to decrypt notes:', error);
+        setNotes([]);
+        toast.error('Could not decrypt your notes. Lock and unlock your vault, then try again.');
+      })
       .finally(() => {
         pendingNavRestoreRef.current = null;
         setLoading(false);
@@ -955,28 +959,7 @@ function App() {
     );
 
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keys accessed via keysRef (avoids channel churn on vault lock/unlock); selectedNoteId via selectedNoteIdRef (avoids resubscribe on note selection)
-  }, [userId, isHydrating, hydrationBypassed, reportRealtimeDisplayFailure, reportRealtimePersistenceFailure]);
-
-  // Re-fetch notes when encryption keys become available (vault unlock).
-  // Separate from the main fetch effect to avoid resubscribing realtime channels.
-  // The main effect runs with keys=null (showing empty notes from IDB),
-  // then this effect re-fetches with decryption once the user enters their passphrase.
-  const hasRefetchedForKeysRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!userId || !keys) {
-      hasRefetchedForKeysRef.current = null;
-      return;
-    }
-    // Only re-fetch once per userId+keys combination
-    const keyId = `${userId}`;
-    if (hasRefetchedForKeysRef.current === keyId) return;
-    hasRefetchedForKeysRef.current = keyId;
-
-    fetchDecryptedNotes(userId, keys)
-      .then(setNotes)
-      .catch(console.error);
-  }, [userId, keys]);
+  }, [userId, keys, isHydrating, hydrationBypassed, reportRealtimeDisplayFailure, reportRealtimePersistenceFailure]);
 
   // Migrate demo content from landing page to user's first note
   // Dependency: userId (string) instead of user (object) because:

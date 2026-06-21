@@ -8,6 +8,15 @@ export interface PassphraseStrength {
   score: number;
 }
 
+function countCharacterClasses(passphrase: string): number {
+  return [
+    /[a-z]/.test(passphrase),
+    /[A-Z]/.test(passphrase),
+    /\d/.test(passphrase),
+    /[^A-Za-z0-9]/.test(passphrase),
+  ].filter(Boolean).length;
+}
+
 export function evaluatePassphraseStrength(passphrase: string): PassphraseStrength | null {
   if (!passphrase) {
     return null;
@@ -22,12 +31,7 @@ export function evaluatePassphraseStrength(passphrase: string): PassphraseStreng
   if (passphrase.length >= 16) score++;
   if (passphrase.length >= 20) score++;
 
-  const characterClasses = [
-    /[a-z]/.test(passphrase),
-    /[A-Z]/.test(passphrase),
-    /\d/.test(passphrase),
-    /[^A-Za-z0-9]/.test(passphrase),
-  ].filter(Boolean).length;
+  const characterClasses = countCharacterClasses(passphrase);
 
   if (characterClasses >= 2) score++;
   if (characterClasses >= 3) score++;
@@ -49,6 +53,10 @@ export function evaluatePassphraseStrength(passphrase: string): PassphraseStreng
 export function validatePassphrasePolicy(passphrase: string): string | null {
   if (passphrase.length < MIN_PASSPHRASE_LENGTH) {
     return `Passphrase must be at least ${MIN_PASSPHRASE_LENGTH} characters`;
+  }
+
+  if (countCharacterClasses(passphrase) < 2) {
+    return 'Use a stronger passphrase. Mix words with spaces, numbers, or symbols.';
   }
 
   const strength = evaluatePassphraseStrength(passphrase);

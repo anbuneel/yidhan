@@ -246,7 +246,7 @@ describe('encryptedNotes', () => {
       expect(notes).toEqual([]);
     });
 
-    it('should skip corrupted notes without blocking others', async () => {
+    it('should fail closed when any note is corrupted', async () => {
       const { createEncryptedNote, fetchDecryptedNotes } = await import('./encryptedNotes');
 
       // Create a valid note
@@ -274,19 +274,11 @@ describe('encryptedNotes', () => {
       });
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const notes = await fetchDecryptedNotes(TEST_USER_ID, keys);
-
-      // Should return the valid note, skipping the corrupted one
-      expect(notes).toHaveLength(1);
-      expect(notes[0].title).toBe('Valid Note');
-
-      // Should have logged the failure
-      expect(consoleSpy).toHaveBeenCalled();
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('1 failed'),
+      await expect(fetchDecryptedNotes(TEST_USER_ID, keys)).rejects.toThrow(
+        'Failed to decrypt 1 of 2 notes'
       );
+
+      expect(consoleSpy).toHaveBeenCalled();
       expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
         expect.objectContaining({
           category: 'vault',
@@ -296,7 +288,6 @@ describe('encryptedNotes', () => {
       );
 
       consoleSpy.mockRestore();
-      warnSpy.mockRestore();
     });
 
     it('should fail to decrypt with wrong keys', async () => {
@@ -306,16 +297,12 @@ describe('encryptedNotes', () => {
 
       const wrongKeys = await deriveTestKeys();
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const notes = await fetchDecryptedNotes(TEST_USER_ID, wrongKeys);
+      await expect(fetchDecryptedNotes(TEST_USER_ID, wrongKeys)).rejects.toThrow(
+        'Failed to decrypt 1 of 1 notes'
+      );
 
       // Decryption with wrong key should fail — note skipped
-      expect(notes).toHaveLength(0);
       expect(consoleSpy).toHaveBeenCalled();
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('0 succeeded'),
-      );
       expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
         expect.objectContaining({
           category: 'vault',
@@ -325,7 +312,6 @@ describe('encryptedNotes', () => {
       );
 
       consoleSpy.mockRestore();
-      warnSpy.mockRestore();
     });
   });
 
