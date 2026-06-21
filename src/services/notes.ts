@@ -85,7 +85,7 @@ export async function fetchNotes(filterTagIds?: string[]): Promise<Note[]> {
 
 // Create a new note
 export async function createNote(
-  userId: string,
+  _userId: string,
   title: string = '',
   content: string = '',
   options?: { createdAt?: Date; updatedAt?: Date }
@@ -95,13 +95,11 @@ export async function createNote(
   validateNoteContentLength(content);
 
   const insertData: {
-    user_id: string;
     title: string;
     content: string;
     created_at?: string;
     display_updated_at?: string;
   } = {
-    user_id: userId,
     title: validatedTitle,
     content: sanitizeHtml(content),
   };
@@ -140,7 +138,7 @@ export interface BatchNoteData {
 }
 
 export async function createNotesBatch(
-  userId: string,
+  _userId: string,
   notes: BatchNoteData[],
   onProgress?: (completed: number, total: number) => void
 ): Promise<Note[]> {
@@ -157,13 +155,11 @@ export async function createNotesBatch(
       validateNoteContentLength(note.content);
 
       const data: {
-        user_id: string;
         title: string;
         content: string;
         created_at?: string;
         display_updated_at?: string;
       } = {
-        user_id: userId,
         title: validatedTitle,
         content: sanitizeHtml(note.content),
       };
@@ -489,7 +485,7 @@ function toNoteShare(dbShare: DbNoteShare): NoteShare {
  */
 export async function createNoteShare(
   noteId: string,
-  userId: string,
+  _userId: string,
   note: Note,
   expiresInDays: number = 7
 ): Promise<{ share: NoteShare; shareKey: Uint8Array }> {
@@ -550,7 +546,7 @@ export async function createNoteShare(
     // Insert new row — retry as update if unique constraint race condition
     const { data: inserted, error } = await supabase
       .from('note_shares')
-      .insert({ note_id: noteId, user_id: userId, ...encryptedFields })
+      .insert({ note_id: noteId, ...encryptedFields })
       .select()
       .single();
 

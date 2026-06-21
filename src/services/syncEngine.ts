@@ -360,7 +360,6 @@ async function processNoteOperation(
 
       const insertPayload: Database['public']['Tables']['notes']['Insert'] = {
         id: noteId,
-        user_id: userId,
         title: '',
         content: '',
         pinned: (data.pinned as boolean) ?? false,
@@ -543,7 +542,6 @@ async function processTagOperation(
 
       const { data: created, error } = await supabase.from('tags').insert({
         id: tagId,
-        user_id: userId,
         name: data.name as string,
         color: data.color as string,
       }).select().maybeSingle();

@@ -15,9 +15,23 @@ ALTER TABLE note_shares ALTER COLUMN share_token TYPE varchar(64);
 -- 3. Drop the disabled read-only policy from expire_shares_for_e2ee.sql
 DROP POLICY IF EXISTS "Users can read their own shares (disabled)" ON note_shares;
 
--- 4. Re-enable owner management policy
-CREATE POLICY "Users can manage their own shares"
-  ON note_shares FOR ALL
+-- 4. Re-enable owner management policies.
+-- Split write policies so ownership is enforced at insert/update time.
+CREATE POLICY "Users can read their own encrypted shares"
+  ON note_shares FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create their own encrypted shares"
+  ON note_shares FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own encrypted shares"
+  ON note_shares FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own encrypted shares"
+  ON note_shares FOR DELETE
   USING (auth.uid() = user_id);
 
 -- 5. RPC function for public (unauthenticated) share lookup

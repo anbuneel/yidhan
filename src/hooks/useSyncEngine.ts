@@ -439,7 +439,6 @@ export async function resolveConflict(
               .from('notes')
               .upsert({
                 id: localNote.id,
-                user_id: userId,
                 ...notePayload,
               })
               .select('updated_at')

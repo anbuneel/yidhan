@@ -1,5 +1,5 @@
 export const MIN_PASSPHRASE_LENGTH = 12;
-export const MIN_PASSPHRASE_STRENGTH_SCORE = 2;
+const MIN_PASSPHRASE_STRENGTH_SCORE = 2;
 
 export type PassphraseStrengthLabel = 'Too short' | 'Weak' | 'Fair' | 'Good' | 'Strong';
 
