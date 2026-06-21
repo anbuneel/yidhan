@@ -117,6 +117,7 @@ Security reviews and analysis.
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [code-review-b8a4c2e1.md](reviews/code-review-b8a4c2e1.md) | Launch security hardening multi-agent code review: E2EE invariants, SQL hardening, review findings, and dispositions | 2026-06-21 |
 | [security-launch-assessment-codex-2026-06-08.md](analysis/security-launch-assessment-codex-2026-06-08.md) | Public launch security assessment: E2EE validation, launch blockers, dependency scan, and hardening checklist | 2026-06-08 |
 | [encryption-capability-analysis-claude.md](analysis/encryption-capability-analysis-claude.md) | E2EE encryption capability analysis v3.2 (Codex peer-reviewed) | 2026-02-21 |
 | [zenote-comprehensive-review-Codex.md](reviews/zenote-comprehensive-review-Codex.md) | Comprehensive security/code review by Codex | 2025-12-28 |
@@ -132,6 +133,7 @@ External reviews and audits.
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [code-review-b8a4c2e1.md](reviews/code-review-b8a4c2e1.md) | Launch security hardening multi-agent code review: full issue list and counter-review dispositions | 2026-06-21 |
 | [impeccable-design-critique-2026-03-28-claude.md](reviews/impeccable-design-critique-2026-03-28-claude.md) | **NEW** Holistic design critique: anti-patterns pass, 5 priority issues (landing focus, trust badges, mobile, demo onboarding, copy hierarchy) | 2026-03-28 |
 | [landing-page-design-review-claude.md](reviews/landing-page-design-review-claude.md) | Landing page UI/UX and conversion optimization review | 2026-01-09 |
 | [code-review-b7e2f41d.md](reviews/code-review-b7e2f41d.md) | **NEW** Vault unlock UX code review (3 agents, 2 rounds, converged) | 2026-02-23 |
