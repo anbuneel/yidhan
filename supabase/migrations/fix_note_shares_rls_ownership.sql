@@ -9,12 +9,33 @@
 -- SELECT/DELETE continue to use the simpler USING clause (you can always
 -- see/delete your own share rows).
 
--- Drop the existing policy (created in both add_note_shares.sql and enable_e2ee_sharing.sql)
+-- Drop older policy shapes (created in add_note_shares.sql and enable_e2ee_sharing.sql)
 DROP POLICY IF EXISTS "Users can manage their own shares" ON note_shares;
+DROP POLICY IF EXISTS "Users can read their own shares" ON note_shares;
+DROP POLICY IF EXISTS "Users can create their own shares" ON note_shares;
+DROP POLICY IF EXISTS "Users can update their own shares" ON note_shares;
+DROP POLICY IF EXISTS "Users can delete their own shares" ON note_shares;
+DROP POLICY IF EXISTS "Users can read their own encrypted shares" ON note_shares;
+DROP POLICY IF EXISTS "Users can create their own encrypted shares" ON note_shares;
+DROP POLICY IF EXISTS "Users can update their own encrypted shares" ON note_shares;
+DROP POLICY IF EXISTS "Users can delete their own encrypted shares" ON note_shares;
 
--- Recreate with note ownership check on writes
-CREATE POLICY "Users can manage their own shares"
-  ON note_shares FOR ALL
+-- Recreate with note ownership checks on writes
+CREATE POLICY "Users can read their own shares"
+  ON note_shares FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create shares for their own notes"
+  ON note_shares FOR INSERT
+  WITH CHECK (
+    auth.uid() = user_id
+    AND EXISTS (
+      SELECT 1 FROM notes WHERE id = note_id AND user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update shares for their own notes"
+  ON note_shares FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (
     auth.uid() = user_id
@@ -22,3 +43,7 @@ CREATE POLICY "Users can manage their own shares"
       SELECT 1 FROM notes WHERE id = note_id AND user_id = auth.uid()
     )
   );
+
+CREATE POLICY "Users can delete their own shares"
+  ON note_shares FOR DELETE
+  USING (auth.uid() = user_id);

@@ -261,7 +261,6 @@ describe('notes service', () => {
 
       expect(result.id).toBe('new-note');
       expect(mockBuilder.insert).toHaveBeenCalledWith({
-        user_id: 'user-123',
         title: '',
         content: '',
       });
@@ -296,7 +295,6 @@ describe('notes service', () => {
       await createNote('user-123', 'Imported Note', '<p>Content</p>', { createdAt, updatedAt });
 
       expect(mockBuilder.insert).toHaveBeenCalledWith({
-        user_id: 'user-123',
         title: 'Imported Note',
         content: '<p>Content</p>',
         created_at: '2023-06-01T10:00:00.000Z',

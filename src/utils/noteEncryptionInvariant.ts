@@ -56,7 +56,7 @@ export function hasRequiredCamelEncryptionFields(note: CamelEncryptionFields): b
   );
 }
 
-export function hasRequiredSnakeEncryptionFields(note: SnakeEncryptionFields): boolean {
+function hasRequiredSnakeEncryptionFields(note: SnakeEncryptionFields): boolean {
   return Boolean(
     isNonEmptyString(note.encrypted_payload) &&
     isNonEmptyString(note.encryption_iv) &&

@@ -51,7 +51,7 @@ export async function fetchTags(): Promise<Tag[]> {
 
 // Create a new tag
 export async function createTag(
-  userId: string,
+  _userId: string,
   name: string,
   color: TagColor
 ): Promise<Tag> {
@@ -61,7 +61,6 @@ export async function createTag(
   const { data, error } = await supabase
     .from('tags')
     .insert({
-      user_id: userId,
       name: validatedName,
       color,
     })

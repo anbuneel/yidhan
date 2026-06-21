@@ -155,7 +155,6 @@ describe('tags service', () => {
       expect(result.name).toBe('Projects');
       expect(result.color).toBe('gold');
       expect(mockBuilder.insert).toHaveBeenCalledWith({
-        user_id: 'user-123',
         name: 'Projects',
         color: 'gold',
       });

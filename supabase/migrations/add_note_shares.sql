@@ -14,16 +14,29 @@ CREATE TABLE note_shares (
 -- RLS policies
 ALTER TABLE note_shares ENABLE ROW LEVEL SECURITY;
 
--- Users can manage their own shares (create, read, update, delete)
-CREATE POLICY "Users can manage their own shares"
-  ON note_shares FOR ALL
+-- Users can manage their own shares (create, read, update, delete).
+-- Policies are split by operation so INSERT/UPDATE ownership is enforced
+-- with WITH CHECK, not only a read-time USING predicate.
+CREATE POLICY "Users can read their own shares"
+  ON note_shares FOR SELECT
   USING (auth.uid() = user_id);
 
--- Public access to read share tokens (for fetching shared notes)
--- This allows unauthenticated users to validate share tokens
-CREATE POLICY "Anyone can read share tokens"
-  ON note_shares FOR SELECT
-  USING (true);
+CREATE POLICY "Users can create their own shares"
+  ON note_shares FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own shares"
+  ON note_shares FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own shares"
+  ON note_shares FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Public share reads are intentionally not granted through a blanket SELECT
+-- policy. E2EE sharing now uses the fetch_shared_note RPC, which returns only
+-- encrypted payloads for valid, non-expired, non-revoked tokens.
 
 -- Create index for fast token lookups
 CREATE INDEX idx_note_shares_token ON note_shares(share_token);
