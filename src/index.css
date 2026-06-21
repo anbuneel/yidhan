@@ -1056,6 +1056,14 @@ body::before {
   max-width: 440px;
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
+  /* Reset browser default <dialog> chrome (border/padding/background/color) so only
+     .auth-card's wabi-sabi corners are visible — otherwise the native dialog box shows
+     through as a mismatched square-cornered shell behind the rounded card. */
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
   animation: auth-modal-sheet-rise 0.35s ease-out forwards;
 }
 
