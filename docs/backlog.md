@@ -58,6 +58,7 @@ Key open items: proof rail links, below-the-fold second act, 6 deferred signatur
 | Item | Priority | Source |
 |------|----------|--------|
 | Restore self-serve offboarding only after real server-owned account deletion exists. Launch hardening paused the flow with `ACCOUNT_OFFBOARDING_ENABLED = false`, hid "Letting Go" from Settings, and removed deletion promises from Privacy/Support copy. | P1 | [Security launch assessment](analysis/security-launch-assessment-codex-2026-06-08.md) |
+| Treat applied Supabase migrations as append-only. Future security/RLS tightening should use forward migrations instead of rewriting historical migration SQL, so restore paths and audit history stay truthful. | P2 | Claude review on PR #193 |
 
 ---
 
@@ -66,6 +67,7 @@ Key open items: proof rail links, below-the-fold second act, 6 deferred signatur
 | Item | Priority | Source |
 |------|----------|--------|
 | Reliability hardening items 4-5 (note-tag convergence, search/sync scale) | Post-launch | [Reliability plan](active/reliability-hardening-plan-codex.md) |
+| Remove vestigial `_userId` parameters from `createNote`, `createNotesBatch`, `createTag`, and `createNoteShare`, then update call sites so the service API no longer suggests client-owned authorization. | P2 | Claude review on PR #193 |
 
 ---
 
