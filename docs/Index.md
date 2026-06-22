@@ -23,9 +23,9 @@ Core product documentation.
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [prd.md](prd.md) | Product Requirements Document (features, personas, user flows) | 2025-12-29 |
+| [prd.md](prd.md) | Product Requirements Document (features, personas, user flows, account deletion gate) | 2026-06-21 |
 | [roadmap.md](roadmap.md) | **NEW** Unified product roadmap (29 items across 4 phases, consolidated from 8+ docs) | 2026-03-03 |
-| [technical-spec.md](technical-spec.md) | Technical architecture and implementation details | 2025-12-29 |
+| [technical-spec.md](technical-spec.md) | Technical architecture, schema, and implementation details | 2026-06-21 |
 | [ui-layout.md](ui-layout.md) | ASCII diagrams of all UI components and layouts | 2025-12-29 |
 
 ---
@@ -39,7 +39,7 @@ Business strategy, competitive positioning, and launch planning.
 | [design-critique-tracker.md](active/design-critique-tracker.md) | Design critique findings tracker - decisions, completed items, open issues | 2026-03-07 |
 | [strategic-viability-review-claude.md](active/strategic-viability-review-claude.md) | Honest competitive viability assessment and gap analysis | 2026-01-06 |
 | [competitive-design-evaluation-claude.md](active/competitive-design-evaluation-claude.md) | Design comparison vs Notion, Bear, Apple Notes, Obsidian, Craft | 2025-12-26 |
-| [launch-readiness-assessment.md](active/launch-readiness-assessment.md) | Launch readiness checklist (93% ready as of 2025-12-28) | 2025-12-28 |
+| [launch-readiness-assessment.md](active/launch-readiness-assessment.md) | Launch readiness assessment with 2026-06-21 security hardening closeout and remaining non-blocking launch decisions | 2026-06-21 |
 | [monetization-philosophy.md](active/monetization-philosophy.md) | Pricing strategy aligned with wabi-sabi philosophy | 2025-12-26 |
 | [logo-and-branding.md](active/logo-and-branding.md) | Branding requirements, logo concepts, assets needed | 2025-12-26 |
 
@@ -118,7 +118,7 @@ Security reviews and analysis.
 | Document | Description | Date |
 |----------|-------------|------|
 | [code-review-b8a4c2e1.md](reviews/code-review-b8a4c2e1.md) | Launch security hardening multi-agent code review: E2EE invariants, SQL hardening, review findings, and dispositions | 2026-06-21 |
-| [security-launch-assessment-codex-2026-06-08.md](analysis/security-launch-assessment-codex-2026-06-08.md) | Public launch security assessment: E2EE validation, launch blockers, dependency scan, and hardening checklist | 2026-06-08 |
+| [security-launch-assessment-codex-2026-06-08.md](analysis/security-launch-assessment-codex-2026-06-08.md) | Public launch security assessment and 2026-06-21 closeout: E2EE validation, hardening, and Supabase verification status | 2026-06-21 |
 | [encryption-capability-analysis-claude.md](analysis/encryption-capability-analysis-claude.md) | E2EE encryption capability analysis v3.2 (Codex peer-reviewed) | 2026-02-21 |
 | [zenote-comprehensive-review-Codex.md](reviews/zenote-comprehensive-review-Codex.md) | Comprehensive security/code review by Codex | 2025-12-28 |
 | [share-token-security-analysis-claude.md](analysis/share-token-security-analysis-claude.md) | Share link token security verification | 2025-12-28 |
@@ -151,6 +151,7 @@ Currently in-progress implementation plans and follow-ups.
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [account-deletion-workflow-plan.md](plans/account-deletion-workflow-plan.md) | Server-owned account deletion workflow plan - implementation PR keeps offboarding disabled until production verification and throwaway-account deletion drill | 2026-06-21 |
 | [reliability-hardening-plan-codex.md](active/reliability-hardening-plan-codex.md) | Reliability hardening plan — items 1-3 implemented (PR #163): blocked sync recovery, safe hydration, E2EE telemetry. Items 4-5 deferred. | 2026-03-10 |
 | [launch-critical-fixes-plan-codex.md](active/launch-critical-fixes-plan-codex.md) | Launch-critical fix plan for `#121`, `#154`, `#126`, `#133` — **COMPLETE** (PR #164): sanitizer hardening, vault restore verification, search shortcut replacement, editor save serialization | 2026-03-10 |
 | [2026-03-09-editor-calm-delight.md](plans/2026-03-09-editor-calm-delight.md) | **NEW** Editor calm & delight - 9 changes: sidebar toolbar, metadata collapse, writing surface polish | 2026-03-09 |

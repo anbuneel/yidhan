@@ -4,17 +4,19 @@ import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface ReAuthModalProps {
   isOpen: boolean;
-  onSuccess: () => void;
+  onSuccess: (confirmationToken?: string) => void;
   onCancel: () => void;
   /** Action description shown to user (e.g., "export your data") */
   actionDescription?: string;
+  sensitiveAction?: 'account_deletion';
 }
 
 /**
  * Re-authentication modal for step-up auth before sensitive actions.
  *
  * For email/password users: prompts for current password.
- * For OAuth users: prompts to type their email to confirm.
+ * OAuth users are blocked for account deletion until a real provider or OTP
+ * challenge mints the same server-side confirmation token.
  *
  * Uses zen-inspired messaging to match Yidhan's aesthetic.
  */
@@ -23,8 +25,9 @@ export function ReAuthModal({
   onSuccess,
   onCancel,
   actionDescription = 'continue',
+  sensitiveAction,
 }: ReAuthModalProps) {
-  const { user, verifyPassword, markReauth } = useAuth();
+  const { user, verifyPassword, confirmAccountDeletion } = useAuth();
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,6 +40,9 @@ export function ReAuthModal({
     provider === 'google' ||
     provider === 'github' ||
     user?.identities?.some((identity) => identity.provider !== 'email');
+  const providerLabel = provider === 'google' ? 'Google' : provider === 'github' ? 'GitHub' : 'your sign-in provider';
+  const isAccountDeletion = sensitiveAction === 'account_deletion';
+  const isOAuthBlocked = isOAuthUser;
 
   if (isOpen !== wasOpenRef.current) {
     wasOpenRef.current = isOpen;
@@ -71,25 +77,27 @@ export function ReAuthModal({
     e.preventDefault();
     setError(null);
 
+    if (isOAuthBlocked) {
+      setError('This verification method is not available for your sign-in provider yet.');
+      return;
+    }
+
     if (!input.trim()) {
-      setError(isOAuthUser ? 'Please enter your email' : 'Please enter your password');
+      setError('Please enter your password');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      if (isOAuthUser) {
-        // OAuth users: verify by typing their email
-        if (input.trim().toLowerCase() !== user?.email?.toLowerCase()) {
-          setError("That doesn't match your account email");
-          return;
+      if (isAccountDeletion) {
+        const result = await confirmAccountDeletion(input);
+        if (result.success && result.confirmationToken) {
+          onSuccess(result.confirmationToken);
+        } else {
+          setError(result.error ?? "That doesn't seem right. Try again?");
         }
-        // Track re-auth for grace window (OAuth users too)
-        markReauth();
-        onSuccess();
       } else {
-        // Email/password users: verify password
         const result = await verifyPassword(input);
         if (result.success) {
           onSuccess();
@@ -180,7 +188,23 @@ export function ReAuthModal({
             Before you {actionDescription}, please confirm it's you.
           </p>
 
+          {isOAuthBlocked && (
+            <p
+              className="text-sm mb-4"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-secondary)',
+                lineHeight: 1.6,
+              }}
+            >
+              You signed in with {providerLabel}. This action needs a stronger
+              verification step than typing your email, so it is unavailable for
+              this sign-in method until that challenge is enabled.
+            </p>
+          )}
+
           {/* Input */}
+          {!isOAuthBlocked && (
           <div className="mb-4">
             <label
               htmlFor="reauth-input"
@@ -190,16 +214,16 @@ export function ReAuthModal({
                 color: 'var(--color-text-secondary)',
               }}
             >
-              {isOAuthUser ? 'Your email' : 'Your password'}
+              Your password
             </label>
             <input
               id="reauth-input"
               ref={inputRef}
-              type={isOAuthUser ? 'email' : 'password'}
+              type="password"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={isOAuthUser ? 'Enter your account email' : 'Enter your password'}
-              autoComplete={isOAuthUser ? 'email' : 'current-password'}
+              placeholder="Enter your password"
+              autoComplete="current-password"
               className="
                 w-full px-4 py-3
                 rounded-lg
@@ -220,6 +244,7 @@ export function ReAuthModal({
               }}
             />
           </div>
+          )}
 
           {/* Error message */}
           {error && (
@@ -228,20 +253,6 @@ export function ReAuthModal({
               style={{ color: 'var(--color-error)' }}
             >
               {error}
-            </p>
-          )}
-
-          {/* OAuth hint */}
-          {isOAuthUser && (
-            <p
-              className="text-xs text-center mb-4"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-tertiary)',
-              }}
-            >
-              You signed in with {provider === 'google' ? 'Google' : 'GitHub'}.
-              Type your email to confirm.
             </p>
           )}
 
@@ -275,7 +286,7 @@ export function ReAuthModal({
             </button>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isOAuthBlocked}
               className="
                 flex-1 py-3
                 rounded-lg

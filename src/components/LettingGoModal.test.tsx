@@ -6,6 +6,7 @@ import type { Note, Tag } from '../types';
 
 const {
   featureFlags,
+  mockConfirmAccountDeletion,
   mockInitiateOffboarding,
   mockSignOut,
   mockIsRecentlyReauthed,
@@ -23,6 +24,7 @@ const {
 
   return {
     featureFlags: { reauthForSensitiveActions: false },
+    mockConfirmAccountDeletion: vi.fn(),
     mockInitiateOffboarding: vi.fn(),
     mockSignOut: vi.fn(),
     mockIsRecentlyReauthed: vi.fn(),
@@ -44,6 +46,7 @@ vi.mock('../config/featureFlags', () => ({
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({
     initiateOffboarding: mockInitiateOffboarding,
+    confirmAccountDeletion: mockConfirmAccountDeletion,
     signOut: mockSignOut,
     user: {
       id: 'user-123',
@@ -100,8 +103,13 @@ function renderLettingGoModal() {
 
 describe('LettingGoModal re-auth feature switch', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     featureFlags.reauthForSensitiveActions = false;
     mockIsRecentlyReauthed.mockReturnValue(false);
+    mockConfirmAccountDeletion.mockResolvedValue({
+      success: true,
+      confirmationToken: 'confirmation-token',
+    });
     mockInitiateOffboarding.mockResolvedValue({ error: null });
     mockSignOut.mockResolvedValue(undefined);
     mockFetchAllNoteShares.mockResolvedValue([]);
@@ -149,22 +157,27 @@ describe('LettingGoModal re-auth feature switch', () => {
     expect(mockDownloadFile).not.toHaveBeenCalled();
   });
 
-  it('starts account departure without re-auth when the switch is off', async () => {
+  it('requires server confirmation before account departure when the switch is off', async () => {
     const user = userEvent.setup();
     renderLettingGoModal();
 
     await user.click(screen.getByRole('button', { name: 'Let go' }));
+    expect(await screen.findByText('A Moment of Verification')).toBeInTheDocument();
+    expect(screen.getByText(/begin your departure/)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Your password'), 'correct horse battery staple');
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => {
-      expect(mockInitiateOffboarding).toHaveBeenCalledOnce();
+      expect(mockConfirmAccountDeletion).toHaveBeenCalledWith('correct horse battery staple');
     });
 
-    expect(screen.queryByText('A Moment of Verification')).not.toBeInTheDocument();
+    expect(mockInitiateOffboarding).toHaveBeenCalledWith('confirmation-token');
     expect(mockIsRecentlyReauthed).not.toHaveBeenCalled();
     expect(mockSignOut).toHaveBeenCalledOnce();
   });
 
-  it('requires re-auth before account departure when the switch is on', async () => {
+  it('requires server confirmation before account departure when the switch is on', async () => {
     featureFlags.reauthForSensitiveActions = true;
     const user = userEvent.setup();
     renderLettingGoModal();
@@ -173,7 +186,7 @@ describe('LettingGoModal re-auth feature switch', () => {
 
     expect(await screen.findByText('A Moment of Verification')).toBeInTheDocument();
     expect(screen.getByText(/begin your departure/)).toBeInTheDocument();
-    expect(mockIsRecentlyReauthed).toHaveBeenCalledOnce();
+    expect(mockIsRecentlyReauthed).not.toHaveBeenCalled();
     expect(mockInitiateOffboarding).not.toHaveBeenCalled();
     expect(mockSignOut).not.toHaveBeenCalled();
   });

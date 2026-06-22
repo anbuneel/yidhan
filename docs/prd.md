@@ -1,7 +1,7 @@
 # Yidhan - Product Requirements Document
 
-**Version:** 2.1
-**Last Updated:** 2026-03-10
+**Version:** 2.2
+**Last Updated:** 2026-06-21
 **Status:** Living Document
 **Author:** Claude (Opus 4.5)
 
@@ -111,7 +111,7 @@ Zenote aims to be the antithesis of feature-bloated productivity tools. Where ot
 | Google OAuth | One-click sign-in via Google | P0 |
 | GitHub OAuth | One-click sign-in via GitHub | P1 |
 | Profile Management | Display name, avatar (initials-based) | P1 |
-| Account Offboarding | Paused for public launch until server-owned deletion workflow is available | P2 |
+| Account Offboarding | Server-owned deletion workflow implemented behind disabled launch flag; re-enablement waits for production verification and throwaway-account deletion drill | P2 |
 
 #### 4. Data Portability
 
@@ -425,7 +425,7 @@ Offline → Make edits → Save to IndexedDB (sync queue)
 | Faded Notes | Soft-deleted notes awaiting permanent release |
 | Temporal Chapters | Automatic grouping of notes by time period |
 | Kintsugi | Art of repairing broken pottery with gold (light theme name) |
-| Letting Go | Account offboarding concept; paused until server-owned deletion is implemented |
+| Letting Go | Account offboarding concept; server-owned deletion workflow remains disabled until production verification and throwaway-account deletion drill pass |
 | Practice Space | Full-featured demo mode at /demo requiring no signup |
 | Two Paths | Conflict resolution modal for concurrent edits (offline sync) |
 | Impermanence Ribbon | Gentle reminder that demo notes aren't synced to cloud |

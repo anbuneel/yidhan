@@ -1,6 +1,6 @@
 // Hardcoded pre-launch toggles. Flip when the product is ready for the extra friction.
 export const REAUTH_FOR_SENSITIVE_ACTIONS = false;
 
-// Disabled until account deletion is backed by a server-owned workflow.
-// The existing metadata-only "departing_at" flow is not a deletion guarantee.
+// Disabled until the server-owned account deletion workflow is production-verified
+// and a throwaway-account deletion drill has passed.
 export const ACCOUNT_OFFBOARDING_ENABLED = false;

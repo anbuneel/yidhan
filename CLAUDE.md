@@ -248,7 +248,7 @@ Avoid: creating new inline `style={{}}` objects for static values that could be 
 ### Soft-delete, sharing, and demo mode
 - Soft-delete (Faded Notes) functions are in `src/services/notes.ts`
 - Share as Letter (E2EE) functions are in `src/services/notes.ts` — uses capability-link model with per-share keys
-- Account offboarding ("Letting Go") is hidden for public launch via `ACCOUNT_OFFBOARDING_ENABLED = false` until a server-owned deletion workflow exists
+- Account offboarding ("Letting Go") is hidden for public launch via `ACCOUNT_OFFBOARDING_ENABLED = false`. The server-owned workflow exists in repo, but re-enablement stays blocked until production verification and a throwaway-account deletion drill pass.
 - Legacy plaintext repair tooling was removed after the pre-launch repair and `launch_security_hardening.sql` verification. Do not reintroduce plaintext-note compatibility for launch builds.
 - Demo/Practice Space (`/demo`): `src/services/demoStorage.ts`, `src/hooks/useDemoState.ts`, `src/pages/DemoPage.tsx`
 - Landing hero drafts save to `DEMO_CONTENT_STORAGE_KEY` (`yidhan-demo-content`) before signup; `App.tsx` migrates them into an encrypted "My first note" after auth/unlock
@@ -302,7 +302,7 @@ content...
 - Google/GitHub OAuth use Supabase's `signInWithOAuth` with redirect back to app origin
 - OAuth-first layout: OAuth buttons appear FIRST, then "or continue with email" divider, then email form
 - Production OAuth requires Supabase Site URL and Redirect URLs to match deployment domain
-- Extensive code splitting: Editor lazy-loaded (415KB chunk), views/modals in separate chunks, initial bundle 332KB (-44% from 596KB)
+- Current production build sizing (2026-06-21): main bundle 778.61KB (240.48KB gzip), Editor lazy chunk 443.26KB (133.96KB gzip), views/modals in separate chunks. Treat the main-bundle regression as a performance follow-up, not a launch security blocker.
 - Auth component supports modal mode (`isModal` prop) for landing page overlay
 
 ## Deployment
@@ -369,7 +369,7 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Share as Letter:** E2EE-compatible sharing via capability links. Per-share random AES-256-GCM key in URL fragment (`#k=<base64url>`). Server stores only ciphertext via `fetch_shared_note` RPC. Max 30-day TTL, soft-delete revocation. URL format: `/s/<token>/<slug>#k=<key>`
 - **Database enforcement:** Public launch hardening requires server note rows to contain encrypted payload metadata and empty plaintext `title`/`content` columns. The launch migration intentionally fails if existing rows still violate that invariant.
 - **Legacy repair status:** Pre-launch plaintext rows were repaired or removed before hardening. If preflight ever reports unsafe rows again, treat that as a data incident; the launch app should fail closed rather than expose a repair UI.
-- **Account offboarding:** Self-serve "Letting Go" is disabled for public launch. Do not promise account deletion until a backend/service-role deletion workflow exists.
+- **Account offboarding:** Self-serve "Letting Go" is disabled for public launch. The backend/service-role deletion workflow is implemented behind the disabled flag; do not promise or re-enable account deletion until production verification and a throwaway-account deletion drill pass.
 
 ### Password Policy
 - Account passwords: minimum 8 characters (enforced in Auth.tsx and SettingsModal.tsx). E2EE passphrases: minimum 12 characters plus strength policy (enforced in PassphraseSetup.tsx and EncryptionContext.tsx).
@@ -435,3 +435,5 @@ SQL migrations are stored in `supabase/migrations/`:
 - `add_restore_timestamps_rpc.sql`
 - `fix_note_shares_rls_ownership.sql`
 - `update_notes_display_updated_at.sql`
+- `launch_security_hardening.sql`
+- `add_account_deletion_workflow.sql`

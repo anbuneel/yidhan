@@ -7,7 +7,13 @@ import { vi } from 'vitest';
  * Mock AuthContext value for testing
  */
 export interface MockAuthContextValue {
-  user: null | { id: string; email: string; user_metadata?: Record<string, unknown> };
+  user: null | {
+    id: string;
+    email: string;
+    app_metadata?: Record<string, unknown>;
+    identities?: Array<{ provider: string }>;
+    user_metadata?: Record<string, unknown>;
+  };
   session: null | { access_token: string };
   loading: boolean;
   isPasswordRecovery: boolean;
@@ -20,10 +26,20 @@ export interface MockAuthContextValue {
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
   updateProfile: (fullName: string) => Promise<{ error: Error | null }>;
-  initiateOffboarding: () => Promise<{ error: Error | null }>;
+  initiateOffboarding: (confirmationToken: string) => Promise<{ error: Error | null }>;
   cancelOffboarding: () => Promise<{ error: Error | null }>;
+  accountDeletionRequest: unknown | null;
   isDeparting: boolean;
   daysUntilRelease: number | null;
+  verifyPassword: (password: string) => Promise<{ success: boolean; error?: string }>;
+  confirmAccountDeletion: (password: string) => Promise<{
+    success: boolean;
+    confirmationToken?: string;
+    error?: string;
+  }>;
+  markReauth: () => void;
+  lastReauthAt: number | null;
+  isRecentlyReauthed: () => boolean;
 }
 
 export const defaultMockAuthContext: MockAuthContextValue = {
@@ -42,8 +58,17 @@ export const defaultMockAuthContext: MockAuthContextValue = {
   updateProfile: vi.fn().mockResolvedValue({ error: null }),
   initiateOffboarding: vi.fn().mockResolvedValue({ error: null }),
   cancelOffboarding: vi.fn().mockResolvedValue({ error: null }),
+  accountDeletionRequest: null,
   isDeparting: false,
   daysUntilRelease: null,
+  verifyPassword: vi.fn().mockResolvedValue({ success: true }),
+  confirmAccountDeletion: vi.fn().mockResolvedValue({
+    success: true,
+    confirmationToken: 'mock-confirmation-token',
+  }),
+  markReauth: vi.fn(),
+  lastReauthAt: null,
+  isRecentlyReauthed: vi.fn().mockReturnValue(false),
 };
 
 /**

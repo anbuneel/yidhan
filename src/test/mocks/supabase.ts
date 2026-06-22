@@ -90,6 +90,10 @@ export const mockChannel = {
 // Main Supabase client mock
 export const mockSupabaseClient = {
   from: vi.fn().mockReturnValue(createQueryBuilder()),
+  rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+  functions: {
+    invoke: vi.fn().mockResolvedValue({ data: null, error: null }),
+  },
   auth: mockAuth,
   channel: vi.fn().mockReturnValue(mockChannel),
   removeChannel: vi.fn().mockResolvedValue('ok'),
@@ -99,6 +103,8 @@ export const mockSupabaseClient = {
 export function resetSupabaseMocks() {
   vi.clearAllMocks();
   mockSupabaseClient.from.mockReturnValue(createQueryBuilder());
+  mockSupabaseClient.rpc.mockResolvedValue({ data: null, error: null });
+  mockSupabaseClient.functions.invoke.mockResolvedValue({ data: null, error: null });
 }
 
 // Helper to mock a successful query response

@@ -57,7 +57,7 @@ Key open items: proof rail links, below-the-fold second act, 6 deferred signatur
 
 | Item | Priority | Source |
 |------|----------|--------|
-| Restore self-serve offboarding only after real server-owned account deletion exists. Launch hardening paused the flow with `ACCOUNT_OFFBOARDING_ENABLED = false`, hid "Letting Go" from Settings, and removed deletion promises from Privacy/Support copy. | P1 | [Security launch assessment](analysis/security-launch-assessment-codex-2026-06-08.md) |
+| Restore self-serve offboarding in a tiny follow-up only after the server-owned account deletion workflow passes production verification and a throwaway-account deletion drill. The implementation PR must keep `ACCOUNT_OFFBOARDING_ENABLED = false`, keep deletion copy silent, and leave re-enablement as a separate verified step. | P1 | [Account deletion workflow plan](plans/account-deletion-workflow-plan.md) |
 | Treat applied Supabase migrations as append-only. Future security/RLS tightening should use forward migrations instead of rewriting historical migration SQL, so restore paths and audit history stay truthful. | P2 | Claude review on PR #193 |
 
 ---

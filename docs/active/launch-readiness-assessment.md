@@ -2,8 +2,8 @@
 
 **Author:** Claude (Opus 4.5 → Opus 4.6)
 **Created:** 2025-12-26
-**Last Updated:** 2026-03-10
-**Status:** Active — Not Yet Launch-Ready
+**Last Updated:** 2026-06-21
+**Status:** Active - Launch-Critical Security Complete
 
 ---
 
@@ -17,7 +17,37 @@
 | Assessment 4 | 2025-12-28 | ~93% | Codex review fixes complete |
 | Assessment 5 | 2026-01-07 | ~95% | Full offline editing complete (PR #48) |
 | Assessment 6 | 2026-01-11 | ~100% | Phase 0 launch polish complete |
-| **Assessment 7** | **2026-03-10** | **Not ready** | **Codex deep-dive: trust/recovery gaps in offboarding, sharing, sync** |
+| Assessment 7 | 2026-03-10 | Not ready | Codex deep-dive: trust/recovery gaps in offboarding, sharing, sync |
+| **Assessment 8** | **2026-06-21** | **Launch-critical security complete** | **PR #192 hardening complete; production SQL verification reported passed** |
+
+---
+
+# Assessment 8 (2026-06-21)
+
+**Reviewer:** Codex App (GPT-5) - launch security closeout
+**Primary artifact:** [`code-review-b8a4c2e1.md`](../reviews/code-review-b8a4c2e1.md)
+**Verdict:** Launch-critical code and E2EE hardening are complete. The previous hard gate, live Supabase verification for `launch_security_hardening.sql` and related RLS/RPC grants, is recorded as passed with `launch_security_verification_passed`.
+
+## Executive Summary
+
+Security hardening is now complete for the public-launch scope. PR #192 closed the E2EE fail-closed issues that remained after the March readiness pass: encrypted-note invariants are centralized, authenticated note persistence rejects plaintext rows and queue payloads, the launch SQL migration enforces encrypted-only server rows, core RLS/share RPC behavior is captured in repo migrations, and the temporary legacy repair surface is gone from the launch build.
+
+The remaining launch decisions are not security-hardening blockers:
+
+1. **Re-auth flag:** `REAUTH_FOR_SENSITIVE_ACTIONS` remains `false`. With self-serve offboarding disabled, this mainly affects Full Backup export. Decide explicitly whether to keep that launch tradeoff or flip it before a broader public push.
+2. **Bundle regression:** Local build on 2026-06-21 reports `main` at 778.61 KB / 240.48 KB gzip and `Editor` at 443.26 KB / 133.96 KB gzip. This is worth a code-split pass soon, but it does not reopen the E2EE/security launch gate.
+3. **Future hardening:** A seeded SQL regression harness, typed security errors, duplicate cleanup-function consolidation, and external Semgrep/Gitleaks-style scans remain useful follow-ups.
+
+## Security Closeout
+
+| Gate | Status | Evidence |
+|------|--------|----------|
+| Client/runtime encrypted-note invariant | Complete | Shared `noteEncryptionInvariant` validation now covers hydration, realtime, sync queue processing, conflict resolution, and encrypted reads. |
+| Authenticated plaintext write fallbacks | Complete | Launch code requires encrypted note payloads; legacy plaintext helpers are disabled outside tests. |
+| Database encrypted-only enforcement | Complete | `supabase/migrations/launch_security_hardening.sql` enforces encrypted-only server rows and empty plaintext title/content fields. |
+| Core RLS and share RPC hardening | Complete | Migration resets owner-scoped RLS policies and restricts public sharing to ciphertext-only `fetch_shared_note` RPC access. |
+| Live Supabase verification | Complete by recorded evidence | Review artifact records production verification output: `launch_security_verification_passed`. |
+| Offboarding trust gap | Closed for launch | Self-serve account deletion stays hidden; the server-owned workflow is being implemented behind the disabled flag and remains gated on production verification plus a throwaway-account deletion drill. |
 
 ---
 
@@ -200,11 +230,12 @@ Category 1 is the most dangerous for launch: users forgive missing features but 
 | 4. Social metadata | 15 min | **Done** | OG URL updated to yidhan.vercel.app |
 | 5. Verify `/demo` route | 15 min | **Done** | Catch-all SPA rewrite added to vercel.json |
 | 6. Guard `deleteNoteFromServer` | 2-3 hours | **Done** | Discriminated union return, conflict surfaced via ConflictModal |
-| 12. Audit Supabase policies | 1 hour (manual) | **Not started** | Manual verification needed |
+| 12. Audit Supabase policies | 1 hour (manual) | **Done** | Superseded by PR #192 production verification: `launch_security_verification_passed` |
 
 ### Remaining before launch
-- **Re-auth flag:** Flip `REAUTH_FOR_SENSITIVE_ACTIONS` to `true` in `src/config/featureFlags.ts` (~1 min) — disabled for pre-launch solo use, see Item 7
-- **Item 12:** Manually audit live Supabase sharing policies
+- **No launch-critical security blockers remain** in the repo docs after PR #192 and recorded live SQL verification.
+- **Re-auth flag:** Decide explicitly whether to keep `REAUTH_FOR_SENSITIVE_ACTIONS = false` for launch. With offboarding disabled, the practical exposure is Full Backup export, not account deletion.
+- **Bundle follow-up:** Main bundle is now 778.61 KB / 240.48 KB gzip. Schedule a performance/code-split pass, but treat it as a non-blocking launch follow-up.
 
 ---
 
