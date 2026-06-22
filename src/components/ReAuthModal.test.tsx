@@ -7,6 +7,8 @@ const {
   mockUserState,
   mockVerifyPassword,
   mockConfirmAccountDeletion,
+  mockStartAccountDeletionOtp,
+  mockConfirmAccountDeletionOtp,
 } = vi.hoisted(() => ({
   mockUserState: {
     value: {
@@ -18,6 +20,8 @@ const {
   },
   mockVerifyPassword: vi.fn(),
   mockConfirmAccountDeletion: vi.fn(),
+  mockStartAccountDeletionOtp: vi.fn(),
+  mockConfirmAccountDeletionOtp: vi.fn(),
 }));
 
 vi.mock('../contexts/AuthContext', () => ({
@@ -25,6 +29,8 @@ vi.mock('../contexts/AuthContext', () => ({
     user: mockUserState.value,
     verifyPassword: mockVerifyPassword,
     confirmAccountDeletion: mockConfirmAccountDeletion,
+    startAccountDeletionOtp: mockStartAccountDeletionOtp,
+    confirmAccountDeletionOtp: mockConfirmAccountDeletionOtp,
   }),
 }));
 
@@ -41,6 +47,11 @@ describe('ReAuthModal', () => {
     mockConfirmAccountDeletion.mockResolvedValue({
       success: true,
       confirmationToken: 'confirmation-token',
+    });
+    mockStartAccountDeletionOtp.mockResolvedValue({ success: true });
+    mockConfirmAccountDeletionOtp.mockResolvedValue({
+      success: true,
+      confirmationToken: 'otp-confirmation-token',
     });
   });
 
@@ -69,7 +80,9 @@ describe('ReAuthModal', () => {
     expect(mockVerifyPassword).not.toHaveBeenCalled();
   });
 
-  it('blocks OAuth account deletion instead of accepting typed email as proof', async () => {
+  it('uses email OTP for OAuth account deletion instead of accepting typed email as proof', async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
     mockUserState.value = {
       id: 'user-123',
       email: 'user@example.com',
@@ -80,7 +93,7 @@ describe('ReAuthModal', () => {
     render(
       <ReAuthModal
         isOpen
-        onSuccess={vi.fn()}
+        onSuccess={onSuccess}
         onCancel={vi.fn()}
         actionDescription="begin your departure"
         sensitiveAction="account_deletion"
@@ -89,8 +102,24 @@ describe('ReAuthModal', () => {
 
     expect(screen.queryByLabelText('Your email')).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Enter your account email')).not.toBeInTheDocument();
-    expect(screen.getByText(/needs a stronger/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    expect(screen.getByText(/one-time code/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Verification code')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Send code' }));
+
+    await waitFor(() => {
+      expect(mockStartAccountDeletionOtp).toHaveBeenCalledOnce();
+    });
+
+    await user.type(screen.getByLabelText('Verification code'), '123456');
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => {
+      expect(mockConfirmAccountDeletionOtp).toHaveBeenCalledWith('123456');
+    });
+
+    expect(onSuccess).toHaveBeenCalledWith('otp-confirmation-token');
     expect(mockConfirmAccountDeletion).not.toHaveBeenCalled();
+    expect(mockVerifyPassword).not.toHaveBeenCalled();
   });
 });

@@ -37,6 +37,12 @@ export interface MockAuthContextValue {
     confirmationToken?: string;
     error?: string;
   }>;
+  startAccountDeletionOtp: () => Promise<{ success: boolean; error?: string }>;
+  confirmAccountDeletionOtp: (otp: string) => Promise<{
+    success: boolean;
+    confirmationToken?: string;
+    error?: string;
+  }>;
   markReauth: () => void;
   lastReauthAt: number | null;
   isRecentlyReauthed: () => boolean;
@@ -63,6 +69,11 @@ export const defaultMockAuthContext: MockAuthContextValue = {
   daysUntilRelease: null,
   verifyPassword: vi.fn().mockResolvedValue({ success: true }),
   confirmAccountDeletion: vi.fn().mockResolvedValue({
+    success: true,
+    confirmationToken: 'mock-confirmation-token',
+  }),
+  startAccountDeletionOtp: vi.fn().mockResolvedValue({ success: true }),
+  confirmAccountDeletionOtp: vi.fn().mockResolvedValue({
     success: true,
     confirmationToken: 'mock-confirmation-token',
   }),

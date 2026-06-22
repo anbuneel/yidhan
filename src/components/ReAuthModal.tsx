@@ -15,8 +15,8 @@ interface ReAuthModalProps {
  * Re-authentication modal for step-up auth before sensitive actions.
  *
  * For email/password users: prompts for current password.
- * OAuth users are blocked for account deletion until a real provider or OTP
- * challenge mints the same server-side confirmation token.
+ * For OAuth users requesting account deletion: sends and verifies an email OTP
+ * before minting the same server-side confirmation token.
  *
  * Uses zen-inspired messaging to match Yidhan's aesthetic.
  */
@@ -27,8 +27,15 @@ export function ReAuthModal({
   actionDescription = 'continue',
   sensitiveAction,
 }: ReAuthModalProps) {
-  const { user, verifyPassword, confirmAccountDeletion } = useAuth();
+  const {
+    user,
+    verifyPassword,
+    confirmAccountDeletion,
+    startAccountDeletionOtp,
+    confirmAccountDeletionOtp,
+  } = useAuth();
   const [input, setInput] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const wasOpenRef = useRef(isOpen);
@@ -42,12 +49,13 @@ export function ReAuthModal({
     user?.identities?.some((identity) => identity.provider !== 'email');
   const providerLabel = provider === 'google' ? 'Google' : provider === 'github' ? 'GitHub' : 'your sign-in provider';
   const isAccountDeletion = sensitiveAction === 'account_deletion';
-  const isOAuthBlocked = isOAuthUser;
+  const usesEmailOtp = isAccountDeletion && isOAuthUser;
 
   if (isOpen !== wasOpenRef.current) {
     wasOpenRef.current = isOpen;
     if (isOpen) {
       setInput('');
+      setOtpSent(false);
       setError(null);
       setIsLoading(false);
     }
@@ -77,13 +85,8 @@ export function ReAuthModal({
     e.preventDefault();
     setError(null);
 
-    if (isOAuthBlocked) {
-      setError('This verification method is not available for your sign-in provider yet.');
-      return;
-    }
-
     if (!input.trim()) {
-      setError('Please enter your password');
+      setError(usesEmailOtp ? 'Please enter the verification code' : 'Please enter your password');
       return;
     }
 
@@ -91,7 +94,9 @@ export function ReAuthModal({
 
     try {
       if (isAccountDeletion) {
-        const result = await confirmAccountDeletion(input);
+        const result = usesEmailOtp
+          ? await confirmAccountDeletionOtp(input.trim())
+          : await confirmAccountDeletion(input);
         if (result.success && result.confirmationToken) {
           onSuccess(result.confirmationToken);
         } else {
@@ -104,6 +109,24 @@ export function ReAuthModal({
         } else {
           setError("That doesn't seem right. Try again?");
         }
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendOtp = async () => {
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const result = await startAccountDeletionOtp();
+      if (result.success) {
+        setOtpSent(true);
+        setInput('');
+        setTimeout(() => inputRef.current?.focus(), 100);
+      } else {
+        setError(result.error ?? 'Could not send verification code');
       }
     } finally {
       setIsLoading(false);
@@ -188,7 +211,7 @@ export function ReAuthModal({
             Before you {actionDescription}, please confirm it's you.
           </p>
 
-          {isOAuthBlocked && (
+          {usesEmailOtp && (
             <p
               className="text-sm mb-4"
               style={{
@@ -197,14 +220,14 @@ export function ReAuthModal({
                 lineHeight: 1.6,
               }}
             >
-              You signed in with {providerLabel}. This action needs a stronger
-              verification step than typing your email, so it is unavailable for
-              this sign-in method until that challenge is enabled.
+              You signed in with {providerLabel}. We&apos;ll send a one-time code to
+              {user?.email ? ` ${user.email}` : ' your account email'} before beginning
+              departure.
             </p>
           )}
 
           {/* Input */}
-          {!isOAuthBlocked && (
+          {(!usesEmailOtp || otpSent) && (
           <div className="mb-4">
             <label
               htmlFor="reauth-input"
@@ -214,16 +237,16 @@ export function ReAuthModal({
                 color: 'var(--color-text-secondary)',
               }}
             >
-              Your password
+              {usesEmailOtp ? 'Verification code' : 'Your password'}
             </label>
             <input
               id="reauth-input"
               ref={inputRef}
-              type="password"
+              type={usesEmailOtp ? 'text' : 'password'}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Enter your password"
-              autoComplete="current-password"
+              placeholder={usesEmailOtp ? 'Enter the code from your email' : 'Enter your password'}
+              autoComplete={usesEmailOtp ? 'one-time-code' : 'current-password'}
               className="
                 w-full px-4 py-3
                 rounded-lg
@@ -285,8 +308,9 @@ export function ReAuthModal({
               Cancel
             </button>
             <button
-              type="submit"
-              disabled={isLoading || isOAuthBlocked}
+              type={usesEmailOtp && !otpSent ? 'button' : 'submit'}
+              onClick={usesEmailOtp && !otpSent ? handleSendOtp : undefined}
+              disabled={isLoading}
               className="
                 flex-1 py-3
                 rounded-lg
@@ -308,7 +332,7 @@ export function ReAuthModal({
                 e.currentTarget.style.background = 'var(--color-cta-bg)';
               }}
             >
-              {isLoading ? 'Verifying...' : 'Confirm'}
+              {isLoading ? 'Verifying...' : usesEmailOtp && !otpSent ? 'Send code' : 'Confirm'}
             </button>
           </div>
         </form>

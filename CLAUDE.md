@@ -300,6 +300,7 @@ content...
 - User's full name is stored in Supabase `user_metadata.full_name`
 - Password recovery detected via Supabase `PASSWORD_RECOVERY` auth event
 - Google/GitHub OAuth use Supabase's `signInWithOAuth` with redirect back to app origin
+- Account deletion re-auth for Google/GitHub accounts uses a server-verified email OTP before minting the deletion confirmation token; typed-email confirmation is not valid proof.
 - OAuth-first layout: OAuth buttons appear FIRST, then "or continue with email" divider, then email form
 - Production OAuth requires Supabase Site URL and Redirect URLs to match deployment domain
 - Current production build sizing (2026-06-21): main bundle 778.61KB (240.48KB gzip), Editor lazy chunk 443.26KB (133.96KB gzip), views/modals in separate chunks. Treat the main-bundle regression as a performance follow-up, not a launch security blocker.
@@ -369,7 +370,7 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Share as Letter:** E2EE-compatible sharing via capability links. Per-share random AES-256-GCM key in URL fragment (`#k=<base64url>`). Server stores only ciphertext via `fetch_shared_note` RPC. Max 30-day TTL, soft-delete revocation. URL format: `/s/<token>/<slug>#k=<key>`
 - **Database enforcement:** Public launch hardening requires server note rows to contain encrypted payload metadata and empty plaintext `title`/`content` columns. The launch migration intentionally fails if existing rows still violate that invariant.
 - **Legacy repair status:** Pre-launch plaintext rows were repaired or removed before hardening. If preflight ever reports unsafe rows again, treat that as a data incident; the launch app should fail closed rather than expose a repair UI.
-- **Account offboarding:** Self-serve "Letting Go" is disabled for public launch. The backend/service-role deletion workflow is implemented behind the disabled flag; do not promise or re-enable account deletion until production verification and a throwaway-account deletion drill pass.
+- **Account offboarding:** Self-serve "Letting Go" is disabled for public launch. The backend/service-role deletion workflow is implemented behind the disabled flag; email/password users verify by password and Google/GitHub users verify by server-checked email OTP before a deletion request can be created. Do not promise or re-enable account deletion until production verification and a throwaway-account deletion drill pass.
 
 ### Password Policy
 - Account passwords: minimum 8 characters (enforced in Auth.tsx and SettingsModal.tsx). E2EE passphrases: minimum 12 characters plus strength policy (enforced in PassphraseSetup.tsx and EncryptionContext.tsx).

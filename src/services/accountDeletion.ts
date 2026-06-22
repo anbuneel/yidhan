@@ -7,8 +7,9 @@ type AccountDeletionServiceResult = {
 };
 
 type ConfirmationResponse = {
-  confirmationToken: string;
-  expiresAt: string;
+  confirmationToken?: string;
+  expiresAt?: string;
+  otpSent?: boolean;
 };
 
 type ConfirmationResult = {
@@ -87,6 +88,7 @@ export async function confirmAccountDeletionWithPassword(
     {
       body: {
         action: 'account_deletion',
+        method: 'password',
         password,
       },
     }
@@ -105,6 +107,65 @@ export async function confirmAccountDeletionWithPassword(
       confirmationToken: null,
       expiresAt: null,
       error: new Error('Could not confirm account deletion'),
+    };
+  }
+
+  return {
+    confirmationToken: data.confirmationToken,
+    expiresAt: data.expiresAt,
+    error: null,
+  };
+}
+
+export async function startAccountDeletionEmailOtp(): Promise<{ success: boolean; error: Error | null }> {
+  const { data, error } = await supabase.functions.invoke<ConfirmationResponse>(
+    'confirm-sensitive-action',
+    {
+      body: {
+        action: 'account_deletion',
+        method: 'email_otp_start',
+      },
+    }
+  );
+
+  if (error) {
+    return { success: false, error: toError(error, 'Could not send verification code') };
+  }
+
+  if (!data?.otpSent) {
+    return { success: false, error: new Error('Could not send verification code') };
+  }
+
+  return { success: true, error: null };
+}
+
+export async function confirmAccountDeletionWithEmailOtp(
+  otp: string
+): Promise<ConfirmationResult> {
+  const { data, error } = await supabase.functions.invoke<ConfirmationResponse>(
+    'confirm-sensitive-action',
+    {
+      body: {
+        action: 'account_deletion',
+        method: 'email_otp_verify',
+        otp,
+      },
+    }
+  );
+
+  if (error) {
+    return {
+      confirmationToken: null,
+      expiresAt: null,
+      error: toError(error, 'Could not verify code'),
+    };
+  }
+
+  if (!data?.confirmationToken || !data.expiresAt) {
+    return {
+      confirmationToken: null,
+      expiresAt: null,
+      error: new Error('Could not verify code'),
     };
   }
 

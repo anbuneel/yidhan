@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   cancelAccountDeletion,
+  confirmAccountDeletionWithEmailOtp,
   confirmAccountDeletionWithPassword,
   fetchAccountDeletionRequest,
   isActiveAccountDeletionRequest,
   requestAccountDeletion,
+  startAccountDeletionEmailOtp,
 } from './accountDeletion';
 import type { DbAccountDeletionRequest } from '../types/database';
 
@@ -93,11 +95,54 @@ describe('accountDeletion service', () => {
     expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('confirm-sensitive-action', {
       body: {
         action: 'account_deletion',
+        method: 'password',
         password: 'password',
       },
     });
     expect(result).toEqual({
       confirmationToken: 'confirmation-token',
+      expiresAt: '2026-06-21T00:10:00.000Z',
+      error: null,
+    });
+  });
+
+  it('starts account deletion email OTP through the Edge Function', async () => {
+    mockSupabase.functions.invoke.mockResolvedValue({
+      data: { otpSent: true },
+      error: null,
+    });
+
+    const result = await startAccountDeletionEmailOtp();
+
+    expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('confirm-sensitive-action', {
+      body: {
+        action: 'account_deletion',
+        method: 'email_otp_start',
+      },
+    });
+    expect(result).toEqual({ success: true, error: null });
+  });
+
+  it('verifies account deletion email OTP through the Edge Function', async () => {
+    mockSupabase.functions.invoke.mockResolvedValue({
+      data: {
+        confirmationToken: 'otp-confirmation-token',
+        expiresAt: '2026-06-21T00:10:00.000Z',
+      },
+      error: null,
+    });
+
+    const result = await confirmAccountDeletionWithEmailOtp('123456');
+
+    expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('confirm-sensitive-action', {
+      body: {
+        action: 'account_deletion',
+        method: 'email_otp_verify',
+        otp: '123456',
+      },
+    });
+    expect(result).toEqual({
+      confirmationToken: 'otp-confirmation-token',
       expiresAt: '2026-06-21T00:10:00.000Z',
       error: null,
     });

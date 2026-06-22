@@ -5,10 +5,12 @@ import { hydrateFromServer, clearOfflineData, needsHydration } from '../services
 import { clearSyncState } from '../services/syncEngine';
 import {
   cancelAccountDeletion,
+  confirmAccountDeletionWithEmailOtp,
   confirmAccountDeletionWithPassword,
   fetchAccountDeletionRequest,
   isActiveAccountDeletionRequest,
   requestAccountDeletion,
+  startAccountDeletionEmailOtp,
 } from '../services/accountDeletion';
 import type { DbAccountDeletionRequest } from '../types/database';
 
@@ -38,6 +40,12 @@ interface AuthContextType {
   // Re-authentication for sensitive actions
   verifyPassword: (password: string) => Promise<{ success: boolean; error?: string }>;
   confirmAccountDeletion: (password: string) => Promise<{
+    success: boolean;
+    confirmationToken?: string;
+    error?: string;
+  }>;
+  startAccountDeletionOtp: () => Promise<{ success: boolean; error?: string }>;
+  confirmAccountDeletionOtp: (otp: string) => Promise<{
     success: boolean;
     confirmationToken?: string;
     error?: string;
@@ -325,6 +333,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const startAccountDeletionOtp = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    const result = await startAccountDeletionEmailOtp();
+
+    if (result.error || !result.success) {
+      return {
+        success: false,
+        error: result.error?.message ?? 'Could not send verification code',
+      };
+    }
+
+    return { success: true };
+  }, []);
+
+  const confirmAccountDeletionOtp = useCallback(async (
+    otp: string
+  ): Promise<{ success: boolean; confirmationToken?: string; error?: string }> => {
+    const result = await confirmAccountDeletionWithEmailOtp(otp);
+
+    if (result.error || !result.confirmationToken) {
+      return {
+        success: false,
+        error: result.error?.message ?? 'Could not verify code',
+      };
+    }
+
+    setLastReauthAt(Date.now());
+    return {
+      success: true,
+      confirmationToken: result.confirmationToken,
+    };
+  }, []);
+
   // Mark re-auth timestamp (for OAuth users who verify via email confirmation)
   const markReauth = useCallback(() => {
     setLastReauthAt(Date.now());
@@ -392,6 +432,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     hydrateOfflineDb,
     verifyPassword,
     confirmAccountDeletion,
+    startAccountDeletionOtp,
+    confirmAccountDeletionOtp,
     markReauth,
     lastReauthAt,
     isRecentlyReauthed,
@@ -412,6 +454,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     hydrateOfflineDb,
     verifyPassword,
     confirmAccountDeletion,
+    startAccountDeletionOtp,
+    confirmAccountDeletionOtp,
     markReauth,
     lastReauthAt,
     isRecentlyReauthed,

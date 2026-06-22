@@ -12,7 +12,7 @@ export const changelog: ChangelogEntry[] = [
     date: '2026-06-21',
     changes: [
       { type: 'improvement', text: 'Server-owned account deletion workflow added behind the disabled offboarding flag, with request rows, confirmation tokens, service-role worker, audit trail, schedule template, and verification SQL' },
-      { type: 'fix', text: 'Account deletion re-auth no longer accepts typed email as OAuth proof; OAuth deletion remains blocked until a real challenge flow is implemented and verified' },
+      { type: 'fix', text: 'Account deletion re-auth no longer accepts typed email as OAuth proof; Google/GitHub accounts use a server-verified email code before the deletion token is minted' },
     ],
   },
   {

@@ -235,6 +235,8 @@ CREATE TABLE account_deletion_audit (
 Account deletion access model:
 - `authenticated` users may only `SELECT` their own deletion request row and may request/cancel through SECURITY DEFINER RPCs.
 - `request_account_deletion(confirmation_token)` consumes a short-lived server-minted confirmation token before creating the 14-day release request.
+- Email/password users mint confirmation tokens by verifying their password in `confirm-sensitive-action`.
+- Google/GitHub users mint confirmation tokens by starting and verifying an email OTP in `confirm-sensitive-action`; typed-email confirmation is not accepted.
 - `service_role`-only worker RPCs claim due rows, delete app data, mark failures/skips, and write audit records.
 - `ACCOUNT_OFFBOARDING_ENABLED` remains `false` until production verification and a throwaway-account deletion drill pass.
 

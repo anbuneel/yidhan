@@ -445,7 +445,7 @@ Do not update public-facing copy to promise deletion until production verificati
 5. Add scheduler setup script with placeholders and secret instructions.
 6. Add `supabase/account_deletion_verification.sql`.
 7. Rewire `AuthContext.tsx` to server request state.
-8. Replace the fake OAuth email confirmation path in `ReAuthModal.tsx`; leave OAuth deletion disabled if real proof is not implemented and tested.
+8. Replace the fake OAuth email confirmation path in `ReAuthModal.tsx`; Google/GitHub users must complete the server-verified email OTP flow before a deletion confirmation token is minted.
 9. Add/update TypeScript DB types.
 10. Add tests per the test plan below.
 11. Run `npm run check`.
@@ -489,7 +489,7 @@ Unit-test worker logic with injected/mocked Supabase clients:
 - Email/password confirmation mints a short-lived one-time token for the same user only.
 - Consumed/expired confirmation tokens cannot be reused.
 - OAuth typed-email fallback is removed.
-- OAuth deletion is either proven through a real challenge flow or blocked with clear UI/copy while feature remains disabled.
+- OAuth deletion uses the server-verified email OTP flow before minting a deletion confirmation token.
 
 ### Client
 
@@ -540,7 +540,7 @@ Unit-test worker logic with injected/mocked Supabase clients:
 - [ ] Schedule setup script exists with placeholders and no committed secrets.
 - [ ] Verification script exists and ends with `account_deletion_verification_passed`.
 - [ ] Client reads server request state and no longer derives deletion state from `user_metadata`.
-- [ ] Fake OAuth email confirmation is removed or blocked for deletion.
+- [ ] Fake OAuth email confirmation is removed; Google/GitHub deletion uses server-verified email OTP.
 - [ ] Tests cover RPC assumptions, worker behavior, re-auth confirmation, client state, and staging/manual verification steps.
 - [ ] `npm run check` passes.
 - [ ] `ACCOUNT_OFFBOARDING_ENABLED` remains `false`.
