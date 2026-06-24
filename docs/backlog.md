@@ -57,7 +57,8 @@ Key open items: proof rail links, below-the-fold second act, 6 deferred signatur
 
 | Item | Priority | Source |
 |------|----------|--------|
-| Restore self-serve offboarding in a tiny follow-up only after the server-owned account deletion workflow passes production verification and a throwaway-account deletion drill. The implementation PR must keep `ACCOUNT_OFFBOARDING_ENABLED = false`, keep deletion copy silent, and leave re-enablement as a separate verified step. | P1 | [Account deletion workflow plan](plans/account-deletion-workflow-plan.md) |
+| Resolve the Supabase built-in email sender limit for OAuth account deletion verification. Google/GitHub users rely on email OTP verification, and Supabase's built-in sender is capped at 2 auth emails/hour, so production reliability needs custom SMTP or another production-grade verification path. | P1 | Account deletion OAuth test |
+| Soften the account deletion completion UX. Instead of an abrupt small dialog saying "Your account is fading quietly. See you if you return." followed by immediate logout, show the final confirmation before logout and transition through the completion steps slowly over a few seconds. | P1 | Account deletion UX test |
 | Treat applied Supabase migrations as append-only. Future security/RLS tightening should use forward migrations instead of rewriting historical migration SQL, so restore paths and audit history stay truthful. | P2 | Claude review on PR #193 |
 
 ---

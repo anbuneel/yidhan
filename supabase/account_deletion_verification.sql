@@ -183,6 +183,8 @@ END $$;
 DO $$
 DECLARE
   scheduled_job_count integer;
+  scheduled_command text;
+  missing_vault_secrets text[];
 BEGIN
   IF to_regclass('cron.job') IS NULL THEN
     RAISE NOTICE 'cron.job not available in this database session. Verify external scheduler separately if pg_cron is not used.';
@@ -195,6 +197,45 @@ BEGIN
 
   IF scheduled_job_count = 0 THEN
     RAISE NOTICE 'No pg_cron job named process-account-deletions was found. Configure pg_cron or verify the external scheduler before re-enabling offboarding.';
+    RETURN;
+  END IF;
+
+  IF scheduled_job_count > 1 THEN
+    RAISE EXCEPTION 'Account deletion verification failed: multiple pg_cron jobs named process-account-deletions were found.';
+  END IF;
+
+  SELECT command INTO scheduled_command
+  FROM cron.job
+  WHERE jobname = 'process-account-deletions'
+  LIMIT 1;
+
+  IF position('Authorization' IN scheduled_command) = 0
+    OR position('account_deletion_function_bearer' IN scheduled_command) = 0
+    OR position('x-account-deletion-secret' IN scheduled_command) = 0
+    OR position('account_deletion_worker_secret' IN scheduled_command) = 0 THEN
+    RAISE EXCEPTION 'Account deletion verification failed: process-account-deletions cron job is missing required authorization headers.';
+  END IF;
+
+  IF to_regclass('vault.secrets') IS NULL THEN
+    RAISE EXCEPTION 'Account deletion verification failed: Vault secrets table is unavailable for scheduled worker secrets.';
+  END IF;
+
+  WITH expected(name) AS (
+    VALUES
+      ('account_deletion_function_url'),
+      ('account_deletion_function_bearer'),
+      ('account_deletion_worker_secret')
+  )
+  SELECT array_agg(name ORDER BY name) INTO missing_vault_secrets
+  FROM expected
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM vault.secrets
+    WHERE vault.secrets.name = expected.name
+  );
+
+  IF missing_vault_secrets IS NOT NULL THEN
+    RAISE EXCEPTION 'Account deletion verification failed: missing Vault scheduler secrets %.', missing_vault_secrets;
   END IF;
 END $$;
 

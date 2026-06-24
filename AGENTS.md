@@ -248,7 +248,7 @@ Avoid: creating new inline `style={{}}` objects for static values that could be 
 ### Soft-delete, sharing, and demo mode
 - Soft-delete (Faded Notes) functions are in `src/services/notes.ts`
 - Share as Letter (E2EE) functions are in `src/services/notes.ts` — uses capability-link model with per-share keys
-- Account offboarding ("Letting Go") is hidden for public launch via `ACCOUNT_OFFBOARDING_ENABLED = false`. The server-owned workflow exists in repo, but re-enablement stays blocked until production verification and a throwaway-account deletion drill pass.
+- Account offboarding ("Letting Go") is enabled via `ACCOUNT_OFFBOARDING_ENABLED = true` after production verification, a scheduler smoke test, and a throwaway-account deletion drill passed. The server-owned workflow creates a 14-day deletion request, supports cancellation during the grace period, and deletes app data plus the Supabase Auth user through the service-role worker.
 - Legacy plaintext repair tooling was removed after the pre-launch repair and `launch_security_hardening.sql` verification. Do not reintroduce plaintext-note compatibility for launch builds.
 - Demo/Practice Space (`/demo`): `src/services/demoStorage.ts`, `src/hooks/useDemoState.ts`, `src/pages/DemoPage.tsx`
 - Landing hero drafts save to `DEMO_CONTENT_STORAGE_KEY` (`yidhan-demo-content`) before signup; `App.tsx` migrates them into an encrypted "My first note" after auth/unlock
@@ -370,7 +370,7 @@ See `docs/plans/capacitor-implementation-plan.md` for detailed setup guide.
 - **Share as Letter:** E2EE-compatible sharing via capability links. Per-share random AES-256-GCM key in URL fragment (`#k=<base64url>`). Server stores only ciphertext via `fetch_shared_note` RPC. Max 30-day TTL, soft-delete revocation. URL format: `/s/<token>/<slug>#k=<key>`
 - **Database enforcement:** Public launch hardening requires server note rows to contain encrypted payload metadata and empty plaintext `title`/`content` columns. The launch migration intentionally fails if existing rows still violate that invariant.
 - **Legacy repair status:** Pre-launch plaintext rows were repaired or removed before hardening. If preflight ever reports unsafe rows again, treat that as a data incident; the launch app should fail closed rather than expose a repair UI.
-- **Account offboarding:** Self-serve "Letting Go" is disabled for public launch. The backend/service-role deletion workflow is implemented behind the disabled flag; email/password users verify by password and Google/GitHub users verify by server-checked email OTP before a deletion request can be created. Do not promise or re-enable account deletion until production verification and a throwaway-account deletion drill pass.
+- **Account offboarding:** Self-serve "Letting Go" is enabled after production verification, a scheduler smoke test, and a throwaway-account deletion drill passed. Email/password users verify by password and Google/GitHub users verify by server-checked email OTP before a deletion request can be created. The scheduled service-role worker processes due requests, re-checks cancellation state, deletes app data, deletes the Supabase Auth user, and writes the audit trail.
 
 ### Password Policy
 - Account passwords: minimum 8 characters (enforced in Auth.tsx and SettingsModal.tsx). E2EE passphrases: minimum 12 characters plus strength policy (enforced in PassphraseSetup.tsx and EncryptionContext.tsx).

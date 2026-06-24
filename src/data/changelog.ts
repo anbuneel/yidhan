@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.19.4',
+    date: '2026-06-23',
+    changes: [
+      { type: 'feature', text: 'Self-serve Letting Go account deletion is enabled after live production verification, scheduler smoke testing, and a throwaway OAuth account deletion drill' },
+      { type: 'improvement', text: 'Account deletion scheduler setup now documents the required Edge Function bearer header, Vault-backed secrets, and pg_net smoke test' },
+    ],
+  },
+  {
     version: '3.19.3',
     date: '2026-06-21',
     changes: [

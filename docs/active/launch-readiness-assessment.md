@@ -34,7 +34,7 @@ Security hardening is now complete for the public-launch scope. PR #192 closed t
 
 The remaining launch decisions are not security-hardening blockers:
 
-1. **Re-auth flag:** `REAUTH_FOR_SENSITIVE_ACTIONS` remains `false`. With self-serve offboarding disabled, this mainly affects Full Backup export. Decide explicitly whether to keep that launch tradeoff or flip it before a broader public push.
+1. **Re-auth flag:** `REAUTH_FOR_SENSITIVE_ACTIONS` remains `false`. Account deletion now has its own server-verified password/email-OTP confirmation path, so this mainly affects Full Backup export. Decide explicitly whether to keep that launch tradeoff or flip it before a broader public push.
 2. **Bundle regression:** Local build on 2026-06-21 reports `main` at 778.61 KB / 240.48 KB gzip and `Editor` at 443.26 KB / 133.96 KB gzip. This is worth a code-split pass soon, but it does not reopen the E2EE/security launch gate.
 3. **Future hardening:** A seeded SQL regression harness, typed security errors, duplicate cleanup-function consolidation, and external Semgrep/Gitleaks-style scans remain useful follow-ups.
 
@@ -47,7 +47,7 @@ The remaining launch decisions are not security-hardening blockers:
 | Database encrypted-only enforcement | Complete | `supabase/migrations/launch_security_hardening.sql` enforces encrypted-only server rows and empty plaintext title/content fields. |
 | Core RLS and share RPC hardening | Complete | Migration resets owner-scoped RLS policies and restricts public sharing to ciphertext-only `fetch_shared_note` RPC access. |
 | Live Supabase verification | Complete by recorded evidence | Review artifact records production verification output: `launch_security_verification_passed`. |
-| Offboarding trust gap | Closed for launch | Self-serve account deletion stays hidden; the server-owned workflow is being implemented behind the disabled flag and remains gated on production verification plus a throwaway-account deletion drill. |
+| Offboarding trust gap | Closed and enabled | Server-owned account deletion is enabled after production verification, scheduler smoke testing, and a throwaway-account deletion drill. |
 
 ---
 
@@ -82,7 +82,9 @@ Category 1 is the most dangerous for launch: users forgive missing features but 
 
 **Fix:** Hide the offboarding link from SettingsModal for launch. Ship proper server-side deletion (edge function + cron) as a dedicated trust workstream later.
 
-**2026-06-20 update:** Addressed on `codex/security-launch-hardening` with `ACCOUNT_OFFBOARDING_ENABLED = false`; the Settings entry point is hidden and public support/privacy copy no longer promises self-serve deletion.
+**2026-06-20 update:** Addressed on `codex/security-launch-hardening` with `ACCOUNT_OFFBOARDING_ENABLED = false`; the Settings entry point was hidden and public support/privacy copy no longer promised self-serve deletion.
+
+**2026-06-23 update:** Superseded by the server-owned account deletion workflow: production verification, scheduler smoke testing, and a throwaway OAuth account deletion drill passed, so `ACCOUNT_OFFBOARDING_ENABLED = true`.
 
 **Effort:** Small (hide feature) / Large (build real backend)
 
@@ -162,9 +164,9 @@ Category 1 is the most dangerous for launch: users forgive missing features but 
 
 **Evidence:** [`ReAuthModal.tsx:78`](../../src/components/ReAuthModal.tsx#L78)
 
-**Why defer:** With offboarding disabled (item 1), the main action gated by re-auth is full backup export. Low user count at launch = low risk. Build proper `signInWithOAuth({ prompt: 'consent' })` step-up auth as part of the offboarding trust workstream.
+**Why defer:** Account deletion now has its own server-verified password/email-OTP confirmation path. The main remaining action gated by `REAUTH_FOR_SENSITIVE_ACTIONS` is full backup export. Low user count at launch = low risk.
 
-**Update (2026-05-25, PR #187):** The ReAuthModal is now gated behind `REAUTH_FOR_SENSITIVE_ACTIONS` in [`src/config/featureFlags.ts`](../../src/config/featureFlags.ts), defaulted to `false` to remove friction during solo pre-launch use. Before any public launch, flip the flag to `true` so Full Backup and "Let Go" require re-auth again.
+**Update (2026-06-23):** Account deletion no longer depends on this global flag; "Letting Go" always uses the account-deletion confirmation path before creating the server-owned deletion request. Keep the global flag decision scoped to Full Backup unless more sensitive actions are added.
 
 ### 8. Cross-device tag sync (DEFERRED)
 
@@ -224,7 +226,7 @@ Category 1 is the most dangerous for launch: users forgive missing features but 
 
 | Item | Effort | Status | Notes |
 |------|--------|--------|-------|
-| 1. Disable "Letting Go" | 30 min | **Done on branch** | Hidden behind `ACCOUNT_OFFBOARDING_ENABLED = false`; backend deletion workstream still required before re-enabling |
+| 1. Disable "Letting Go" | 30 min | **Superseded** | Re-enabled after the server-owned workflow, production verification, scheduler smoke test, and throwaway-account deletion drill passed |
 | 2. Share key sessionStorage | 1 hour | **Done** | New `shareRoute.ts` module, all reload paths covered |
 | 3. Fix backup copy | 15 min | **Partial** | Removed "(includes share links)" — label now just "Full Backup" |
 | 4. Social metadata | 15 min | **Done** | OG URL updated to yidhan.vercel.app |
@@ -234,7 +236,7 @@ Category 1 is the most dangerous for launch: users forgive missing features but 
 
 ### Remaining before launch
 - **No launch-critical security blockers remain** in the repo docs after PR #192 and recorded live SQL verification.
-- **Re-auth flag:** Decide explicitly whether to keep `REAUTH_FOR_SENSITIVE_ACTIONS = false` for launch. With offboarding disabled, the practical exposure is Full Backup export, not account deletion.
+- **Re-auth flag:** Decide explicitly whether to keep `REAUTH_FOR_SENSITIVE_ACTIONS = false` for launch. Account deletion has its own server-verified confirmation path, so the practical exposure is Full Backup export.
 - **Bundle follow-up:** Main bundle is now 778.61 KB / 240.48 KB gzip. Schedule a performance/code-split pass, but treat it as a non-blocking launch follow-up.
 
 ---

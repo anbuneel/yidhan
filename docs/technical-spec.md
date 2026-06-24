@@ -184,7 +184,7 @@ CREATE TABLE note_shares (
   )
 );
 
--- Account deletion requests (server-owned; feature flag remains disabled)
+-- Account deletion requests (server-owned; offboarding feature enabled after live verification)
 CREATE TABLE account_deletion_requests (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   requested_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -238,7 +238,7 @@ Account deletion access model:
 - Email/password users mint confirmation tokens by verifying their password in `confirm-sensitive-action`.
 - Google/GitHub users mint confirmation tokens by starting and verifying an email OTP in `confirm-sensitive-action`; typed-email confirmation is not accepted.
 - `service_role`-only worker RPCs claim due rows, delete app data, mark failures/skips, and write audit records.
-- `ACCOUNT_OFFBOARDING_ENABLED` remains `false` until production verification and a throwaway-account deletion drill pass.
+- `ACCOUNT_OFFBOARDING_ENABLED` is `true` after production verification, a scheduler smoke test, and a throwaway-account deletion drill pass.
 
 ### Entity Relationship Diagram
 
