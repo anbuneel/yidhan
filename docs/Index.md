@@ -51,6 +51,8 @@ Design analysis and feature exploration (AI-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [launch-readiness-review-claude.md](analysis/launch-readiness-review-claude.md) | **NEW** Pre-launch comprehensive review: 4 blockers (offboarding job, passphrase dead-end, SMTP, copy), 12 open findings | 2026-07-06 |
+| [supabase-free-tier-vs-pro-claude.md](analysis/supabase-free-tier-vs-pro-claude.md) | **NEW** Supabase free vs Pro cost analysis: $0 hardening path (SMTP, backups, keep-alive), when to upgrade | 2026-07-06 |
 | [react-doctor-100-fixes-codex.md](analysis/react-doctor-100-fixes-codex.md) | React Doctor 100 cleanup summary: semantic fixes, small extractions, validation, and remaining lint gap | 2026-06-01 |
 | [design-audit-impeccable-skill-claude.md](analysis/design-audit-impeccable-skill-claude.md) | **NEW** Impeccable audit: a11y, performance, theming, responsive — 20 findings, 0 critical | 2026-03-28 |
 | [design-audit-redesign-skill-claude.md](analysis/design-audit-redesign-skill-claude.md) | **NEW** Redesign skill audit: anti-generic checklist, 8/10 overall score | 2026-03-28 |
@@ -299,6 +301,13 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 ## Chronological Index
 
 All analysis, review, and reference docs ordered by creation date (newest first).
+
+### 2026-07 (July)
+
+| Date | Document | Category |
+|------|----------|----------|
+| 07-06 | [launch-readiness-review-claude.md](analysis/launch-readiness-review-claude.md) | Launch review |
+| 07-06 | [supabase-free-tier-vs-pro-claude.md](analysis/supabase-free-tier-vs-pro-claude.md) | Infrastructure |
 
 ### 2026-06 (June)
 
