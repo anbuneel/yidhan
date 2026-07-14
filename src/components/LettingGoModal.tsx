@@ -89,20 +89,20 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
 
   // Initiate account departure - requires re-auth
   const handleLetGo = () => {
-    if (REAUTH_FOR_SENSITIVE_ACTIONS && !isRecentlyReauthed()) {
-      // Require re-auth first
-      setPendingAction('letGo');
-      setShowReAuthModal(true);
-    } else {
-      performLetGo();
-    }
+    setPendingAction('letGo');
+    setShowReAuthModal(true);
   };
 
   // Actually perform the account departure
-  const performLetGo = async () => {
+  const performLetGo = async (confirmationToken?: string) => {
+    if (!confirmationToken) {
+      toast.error('Please verify before beginning departure.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const { error } = await initiateOffboarding();
+      const { error } = await initiateOffboarding(confirmationToken);
       if (error) {
         toast.error('Something went wrong. Please try again.');
         return;
@@ -127,14 +127,14 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
   };
 
   // Handle successful re-authentication
-  const handleReAuthSuccess = () => {
+  const handleReAuthSuccess = (confirmationToken?: string) => {
     setShowReAuthModal(false);
 
     // Execute the pending action
     if (pendingAction === 'fullBackup') {
       performFullBackup();
     } else if (pendingAction === 'letGo') {
-      performLetGo();
+      performLetGo(confirmationToken);
     }
 
     setPendingAction(null);
@@ -168,6 +168,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
         onSuccess={handleReAuthSuccess}
         onCancel={handleReAuthCancel}
         actionDescription={getActionDescription()}
+        sensitiveAction={pendingAction === 'letGo' ? 'account_deletion' : undefined}
       />
 
       <div

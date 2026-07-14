@@ -8,6 +8,22 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.19.4',
+    date: '2026-06-23',
+    changes: [
+      { type: 'feature', text: 'Self-serve Letting Go account deletion is enabled after live production verification, scheduler smoke testing, and a throwaway OAuth account deletion drill' },
+      { type: 'improvement', text: 'Account deletion scheduler setup now documents the required Edge Function bearer header, Vault-backed secrets, and pg_net smoke test' },
+    ],
+  },
+  {
+    version: '3.19.3',
+    date: '2026-06-21',
+    changes: [
+      { type: 'improvement', text: 'Server-owned account deletion workflow added behind the disabled offboarding flag, with request rows, confirmation tokens, service-role worker, audit trail, schedule template, and verification SQL' },
+      { type: 'fix', text: 'Account deletion re-auth no longer accepts typed email as OAuth proof; Google/GitHub accounts use a server-verified email code before the deletion token is minted' },
+    ],
+  },
+  {
     version: '3.19.2',
     date: '2026-06-20',
     changes: [

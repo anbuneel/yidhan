@@ -4,17 +4,19 @@ import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface ReAuthModalProps {
   isOpen: boolean;
-  onSuccess: () => void;
+  onSuccess: (confirmationToken?: string) => void;
   onCancel: () => void;
   /** Action description shown to user (e.g., "export your data") */
   actionDescription?: string;
+  sensitiveAction?: 'account_deletion';
 }
 
 /**
  * Re-authentication modal for step-up auth before sensitive actions.
  *
  * For email/password users: prompts for current password.
- * For OAuth users: prompts to type their email to confirm.
+ * For OAuth users requesting account deletion: sends and verifies an email OTP
+ * before minting the same server-side confirmation token.
  *
  * Uses zen-inspired messaging to match Yidhan's aesthetic.
  */
@@ -23,9 +25,17 @@ export function ReAuthModal({
   onSuccess,
   onCancel,
   actionDescription = 'continue',
+  sensitiveAction,
 }: ReAuthModalProps) {
-  const { user, verifyPassword, markReauth } = useAuth();
+  const {
+    user,
+    verifyPassword,
+    confirmAccountDeletion,
+    startAccountDeletionOtp,
+    confirmAccountDeletionOtp,
+  } = useAuth();
   const [input, setInput] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const wasOpenRef = useRef(isOpen);
@@ -37,11 +47,15 @@ export function ReAuthModal({
     provider === 'google' ||
     provider === 'github' ||
     user?.identities?.some((identity) => identity.provider !== 'email');
+  const providerLabel = provider === 'google' ? 'Google' : provider === 'github' ? 'GitHub' : 'your sign-in provider';
+  const isAccountDeletion = sensitiveAction === 'account_deletion';
+  const usesEmailOtp = isAccountDeletion && isOAuthUser;
 
   if (isOpen !== wasOpenRef.current) {
     wasOpenRef.current = isOpen;
     if (isOpen) {
       setInput('');
+      setOtpSent(false);
       setError(null);
       setIsLoading(false);
     }
@@ -72,30 +86,47 @@ export function ReAuthModal({
     setError(null);
 
     if (!input.trim()) {
-      setError(isOAuthUser ? 'Please enter your email' : 'Please enter your password');
+      setError(usesEmailOtp ? 'Please enter the verification code' : 'Please enter your password');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      if (isOAuthUser) {
-        // OAuth users: verify by typing their email
-        if (input.trim().toLowerCase() !== user?.email?.toLowerCase()) {
-          setError("That doesn't match your account email");
-          return;
+      if (isAccountDeletion) {
+        const result = usesEmailOtp
+          ? await confirmAccountDeletionOtp(input.trim())
+          : await confirmAccountDeletion(input);
+        if (result.success && result.confirmationToken) {
+          onSuccess(result.confirmationToken);
+        } else {
+          setError(result.error ?? "That doesn't seem right. Try again?");
         }
-        // Track re-auth for grace window (OAuth users too)
-        markReauth();
-        onSuccess();
       } else {
-        // Email/password users: verify password
         const result = await verifyPassword(input);
         if (result.success) {
           onSuccess();
         } else {
           setError("That doesn't seem right. Try again?");
         }
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendOtp = async () => {
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const result = await startAccountDeletionOtp();
+      if (result.success) {
+        setOtpSent(true);
+        setInput('');
+        setTimeout(() => inputRef.current?.focus(), 100);
+      } else {
+        setError(result.error ?? 'Could not send verification code');
       }
     } finally {
       setIsLoading(false);
@@ -180,7 +211,23 @@ export function ReAuthModal({
             Before you {actionDescription}, please confirm it's you.
           </p>
 
+          {usesEmailOtp && (
+            <p
+              className="text-sm mb-4"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-secondary)',
+                lineHeight: 1.6,
+              }}
+            >
+              You signed in with {providerLabel}. We&apos;ll send a one-time code to
+              {user?.email ? ` ${user.email}` : ' your account email'} before beginning
+              departure.
+            </p>
+          )}
+
           {/* Input */}
+          {(!usesEmailOtp || otpSent) && (
           <div className="mb-4">
             <label
               htmlFor="reauth-input"
@@ -190,16 +237,16 @@ export function ReAuthModal({
                 color: 'var(--color-text-secondary)',
               }}
             >
-              {isOAuthUser ? 'Your email' : 'Your password'}
+              {usesEmailOtp ? 'Verification code' : 'Your password'}
             </label>
             <input
               id="reauth-input"
               ref={inputRef}
-              type={isOAuthUser ? 'email' : 'password'}
+              type={usesEmailOtp ? 'text' : 'password'}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={isOAuthUser ? 'Enter your account email' : 'Enter your password'}
-              autoComplete={isOAuthUser ? 'email' : 'current-password'}
+              placeholder={usesEmailOtp ? 'Enter the code from your email' : 'Enter your password'}
+              autoComplete={usesEmailOtp ? 'one-time-code' : 'current-password'}
               className="
                 w-full px-4 py-3
                 rounded-lg
@@ -220,6 +267,7 @@ export function ReAuthModal({
               }}
             />
           </div>
+          )}
 
           {/* Error message */}
           {error && (
@@ -228,20 +276,6 @@ export function ReAuthModal({
               style={{ color: 'var(--color-error)' }}
             >
               {error}
-            </p>
-          )}
-
-          {/* OAuth hint */}
-          {isOAuthUser && (
-            <p
-              className="text-xs text-center mb-4"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-tertiary)',
-              }}
-            >
-              You signed in with {provider === 'google' ? 'Google' : 'GitHub'}.
-              Type your email to confirm.
             </p>
           )}
 
@@ -274,7 +308,8 @@ export function ReAuthModal({
               Cancel
             </button>
             <button
-              type="submit"
+              type={usesEmailOtp && !otpSent ? 'button' : 'submit'}
+              onClick={usesEmailOtp && !otpSent ? handleSendOtp : undefined}
               disabled={isLoading}
               className="
                 flex-1 py-3
@@ -297,7 +332,7 @@ export function ReAuthModal({
                 e.currentTarget.style.background = 'var(--color-cta-bg)';
               }}
             >
-              {isLoading ? 'Verifying...' : 'Confirm'}
+              {isLoading ? 'Verifying...' : usesEmailOtp && !otpSent ? 'Send code' : 'Confirm'}
             </button>
           </div>
         </form>

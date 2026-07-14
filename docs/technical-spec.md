@@ -1,7 +1,7 @@
 # Yidhan - Technical Specification
 
-**Version:** 1.0
-**Last Updated:** 2025-12-29
+**Version:** 1.1
+**Last Updated:** 2026-06-21
 **Status:** Living Document
 **Author:** Claude (Opus 4.5)
 
@@ -183,7 +183,62 @@ CREATE TABLE note_shares (
     expires_at <= created_at + INTERVAL '30 days'
   )
 );
+
+-- Account deletion requests (server-owned; offboarding feature enabled after live verification)
+CREATE TABLE account_deletion_requests (
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  requested_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  release_at TIMESTAMPTZ NOT NULL,
+  cancelled_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'pending',
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  last_attempt_at TIMESTAMPTZ,
+  next_attempt_at TIMESTAMPTZ,
+  processing_started_at TIMESTAMPTZ,
+  processing_worker_id TEXT,
+  released_at TIMESTAMPTZ,
+  error TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  CONSTRAINT account_deletion_requests_status_check CHECK (
+    status IN ('pending', 'processing', 'cancelled', 'released', 'failed')
+  )
+);
+
+-- Short-lived server-verifiable sensitive-action confirmations
+CREATE TABLE sensitive_action_confirmations (
+  id UUID DEFAULT extensions.gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  action TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  method TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  consumed_at TIMESTAMPTZ
+);
+
+-- Append-only account deletion worker audit
+CREATE TABLE account_deletion_audit (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID,
+  user_id_hash TEXT,
+  requested_at TIMESTAMPTZ,
+  release_at TIMESTAMPTZ,
+  attempt_count INTEGER,
+  outcome TEXT NOT NULL,
+  detail TEXT,
+  worker_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
 ```
+
+Account deletion access model:
+- `authenticated` users may only `SELECT` their own deletion request row and may request/cancel through SECURITY DEFINER RPCs.
+- `request_account_deletion(confirmation_token)` consumes a short-lived server-minted confirmation token before creating the 14-day release request.
+- Email/password users mint confirmation tokens by verifying their password in `confirm-sensitive-action`.
+- Google/GitHub users mint confirmation tokens by starting and verifying an email OTP in `confirm-sensitive-action`; typed-email confirmation is not accepted.
+- `service_role`-only worker RPCs claim due rows, delete app data, mark failures/skips, and write audit records.
+- `ACCOUNT_OFFBOARDING_ENABLED` is `true` after production verification, a scheduler smoke test, and a throwaway-account deletion drill pass.
 
 ### Entity Relationship Diagram
 

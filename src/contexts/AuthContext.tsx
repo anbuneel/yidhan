@@ -3,6 +3,16 @@ import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { hydrateFromServer, clearOfflineData, needsHydration } from '../services/offlineNotes';
 import { clearSyncState } from '../services/syncEngine';
+import {
+  cancelAccountDeletion,
+  confirmAccountDeletionWithEmailOtp,
+  confirmAccountDeletionWithPassword,
+  fetchAccountDeletionRequest,
+  isActiveAccountDeletionRequest,
+  requestAccountDeletion,
+  startAccountDeletionEmailOtp,
+} from '../services/accountDeletion';
+import type { DbAccountDeletionRequest } from '../types/database';
 
 interface AuthContextType {
   user: User | null;
@@ -19,8 +29,9 @@ interface AuthContextType {
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
   updateProfile: (fullName: string) => Promise<{ error: Error | null }>;
   // Offboarding ("Letting Go")
-  initiateOffboarding: () => Promise<{ error: Error | null }>;
+  initiateOffboarding: (confirmationToken: string) => Promise<{ error: Error | null }>;
   cancelOffboarding: () => Promise<{ error: Error | null }>;
+  accountDeletionRequest: DbAccountDeletionRequest | null;
   isDeparting: boolean;
   daysUntilRelease: number | null;
   // Offline support
@@ -28,6 +39,17 @@ interface AuthContextType {
   hydrateOfflineDb: () => Promise<void>;
   // Re-authentication for sensitive actions
   verifyPassword: (password: string) => Promise<{ success: boolean; error?: string }>;
+  confirmAccountDeletion: (password: string) => Promise<{
+    success: boolean;
+    confirmationToken?: string;
+    error?: string;
+  }>;
+  startAccountDeletionOtp: () => Promise<{ success: boolean; error?: string }>;
+  confirmAccountDeletionOtp: (otp: string) => Promise<{
+    success: boolean;
+    confirmationToken?: string;
+    error?: string;
+  }>;
   /** Mark re-auth timestamp (for OAuth users who verify via email) */
   markReauth: () => void;
   lastReauthAt: number | null;
@@ -104,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isHydrating, setIsHydrating] = useState(true);
   // Track last re-authentication time for "recently reauthed" grace window
   const [lastReauthAt, setLastReauthAt] = useState<number | null>(null);
+  const [accountDeletionRequest, setAccountDeletionRequest] = useState<DbAccountDeletionRequest | null>(null);
 
   const userId = user?.id ?? null;
 
@@ -120,6 +143,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLastReauthAt(null);
     }
     prevUserIdRef.current = userId;
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setAccountDeletionRequest(null);
+      return;
+    }
+
+    let isCurrent = true;
+
+    fetchAccountDeletionRequest().then(({ request, error }) => {
+      if (!isCurrent) return;
+      if (error) {
+        console.warn('Failed to load account deletion status:', error);
+        return;
+      }
+      setAccountDeletionRequest(request);
+    });
+
+    return () => {
+      isCurrent = false;
+    };
   }, [userId]);
 
   // Hydrate offline database from server
@@ -229,6 +274,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     hydrationUserIdRef.current = null;
     // Clear re-auth grace window (security: prevent new user from inheriting)
     setLastReauthAt(null);
+    setAccountDeletionRequest(null);
     // Clear sync state to prevent memory leaks
     clearSyncState();
     // Clear offline database on logout (security: prevent data leakage)
@@ -268,6 +314,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: true };
   }, [user?.email]);
 
+  const confirmAccountDeletion = useCallback(async (
+    password: string
+  ): Promise<{ success: boolean; confirmationToken?: string; error?: string }> => {
+    const result = await confirmAccountDeletionWithPassword(password);
+
+    if (result.error || !result.confirmationToken) {
+      return {
+        success: false,
+        error: result.error?.message ?? 'Could not confirm account deletion',
+      };
+    }
+
+    setLastReauthAt(Date.now());
+    return {
+      success: true,
+      confirmationToken: result.confirmationToken,
+    };
+  }, []);
+
+  const startAccountDeletionOtp = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    const result = await startAccountDeletionEmailOtp();
+
+    if (result.error || !result.success) {
+      return {
+        success: false,
+        error: result.error?.message ?? 'Could not send verification code',
+      };
+    }
+
+    return { success: true };
+  }, []);
+
+  const confirmAccountDeletionOtp = useCallback(async (
+    otp: string
+  ): Promise<{ success: boolean; confirmationToken?: string; error?: string }> => {
+    const result = await confirmAccountDeletionWithEmailOtp(otp);
+
+    if (result.error || !result.confirmationToken) {
+      return {
+        success: false,
+        error: result.error?.message ?? 'Could not verify code',
+      };
+    }
+
+    setLastReauthAt(Date.now());
+    return {
+      success: true,
+      confirmationToken: result.confirmationToken,
+    };
+  }, []);
+
   // Mark re-auth timestamp (for OAuth users who verify via email confirmation)
   const markReauth = useCallback(() => {
     setLastReauthAt(Date.now());
@@ -280,37 +377,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [lastReauthAt]);
 
   // Offboarding ("Letting Go") - initiate account departure with 14-day grace period
-  const initiateOffboarding = useCallback(async () => {
-    const { data, error } = await supabase.auth.updateUser({
-      data: { departing_at: new Date().toISOString() },
-    });
-    if (!error && data.user) {
-      setUser(data.user);
+  const initiateOffboarding = useCallback(async (confirmationToken: string) => {
+    const { request, error } = await requestAccountDeletion(confirmationToken);
+    if (!error) {
+      setAccountDeletionRequest(request);
     }
     return { error };
   }, []);
 
   // Cancel offboarding - user decided to stay
   const cancelOffboarding = useCallback(async () => {
-    const { data, error } = await supabase.auth.updateUser({
-      data: { departing_at: null },
-    });
-    if (!error && data.user) {
-      setUser(data.user);
+    const { request, error } = await cancelAccountDeletion();
+    if (!error) {
+      setAccountDeletionRequest(request);
     }
     return { error };
   }, []);
 
   // Computed: is the user in departure grace period?
-  const rawDeparting = user?.user_metadata?.departing_at;
-  const departingAt = typeof rawDeparting === 'string' ? rawDeparting : undefined;
-  const isDeparting = Boolean(departingAt);
+  const activeAccountDeletionRequest = isActiveAccountDeletionRequest(accountDeletionRequest)
+    ? accountDeletionRequest
+    : null;
+  const isDeparting = Boolean(activeAccountDeletionRequest);
 
   // Computed: days until account release (null if not departing)
   function calculateDaysUntilRelease(): number | null {
-    if (!departingAt) return null;
-    const departureDate = new Date(departingAt);
-    const releaseDate = new Date(departureDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+    if (!activeAccountDeletionRequest) return null;
+    const releaseDate = new Date(activeAccountDeletionRequest.release_at);
     const msRemaining = releaseDate.getTime() - Date.now();
     const daysRemaining = Math.ceil(msRemaining / (24 * 60 * 60 * 1000));
     return Math.max(0, daysRemaining);
@@ -332,11 +425,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateProfile,
     initiateOffboarding,
     cancelOffboarding,
+    accountDeletionRequest,
     isDeparting,
     daysUntilRelease,
     isHydrating,
     hydrateOfflineDb,
     verifyPassword,
+    confirmAccountDeletion,
+    startAccountDeletionOtp,
+    confirmAccountDeletionOtp,
     markReauth,
     lastReauthAt,
     isRecentlyReauthed,
@@ -350,11 +447,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateProfile,
     initiateOffboarding,
     cancelOffboarding,
+    accountDeletionRequest,
     isDeparting,
     daysUntilRelease,
     isHydrating,
     hydrateOfflineDb,
     verifyPassword,
+    confirmAccountDeletion,
+    startAccountDeletionOtp,
+    confirmAccountDeletionOtp,
     markReauth,
     lastReauthAt,
     isRecentlyReauthed,

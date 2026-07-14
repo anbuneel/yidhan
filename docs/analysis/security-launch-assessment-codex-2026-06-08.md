@@ -1,8 +1,8 @@
 # Yidhan Security Launch Assessment
 
-**Version:** 1.1
-**Last Updated:** 2026-06-08
-**Status:** Complete
+**Version:** 1.2
+**Last Updated:** 2026-06-21
+**Status:** Complete - Launch-Critical Hardening Closed
 **Author:** Codex (GPT-5)
 **Review ID:** d2c8a91f
 
@@ -14,13 +14,21 @@
 
 ---
 
-## Executive Summary
+## Current Status (2026-06-21)
+
+This document preserves the initial launch security audit and its evidence. Its original "not ready" verdict is now historical for the launch-critical E2EE scope.
+
+PR #192 completed the hardening work tracked by this assessment and the follow-up multi-agent review. The repo now enforces a single encrypted-note launch invariant across client persistence, sync queue processing, realtime/server hydration, conflict resolution, and database rows. The review artifact records live Supabase verification output as `launch_security_verification_passed`, closing the previous backend-proof gate for launch.
+
+Remaining work is future hardening, not a launch-critical security blocker: automated seeded SQL regression tests, typed security error classes, cleanup-function consolidation, external Semgrep/Gitleaks-style scans, and production verification plus a throwaway-account deletion drill before self-serve offboarding is re-enabled.
+
+## Initial Executive Summary (2026-06-08)
 
 Yidhan does not yet meet the launch bar for "full E2EE" or "bulletproof security." The core cryptographic primitives are mostly sound: note title/content encryption uses AES-GCM with random 96-bit IVs, note/user AAD binding, and HMAC content hashes; encrypted share links use per-share random keys and token-bound AAD. Focused crypto/security tests passed.
 
 At the time of the initial audit, the blockers were around enforcement and launch hardening, not the AES implementation. The app accepted plaintext note rows, had plaintext fallback write paths, had a weak passphrase policy for an offline-guessable verifier, lacked reproducible core RLS migrations, exposed unscoped SECURITY DEFINER cleanup functions, had current DOMPurify advisories while rendering user HTML, and only applied CSP/security headers to shared-note routes.
 
-**Launch verdict at initial audit:** Not ready for public launch with current E2EE/privacy claims. The first remediation pass has since addressed several client/runtime findings locally, but backend/database verification and enforcement remain required before a strong public E2EE claim.
+**Launch verdict at initial audit:** Not ready for public launch with current E2EE/privacy claims. This verdict was superseded on 2026-06-21 after PR #192 and recorded production SQL verification closed the launch-critical hardening gate.
 
 ## Plain-English Security Model
 
@@ -31,7 +39,7 @@ The confusing part is that "E2EE app" is not one single property. For Yidhan, it
 3. Backend/database enforcement: Supabase must reject bad writes even if someone bypasses the UI and calls the API directly.
 4. Operational/web hardening: CSP headers, dependency hygiene, Sentry scrubbing, share-link secrecy, account deletion, RLS, and logs must support the privacy promise.
 
-The first remediation pass on branch `codex/security-launch-hardening` mainly addressed layers 1, 2, and part of 4. It made encrypted accounts fail closed in client and sync paths, strengthened passphrase setup, hardened sanitization and clipboard handling, added app-wide security headers, deepened Sentry scrubbing, and cleaned the dependency audit. The remaining public-launch blockers are mostly layer 3: live Supabase/RLS proof, database-level encrypted-write enforcement, share RPC/function scoping, and backend deletion guarantees.
+The first remediation pass on branch `codex/security-launch-hardening` mainly addressed layers 1, 2, and part of 4. It made encrypted accounts fail closed in client and sync paths, strengthened passphrase setup, hardened sanitization and clipboard handling, added app-wide security headers, deepened Sentry scrubbing, and cleaned the dependency audit. At the time, the remaining public-launch blockers were mostly layer 3: live Supabase/RLS proof, database-level encrypted-write enforcement, share RPC/function scoping, and backend deletion guarantees. Those launch-critical layer 3 items were later closed by PR #192 and recorded production SQL verification.
 
 ## What Was Risky
 
@@ -71,7 +79,7 @@ After the first client/runtime hardening pass, the remaining gaps were backend p
 4. Offboarding deletion guarantee: if public copy promises account deletion, the backend must actually perform and audit that deletion.
 5. External scans: Semgrep/Gitleaks or equivalent tooling should still run before launch.
 
-The second fix pass below adds repo-level backend enforcement for these items. The remaining launch work is to apply and verify that migration against the live Supabase project.
+The second fix pass below added repo-level backend enforcement for these items. The remaining launch work at that time was to apply and verify the migration against the live Supabase project; the later PR #192 review artifact records that verification as passed.
 
 ## Second Fix Pass: Backend Enforcement
 
@@ -84,10 +92,10 @@ On 2026-06-20, branch `codex/security-launch-hardening` added repo-level backend
 - Hardened `fetch_shared_note` with token-shape validation, note/share owner matching, explicit `search_path`, explicit grants, and explicit revokes from `PUBLIC`.
 - Added encrypted share-row constraints and a trigger preventing direct API writes from extending share expiry beyond 30 days from the write.
 - Revoked normal-client access to global `SECURITY DEFINER` cleanup and timestamp-restore functions, leaving them for service-owned execution.
-- Hid self-serve "Letting Go" offboarding behind a disabled launch flag and corrected public support/privacy copy so the app no longer promises account deletion before a server-owned deletion workflow exists.
+- Hid self-serve "Letting Go" offboarding behind a disabled launch flag and corrected public support/privacy copy so the app no longer promises account deletion before the server-owned workflow is live-verified.
 - Used a temporary legacy encryption repair tool for the pre-hardening window, then removed the runtime repair surface after all retained accounts had encrypted rows and `launch_security_hardening.sql` verification passed.
 
-This does not replace live Supabase verification. Before public launch, the migration must be applied to the production project and RLS/function grants should be verified against the live database.
+This work was later paired with live Supabase verification. The PR #192 review artifact records the production verification output as `launch_security_verification_passed`.
 
 ## No Active Users Impact
 
@@ -111,7 +119,7 @@ Skipped or limited coverage:
 
 - Semgrep was not installed.
 - Gitleaks was not installed.
-- Live Supabase policies were not inspected, so the repo can show intended behavior but cannot prove production DB state.
+- Live Supabase policies were not inspected during the initial audit, so the 2026-06-08 repo state could show intended behavior but could not prove production DB state. Later verification was provided and recorded in the PR #192 review artifact.
 - No professional penetration test, dynamic browser attack testing, or live account abuse testing was performed.
 
 ## Validation Results
@@ -427,4 +435,6 @@ Strongly recommended before launch:
 
 ## Final Verdict
 
-Yidhan has the foundation for real E2EE, but the app does not yet prove or enforce full E2EE end to end. The launch bar should be: no plaintext authenticated note writes, no trusted plaintext server rows for encrypted accounts, reproducible RLS, fixed sanitizer advisories, and app-wide browser hardening. Until those are complete, the public claim should be softened or launch should wait.
+The initial 2026-06-08 verdict was "do not launch with full E2EE claims yet." As of the 2026-06-21 closeout, that verdict is superseded for the launch-critical E2EE hardening scope: authenticated plaintext note writes are blocked, trusted plaintext server rows are rejected, core RLS/share RPC hardening is captured in repo SQL, app-wide browser hardening is in place, and live SQL verification is recorded as passed.
+
+Yidhan can now make the launch E2EE claim with a clearer conscience, provided public copy stays honest about the remaining boundaries: tags and metadata are not encrypted, self-serve account deletion is disabled until production verification and a throwaway-account deletion drill pass, and "Remember this browser" remains an opt-in local key-storage tradeoff.

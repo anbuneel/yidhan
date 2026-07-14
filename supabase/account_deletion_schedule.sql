@@ -1,0 +1,101 @@
+-- Account deletion scheduler setup.
+--
+-- Run in the live Supabase SQL Editor after:
+-- - process-account-deletions is deployed
+-- - PROCESS_ACCOUNT_DELETIONS_SECRET is set as an Edge Function secret
+-- - pg_cron, pg_net, and Vault are enabled
+--
+-- Do not commit real secrets to the repository.
+
+-- 1. Store scheduler inputs in Vault.
+-- Replace the placeholders before running.
+--
+-- SELECT vault.create_secret(
+--   '__PROCESS_ACCOUNT_DELETIONS_FUNCTION_URL__',
+--   'account_deletion_function_url',
+--   'Account deletion worker URL'
+-- );
+--
+-- SELECT vault.create_secret(
+--   '__SUPABASE_ANON_OR_PUBLISHABLE_KEY__',
+--   'account_deletion_function_bearer',
+--   'Anon bearer token for scheduled Edge Function invocation'
+-- );
+--
+-- SELECT vault.create_secret(
+--   '__PROCESS_ACCOUNT_DELETIONS_SECRET__',
+--   'account_deletion_worker_secret',
+--   'Shared secret for account deletion worker'
+-- );
+
+-- 2. Schedule the worker daily at 03:30 UTC.
+-- Supabase's Edge Function gateway requires an Authorization bearer header.
+-- The x-account-deletion-secret header remains the worker's operation-specific
+-- authorization check.
+--
+-- SELECT cron.schedule(
+--   'process-account-deletions',
+--   '30 3 * * *',
+--   $$
+--   SELECT net.http_post(
+--     url := (
+--       SELECT decrypted_secret
+--       FROM vault.decrypted_secrets
+--       WHERE name = 'account_deletion_function_url'
+--     ),
+--     headers := jsonb_build_object(
+--       'Content-Type', 'application/json',
+--       'Authorization', 'Bearer ' || (
+--         SELECT decrypted_secret
+--         FROM vault.decrypted_secrets
+--         WHERE name = 'account_deletion_function_bearer'
+--       ),
+--       'x-account-deletion-secret', (
+--         SELECT decrypted_secret
+--         FROM vault.decrypted_secrets
+--         WHERE name = 'account_deletion_worker_secret'
+--       )
+--     ),
+--     body := jsonb_build_object('source', 'pg_cron'),
+--     timeout_milliseconds := 10000
+--   );
+--   $$
+-- );
+
+-- Verification:
+-- SELECT jobid, jobname, schedule, active, command
+-- FROM cron.job
+-- WHERE jobname = 'process-account-deletions';
+
+-- Smoke test:
+-- SELECT net.http_post(
+--   url := (
+--     SELECT decrypted_secret
+--     FROM vault.decrypted_secrets
+--     WHERE name = 'account_deletion_function_url'
+--   ),
+--   headers := jsonb_build_object(
+--     'Content-Type', 'application/json',
+--     'Authorization', 'Bearer ' || (
+--       SELECT decrypted_secret
+--       FROM vault.decrypted_secrets
+--       WHERE name = 'account_deletion_function_bearer'
+--     ),
+--     'x-account-deletion-secret', (
+--       SELECT decrypted_secret
+--       FROM vault.decrypted_secrets
+--       WHERE name = 'account_deletion_worker_secret'
+--     )
+--   ),
+--   body := jsonb_build_object('source', 'manual_pg_net_smoke'),
+--   timeout_milliseconds := 10000
+-- ) AS request_id;
+--
+-- SELECT id, status_code, content, error_msg, created
+-- FROM net._http_response
+-- WHERE id = <request_id>;
+
+-- Rollback:
+-- SELECT cron.unschedule(jobid)
+-- FROM cron.job
+-- WHERE jobname = 'process-account-deletions';
