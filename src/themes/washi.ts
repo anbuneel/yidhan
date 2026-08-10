@@ -61,7 +61,7 @@ const washi: ThemeConfig = {
     shadowLg: '0 4px 12px rgba(61, 54, 48, 0.10), 0 10px 40px rgba(61, 54, 48, 0.25)',
 
     // Effects
-    noiseOpacity: '0.10',
+    noiseOpacity: '0.05', // Lowered from 0.10 to keep small text crisp under the texture overlay
     noiseFilter: 'sepia(80%) saturate(120%) brightness(0.95)', // Warm aged paper tint
   },
 };

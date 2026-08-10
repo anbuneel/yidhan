@@ -236,8 +236,8 @@ export function LandingPage({
               Begin where you <em>are.</em>
             </h1>
             <p className="landing-sub">
-              A quiet space for the half-formed thought. No folders. No organizing.
-              Nothing to learn — just room to think.
+              A quiet space for the half-formed thought.<br />
+              No folders. No organizing. Nothing to learn — just room to think.
             </p>
             <button
               type="button"
@@ -301,7 +301,7 @@ export function LandingPage({
         {!isWriting && (
           <a
             className="landing-scrollcue focus-ring"
-            href="#landing-surface"
+            href="#landing-library"
           >
             <span>Or see how it feels</span>
             <span className="landing-scrollcue-arrow" aria-hidden="true">↓</span>
@@ -311,31 +311,8 @@ export function LandingPage({
 
       {/* ─── Gallery — the honest "second act": the real product ─── */}
       <div className="landing-gallery">
-        {/* The surface */}
-        <section className="landing-piece landing-reveal" id="landing-surface">
-          <div className="landing-caption">
-            <p className="landing-kicker">The surface</p>
-            <h2 className="landing-piece-title">A page that gets out of the way.</h2>
-            <p className="landing-piece-body">
-              No sidebars. No menus crowding the margins. Write in focus mode and the
-              interface recedes — leaving only your words and a soft manuscript glow around
-              the page.
-            </p>
-          </div>
-          <div className="landing-mock-editor" aria-hidden="true">
-            <div className="landing-mock-glow" />
-            <div className="landing-mock-doc">
-              <div className="landing-mock-title">Four Thousand Weeks</div>
-              <p>
-                Started it last night. The bit about how we&rsquo;ll never &ldquo;get on
-                top of everything&rdquo; was oddly freeing.<span className="landing-car" />
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* What accumulates */}
-        <section className="landing-piece-wide">
+        {/* What accumulates — the real product, first beat below the fold */}
+        <section className="landing-piece-wide" id="landing-library">
           <div className="landing-wide-inner landing-reveal">
             <div className="landing-caption">
               <p className="landing-kicker">What accumulates</p>
@@ -369,9 +346,17 @@ export function LandingPage({
             <h2 className="landing-piece-title">Locked before it leaves your hands.</h2>
             <p className="landing-piece-body">
               Every word is encrypted on your device before it syncs — so it reaches your
-              other screens, but never ours readable. It works offline, and the code is open
-              for anyone to check.
+              other screens, but never ours in a form we can read. It works offline, and the
+              code is open for anyone to check.
             </p>
+            <div className="landing-piece-cta">
+              <button type="button" onClick={handleCloseStart} className="landing-cta focus-ring">
+                Start writing
+              </button>
+              <p className="landing-micro">
+                No account needed — your first words stay on this device.
+              </p>
+            </div>
           </div>
           <div className="landing-vault" aria-hidden="true">
             <span className="landing-vault-ring" />
@@ -383,19 +368,6 @@ export function LandingPage({
           </div>
         </section>
       </div>
-
-      {/* ─── Close — echoes the hero ─── */}
-      <section className="landing-close landing-reveal">
-        <h2 className="landing-close-title">
-          Your page is <em>waiting.</em>
-        </h2>
-        <button type="button" onClick={handleCloseStart} className="landing-cta focus-ring">
-          Start writing
-        </button>
-        <p className="landing-micro">
-          No account needed — your first words stay on this device.
-        </p>
-      </section>
 
       {/* ─── Footer nav ─── */}
       <nav className="landing-footer">
@@ -503,7 +475,7 @@ export function LandingPage({
           font-size: 1.1rem;
           line-height: 1.7;
           color: var(--color-text-secondary);
-          max-width: 40ch;
+          max-width: 38rem;
           margin: 0 auto 2.4rem;
         }
         .landing-cta {
@@ -536,7 +508,7 @@ export function LandingPage({
           gap: 0.3rem;
           margin-top: 1.6rem;
           font-family: var(--font-body);
-          font-size: 0.82rem;
+          font-size: 0.92rem;
           color: var(--color-text-tertiary);
           text-decoration: none;
           border-bottom: 1px dotted var(--color-text-tertiary);
@@ -597,7 +569,7 @@ export function LandingPage({
         .landing-hero-doc::placeholder {
           color: var(--color-text-tertiary);
           font-style: italic;
-          font-weight: 300;
+          font-weight: 400;
           opacity: 1;
         }
         .landing-hero-foot {
@@ -607,14 +579,14 @@ export function LandingPage({
         }
         .landing-seal {
           font-family: var(--font-body);
-          font-size: 0.72rem; letter-spacing: 0.04em;
+          font-size: 0.82rem; letter-spacing: 0.04em;
           color: var(--color-text-tertiary);
           display: inline-flex; align-items: center; gap: 0.5rem;
           opacity: 0; transform: translateY(4px);
           transition: opacity 0.6s ease, transform 0.6s ease;
         }
         .landing-seal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent); }
-        .landing-seal.show { opacity: 0.9; transform: none; }
+        .landing-seal.show { opacity: 1; transform: none; }
         .landing-continue {
           font-family: var(--font-body);
           font-size: 0.8rem;
@@ -646,16 +618,16 @@ export function LandingPage({
         .landing-hero.writing .landing-scrollcue { opacity: 0; pointer-events: none; }
 
         .landing-scrollcue {
-          position: absolute; left: 50%; bottom: 2.2rem; transform: translateX(-50%);
+          position: absolute; left: 0; right: 0; bottom: 2.2rem;
+          margin-inline: auto; width: max-content;
           display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
           font-family: var(--font-body);
-          font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.18em;
+          font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.18em;
           color: var(--color-text-tertiary); text-decoration: none;
-          animation: landing-float 3.4s ease-in-out infinite;
           transition: opacity 0.5s ease;
         }
         .landing-scrollcue:hover { color: var(--color-accent); }
-        .landing-scrollcue-arrow { font-size: 1rem; }
+        .landing-scrollcue-arrow { font-size: 1rem; animation: landing-float 3.4s ease-in-out infinite; }
 
         /* ─── Gallery ─── */
         .landing-gallery {
@@ -677,7 +649,7 @@ export function LandingPage({
         }
         .landing-kicker {
           font-family: var(--font-body);
-          font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.18em;
+          font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.18em;
           color: var(--color-accent); margin: 0 0 1rem;
         }
         .landing-piece-title {
@@ -691,32 +663,6 @@ export function LandingPage({
           color: var(--color-text-secondary); max-width: 42ch; margin: 0;
         }
 
-        /* Surface mock editor */
-        .landing-mock-editor {
-          position: relative;
-          background: var(--color-bg-primary);
-          border: 1px solid var(--glass-border);
-          border-radius: var(--radius-card);
-          box-shadow: var(--shadow-manuscript);
-          padding: clamp(2rem, 4vw, 3.2rem);
-          overflow: hidden;
-        }
-        .landing-mock-glow {
-          position: absolute; inset: 0; pointer-events: none;
-          background: radial-gradient(ellipse 80% 50% at 50% 36%, var(--color-accent-glow) 0%, transparent 70%);
-        }
-        .landing-mock-doc { position: relative; z-index: 1; }
-        .landing-mock-title {
-          font-family: var(--font-display); font-weight: 600;
-          font-size: 1.9rem; line-height: 1.3; letter-spacing: 0;
-          color: var(--color-text-primary); margin-bottom: 0.8rem;
-        }
-        .landing-mock-doc p {
-          font-family: var(--font-body); font-weight: 400;
-          font-size: 1.16rem; line-height: 1.85;
-          color: var(--color-text-primary); margin: 0;
-        }
-
         /* Note grid - rendered with the real NoteCard in decorative mode */
         /* "What accumulates" steps out of the editorial 2-col split: a centered
            caption above a centered 2-up masonry. Cards render at app-true width
@@ -725,10 +671,10 @@ export function LandingPage({
         .landing-piece-wide { margin-bottom: clamp(6rem, 16vw, 13rem); }
         .landing-piece-wide .landing-caption {
           text-align: center;
-          max-width: 48ch;
+          max-width: 48rem;
           margin: 0 auto clamp(2.5rem, 5vw, 3.5rem);
         }
-        .landing-piece-wide .landing-piece-body { margin-left: auto; margin-right: auto; }
+        .landing-piece-wide .landing-piece-body { max-width: 34rem; margin-left: auto; margin-right: auto; }
         .landing-grid {
           columns: 2;
           column-gap: 1.5rem;
@@ -751,17 +697,8 @@ export function LandingPage({
           border: 1px dashed color-mix(in srgb, var(--color-accent) 40%, transparent);
         }
 
-        /* ─── Close ─── */
-        .landing-close {
-          text-align: center;
-          padding: clamp(5rem, 14vw, 11rem) 1.4rem clamp(3rem, 8vw, 6rem);
-        }
-        .landing-close-title {
-          font-family: var(--font-display); font-weight: 300;
-          font-size: 3.4rem; line-height: 1.06;
-          margin: 0 0 2.2rem; color: var(--color-text-primary);
-        }
-        .landing-close-title em { font-style: italic; color: var(--color-accent); font-weight: 400; }
+        /* Inline CTA closing the encryption piece (replaces the old standalone close beat) */
+        .landing-piece-cta { margin-top: 2.2rem; }
 
         /* ─── Footer ─── */
         .landing-footer {
@@ -783,14 +720,7 @@ export function LandingPage({
         .landing-reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.22,1,0.36,1); }
         .landing-reveal.in { opacity: 1; transform: none; }
 
-        .landing-car {
-          display: inline-block; width: 2px; height: 1.05em; vertical-align: -0.16em;
-          margin-left: 0.1em; border-radius: 1px; background: var(--color-accent);
-          animation: landing-blink 2.6s ease-in-out infinite;
-        }
-
-        @keyframes landing-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
-        @keyframes landing-float { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 6px); } }
+        @keyframes landing-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
         @keyframes landing-fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
         @media (max-width: 768px) {
@@ -800,22 +730,20 @@ export function LandingPage({
           .landing-headline { font-size: 3.2rem; }
           .landing-sub { font-size: 1rem; }
           .landing-piece-title { font-size: 2.2rem; }
-          .landing-close-title { font-size: 2.6rem; }
         }
 
         @media (max-width: 420px) {
           .landing-headline { font-size: 2.75rem; }
           .landing-piece-title { font-size: 2rem; }
-          .landing-close-title { font-size: 2.3rem; }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .landing-prose,
           .landing-hero-editor-wrap,
           .landing-scrollcue,
+          .landing-scrollcue-arrow,
           .landing-seal,
           .landing-continue,
-          .landing-car,
           .landing-reveal { animation: none !important; transition: none !important; }
           .landing-reveal { opacity: 1; transform: none; }
         }

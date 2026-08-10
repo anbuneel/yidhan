@@ -104,8 +104,10 @@ export const NoteCard = memo(function NoteCard({
         borderRadius: 'var(--radius-card)',
         boxShadow: isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)',
         transitionTimingFunction: 'var(--ease-out-quint)',
-        minHeight: isCompact ? 'auto' : '280px',
-        maxHeight: isCompact ? '120px' : '300px',
+        // Full cards size to their content so the masonry actually staggers;
+        // the preview caps its own height below. Compact keeps a fixed clamp.
+        minHeight: isCompact ? 'auto' : undefined,
+        maxHeight: isCompact ? '120px' : undefined,
       }}
       onMouseEnter={(e) => {
         if (!isCompact && !isDecorative) {
@@ -208,10 +210,12 @@ export const NoteCard = memo(function NoteCard({
         </p>
       ) : (
         <div
-          className="flex-1 overflow-hidden note-card-preview"
+          className="overflow-hidden note-card-preview"
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-secondary)',
+            // Content-driven height up to ~5 lines; the bottom mask fades the cut.
+            maxHeight: '8em',
           }}
           dangerouslySetInnerHTML={{ __html: htmlPreview || 'No content' }}
         />

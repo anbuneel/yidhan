@@ -8,6 +8,15 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.19.5',
+    date: '2026-08-09',
+    changes: [
+      { type: 'improvement', text: 'Note chapters now center one- and two-card groups, while content-driven card heights restore the natural masonry rhythm' },
+      { type: 'improvement', text: 'Landing page now reaches the real note library sooner, closes with its privacy promise and writing CTA, and uses clearer supporting copy' },
+      { type: 'improvement', text: 'Paper texture is lighter across every theme so small and low-contrast text stays crisp' },
+    ],
+  },
+  {
     version: '3.19.4',
     date: '2026-06-23',
     changes: [
