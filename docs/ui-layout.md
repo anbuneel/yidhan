@@ -45,16 +45,13 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 **Gallery second act:**
 ```
 +--------------------------------------------------------------------------+
-| The surface                                                              |
-| A page that gets out of the way.                    [editor surface]      |
-|                                                                          |
 | What accumulates                                                         |
-| [real starter note card masonry]                    Your thoughts...      |
+| Your thoughts, finding their own shape.                                  |
+|                    [real starter note card masonry]                       |
 |                                                                          |
 | What stays yours                                                         |
 | Locked before it leaves your hands.                 [vault mark]          |
-|                                                                          |
-| Your page is waiting.                               [Start writing]       |
+| [Start writing]                                                          |
 | Changelog . Roadmap . GitHub . Privacy . Terms . Support                 |
 +--------------------------------------------------------------------------+
 ```
@@ -83,8 +80,9 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 - The first typed draft is saved to `yidhan-demo-content` before signup and migrated by `App.tsx` into an encrypted "My first note" after auth/unlock.
 - Hidden hero controls and scroll cue leave the tab order after the editor reveal.
 - Mobile primary CTA routes directly to `/demo` to avoid soft-keyboard viewport shifts.
-- Gallery uses three museum-spaced proof pieces: writing surface, starter-note grid, and encryption/offline/open-source promise.
+- Gallery uses two museum-spaced proof pieces: the starter-note grid followed by the encryption/offline/open-source promise and closing CTA.
 - Gallery starter notes mirror the Practice Space seed notes.
+- Chapters with one or two visible notes cap their masonry columns and center the group; full note cards size to their preview content.
 - Auth opens as modal overlay from `Continue in Yidhan`.
 
 ## Auth Modal (OAuth-First Layout)

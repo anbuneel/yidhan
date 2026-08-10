@@ -61,7 +61,7 @@ const mori: ThemeConfig = {
     shadowLg: '0 20px 50px -10px rgba(0, 0, 0, 0.55)',
 
     // Effects
-    noiseOpacity: '0.10',
+    noiseOpacity: '0.05', // Lowered from 0.10 to keep small text crisp under the texture overlay
     noiseFilter: 'grayscale(100%)', // Neutral grain for dark mode
   },
 };

@@ -59,7 +59,7 @@ const midnight: ThemeConfig = {
     shadowLg: '0 4px 12px rgba(5, 20, 10, 0.25), 0 20px 50px -10px rgba(5, 20, 10, 0.65)',
 
     // Effects
-    noiseOpacity: '0.05',
+    noiseOpacity: '0.04', // Lowered from 0.05 to keep small text crisp under the texture overlay
     noiseFilter: 'grayscale(100%)', // Neutral grain for dark mode
   },
 };

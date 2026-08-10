@@ -59,7 +59,7 @@ const kintsugi: ThemeConfig = {
     shadowLg: '0 4px 12px rgba(120, 80, 60, 0.15), 0 10px 40px rgba(120, 80, 60, 0.38)',
 
     // Effects
-    noiseOpacity: '0.18',
+    noiseOpacity: '0.055', // Lowered from 0.18 — heavy grain over content blurred small/low-contrast text
     noiseFilter: 'sepia(65%) saturate(140%) brightness(0.93)', // Warmer, more defined grain
   },
 };

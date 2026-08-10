@@ -93,6 +93,20 @@ export const ChapterSection = memo(function ChapterSection({
   const hasMore = !isSearching && visibleCount < notes.length;
   const remainingCount = Math.max(0, notes.length - visibleCount);
 
+  // Count-aware masonry: when a chapter holds fewer cards than the viewport's
+  // column count, cap the columns to the card count and centre the group so a
+  // lone card isn't stranded at column 1 of a wide, empty band. At 3+ cards the
+  // full-width 3/2/1 grid is preserved. Widths track the app-true card width
+  // (~440px) plus the 20px masonry gutter.
+  const cardCount = displayNotes.length;
+  const lowCountMaxWidth =
+    cardCount === 1 ? '480px' : cardCount === 2 ? '960px' : undefined;
+  const masonryBreakpoints = {
+    default: Math.min(3, cardCount) || 1,
+    1100: Math.min(2, cardCount) || 1,
+    700: 1,
+  };
+
   // IntersectionObserver for progressive loading
   useEffect(() => {
     if (!sentinelRef.current || isSearching) return;
@@ -277,45 +291,51 @@ export const ChapterSection = memo(function ChapterSection({
           id={`chapter-content-${chapterKey}`}
           style={{ opacity }}
         >
-          <Masonry
-            breakpointCols={{
-              default: 3,
-              1100: 2,
-              700: 1,
-            }}
-            className="masonry-grid px-6 md:px-12"
-            columnClassName="masonry-grid-column"
-          >
-            {displayNotes.map((note, index) => (
-              <div
-                key={note.id}
-                className="note-card-entrance"
-                style={{
-                  animationDelay: `${Math.min(index * 0.06, 0.6)}s`,
-                }}
+          <div className="px-6 md:px-12">
+            <div
+              style={
+                lowCountMaxWidth
+                  ? { maxWidth: lowCountMaxWidth, marginInline: 'auto' }
+                  : undefined
+              }
+            >
+              <Masonry
+                breakpointCols={masonryBreakpoints}
+                className="masonry-grid"
+                columnClassName="masonry-grid-column"
               >
-                {isTouchDevice ? (
-                  <SwipeableNoteCard
-                    note={note}
-                    onClick={onNoteClick}
-                    onDelete={onNoteDelete}
-                    onTogglePin={onTogglePin}
-                    isCompact={isCompact}
-                    searchQuery={isSearching ? searchQuery : undefined}
-                  />
-                ) : (
-                  <NoteCard
-                    note={note}
-                    onClick={onNoteClick}
-                    onDelete={onNoteDelete}
-                    onTogglePin={onTogglePin}
-                    isCompact={isCompact}
-                    searchQuery={isSearching ? searchQuery : undefined}
-                  />
-                )}
-              </div>
-            ))}
-          </Masonry>
+                {displayNotes.map((note, index) => (
+                  <div
+                    key={note.id}
+                    className="note-card-entrance"
+                    style={{
+                      animationDelay: `${Math.min(index * 0.06, 0.6)}s`,
+                    }}
+                  >
+                    {isTouchDevice ? (
+                      <SwipeableNoteCard
+                        note={note}
+                        onClick={onNoteClick}
+                        onDelete={onNoteDelete}
+                        onTogglePin={onTogglePin}
+                        isCompact={isCompact}
+                        searchQuery={isSearching ? searchQuery : undefined}
+                      />
+                    ) : (
+                      <NoteCard
+                        note={note}
+                        onClick={onNoteClick}
+                        onDelete={onNoteDelete}
+                        onTogglePin={onTogglePin}
+                        isCompact={isCompact}
+                        searchQuery={isSearching ? searchQuery : undefined}
+                      />
+                    )}
+                  </div>
+                ))}
+              </Masonry>
+            </div>
+          </div>
 
           {/* Sentinel for IntersectionObserver */}
           {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}

@@ -20,11 +20,11 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Light & Dark Themes** - Kintsugi (warm light) and Midnight (forest green dark) themes
 - **Tag Organization** - Organize notes with colorful tags and filter by multiple tags
 - **Tag Management** - Create, edit, and delete tags with a beautiful color picker
-- **Landing Page** - Quiet hero that becomes a lightweight writing surface on desktop, saves the first draft into signup, and follows with a real-product gallery
+- **Landing Page** - Quiet hero that becomes a lightweight writing surface on desktop, saves the first draft into signup, and leads directly into real note cards and the privacy promise
 - **Practice Space** - Full-featured demo at `/demo` without signup; notes persist in localStorage
 - **Seamless Onboarding** - Demo content auto-saves after signup, email confirmation with resend options
 - **Export/Import** - Backup notes to JSON or Markdown, restore from backups
-- **Rich Card Previews** - Note cards show formatted content (lists, bold, etc.)
+- **Rich Card Previews** - Content-sized masonry cards show formatted previews and center gracefully when a chapter has only one or two notes
 - **Quick Delete** - Delete notes directly from card view with confirmation
 - **Personalized Avatar** - Profile shows your initials from name or email
 - **Settings Page** - Update display name, change password, toggle theme
