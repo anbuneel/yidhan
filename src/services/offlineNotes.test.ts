@@ -28,6 +28,7 @@ vi.mock('../lib/supabase', () => ({
 }));
 
 import {
+  clearQueuedNoteCreates,
   getBlockedSyncReason,
   getSyncQueueSnapshot,
 } from './offlineNotes';
@@ -1152,6 +1153,23 @@ describe('offlineNotes', () => {
       expect(snapshot.blockedCount).toBe(3);
       expect(snapshot.blockedReason).toBe('newest failure');
       await expect(getBlockedSyncReason(TEST_USER_ID)).resolves.toBe('newest failure');
+    });
+
+    it('clears queued note creates regardless of their state', async () => {
+      await queueEntry({ operation: 'create', entityId: 'note-a', status: 'blocked', blockedAt: 1 });
+      await queueEntry({ operation: 'create', entityId: 'note-a', status: 'pending' });
+      await queueEntry({ operation: 'update', entityId: 'note-a', status: 'pending' });
+      await queueEntry({ operation: 'create', entityId: 'note-b', status: 'blocked', blockedAt: 1 });
+
+      const cleared = await clearQueuedNoteCreates(TEST_USER_ID, 'note-a');
+
+      expect(cleared).toBe(2);
+      const remaining = await getOfflineDb(TEST_USER_ID).syncQueue.toArray();
+      // The update for the same note and the other note's create both survive.
+      expect(remaining.map((e) => `${e.entityId}:${e.operation}`).sort()).toEqual([
+        'note-a:update',
+        'note-b:create',
+      ]);
     });
 
     it('reports no reason when nothing is blocked', async () => {

@@ -26,6 +26,7 @@ const {
   mockUpdateSyncQueueEntry,
   mockMarkSyncQueueEntryBlocked,
   mockQueueSyncOperation,
+  mockClearQueuedNoteCreates,
 } = vi.hoisted(() => ({
   mockFrom: vi.fn(),
   mockFetchAllPaginated: vi.fn(),
@@ -36,6 +37,7 @@ const {
   mockUpdateSyncQueueEntry: vi.fn(),
   mockMarkSyncQueueEntryBlocked: vi.fn(),
   mockQueueSyncOperation: vi.fn(),
+  mockClearQueuedNoteCreates: vi.fn().mockResolvedValue(0),
 }));
 
 // Module-level mocks
@@ -55,6 +57,7 @@ vi.mock('./offlineNotes', () => ({
   updateSyncQueueEntry: (...args: unknown[]) => mockUpdateSyncQueueEntry(...args),
   markSyncQueueEntryBlocked: (...args: unknown[]) => mockMarkSyncQueueEntryBlocked(...args),
   queueSyncOperation: (...args: unknown[]) => mockQueueSyncOperation(...args),
+  clearQueuedNoteCreates: (...args: unknown[]) => mockClearQueuedNoteCreates(...args),
 }));
 
 vi.mock('./offlineTags', () => ({
@@ -1904,6 +1907,35 @@ describe('syncEngine — recovery from permanently blocked entries', () => {
     expect(link?.syncStatus).toBe('pending');
 
     await db.noteTags.clear();
+  });
+
+  it('retires the dead create entry once a rebuild satisfies it', async () => {
+    // A blocked create is never compacted away, so without this the indicator
+    // keeps reporting a block for a note that is actually synced.
+    const noteId = 'note-stale-create';
+    await seedLocalNote(noteId);
+
+    const entry = buildEntry({
+      id: 909,
+      clientMutationId: 'mut-stale-create',
+      operation: 'update',
+      entityType: 'note',
+      entityId: noteId,
+      payload: { title: '', content: '', ...encryptedServerFields(noteId) },
+    });
+    await enqueue(entry);
+
+    const { factory } = buildVerbAwareChain({
+      select: { data: null },
+      update: { data: null },
+      insert: { data: { updated_at: '2026-07-05T00:00:00.000Z' } },
+    });
+    mockFrom.mockImplementation(factory);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.processed).toBe(1);
+    expect(mockClearQueuedNoteCreates).toHaveBeenCalledWith(TEST_USER_ID, noteId);
   });
 
   it('does not rebuild a row that is still on the server', async () => {

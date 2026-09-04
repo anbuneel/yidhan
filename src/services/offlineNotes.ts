@@ -1106,6 +1106,26 @@ export async function getSyncQueueCounts(
  * a sync run lands between the two, which surfaces as "N blocked" with no
  * reason attached — the exact confusing state the reason exists to remove.
  */
+/**
+ * Drop queued `create` entries for a note that demonstrably exists on the server.
+ *
+ * A blocked `create` is never compacted away (compactQueueForEntity skips
+ * blocked entries, and an `update` only compacts other updates). So once a
+ * later operation rebuilds the row, the dead create lingers and the indicator
+ * reports a block for a note that is fully synced — until someone clicks retry
+ * and the create's own idempotency check quietly resolves it. Clearing it here
+ * reaches the same conclusion without making the user chase a phantom.
+ */
+export async function clearQueuedNoteCreates(userId: string, noteId: string): Promise<number> {
+  const db = getOfflineDb(userId);
+
+  return db.syncQueue
+    .where('entityId')
+    .equals(noteId)
+    .and((entry) => entry.entityType === 'note' && entry.operation === 'create')
+    .delete();
+}
+
 export async function getSyncQueueSnapshot(userId: string): Promise<{
   pendingCount: number;
   blockedCount: number;

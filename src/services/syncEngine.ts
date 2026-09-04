@@ -18,6 +18,7 @@ import {
   getPendingSyncQueue,
   removeSyncQueueEntry,
   markNoteSynced,
+  clearQueuedNoteCreates,
   markSyncQueueEntryBlocked,
   queueSyncOperation,
   updateSyncQueueEntry,
@@ -394,6 +395,32 @@ async function requeueNoteTagLinks(userId: string, noteId: string): Promise<void
  * Returns the server `updated_at`, or null when there is no usable local
  * record to rebuild from.
  */
+/**
+ * Finish a rebuild: record it, restore its tag links, and retire the dead
+ * `create` entry the rebuild has just made moot.
+ *
+ * Shared by both success paths so neither can drift — the insert returning a
+ * row, and the insert returning none but a confirming read finding it.
+ */
+async function settleRebuiltNote(userId: string, noteId: string): Promise<void> {
+  addReliabilityBreadcrumb({
+    category: 'sync',
+    message: 'Rebuilt a note the server had lost',
+    data: { noteId, tagLinks: await countLocalNoteTagLinks(userId, noteId) },
+  });
+
+  await requeueNoteTagLinks(userId, noteId);
+
+  const clearedCreates = await clearQueuedNoteCreates(userId, noteId);
+  if (clearedCreates > 0) {
+    addReliabilityBreadcrumb({
+      category: 'sync',
+      message: 'Cleared a queued create the rebuild satisfied',
+      data: { noteId, clearedCreates },
+    });
+  }
+}
+
 async function reinsertNoteFromLocalRecord(
   userId: string,
   noteId: string,
@@ -447,12 +474,7 @@ async function reinsertNoteFromLocalRecord(
   if (error) throw error;
 
   if (created) {
-    addReliabilityBreadcrumb({
-      category: 'sync',
-      message: 'Rebuilt a note the server had lost',
-      data: { noteId, tagLinks: await countLocalNoteTagLinks(userId, noteId) },
-    });
-    await requeueNoteTagLinks(userId, noteId);
+    await settleRebuiltNote(userId, noteId);
     return new Date(created.updated_at);
   }
 
@@ -461,7 +483,7 @@ async function reinsertNoteFromLocalRecord(
   // reach the user as "Unknown sync failure".
   const confirmed = await fetchServerNoteUpdatedAt(noteId);
   if (confirmed) {
-    await requeueNoteTagLinks(userId, noteId);
+    await settleRebuiltNote(userId, noteId);
     return confirmed;
   }
 
