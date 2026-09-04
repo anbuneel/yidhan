@@ -374,6 +374,10 @@ async function processQueueEntry(
  * normal add_tag path restore them, which already tolerates a duplicate (23505)
  * and retries when the tag itself has not synced yet (23503).
  */
+async function countLocalNoteTagLinks(userId: string, noteId: string): Promise<number> {
+  return getOfflineDb(userId).noteTags.where('noteId').equals(noteId).count();
+}
+
 async function requeueNoteTagLinks(userId: string, noteId: string): Promise<void> {
   const db = getOfflineDb(userId);
   const links = await db.noteTags.where('noteId').equals(noteId).toArray();
@@ -443,6 +447,11 @@ async function reinsertNoteFromLocalRecord(
   if (error) throw error;
 
   if (created) {
+    addReliabilityBreadcrumb({
+      category: 'sync',
+      message: 'Rebuilt a note the server had lost',
+      data: { noteId, tagLinks: await countLocalNoteTagLinks(userId, noteId) },
+    });
     await requeueNoteTagLinks(userId, noteId);
     return new Date(created.updated_at);
   }
@@ -456,7 +465,7 @@ async function reinsertNoteFromLocalRecord(
     return confirmed;
   }
 
-  throw new Error(`Rebuilt note ${noteId} did not appear on the server`);
+  throw new RetryableSyncError(`Rebuilt note ${noteId} did not appear on the server`);
 }
 
 /**
@@ -535,7 +544,9 @@ async function processNoteOperation(
         : await fetchServerNoteUpdatedAt(noteId);
 
       if (!createdAt) {
-        throw new Error(`Created note ${noteId} did not appear on the server`);
+        throw new RetryableSyncError(
+          `Created note ${noteId} did not appear on the server`
+        );
       }
 
       await markNoteSynced(userId, noteId, createdAt);
@@ -881,7 +892,9 @@ function isRetryableError(error: unknown): boolean {
 
   // An expired or not-yet-refreshed JWT resolves on its own once the Supabase
   // client refreshes the session, so this is a wait, not a permanent block.
-  if (err.code === 'PGRST301' || err.status === 401) {
+  // PostgrestError carries code/message/details/hint but no HTTP status, so
+  // the code is what identifies this — a `status === 401` test never fires.
+  if (err.code === 'PGRST301') {
     return true;
   }
 

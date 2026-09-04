@@ -50,6 +50,17 @@ describe('describeSyncFailure', () => {
     );
   });
 
+  // Pinned deliberately: syncEngine throws this as a RetryableSyncError, so
+  // the copy may only promise a retry for as long as that stays true.
+  it('promises a retry only for the unconfirmed-write failure', () => {
+    expect(describeSyncFailure('Rebuilt note abc did not appear on the server')).toBe(
+      'The server accepted this change but did not confirm it. It will be retried.'
+    );
+    expect(describeSyncFailure('Created note abc did not appear on the server')).toBe(
+      'The server accepted this change but did not confirm it. It will be retried.'
+    );
+  });
+
   it('falls back to calm generic copy for anything unrecognised', () => {
     expect(describeSyncFailure('[XX999] something nobody has seen before')).toBe(
       'This change could not be saved yet.'

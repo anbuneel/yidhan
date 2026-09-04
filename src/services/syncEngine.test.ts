@@ -1941,6 +1941,40 @@ describe('syncEngine — recovery from permanently blocked entries', () => {
     expect(persisted?.lastError).not.toContain('Unknown sync failure');
   });
 
+  it('retries rather than blocking when a rebuilt note is not yet confirmed', async () => {
+    // The user-facing copy for this failure says it will be retried, so it
+    // has to actually retry — a plain Error here would block on first sight.
+    const noteId = 'note-unconfirmed';
+    await seedLocalNote(noteId);
+
+    const entry = buildEntry({
+      id: 908,
+      clientMutationId: 'mut-unconfirmed',
+      operation: 'pin',
+      entityType: 'note',
+      entityId: noteId,
+      payload: { pinned: true },
+      retryCount: 0,
+    });
+    await enqueue(entry);
+
+    const { factory } = buildVerbAwareChain({
+      select: { data: null },
+      update: { data: null },
+      insert: { data: null },
+    });
+    mockFrom.mockImplementation(factory);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.blocked).toBe(0);
+    expect(mockMarkSyncQueueEntryBlocked).not.toHaveBeenCalled();
+
+    const persisted = await getOfflineDb(TEST_USER_ID).syncQueue.get(908);
+    expect(persisted?.status).toBe('pending');
+    expect(persisted?.retryCount).toBe(1);
+  });
+
   it('names the failure when a rebuilt note never lands on the server', async () => {
     const noteId = 'note-rebuild-vanishes';
     await seedLocalNote(noteId);

@@ -27,6 +27,10 @@ vi.mock('../lib/supabase', () => ({
   fetchAllPaginated: vi.fn().mockResolvedValue({ data: [], error: null }),
 }));
 
+import {
+  getBlockedSyncReason,
+  getSyncQueueSnapshot,
+} from './offlineNotes';
 import { getOfflineDb, type LocalTag } from '../lib/offlineDb';
 import { supabase } from '../lib/supabase';
 
@@ -1098,6 +1102,66 @@ describe('offlineNotes', () => {
       expect(stored!.syncStatus).toBe('synced');
       expect(stored!.lastSyncedAt).toBe(serverTime.getTime());
       expect(stored!.serverUpdatedAt).toBe(serverTime.getTime());
+    });
+  });
+
+  describe('sync queue reporting', () => {
+    async function queueEntry(overrides: Record<string, unknown>) {
+      const db = getOfflineDb(TEST_USER_ID);
+      await db.syncQueue.add({
+        clientMutationId: `mut-${Math.random().toString(36).slice(2, 10)}`,
+        operation: 'update',
+        entityType: 'note',
+        entityId: 'note-x',
+        payload: {},
+        createdAt: Date.now(),
+        retryCount: 0,
+        status: 'pending',
+        lastError: null,
+        lastAttemptAt: null,
+        blockedAt: null,
+        updatedAt: Date.now(),
+        ...overrides,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+    }
+
+    beforeEach(async () => {
+      await getOfflineDb(TEST_USER_ID).syncQueue.clear();
+    });
+
+    it('counts pending and blocked entries separately', async () => {
+      await queueEntry({ status: 'pending' });
+      await queueEntry({ status: 'pending' });
+      await queueEntry({ status: 'blocked', blockedAt: 1, lastError: '[42501] denied' });
+
+      const snapshot = await getSyncQueueSnapshot(TEST_USER_ID);
+
+      expect(snapshot.pendingCount).toBe(2);
+      expect(snapshot.blockedCount).toBe(1);
+      expect(snapshot.blockedReason).toBe('[42501] denied');
+    });
+
+    it('reports the most recently blocked entry as the reason', async () => {
+      await queueEntry({ status: 'blocked', blockedAt: 100, lastError: 'older failure' });
+      await queueEntry({ status: 'blocked', blockedAt: 900, lastError: 'newest failure' });
+      await queueEntry({ status: 'blocked', blockedAt: 500, lastError: 'middle failure' });
+
+      const snapshot = await getSyncQueueSnapshot(TEST_USER_ID);
+
+      expect(snapshot.blockedCount).toBe(3);
+      expect(snapshot.blockedReason).toBe('newest failure');
+      await expect(getBlockedSyncReason(TEST_USER_ID)).resolves.toBe('newest failure');
+    });
+
+    it('reports no reason when nothing is blocked', async () => {
+      await queueEntry({ status: 'pending' });
+
+      const snapshot = await getSyncQueueSnapshot(TEST_USER_ID);
+
+      expect(snapshot.blockedCount).toBe(0);
+      expect(snapshot.blockedReason).toBeNull();
+      await expect(getBlockedSyncReason(TEST_USER_ID)).resolves.toBeNull();
     });
   });
 });
