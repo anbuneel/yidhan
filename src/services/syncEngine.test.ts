@@ -25,6 +25,7 @@ const {
   mockMarkTagSynced,
   mockUpdateSyncQueueEntry,
   mockMarkSyncQueueEntryBlocked,
+  mockQueueSyncOperation,
 } = vi.hoisted(() => ({
   mockFrom: vi.fn(),
   mockFetchAllPaginated: vi.fn(),
@@ -34,6 +35,7 @@ const {
   mockMarkTagSynced: vi.fn(),
   mockUpdateSyncQueueEntry: vi.fn(),
   mockMarkSyncQueueEntryBlocked: vi.fn(),
+  mockQueueSyncOperation: vi.fn(),
 }));
 
 // Module-level mocks
@@ -52,6 +54,7 @@ vi.mock('./offlineNotes', () => ({
   markNoteSynced: (...args: unknown[]) => mockMarkNoteSynced(...args),
   updateSyncQueueEntry: (...args: unknown[]) => mockUpdateSyncQueueEntry(...args),
   markSyncQueueEntryBlocked: (...args: unknown[]) => mockMarkSyncQueueEntryBlocked(...args),
+  queueSyncOperation: (...args: unknown[]) => mockQueueSyncOperation(...args),
 }));
 
 vi.mock('./offlineTags', () => ({
@@ -1852,6 +1855,55 @@ describe('syncEngine — recovery from permanently blocked entries', () => {
     expect(result.blocked).toBe(0);
     expect(calls.insert).not.toHaveBeenCalled();
     expect(mockMarkSyncQueueEntryBlocked).not.toHaveBeenCalled();
+  });
+
+  it('re-queues tag links when it rebuilds a note', async () => {
+    // note_tags cascades on delete, so a rebuilt note comes back tagless.
+    // hydrateFromServer prunes local 'synced' links absent from the server,
+    // which would silently strip the tags on every device.
+    const noteId = 'note-with-tags';
+    await seedLocalNote(noteId);
+    const db = getOfflineDb(TEST_USER_ID);
+    await db.noteTags.put({
+      noteId,
+      tagId: 'tag-kept',
+      syncStatus: 'synced',
+      lastSyncedAt: Date.now(),
+    });
+
+    const entry = buildEntry({
+      id: 907,
+      clientMutationId: 'mut-note-with-tags',
+      operation: 'pin',
+      entityType: 'note',
+      entityId: noteId,
+      payload: { pinned: true },
+    });
+    await enqueue(entry);
+
+    const { factory } = buildVerbAwareChain({
+      select: { data: null },
+      update: { data: null },
+      insert: { data: { updated_at: '2026-07-04T00:00:00.000Z' } },
+    });
+    mockFrom.mockImplementation(factory);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.processed).toBe(1);
+    expect(mockQueueSyncOperation).toHaveBeenCalledWith(
+      TEST_USER_ID,
+      'add_tag',
+      'noteTag',
+      `${noteId}:tag-kept`,
+      { noteId, tagId: 'tag-kept' }
+    );
+
+    // Pending links survive hydration's prune of synced-but-absent rows.
+    const link = await db.noteTags.get([noteId, 'tag-kept']);
+    expect(link?.syncStatus).toBe('pending');
+
+    await db.noteTags.clear();
   });
 
   it('does not rebuild a row that is still on the server', async () => {

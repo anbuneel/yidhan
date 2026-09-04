@@ -38,6 +38,12 @@ describe('describeSyncFailure', () => {
     );
   });
 
+  it('does not blame encryption for an unrelated check constraint', () => {
+    expect(
+      describeSyncFailure('[23514] violates check constraint "chk_tag_name_length"')
+    ).toBe('This change could not be saved yet.');
+  });
+
   it('explains a plaintext note guard', () => {
     expect(describeSyncFailure('Refusing update sync for unsafe plaintext note abc')).toBe(
       'This note predates the encryption upgrade and needs to be re-saved.'

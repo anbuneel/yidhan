@@ -19,6 +19,7 @@ import {
   removeSyncQueueEntry,
   markNoteSynced,
   markSyncQueueEntryBlocked,
+  queueSyncOperation,
   updateSyncQueueEntry,
 } from './offlineNotes';
 import { markTagSynced } from './offlineTags';
@@ -360,6 +361,35 @@ async function processQueueEntry(
  * Returns the server `updated_at`, or null when there is no usable local
  * record to rebuild from.
  */
+/**
+ * Re-queue a rebuilt note's tag links.
+ *
+ * note_tags.note_id is ON DELETE CASCADE, so whenever the server row was lost
+ * to a real delete the tag links went with it. Rebuilding only the note leaves
+ * it tagless server-side, and hydrateFromServer is authoritative: it drops
+ * local noteTags rows that are marked `synced` but absent from the server. The
+ * next hydration on any device would silently strip those tags for good.
+ *
+ * Marking the links pending both protects them from that prune and lets the
+ * normal add_tag path restore them, which already tolerates a duplicate (23505)
+ * and retries when the tag itself has not synced yet (23503).
+ */
+async function requeueNoteTagLinks(userId: string, noteId: string): Promise<void> {
+  const db = getOfflineDb(userId);
+  const links = await db.noteTags.where('noteId').equals(noteId).toArray();
+
+  for (const link of links) {
+    await db.noteTags.update([link.noteId, link.tagId], {
+      syncStatus: 'pending',
+      lastSyncedAt: null,
+    });
+    await queueSyncOperation(userId, 'add_tag', 'noteTag', `${link.noteId}:${link.tagId}`, {
+      noteId: link.noteId,
+      tagId: link.tagId,
+    });
+  }
+}
+
 async function reinsertNoteFromLocalRecord(
   userId: string,
   noteId: string,
@@ -411,13 +441,20 @@ async function reinsertNoteFromLocalRecord(
     .maybeSingle();
 
   if (error) throw error;
-  if (created) return new Date(created.updated_at);
+
+  if (created) {
+    await requeueNoteTagLinks(userId, noteId);
+    return new Date(created.updated_at);
+  }
 
   // The insert reported success but returned no row. Re-read before giving up,
   // and fail loudly if the row still is not there — a silent `false` here would
   // reach the user as "Unknown sync failure".
   const confirmed = await fetchServerNoteUpdatedAt(noteId);
-  if (confirmed) return confirmed;
+  if (confirmed) {
+    await requeueNoteTagLinks(userId, noteId);
+    return confirmed;
+  }
 
   throw new Error(`Rebuilt note ${noteId} did not appear on the server`);
 }

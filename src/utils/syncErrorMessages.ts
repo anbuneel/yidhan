@@ -36,8 +36,10 @@ const PATTERNS: FailurePattern[] = [
     message: 'The server refused this change. It needs attention from the app owner.',
   },
   {
-    // 23514 — the launch E2EE invariant rejected the row.
-    matches: (raw) => raw.includes('[23514]') || raw.includes('check constraint'),
+    // 23514 on the E2EE invariants specifically. Matching the generic phrase
+    // would mis-describe any future check constraint as an encryption problem.
+    matches: (raw) =>
+      raw.includes('chk_notes_e2ee_only') || raw.includes('chk_note_shares_e2ee_only'),
     message: 'This note is missing its encryption details, so it cannot be saved.',
   },
   {
