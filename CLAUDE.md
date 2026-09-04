@@ -30,6 +30,7 @@ npm run e2e      # Run Playwright E2E tests
 npm run e2e:ui   # Open Playwright UI for interactive testing
 npm run e2e:headed # Run E2E tests with visible browser
 npm run e2e:report # View E2E test HTML report
+npm run e2e:sw   # Service worker update tests (production build, real worker)
 npm run theme:generate  # Generate CSS from active themes
 npm run theme:preview   # Preview theme CSS without updating
 npm run icons:generate  # Generate PWA icons from SVG source
@@ -314,7 +315,11 @@ parks in `waiting` until the page posts `SKIP_WAITING` — and a client running 
 cannot post it, so browsers stay pinned to an old precached shell indefinitely (this is what
 stranded clients on pre-hardening code against a migrated database).
 Registration is explicit in `src/utils/serviceWorkerUpdates.ts`, not vite-plugin-pwa's
-injected script, so the update path is testable. Mid-session activation can invalidate lazy
+injected script, so the update path is testable. `npm run e2e:sw` guards it against a
+real build in a real browser: it installs a worker, swaps in a new deployment with the
+tab still open, and asserts the client moves to it. The main `npm run e2e` suite cannot
+cover this — it runs against the dev server, which produces no service worker, which is
+why the original breakage went unnoticed. Mid-session activation can invalidate lazy
 chunk URLs; `lazyWithRetry` plus the `unhandledrejection` handler in `main.tsx` recover with
 one cooldown-guarded reload.
 

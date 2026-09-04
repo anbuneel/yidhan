@@ -1139,16 +1139,8 @@ export async function getSyncQueueSnapshot(userId: string): Promise<{
  * state diagnosable without opening IndexedDB by hand.
  */
 export async function getBlockedSyncReason(userId: string): Promise<string | null> {
-  const db = getOfflineDb(userId);
-  const blocked = await db.syncQueue.where('status').equals('blocked').toArray();
-
-  if (blocked.length === 0) return null;
-
-  const mostRecent = blocked.reduce((latest, entry) =>
-    (entry.blockedAt ?? 0) > (latest.blockedAt ?? 0) ? entry : latest
-  );
-
-  return mostRecent.lastError ?? null;
+  const { blockedReason } = await getSyncQueueSnapshot(userId);
+  return blockedReason;
 }
 
 export async function getPendingSyncCount(userId: string): Promise<number> {

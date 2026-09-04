@@ -114,6 +114,7 @@
     "e2e:ui": "playwright test --ui",
     "e2e:headed": "playwright test --headed",
     "e2e:report": "playwright show-report",
+    "e2e:sw": "playwright test --config playwright.sw.config.ts",
     "theme:generate": "tsx scripts/generate-theme-css.ts",
     "theme:preview": "tsx scripts/generate-theme-css.ts --preview",
     "icons:generate": "tsx scripts/generate-icons.ts",

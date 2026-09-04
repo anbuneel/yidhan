@@ -53,6 +53,7 @@ tmpclaude-*
 # Playwright
 /test-results/
 /playwright-report/
+/playwright-report-sw/
 /blob-report/
 /playwright/.cache/
 
