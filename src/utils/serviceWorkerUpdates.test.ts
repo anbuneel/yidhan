@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   activateWaitingUpdate,
   registerServiceWorker,
+  removeLegacyRuntimeCaches,
   resetServiceWorkerRegistrationForTests,
 } from './serviceWorkerUpdates';
 
@@ -66,5 +67,31 @@ describe('serviceWorkerUpdates', () => {
     await registerServiceWorker({ registrar: vi.fn().mockReturnValue(applyUpdate) });
 
     await expect(activateWaitingUpdate()).resolves.toBe(false);
+  });
+
+  describe('removeLegacyRuntimeCaches', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('deletes the retired Google Fonts runtime caches and reports which existed', async () => {
+      const present = new Set(['google-fonts-cache']);
+      const cacheDelete = vi.fn(async (name: string) => present.delete(name));
+      vi.stubGlobal('caches', { delete: cacheDelete });
+
+      const removed = await removeLegacyRuntimeCaches();
+
+      expect(cacheDelete).toHaveBeenCalledWith('google-fonts-cache');
+      expect(cacheDelete).toHaveBeenCalledWith('gstatic-fonts-cache');
+      expect(removed).toEqual(['google-fonts-cache']);
+    });
+
+    it('is a no-op where Cache Storage is unavailable or refuses', async () => {
+      vi.stubGlobal('caches', undefined);
+      expect(await removeLegacyRuntimeCaches()).toEqual([]);
+
+      vi.stubGlobal('caches', { delete: vi.fn().mockRejectedValue(new Error('SecurityError')) });
+      expect(await removeLegacyRuntimeCaches()).toEqual([]);
+    });
   });
 });

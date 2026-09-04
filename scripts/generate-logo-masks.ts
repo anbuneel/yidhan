@@ -32,7 +32,13 @@ const ARC_OUTPUT = path.join(OUTPUT_DIR, 'yidhan-logo-mark-arc.webp');
 const DOT_OUTPUT = path.join(OUTPUT_DIR, 'yidhan-logo-mark-dot.webp');
 
 // ── Tuning ──────────────────────────────────────────────────────
-/** The gold seed, in source pixels. Radius includes a margin around the paint. */
+/**
+ * The gold seed, in source pixels, measured against the current
+ * images/yidhan-logo-mark-512.webp (512×334). Radius includes a margin around
+ * the paint. This is coupled to that exact export: if the source is ever
+ * re-cropped or re-sized, re-measure the seed here or the split silently
+ * lands part of the arc in the seed mask (or vice versa) instead of erroring.
+ */
 const SEED = { cx: 227, cy: 258.5, r: 44 };
 /** Luminance treated as fully inked, taken from this percentile of each region. */
 const INK_PERCENTILE = 0.02;

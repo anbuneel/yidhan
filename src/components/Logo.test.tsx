@@ -28,8 +28,8 @@ describe('Logo', () => {
   });
 
   it('applies className to the outer element in both modes', () => {
-    const { unmount } = render(<Logo className="mb-12" />);
-    expect(screen.getByText('Yidhan').parentElement?.parentElement).toHaveClass('mb-12');
+    const { container, unmount } = render(<Logo className="mb-12" />);
+    expect(container.firstChild).toHaveClass('mb-12');
     unmount();
 
     render(<Logo className="shrink-0" onClick={() => {}} />);
