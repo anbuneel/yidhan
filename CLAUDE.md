@@ -449,3 +449,4 @@ SQL migrations are stored in `supabase/migrations/`:
 - `launch_security_hardening.sql`
 - `add_account_deletion_workflow.sql`
 - `default_user_id_to_auth_uid.sql` — **required.** Clients stopped sending `user_id` on note/tag inserts; without this default every create fails RLS (`42501`) or NOT NULL (`23502`) and blocks in the sync queue.
+- `verify_migration_state.sql` — drift check. Run in the SQL editor after deploying; every row should read `applied`. Migrations are applied by hand, so a client shipped ahead of its migration fails silently on writes only.
