@@ -221,18 +221,22 @@ body {
     position: absolute;
     inset: 0;
     mask-size: 100% 100%;
+    -webkit-mask-size: 100% 100%;
     mask-repeat: no-repeat;
+    -webkit-mask-repeat: no-repeat;
     print-color-adjust: exact;
   }
 
   .brand-mark::before {
     background-color: currentColor;
     mask-image: url('./assets/brand/yidhan-logo-mark-arc.webp');
+    -webkit-mask-image: url('./assets/brand/yidhan-logo-mark-arc.webp');
   }
 
   .brand-mark::after {
     background-color: var(--color-brand-gold);
     mask-image: url('./assets/brand/yidhan-logo-mark-dot.webp');
+    -webkit-mask-image: url('./assets/brand/yidhan-logo-mark-dot.webp');
   }
 
   /* Forced colours override backgrounds, which would erase a masked mark */
