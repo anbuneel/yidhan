@@ -27,9 +27,15 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      // Keep a new worker waiting until the next clean page load. Auto-activating
-      // while React is running can invalidate lazy chunk URLs and force prompts.
-      registerType: 'prompt',
+      // Must stay 'autoUpdate'. Under 'prompt' a new worker parks in `waiting`
+      // until the page sends SKIP_WAITING — and a client running stale code
+      // cannot send it, so browsers stayed pinned to an old precached shell
+      // indefinitely. Mid-session activation can invalidate lazy chunk URLs;
+      // lazyWithRetry and the chunk-error handler in main.tsx recover from that.
+      registerType: 'autoUpdate',
+      // Registration is explicit in src/utils/serviceWorkerUpdates.ts so the
+      // update path is testable instead of relying on an injected script.
+      injectRegister: null,
       includeAssets: ['favicon.png', 'robots.txt'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],

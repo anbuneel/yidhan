@@ -22,7 +22,7 @@ export function SyncIndicator({
   onRetryBlockedChanges,
   isRetryingBlockedChanges = false,
 }: SyncIndicatorProps) {
-  const { isOnline, pendingCount, blockedCount, isStuck, refresh } = useSyncStatus();
+  const { isOnline, pendingCount, blockedCount, blockedReason, isStuck, refresh } = useSyncStatus();
   const [isRetryingLocal, setIsRetryingLocal] = useState(false);
   const isRetrying = isRetryingBlockedChanges || isRetryingLocal;
 
@@ -53,7 +53,12 @@ export function SyncIndicator({
           background: 'var(--color-bg-tertiary)',
         }}
         aria-live="polite"
-        aria-label={`${blockedCount} change${blockedCount === 1 ? '' : 's'} blocked and awaiting retry`}
+        aria-label={
+          blockedReason
+            ? `${blockedCount} change${blockedCount === 1 ? '' : 's'} blocked: ${blockedReason}`
+            : `${blockedCount} change${blockedCount === 1 ? '' : 's'} blocked and awaiting retry`
+        }
+        title={blockedReason ?? undefined}
       >
         <span
           className="size-2 rounded-full"

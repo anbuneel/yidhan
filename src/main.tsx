@@ -8,6 +8,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { EncryptionProvider } from './contexts/EncryptionContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { isChunkLoadError, reloadForUpdatedApp } from './utils/updateRecovery'
+import { activateWaitingUpdate, registerServiceWorker } from './utils/serviceWorkerUpdates'
 import { scrubSensitiveData, scrubShareSecrets } from './utils/sentryScrubber'
 
 // Handle chunk loading errors (happens when app is open during deployment)
@@ -16,9 +17,18 @@ window.addEventListener('unhandledrejection', (event) => {
   if (isChunkLoadError(event.reason)) {
     // Prevent the error from being logged to console (it's expected)
     event.preventDefault()
-    reloadForUpdatedApp()
+    // Hand over to a waiting worker first, otherwise the reload is served the
+    // same stale precache that just failed to produce the chunk.
+    void activateWaitingUpdate().finally(() => {
+      reloadForUpdatedApp()
+    })
   }
 })
+
+// Register the service worker explicitly. vite-plugin-pwa's injected script
+// only registers; it never surfaces an update, which is how clients ended up
+// stranded on an old shell.
+void registerServiceWorker()
 
 // Initialize Sentry for error monitoring (only in production with DSN configured)
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN

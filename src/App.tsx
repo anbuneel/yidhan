@@ -65,6 +65,7 @@ import {
   deleteNoteFromServer,
   upsertTagFromServer,
   deleteTagFromServer,
+  getBlockedSyncReason,
   retryBlockedSyncEntries,
 } from './services/offlineNotes';
 import type { LocalNote } from './lib/offlineDb';
@@ -1626,10 +1627,18 @@ function App() {
         return;
       }
 
-      toast('Retried blocked changes, but some still need attention.', {
-        duration: 3000,
-        icon: '\u26A0\uFE0F',
-      });
+      // Say why. A bare "still need attention" is what left blocked changes
+      // undiagnosable — the reason is already recorded on the queue entry.
+      const reason = await getBlockedSyncReason(user.id);
+      toast(
+        reason
+          ? `Some changes are still blocked: ${reason}`
+          : 'Retried blocked changes, but some still need attention.',
+        {
+          duration: 6000,
+          icon: '\u26A0\uFE0F',
+        }
+      );
     } catch (error) {
       console.error('Failed to retry blocked changes:', error);
       toast.error('Failed to retry blocked changes');

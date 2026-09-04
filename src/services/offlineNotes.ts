@@ -1099,6 +1099,27 @@ export async function getSyncQueueCounts(
   return { pendingCount, blockedCount };
 }
 
+/**
+ * Reason the most recently blocked queue entry failed.
+ *
+ * Blocked entries already record `lastError`, but nothing surfaced it, so a
+ * blocked banner told the user a count and nothing else — and the retry button
+ * cannot clear a deterministic failure. Showing the reason is what makes the
+ * state diagnosable without opening IndexedDB by hand.
+ */
+export async function getBlockedSyncReason(userId: string): Promise<string | null> {
+  const db = getOfflineDb(userId);
+  const blocked = await db.syncQueue.where('status').equals('blocked').toArray();
+
+  if (blocked.length === 0) return null;
+
+  const mostRecent = blocked.reduce((latest, entry) =>
+    (entry.blockedAt ?? 0) > (latest.blockedAt ?? 0) ? entry : latest
+  );
+
+  return mostRecent.lastError ?? null;
+}
+
 export async function getPendingSyncCount(userId: string): Promise<number> {
   const { pendingCount } = await getSyncQueueCounts(userId);
   return pendingCount;

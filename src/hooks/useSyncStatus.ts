@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from '../contexts/AuthContext';
-import { getSyncQueueCounts } from '../services/offlineNotes';
+import { getBlockedSyncReason, getSyncQueueCounts } from '../services/offlineNotes';
 import { useNetworkStatus } from './useNetworkStatus';
 
 // On native platforms, assume online (network detection is unreliable in WebViews)
@@ -22,6 +22,8 @@ export interface SyncStatus {
   pendingCount: number;
   /** Number of blocked operations awaiting manual retry */
   blockedCount: number;
+  /** Why the most recent blocked operation failed, if anything is blocked */
+  blockedReason: string | null;
   /** Whether we're currently online */
   isOnline: boolean;
   /** Whether all changes are synced */
@@ -43,6 +45,7 @@ export function useSyncStatus(): SyncStatus {
   const { isOnline } = useNetworkStatus();
   const [pendingCount, setPendingCount] = useState(0);
   const [blockedCount, setBlockedCount] = useState(0);
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [isStuck, setIsStuck] = useState(false);
   // Ref to track when pending items first appeared (not needed for rendering)
@@ -52,6 +55,7 @@ export function useSyncStatus(): SyncStatus {
     if (!user) {
       setPendingCount(0);
       setBlockedCount(0);
+      setBlockedReason(null);
       setIsStuck(false);
       pendingSinceRef.current = null;
       return;
@@ -61,6 +65,7 @@ export function useSyncStatus(): SyncStatus {
       const counts = await getSyncQueueCounts(user.id);
       setPendingCount(counts.pendingCount);
       setBlockedCount(counts.blockedCount);
+      setBlockedReason(counts.blockedCount > 0 ? await getBlockedSyncReason(user.id) : null);
       setLastChecked(new Date());
 
       // Track when pending items first appeared
@@ -106,6 +111,7 @@ export function useSyncStatus(): SyncStatus {
   return {
     pendingCount,
     blockedCount,
+    blockedReason,
     isOnline: effectiveOnline,
     isSynced: pendingCount === 0 && blockedCount === 0 && effectiveOnline,
     isStuck,

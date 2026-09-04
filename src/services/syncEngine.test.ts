@@ -783,8 +783,11 @@ describe('processQueue behavior', () => {
       createDeferred<{ data: null; error: null }>()
     );
     const pendingReads = [...deferredReads];
-    const maybeSingle = vi.fn(() => pendingReads.shift()!.promise);
-    const single = vi.fn().mockResolvedValue({
+    // The idempotency read is what the test gates on; the insert that follows
+    // it resolves immediately. Both terminate with maybeSingle, so the chain
+    // tracks which verb it is completing.
+    const existenceRead = vi.fn(() => pendingReads.shift()!.promise);
+    const insertRead = vi.fn().mockResolvedValue({
       data: { id: 'created-note', updated_at: '2026-03-12T00:00:00Z' },
       error: null,
     });
@@ -795,22 +798,29 @@ describe('processQueue behavior', () => {
       }
 
       const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-      for (const method of ['select', 'insert', 'update', 'delete', 'eq', 'gt', 'filter']) {
+      let isInsert = false;
+      for (const method of ['select', 'update', 'delete', 'eq', 'gt', 'filter']) {
         chain[method] = vi.fn().mockReturnValue(chain);
       }
-      chain.maybeSingle = maybeSingle;
-      chain.single = single;
+      chain.insert = vi.fn().mockImplementation(() => {
+        isInsert = true;
+        return chain;
+      });
+
+      const terminal = () => (isInsert ? insertRead() : existenceRead());
+      chain.maybeSingle = vi.fn().mockImplementation(terminal);
+      chain.single = vi.fn().mockImplementation(terminal);
       return chain;
     });
 
     const syncPromise = processQueue(TEST_USER_ID);
     await vi.waitFor(() => {
-      expect(maybeSingle).toHaveBeenCalledTimes(SYNC_BATCH_CONCURRENCY_LIMIT);
+      expect(existenceRead).toHaveBeenCalledTimes(SYNC_BATCH_CONCURRENCY_LIMIT);
     });
 
     deferredReads[0].resolve({ data: null, error: null });
     await vi.waitFor(() => {
-      expect(maybeSingle).toHaveBeenCalledTimes(SYNC_BATCH_CONCURRENCY_LIMIT + 1);
+      expect(existenceRead).toHaveBeenCalledTimes(SYNC_BATCH_CONCURRENCY_LIMIT + 1);
     });
 
     for (const deferred of deferredReads.slice(1)) {
@@ -819,7 +829,7 @@ describe('processQueue behavior', () => {
 
     const result = await syncPromise;
     expect(result.processed).toBe(entries.length);
-    expect(single).toHaveBeenCalledTimes(entries.length);
+    expect(insertRead).toHaveBeenCalledTimes(entries.length);
   });
 
   it('should increment retry count on retryable network error', async () => {
@@ -1626,6 +1636,212 @@ describe('fullSync', () => {
     expect(result.pulled.tags).toBe(0);
     expect(result.processed).toBe(0); // empty push queue
     expect(result.pullErrors).toHaveLength(0);
+  });
+});
+
+describe('syncEngine — recovery from permanently blocked entries', () => {
+  beforeEach(async () => {
+    resetSyncTestState();
+    await clearTestDb('notes', 'tags', 'noteTags', 'syncQueue');
+  });
+
+  afterEach(() => {
+    clearSyncState();
+  });
+
+  /**
+   * Chain mock that answers based on the write verb used, so a test can make
+   * an UPDATE match zero rows while the recovery INSERT still succeeds.
+   */
+  function buildVerbAwareChain(
+    results: Partial<Record<'select' | 'insert' | 'update' | 'delete', { data?: unknown; error?: unknown }>>
+  ) {
+    const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+    let verb: 'select' | 'insert' | 'update' | 'delete' = 'select';
+
+    for (const m of ['select', 'eq', 'gt', 'filter'] as const) {
+      chain[m] = vi.fn().mockReturnValue(chain);
+    }
+    for (const m of ['insert', 'update', 'delete'] as const) {
+      chain[m] = vi.fn().mockImplementation(() => {
+        verb = m;
+        return chain;
+      });
+    }
+
+    const settle = async () => {
+      const r = results[verb] ?? { data: null, error: null };
+      return { data: r.data ?? null, error: r.error ?? null };
+    };
+
+    chain.maybeSingle = vi.fn().mockImplementation(settle);
+    chain.single = vi.fn().mockImplementation(settle);
+    return chain;
+  }
+
+  /** Persist the entry so status writes land somewhere, and feed the queue. */
+  async function enqueue(entry: SyncQueueEntry) {
+    await getOfflineDb(TEST_USER_ID).syncQueue.put(entry);
+    mockGetPendingSyncQueue.mockResolvedValue([entry]);
+  }
+
+  async function seedLocalNote(noteId: string, overrides: Record<string, unknown> = {}) {
+    const db = getOfflineDb(TEST_USER_ID);
+    await db.notes.put({
+      id: noteId,
+      userId: TEST_USER_ID,
+      title: '',
+      content: '',
+      pinned: false,
+      deletedAt: null,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      syncStatus: 'pending',
+      lastSyncedAt: null,
+      serverUpdatedAt: null,
+      localUpdatedAt: Date.now(),
+      encryptedPayload: `ciphertext-${noteId}`,
+      encryptionIv: `iv-${noteId}`,
+      encryptionVersion: 1,
+      contentHash: `hash-${noteId}`,
+      ...overrides,
+    });
+  }
+
+  it('re-creates the note instead of blocking when a pin targets a row the server lost', async () => {
+    const noteId = 'note-missing-pin';
+    await seedLocalNote(noteId);
+
+    const entry = buildEntry({
+      id: 900,
+      clientMutationId: 'mut-missing-pin',
+      operation: 'pin',
+      entityType: 'note',
+      entityId: noteId,
+      payload: { pinned: true },
+    });
+    await enqueue(entry);
+
+    // UPDATE matches no rows; the recovery INSERT succeeds.
+    const chain = buildVerbAwareChain({
+      update: { data: null },
+      insert: { data: { updated_at: '2026-07-01T00:00:00.000Z' } },
+    });
+    mockFrom.mockReturnValue(chain);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.blocked).toBe(0);
+    expect(result.failed).toBe(0);
+    expect(result.processed).toBe(1);
+    expect(chain.insert).toHaveBeenCalledTimes(1);
+    expect(mockMarkSyncQueueEntryBlocked).not.toHaveBeenCalled();
+    expect(mockMarkNoteSynced).toHaveBeenCalledWith(
+      TEST_USER_ID,
+      noteId,
+      new Date('2026-07-01T00:00:00.000Z')
+    );
+  });
+
+  it('rebuilds the row from the local record when an update finds nothing to update', async () => {
+    const noteId = 'note-missing-update';
+    await seedLocalNote(noteId);
+
+    const entry = buildEntry({
+      id: 901,
+      clientMutationId: 'mut-missing-update',
+      operation: 'update',
+      entityType: 'note',
+      entityId: noteId,
+      payload: {
+        title: '',
+        content: '',
+        ...encryptedServerFields(noteId),
+      },
+    });
+    await enqueue(entry);
+
+    const chain = buildVerbAwareChain({
+      select: { data: null },
+      update: { data: null },
+      insert: { data: { updated_at: '2026-07-02T00:00:00.000Z' } },
+    });
+    mockFrom.mockReturnValue(chain);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.blocked).toBe(0);
+    expect(result.processed).toBe(1);
+    expect(chain.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves a note-tag insert pending when its parent row has not synced yet', async () => {
+    const entry = buildEntry({
+      id: 902,
+      clientMutationId: 'mut-fk-add-tag',
+      operation: 'add_tag',
+      entityType: 'noteTag',
+      entityId: 'note-fk:tag-fk',
+      payload: { noteId: 'note-fk', tagId: 'tag-fk' },
+      retryCount: 0,
+    });
+    await enqueue(entry);
+
+    const fkError = Object.assign(new Error('insert violates foreign key constraint'), {
+      code: '23503',
+    });
+    const chain = buildChain({ error: fkError });
+    // note_tags inserts resolve through the terminal insert call itself.
+    chain.insert = vi.fn().mockResolvedValue({ data: null, error: fkError });
+    mockFrom.mockReturnValue(chain);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    // Ordering, not corruption — the entry stays retryable rather than blocking.
+    expect(result.blocked).toBe(0);
+    expect(mockMarkSyncQueueEntryBlocked).not.toHaveBeenCalled();
+    expect(mockUpdateSyncQueueEntry).toHaveBeenCalled();
+
+    const persisted = await getOfflineDb(TEST_USER_ID).syncQueue.get(902);
+    expect(persisted?.status).toBe('pending');
+  });
+
+  it('keeps the Postgres error code in lastError so a block can be diagnosed', async () => {
+    const noteId = 'note-rls-blocked';
+    await seedLocalNote(noteId);
+
+    const entry = buildEntry({
+      id: 903,
+      clientMutationId: 'mut-rls-blocked',
+      operation: 'create',
+      entityType: 'note',
+      entityId: noteId,
+      payload: {
+        title: '',
+        content: '',
+        pinned: false,
+        ...encryptedServerFields(noteId),
+      },
+    });
+    await enqueue(entry);
+
+    const rlsError = Object.assign(
+      new Error('new row violates row-level security policy for table "notes"'),
+      { code: '42501' }
+    );
+    const chain = buildVerbAwareChain({
+      select: { data: null },
+      insert: { error: rlsError },
+    });
+    mockFrom.mockReturnValue(chain);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.blocked).toBe(1);
+    const persisted = await getOfflineDb(TEST_USER_ID).syncQueue.get(903);
+    expect(persisted?.status).toBe('blocked');
+    expect(persisted?.lastError).toContain('42501');
+    expect(persisted?.lastError).toContain('row-level security');
   });
 });
 

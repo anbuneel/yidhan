@@ -330,6 +330,75 @@ async function processQueueEntry(
 }
 
 /**
+ * Re-insert a note row on the server from its local encrypted record.
+ *
+ * A queued update/pin/restore targets a row the server may not have — usually
+ * because that note's own `create` entry failed earlier. PostgREST reports the
+ * resulting zero-row write as PGRST116, which `isRetryableError` classifies as
+ * non-retryable, so the entry blocks permanently and "Retry blocked changes"
+ * can never clear it. Re-creating the row from the local record is what breaks
+ * that loop.
+ *
+ * A note hard-deleted on another device is resurrected by this. That is the
+ * deliberate trade: the note is still present in this device's IndexedDB, so
+ * the alternative is a note the user can see but can never sync.
+ *
+ * Returns the server `updated_at`, or null when there is no usable local
+ * record to rebuild from.
+ */
+async function reinsertNoteFromLocalRecord(
+  userId: string,
+  noteId: string,
+  overrides: Readonly<Record<string, unknown>> = {}
+): Promise<Date | null> {
+  const db = getOfflineDb(userId);
+  const localNote = await db.notes.get(noteId);
+
+  if (!localNote || !isEncryptedLocalNote(localNote)) return null;
+
+  const insertPayload: Record<string, unknown> = {
+    id: noteId,
+    title: '',
+    content: '',
+    pinned: localNote.pinned,
+    encrypted_payload: localNote.encryptedPayload,
+    encryption_iv: localNote.encryptionIv,
+    encryption_version: localNote.encryptionVersion,
+    content_hash: localNote.contentHash,
+    created_at: new Date(localNote.createdAt).toISOString(),
+    display_updated_at: new Date(localNote.updatedAt).toISOString(),
+    deleted_at: localNote.deletedAt === null ? null : new Date(localNote.deletedAt).toISOString(),
+    ...overrides,
+  };
+
+  const { data: created, error } = await supabase
+    .from('notes')
+    .insert(insertPayload)
+    .select('updated_at')
+    .maybeSingle();
+
+  if (error) throw error;
+  return created ? new Date(created.updated_at) : null;
+}
+
+/**
+ * Read back a note's server timestamp.
+ *
+ * A write can succeed while its RETURNING row is filtered out by RLS, which
+ * leaves `.maybeSingle()` null with no error. Re-reading separates that case
+ * from a genuinely absent row.
+ */
+async function fetchServerNoteUpdatedAt(noteId: string): Promise<Date | null> {
+  const { data } = await supabase
+    .from('notes')
+    .select('updated_at')
+    .eq('id', noteId)
+    .maybeSingle();
+
+  return data ? new Date(data.updated_at) : null;
+}
+
+/**
  * Process note operations
  */
 async function processNoteOperation(
@@ -377,10 +446,19 @@ async function processNoteOperation(
         .from('notes')
         .insert(insertPayload)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      await markNoteSynced(userId, noteId, new Date(created.updated_at));
+
+      // The insert can succeed while RLS filters the returned row. Read the
+      // timestamp back rather than treating a null row as a hard failure.
+      const createdAt = created
+        ? new Date(created.updated_at)
+        : await fetchServerNoteUpdatedAt(noteId);
+
+      if (!createdAt) return false;
+
+      await markNoteSynced(userId, noteId, createdAt);
       return true;
     }
 
@@ -447,23 +525,38 @@ async function processNoteOperation(
         .update(updatePayload)
         .eq('id', noteId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      await markNoteSynced(userId, noteId, new Date(updated.updated_at));
+
+      const updatedAt = updated
+        ? new Date(updated.updated_at)
+        : await reinsertNoteFromLocalRecord(userId, noteId, { ...encryptedPayload });
+
+      if (!updatedAt) return false;
+
+      await markNoteSynced(userId, noteId, updatedAt);
       return true;
     }
 
     case 'soft_delete': {
+      const deletedAt = data.deletedAt as string;
       const { data: softDeleted, error } = await supabase
         .from('notes')
-        .update({ deleted_at: data.deletedAt as string })
+        .update({ deleted_at: deletedAt })
         .eq('id', noteId)
         .select('updated_at')
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      await markNoteSynced(userId, noteId, new Date(softDeleted.updated_at));
+
+      const softDeletedAt = softDeleted
+        ? new Date(softDeleted.updated_at)
+        : await reinsertNoteFromLocalRecord(userId, noteId, { deleted_at: deletedAt });
+
+      if (!softDeletedAt) return false;
+
+      await markNoteSynced(userId, noteId, softDeletedAt);
       return true;
     }
 
@@ -473,10 +566,17 @@ async function processNoteOperation(
         .update({ deleted_at: null })
         .eq('id', noteId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      await markNoteSynced(userId, noteId, new Date(restored.updated_at));
+
+      const restoredAt = restored
+        ? new Date(restored.updated_at)
+        : await reinsertNoteFromLocalRecord(userId, noteId, { deleted_at: null });
+
+      if (!restoredAt) return false;
+
+      await markNoteSynced(userId, noteId, restoredAt);
       return true;
     }
 
@@ -492,15 +592,23 @@ async function processNoteOperation(
     }
 
     case 'pin': {
+      const isPinned = data.pinned as boolean;
       const { data: pinned, error } = await supabase
         .from('notes')
-        .update({ pinned: data.pinned as boolean })
+        .update({ pinned: isPinned })
         .eq('id', noteId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      await markNoteSynced(userId, noteId, new Date(pinned.updated_at));
+
+      const pinnedAt = pinned
+        ? new Date(pinned.updated_at)
+        : await reinsertNoteFromLocalRecord(userId, noteId, { pinned: isPinned });
+
+      if (!pinnedAt) return false;
+
+      await markNoteSynced(userId, noteId, pinnedAt);
       return true;
     }
 
@@ -623,8 +731,14 @@ async function processNoteTagOperation(
       });
 
       // Ignore duplicate key errors (23505)
-      if (error && error.code !== '23505') throw error;
-      return true;
+      if (!error || error.code === '23505') return true;
+
+      // A foreign-key violation means the note or tag has not reached the
+      // server yet. That is ordering, not corruption — retry so this entry
+      // settles once its parent syncs, instead of blocking permanently.
+      if (error.code === '23503') return false;
+
+      throw error;
     }
 
     case 'remove_tag': {
@@ -672,12 +786,24 @@ function isRetryableError(error: unknown): boolean {
     return true; // Serialization failure, deadlock
   }
 
+  // An expired or not-yet-refreshed JWT resolves on its own once the Supabase
+  // client refreshes the session, so this is a wait, not a permanent block.
+  if (err.code === 'PGRST301' || err.status === 401) {
+    return true;
+  }
+
   return false;
 }
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim()) {
-    return error.message.trim();
+    // Keep the PostgREST/Postgres code alongside the message. The code is what
+    // distinguishes an RLS rejection from a missing column default, and it is
+    // the only part of a blocked entry that is actionable after the fact.
+    const code = (error as { code?: unknown }).code;
+    const message = error.message.trim();
+
+    return typeof code === 'string' && code ? `[${code}] ${message}` : message;
   }
 
   return 'Unknown sync failure';

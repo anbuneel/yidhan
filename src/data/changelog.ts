@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.19.6',
+    date: '2026-09-04',
+    changes: [
+      { type: 'fix', text: 'App updates install again — a new version could sit waiting indefinitely, leaving browsers pinned to an old copy of the app long after a release' },
+      { type: 'fix', text: 'Queued changes no longer get stuck as blocked when a note is missing on the server; the note is rebuilt from this device instead' },
+      { type: 'fix', text: 'Adding a tag now waits for its note to finish syncing rather than blocking permanently' },
+      { type: 'improvement', text: 'Blocked changes now say why they failed, in the sync indicator and when a retry does not clear them' },
+    ],
+  },
+  {
     version: '3.19.5',
     date: '2026-08-09',
     changes: [
