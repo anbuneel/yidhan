@@ -97,6 +97,11 @@ See [Mobile Gap Analysis](docs/analysis/mobile-ios-gap-analysis-claude.md) for d
 - **Native:** Capacitor (Android ready, iOS planned)
 - **Fonts:** Cormorant Garamond, Source Sans 3 (self-hosted, no third-party font requests)
 
+Bundled fonts use the SIL Open Font License 1.1. Full notices ship with the web and native builds:
+[Cormorant Garamond](public/licenses/fonts/cormorant-garamond-OFL.txt),
+[Source Sans 3](public/licenses/fonts/source-sans-3-OFL.txt), and
+[JetBrains Mono](public/licenses/fonts/jetbrains-mono-OFL.txt).
+
 ## Documentation
 
 - **[Product Requirements Document](docs/prd.md)** - Product vision, user personas, feature requirements, user flows, and success metrics

@@ -181,6 +181,10 @@ was previously loaded; widen them in `fonts.css` if a true bold is wanted. `inde
 latin faces. Vite hashes the files and the service worker precaches them (no runtime font caching, and
 no `statuses: [0, 200]` cache that can pin a browser to fallback fonts). The CSP in `vercel.json` allows
 `font-src 'self'` only.
+Full upstream font licenses and copyright notices are in `public/licenses/fonts/`.
+Vite copies them into `dist/licenses/fonts/` (also packaged by Capacitor), and
+`includeAssets` in `vite.config.ts` precaches them for offline access. Keep these
+notices with the fonts when updating or redistributing them.
 
 ### Logo Mark
 `Logo.tsx` renders the wordmark as live text and the enso mark as `.brand-mark` (in `index.css`): two

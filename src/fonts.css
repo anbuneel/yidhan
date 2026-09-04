@@ -7,6 +7,10 @@
    Georgia/system-ui). Vite hashes the files into dist/assets and the
    service worker precaches them, so they are available offline too.
 
+   Copyright notices and full upstream OFL licenses live in public/licenses/fonts/.
+   Vite copies them into dist/licenses/fonts/ for web and Capacitor distribution;
+   the service worker precaches them alongside the fonts.
+
    unicode-range keeps the on-demand behaviour Google Fonts had: a browser only
    downloads a subset when the page actually uses characters in that range.
    Order matters — when ranges overlap the face defined last wins, so the

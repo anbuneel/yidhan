@@ -11,6 +11,7 @@ export const changelog: ChangelogEntry[] = [
     version: '3.19.7',
     date: '2026-09-04',
     changes: [
+      { type: 'fix', text: 'Bundled font licenses now ship with the app and remain available offline' },
       { type: 'improvement', text: 'Logo mark now follows your theme — a gold enso on Midnight, terracotta on Kintsugi — instead of a fixed terracotta image beside gold text' },
       { type: 'fix', text: 'Fonts ship with the app instead of loading from Google Fonts, so typography no longer depends on a third-party request or a cache that could pin a browser to fallback fonts for a year' },
       { type: 'fix', text: 'Landing headlines and the 404 page render in the light display weight they ask for, rather than silently falling back to regular' },

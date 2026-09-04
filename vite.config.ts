@@ -42,7 +42,8 @@ export default defineConfig({
       // Registration is explicit in src/utils/serviceWorkerUpdates.ts so the
       // update path is testable instead of relying on an injected script.
       injectRegister: null,
-      includeAssets: ['favicon.png', 'robots.txt'],
+      // Keep the font licenses available offline alongside the precached fonts.
+      includeAssets: ['favicon.png', 'robots.txt', 'licenses/fonts/*.txt'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         // Exclude the legacy oversized SVG from precache.
