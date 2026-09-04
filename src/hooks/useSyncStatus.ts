@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from '../contexts/AuthContext';
 import { getBlockedSyncReason, getSyncQueueCounts } from '../services/offlineNotes';
+import { describeSyncFailure } from '../utils/syncErrorMessages';
 import { useNetworkStatus } from './useNetworkStatus';
 
 // On native platforms, assume online (network detection is unreliable in WebViews)
@@ -22,7 +23,7 @@ export interface SyncStatus {
   pendingCount: number;
   /** Number of blocked operations awaiting manual retry */
   blockedCount: number;
-  /** Why the most recent blocked operation failed, if anything is blocked */
+  /** Plain-language reason the most recent blocked operation failed */
   blockedReason: string | null;
   /** Whether we're currently online */
   isOnline: boolean;
@@ -65,7 +66,14 @@ export function useSyncStatus(): SyncStatus {
       const counts = await getSyncQueueCounts(user.id);
       setPendingCount(counts.pendingCount);
       setBlockedCount(counts.blockedCount);
-      setBlockedReason(counts.blockedCount > 0 ? await getBlockedSyncReason(user.id) : null);
+      if (counts.blockedCount > 0) {
+        const raw = await getBlockedSyncReason(user.id);
+        // The technical text belongs in the console, not the interface.
+        if (raw) console.warn('[sync] blocked entry:', raw);
+        setBlockedReason(describeSyncFailure(raw));
+      } else {
+        setBlockedReason(null);
+      }
       setLastChecked(new Date());
 
       // Track when pending items first appeared

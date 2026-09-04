@@ -354,7 +354,13 @@ async function reinsertNoteFromLocalRecord(
   const db = getOfflineDb(userId);
   const localNote = await db.notes.get(noteId);
 
-  if (!localNote || !isEncryptedLocalNote(localNote)) return null;
+  // No local record: the queued operation has nothing left to act on. The
+  // caller drops the entry rather than retrying something that cannot succeed.
+  if (!localNote) return null;
+
+  if (!isEncryptedLocalNote(localNote)) {
+    throw createPlaintextLocalNoteError(noteId);
+  }
 
   const insertPayload: Record<string, unknown> = {
     id: noteId,
@@ -378,7 +384,15 @@ async function reinsertNoteFromLocalRecord(
     .maybeSingle();
 
   if (error) throw error;
-  return created ? new Date(created.updated_at) : null;
+  if (created) return new Date(created.updated_at);
+
+  // The insert reported success but returned no row. Re-read before giving up,
+  // and fail loudly if the row still is not there — a silent `false` here would
+  // reach the user as "Unknown sync failure".
+  const confirmed = await fetchServerNoteUpdatedAt(noteId);
+  if (confirmed) return confirmed;
+
+  throw new Error(`Rebuilt note ${noteId} did not appear on the server`);
 }
 
 /**
@@ -456,7 +470,9 @@ async function processNoteOperation(
         ? new Date(created.updated_at)
         : await fetchServerNoteUpdatedAt(noteId);
 
-      if (!createdAt) return false;
+      if (!createdAt) {
+        throw new Error(`Created note ${noteId} did not appear on the server`);
+      }
 
       await markNoteSynced(userId, noteId, createdAt);
       return true;
@@ -533,7 +549,8 @@ async function processNoteOperation(
         ? new Date(updated.updated_at)
         : await reinsertNoteFromLocalRecord(userId, noteId, { ...encryptedPayload });
 
-      if (!updatedAt) return false;
+      // Note no longer exists locally — nothing left to sync.
+      if (!updatedAt) return true;
 
       await markNoteSynced(userId, noteId, updatedAt);
       return true;
@@ -554,7 +571,8 @@ async function processNoteOperation(
         ? new Date(softDeleted.updated_at)
         : await reinsertNoteFromLocalRecord(userId, noteId, { deleted_at: deletedAt });
 
-      if (!softDeletedAt) return false;
+      // Note no longer exists locally — nothing left to sync.
+      if (!softDeletedAt) return true;
 
       await markNoteSynced(userId, noteId, softDeletedAt);
       return true;
@@ -574,7 +592,8 @@ async function processNoteOperation(
         ? new Date(restored.updated_at)
         : await reinsertNoteFromLocalRecord(userId, noteId, { deleted_at: null });
 
-      if (!restoredAt) return false;
+      // Note no longer exists locally — nothing left to sync.
+      if (!restoredAt) return true;
 
       await markNoteSynced(userId, noteId, restoredAt);
       return true;
@@ -606,7 +625,8 @@ async function processNoteOperation(
         ? new Date(pinned.updated_at)
         : await reinsertNoteFromLocalRecord(userId, noteId, { pinned: isPinned });
 
-      if (!pinnedAt) return false;
+      // Note no longer exists locally — nothing left to sync.
+      if (!pinnedAt) return true;
 
       await markNoteSynced(userId, noteId, pinnedAt);
       return true;
@@ -734,10 +754,9 @@ async function processNoteTagOperation(
       if (!error || error.code === '23505') return true;
 
       // A foreign-key violation means the note or tag has not reached the
-      // server yet. That is ordering, not corruption — retry so this entry
-      // settles once its parent syncs, instead of blocking permanently.
-      if (error.code === '23503') return false;
-
+      // server yet. That is ordering, not corruption — throwing keeps the real
+      // message and code on the entry while isRetryableError lets it settle
+      // once the parent syncs, instead of blocking permanently.
       throw error;
     }
 
@@ -784,6 +803,12 @@ function isRetryableError(error: unknown): boolean {
   // PostgreSQL/Supabase error codes that are retryable
   if (err.code === '40001' || err.code === '40P01') {
     return true; // Serialization failure, deadlock
+  }
+
+  // Foreign-key violation: the parent note or tag has not synced yet. Ordering,
+  // not corruption — this settles once the parent lands.
+  if (err.code === '23503') {
+    return true;
   }
 
   // An expired or not-yet-refreshed JWT resolves on its own once the Supabase

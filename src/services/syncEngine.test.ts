@@ -1804,6 +1804,66 @@ describe('syncEngine — recovery from permanently blocked entries', () => {
 
     const persisted = await getOfflineDb(TEST_USER_ID).syncQueue.get(902);
     expect(persisted?.status).toBe('pending');
+    // Keep the real reason: a bare retry would record "Unknown sync failure",
+    // which is the opacity this whole change exists to remove.
+    expect(persisted?.lastError).toContain('23503');
+    expect(persisted?.lastError).not.toContain('Unknown sync failure');
+  });
+
+  it('drops a pin whose note no longer exists on this device', async () => {
+    // Cross-device race: the note was hard-deleted elsewhere and is gone
+    // locally too, so the queued pin has nothing left to act on.
+    const entry = buildEntry({
+      id: 904,
+      clientMutationId: 'mut-pin-no-local',
+      operation: 'pin',
+      entityType: 'note',
+      entityId: 'note-vanished',
+      payload: { pinned: true },
+    });
+    await enqueue(entry);
+
+    const chain = buildVerbAwareChain({ update: { data: null } });
+    mockFrom.mockReturnValue(chain);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.processed).toBe(1);
+    expect(result.blocked).toBe(0);
+    expect(chain.insert).not.toHaveBeenCalled();
+    expect(mockMarkSyncQueueEntryBlocked).not.toHaveBeenCalled();
+  });
+
+  it('names the failure when a rebuilt note never lands on the server', async () => {
+    const noteId = 'note-rebuild-vanishes';
+    await seedLocalNote(noteId);
+
+    const entry = buildEntry({
+      id: 905,
+      clientMutationId: 'mut-rebuild-vanishes',
+      operation: 'pin',
+      entityType: 'note',
+      entityId: noteId,
+      payload: { pinned: true },
+      retryCount: 4, // one attempt short of MAX_SYNC_RETRIES
+    });
+    await enqueue(entry);
+
+    // Update matches nothing, the rebuild insert reports success but returns
+    // no row, and the confirming read finds nothing either.
+    const chain = buildVerbAwareChain({
+      select: { data: null },
+      update: { data: null },
+      insert: { data: null },
+    });
+    mockFrom.mockReturnValue(chain);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.blocked).toBe(1);
+    const persisted = await getOfflineDb(TEST_USER_ID).syncQueue.get(905);
+    expect(persisted?.lastError).toContain('did not appear on the server');
+    expect(persisted?.lastError).not.toContain('Unknown sync failure');
   });
 
   it('keeps the Postgres error code in lastError so a block can be diagnosed', async () => {

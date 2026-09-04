@@ -16,6 +16,7 @@ import { sanitizeText, htmlToPlainText } from './utils/sanitize';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 import { getLoadedEditorComponent, loadEditorComponent } from './utils/editorLoader';
 import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
+import { describeSyncFailure } from './utils/syncErrorMessages';
 import {
   clearPersistedShareKey,
   parseShareRoute,
@@ -1629,10 +1630,13 @@ function App() {
 
       // Say why. A bare "still need attention" is what left blocked changes
       // undiagnosable — the reason is already recorded on the queue entry.
-      const reason = await getBlockedSyncReason(user.id);
+      // The raw Postgres text goes to the console; the toast stays readable.
+      const rawReason = await getBlockedSyncReason(user.id);
+      if (rawReason) console.warn('[sync] blocked entry:', rawReason);
+      const reason = describeSyncFailure(rawReason);
       toast(
         reason
-          ? `Some changes are still blocked: ${reason}`
+          ? `Some changes are still blocked. ${reason}`
           : 'Retried blocked changes, but some still need attention.',
         {
           duration: 6000,
