@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from '../contexts/AuthContext';
-import { getBlockedSyncReason, getSyncQueueCounts } from '../services/offlineNotes';
+import { getSyncQueueSnapshot } from '../services/offlineNotes';
 import { describeSyncFailure } from '../utils/syncErrorMessages';
 import { useNetworkStatus } from './useNetworkStatus';
 
@@ -63,17 +63,14 @@ export function useSyncStatus(): SyncStatus {
     }
 
     try {
-      const counts = await getSyncQueueCounts(user.id);
+      // One pass: a separate count and reason query can disagree when a sync
+      // run lands between them, showing a block with no reason for a tick.
+      const counts = await getSyncQueueSnapshot(user.id);
       setPendingCount(counts.pendingCount);
       setBlockedCount(counts.blockedCount);
-      if (counts.blockedCount > 0) {
-        const raw = await getBlockedSyncReason(user.id);
-        // The technical text belongs in the console, not the interface.
-        if (raw) console.warn('[sync] blocked entry:', raw);
-        setBlockedReason(describeSyncFailure(raw));
-      } else {
-        setBlockedReason(null);
-      }
+      // The technical text belongs in the console, not the interface.
+      if (counts.blockedReason) console.warn('[sync] blocked entry:', counts.blockedReason);
+      setBlockedReason(describeSyncFailure(counts.blockedReason));
       setLastChecked(new Date());
 
       // Track when pending items first appeared

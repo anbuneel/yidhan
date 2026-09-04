@@ -229,6 +229,20 @@ class SyncConflictError extends Error {
 }
 
 /**
+ * A failure worth retrying that still needs to explain itself.
+ *
+ * Signalling retry by returning `false` loses the reason: the queue records
+ * `getErrorMessage(undefined)` — "Unknown sync failure" — which is the opacity
+ * this module is meant to avoid.
+ */
+class RetryableSyncError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RetryableSyncError';
+  }
+}
+
+/**
  * Register a conflict handler
  */
 export function setConflictHandler(
@@ -351,6 +365,19 @@ async function reinsertNoteFromLocalRecord(
   noteId: string,
   overrides: Readonly<Record<string, unknown>> = {}
 ): Promise<Date | null> {
+  // A null RETURNING row means either the row is genuinely gone or the write
+  // landed and RLS filtered what came back. Inserting on the second reading
+  // collides on the primary key (23505, non-retryable) and blocks the entry
+  // permanently — the failure this whole path exists to prevent. Confirm first.
+  const serverUpdatedAt = await fetchServerNoteUpdatedAt(noteId);
+  if (serverUpdatedAt) {
+    // The row is there but the write did not report back. Do not assume the
+    // change applied — marking it synced on a guess would silently drop it.
+    throw new RetryableSyncError(
+      `Note ${noteId} exists on the server but the write returned no row`
+    );
+  }
+
   const db = getOfflineDb(userId);
   const localNote = await db.notes.get(noteId);
 
@@ -781,6 +808,10 @@ async function processNoteTagOperation(
  * Check if an error is retryable (5xx, network errors)
  */
 function isRetryableError(error: unknown): boolean {
+  if (error instanceof RetryableSyncError) {
+    return true;
+  }
+
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
     // Network errors

@@ -1100,6 +1100,37 @@ export async function getSyncQueueCounts(
 }
 
 /**
+ * Counts and blocked reason from a single pass over the queue.
+ *
+ * Reading the count and the reason as separate queries lets them disagree when
+ * a sync run lands between the two, which surfaces as "N blocked" with no
+ * reason attached — the exact confusing state the reason exists to remove.
+ */
+export async function getSyncQueueSnapshot(userId: string): Promise<{
+  pendingCount: number;
+  blockedCount: number;
+  blockedReason: string | null;
+}> {
+  const db = getOfflineDb(userId);
+
+  return db.transaction('r', db.syncQueue, async () => {
+    const entries = await db.syncQueue.toArray();
+    const blocked = entries.filter((entry) => getQueueEntryStatus(entry) === 'blocked');
+    const mostRecent = blocked.reduce<SyncQueueEntry | null>(
+      (latest, entry) =>
+        latest === null || (entry.blockedAt ?? 0) > (latest.blockedAt ?? 0) ? entry : latest,
+      null
+    );
+
+    return {
+      pendingCount: entries.filter((entry) => getQueueEntryStatus(entry) === 'pending').length,
+      blockedCount: blocked.length,
+      blockedReason: mostRecent?.lastError ?? null,
+    };
+  });
+}
+
+/**
  * Reason the most recently blocked queue entry failed.
  *
  * Blocked entries already record `lastError`, but nothing surfaced it, so a

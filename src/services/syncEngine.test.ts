@@ -1652,31 +1652,51 @@ describe('syncEngine — recovery from permanently blocked entries', () => {
   /**
    * Chain mock that answers based on the write verb used, so a test can make
    * an UPDATE match zero rows while the recovery INSERT still succeeds.
+   *
+   * Each supabase.from() call gets a fresh builder, as the real client does —
+   * a shared one would carry the previous call's verb into the next query and
+   * answer a plain read with the previous write's result.
    */
   function buildVerbAwareChain(
     results: Partial<Record<'select' | 'insert' | 'update' | 'delete', { data?: unknown; error?: unknown }>>
   ) {
-    const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-    let verb: 'select' | 'insert' | 'update' | 'delete' = 'select';
-
-    for (const m of ['select', 'eq', 'gt', 'filter'] as const) {
-      chain[m] = vi.fn().mockReturnValue(chain);
-    }
-    for (const m of ['insert', 'update', 'delete'] as const) {
-      chain[m] = vi.fn().mockImplementation(() => {
-        verb = m;
-        return chain;
-      });
-    }
-
-    const settle = async () => {
-      const r = results[verb] ?? { data: null, error: null };
-      return { data: r.data ?? null, error: r.error ?? null };
+    const calls = {
+      select: vi.fn(),
+      insert: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     };
 
-    chain.maybeSingle = vi.fn().mockImplementation(settle);
-    chain.single = vi.fn().mockImplementation(settle);
-    return chain;
+    const factory = () => {
+      const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+      let verb: 'select' | 'insert' | 'update' | 'delete' = 'select';
+
+      for (const m of ['eq', 'gt', 'filter'] as const) {
+        chain[m] = vi.fn().mockReturnValue(chain);
+      }
+      chain.select = vi.fn().mockImplementation((...args: unknown[]) => {
+        calls.select(...args);
+        return chain;
+      });
+      for (const m of ['insert', 'update', 'delete'] as const) {
+        chain[m] = vi.fn().mockImplementation((...args: unknown[]) => {
+          calls[m](...args);
+          verb = m;
+          return chain;
+        });
+      }
+
+      const settle = async () => {
+        const r = results[verb] ?? { data: null, error: null };
+        return { data: r.data ?? null, error: r.error ?? null };
+      };
+
+      chain.maybeSingle = vi.fn().mockImplementation(settle);
+      chain.single = vi.fn().mockImplementation(settle);
+      return chain;
+    };
+
+    return { factory, calls };
   }
 
   /** Persist the entry so status writes land somewhere, and feed the queue. */
@@ -1723,18 +1743,18 @@ describe('syncEngine — recovery from permanently blocked entries', () => {
     await enqueue(entry);
 
     // UPDATE matches no rows; the recovery INSERT succeeds.
-    const chain = buildVerbAwareChain({
+    const { factory, calls } = buildVerbAwareChain({
       update: { data: null },
       insert: { data: { updated_at: '2026-07-01T00:00:00.000Z' } },
     });
-    mockFrom.mockReturnValue(chain);
+    mockFrom.mockImplementation(factory);
 
     const result = await processQueue(TEST_USER_ID);
 
     expect(result.blocked).toBe(0);
     expect(result.failed).toBe(0);
     expect(result.processed).toBe(1);
-    expect(chain.insert).toHaveBeenCalledTimes(1);
+    expect(calls.insert).toHaveBeenCalledTimes(1);
     expect(mockMarkSyncQueueEntryBlocked).not.toHaveBeenCalled();
     expect(mockMarkNoteSynced).toHaveBeenCalledWith(
       TEST_USER_ID,
@@ -1761,18 +1781,18 @@ describe('syncEngine — recovery from permanently blocked entries', () => {
     });
     await enqueue(entry);
 
-    const chain = buildVerbAwareChain({
+    const { factory, calls } = buildVerbAwareChain({
       select: { data: null },
       update: { data: null },
       insert: { data: { updated_at: '2026-07-02T00:00:00.000Z' } },
     });
-    mockFrom.mockReturnValue(chain);
+    mockFrom.mockImplementation(factory);
 
     const result = await processQueue(TEST_USER_ID);
 
     expect(result.blocked).toBe(0);
     expect(result.processed).toBe(1);
-    expect(chain.insert).toHaveBeenCalledTimes(1);
+    expect(calls.insert).toHaveBeenCalledTimes(1);
   });
 
   it('leaves a note-tag insert pending when its parent row has not synced yet', async () => {
@@ -1823,15 +1843,50 @@ describe('syncEngine — recovery from permanently blocked entries', () => {
     });
     await enqueue(entry);
 
-    const chain = buildVerbAwareChain({ update: { data: null } });
-    mockFrom.mockReturnValue(chain);
+    const { factory, calls } = buildVerbAwareChain({ update: { data: null } });
+    mockFrom.mockImplementation(factory);
 
     const result = await processQueue(TEST_USER_ID);
 
     expect(result.processed).toBe(1);
     expect(result.blocked).toBe(0);
-    expect(chain.insert).not.toHaveBeenCalled();
+    expect(calls.insert).not.toHaveBeenCalled();
     expect(mockMarkSyncQueueEntryBlocked).not.toHaveBeenCalled();
+  });
+
+  it('does not rebuild a row that is still on the server', async () => {
+    // A null RETURNING row can mean the write landed but RLS filtered the
+    // response. Inserting then would collide on the primary key (23505),
+    // which is non-retryable — a permanent block from a transient condition.
+    const noteId = 'note-returning-filtered';
+    await seedLocalNote(noteId);
+
+    const entry = buildEntry({
+      id: 906,
+      clientMutationId: 'mut-returning-filtered',
+      operation: 'pin',
+      entityType: 'note',
+      entityId: noteId,
+      payload: { pinned: true },
+    });
+    await enqueue(entry);
+
+    const { factory, calls } = buildVerbAwareChain({
+      update: { data: null },
+      // The confirming read still finds the row.
+      select: { data: { updated_at: '2026-07-03T00:00:00.000Z' } },
+    });
+    mockFrom.mockImplementation(factory);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(calls.insert).not.toHaveBeenCalled();
+    expect(result.blocked).toBe(0);
+
+    const persisted = await getOfflineDb(TEST_USER_ID).syncQueue.get(906);
+    expect(persisted?.status).toBe('pending');
+    expect(persisted?.lastError).toContain('exists on the server');
+    expect(persisted?.lastError).not.toContain('Unknown sync failure');
   });
 
   it('names the failure when a rebuilt note never lands on the server', async () => {
@@ -1851,12 +1906,12 @@ describe('syncEngine — recovery from permanently blocked entries', () => {
 
     // Update matches nothing, the rebuild insert reports success but returns
     // no row, and the confirming read finds nothing either.
-    const chain = buildVerbAwareChain({
+    const { factory } = buildVerbAwareChain({
       select: { data: null },
       update: { data: null },
       insert: { data: null },
     });
-    mockFrom.mockReturnValue(chain);
+    mockFrom.mockImplementation(factory);
 
     const result = await processQueue(TEST_USER_ID);
 
@@ -1889,11 +1944,11 @@ describe('syncEngine — recovery from permanently blocked entries', () => {
       new Error('new row violates row-level security policy for table "notes"'),
       { code: '42501' }
     );
-    const chain = buildVerbAwareChain({
+    const { factory } = buildVerbAwareChain({
       select: { data: null },
       insert: { error: rlsError },
     });
-    mockFrom.mockReturnValue(chain);
+    mockFrom.mockImplementation(factory);
 
     const result = await processQueue(TEST_USER_ID);
 
