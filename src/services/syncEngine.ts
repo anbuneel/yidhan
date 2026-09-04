@@ -18,7 +18,9 @@ import {
   getPendingSyncQueue,
   removeSyncQueueEntry,
   markNoteSynced,
+  clearQueuedNoteCreates,
   markSyncQueueEntryBlocked,
+  queueSyncOperation,
   updateSyncQueueEntry,
 } from './offlineNotes';
 import { markTagSynced } from './offlineTags';
@@ -229,6 +231,20 @@ class SyncConflictError extends Error {
 }
 
 /**
+ * A failure worth retrying that still needs to explain itself.
+ *
+ * Signalling retry by returning `false` loses the reason: the queue records
+ * `getErrorMessage(undefined)` — "Unknown sync failure" — which is the opacity
+ * this module is meant to avoid.
+ */
+class RetryableSyncError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RetryableSyncError';
+  }
+}
+
+/**
  * Register a conflict handler
  */
 export function setConflictHandler(
@@ -330,6 +346,166 @@ async function processQueueEntry(
 }
 
 /**
+ * Re-queue a rebuilt note's tag links.
+ *
+ * note_tags.note_id is ON DELETE CASCADE, so whenever the server row was lost
+ * to a real delete the tag links went with it. Rebuilding only the note leaves
+ * it tagless server-side, and hydrateFromServer is authoritative: it drops
+ * local noteTags rows that are marked `synced` but absent from the server. The
+ * next hydration on any device would silently strip those tags for good.
+ *
+ * Marking the links pending both protects them from that prune and lets the
+ * normal add_tag path restore them, which already tolerates a duplicate (23505)
+ * and retries when the tag itself has not synced yet (23503).
+ */
+async function requeueNoteTagLinks(userId: string, noteId: string): Promise<number> {
+  const db = getOfflineDb(userId);
+  const links = await db.noteTags.where('noteId').equals(noteId).toArray();
+
+  for (const link of links) {
+    await db.noteTags.update([link.noteId, link.tagId], {
+      syncStatus: 'pending',
+      lastSyncedAt: null,
+    });
+    await queueSyncOperation(userId, 'add_tag', 'noteTag', `${link.noteId}:${link.tagId}`, {
+      noteId: link.noteId,
+      tagId: link.tagId,
+    });
+  }
+
+  return links.length;
+}
+
+/**
+ * Re-insert a note row on the server from its local encrypted record.
+ *
+ * A queued update/pin/restore targets a row the server may not have — usually
+ * because that note's own `create` entry failed earlier. PostgREST reports the
+ * resulting zero-row write as PGRST116, which `isRetryableError` classifies as
+ * non-retryable, so the entry blocks permanently and "Retry blocked changes"
+ * can never clear it. Re-creating the row from the local record is what breaks
+ * that loop.
+ *
+ * A note hard-deleted on another device is resurrected by this. That is the
+ * deliberate trade: the note is still present in this device's IndexedDB, so
+ * the alternative is a note the user can see but can never sync.
+ *
+ * Returns the server `updated_at`, or null when there is no usable local
+ * record to rebuild from.
+ */
+/**
+ * Finish a rebuild: record it, restore its tag links, and retire the dead
+ * `create` entry the rebuild has just made moot.
+ *
+ * Shared by both success paths so neither can drift — the insert returning a
+ * row, and the insert returning none but a confirming read finding it.
+ */
+async function settleRebuiltNote(userId: string, noteId: string): Promise<void> {
+  const tagLinks = await requeueNoteTagLinks(userId, noteId);
+
+  addReliabilityBreadcrumb({
+    category: 'sync',
+    message: 'Rebuilt a note the server had lost',
+    data: { noteId, tagLinks },
+  });
+
+  const clearedCreates = await clearQueuedNoteCreates(userId, noteId);
+  if (clearedCreates > 0) {
+    addReliabilityBreadcrumb({
+      category: 'sync',
+      message: 'Cleared a queued create the rebuild satisfied',
+      data: { noteId, clearedCreates },
+    });
+  }
+}
+
+async function reinsertNoteFromLocalRecord(
+  userId: string,
+  noteId: string,
+  overrides: Readonly<Record<string, unknown>> = {}
+): Promise<Date | null> {
+  // A null RETURNING row means either the row is genuinely gone or the write
+  // landed and RLS filtered what came back. Inserting on the second reading
+  // collides on the primary key (23505, non-retryable) and blocks the entry
+  // permanently — the failure this whole path exists to prevent. Confirm first.
+  const serverUpdatedAt = await fetchServerNoteUpdatedAt(noteId);
+  if (serverUpdatedAt) {
+    // The row is there but the write did not report back. Do not assume the
+    // change applied — marking it synced on a guess would silently drop it.
+    throw new RetryableSyncError(
+      `Note ${noteId} exists on the server but the write returned no row`
+    );
+  }
+
+  const db = getOfflineDb(userId);
+  const localNote = await db.notes.get(noteId);
+
+  // No local record: the queued operation has nothing left to act on. The
+  // caller drops the entry rather than retrying something that cannot succeed.
+  if (!localNote) return null;
+
+  if (!isEncryptedLocalNote(localNote)) {
+    throw createPlaintextLocalNoteError(noteId);
+  }
+
+  const insertPayload: Record<string, unknown> = {
+    id: noteId,
+    title: '',
+    content: '',
+    pinned: localNote.pinned,
+    encrypted_payload: localNote.encryptedPayload,
+    encryption_iv: localNote.encryptionIv,
+    encryption_version: localNote.encryptionVersion,
+    content_hash: localNote.contentHash,
+    created_at: new Date(localNote.createdAt).toISOString(),
+    display_updated_at: new Date(localNote.updatedAt).toISOString(),
+    deleted_at: localNote.deletedAt === null ? null : new Date(localNote.deletedAt).toISOString(),
+    ...overrides,
+  };
+
+  const { data: created, error } = await supabase
+    .from('notes')
+    .insert(insertPayload)
+    .select('updated_at')
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (created) {
+    await settleRebuiltNote(userId, noteId);
+    return new Date(created.updated_at);
+  }
+
+  // The insert reported success but returned no row. Re-read before giving up,
+  // and fail loudly if the row still is not there — a silent `false` here would
+  // reach the user as "Unknown sync failure".
+  const confirmed = await fetchServerNoteUpdatedAt(noteId);
+  if (confirmed) {
+    await settleRebuiltNote(userId, noteId);
+    return confirmed;
+  }
+
+  throw new RetryableSyncError(`Rebuilt note ${noteId} did not appear on the server`);
+}
+
+/**
+ * Read back a note's server timestamp.
+ *
+ * A write can succeed while its RETURNING row is filtered out by RLS, which
+ * leaves `.maybeSingle()` null with no error. Re-reading separates that case
+ * from a genuinely absent row.
+ */
+async function fetchServerNoteUpdatedAt(noteId: string): Promise<Date | null> {
+  const { data } = await supabase
+    .from('notes')
+    .select('updated_at')
+    .eq('id', noteId)
+    .maybeSingle();
+
+  return data ? new Date(data.updated_at) : null;
+}
+
+/**
  * Process note operations
  */
 async function processNoteOperation(
@@ -377,10 +553,23 @@ async function processNoteOperation(
         .from('notes')
         .insert(insertPayload)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      await markNoteSynced(userId, noteId, new Date(created.updated_at));
+
+      // The insert can succeed while RLS filters the returned row. Read the
+      // timestamp back rather than treating a null row as a hard failure.
+      const createdAt = created
+        ? new Date(created.updated_at)
+        : await fetchServerNoteUpdatedAt(noteId);
+
+      if (!createdAt) {
+        throw new RetryableSyncError(
+          `Created note ${noteId} did not appear on the server`
+        );
+      }
+
+      await markNoteSynced(userId, noteId, createdAt);
       return true;
     }
 
@@ -447,23 +636,40 @@ async function processNoteOperation(
         .update(updatePayload)
         .eq('id', noteId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      await markNoteSynced(userId, noteId, new Date(updated.updated_at));
+
+      const updatedAt = updated
+        ? new Date(updated.updated_at)
+        : await reinsertNoteFromLocalRecord(userId, noteId, { ...encryptedPayload });
+
+      // Note no longer exists locally — nothing left to sync.
+      if (!updatedAt) return true;
+
+      await markNoteSynced(userId, noteId, updatedAt);
       return true;
     }
 
     case 'soft_delete': {
+      const deletedAt = data.deletedAt as string;
       const { data: softDeleted, error } = await supabase
         .from('notes')
-        .update({ deleted_at: data.deletedAt as string })
+        .update({ deleted_at: deletedAt })
         .eq('id', noteId)
         .select('updated_at')
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      await markNoteSynced(userId, noteId, new Date(softDeleted.updated_at));
+
+      const softDeletedAt = softDeleted
+        ? new Date(softDeleted.updated_at)
+        : await reinsertNoteFromLocalRecord(userId, noteId, { deleted_at: deletedAt });
+
+      // Note no longer exists locally — nothing left to sync.
+      if (!softDeletedAt) return true;
+
+      await markNoteSynced(userId, noteId, softDeletedAt);
       return true;
     }
 
@@ -473,10 +679,18 @@ async function processNoteOperation(
         .update({ deleted_at: null })
         .eq('id', noteId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      await markNoteSynced(userId, noteId, new Date(restored.updated_at));
+
+      const restoredAt = restored
+        ? new Date(restored.updated_at)
+        : await reinsertNoteFromLocalRecord(userId, noteId, { deleted_at: null });
+
+      // Note no longer exists locally — nothing left to sync.
+      if (!restoredAt) return true;
+
+      await markNoteSynced(userId, noteId, restoredAt);
       return true;
     }
 
@@ -492,15 +706,24 @@ async function processNoteOperation(
     }
 
     case 'pin': {
+      const isPinned = data.pinned as boolean;
       const { data: pinned, error } = await supabase
         .from('notes')
-        .update({ pinned: data.pinned as boolean })
+        .update({ pinned: isPinned })
         .eq('id', noteId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      await markNoteSynced(userId, noteId, new Date(pinned.updated_at));
+
+      const pinnedAt = pinned
+        ? new Date(pinned.updated_at)
+        : await reinsertNoteFromLocalRecord(userId, noteId, { pinned: isPinned });
+
+      // Note no longer exists locally — nothing left to sync.
+      if (!pinnedAt) return true;
+
+      await markNoteSynced(userId, noteId, pinnedAt);
       return true;
     }
 
@@ -623,8 +846,13 @@ async function processNoteTagOperation(
       });
 
       // Ignore duplicate key errors (23505)
-      if (error && error.code !== '23505') throw error;
-      return true;
+      if (!error || error.code === '23505') return true;
+
+      // A foreign-key violation means the note or tag has not reached the
+      // server yet. That is ordering, not corruption — throwing keeps the real
+      // message and code on the entry while isRetryableError lets it settle
+      // once the parent syncs, instead of blocking permanently.
+      throw error;
     }
 
     case 'remove_tag': {
@@ -648,6 +876,10 @@ async function processNoteTagOperation(
  * Check if an error is retryable (5xx, network errors)
  */
 function isRetryableError(error: unknown): boolean {
+  if (error instanceof RetryableSyncError) {
+    return true;
+  }
+
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
     // Network errors
@@ -672,12 +904,32 @@ function isRetryableError(error: unknown): boolean {
     return true; // Serialization failure, deadlock
   }
 
+  // Foreign-key violation: the parent note or tag has not synced yet. Ordering,
+  // not corruption — this settles once the parent lands.
+  if (err.code === '23503') {
+    return true;
+  }
+
+  // An expired or not-yet-refreshed JWT resolves on its own once the Supabase
+  // client refreshes the session, so this is a wait, not a permanent block.
+  // PostgrestError carries code/message/details/hint but no HTTP status, so
+  // the code is what identifies this — a `status === 401` test never fires.
+  if (err.code === 'PGRST301') {
+    return true;
+  }
+
   return false;
 }
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim()) {
-    return error.message.trim();
+    // Keep the PostgREST/Postgres code alongside the message. The code is what
+    // distinguishes an RLS rejection from a missing column default, and it is
+    // the only part of a blocked entry that is actionable after the fact.
+    const code = (error as { code?: unknown }).code;
+    const message = error.message.trim();
+
+    return typeof code === 'string' && code ? `[${code}] ${message}` : message;
   }
 
   return 'Unknown sync failure';

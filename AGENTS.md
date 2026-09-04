@@ -30,6 +30,7 @@ npm run e2e      # Run Playwright E2E tests
 npm run e2e:ui   # Open Playwright UI for interactive testing
 npm run e2e:headed # Run E2E tests with visible browser
 npm run e2e:report # View E2E test HTML report
+npm run e2e:sw   # Service worker update tests (production build, real worker)
 npm run theme:generate  # Generate CSS from active themes
 npm run theme:preview   # Preview theme CSS without updating
 npm run icons:generate  # Generate PWA icons from SVG source
@@ -283,7 +284,7 @@ content...
 ## Notes
 - Content is stored as HTML (from Tiptap's `getHTML()`), encrypted client-side before storage
 - **E2EE**: Title + content encrypted as JSON blob using AES-256-GCM with AAD (`noteId:userId`). Tags remain plaintext. Keys derived from passphrase via Argon2id (`hash-wasm` WASM). Keys held in React state + sessionStorage (survives refresh, cleared on tab close/signout/vault lock). Encrypted reads, realtime upserts, sync pulls, conflict resolution, and authenticated imports fail closed on plaintext note payloads.
-- **Blocked sync recovery:** Sync queue entries now use `pending` / `blocked` state so repeated failures remain recoverable instead of being dropped.
+- **Blocked sync recovery:** Sync queue entries now use `pending` / `blocked` state so repeated failures remain recoverable instead of being dropped. Note writes use `.maybeSingle()`: a zero-row update rebuilds the row from the local encrypted record rather than blocking on PGRST116. `add_tag` treats a foreign-key violation (`23503`) as ordering and retries. `lastError` keeps the Postgres code and is surfaced in the sync indicator.
 - **Safe hydration:** Startup hydration uses local metadata and merge behavior to avoid clearing queued local work during recovery paths.
 - Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase (all payloads encrypted)
 - Legacy plaintext offline note write helpers are disabled in non-test builds; launch code must use `encryptedNotes` so plaintext never enters IndexedDB or the sync queue.
@@ -307,6 +308,20 @@ content...
 - Auth component supports modal mode (`isModal` prop) for landing page overlay
 
 ## Deployment
+
+### Service Worker Updates
+`registerType` in `vite.config.ts` must stay `'autoUpdate'`. Under `'prompt'` a new worker
+parks in `waiting` until the page posts `SKIP_WAITING` — and a client running stale code
+cannot post it, so browsers stay pinned to an old precached shell indefinitely (this is what
+stranded clients on pre-hardening code against a migrated database).
+Registration is explicit in `src/utils/serviceWorkerUpdates.ts`, not vite-plugin-pwa's
+injected script, so the update path is testable. `npm run e2e:sw` guards it against a
+real build in a real browser: it installs a worker, swaps in a new deployment with the
+tab still open, and asserts the client moves to it. The main `npm run e2e` suite cannot
+cover this — it runs against the dev server, which produces no service worker, which is
+why the original breakage went unnoticed. Mid-session activation can invalidate lazy
+chunk URLs; `lazyWithRetry` plus the `unhandledrejection` handler in `main.tsx` recover with
+one cooldown-guarded reload.
 
 ### Production (Vercel)
 - **URL:** https://yidhan.vercel.app
@@ -438,3 +453,5 @@ SQL migrations are stored in `supabase/migrations/`:
 - `update_notes_display_updated_at.sql`
 - `launch_security_hardening.sql`
 - `add_account_deletion_workflow.sql`
+- `default_user_id_to_auth_uid.sql` — **required.** Clients stopped sending `user_id` on note/tag inserts; without this default every create fails RLS (`42501`) or NOT NULL (`23502`) and blocks in the sync queue.
+- `verify_migration_state.sql` — drift check. Run in the SQL editor after deploying; every row should read `applied`. Migrations are applied by hand, so a client shipped ahead of its migration fails silently on writes only.

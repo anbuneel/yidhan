@@ -63,3 +63,32 @@ jobs:
 
       - name: Run tests with coverage
         run: npm run test:coverage
+
+  # Service worker update guard (~2min)
+  #
+  # Unit tests cannot run a service worker and the main e2e suite runs against
+  # the dev server, which produces none — so the update path was untestable and
+  # untested, and `registerType: 'prompt'` stranded clients on an old build for
+  # months. This suite drives the production build in a real browser. It only
+  # guards anything if it actually runs, hence a job rather than a manual script.
+  service-worker:
+    runs-on: ubuntu-latest
+    needs: fast-checks
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Service worker update tests
+        run: npm run e2e:sw

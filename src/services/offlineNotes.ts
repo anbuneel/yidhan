@@ -1099,6 +1099,70 @@ export async function getSyncQueueCounts(
   return { pendingCount, blockedCount };
 }
 
+/**
+ * Counts and blocked reason from a single pass over the queue.
+ *
+ * Reading the count and the reason as separate queries lets them disagree when
+ * a sync run lands between the two, which surfaces as "N blocked" with no
+ * reason attached — the exact confusing state the reason exists to remove.
+ */
+/**
+ * Drop queued `create` entries for a note that demonstrably exists on the server.
+ *
+ * A blocked `create` is never compacted away (compactQueueForEntity skips
+ * blocked entries, and an `update` only compacts other updates). So once a
+ * later operation rebuilds the row, the dead create lingers and the indicator
+ * reports a block for a note that is fully synced — until someone clicks retry
+ * and the create's own idempotency check quietly resolves it. Clearing it here
+ * reaches the same conclusion without making the user chase a phantom.
+ */
+export async function clearQueuedNoteCreates(userId: string, noteId: string): Promise<number> {
+  const db = getOfflineDb(userId);
+
+  return db.syncQueue
+    .where('entityId')
+    .equals(noteId)
+    .and((entry) => entry.entityType === 'note' && entry.operation === 'create')
+    .delete();
+}
+
+export async function getSyncQueueSnapshot(userId: string): Promise<{
+  pendingCount: number;
+  blockedCount: number;
+  blockedReason: string | null;
+}> {
+  const db = getOfflineDb(userId);
+
+  return db.transaction('r', db.syncQueue, async () => {
+    const entries = await db.syncQueue.toArray();
+    const blocked = entries.filter((entry) => getQueueEntryStatus(entry) === 'blocked');
+    const mostRecent = blocked.reduce<SyncQueueEntry | null>(
+      (latest, entry) =>
+        latest === null || (entry.blockedAt ?? 0) > (latest.blockedAt ?? 0) ? entry : latest,
+      null
+    );
+
+    return {
+      pendingCount: entries.filter((entry) => getQueueEntryStatus(entry) === 'pending').length,
+      blockedCount: blocked.length,
+      blockedReason: mostRecent?.lastError ?? null,
+    };
+  });
+}
+
+/**
+ * Reason the most recently blocked queue entry failed.
+ *
+ * Blocked entries already record `lastError`, but nothing surfaced it, so a
+ * blocked banner told the user a count and nothing else — and the retry button
+ * cannot clear a deterministic failure. Showing the reason is what makes the
+ * state diagnosable without opening IndexedDB by hand.
+ */
+export async function getBlockedSyncReason(userId: string): Promise<string | null> {
+  const { blockedReason } = await getSyncQueueSnapshot(userId);
+  return blockedReason;
+}
+
 export async function getPendingSyncCount(userId: string): Promise<number> {
   const { pendingCount } = await getSyncQueueCounts(userId);
   return pendingCount;
