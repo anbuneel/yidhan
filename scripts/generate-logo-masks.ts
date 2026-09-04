@@ -45,6 +45,10 @@ const INK_PERCENTILE = 0.02;
 /** < 1 lifts mid-tones (more solid); 1 keeps the source's exact ink density. */
 const GAMMA = 0.8;
 const PAPER_LUMINANCE = 255;
+/** Sanity bounds for the SEED split; the seed paints ~4,000 solid pixels today. */
+const SEED_MIN_SOLID_PIXELS = 1_500;
+/** Width of the empty ring that must separate the seed circle from the arc. */
+const SEED_CLEARANCE_PX = 6;
 
 type Region = 'arc' | 'seed';
 
@@ -79,6 +83,43 @@ function inkLuminance(source: SourcePixels, region: Region): number {
   }
   values.sort((a, b) => a - b);
   return values[Math.floor(values.length * INK_PERCENTILE)];
+}
+
+/**
+ * Fail loudly if SEED no longer matches the source. A bad re-export would
+ * otherwise mis-split the mark (arc paint inside the seed circle, or the seed
+ * spilling out of it) and ship a silently wrong logo.
+ */
+function assertSeedGeometry(source: SourcePixels): void {
+  const { data, width, height, channels } = source;
+  let seedSolid = 0;
+  let clearanceSolid = 0;
+  const outer = SEED.r + SEED_CLEARANCE_PX;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const offset = (y * width + x) * channels;
+      if (data[offset + 3] <= 200) continue;
+      const dx = x - SEED.cx;
+      const dy = y - SEED.cy;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance <= SEED.r) seedSolid++;
+      else if (distance <= outer) clearanceSolid++;
+    }
+  }
+
+  if (seedSolid < SEED_MIN_SOLID_PIXELS) {
+    throw new Error(
+      `Seed circle at (${SEED.cx}, ${SEED.cy}) r=${SEED.r} contains only ${seedSolid} solid pixels ` +
+        `(expected ≥ ${SEED_MIN_SOLID_PIXELS}). Re-measure SEED against the source image.`
+    );
+  }
+  if (clearanceSolid > 0) {
+    throw new Error(
+      `${clearanceSolid} solid pixels sit in the ${SEED_CLEARANCE_PX}px ring around the seed circle, ` +
+        `so the arc and seed are not cleanly separated. Re-measure SEED against the source image.`
+    );
+  }
 }
 
 function buildMask(source: SourcePixels, region: Region): Buffer {
@@ -139,6 +180,7 @@ async function generateLogoMasks() {
   };
 
   console.log(`Source: ${info.width}×${info.height}, gamma ${GAMMA}\n`);
+  assertSeedGeometry(source);
   await writeMask(source, 'arc', ARC_OUTPUT);
   await writeMask(source, 'seed', DOT_OUTPUT);
 
