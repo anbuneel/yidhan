@@ -18,6 +18,13 @@
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
+/**
+ * Runtime caches from when fonts were fetched from Google Fonts. Fonts are
+ * self-hosted and precached now, so no worker reads these; Workbox only cleans
+ * up old precaches, not retired runtime caches, so the page drops them.
+ */
+const LEGACY_RUNTIME_CACHES = ['google-fonts-cache', 'gstatic-fonts-cache'];
+
 export type UpdateApplier = (reloadPage?: boolean) => Promise<void>;
 
 interface RegisterOptions {
@@ -104,6 +111,28 @@ export async function activateWaitingUpdate(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Delete runtime caches the app no longer uses.
+ *
+ * Returns the names that were actually present and removed. Safe to call on
+ * every load: deleting a cache that does not exist is a cheap no-op.
+ */
+export async function removeLegacyRuntimeCaches(): Promise<string[]> {
+  if (typeof caches === 'undefined') return [];
+
+  const removed = await Promise.all(
+    LEGACY_RUNTIME_CACHES.map(async (name) => {
+      try {
+        return (await caches.delete(name)) ? name : null;
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  return removed.filter((name): name is string => name !== null);
 }
 
 /** Test seam — drops the registration so each test starts clean. */

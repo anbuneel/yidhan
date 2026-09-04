@@ -49,10 +49,11 @@
     <meta name="twitter:description" content="End-to-end encrypted, distraction-free note-taking. Where thoughts bloom with clarity." />
     <meta name="twitter:image" content="https://yidhan.vercel.app/og-image.png" />
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Source+Sans+3:wght@300;400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <!-- Fonts are self-hosted (src/fonts.css). Preload the two latin faces every
+         page paints with so they arrive alongside the JS instead of after React
+         renders; the other subsets load on demand via unicode-range. -->
+    <link rel="preload" href="/src/assets/fonts/cormorant-garamond-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/src/assets/fonts/source-sans-3-latin.woff2" as="font" type="font/woff2" crossorigin>
 
     <title>Yidhan</title>
   </head>

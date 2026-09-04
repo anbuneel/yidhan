@@ -172,7 +172,6 @@ export function PrivacyPage({
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Supabase</strong>: Database, authentication, and real-time sync. Your encrypted data is stored on Supabase's infrastructure with row-level security.</p>
                 <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Sentry</strong>: Error monitoring (no note content). Optional; Yidhan works without it.</p>
-                <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Google Fonts</strong>: Typography (Cormorant Garamond, Source Sans 3). Google may log font requests.</p>
                 <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Vercel</strong>: Hosting and deployment.</p>
               </div>
             </section>

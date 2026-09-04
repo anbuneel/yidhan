@@ -119,6 +119,7 @@
     "theme:preview": "tsx scripts/generate-theme-css.ts --preview",
     "icons:generate": "tsx scripts/generate-icons.ts",
     "og:generate": "tsx scripts/generate-og-image.ts",
+    "logo:masks": "tsx scripts/generate-logo-masks.ts",
     "splash:generate": "tsx scripts/generate-splash-screens.ts",
     "docs:sync-agents": "node scripts/sync-agents.mjs",
     "docs:sync-agents:check": "node scripts/sync-agents.mjs --check",

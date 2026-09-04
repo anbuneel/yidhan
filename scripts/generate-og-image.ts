@@ -29,7 +29,7 @@ const LOCKUP_HEIGHT = 360; // Height to fit the lockup within
 const LOCKUP_TOP = 60; // Top padding above lockup
 
 // ── Source / output paths ───────────────────────────────────────
-const LOCKUP_PATH = path.join(__dirname, '../src/assets/brand/yidhan-logo-lockup-tight-1200.webp');
+const LOCKUP_PATH = path.join(__dirname, '../images/yidhan-logo-lockup-tight-1200.webp');
 const OUTPUT_PATH = path.join(__dirname, '../public/og-image.png');
 
 // ── Text content ────────────────────────────────────────────────

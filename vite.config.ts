@@ -8,6 +8,12 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vite.dev/config/
 export default defineConfig({
   build: {
+    // Keep fonts and the logo masks as files. The smallest subsets (the 1KB
+    // JetBrains Mono cyrillic-ext face, the 4KB seed mask) sit under the default
+    // inline limit and would be embedded in the CSS as base64 instead — always
+    // downloaded, which defeats unicode-range, and larger than the file.
+    assetsInlineLimit: (filePath) =>
+      /[\\/]assets[\\/](brand|fonts)[\\/]/.test(filePath) ? false : undefined,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
@@ -36,7 +42,8 @@ export default defineConfig({
       // Registration is explicit in src/utils/serviceWorkerUpdates.ts so the
       // update path is testable instead of relying on an injected script.
       injectRegister: null,
-      includeAssets: ['favicon.png', 'robots.txt'],
+      // Keep the font licenses available offline alongside the precached fonts.
+      includeAssets: ['favicon.png', 'robots.txt', 'licenses/fonts/*.txt'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         // Exclude the legacy oversized SVG from precache.
@@ -44,28 +51,12 @@ export default defineConfig({
         // Serve index.html for all navigation requests (full offline-first)
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/api/, /^\/share\//, /^\/s\//],
-        runtimeCaching: [
-          {
-            // Cache Google Fonts stylesheets
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Cache Google Fonts files
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'gstatic-fonts-cache',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
+        // No runtime caching: fonts are self-hosted (src/fonts.css) and land in
+        // the precache through the woff2 glob above. The Google Fonts routes
+        // this replaced were CacheFirst with `statuses: [0, 200]` and a 1-year
+        // TTL — one opaque/failed first fetch was cached and served for a year,
+        // pinning that browser to Georgia/system-ui until Cache Storage was
+        // cleared by hand.
       },
       manifest: {
         name: 'Yidhan',

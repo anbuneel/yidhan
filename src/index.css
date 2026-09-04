@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./fonts.css";
 
 /* ============================================
    THEME COLORS
@@ -111,10 +112,13 @@
   --space-8: 48px;
   --space-10: 64px;
 
-  /* Typography */
+  /* Typography (faces are self-hosted, see fonts.css) */
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-body: 'Source Sans 3', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', Consolas, monospace;
+
+  /* Brand: the gold seed in the logo mark stays gold in every theme */
+  --color-brand-gold: #D4AF37;
 
   /* Radii - Asymmetric organic */
   --radius-sm: 4px;
@@ -193,6 +197,63 @@ body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ============================================
+   BRAND MARK
+   The enso arc and gold seed from the logo, rendered as two CSS-masked
+   layers so the mark follows the theme instead of carrying the terracotta
+   baked into the old raster: the arc takes the accent (terracotta on
+   Kintsugi, gold on Midnight), the seed stays brand gold. The masks keep the
+   watercolour texture in their alpha channel — see scripts/generate-logo-masks.ts.
+
+   Deliberately in @layer components, unlike the rest of this file: Tailwind v4
+   emits its utilities in the later `utilities` layer, and unlayered rules beat
+   layered ones regardless of order or specificity. Unlayered, `.brand-mark`'s
+   display and color could never be overridden by a utility class on the same
+   element (Logo.tsx sizes it with h-* classes today). Any plain unlayered rule
+   elsewhere still wins over these, which is the normal "override" behaviour.
+   ============================================ */
+@layer components {
+  .brand-mark {
+    position: relative;
+    display: inline-block;
+    aspect-ratio: 512 / 334;
+    color: var(--color-accent);
+  }
+
+  .brand-mark::before,
+  .brand-mark::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    mask-size: 100% 100%;
+    -webkit-mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    -webkit-mask-repeat: no-repeat;
+    print-color-adjust: exact;
+  }
+
+  .brand-mark::before {
+    background-color: currentColor;
+    mask-image: url('./assets/brand/yidhan-logo-mark-arc.webp');
+    -webkit-mask-image: url('./assets/brand/yidhan-logo-mark-arc.webp');
+  }
+
+  .brand-mark::after {
+    background-color: var(--color-brand-gold);
+    mask-image: url('./assets/brand/yidhan-logo-mark-dot.webp');
+    -webkit-mask-image: url('./assets/brand/yidhan-logo-mark-dot.webp');
+  }
+
+  /* Forced colours override backgrounds, which would erase a masked mark */
+  @media (forced-colors: active) {
+    .brand-mark::before,
+    .brand-mark::after {
+      background-color: CanvasText;
+      forced-color-adjust: none;
+    }
+  }
 }
 
 /* ============================================

@@ -34,7 +34,7 @@ function SharedNoteHeader({ theme, onThemeToggle }: SharedNoteHeaderProps) {
       style={{ background: 'var(--color-bg-primary)' }}
     >
       <div className="h-16 flex items-center justify-between">
-        <Logo variant="header" />
+        <Logo />
 
         <button type="button"
           onClick={onThemeToggle}
