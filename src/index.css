@@ -206,6 +206,13 @@ body {
    baked into the old raster: the arc takes the accent (terracotta on
    Kintsugi, gold on Midnight), the seed stays brand gold. The masks keep the
    watercolour texture in their alpha channel — see scripts/generate-logo-masks.ts.
+
+   Deliberately in @layer components, unlike the rest of this file: Tailwind v4
+   emits its utilities in the later `utilities` layer, and unlayered rules beat
+   layered ones regardless of order or specificity. Unlayered, `.brand-mark`'s
+   display and color could never be overridden by a utility class on the same
+   element (Logo.tsx sizes it with h-* classes today). Any plain unlayered rule
+   elsewhere still wins over these, which is the normal "override" behaviour.
    ============================================ */
 @layer components {
   .brand-mark {
