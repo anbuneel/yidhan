@@ -306,7 +306,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
       >
         {/* Logo/Title */}
         <h1 className="mb-2 flex justify-center">
-          <Logo variant="header" />
+          <Logo />
         </h1>
         <h2
           id="auth-modal-title"

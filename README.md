@@ -95,7 +95,7 @@ See [Mobile Gap Analysis](docs/analysis/mobile-ios-gap-analysis-claude.md) for d
 - **Rich Text:** Tiptap (ProseMirror)
 - **Backend:** Supabase (PostgreSQL, Auth, Real-time)
 - **Native:** Capacitor (Android ready, iOS planned)
-- **Fonts:** Cormorant Garamond, Source Sans 3
+- **Fonts:** Cormorant Garamond, Source Sans 3 (self-hosted, no third-party font requests)
 
 ## Documentation
 
@@ -222,6 +222,7 @@ Yidhan embraces **wabi-sabi** - finding beauty in imperfection:
 - **Warm, organic colors** - terracotta and antique gold accents
 - **Curated tag palette** - 8 muted, earthy colors
 - **Serif typography** for display text (Cormorant Garamond)
+- **Theme-aware logo mark** - the hand-painted enso follows the accent (terracotta on Kintsugi, gold on Midnight)
 - **Subtle paper texture** overlay
 - **Gentle animations** that feel natural
 

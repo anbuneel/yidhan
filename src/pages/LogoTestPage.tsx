@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import lockupSrc from '../assets/brand/yidhan-logo-lockup-tight-1200.webp';
-import markSrc from '../assets/brand/yidhan-logo-mark-512.webp';
+import lockupSrc from '../../images/yidhan-logo-lockup-tight-1200.webp';
+import markSrc from '../../images/yidhan-logo-mark-512.webp';
 import type { Theme } from '../types';
 
 interface LogoTestPageProps {

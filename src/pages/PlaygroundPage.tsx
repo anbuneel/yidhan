@@ -59,7 +59,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
       </svg>
 
       <header className="page-header">
-        <Logo variant="header" />
+        <Logo />
         <div className="page-header-actions">
           <button
             type="button"
