@@ -37,11 +37,22 @@ WITH checks(check_name, ok) AS (
       SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
       WHERE n.nspname = 'public' AND p.proname = 'fetch_shared_note')),
 
-    -- fix_note_shares_rls_ownership.sql
-    ('note_shares owner-scoped insert policy', EXISTS (
+    -- launch_security_hardening.sql owns the final note_shares policy set. It
+    -- drops every pre-existing policy on the table, so the earlier names from
+    -- fix_note_shares_rls_ownership.sql are gone on a correctly migrated
+    -- database — check the hardened set, not the superseded one.
+    ('note_shares hardened policy set', (
+      SELECT count(*) = 4 FROM pg_policies WHERE schemaname = 'public'
+        AND tablename = 'note_shares'
+        AND policyname IN (
+          'note_shares_select_own',
+          'note_shares_insert_own_note',
+          'note_shares_update_own_note',
+          'note_shares_delete_own'))),
+    ('no pre-hardening note_shares policies linger', NOT EXISTS (
       SELECT 1 FROM pg_policies WHERE schemaname = 'public'
         AND tablename = 'note_shares'
-        AND policyname = 'Users can create shares for their own notes')),
+        AND policyname NOT LIKE 'note\_shares\_%')),
 
     -- add_notes_updated_at_trigger.sql
     ('notes updated_at trigger', EXISTS (
