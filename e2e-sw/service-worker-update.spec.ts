@@ -50,7 +50,11 @@ function startStaticServer(dirRef: { current: string }): Promise<{ server: Serve
     const relative = requested === '/' ? 'index.html' : requested.replace(/^\/+/, '');
     const filePath = path.join(dirRef.current, relative);
 
-    if (!filePath.startsWith(dirRef.current) || !existsSync(filePath) || !statSync(filePath).isFile()) {
+    // path.relative rather than startsWith: a prefix test lets a sibling
+    // directory through when it shares the prefix (…/v1 vs …/v10).
+    const escapesRoot = path.relative(dirRef.current, filePath).startsWith('..');
+
+    if (escapesRoot || !existsSync(filePath) || !statSync(filePath).isFile()) {
       res.writeHead(404).end('not found');
       return;
     }
