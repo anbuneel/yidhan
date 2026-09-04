@@ -345,10 +345,6 @@ async function processQueueEntry(
   }
 }
 
-async function countLocalNoteTagLinks(userId: string, noteId: string): Promise<number> {
-  return getOfflineDb(userId).noteTags.where('noteId').equals(noteId).count();
-}
-
 /**
  * Re-queue a rebuilt note's tag links.
  *
@@ -362,7 +358,7 @@ async function countLocalNoteTagLinks(userId: string, noteId: string): Promise<n
  * normal add_tag path restore them, which already tolerates a duplicate (23505)
  * and retries when the tag itself has not synced yet (23503).
  */
-async function requeueNoteTagLinks(userId: string, noteId: string): Promise<void> {
+async function requeueNoteTagLinks(userId: string, noteId: string): Promise<number> {
   const db = getOfflineDb(userId);
   const links = await db.noteTags.where('noteId').equals(noteId).toArray();
 
@@ -376,6 +372,8 @@ async function requeueNoteTagLinks(userId: string, noteId: string): Promise<void
       tagId: link.tagId,
     });
   }
+
+  return links.length;
 }
 
 /**
@@ -403,13 +401,13 @@ async function requeueNoteTagLinks(userId: string, noteId: string): Promise<void
  * row, and the insert returning none but a confirming read finding it.
  */
 async function settleRebuiltNote(userId: string, noteId: string): Promise<void> {
+  const tagLinks = await requeueNoteTagLinks(userId, noteId);
+
   addReliabilityBreadcrumb({
     category: 'sync',
     message: 'Rebuilt a note the server had lost',
-    data: { noteId, tagLinks: await countLocalNoteTagLinks(userId, noteId) },
+    data: { noteId, tagLinks },
   });
-
-  await requeueNoteTagLinks(userId, noteId);
 
   const clearedCreates = await clearQueuedNoteCreates(userId, noteId);
   if (clearedCreates > 0) {
