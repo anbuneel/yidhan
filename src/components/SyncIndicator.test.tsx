@@ -112,6 +112,32 @@ describe('SyncIndicator', () => {
     expect(mockToast).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the risk caption and Install action visible while offline', () => {
+    // Offline is exactly when lingering changes are necessarily local-only,
+    // and the Offline branch used to return before the caption could render —
+    // leaving the seven-second toast as the only warning.
+    mockSyncStatus.mockReturnValue({ ...stuckPending, isOnline: false });
+    mockPersistence.mockReturnValue(persistence('denied'));
+    mockInstall.mockReturnValue({ isInstallable: true, triggerInstall });
+    render(<SyncIndicator />);
+
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(screen.getByText(/on this device only/)).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('kept only on this device')
+    );
+    expect(screen.getByRole('button', { name: /Install to protect/ })).toBeInTheDocument();
+  });
+
+  it('does not flag offline work when storage is persisted', () => {
+    mockSyncStatus.mockReturnValue({ ...stuckPending, isOnline: false });
+    render(<SyncIndicator />);
+
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(screen.queryByText(/on this device only/)).not.toBeInTheDocument();
+  });
+
   it('offers Install only when the browser can install, and triggers it', () => {
     mockSyncStatus.mockReturnValue(blocked);
     mockPersistence.mockReturnValue(persistence('denied'));

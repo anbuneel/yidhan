@@ -84,6 +84,7 @@ export function SyncIndicator({
   useEffect(() => {
     if (!atRisk || !claimAtRiskNotice()) return;
     toast('Unsynced notes are kept only on this device. Installing Yidhan keeps them safe if the browser clears storage.', {
+      id: 'storage-at-risk',
       icon: '器',
       duration: 7000,
       style: {
@@ -181,7 +182,7 @@ export function SyncIndicator({
           background: 'var(--color-bg-tertiary)',
         }}
         aria-live="polite"
-        aria-label="Offline - changes saved locally"
+        aria-label={withRisk('Offline - changes saved locally')}
       >
         <svg
           className="size-4"
@@ -213,6 +214,7 @@ export function SyncIndicator({
         >
           Offline
         </span>
+        {atRisk && <AtRiskCaption installable={isInstallable} onInstall={triggerInstall} />}
       </output>
     );
   }
