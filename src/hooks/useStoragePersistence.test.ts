@@ -56,6 +56,10 @@ describe('useStoragePersistence', () => {
     });
 
     expect(mockEnsure).toHaveBeenCalledWith('installed');
+    // Exactly once: the reset seam unbinds the previous test's listener, so a
+    // leaked one would show up here instead of being masked by the idempotent
+    // request underneath.
+    expect(mockEnsure).toHaveBeenCalledTimes(1);
   });
 
   it('exposes isDenied only for an explicit refusal', async () => {

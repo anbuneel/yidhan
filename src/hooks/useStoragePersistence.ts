@@ -19,7 +19,7 @@ export interface StoragePersistence extends StoragePersistenceSnapshot {
 }
 
 let launchRequested = false;
-let installListenerBound = false;
+let installListener: (() => void) | null = null;
 
 const serverSnapshot: StoragePersistenceSnapshot = {
   state: 'unknown',
@@ -47,11 +47,11 @@ export function useStoragePersistence(): StoragePersistence {
       void ensurePersistentStorage('launch');
     }
 
-    if (!installListenerBound && typeof window !== 'undefined') {
-      installListenerBound = true;
-      window.addEventListener('appinstalled', () => {
+    if (!installListener && typeof window !== 'undefined') {
+      installListener = () => {
         void ensurePersistentStorage('installed');
-      });
+      };
+      window.addEventListener('appinstalled', installListener);
     }
   }, []);
 
@@ -64,8 +64,15 @@ export function useStoragePersistence(): StoragePersistence {
   };
 }
 
-/** Test seam — lets each test start with a fresh launch. */
+/**
+ * Test seam — lets each test start with a fresh launch, and unbinds the real
+ * listener so one left over from an earlier test cannot answer `appinstalled`
+ * a second time and hide a regression in "request once per install".
+ */
 export function resetStoragePersistenceHookForTests(): void {
   launchRequested = false;
-  installListenerBound = false;
+  if (installListener && typeof window !== 'undefined') {
+    window.removeEventListener('appinstalled', installListener);
+  }
+  installListener = null;
 }
