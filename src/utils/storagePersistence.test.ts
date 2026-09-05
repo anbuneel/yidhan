@@ -86,13 +86,21 @@ describe('storagePersistence', () => {
     expect(mockReport).not.toHaveBeenCalled();
   });
 
-  it('treats a throwing API as unsupported rather than as denied', async () => {
+  it('treats a throwing API as denied, since only a grant makes storage safe', async () => {
+    // Storage is evictable by default; an API that fails has not changed that.
+    // Failing toward the warning keeps it in front of exactly the people it is
+    // for, and the telemetry names the cause so it is not mistaken for a decline.
     stubStorage({
-      persisted: vi.fn().mockRejectedValue(new Error('SecurityError')),
+      persisted: vi.fn().mockRejectedValue(new DOMException('blocked', 'SecurityError')),
       persist: vi.fn(),
     });
 
-    await expect(ensurePersistentStorage()).resolves.toBe('unsupported');
+    await expect(ensurePersistentStorage('launch')).resolves.toBe('denied');
+    expect(getStoragePersistenceSnapshot().state).toBe('denied');
+    expect(mockReport).toHaveBeenCalledTimes(1);
+    expect(mockReport.mock.calls[0][0]).toMatchObject({
+      data: { trigger: 'launch', error: 'SecurityError' },
+    });
   });
 
   it('treats native platforms as granted without touching the browser API', async () => {

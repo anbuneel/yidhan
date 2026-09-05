@@ -23,7 +23,10 @@ import { addReliabilityBreadcrumb, reportReliabilityIssue } from './reliabilityT
 export type PersistenceState =
   /** The browser has promised not to evict this origin's storage. */
   | 'granted'
-  /** The browser declined; unsynced data is evictable under pressure. */
+  /**
+   * The browser declined, or its API failed. Either way nothing exempts this
+   * origin from eviction, so unsynced data is at risk under pressure.
+   */
   | 'denied'
   /** No Storage API here (older browser, non-secure context, some WebViews). */
   | 'unsupported'
@@ -112,6 +115,7 @@ export async function ensurePersistentStorage(
     }
 
     let state: PersistenceState;
+    let failure: string | null = null;
     try {
       const already =
         typeof manager.persisted === 'function' ? await manager.persisted() : false;
@@ -119,13 +123,20 @@ export async function ensurePersistentStorage(
       // is already persisted is not asked again.
       const persisted = already || (await manager.persist());
       state = persisted ? 'granted' : 'denied';
-    } catch {
-      // Treat a throwing API the same as an absent one: we cannot rely on it.
-      state = 'unsupported';
+    } catch (error) {
+      // A throwing API is not a grant. Storage is evictable by default and
+      // only a "yes" changes that, so this fails toward showing the warning
+      // rather than hiding it from exactly the people it is for. The cause
+      // travels with the telemetry so a broken API is distinguishable from a
+      // real decline.
+      state = 'denied';
+      failure = error instanceof Error ? error.name : String(error);
     }
 
     publish({ state });
     void readEstimate(manager);
+
+    const data = failure ? { trigger, error: failure } : { trigger };
 
     // A first denial is reported once per session — that is the population
     // whose unsynced notes can be lost, which is the number worth knowing.
@@ -137,14 +148,14 @@ export async function ensurePersistentStorage(
         category: 'storage',
         message: 'Persistent storage denied; unsynced notes are evictable',
         level: 'warning',
-        data: { trigger },
+        data,
       });
     } else {
       addReliabilityBreadcrumb({
         category: 'storage',
         message: `Persistent storage ${state}`,
         level: state === 'denied' ? 'warning' : 'info',
-        data: { trigger },
+        data,
       });
     }
 
