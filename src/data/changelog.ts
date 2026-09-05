@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.19.8',
+    date: '2026-09-04',
+    changes: [
+      { type: 'improvement', text: 'Landing headline emphasis now uses true Cormorant italics for more natural letterforms' },
+      { type: 'fix', text: 'Social-preview images now generate with the bundled font, without relying on Google Fonts or installed system fonts' },
+    ],
+  },
+  {
     version: '3.19.7',
     date: '2026-09-04',
     changes: [
