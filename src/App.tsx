@@ -100,6 +100,7 @@ import { migrateDemoToAccount } from './services/demoMigration';
 import { sanitizeHtml } from './utils/sanitize';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useSyncEngine, resolveConflict } from './hooks/useSyncEngine';
+import { useStoragePersistence } from './hooks/useStoragePersistence';
 import {
   reportConflict,
   invalidateSyncPullCursors,
@@ -217,6 +218,11 @@ function App() {
 
   // Sync engine for offline support
   const { conflicts, removeConflict, triggerSync } = useSyncEngine(handleSyncComplete);
+
+  // Ask the browser not to evict the offline database. An unsynced note lives
+  // only there, and best-effort storage can be cleared silently under disk
+  // pressure — which is how blocked notes were lost across a restart.
+  useStoragePersistence();
   const [activeConflict, setActiveConflict] = useState<typeof conflicts[0] | null>(null);
   const [isRetryingBlockedChanges, setIsRetryingBlockedChanges] = useState(false);
   const triggerSyncRef = useRef(triggerSync);

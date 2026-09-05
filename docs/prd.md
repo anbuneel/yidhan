@@ -1,7 +1,7 @@
 # Yidhan - Product Requirements Document
 
-**Version:** 2.2
-**Last Updated:** 2026-06-21
+**Version:** 2.3
+**Last Updated:** 2026-09-05
 **Status:** Living Document
 **Author:** Claude (Opus 4.5)
 
@@ -147,6 +147,7 @@ Zenote aims to be the antithesis of feature-bloated productivity tools. Where ot
 | Sync Queue | Pending changes queue with automatic sync on reconnect | P0 |
 | Blocked Changes Recovery | Repeated sync failures stay recoverable with a manual retry action instead of being discarded | P1 |
 | Safe Startup Hydration | Startup hydration merges server state without clearing queued local work | P1 |
+| Persistent Storage | Requests `navigator.storage.persist()` on launch and on install so unsynced notes are exempt from browser eviction; when declined, lingering unsynced work is flagged as on this device only with an Install action | P0 |
 | Conflict Detection | Detects concurrent edits to same note | P1 |
 | "Two Paths" Modal | Visual conflict resolution (keep local, keep remote, or merge) | P1 |
 | Sync Indicator | Subtle status showing offline/pending state | P2 |
@@ -338,6 +339,7 @@ Offline → Make edits → Save to IndexedDB (sync queue)
 | Data Durability | 99.999999999% (Supabase/AWS) |
 | Save Retry | 3 attempts with exponential backoff |
 | Failed Sync Recovery | Blocked changes remain recoverable until the user retries or resolves them |
+| Unsynced Note Durability | Offline database requests persistent storage; a denial is surfaced to the user and reported once per session |
 
 ---
 

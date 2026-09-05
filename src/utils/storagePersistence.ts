@@ -1,0 +1,188 @@
+/**
+ * Persistent storage for the offline database.
+ *
+ * Why this exists: an unsynced note lives only in this browser's IndexedDB
+ * until it reaches the server. By default a browser treats that storage as
+ * "best effort" and may clear it under disk pressure — silently, with no
+ * error, typically across a restart. That is how two notes that had been
+ * blocked from syncing for months were lost the moment Chrome restarted.
+ *
+ * `navigator.storage.persist()` asks the browser to exempt this origin from
+ * eviction. Chrome grants it without a prompt when the site is installed as an
+ * app, bookmarked, has notification permission, or is used often; otherwise it
+ * answers no. So the request is cheap, worth repeating (eligibility changes),
+ * and its answer is worth showing: "denied" means unsynced notes are at risk.
+ *
+ * Framework-free so it can be exercised directly; `useStoragePersistence`
+ * subscribes React to it.
+ */
+
+import { Capacitor } from '@capacitor/core';
+import { addReliabilityBreadcrumb, reportReliabilityIssue } from './reliabilityTelemetry';
+
+export type PersistenceState =
+  /** The browser has promised not to evict this origin's storage. */
+  | 'granted'
+  /**
+   * The browser declined, or its API failed. Either way nothing exempts this
+   * origin from eviction, so unsynced data is at risk under pressure.
+   */
+  | 'denied'
+  /** No Storage API here (older browser, non-secure context, some WebViews). */
+  | 'unsupported'
+  /** Not yet asked. */
+  | 'unknown';
+
+export interface StoragePersistenceSnapshot {
+  state: PersistenceState;
+  /** Bytes in use / available, when the browser reports them. */
+  usageBytes: number | null;
+  quotaBytes: number | null;
+}
+
+type Listener = () => void;
+
+let snapshot: StoragePersistenceSnapshot = { state: 'unknown', usageBytes: null, quotaBytes: null };
+let inFlight: Promise<PersistenceState> | null = null;
+let deniedReported = false;
+let atRiskNoticeShown = false;
+const listeners = new Set<Listener>();
+
+/**
+ * Claim the one at-risk notice this session is allowed to show.
+ *
+ * Returns true exactly once per page load. Lives here rather than in the
+ * component because App.tsx renders each view with an early return, so the
+ * sync indicator unmounts every time the user opens a note — a component-local
+ * guard would reset on each return to the library and re-fire the notice.
+ */
+export function claimAtRiskNotice(): boolean {
+  if (atRiskNoticeShown) return false;
+  atRiskNoticeShown = true;
+  return true;
+}
+
+function getStorageManager(): StorageManager | null {
+  if (typeof navigator === 'undefined') return null;
+  const manager = (navigator as Navigator & { storage?: StorageManager }).storage;
+  return manager && typeof manager.persist === 'function' ? manager : null;
+}
+
+function publish(next: Partial<StoragePersistenceSnapshot>): void {
+  snapshot = { ...snapshot, ...next };
+  listeners.forEach((listener) => listener());
+}
+
+async function readEstimate(manager: StorageManager): Promise<void> {
+  if (typeof manager.estimate !== 'function') return;
+  try {
+    const { usage, quota } = await manager.estimate();
+    publish({ usageBytes: usage ?? null, quotaBytes: quota ?? null });
+  } catch {
+    // Informational only; a failed estimate changes nothing.
+  }
+}
+
+/**
+ * Check, and if necessary request, persistent storage.
+ *
+ * Idempotent and safe to call on every launch: an already-granted origin
+ * returns immediately, and concurrent callers share one request. Returns the
+ * resulting state.
+ */
+export async function ensurePersistentStorage(
+  trigger: 'launch' | 'installed' | 'manual' = 'launch'
+): Promise<PersistenceState> {
+  if (inFlight) return inFlight;
+
+  inFlight = (async () => {
+    // Native app data is not subject to browser eviction heuristics; reporting
+    // it as at-risk would be a false alarm.
+    if (Capacitor.isNativePlatform()) {
+      publish({ state: 'granted' });
+      return 'granted' as const;
+    }
+
+    const manager = getStorageManager();
+    if (!manager) {
+      publish({ state: 'unsupported' });
+      addReliabilityBreadcrumb({
+        category: 'storage',
+        message: 'Persistent storage unsupported',
+        data: { trigger },
+      });
+      return 'unsupported' as const;
+    }
+
+    let state: PersistenceState;
+    let failure: string | null = null;
+    try {
+      const already =
+        typeof manager.persisted === 'function' ? await manager.persisted() : false;
+      // Parenthesised so the short-circuit reads as intended: an origin that
+      // is already persisted is not asked again.
+      const persisted = already || (await manager.persist());
+      state = persisted ? 'granted' : 'denied';
+    } catch (error) {
+      // A throwing API is not a grant. Storage is evictable by default and
+      // only a "yes" changes that, so this fails toward showing the warning
+      // rather than hiding it from exactly the people it is for. The cause
+      // travels with the telemetry so a broken API is distinguishable from a
+      // real decline.
+      state = 'denied';
+      failure = error instanceof Error ? error.name : String(error);
+    }
+
+    publish({ state });
+    void readEstimate(manager);
+
+    const data = failure ? { trigger, error: failure } : { trigger };
+
+    // A first denial is reported once per session — that is the population
+    // whose unsynced notes can be lost, which is the number worth knowing.
+    // reportReliabilityIssue leaves its own breadcrumb, so it is the single
+    // record for that case; every other outcome gets a plain breadcrumb.
+    if (state === 'denied' && !deniedReported) {
+      deniedReported = true;
+      reportReliabilityIssue({
+        category: 'storage',
+        message: 'Persistent storage denied; unsynced notes are evictable',
+        level: 'warning',
+        data,
+      });
+    } else {
+      addReliabilityBreadcrumb({
+        category: 'storage',
+        message: `Persistent storage ${state}`,
+        level: state === 'denied' ? 'warning' : 'info',
+        data,
+      });
+    }
+
+    return state;
+  })().finally(() => {
+    inFlight = null;
+  });
+
+  return inFlight;
+}
+
+export function getStoragePersistenceSnapshot(): StoragePersistenceSnapshot {
+  return snapshot;
+}
+
+export function subscribeToStoragePersistence(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/** Test seam — returns the module to its pre-request state. */
+export function resetStoragePersistenceForTests(): void {
+  snapshot = { state: 'unknown', usageBytes: null, quotaBytes: null };
+  inFlight = null;
+  deniedReported = false;
+  atRiskNoticeShown = false;
+  listeners.clear();
+}
