@@ -15,10 +15,11 @@
  * persistence to installed apps without asking.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useSyncStatus } from '../hooks/useSyncStatus';
 import { useStoragePersistence } from '../hooks/useStoragePersistence';
+import { claimAtRiskNotice } from '../utils/storagePersistence';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 interface SyncIndicatorProps {
@@ -78,11 +79,10 @@ export function SyncIndicator({
   const atRisk = storageDenied && hasLingeringWork;
 
   // Say it once per session on entering the at-risk state, then let the
-  // caption in the pill carry it quietly.
-  const warnedRef = useRef(false);
+  // caption in the pill carry it quietly. The claim is session-scoped (see
+  // claimAtRiskNotice) because this component unmounts on every view change.
   useEffect(() => {
-    if (!atRisk || warnedRef.current) return;
-    warnedRef.current = true;
+    if (!atRisk || !claimAtRiskNotice()) return;
     toast('Unsynced notes are kept only on this device. Installing Yidhan keeps them safe if the browser clears storage.', {
       icon: '器',
       duration: 7000,

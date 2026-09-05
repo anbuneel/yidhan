@@ -42,7 +42,22 @@ type Listener = () => void;
 let snapshot: StoragePersistenceSnapshot = { state: 'unknown', usageBytes: null, quotaBytes: null };
 let inFlight: Promise<PersistenceState> | null = null;
 let deniedReported = false;
+let atRiskNoticeShown = false;
 const listeners = new Set<Listener>();
+
+/**
+ * Claim the one at-risk notice this session is allowed to show.
+ *
+ * Returns true exactly once per page load. Lives here rather than in the
+ * component because App.tsx renders each view with an early return, so the
+ * sync indicator unmounts every time the user opens a note — a component-local
+ * guard would reset on each return to the library and re-fire the notice.
+ */
+export function claimAtRiskNotice(): boolean {
+  if (atRiskNoticeShown) return false;
+  atRiskNoticeShown = true;
+  return true;
+}
 
 function getStorageManager(): StorageManager | null {
   if (typeof navigator === 'undefined') return null;
@@ -100,7 +115,10 @@ export async function ensurePersistentStorage(
     try {
       const already =
         typeof manager.persisted === 'function' ? await manager.persisted() : false;
-      state = already || (await manager.persist()) ? 'granted' : 'denied';
+      // Parenthesised so the short-circuit reads as intended: an origin that
+      // is already persisted is not asked again.
+      const persisted = already || (await manager.persist());
+      state = persisted ? 'granted' : 'denied';
     } catch {
       // Treat a throwing API the same as an absent one: we cannot rely on it.
       state = 'unsupported';
@@ -152,5 +170,6 @@ export function resetStoragePersistenceForTests(): void {
   snapshot = { state: 'unknown', usageBytes: null, quotaBytes: null };
   inFlight = null;
   deniedReported = false;
+  atRiskNoticeShown = false;
   listeners.clear();
 }
