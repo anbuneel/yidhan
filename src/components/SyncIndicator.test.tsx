@@ -42,7 +42,7 @@ describe('SyncIndicator', () => {
     mockToast.mockClear();
     triggerInstall.mockClear();
     mockPersistence.mockReturnValue(persistence('granted'));
-    mockInstall.mockReturnValue({ isInstallable: false, triggerInstall });
+    mockInstall.mockReturnValue({ isInstallable: false, canInstallOnIOS: false, triggerInstall });
   });
 
   it('renders nothing when everything is synced', () => {
@@ -136,6 +136,19 @@ describe('SyncIndicator', () => {
 
     expect(screen.getByText('Offline')).toBeInTheDocument();
     expect(screen.queryByText(/on this device only/)).not.toBeInTheDocument();
+  });
+
+  it('points iOS Safari at Add to Home Screen, since it never fires beforeinstallprompt', () => {
+    // Safari's storage eviction makes iOS the most exposed group, and it has
+    // no installable prompt to offer — so say what to do instead of showing
+    // a caption with no way forward.
+    mockSyncStatus.mockReturnValue(blocked);
+    mockPersistence.mockReturnValue(persistence('denied'));
+    mockInstall.mockReturnValue({ isInstallable: false, canInstallOnIOS: true, triggerInstall });
+    render(<SyncIndicator />);
+
+    expect(screen.getByText(/Add to Home Screen to protect/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Install to protect/ })).not.toBeInTheDocument();
   });
 
   it('offers Install only when the browser can install, and triggers it', () => {

@@ -73,6 +73,10 @@ describe('storagePersistence', () => {
     // but not on every poll.
     expect(mockReport).toHaveBeenCalledTimes(1);
     expect(mockReport.mock.calls[0][0]).toMatchObject({ category: 'storage', level: 'warning' });
+    // One record per outcome: the first denial is the report alone (it
+    // leaves its own breadcrumb); only the repeat gets a plain breadcrumb.
+    expect(mockBreadcrumb).toHaveBeenCalledTimes(1);
+    expect(mockBreadcrumb.mock.calls[0][0]).toMatchObject({ message: 'Persistent storage denied' });
   });
 
   it('reports unsupported when the Storage API is absent', async () => {

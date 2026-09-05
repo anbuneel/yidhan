@@ -127,21 +127,23 @@ export async function ensurePersistentStorage(
     publish({ state });
     void readEstimate(manager);
 
-    addReliabilityBreadcrumb({
-      category: 'storage',
-      message: `Persistent storage ${state}`,
-      level: state === 'denied' ? 'warning' : 'info',
-      data: { trigger },
-    });
-
-    // Once per session: this is the population whose unsynced notes can be
-    // lost, which is the number worth knowing.
+    // A first denial is reported once per session — that is the population
+    // whose unsynced notes can be lost, which is the number worth knowing.
+    // reportReliabilityIssue leaves its own breadcrumb, so it is the single
+    // record for that case; every other outcome gets a plain breadcrumb.
     if (state === 'denied' && !deniedReported) {
       deniedReported = true;
       reportReliabilityIssue({
         category: 'storage',
         message: 'Persistent storage denied; unsynced notes are evictable',
         level: 'warning',
+        data: { trigger },
+      });
+    } else {
+      addReliabilityBreadcrumb({
+        category: 'storage',
+        message: `Persistent storage ${state}`,
+        level: state === 'denied' ? 'warning' : 'info',
         data: { trigger },
       });
     }

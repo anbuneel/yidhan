@@ -36,12 +36,24 @@ const captionStyle = {
   fontFamily: 'var(--font-body)',
 } as const;
 
-function AtRiskCaption({ installable, onInstall }: { installable: boolean; onInstall: () => void }) {
+interface AtRiskCaptionProps {
+  installable: boolean;
+  /** iOS Safari never fires beforeinstallprompt; installing is a manual Share → Add to Home Screen. */
+  iosHint: boolean;
+  onInstall: () => void;
+}
+
+function AtRiskCaption({ installable, iosHint, onInstall }: AtRiskCaptionProps) {
   return (
     <span className="flex items-center gap-1.5" title={AT_RISK_EXPLANATION}>
       <span className="text-[11px]" style={captionStyle}>
         · on this device only
       </span>
+      {!installable && iosHint && (
+        <span className="text-[11px] font-medium" style={{ ...captionStyle, color: 'var(--color-accent)' }}>
+          Add to Home Screen to protect
+        </span>
+      )}
       {installable && (
         <button
           type="button"
@@ -69,7 +81,7 @@ export function SyncIndicator({
 }: SyncIndicatorProps) {
   const { isOnline, pendingCount, blockedCount, blockedReason, isStuck, refresh } = useSyncStatus();
   const { isDenied: storageDenied } = useStoragePersistence();
-  const { isInstallable, triggerInstall } = useInstallPrompt();
+  const { isInstallable, canInstallOnIOS, triggerInstall } = useInstallPrompt();
   const [isRetryingLocal, setIsRetryingLocal] = useState(false);
   const isRetrying = isRetryingBlockedChanges || isRetryingLocal;
 
@@ -86,7 +98,7 @@ export function SyncIndicator({
     if (!atRisk || !claimAtRiskNotice()) return;
     toast('Unsynced notes are kept only on this device. Installing Yidhan keeps them safe if the browser clears storage.', {
       id: 'storage-at-risk',
-      icon: '器',
+      icon: '\u26A0\uFE0F',
       duration: 7000,
       style: {
         background: 'var(--color-bg-secondary)',
@@ -169,7 +181,7 @@ export function SyncIndicator({
             Reconnect to retry
           </span>
         )}
-        {atRisk && <AtRiskCaption installable={isInstallable} onInstall={triggerInstall} />}
+        {atRisk && <AtRiskCaption installable={isInstallable} iosHint={canInstallOnIOS} onInstall={triggerInstall} />}
       </output>
     );
   }
@@ -215,7 +227,7 @@ export function SyncIndicator({
         >
           Offline
         </span>
-        {atRisk && <AtRiskCaption installable={isInstallable} onInstall={triggerInstall} />}
+        {atRisk && <AtRiskCaption installable={isInstallable} iosHint={canInstallOnIOS} onInstall={triggerInstall} />}
       </output>
     );
   }
@@ -246,7 +258,7 @@ export function SyncIndicator({
         >
           {pendingCount} pending
         </span>
-        {atRisk && <AtRiskCaption installable={isInstallable} onInstall={triggerInstall} />}
+        {atRisk && <AtRiskCaption installable={isInstallable} iosHint={canInstallOnIOS} onInstall={triggerInstall} />}
       </output>
     );
   }
