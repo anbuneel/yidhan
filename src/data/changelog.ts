@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.19.8',
+    date: '2026-09-04',
+    changes: [
+      { type: 'fix', text: 'Yidhan now asks the browser to keep its offline storage, so unsynced notes are no longer at risk of being cleared under disk pressure' },
+      { type: 'improvement', text: 'When the browser declines and changes are waiting to sync, the sync indicator says they are on this device only and offers to install the app, which keeps them safe' },
+    ],
+  },
+  {
     version: '3.19.7',
     date: '2026-09-04',
     changes: [

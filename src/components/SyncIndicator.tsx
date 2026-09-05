@@ -5,17 +5,60 @@
  * Follows "invisible when working" philosophy:
  * - Synced: No indicator (zen - absence is peace)
  * - Offline: Cloud icon with X
-  * - Stuck pending (30s+): Ink dot with count
+ * - Stuck pending (30s+): Ink dot with count
  * - Blocked: Manual retry needed
  * - Normal pending (<30s): No indicator (sync is invisible)
+ *
+ * One honest exception to the quiet: when the browser has declined persistent
+ * storage and there is unsynced work, that work exists only in evictable
+ * browser storage. The indicator says so, and offers Install — Chrome grants
+ * persistence to installed apps without asking.
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useSyncStatus } from '../hooks/useSyncStatus';
+import { useStoragePersistence } from '../hooks/useStoragePersistence';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 interface SyncIndicatorProps {
   onRetryBlockedChanges?: () => Promise<void>;
   isRetryingBlockedChanges?: boolean;
+}
+
+const AT_RISK_EXPLANATION =
+  'These changes are kept only in this browser until they sync, and the browser may clear its storage. Installing Yidhan keeps them safe.';
+
+const captionStyle = {
+  color: 'var(--color-text-tertiary)',
+  fontFamily: 'var(--font-body)',
+} as const;
+
+function AtRiskCaption({ installable, onInstall }: { installable: boolean; onInstall: () => void }) {
+  return (
+    <span className="flex items-center gap-1.5" title={AT_RISK_EXPLANATION}>
+      <span className="text-[11px]" style={captionStyle}>
+        · on this device only
+      </span>
+      {installable && (
+        <button
+          type="button"
+          onClick={onInstall}
+          className="text-[11px] font-medium"
+          style={{
+            color: 'var(--color-accent)',
+            fontFamily: 'var(--font-body)',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+          }}
+        >
+          Install to protect
+        </button>
+      )}
+    </span>
+  );
 }
 
 export function SyncIndicator({
@@ -23,8 +66,36 @@ export function SyncIndicator({
   isRetryingBlockedChanges = false,
 }: SyncIndicatorProps) {
   const { isOnline, pendingCount, blockedCount, blockedReason, isStuck, refresh } = useSyncStatus();
+  const { isDenied: storageDenied } = useStoragePersistence();
+  const { isInstallable, triggerInstall } = useInstallPrompt();
   const [isRetryingLocal, setIsRetryingLocal] = useState(false);
   const isRetrying = isRetryingBlockedChanges || isRetryingLocal;
+
+  // Unsynced work that has been local-only for a while, in storage the
+  // browser has said it may clear. Normal sub-30s pending is not flagged —
+  // that would flash a warning on every keystroke.
+  const hasLingeringWork = blockedCount > 0 || (isStuck && pendingCount > 0);
+  const atRisk = storageDenied && hasLingeringWork;
+
+  // Say it once per session on entering the at-risk state, then let the
+  // caption in the pill carry it quietly.
+  const warnedRef = useRef(false);
+  useEffect(() => {
+    if (!atRisk || warnedRef.current) return;
+    warnedRef.current = true;
+    toast('Unsynced notes are kept only on this device. Installing Yidhan keeps them safe if the browser clears storage.', {
+      icon: '器',
+      duration: 7000,
+      style: {
+        background: 'var(--color-bg-secondary)',
+        color: 'var(--color-text-primary)',
+        border: '1px solid var(--glass-border)',
+      },
+    });
+  }, [atRisk]);
+
+  const withRisk = (label: string) =>
+    atRisk ? `${label}. These changes are kept only on this device` : label;
 
   const handleRetryBlockedChanges = async () => {
     if (!onRetryBlockedChanges || !isOnline || isRetrying) {
@@ -46,6 +117,10 @@ export function SyncIndicator({
   }
 
   if (blockedCount > 0) {
+    const label = blockedReason
+      ? `${blockedCount} change${blockedCount === 1 ? '' : 's'} blocked: ${blockedReason}`
+      : `${blockedCount} change${blockedCount === 1 ? '' : 's'} blocked and awaiting retry`;
+
     return (
       <output
         className="flex items-center gap-2 px-2 py-1 rounded-md"
@@ -53,11 +128,7 @@ export function SyncIndicator({
           background: 'var(--color-bg-tertiary)',
         }}
         aria-live="polite"
-        aria-label={
-          blockedReason
-            ? `${blockedCount} change${blockedCount === 1 ? '' : 's'} blocked: ${blockedReason}`
-            : `${blockedCount} change${blockedCount === 1 ? '' : 's'} blocked and awaiting retry`
-        }
+        aria-label={withRisk(label)}
         title={blockedReason ?? undefined}
       >
         <span
@@ -92,16 +163,11 @@ export function SyncIndicator({
             {isRetrying ? 'Retrying...' : 'Retry blocked changes'}
           </button>
         ) : (
-          <span
-            className="text-[11px]"
-            style={{
-              color: 'var(--color-text-tertiary)',
-              fontFamily: 'var(--font-body)',
-            }}
-          >
+          <span className="text-[11px]" style={captionStyle}>
             Reconnect to retry
           </span>
         )}
+        {atRisk && <AtRiskCaption installable={isInstallable} onInstall={triggerInstall} />}
       </output>
     );
   }
@@ -160,7 +226,7 @@ export function SyncIndicator({
           background: 'var(--color-bg-tertiary)',
         }}
         aria-live="polite"
-        aria-label={`${pendingCount} change${pendingCount === 1 ? '' : 's'} pending sync`}
+        aria-label={withRisk(`${pendingCount} change${pendingCount === 1 ? '' : 's'} pending sync`)}
       >
         {/* Ink dot */}
         <span
@@ -177,6 +243,7 @@ export function SyncIndicator({
         >
           {pendingCount} pending
         </span>
+        {atRisk && <AtRiskCaption installable={isInstallable} onInstall={triggerInstall} />}
       </output>
     );
   }
