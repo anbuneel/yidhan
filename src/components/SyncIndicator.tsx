@@ -108,8 +108,10 @@ export function SyncIndicator({
     });
   }, [atRisk]);
 
+  // Blocked labels end in a describeSyncFailure sentence, which already carries
+  // its own full stop — trim it so the announcement never reads "…owner..".
   const withRisk = (label: string) =>
-    atRisk ? `${label}. These changes are kept only on this device` : label;
+    atRisk ? `${label.replace(/\.$/, '')}. These changes are kept only on this device` : label;
 
   const handleRetryBlockedChanges = async () => {
     if (!onRetryBlockedChanges || !isOnline || isRetrying) {

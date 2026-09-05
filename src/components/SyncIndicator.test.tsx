@@ -82,6 +82,18 @@ describe('SyncIndicator', () => {
     expect(mockToast).toHaveBeenCalledTimes(1);
   });
 
+  it('joins the blocked reason and the risk sentence without a double full stop', () => {
+    // Every describeSyncFailure string ends in a period, and so does the risk
+    // sentence's lead-in — a naive join announced "…owner.. These changes…".
+    mockSyncStatus.mockReturnValue(blocked);
+    mockPersistence.mockReturnValue(persistence('denied'));
+    render(<SyncIndicator />);
+
+    const label = screen.getByRole('status').getAttribute('aria-label') ?? '';
+    expect(label).toContain('The server refused this change. These changes are kept only on this device');
+    expect(label).not.toContain('..');
+  });
+
   it('flags stuck pending work too, but not normal sub-threshold pending', () => {
     mockPersistence.mockReturnValue(persistence('denied'));
 
