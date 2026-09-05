@@ -27,8 +27,9 @@ interface SyncIndicatorProps {
   isRetryingBlockedChanges?: boolean;
 }
 
+// Same phrasing as the caption, toast and accessible label: "on this device".
 const AT_RISK_EXPLANATION =
-  'These changes are kept only in this browser until they sync, and the browser may clear its storage. Installing Yidhan keeps them safe.';
+  'These changes are kept only on this device until they sync, and the browser may clear its storage. Installing Yidhan keeps them safe.';
 
 const captionStyle = {
   color: 'var(--color-text-tertiary)',
