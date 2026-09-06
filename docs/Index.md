@@ -52,6 +52,7 @@ Design analysis and feature exploration (AI-authored).
 | Document | Description | Date |
 |----------|-------------|------|
 | [world-class-improvements-claude.md](analysis/world-class-improvements-claude.md) | **NEW** World-class improvement analysis: competitive scorecard vs Apple Notes/Bear/Craft/Notion, 10 prioritized moves, 25 verified defects, 4-phase plan | 2026-09-06 |
+| [world-class-improvements-visual-claude.html](analysis/world-class-improvements-visual-claude.html) | **NEW** Visual brief companion: real screenshots with numbered pins, ten moves, four-step plan (open in a browser) | 2026-09-06 |
 | [launch-readiness-review-claude.md](analysis/launch-readiness-review-claude.md) | Pre-launch comprehensive review: 4 blockers (offboarding job, passphrase dead-end, SMTP, copy), 12 open findings | 2026-07-06 |
 | [supabase-free-tier-vs-pro-claude.md](analysis/supabase-free-tier-vs-pro-claude.md) | **NEW** Supabase free vs Pro cost analysis: $0 hardening path (SMTP, backups, keep-alive), when to upgrade | 2026-07-06 |
 | [react-doctor-100-fixes-codex.md](analysis/react-doctor-100-fixes-codex.md) | React Doctor 100 cleanup summary: semantic fixes, small extractions, validation, and remaining lint gap | 2026-06-01 |
@@ -308,6 +309,7 @@ All analysis, review, and reference docs ordered by creation date (newest first)
 | Date | Document | Category |
 |------|----------|----------|
 | 09-06 | [world-class-improvements-claude.md](analysis/world-class-improvements-claude.md) | Strategy / analysis |
+| 09-06 | [world-class-improvements-visual-claude.html](analysis/world-class-improvements-visual-claude.html) | Visual brief |
 
 ### 2026-07 (July)
 
