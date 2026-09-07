@@ -28,6 +28,35 @@ ID prefixes: ED editor · SAVE save and revisions · NAV navigation and capture 
 
 ---
 
+## Board
+
+Status lives here and nowhere else. Move an ID between lists in the same PR that changes its state. A PR title carries the IDs it closes, for example `fix(ED-01, ED-02): title Enter and slash-menu Escape`.
+
+**Now**
+
+- (nothing started)
+
+**Next** (Phase 0, in PR order; see "Phase 0 as twelve pull requests")
+
+- PR 1 · ED-01, ED-02, ED-16
+- PR 2 · ED-03
+- PR 3 · SAVE-01, SAVE-02, SAVE-03
+- PR 4 · SYNC-01
+- PR 5 · SYNC-02
+- PR 6 · SYNC-03, SYNC-05
+- PR 7 · SRCH-01, SRCH-05
+- PR 8 · ONB-01, KEY-13a, MOB-01, OPS-05, OPS-06
+- PR 9 · PORT-01, PORT-02
+- PR 10 · SHR-04, PERF-05
+- PR 11 · NAV-01, NAV-02
+- PR 12 · QA-01
+
+**Done**
+
+- OPS-03 · work off the ledger (this document)
+
+---
+
 ## The dependency spine
 
 Nine chains decide the order. Everything else can float within its phase.
@@ -106,7 +135,7 @@ Goal: a writer never loses words, never gets misled about what is saved or encry
 | NAV-01 | Note URLs: `/n/<id>`, `/faded`, `/`; history push and pop; scroll restore; routing extracted to `src/routing/` | C 4.2; X connections | M | Browser Back from a note returns to the library; refresh reopens the note |
 | NAV-02 | Faded view routeable; editor with a missing note redirects instead of `return null` | C defects 13 and 14 | S | Part of NAV-01 |
 | QA-01 | Authenticated E2E fixture (test account, vault unlock) and the full Playwright suite in CI | C 4.10; X quality gates | S | `npm run e2e` runs green in CI |
-| OPS-03 | Convert this ledger into GitHub issues with labels `phase:N`, `area:<prefix>`, `source:claude|codex|both`, and milestones per phase | this doc | S | Issues exist |
+| OPS-03 | Work off the ledger: no issue tracker duplication; PR titles carry the IDs they close; the Board section is the only status record | this doc | S | Done: convention adopted |
 
 Exit criteria: no known way to lose words; both sync bugs fixed; every screen tells the truth about encryption; Back works.
 
@@ -326,13 +355,33 @@ Exit criteria: pictures sync; five importers; note links; tags encrypted; TestFl
 
 ## Operating model
 
-- **Issues.** Each ID becomes one GitHub issue titled `ID: item`, labelled `phase:N`, `area:<prefix>`, `source:claude|codex|both`, `size:S|M|L`, with the "done when" clause as the acceptance criterion and dependencies linked. Milestones: `Phase 0`, `Phase 1`, `Phase 2`, `Phase 3`.
-- **Cadence.** Weekly: pick from the current phase only, dependency order first. Every merged PR closes its issue and updates `src/data/changelog.ts`. Phase review at each exit criterion; re-sequence the next phase with cohort findings (OPS-01).
-- **Gates.** `npm run check` plus `npm run e2e` on every PR (QA-01). QA-03 targets run nightly and block a release when regressed. Axe (DES-07) on every PR.
-- **Docs.** When a phase ships, move features in `docs/prd.md` and `docs/roadmap.md`, and update `src/data/roadmap.ts`. This ledger is updated in place; items are never deleted, only marked `done` with the closing PR.
+- **The ledger is the tracker.** No GitHub issues are created from it. A PR's title and commit messages carry the IDs it closes. When a PR merges, the same PR moves those IDs to **Done** on the Board and, if a new item starts, to **Now**. Anyone can see the state of the plan by reading the Board.
+- **Pick from the current phase only,** in the PR order given for Phase 0 and by the dependency spine after that. When a phase's exit criteria are met, write the next phase's PR order into the Board before starting it.
+- **Gates.** `npm run check` on every PR, and `npm run e2e` once QA-01 lands. Axe (DES-07) on every PR from Phase 1. The QA-03 targets run nightly and block a release when they regress.
+- **Docs.** Each PR adds its line to `src/data/changelog.ts`. When a phase ships, update `docs/prd.md`, `docs/roadmap.md`, and `src/data/roadmap.ts`. Ledger rows are never deleted; a finished row stays where it is and its ID appears under Done.
+- **Re-planning.** The cohort (OPS-01) and the nightly targets are the only two inputs that reorder the plan. Anything new goes into the ledger with the next free ID in its area and a phase, then into the Board when it is picked.
 - **What stays out.** Real-time collaboration, folders, push notifications, gamification, floating selection toolbars, analytics tracking, and cloud AI stay out, as both reviews agreed.
 
----
+## Phase 0 as twelve pull requests
+
+Each PR is one reviewable change with its own tests. Order matters only where noted; PRs 1 to 10 are independent of each other and can run in parallel.
+
+| PR | IDs | Title | Size | Notes |
+|----|-----|-------|------|-------|
+| 1 | ED-01, ED-02, ED-16 | Title Enter, slash-menu Escape, duplicate Underline | S | Add an E2E for each keystroke |
+| 2 | ED-03 | Link popover and `openOnClick: false` | S | `Cmd+K` with a selection inserts a link; library search keeps `Cmd+K` without a selection |
+| 3 | SAVE-01, SAVE-02, SAVE-03 | Honest saving: failures block exit, 10 s cap, "saved here" versus "synced" | S | Force a failing `onUpdate` in tests |
+| 4 | SYNC-01 | Conflict modal decrypts both sides and shows a paragraph diff | S | Keys are in memory; no schema change |
+| 5 | SYNC-02 | `note_tags` incremental pull and realtime | S | Two-client regression test |
+| 6 | SYNC-03, SYNC-05 | Cursor without spread; server rejects stale writes by `content_hash` | S | One migration for the precondition if done as an RPC |
+| 7 | SRCH-01, SRCH-05 | Memoized plaintext by `contentHash`; delete dead search paths | S | Measure with the 2,000-note fixture |
+| 8 | ONB-01, KEY-13a, MOB-01, OPS-05, OPS-06 | Honest words: Practice Space copy, share-target URL scrub, gesture whisper, roadmap and #170 updates | S | Copy and docs; no schema |
+| 9 | PORT-01, PORT-02 | Lossless Markdown round-trip; v2 backup import | S | Property test over every editor construct |
+| 10 | SHR-04, PERF-05 | Delete the stale share test and the dead plaintext layer | S | Pure removal |
+| 11 | NAV-01, NAV-02 | Note URLs, history, faded route, missing-note redirect; routing extracted to `src/routing/` | M | Do after PR 1 to 10 merge to avoid conflicts in `App.tsx`; first slice of PERF-04 |
+| 12 | QA-01 | Authenticated E2E fixture; full Playwright suite in CI | S | Needs the test-account secrets in the repository settings; can start any time |
+
+Phase 0 exits when all twelve are merged and the four exit criteria hold: no known way to lose words, both sync bugs fixed, every screen honest about encryption, Back works.
 
 ## Appendix A: Coverage of the Claude review
 
