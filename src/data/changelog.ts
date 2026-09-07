@@ -7,6 +7,22 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.10', date: '2026-09-07', changes: [
+    { type: 'fix', text: 'Copy feedback clears after draft recovery, and older notes verify their saved state against the server.' },
+    { type: 'fix', text: 'Unsaved drafts explain when the vault needs unlocking; sync acknowledgements preserve an explicitly missing hash.' },
+    { type: 'fix', text: 'Failed saves keep your draft open with Retry and Copy, including in focus mode; continuous typing saves to this device every ten seconds' },
+    { type: 'improvement', text: 'Saved here confirms local storage; Synced appears only when the server has acknowledged the current content' },
+    { type: 'fix', text: 'Letting a note fade always works, even when its last edit could not be saved' },
+  ] },
+  {
+    version: '3.19.9',
+    date: '2026-09-07',
+    changes: [
+      { type: 'fix', text: 'Escape closes tag and profile menus, and link controls offer an explicit Open link action' },
+      { type: 'fix', text: 'Add, edit, and remove links from the editor controls or slash menu; Ctrl/Cmd+K links selected text, and clicking a link keeps your note open' },
+      { type: 'fix', text: 'Enter in a note title moves into the writing area, Escape closes the slash menu without leaving the note, and underline formatting initializes cleanly' },
+    ],
+  },
   {
     version: '3.19.11', date: '2026-09-07',
     changes: [{ type: 'fix', text: 'Conflict copies support long titles; targeted tag refreshes keep labels current even when events arrive out of order' }, { type: 'fix', text: 'Tag changes refresh across devices, conflicts show readable comparisons and preserve a copy, and large libraries sync without cursor overflow' }, { type: 'improvement', text: 'A burst of tag changes from another device now refreshes the library once instead of once per change' }],

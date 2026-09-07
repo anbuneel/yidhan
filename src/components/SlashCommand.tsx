@@ -1,6 +1,6 @@
 import { Extension } from '@tiptap/core';
 import { ReactRenderer } from '@tiptap/react';
-import Suggestion from '@tiptap/suggestion';
+import Suggestion, { exitSuggestion } from '@tiptap/suggestion';
 import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 import { CommandList, type CommandListRef, type SlashCommandItem } from './SlashCommandList';
 
@@ -96,6 +96,14 @@ const icons = {
 };
 
 const slashCommandItems: SlashCommandItem[] = [
+  {
+    title: 'Link', description: 'Insert or edit a link', searchTerms: ['url', 'href', 'link'],
+    icon: <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-2 2M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l2-2" /></svg>,
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).run();
+      editor.view.dom.dispatchEvent(new Event('yidhan:edit-link', { bubbles: true }));
+    },
+  },
   // Headings
   {
     title: 'Heading 1',
@@ -277,6 +285,7 @@ export const SlashCommand = Extension.create({
               });
 
               popup = document.createElement('div');
+              popup.dataset.editorPopover = 'slash';
               popup.style.position = 'fixed';
               popup.style.zIndex = '50';
               document.body.appendChild(popup);
@@ -311,8 +320,8 @@ export const SlashCommand = Extension.create({
 
             onKeyDown: (props: SuggestionKeyDownProps) => {
               if (props.event.key === 'Escape') {
-                popup?.remove();
-                component?.destroy();
+                props.event.preventDefault();
+                exitSuggestion(props.view);
                 return true;
               }
 
@@ -322,6 +331,8 @@ export const SlashCommand = Extension.create({
             onExit: () => {
               popup?.remove();
               component?.destroy();
+              popup = null;
+              component = null;
             },
           };
         },

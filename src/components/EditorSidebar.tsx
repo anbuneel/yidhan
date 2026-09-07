@@ -31,14 +31,18 @@ function SidebarDivider() {
 interface EditorSidebarProps {
   editor: Editor | null;
   onToggleFocusMode?: () => void;
+  onLink?: () => void;
 }
 
-export function EditorSidebar({ editor, onToggleFocusMode }: EditorSidebarProps) {
+export function EditorSidebar({ editor, onToggleFocusMode, onLink }: EditorSidebarProps) {
   if (!editor) return null;
 
   return (
     <div className="editor-sidebar focus-mode-target" role="toolbar" aria-orientation="vertical" aria-label="Formatting toolbar">
       <div className="editor-sidebar-buttons">
+        <SidebarButton onClick={() => onLink?.()} isActive={editor.isActive('link')} title="Link (Ctrl+K)">
+          <svg className="size-3.5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-2 2M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l2-2" /></svg>
+        </SidebarButton>
         {/* Inline formatting */}
         <SidebarButton
           onClick={() => editor.chain().focus().toggleBold().run()}

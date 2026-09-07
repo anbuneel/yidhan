@@ -50,6 +50,7 @@ function localNoteToNote(localNote: LocalNote, tags: Tag[] = []): Note {
     encryptionIv: localNote.encryptionIv,
     encryptionVersion: localNote.encryptionVersion,
     contentHash: localNote.contentHash,
+    confirmedContentHash: localNote.confirmedContentHash,
   };
 }
 
@@ -88,6 +89,7 @@ function dbNoteToLocal(dbNote: DbNote, userId: string): LocalNote {
     encryptionIv: dbNote.encryption_iv ?? null,
     encryptionVersion: dbNote.encryption_version ?? null,
     contentHash: dbNote.content_hash ?? null,
+    confirmedContentHash: dbNote.content_hash ?? null,
   };
 }
 
@@ -1071,16 +1073,23 @@ export async function retryBlockedSyncEntries(userId: string): Promise<number> {
 export async function markNoteSynced(
   userId: string,
   noteId: string,
-  serverUpdatedAt: Date
+  serverUpdatedAt: Date,
+  confirmedHash?: string | null
 ): Promise<void> {
   const db = getOfflineDb(userId);
   // Use server timestamp to keep all sync comparisons in same clock domain
   const serverTime = serverUpdatedAt.getTime();
 
-  await db.notes.update(noteId, {
-    syncStatus: 'synced',
-    lastSyncedAt: serverTime,
-    serverUpdatedAt: serverTime,
+  await db.transaction('rw', db.notes, async () => {
+    const note = await db.notes.get(noteId);
+    if (!note) return;
+    const confirmedContentHash = confirmedHash === undefined ? note.confirmedContentHash : confirmedHash;
+    await db.notes.update(noteId, {
+      syncStatus: !note.contentHash || confirmedContentHash === note.contentHash ? 'synced' : 'pending',
+      confirmedContentHash,
+      lastSyncedAt: serverTime,
+      serverUpdatedAt: serverTime,
+    });
   });
 }
 
@@ -1218,6 +1227,7 @@ export async function upsertNoteFromServer(
         encryptionIv: note.encryptionIv ?? null,
         encryptionVersion: note.encryptionVersion ?? null,
         contentHash: note.contentHash ?? null,
+        confirmedContentHash: note.contentHash ?? null,
       });
     }
   } else {
@@ -1239,6 +1249,7 @@ export async function upsertNoteFromServer(
       encryptionIv: note.encryptionIv ?? null,
       encryptionVersion: note.encryptionVersion ?? null,
       contentHash: note.contentHash ?? null,
+      confirmedContentHash: note.contentHash ?? null,
     };
     await db.notes.add(localNote);
   }

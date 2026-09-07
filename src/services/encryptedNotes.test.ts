@@ -123,6 +123,27 @@ describe('encryptedNotes', () => {
   // createEncryptedNote
   // ──────────────────────────────────────────────────
 
+  it('reopens the durable checkpoint and never acknowledges newer local content as synced', async () => {
+    const { createEncryptedNote, updateEncryptedNote, fetchDecryptedNotes } = await import('./encryptedNotes');
+    const { markNoteSynced } = await import('./offlineNotes');
+    const original = await createEncryptedNote(TEST_USER_ID, 'Before', '<p>Before</p>', keys);
+    const saved = await updateEncryptedNote(TEST_USER_ID, original.id, 'Checkpoint', '<p>Durable words</p>', keys);
+    const db = getOfflineDb(TEST_USER_ID);
+    const stored = await db.notes.get(original.id);
+    expect(stored?.title).toBe('');
+    expect(stored?.content).toBe('');
+    expect(JSON.stringify(stored)).not.toContain('Durable words');
+    const reopened = await fetchDecryptedNotes(TEST_USER_ID, keys);
+    expect(reopened.find(note => note.id === original.id)?.content).toBe('<p>Durable words</p>');
+    await markNoteSynced(TEST_USER_ID, original.id, new Date(), original.contentHash);
+    expect((await db.notes.get(original.id))?.syncStatus).toBe('pending');
+    await markNoteSynced(TEST_USER_ID, original.id, new Date(), saved.contentHash);
+    expect((await db.notes.get(original.id))?.syncStatus).toBe('synced');
+    await markNoteSynced(TEST_USER_ID, original.id, new Date(), null);
+    expect((await db.notes.get(original.id))?.confirmedContentHash).toBeNull();
+    expect((await db.notes.get(original.id))?.syncStatus).toBe('pending');
+  });
+
   describe('createEncryptedNote', () => {
     it('should create a note and return decrypted title/content', async () => {
       const { createEncryptedNote } = await import('./encryptedNotes');

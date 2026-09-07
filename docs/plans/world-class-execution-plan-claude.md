@@ -48,10 +48,6 @@ Fix what is broken. Items 1 to 22 are all small, need no Mac, no migration, and 
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
-| 1 | Editor | `Enter` in the title moves focus to the body at position 0 | days |  | Typing a title and pressing Enter puts the caret in the body · E2E keystroke test |
-| 2 | Editor | `Escape` handler returns early on `defaultPrevented` or any open popover; slash menu calls `preventDefault` | days |  | Escape on the slash menu closes only the menu; note stays open · E2E test |
-| 3 | Editor | Link extension: `openOnClick: false`, link popover (insert, edit, remove), entries in toolbar, sidebar, slash menu; `Cmd+K` with a selection inserts a link | days |  | A link can be added, edited, and removed by mouse; clicking one stays in the app · E2E test |
-| 4 | Editor | Remove the duplicate `Underline` registration | days |  | No Tiptap duplicate-name warning · console assertion in the editor unit test |
 | 5 | Saving | Every exit path checks the save result; a failed save keeps the draft, shows a persistent "Not saved" state with Retry and Copy, visible in focus mode | days |  | the note stays open with the state on screen until the save succeeds or the user copies · E2E with a forced `onUpdate` rejection |
 | 6 | Saving | Maximum save interval of 10 s during continuous typing; encrypted local checkpoint | days |  | the killed tab loses at most the last 10 s; reopening shows the checkpoint · E2E |
 | 7 | Saving | Save indicator distinguishes "Saved on this device" from "Synced"; never implies another device has text before the server confirms the revision | days |  | Offline typing shows "Saved here", "Synced" appears only after the server acknowledges · unit test on the status state machine |
@@ -210,6 +206,13 @@ Items 23 to 34 are the five things that change what the product is: a recovery k
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
+| 1 | Editor | `Enter` in the title moves focus to the body at position 0 | days |  | Typing a title and pressing Enter puts the caret in the body · integrated-browser keystroke verification (owner override: no Playwright) |
+| 2 | Editor | `Escape` handler returns early on `defaultPrevented` or any open popover; slash menu calls `preventDefault` | days |  | Escape on the slash menu closes only the menu; note stays open · editor unit tests and integrated-browser verification (owner override: no Playwright) |
+| 3 | Editor | Link extension: `openOnClick: false`, link popover (insert, edit, remove), entries in toolbar, sidebar, slash menu; `Cmd+K` with a selection inserts a link | days |  | A link can be added, edited, and removed by mouse; clicking one stays in the app · component tests and integrated-browser verification (owner override: no Playwright) |
+| 4 | Editor | Remove the duplicate `Underline` registration | days |  | No Tiptap duplicate-name warning · console assertion in the editor unit test |
+| 5 | Saving | Every exit path checks the save result; a failed save keeps the draft, shows a persistent "Not saved" state with Retry and Copy, visible in focus mode | days |  | the note stays open with the state on screen until the save succeeds or the user copies · component tests with forced `onUpdate` rejection (owner override: no Playwright) |
+| 6 | Saving | Maximum save interval of 10 s during continuous typing; encrypted local checkpoint | days |  | the killed tab loses at most the last 10 s; reopening shows the checkpoint · timer component test and encrypted persistence/reopen integration test (owner override: no Playwright) |
+| 7 | Saving | Save indicator distinguishes "Saved on this device" from "Synced"; never implies another device has text before the server confirms the revision | days |  | Offline typing shows "Saved here", "Synced" appears only after the server acknowledges · unit test on the status state machine |
 | 8 | Sync | `note_tags` reconciled per changed note in realtime, with paginated catch-up (no timestamp column) | days |  | A tag added on device A appears on device B within the #80 cross-device budget without re-login · two-client integration test with isolated local stores and simulated transport; live p95 budget remains unverified |
 | 9 | Sync | Conflict modal decrypts both sides: title, excerpt, word count, device and time, paragraph-level diff; both versions preserved until the user chooses | days |  | Both cards show readable text and a diff; choosing either keeps the other as a revision (#59) or a copy · component test with two ciphertexts |
 | 10 | Sync | Replace the `Math.max(...spread)` cursor computation | days |  | Cursor computed by reduce · unit test at 100k rows |
@@ -475,3 +478,5 @@ Items 23 to 34 are the five things that change what the product is: a recovery k
 | A | A Worker gives execution isolation, not protected persistent storage | Accepted | #102 rewritten to say exactly that and to point persistent protection at #135 and #106 |
 | B | "JSON behind the same sanitizer" is insufficient; the sanitizer takes HTML strings (`src/utils/sanitize.ts:57`) | Yes | #31 rewritten: JSON is canonical with a `docVersion`, validated against the editor schema, HTML derived for display and export, older clients open newer documents read-only |
 | C | Generate issues incrementally for ready work | Declined by the repository owner | The ledger and Board remain the tracker (#148) |
+| 149 | Testing | Stabilize the existing PassphraseUnlock component tests under CPU contention; an untouched full-suite run timed out during typing and leaked partial input into the next case | days | No key-behavior changes | Repeated suite runs isolate cleanup and pass under load |
+
