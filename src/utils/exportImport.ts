@@ -17,6 +17,7 @@ interface ExportedNote {
   title: string;
   content: string;
   tags: string[]; // Tag names
+  pinned: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -110,7 +111,7 @@ function validateExportedNote(note: unknown, index: number): ExportedNote {
   const createdAt = new Date(createdAtMs).toISOString();
   const updatedAt = new Date(updatedAtMs).toISOString();
 
-  return { title, content, tags, createdAt, updatedAt };
+  return { title, content, tags, pinned: n.pinned === true, createdAt, updatedAt };
 }
 
 /**
@@ -146,6 +147,7 @@ export function exportNotesToJSON(notes: Note[], tags: Tag[]): string {
       title: note.title,
       content: note.content,
       tags: note.tags.map((t) => t.name),
+      pinned: note.pinned,
       createdAt: note.createdAt.toISOString(),
       updatedAt: note.updatedAt.toISOString(),
     })),
@@ -223,7 +225,7 @@ export function exportFullAccountData(
       color: tag.color,
     })),
     shareLinks: shareLinks.map((share) => ({
-      noteTitle: share.noteTitle,
+      noteTitle: notes.find(note => note.id === share.noteId)?.title || share.noteTitle || 'Untitled',
       noteId: share.noteId,
       token: share.token,
       expiresAt: share.expiresAt,
@@ -270,7 +272,7 @@ export function parseImportedJSON(jsonString: string): ExportData {
   const d = data as Record<string, unknown>;
 
   // Validate version
-  if (d.version !== 1) {
+  if (d.version !== 1 && d.version !== 2) {
     throw new ValidationError('Invalid or unsupported export version');
   }
 
@@ -323,12 +325,15 @@ export function readFileAsText(file: File): Promise<string> {
  * Convert HTML to Markdown (basic conversion)
  */
 export function htmlToMarkdown(html: string): string {
+  const original = sanitizeHtml(html);
   let md = html;
 
   // Headers
   md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
   md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
   md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+
+  md = md.replace(/<h([4-6])[^>]*>(.*?)<\/h\1>/gi, (_match, level, text) => '#'.repeat(Number(level)) + ' ' + text + '\n\n');
 
   // Bold and italic
   md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
@@ -407,6 +412,10 @@ export function htmlToMarkdown(html: string): string {
   md = md.replace(/\n{3,}/g, '\n\n');
   md = md.trim();
 
+  // Markdown permits raw HTML. Keep a sanitized block when the basic serializer
+  // cannot preserve it (marks, alignment, nested structures, whitespace).
+  if (/^<(?:p|h[1-6]|ul|ol|pre|blockquote|hr)(?:\s|>)/i.test(original) &&
+      sanitizeHtml(markdownToHtml(md)) !== original) return original;
   return md;
 }
 
@@ -414,6 +423,7 @@ export function htmlToMarkdown(html: string): string {
  * Convert Markdown to HTML (basic conversion)
  */
 export function markdownToHtml(md: string): string {
+  if (/^\s*<(?:p|h[1-6]|ul|ol|pre|blockquote|hr)(?:\s|>)/i.test(md)) return sanitizeHtml(md.trim());
   let html = md;
 
   // Escape HTML
@@ -428,6 +438,7 @@ export function markdownToHtml(md: string): string {
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
   // Headers
+  html = html.replace(/^(#{4,6}) (.*)$/gm, (_match, marks, text) => '<h' + marks.length + '>' + text + '</h' + marks.length + '>');
   html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
   html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
   html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');

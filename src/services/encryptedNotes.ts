@@ -118,7 +118,7 @@ export async function createEncryptedNote(
   keys: DerivedKeys,
   pinned = false
 ): Promise<Note> {
-  // Validate and sanitize (same checks as createNoteOffline)
+  // Validate and sanitize before encryption
   const validatedTitle = validateNoteTitle(title);
   validateNoteContentLength(content);
   const sanitizedContent = sanitizeHtml(content);
@@ -394,6 +394,7 @@ export async function createEncryptedNotesBatch(
     createdAt?: Date;
     updatedAt?: Date;
     tags?: Tag[];
+    pinned?: boolean;
   }>,
   keys: DerivedKeys,
   onProgress?: (completed: number, total: number) => void
@@ -423,7 +424,7 @@ export async function createEncryptedNotesBatch(
         userId,
         title: '',
         content: '',
-        pinned: false,
+        pinned: noteData.pinned ?? false,
         deletedAt: null,
         createdAt,
         updatedAt,
@@ -444,7 +445,7 @@ export async function createEncryptedNotesBatch(
         payload: {
           title: '',
           content: '',
-          pinned: false,
+          pinned: noteData.pinned ?? false,
           createdAt: new Date(createdAt).toISOString(),
           updatedAt: new Date(updatedAt).toISOString(),
           encrypted_payload: encrypted.ciphertext,
@@ -467,7 +468,7 @@ export async function createEncryptedNotesBatch(
         createdAt: new Date(createdAt),
         updatedAt: new Date(updatedAt),
         tags: [],
-        pinned: false,
+        pinned: noteData.pinned ?? false,
         deletedAt: null,
         syncStatus: 'pending',
         encryptedPayload: encrypted.ciphertext,

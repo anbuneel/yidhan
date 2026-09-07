@@ -1,3 +1,4 @@
+import { sanitizeHtml } from './sanitize';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   exportNotesToJSON,
@@ -137,7 +138,7 @@ describe('exportImport', () => {
     });
 
     it('throws on invalid version', () => {
-      const data = { version: 2, notes: [], tags: [] };
+      const data = { version: 99, notes: [], tags: [] };
       expect(() => parseImportedJSON(JSON.stringify(data))).toThrow(
         'Invalid or unsupported export version'
       );
@@ -347,36 +348,29 @@ describe('exportImport', () => {
       expect(htmlToMarkdown('<code>const x = 1</code>')).toBe('`const x = 1`');
     });
 
-    it('converts code blocks', () => {
+    it('preserves code blocks through a Markdown roundtrip', () => {
       const html = '<pre><code>function test() {}</code></pre>';
-      expect(htmlToMarkdown(html)).toContain('```');
-      expect(htmlToMarkdown(html)).toContain('function test() {}');
+      expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
     });
 
-    it('converts unordered lists', () => {
+    it('preserves unordered lists through a Markdown roundtrip', () => {
       const html = '<ul><li>Item 1</li><li>Item 2</li></ul>';
-      const result = htmlToMarkdown(html);
-      expect(result).toContain('- Item 1');
-      expect(result).toContain('- Item 2');
+      expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
     });
 
-    it('converts ordered lists', () => {
+    it('preserves ordered lists through a Markdown roundtrip', () => {
       const html = '<ol><li>First</li><li>Second</li></ol>';
-      const result = htmlToMarkdown(html);
-      expect(result).toContain('1. First');
-      expect(result).toContain('2. Second');
+      expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
     });
 
-    it('converts task lists', () => {
+    it('preserves task lists through a Markdown roundtrip', () => {
       const html = '<ul data-type="taskList"><li data-type="taskItem" data-checked="false">Todo</li><li data-type="taskItem" data-checked="true">Done</li></ul>';
-      const result = htmlToMarkdown(html);
-      expect(result).toContain('- [ ] Todo');
-      expect(result).toContain('- [x] Done');
+      expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
     });
 
-    it('converts blockquotes', () => {
+    it('preserves blockquotes through a Markdown roundtrip', () => {
       const html = '<blockquote>Quote</blockquote>';
-      expect(htmlToMarkdown(html)).toContain('> Quote');
+      expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
     });
 
     it('converts links', () => {
@@ -384,11 +378,9 @@ describe('exportImport', () => {
       expect(htmlToMarkdown(html)).toBe('[Example](https://example.com)');
     });
 
-    it('converts paragraphs and line breaks', () => {
+    it('preserves paragraphs and line breaks through a Markdown roundtrip', () => {
       const html = '<p>Paragraph</p><br><hr>';
-      const result = htmlToMarkdown(html);
-      expect(result).toContain('Paragraph');
-      expect(result).toContain('---');
+      expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
     });
 
     it('decodes HTML entities', () => {

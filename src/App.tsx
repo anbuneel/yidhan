@@ -1856,6 +1856,7 @@ function App() {
           originalTagsMap.set(index, noteData.tags);
           return {
             title: noteData.title,
+            pinned: noteData.pinned,
             content: sanitizeHtml(noteData.content),
             createdAt: noteData.createdAt ? new Date(noteData.createdAt) : undefined,
             updatedAt: noteData.updatedAt ? new Date(noteData.updatedAt) : undefined,

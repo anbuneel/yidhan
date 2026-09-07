@@ -7,6 +7,10 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.13', date: '2026-09-07', changes: [
+    { type: 'fix', text: 'Markdown keeps editor formatting, full account backups restore pins and dates, and shared-note labels use your readable titles' },
+    { type: 'improvement', text: 'Removed unused plaintext note APIs and updated letter-sharing verification for encrypted links and the 30-day limit' },
+  ] },
   {
     version: '3.19.8',
     date: '2026-09-04',

@@ -64,10 +64,7 @@ Fix what is broken. Items 1 to 22 are all small, need no Mac, no migration, and 
 | 14 | Phone | Time ribbon gets its own room: bottom padding, hidden near the footer, hidden under 20 notes | days |  | No overlap on a 390 px viewport · mobile E2E and visual regression |
 | 15 | Onboarding | Practice Space starter note and landing seal say plainly that drafts are not encrypted until signed up | days |  | No screen claims encryption for localStorage content · copy review and a text assertion in the demo E2E |
 | 16 | Keys and privacy | Remove the GET `share_target` from the manifest until #47 ships; the in-app paste path remains; note the removal in the changelog | days |  | The manifest has no `share_target`; no request to any server can carry shared text · manifest assertion in the build test |
-| 17 | Import and export | Lossless Markdown round-trip: highlight, underline, `h4` to `h6`, alignment | days |  | Editor HTML → Markdown → HTML → sanitized equals the original for every construct the editor can produce · property test |
-| 18 | Import and export | Import accepts the v2 full-account backup; share rows labelled from decrypted titles | days |  | The offboarding export re-imports with identical note count, tags, pinned state, and timestamps · E2E |
-| 19 | Sharing | Replace obsolete sharing expectations with current ones: remove the "never expires" case; the anonymous-view test must carry the `#k=` fragment and decrypt; assert the 30-day cap and the `/s/<token>/<slug>` route | days |  | The sharing suite passes against current behaviour and fails if the fragment is dropped · E2E |
-| 20 | Speed and code | Delete the dead plaintext write paths and unused helpers | days |  | No caller can violate the E2EE CHECK constraint · lint with the unused-export rule; grep in CI for the removed names |
+
 | 21 | Process | Update `docs/roadmap.md` "Not Building": tables → databases only; backlinks → graph only; recovery → recovery key planned | days |  | Doc changed |
 | 22 | Process | Raise issue #170 to P1 and link it to #24 to #23 and #103 | days |  | Issue updated |
 
@@ -211,6 +208,10 @@ Items 23 to 34 are the five things that change what the product is: a recovery k
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
+| 17 | Import and export | Lossless Markdown round-trip: highlight, underline, `h4` to `h6`, alignment | days |  | Editor HTML → Markdown → HTML → sanitized equals the original for every construct the editor can produce · property test |
+| 18 | Import and export | Import accepts the v2 full-account backup; share rows labelled from decrypted titles | days |  | The offboarding export re-imports with identical note count, tags, pinned state, and timestamps · component/integration test with real encryption (user override: no Playwright) |
+| 19 | Sharing | Replace obsolete sharing expectations with current ones: remove the "never expires" case; the anonymous-view test must carry the `#k=` fragment and decrypt; assert the 30-day cap and the `/s/<token>/<slug>` route | days |  | The sharing suite passes against current behaviour and fails if the fragment is dropped · component/integration test with real encryption (user override: no Playwright) |
+| 20 | Speed and code | Delete the dead plaintext write paths and unused helpers | days |  | No caller can violate the E2EE CHECK constraint · lint plus removed-service-API assertion in CI; repository-wide unused-export rule deferred to #151 |
 | 148 | Process | Work off the ledger: no issue tracker duplication; PR titles carry the IDs they close; the Board is the only status record | days |  | Done: convention adopted |
 
 ---

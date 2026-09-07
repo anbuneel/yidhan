@@ -103,7 +103,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/check-removed-note-writes.mjs",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
