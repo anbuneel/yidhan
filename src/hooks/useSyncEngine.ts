@@ -387,6 +387,19 @@ export async function resolveConflict(
     });
   };
 
+  // Persist the unchosen version before touching either original. This uses the
+  // existing encrypted copy path and requires no revision-history migration.
+  if (!isHardDeletedConflict && choice !== 'both') {
+    if (!keys || !isEncrypted || !serverIsEncrypted) throw new Error('Both encrypted versions must be available');
+    const { decryptNote } = await import('../lib/encryption');
+    const { createEncryptedNote } = await import('../services/encryptedNotes');
+    const losing = choice === 'local'
+      ? { ciphertext: serverNote.encrypted_payload!, iv: serverNote.encryption_iv! }
+      : { ciphertext: localNote.encryptedPayload!, iv: localNote.encryptionIv! };
+    const content = await decryptNote(localNote.id, userId, losing, keys.encryptionKey);
+    await createEncryptedNote(userId, content.title + ' (conflict copy)', content.content, keys, false);
+  }
+
   switch (choice) {
     case 'local': {
       const { queueSyncOperation } = await import('../services/offlineNotes');

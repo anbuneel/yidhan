@@ -6,6 +6,8 @@
  */
 
 import { Capacitor } from '@capacitor/core';
+import { latestSyncTime } from '../utils/syncCursor';
+import { reconcileNoteTags } from './noteTagSync';
 import { supabase, fetchAllPaginated } from '../lib/supabase';
 import {
   getOfflineDb,
@@ -1270,8 +1272,7 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
 
   // Compute pull cursor from synced entries only (pending/conflict may have skewed timestamps)
   const allNotes = await db.notes.toArray();
-  const syncedNotes = allNotes.filter(n => n.syncStatus === 'synced');
-  const lastSync = Math.max(...syncedNotes.map(n => n.lastSyncedAt || 0), 0);
+  const lastSync = latestSyncTime(allNotes);
 
   // --- Note data pull (always runs, no early return) ---
   // Full pull when lastSync is 0 (empty DB, post-migration, or failed hydration);
@@ -1351,8 +1352,7 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
   // Tags currently lack updated_at, so fetch all (full pull).
   // When tags.updated_at migration lands, this will become incremental.
   const localTags = await db.tags.toArray();
-  const syncedTags = localTags.filter(t => t.syncStatus === 'synced');
-  const lastTagSync = Math.max(...syncedTags.map(t => t.lastSyncedAt || 0), 0);
+  const lastTagSync = latestSyncTime(localTags);
 
   // Try incremental tag pull first; fall back to full pull if column doesn't exist
   let tagResult = lastTagSync > 0
@@ -1434,6 +1434,8 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
     }
   }
 
+  try { pulledTags += await reconcileNoteTags(userId); }
+  catch (error) { errors.push({ entity: 'tags', operation: 'membership', error: error instanceof Error ? error : new Error('Could not refresh tag links') }); }
   return { pulledNotes, pulledTags, deletedNotes, deletedTags, errors };
 }
 

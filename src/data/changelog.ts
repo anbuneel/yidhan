@@ -8,6 +8,10 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '3.19.11', date: '2026-09-07',
+    changes: [{ type: 'fix', text: 'Tag changes refresh across devices, conflicts show readable comparisons and preserve a copy, and large libraries sync without cursor overflow' }],
+  },
+  {
     version: '3.19.8',
     date: '2026-09-04',
     changes: [

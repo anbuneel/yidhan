@@ -113,7 +113,8 @@ import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { useSessionSettings } from './hooks/useSessionSettings';
 import { useVaultSettings } from './hooks/useVaultSettings';
 import { useIdleTimer } from './hooks/useIdleTimer';
-import { ConflictModal } from './components/ConflictModal';
+import { EncryptedConflictModal as ConflictModal } from './components/EncryptedConflictModal';
+import { subscribeToNoteTags } from './services/noteTagSync';
 import { InstallPrompt } from './components/InstallPrompt';
 import { IOSInstallGuide } from './components/IOSInstallGuide';
 import { SessionTimeoutModal } from './components/SessionTimeoutModal';
@@ -729,6 +730,11 @@ function App() {
   // (e.g., when Supabase refreshes the session on tab focus)
   // Wait for hydration to complete so first-time users see their notes from server
   const userId = user?.id;
+  useEffect(() => {
+    if (!userId || !keys) return;
+    return subscribeToNoteTags(userId, () => { void handleSyncComplete(); void triggerSync(); });
+  }, [userId, keys, triggerSync, handleSyncComplete]);
+
 
   // Track if we've bypassed hydration due to timeout (state to trigger re-render)
   const [hydrationBypassed, setHydrationBypassed] = useState(false);
@@ -2551,6 +2557,7 @@ function App() {
 
         {/* Conflict Resolution Modal */}
         <ConflictModal
+          keys={keys}
           conflict={activeConflict}
           onResolve={handleConflictResolve}
           onDismiss={handleConflictDismiss}
@@ -2654,6 +2661,7 @@ function App() {
 
         {/* Conflict Resolution Modal */}
         <ConflictModal
+          keys={keys}
           conflict={activeConflict}
           onResolve={handleConflictResolve}
           onDismiss={handleConflictDismiss}

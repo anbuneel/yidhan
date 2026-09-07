@@ -316,6 +316,8 @@ content...
 - Server-side `notes_updated_at_trigger` prevents client clock skew issues (fires on UPDATE only; INSERT preserves client-supplied timestamps)
 - Self-echo suppression via `pendingMutations` set prevents realtime re-applying own changes
 - Realtime subscriptions update IndexedDB + React state for cross-device changes
+- Tag memberships reconcile per note on realtime events and use a complete paginated catch-up after disconnects (the junction has no timestamp column). Queued local tag edits remain protected.
+- Conflict previews decrypt both versions in memory, show word counts and paragraph changes, and save the unchosen encrypted content as a separate copy before resolution.
 - All note/tag operations are scoped to authenticated user via RLS
 - Launch database hardening (`supabase/migrations/launch_security_hardening.sql`) resets core RLS policies, removes public table-read share policies, enforces encrypted-only note rows, caps share writes at 30 days, and revokes normal-client access to global SECURITY DEFINER cleanup/migration functions
 - Tags support many-to-many relationship with notes

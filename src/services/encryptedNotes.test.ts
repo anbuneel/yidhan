@@ -63,6 +63,25 @@ describe('encryptedNotes', () => {
     await Dexie.delete(db.name);
   });
 
+  it.each(['local', 'server'] as const)('preserves both encrypted bodies when choosing %s', async choice => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const { createEncryptedNote, fetchDecryptedNotes } = await import('./encryptedNotes');
+    const { encryptNote } = await import('../lib/encryption');
+    const { resolveConflict } = await import('../hooks/useSyncEngine');
+    const note = await createEncryptedNote(TEST_USER_ID, 'Local title', '<p>Local words</p>', keys);
+    const local = (await getOfflineDb(TEST_USER_ID).notes.get(note.id))!;
+    const remote = await encryptNote(note.id, TEST_USER_ID, 'Remote title', '<p>Remote words</p>', keys);
+    await resolveConflict(TEST_USER_ID, { entityType: 'note', entityId: note.id, localVersion: local,
+      serverVersion: { id: note.id, title: '', content: '', pinned: false, deleted_at: null,
+        created_at: new Date(1).toISOString(), updated_at: new Date(2).toISOString(),
+        encrypted_payload: remote.ciphertext, encryption_iv: remote.iv, encryption_version: 1, content_hash: remote.contentHash,
+      } }, choice, keys);
+    const restored = await fetchDecryptedNotes(TEST_USER_ID, keys);
+    expect(restored.map(n => n.content).sort()).toEqual(['<p>Local words</p>', '<p>Remote words</p>']);
+    expect(restored.find(n => n.id !== note.id)?.title).toContain('(conflict copy)');
+    expect((await getOfflineDb(TEST_USER_ID).notes.toArray()).every(n => n.title === '' && n.content === '')).toBe(true);
+  });
+
   // ──────────────────────────────────────────────────
   // createEncryptedNote
   // ──────────────────────────────────────────────────

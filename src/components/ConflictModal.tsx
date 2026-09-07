@@ -8,7 +8,7 @@
 import { useState, useEffect, useEffectEvent, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import type { ConflictInfo, NoteConflictServerVersion } from '../services/syncEngine';
-import { escapeHtml } from '../utils/sanitize';
+import { paragraphs, paragraphChanges, wordCount } from '../utils/conflictPreview';
 import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface ConflictModalProps {
@@ -81,6 +81,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
 
   const localNote = conflict.localVersion;
   const serverNote: NoteConflictServerVersion = conflict.serverVersion;
+  const diff = paragraphChanges(paragraphs(localNote.content), paragraphs(serverNote.content));
   const isHardDeletedConflict = serverNote.hard_deleted === true;
   const headerText = isHardDeletedConflict
     ? 'This note was edited here, but deleted on another device. Which path should remain?'
@@ -90,7 +91,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
   const localResolvingLabel = isHardDeletedConflict ? 'Restoring...' : 'Keeping...';
   const serverHeading = isHardDeletedConflict
     ? 'Deleted on another device'
-    : escapeHtml(serverNote.title) || 'Untitled';
+    : serverNote.title || 'Untitled';
   const serverPreview = isHardDeletedConflict
     ? 'Choosing this accepts the deletion and removes the original note from this device.'
     : getPlainTextPreview(serverNote.content);
@@ -208,7 +209,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                 color: 'var(--color-text-primary)',
               }}
             >
-              {escapeHtml(localNote.title) || 'Untitled'}
+              {localNote.title || 'Untitled'}
             </h3>
             <p
               className="text-sm line-clamp-4"
@@ -219,6 +220,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
             >
               {getPlainTextPreview(localNote.content)}
             </p>
+            <p className="mt-2 text-xs text-[var(--color-text-secondary)]">{wordCount(localNote.content)} words</p>
             <button type="button"
               onClick={() => handleResolve('local')}
               disabled={isResolving}
@@ -305,6 +307,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
             >
               {serverPreview}
             </p>
+            <p className="mt-2 text-xs text-[var(--color-text-secondary)]">{wordCount(serverNote.content)} words</p>
             <button type="button"
               onClick={() => handleResolve('server')}
               disabled={isResolving}
@@ -349,6 +352,13 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
           </div>
         </div>
 
+        {!isHardDeletedConflict && <details className="mb-6 text-sm text-[var(--color-text-primary)]" open>
+          <summary>Paragraph changes</summary>
+          {diff.removed.map((line, i) => <p key={'removed-' + i} className="mt-2"><span className="text-[var(--color-text-secondary)]">Other device: </span><del>{line}</del></p>)}
+          {diff.added.map((line, i) => <p key={'added-' + i} className="mt-2"><span className="text-[var(--color-text-secondary)]">This device: </span><ins>{line}</ins></p>)}
+          {!diff.removed.length && !diff.added.length && <p>The words match; formatting or order may differ.</p>}
+          <p className="mt-3 text-[var(--color-text-secondary)]">The other version will remain as a separate copy.</p>
+        </details>}
         {/* Keep both option */}
         <div className="text-center">
           <button type="button"
