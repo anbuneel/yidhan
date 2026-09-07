@@ -14,6 +14,7 @@ import { RoadmapPage } from './components/RoadmapPage';
 import { PrivacyPage } from './components/PrivacyPage';
 import { TermsPage } from './components/TermsPage';
 import { SupportPage } from './components/SupportPage';
+import { SecurityPage } from './components/SecurityPage';
 import { NotFoundPage } from './components/NotFoundPage';
 import { BackupPassphraseModal } from './components/BackupPassphraseModal';
 import { DatabaseUpdatePending } from './components/DatabaseUpdatePending';
@@ -34,7 +35,7 @@ import {
   preserveShareKeyFromLocation,
 } from './utils/shareRoute';
 
-const ROUTEABLE_VIEWS: readonly ViewMode[] = ['changelog', 'roadmap', 'privacy', 'terms', 'support'];
+const ROUTEABLE_VIEWS: readonly ViewMode[] = ['changelog', 'roadmap', 'privacy', 'terms', 'support', 'security'];
 
 // Lazy load heavy components with smart retry (auto-reloads on chunk errors when safe)
 const Editor = lazyWithRetry(loadEditorComponent);
@@ -507,6 +508,7 @@ function App() {
   const navigateToPrivacy = useCallback(() => navigateToPublicView('privacy'), [navigateToPublicView]);
   const navigateToTerms = useCallback(() => navigateToPublicView('terms'), [navigateToPublicView]);
   const navigateToSupport = useCallback(() => navigateToPublicView('support'), [navigateToPublicView]);
+  const navigateToSecurity = useCallback(() => navigateToPublicView('security'), [navigateToPublicView]);
 
   const [LoadedEditor, setLoadedEditor] = useState(() => getLoadedEditorComponent());
   const preloadEditorRoute = useCallback(async () => {
@@ -2353,6 +2355,7 @@ function App() {
         <ErrorBoundary>
           <Suspense fallback={<LoadingFallback />}>
             <PrivacyPage
+              onSecurityClick={navigateToSecurity}
               theme={theme}
               onThemeToggle={handleThemeToggle}
               onSignIn={() => {
@@ -2423,6 +2426,41 @@ function App() {
         <ErrorBoundary>
           <Suspense fallback={<LoadingFallback />}>
             <SupportPage
+              theme={theme}
+              onThemeToggle={handleThemeToggle}
+              onSignIn={() => {
+                setAuthModalMode('login');
+                setShowAuthModal(true);
+              }}
+              onLogoClick={navigateHome}
+              onChangelogClick={navigateToChangelog}
+              onRoadmapClick={navigateToRoadmap}
+              onPrivacyClick={navigateToPrivacy}
+              onTermsClick={navigateToTerms}
+              onSupportClick={navigateToSupport}
+              onSettingsClick={() => setShowSettingsModal(true)}
+            />
+          </Suspense>
+        </ErrorBoundary>
+        {showAuthModal && (
+          <Auth
+            theme={theme}
+            onThemeToggle={handleThemeToggle}
+            initialMode={authModalMode}
+            isModal
+            onClose={() => setShowAuthModal(false)}
+          />
+        )}
+      </>
+    );
+  }
+
+  if (view === 'security') {
+    return (
+      <>
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingFallback />}>
+            <SecurityPage
               theme={theme}
               onThemeToggle={handleThemeToggle}
               onSignIn={() => {

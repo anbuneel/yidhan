@@ -8,6 +8,8 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   { version: '3.19.15', date: '2026-09-07', changes: [
+    { type: 'feature', text: 'A security page at /security sets out what encryption protects, what stays visible to us even so — timestamps, note sizes, tag names — and what we have not solved yet' },
+    { type: 'improvement', text: 'Error reports no longer carry the salt used to derive your keys. It was never a secret, but it identified you across reports and served no purpose there' },
     { type: 'feature', text: 'Encrypted backups: save a .yidhan file sealed with a passphrase you choose, and open it again to restore your notes, tags, pins and dates. The backup passphrase is separate from your vault passphrase on purpose, so the file keeps opening even if you change that one' },
     { type: 'fix', text: 'If a single note cannot be opened on this device, it now appears as a locked card you can retry, and the rest of your library stays readable. Previously one unreadable note made the whole library appear empty' },
     { type: 'improvement', text: 'Exports say when a note could not be included, instead of quietly leaving it out' },

@@ -13,6 +13,8 @@ interface PrivacyPageProps {
   onTermsClick?: () => void;
   onSupportClick?: () => void;
   onSettingsClick?: () => void;
+  /** The threat model — what is visible even so, and what is not solved yet. */
+  onSecurityClick: () => void;
 }
 
 export function PrivacyPage({
@@ -26,6 +28,7 @@ export function PrivacyPage({
   onTermsClick,
   onSupportClick,
   onSettingsClick,
+  onSecurityClick,
 }: PrivacyPageProps) {
   return (
     <div
@@ -210,6 +213,46 @@ export function PrivacyPage({
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   You can export all your notes at any time (JSON or Markdown). Self-serve account deletion is paused for public launch until a server-owned deletion workflow is available; contact support if you need account removal before that flow returns.
+                </p>
+              </div>
+            </section>
+
+            {/* The threat model. This page says what we do; that one says what an
+                attacker would get, and what we have not solved. */}
+            <section>
+              <h2
+                className="mb-4"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '1.25rem',
+                  fontWeight: 600,
+                  color: 'var(--color-text-primary)',
+                }}
+              >
+                The longer answer
+              </h2>
+              <div
+                className="space-y-3"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  fontWeight: 300,
+                  lineHeight: 1.7,
+                  fontSize: '0.95rem',
+                }}
+              >
+                <p>
+                  If you want the specifics — what an attacker with our whole database
+                  would actually get, what remains visible to us even with encryption, and
+                  the parts we have not solved yet — that is written out on the{' '}
+                  <button
+                    type="button"
+                    onClick={onSecurityClick}
+                    className="focus-ring bg-transparent border-none p-0 cursor-pointer underline underline-offset-4"
+                    style={{ color: 'var(--color-accent)', font: 'inherit' }}
+                  >
+                    security page
+                  </button>
+                  .
                 </p>
               </div>
             </section>

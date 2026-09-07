@@ -35,7 +35,7 @@ export interface Note {
   decryptionFailed?: boolean;
 }
 
-export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded' | 'privacy' | 'terms' | 'support';
+export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded' | 'privacy' | 'terms' | 'support' | 'security';
 
 export interface NoteShare {
   id: string;

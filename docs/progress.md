@@ -132,3 +132,17 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   wrong passphrase are separated deliberately: structural checks run before any crypto,
   so the two failures carry different messages, and only one of them is something the
   reader can act on.
+- **2026-09-07** — The threat model, written down — ledger items 39 and 40. `/security`
+  says what an attacker would get and what they would not, including the parts that are
+  not solved: an unlocked vault does not survive a compromised browser, "Remember this
+  browser" trades a real convenience for a real cost, a forgotten passphrase is
+  unrecoverable, practice drafts are unencrypted on the device, and there has been no
+  independent review. It names the metadata encryption does not hide — timestamps,
+  sizes, counts, and tag names, which are plaintext on the server until item 101 —
+  rather than letting "end-to-end encrypted" carry an implication it cannot support.
+  `/.well-known/security.txt` publishes where to report, and `/privacy` links across.
+  `docs/reference/outbound-data.md` is the inventory behind it: every request type the
+  app makes and every field it may carry, with one scrubber test per row. Writing it
+  found something — `encryption_salt` was reaching Sentry unredacted. The salt is not a
+  secret, but it is a stable per-user identifier and an error report has no use for one,
+  so it is redacted now.
