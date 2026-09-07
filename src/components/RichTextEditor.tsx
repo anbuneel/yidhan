@@ -82,6 +82,7 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
   // Memoize extensions to prevent recreation on every render
   const extensions = useMemo(() => [
     StarterKit.configure({
+      link: { openOnClick: false },
       heading: {
         levels: [1, 2, 3],
       },

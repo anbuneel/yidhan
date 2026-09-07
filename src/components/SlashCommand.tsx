@@ -96,6 +96,14 @@ const icons = {
 };
 
 const slashCommandItems: SlashCommandItem[] = [
+  {
+    title: 'Link', description: 'Insert or edit a link', searchTerms: ['url', 'href', 'link'],
+    icon: <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-2 2M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l2-2" /></svg>,
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).run();
+      editor.view.dom.dispatchEvent(new Event('yidhan:edit-link', { bubbles: true }));
+    },
+  },
   // Headings
   {
     title: 'Heading 1',
