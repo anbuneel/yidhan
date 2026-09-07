@@ -46,6 +46,9 @@ export function subscribeToNoteTags(userId: string, onChange: () => void, onRead
       ('note_id' in payload.old ? payload.old.note_id : undefined);
     if (typeof noteId !== 'string') return;
     work = work.then(async () => {
+      // A membership event can outrun the creation of the note it belongs to.
+      // Skip it rather than reconcile against a note we do not have yet; the
+      // next full reconcile picks it up.
       if (stopped || !await getOfflineDb(userId).notes.get(noteId)) return;
       await reconcileNoteTags(userId, noteId);
       if (!stopped) onChange();

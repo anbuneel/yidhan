@@ -318,9 +318,14 @@ export function useSyncEngine(
 
 /**
  * Conflict copies already written in this session, keyed by note and losing
- * ciphertext. ConflictModal leaves a conflict on screen when resolution
- * throws, so a retry re-enters resolveConflict from the top; without this the
- * losing version would be copied again on every attempt.
+ * ciphertext. A resolution that throws part-way has already written the copy,
+ * and App's handler clears the conflict rather than rethrowing, so the same
+ * conflict returns on a later sync pull and resolveConflict runs again from the
+ * top; without this the losing version would be copied once per attempt.
+ *
+ * The get and the set are separated by awaits. Only one resolution runs at a
+ * time through the modal, which disables its buttons while resolving; direct
+ * callers should not race two resolutions for one conflict.
  */
 const writtenConflictCopies = new Map<string, string>();
 
