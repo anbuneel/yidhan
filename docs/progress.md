@@ -83,3 +83,8 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   and Done tables, contradicting its own rule that an item sits in exactly one
   list. It now carries only committed work, alongside the ledger convention
   adopted as item 148.
+- **2026-09-07** — Conflict choices retire stale queued note writes; outbound
+  sync is exclusive across tabs and recovers when a tab dies; retry decisions
+  use structured failures; card fading is exactly once with visible failure
+  recovery; and unused exports are guarded by an exact audited baseline —
+  ledger items 71, 72, 74, 150, 151.

@@ -7,6 +7,11 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.14', date: '2026-09-07', changes: [
+    { type: 'fix', text: 'Choosing a sync-conflict version now retires older queued changes so they cannot overwrite that choice later.' },
+    { type: 'fix', text: 'Only one tab sends queued changes at a time, and closing a syncing tab releases the next one without stranding your notes.' },
+    { type: 'fix', text: 'If fading a note fails, its card returns with a clear message and can be tried again.' },
+  ] },
   { version: '3.19.13', date: '2026-09-07', changes: [
     { type: 'fix', text: 'Imported account backups retain their format version; obsolete plaintext API documentation is removed.' },
     { type: 'fix', text: 'Markdown keeps editor formatting, full account backups restore pins and dates, and shared-note labels use your readable titles' },

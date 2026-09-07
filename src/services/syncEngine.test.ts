@@ -66,6 +66,23 @@ vi.mock('./offlineTags', () => ({
   markTagSynced: (...args: unknown[]) => mockMarkTagSynced(...args),
 }));
 
+vi.mock('../lib/encryption', () => ({
+  decryptNote: vi.fn().mockResolvedValue({
+    title: 'Preserved conflict copy',
+    content: '<p>Preserved</p>',
+  }),
+  encryptNote: vi.fn().mockResolvedValue({
+    ciphertext: 'conflict-copy-ciphertext',
+    iv: 'conflict-copy-iv',
+    version: 1,
+    contentHash: 'conflict-copy-hash',
+  }),
+}));
+
+vi.mock('./encryptedNotes', () => ({
+  createEncryptedNote: vi.fn().mockResolvedValue({ id: 'conflict-copy-note' }),
+}));
+
 // Imports (after mocks so syncEngine receives mocked dependencies)
 import {
   isPendingMutation,
@@ -86,10 +103,12 @@ import {
   type PullError,
   type ConflictInfo,
 } from './syncEngine';
-import { mapSyncOutcome } from '../hooks/useSyncEngine';
+import { mapSyncOutcome, resolveConflict } from '../hooks/useSyncEngine';
+import type { DerivedKeys } from '../lib/encryption';
 import {
   MIGRATION_SYNC_SENTINEL,
   getOfflineDb,
+  type LocalNote,
   type SyncQueueEntry,
 } from '../lib/offlineDb';
 
@@ -98,6 +117,13 @@ import {
 // ──────────────────────────────────────────────────
 
 const TEST_USER_ID = 'test-user-sync';
+const TEST_KEYS = {
+  encryptionKey: {} as CryptoKey,
+  hashKey: {} as CryptoKey,
+  salt: new Uint8Array(16),
+  rawEncryptionKey: new Uint8Array(32),
+  rawHashKey: new Uint8Array(32),
+} satisfies DerivedKeys;
 
 /** Reset sync state, mocks, and navigator.onLine for behavior tests */
 function resetSyncTestState(): void {
@@ -857,9 +883,9 @@ describe('processQueue behavior', () => {
     const db = getOfflineDb(TEST_USER_ID);
     await db.syncQueue.put({ ...entry, id: 100 });
 
-    // Make the idempotency check throw a network error (retryable)
+    // Fetch reports a transport failure as a TypeError.
     const failChain = buildChain();
-    failChain.maybeSingle.mockRejectedValue(new Error('network timeout'));
+    failChain.maybeSingle.mockRejectedValue(new TypeError('Failed to fetch'));
     mockFrom.mockReturnValue(failChain);
 
     const result = await processQueue(TEST_USER_ID);
@@ -871,7 +897,7 @@ describe('processQueue behavior', () => {
     const updated = await db.syncQueue.get(100);
     expect(updated?.retryCount).toBe(1);
     expect(updated?.status).toBe('pending');
-    expect(updated?.lastError).toContain('network timeout');
+    expect(updated?.lastError).toContain('Failed to fetch');
 
     // Clean up
     await db.syncQueue.clear();
@@ -913,9 +939,11 @@ describe('processQueue behavior', () => {
       contentHash: 'hash-note-exhausted',
     });
 
-    // Make server call throw a retryable error
+    // Structured HTTP status, not message prose, makes this retryable.
     const failChain = buildChain();
-    failChain.maybeSingle.mockRejectedValue(new Error('fetch timeout'));
+    failChain.maybeSingle.mockRejectedValue(
+      Object.assign(new Error('service unavailable'), { status: 503 })
+    );
     mockFrom.mockReturnValue(failChain);
 
     const result = await processQueue(TEST_USER_ID);
@@ -935,7 +963,7 @@ describe('processQueue behavior', () => {
     const updated = await db.syncQueue.get(200);
     expect(updated?.retryCount).toBe(5);
     expect(updated?.status).toBe('blocked');
-    expect(updated?.lastError).toContain('fetch timeout');
+    expect(updated?.lastError).toContain('service unavailable');
 
     // Clean up
     await db.syncQueue.clear();
@@ -1013,6 +1041,66 @@ describe('processQueue behavior', () => {
     const blocked = await db.syncQueue.get(210);
     expect(blocked?.status).toBe('blocked');
     expect(blocked?.lastError).toContain('permission denied');
+
+    await db.syncQueue.clear();
+  });
+
+  it('does not retry a server error merely because its message says network', async () => {
+    const entry = buildEntry({
+      id: 211,
+      clientMutationId: 'mut-message-network',
+      operation: 'create',
+      entityType: 'note',
+      entityId: 'note-message-network',
+    });
+    mockGetPendingSyncQueue.mockResolvedValue([entry]);
+
+    const db = getOfflineDb(TEST_USER_ID);
+    await db.syncQueue.put(entry);
+
+    const failChain = buildChain();
+    failChain.maybeSingle.mockRejectedValue(
+      Object.assign(new Error('network access is forbidden by policy'), { code: '42501' })
+    );
+    mockFrom.mockReturnValue(failChain);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.failed).toBe(0);
+    expect(result.blocked).toBe(1);
+    expect(mockUpdateSyncQueueEntry).not.toHaveBeenCalled();
+    expect((await db.syncQueue.get(211))?.status).toBe('blocked');
+
+    await db.syncQueue.clear();
+  });
+
+  it('does not suppress a delete error whose message says 0 rows', async () => {
+    const entry = buildEntry({
+      id: 212,
+      clientMutationId: 'mut-delete-zero-rows',
+      operation: 'delete',
+      entityType: 'note',
+      entityId: 'note-delete-zero-rows',
+      payload: {},
+    });
+    mockGetPendingSyncQueue.mockResolvedValue([entry]);
+
+    const db = getOfflineDb(TEST_USER_ID);
+    await db.syncQueue.put(entry);
+    const deleteError = Object.assign(new Error('permission denied after 0 rows'), {
+      code: '42501',
+    });
+    mockFrom.mockReturnValue({
+      delete: vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({ data: null, error: deleteError }),
+      })),
+    });
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.processed).toBe(0);
+    expect(result.blocked).toBe(1);
+    expect((await db.syncQueue.get(212))?.lastError).toContain('42501');
 
     await db.syncQueue.clear();
   });
@@ -1161,6 +1249,125 @@ describe('processQueue behavior', () => {
     // After the 2s timeout it gets removed, but immediately after
     // processQueue returns it should still be pending.
     expect(isPendingMutation(mutId)).toBe(true);
+  });
+
+  it('reapplies the selected server version after an already-dequeued stale update', async () => {
+    await clearTestDb('notes', 'noteTags', 'syncQueue');
+    const db = getOfflineDb(TEST_USER_ID);
+    const now = Date.now();
+    const noteId = 'note-in-flight-conflict';
+    const localNote: LocalNote = {
+      id: noteId,
+      userId: TEST_USER_ID,
+      title: '',
+      content: '',
+      pinned: false,
+      deletedAt: null,
+      createdAt: now - 10_000,
+      updatedAt: now,
+      syncStatus: 'conflict',
+      lastSyncedAt: now - 20_000,
+      serverUpdatedAt: now - 20_000,
+      localUpdatedAt: now,
+      encryptedPayload: 'local-current-ciphertext',
+      encryptionIv: 'local-current-iv',
+      encryptionVersion: 1,
+      contentHash: 'local-current-hash',
+    };
+    const staleEntry = buildEntry({
+      id: 1200,
+      clientMutationId: 'already-dequeued-stale-update',
+      operation: 'update',
+      entityType: 'note',
+      entityId: noteId,
+      payload: {
+        title: '',
+        content: '',
+        encrypted_payload: 'stale-ciphertext',
+        encryption_iv: 'stale-iv',
+        encryption_version: 1,
+        content_hash: 'stale-hash',
+      },
+    });
+    await db.notes.put(localNote);
+    await db.syncQueue.put(staleEntry);
+    mockGetPendingSyncQueue.mockResolvedValue([staleEntry]);
+
+    const staleRead = buildChain({ data: null });
+    const staleWrite = buildChain();
+    const staleWriteDeferred = createDeferred<{
+      data: { updated_at: string; content_hash: string };
+      error: null;
+    }>();
+    staleWrite.maybeSingle.mockReturnValue(staleWriteDeferred.promise);
+    const selectedWrite = buildChain({
+      data: { updated_at: '2026-09-07T18:03:00.000Z' },
+    });
+    mockFrom
+      .mockReturnValueOnce(staleRead)
+      .mockReturnValueOnce(staleWrite)
+      .mockReturnValueOnce(selectedWrite);
+
+    const queueRun = processQueue(TEST_USER_ID);
+    await vi.waitFor(() => expect(staleWrite.update).toHaveBeenCalledTimes(1));
+
+    const conflict: ConflictInfo = {
+      entityType: 'note',
+      entityId: noteId,
+      localVersion: localNote,
+      serverVersion: {
+        id: noteId,
+        user_id: TEST_USER_ID,
+        title: '',
+        content: '',
+        pinned: true,
+        deleted_at: null,
+        created_at: new Date(localNote.createdAt).toISOString(),
+        display_updated_at: '2026-09-07T17:59:00.000Z',
+        updated_at: '2026-09-07T18:00:00.000Z',
+        encrypted_payload: 'selected-server-ciphertext',
+        encryption_iv: 'selected-server-iv',
+        encryption_version: 1,
+        content_hash: 'selected-server-hash',
+      },
+    };
+    let resolutionSettled = false;
+    const resolution = resolveConflict(TEST_USER_ID, conflict, 'server', TEST_KEYS)
+      .then(() => { resolutionSettled = true; });
+
+    await Promise.resolve();
+    expect(resolutionSettled).toBe(false);
+    expect(selectedWrite.update).not.toHaveBeenCalled();
+
+    staleWriteDeferred.resolve({
+      data: {
+        updated_at: '2026-09-07T18:02:00.000Z',
+        content_hash: 'stale-hash',
+      },
+      error: null,
+    });
+    await queueRun;
+    await resolution;
+
+    expect(staleWrite.update).toHaveBeenCalledWith(expect.objectContaining({
+      content_hash: 'stale-hash',
+    }));
+    expect(selectedWrite.update).toHaveBeenCalledWith(expect.objectContaining({
+      pinned: true,
+      encrypted_payload: 'selected-server-ciphertext',
+      content_hash: 'selected-server-hash',
+    }));
+    expect(await db.syncQueue
+      .filter((entry) => entry.entityType === 'note' && entry.entityId === noteId)
+      .count()).toBe(0);
+    expect(await db.notes.get(noteId)).toMatchObject({
+      pinned: true,
+      syncStatus: 'synced',
+      contentHash: 'selected-server-hash',
+      confirmedContentHash: 'selected-server-hash',
+    });
+
+    await clearTestDb('notes', 'noteTags', 'syncQueue');
   });
 });
 
@@ -1666,6 +1873,75 @@ describe('fullSync', () => {
     expect(result.pulled.tags).toBe(0);
     expect(result.processed).toBe(0); // empty push queue
     expect(result.pullErrors).toHaveLength(0);
+  });
+
+  it('reports sync activity until a deferred full sync completes', async () => {
+    const pullGate = createDeferred<{ data: never[]; error: null }>();
+    mockFetchAllPaginated
+      .mockReturnValueOnce(pullGate.promise)
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
+    mockGetPendingSyncQueue.mockResolvedValue([]);
+
+    const run = fullSync(TEST_USER_ID);
+    expect(isSyncInProgress()).toBe(true);
+    await vi.waitFor(() => expect(mockFetchAllPaginated).toHaveBeenCalledTimes(1));
+    expect(isSyncInProgress()).toBe(true);
+
+    pullGate.resolve({ data: [], error: null });
+    await run;
+
+    expect(isSyncInProgress()).toBe(false);
+  });
+
+  it('holds queue ownership continuously across the full-sync pull and push phases', async () => {
+    const pullGate = createDeferred<{ data: never[]; error: null }>();
+    const fullSyncPushGate = createDeferred<SyncQueueEntry[]>();
+    const concurrentQueueGate = createDeferred<SyncQueueEntry[]>();
+    const queueOrder: string[] = [];
+
+    mockFetchAllPaginated
+      .mockReturnValueOnce(pullGate.promise)
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
+    mockGetPendingSyncQueue
+      .mockImplementationOnce(async () => {
+        queueOrder.push('full-sync-push');
+        return fullSyncPushGate.promise;
+      })
+      .mockImplementationOnce(async () => {
+        queueOrder.push('concurrent-queue');
+        return concurrentQueueGate.promise;
+      });
+
+    const fullRun = fullSync(TEST_USER_ID);
+    await vi.waitFor(() => expect(mockFetchAllPaginated).toHaveBeenCalledTimes(1));
+
+    const concurrentQueueRun = processQueue(TEST_USER_ID);
+    await Promise.resolve();
+    expect(mockGetPendingSyncQueue).not.toHaveBeenCalled();
+
+    pullGate.resolve({ data: [], error: null });
+    await vi.waitFor(() => expect(mockGetPendingSyncQueue).toHaveBeenCalledTimes(1));
+    expect(queueOrder).toEqual(['full-sync-push']);
+
+    // Keep the full-sync push open long enough to prove the concurrent public
+    // queue run cannot enter in a lock gap between pull and push.
+    await Promise.resolve();
+    expect(mockGetPendingSyncQueue).toHaveBeenCalledTimes(1);
+
+    fullSyncPushGate.resolve([]);
+    await fullRun;
+    await vi.waitFor(() => expect(mockGetPendingSyncQueue).toHaveBeenCalledTimes(2));
+    expect(isSyncInProgress()).toBe(true);
+
+    concurrentQueueGate.resolve([]);
+    await concurrentQueueRun;
+
+    expect(queueOrder).toEqual(['full-sync-push', 'concurrent-queue']);
+    expect(isSyncInProgress()).toBe(false);
   });
 });
 

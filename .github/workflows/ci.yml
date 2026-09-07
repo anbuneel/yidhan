@@ -36,6 +36,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Check unused exports
+        run: npm run lint:exports
+
       - name: Build
         run: npm run build
 

@@ -1,5 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const chromiumLaunchOptions = chromiumExecutablePath
+  ? { launchOptions: { executablePath: chromiumExecutablePath } }
+  : {};
+
 /**
  * Playwright E2E test configuration for Yidhan
  * @see https://playwright.dev/docs/test-configuration
@@ -46,19 +51,21 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], ...chromiumLaunchOptions },
     },
     {
       name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
+      use: { ...devices['Pixel 5'], ...chromiumLaunchOptions },
     },
   ],
 
   // Run your local dev server before starting the tests
   webServer: {
-    command: 'npm run dev',
+    command: 'npm run dev -- --port 5174 --strictPort',
     url: 'http://localhost:5174',
-    reuseExistingServer: !process.env.CI,
+    // Reusing an arbitrary process on this fixed port can silently test a
+    // different checkout/worktree. Opt in only when the caller owns it.
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === '1',
     timeout: 120 * 1000,
   },
 

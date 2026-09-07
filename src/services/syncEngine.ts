@@ -37,6 +37,7 @@ import {
   isLaunchEncryptedDbNote,
   requireEncryptedQueuePayload,
 } from '../utils/noteEncryptionInvariant';
+import { withCrossTabSyncLock } from './syncLock';
 
 // Lazy check for native platform (avoids issues at module initialization)
 let _isNative: boolean | null = null;
@@ -80,9 +81,10 @@ const STALE_SYNC_ENTRY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const STALE_SYNC_ENTRY_MIN_RETRIES = 3;
 export const SYNC_BATCH_CONCURRENCY_LIMIT = 6;
 
-// Sync state
-let isSyncing = false;
-let syncPromise: Promise<SyncResult> | null = null;
+// Sync activity is tokenized so one operation finishing cannot report idle
+// while another public pull/full-sync/queue run is still waiting or active.
+const activeSyncOperations = new Set<symbol>();
+const queueSyncPromises = new Map<string, Promise<SyncResult>>();
 
 // Pause/resume state for E2EE (gate sync during migration or key rotation)
 // Uses a shared Promise so all concurrent waiters resolve when resumed
@@ -121,6 +123,17 @@ export function resumeSync(): void {
 async function waitForUnpause(): Promise<void> {
   if (!isPaused || !pausePromise) return;
   return pausePromise;
+}
+
+async function trackSyncOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const token = Symbol('sync-operation');
+  activeSyncOperations.add(token);
+
+  try {
+    return await operation();
+  } finally {
+    activeSyncOperations.delete(token);
+  }
 }
 
 export interface SyncResult {
@@ -632,6 +645,15 @@ async function processNoteOperation(
         ...encryptedPayload,
         // updated_at is set by server-side trigger (notes_updated_at_trigger)
       };
+      if (typeof data.pinned === 'boolean') {
+        updatePayload.pinned = data.pinned;
+      }
+      if (data.deleted_at === null || typeof data.deleted_at === 'string') {
+        updatePayload.deleted_at = data.deleted_at;
+      }
+      if (typeof data.display_updated_at === 'string') {
+        updatePayload.display_updated_at = data.display_updated_at;
+      }
 
       const { data: updated, error } = await supabase
         .from('notes')
@@ -705,8 +727,10 @@ async function processNoteOperation(
         .delete()
         .eq('id', noteId);
 
-      // Ignore "not found" errors for deletes
-      if (error && !error.message.includes('0 rows')) throw error;
+      // PostgREST DELETE is idempotent: a missing row is a successful response
+      // with zero affected rows. Any returned error is therefore real and must
+      // retain its code instead of being suppressed because of message text.
+      if (error) throw error;
       return true;
     }
 
@@ -823,8 +847,7 @@ async function processTagOperation(
     case 'delete': {
       const { error } = await supabase.from('tags').delete().eq('id', tagId);
 
-      // Ignore "not found" errors
-      if (error && !error.message.includes('0 rows')) throw error;
+      if (error) throw error;
       return true;
     }
 
@@ -877,53 +900,60 @@ async function processNoteTagOperation(
   }
 }
 
+const TRANSIENT_ERROR_CODES = new Set([
+  // PostgreSQL serialization/deadlock/lock availability.
+  '40001',
+  '40P01',
+  '55P03',
+  // A noteTag can race the note/tag create that it depends on.
+  '23503',
+  // PostgREST JWT refresh race.
+  'PGRST301',
+  // Browser/Node transport codes surfaced by fetch implementations.
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'EHOSTUNREACH',
+  'ENETDOWN',
+  'ENETUNREACH',
+  'ETIMEDOUT',
+  'UND_ERR_CONNECT_TIMEOUT',
+]);
+
 /**
- * Check if an error is retryable (5xx, network errors)
+ * Check if an error is retryable using structured transport/server signals.
+ * Error prose is diagnostic only: matching words such as "network" can turn a
+ * deterministic authorization or validation failure into an endless retry.
  */
 function isRetryableError(error: unknown): boolean {
   if (error instanceof RetryableSyncError) {
     return true;
   }
 
-  if (error instanceof Error) {
-    const message = error.message.toLowerCase();
-    // Network errors
-    if (
-      message.includes('network') ||
-      message.includes('fetch') ||
-      message.includes('timeout') ||
-      message.includes('connection')
-    ) {
-      return true;
-    }
+  // The Fetch standard rejects transport failures with TypeError. DOM-backed
+  // fetch implementations can instead surface a named NetworkError/TimeoutError.
+  if (error instanceof TypeError) {
+    return true;
+  }
+  if (
+    typeof DOMException !== 'undefined' &&
+    error instanceof DOMException &&
+    (error.name === 'NetworkError' || error.name === 'TimeoutError')
+  ) {
+    return true;
   }
 
-  // Check for HTTP status codes
+  // Check explicit HTTP/Postgres/PostgREST/transport codes.
   const err = error as { status?: number; code?: string };
-  if (err.status && err.status >= 500) {
+  if (
+    err.status === 408 ||
+    err.status === 425 ||
+    err.status === 429 ||
+    (typeof err.status === 'number' && err.status >= 500)
+  ) {
     return true;
   }
 
-  // PostgreSQL/Supabase error codes that are retryable
-  if (err.code === '40001' || err.code === '40P01') {
-    return true; // Serialization failure, deadlock
-  }
-
-  // Foreign-key violation: the parent note or tag has not synced yet. Ordering,
-  // not corruption — this settles once the parent lands.
-  if (err.code === '23503') {
-    return true;
-  }
-
-  // An expired or not-yet-refreshed JWT resolves on its own once the Supabase
-  // client refreshes the session, so this is a wait, not a permanent block.
-  // PostgrestError carries code/message/details/hint but no HTTP status, so
-  // the code is what identifies this — a `status === 401` test never fires.
-  if (err.code === 'PGRST301') {
-    return true;
-  }
-
-  return false;
+  return typeof err.code === 'string' && TRANSIENT_ERROR_CODES.has(err.code);
 }
 
 function getErrorMessage(error: unknown): string {
@@ -1162,24 +1192,27 @@ async function processQueuedEntryAndPersist(
  * Process the entire sync queue
  * Called when coming back online or periodically
  */
-export async function processQueue(userId: string): Promise<SyncResult> {
-  // Wait if sync is paused (E2EE migration, key rotation)
-  await waitForUnpause();
-
-  // Prevent concurrent syncs
-  if (isSyncing && syncPromise) {
-    return syncPromise;
+export function processQueue(userId: string): Promise<SyncResult> {
+  const existing = queueSyncPromises.get(userId);
+  if (existing) {
+    return existing;
   }
 
-  isSyncing = true;
-  syncPromise = doProcessQueue(userId);
+  const run = trackSyncOperation(async () => {
+    // Wait if sync is paused (E2EE migration, key rotation)
+    await waitForUnpause();
+    return withCrossTabSyncLock(userId, () => doProcessQueue(userId));
+  });
+  queueSyncPromises.set(userId, run);
 
-  try {
-    return await syncPromise;
-  } finally {
-    isSyncing = false;
-    syncPromise = null;
-  }
+  const clearIfCurrent = () => {
+    if (queueSyncPromises.get(userId) === run) {
+      queueSyncPromises.delete(userId);
+    }
+  };
+  void run.then(clearIfCurrent, clearIfCurrent);
+
+  return run;
 }
 
 async function doProcessQueue(userId: string): Promise<SyncResult> {
@@ -1262,9 +1295,16 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
  * Both entity pulls (notes, tags) run independently — a notes error
  * does not prevent the tag pull from executing.
  */
-export async function pullRemoteChanges(userId: string): Promise<PullResult> {
-  // Wait if sync is paused (E2EE migration, key rotation)
-  await waitForUnpause();
+export function pullRemoteChanges(userId: string): Promise<PullResult> {
+  return trackSyncOperation(async () => {
+    // Wait if sync is paused (E2EE migration, key rotation)
+    await waitForUnpause();
+    return withCrossTabSyncLock(userId, () => doPullRemoteChanges(userId));
+  });
+}
+
+/** Pull implementation for callers that already own the per-user sync lock. */
+async function doPullRemoteChanges(userId: string): Promise<PullResult> {
 
   const db = getOfflineDb(userId);
   const errors: PullError[] = [];
@@ -1472,29 +1512,34 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
  * Full sync: pull remote changes then push local queue.
  * Returns FullSyncResult with both pull and push outcomes.
  */
-export async function fullSync(userId: string): Promise<FullSyncResult> {
-  // Wait if sync is paused (E2EE migration, key rotation)
-  await waitForUnpause();
+export function fullSync(userId: string): Promise<FullSyncResult> {
+  return trackSyncOperation(async () => {
+    // Wait if sync is paused (E2EE migration, key rotation)
+    await waitForUnpause();
 
-  // Pull first to get latest server state
-  const pullResult = await pullRemoteChanges(userId);
+    // Hold one ownership boundary across both phases. Calling the public pull
+    // or queue functions here would try to reacquire the same non-reentrant
+    // Web Lock and deadlock. It would also leave a gap where another tab could
+    // push a stale payload after our pull but before our own queue processing.
+    return withCrossTabSyncLock(userId, async () => {
+      const pullResult = await doPullRemoteChanges(userId);
+      const pushResult = await doProcessQueue(userId);
 
-  // Then process our queue
-  const pushResult = await processQueue(userId);
-
-  return {
-    ...pushResult,
-    pulled: { notes: pullResult.pulledNotes, tags: pullResult.pulledTags },
-    deleted: { notes: pullResult.deletedNotes, tags: pullResult.deletedTags },
-    pullErrors: pullResult.errors,
-  };
+      return {
+        ...pushResult,
+        pulled: { notes: pullResult.pulledNotes, tags: pullResult.pulledTags },
+        deleted: { notes: pullResult.deletedNotes, tags: pullResult.deletedTags },
+        pullErrors: pullResult.errors,
+      };
+    });
+  });
 }
 
 /**
  * Get sync status
  */
 export function isSyncInProgress(): boolean {
-  return isSyncing;
+  return activeSyncOperations.size > 0;
 }
 
 /**
@@ -1509,9 +1554,10 @@ export function clearSyncState(): void {
   // Clear pending mutations
   pendingMutations.clear();
 
-  // Reset sync state
-  isSyncing = false;
-  syncPromise = null;
+  // Reset sync state. In-flight finally handlers delete only their own tokens,
+  // so they cannot clear activity registered after logout/reset.
+  activeSyncOperations.clear();
+  queueSyncPromises.clear();
 
   // Clear conflict handler
   onConflictDetected = null;
