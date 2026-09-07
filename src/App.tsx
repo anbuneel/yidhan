@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
-import { type PublicPageNav } from './components/PublicPage';
 import { LibraryScreen } from './components/LibraryScreen';
 import { FadedNotesScreen } from './components/FadedNotesScreen';
 import { NoteEditorView } from './components/NoteEditorView';
@@ -9,7 +8,7 @@ import { renderEntryScreen } from './components/entryScreens';
 import { renderAccountGate } from './components/accountGates';
 import { LoadingFallback } from './components/LoadingFallback';
 import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
-import { clearScrollMemory, routeToViewMode, useRouter, type Route } from './routing';
+import { clearScrollMemory, routeToViewMode, useRouter } from './routing';
 import { useAuth } from './contexts/AuthContext';
 import { useEncryption } from './contexts/EncryptionContext';
 import { createEncryptedNote } from './services/encryptedNotes';
@@ -17,6 +16,7 @@ import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useSchemaGuard } from './hooks/useSchemaGuard';
 import { useNotesSync } from './hooks/useNotesSync';
 import { useAppTheme } from './hooks/useAppTheme';
+import { useAppNavigation } from './hooks/useAppNavigation';
 import { useLibrarySearch } from './hooks/useLibrarySearch';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useAppLoader } from './hooks/useAppLoader';
@@ -73,22 +73,8 @@ function App() {
   const view = routeToViewMode(route);
   const isDemo = route.name === 'demo';
 
-  const navigateToRoute = useCallback((next: Route) => {
-    startTransition(() => navigate(next));
-  }, [navigate, startTransition]);
-
-  const navigateToDemo = useCallback(() => navigateToRoute({ name: 'demo' }), [navigateToRoute]);
-  // The mobile "Start writing" path: /demo/new opens the Practice Space already in an
-  // empty note, so the button reaches a caret rather than a library (item 45).
-  const navigateToDemoDraft = useCallback(() => navigateToRoute({ name: 'demo', newNote: true }), [navigateToRoute]);
-  const navigateHome = useCallback(() => navigateToRoute({ name: 'library' }), [navigateToRoute]);
-
-  const navigateToChangelog = useCallback(() => navigateToRoute({ name: 'changelog' }), [navigateToRoute]);
-  const navigateToRoadmap = useCallback(() => navigateToRoute({ name: 'roadmap' }), [navigateToRoute]);
-  const navigateToPrivacy = useCallback(() => navigateToRoute({ name: 'privacy' }), [navigateToRoute]);
-  const navigateToTerms = useCallback(() => navigateToRoute({ name: 'terms' }), [navigateToRoute]);
-  const navigateToSupport = useCallback(() => navigateToRoute({ name: 'support' }), [navigateToRoute]);
-  const navigateToSecurity = useCallback(() => navigateToRoute({ name: 'security' }), [navigateToRoute]);
+  const { navigateToRoute, navigateHome, navigateToDemo, navigateToDemoDraft, publicPageNav } =
+    useAppNavigation({ navigate, runInTransition: startTransition });
 
   // The note the reader currently has open, read inside realtime handlers so the
   // Supabase channel is not re-subscribed every time a note is opened or closed.
@@ -394,15 +380,6 @@ function App() {
     toast('That note is no longer here.');
   }, [missingNoteId, replaceRoute]);
 
-  const publicPageNav: PublicPageNav = {
-    onLogoClick: navigateHome,
-    onChangelogClick: navigateToChangelog,
-    onRoadmapClick: navigateToRoadmap,
-    onPrivacyClick: navigateToPrivacy,
-    onTermsClick: navigateToTerms,
-    onSupportClick: navigateToSupport,
-    onSecurityClick: navigateToSecurity,
-  };
 
   // Show loading while checking auth or fetching notes
   if (showAppLoader) {
@@ -526,12 +503,12 @@ function App() {
         }}
         footer={{
           ref: libraryFooterRef,
-          onChangelogClick: navigateToChangelog,
-          onRoadmapClick: navigateToRoadmap,
+          onChangelogClick: publicPageNav.onChangelogClick,
+          onRoadmapClick: publicPageNav.onRoadmapClick,
           onShortcutsClick: () => setShowShortcutsModal(true),
-          onPrivacyClick: navigateToPrivacy,
-          onTermsClick: navigateToTerms,
-          onSupportClick: navigateToSupport,
+          onPrivacyClick: publicPageNav.onPrivacyClick,
+          onTermsClick: publicPageNav.onTermsClick,
+          onSupportClick: publicPageNav.onSupportClick,
         }}
         modals={
           <AppModals

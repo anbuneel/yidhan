@@ -52,7 +52,7 @@ describe('parseRoute', () => {
   });
 
   it('reads every public page', () => {
-    for (const page of ['changelog', 'roadmap', 'privacy', 'terms', 'support'] as const) {
+    for (const page of ['changelog', 'roadmap', 'privacy', 'terms', 'support', 'security'] as const) {
       expect(parseRoute(`/${page}`)).toEqual({ name: page });
     }
   });
@@ -100,6 +100,7 @@ describe('routeToPath', () => {
     [{ name: 'demo', newNote: true }, '/demo/new'],
     [{ name: 'changelog' }, '/changelog'],
     [{ name: 'support' }, '/support'],
+    [{ name: 'security' }, '/security'],
     [{ name: 'playground' }, '/playground'],
     [{ name: 'share', token: 'abcdefghijklmnopqrstuv' }, '/s/abcdefghijklmnopqrstuv'],
     [{ name: 'notFound', path: '/nope' }, '/nope'],
@@ -157,6 +158,9 @@ describe('routeToViewMode', () => {
 
   it('passes public pages through by name', () => {
     expect(routeToViewMode({ name: 'privacy' })).toBe('privacy');
+    // `/security` arrived with Lane B, after this table was written. A public page that
+    // parses but has no view mode renders the library under its own address.
+    expect(routeToViewMode({ name: 'security' })).toBe('security');
     expect(routeToViewMode({ name: 'faded' })).toBe('faded');
   });
 });
