@@ -1,196 +1,45 @@
-import { VaultLockedSaveError } from './utils/saveErrors';
-import { useState, useEffect, useCallback, useEffectEvent, useRef, Suspense, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
-import type { Note, Tag, ViewMode, Theme } from './types';
-import { useNoteSearch } from './hooks/useNoteSearch';
-import { applySavedNote } from './utils/applySavedNote';
-import { Header } from './components/Header';
-import { ChapteredLibrary } from './components/ChapteredLibrary';
-import { Auth } from './components/Auth';
-import { LandingPage } from './components/LandingPage';
-import { DemoPage } from './pages/DemoPage';
-import { ChangelogPage } from './components/ChangelogPage';
-import { RoadmapPage } from './components/RoadmapPage';
-import { PrivacyPage } from './components/PrivacyPage';
-import { TermsPage } from './components/TermsPage';
-import { SupportPage } from './components/SupportPage';
-import { SecurityPage } from './components/SecurityPage';
-import { NotFoundPage } from './components/NotFoundPage';
-import { BackupPassphraseModal } from './components/BackupPassphraseModal';
-import { DatabaseUpdatePending } from './components/DatabaseUpdatePending';
-import {
-  BACKUP_FILE_EXTENSION,
-  BackupFormatError,
-  BackupPassphraseError,
-  openEncryptedBackup,
-} from './utils/encryptedBackup';
-import { sanitizeText } from './utils/sanitize';
-import { lazyWithRetry } from './utils/lazyWithRetry';
-import { getLoadedEditorComponent, loadEditorComponent } from './utils/editorLoader';
-import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
-import { describeSyncFailure } from './utils/syncErrorMessages';
-import {
-  clearPersistedShareKey,
-  parseShareRoute,
-  preserveShareKeyFromLocation,
-} from './utils/shareRoute';
-
-const ROUTEABLE_VIEWS: readonly ViewMode[] = ['changelog', 'roadmap', 'privacy', 'terms', 'support', 'security'];
-
-// Lazy load heavy components with smart retry (auto-reloads on chunk errors when safe)
-const Editor = lazyWithRetry(loadEditorComponent);
-const FadedNotesView = lazyWithRetry(() => import('./components/FadedNotesView').then(module => ({ default: module.FadedNotesView })));
-const SharedNoteView = lazyWithRetry(() => import('./components/SharedNoteView').then(module => ({ default: module.SharedNoteView })));
-const PlaygroundPage = import.meta.env.DEV
-  ? lazyWithRetry(() => import('./pages/PlaygroundPage').then(module => ({ default: module.PlaygroundPage })))
-  : null;
-
-import { TagFilterBar } from './components/TagFilterBar';
-import { WelcomeBackPrompt } from './components/WelcomeBackPrompt';
-import { Footer } from './components/Footer';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { LibraryScreen } from './components/LibraryScreen';
+import { FadedNotesScreen } from './components/FadedNotesScreen';
+import { NoteEditorView } from './components/NoteEditorView';
+import { AppModals } from './components/AppModals';
+import { renderEntryScreen } from './components/entryScreens';
+import { renderAccountGate } from './components/accountGates';
 import { LoadingFallback } from './components/LoadingFallback';
-
-// Lazy load modals with smart retry (only loaded when opened)
-const TagModal = lazyWithRetry(() => import('./components/TagModal').then(module => ({ default: module.TagModal })));
-const SettingsModal = lazyWithRetry(() => import('./components/SettingsModal').then(module => ({ default: module.SettingsModal })));
-const LettingGoModal = lazyWithRetry(() => import('./components/LettingGoModal').then(module => ({ default: module.LettingGoModal })));
-const KeyboardShortcutsModal = lazyWithRetry(() => import('./components/KeyboardShortcutsModal').then(module => ({ default: module.KeyboardShortcutsModal })));
+import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
+import { clearScrollMemory, routeToViewMode, useRouter } from './routing';
 import { useAuth } from './contexts/AuthContext';
 import { useEncryption } from './contexts/EncryptionContext';
-import { PassphraseSetup } from './components/PassphraseSetup';
-import { PassphraseUnlock } from './components/PassphraseUnlock';
-import {
-  subscribeToNotes,
-  cleanupExpiredFadedNotes,
-  emptyFadedNotes,
-} from './services/notes';
-import { subscribeToTags } from './services/tags';
-import {
-  toggleNotePinOffline,
-  softDeleteNoteOffline,
-  restoreNoteOffline,
-  permanentDeleteNoteOffline,
-  countFadedNotesOffline,
-  addTagToNoteOffline,
-  removeTagFromNoteOffline,
-  upsertNoteFromServer,
-  deleteNoteFromServer,
-  upsertTagFromServer,
-  deleteTagFromServer,
-  getBlockedSyncReason,
-  retryBlockedSyncEntries,
-} from './services/offlineNotes';
-import type { LocalNote } from './lib/offlineDb';
-import {
-  createEncryptedNote,
-  updateEncryptedNote,
-  fetchDecryptedNotes,
-  fetchDecryptedFadedNotes,
-  decryptNoteFromServer,
-  createEncryptedNotesBatch,
-} from './services/encryptedNotes';
-import {
-  fetchTagsOffline,
-  createTagOffline,
-  updateTagOffline,
-  deleteTagOffline,
-} from './services/offlineTags';
-import {
-  exportNotesToJSON,
-  downloadFile,
-  parseImportedJSON,
-  readFileAsText,
-  downloadMarkdownZip,
-  markdownToHtml,
-  parseMultiNoteMarkdown,
-  partitionExportableNotes,
-  describeOmittedNotes,
-  ValidationError,
-  MAX_IMPORT_FILE_SIZE,
-} from './utils/exportImport';
-import { DEMO_CONTENT_STORAGE_KEY, hasDemoState } from './services/demoStorage';
-import { migrateDemoToAccount } from './services/demoMigration';
-import { sanitizeHtml } from './utils/sanitize';
+import { createEncryptedNote } from './services/encryptedNotes';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useSchemaGuard } from './hooks/useSchemaGuard';
-import { blocksWrites } from './services/schemaVersion';
-import { useSyncEngine, resolveConflict } from './hooks/useSyncEngine';
-import { useStoragePersistence } from './hooks/useStoragePersistence';
-import {
-  reportConflict,
-  invalidateSyncPullCursors,
-  type HardDeletedServerNoteVersion,
-} from './services/syncEngine';
+import { useNotesSync } from './hooks/useNotesSync';
+import { useAppTheme } from './hooks/useAppTheme';
+import { useAppNavigation } from './hooks/useAppNavigation';
+import { useLibrarySearch } from './hooks/useLibrarySearch';
+import { useAppShortcuts } from './hooks/useAppShortcuts';
+import { useAppLoader } from './hooks/useAppLoader';
+import { useEditorChunk } from './hooks/useEditorChunk';
+import { useShareRoute } from './hooks/useShareRoute';
+import { useVisibleNotes } from './hooks/useVisibleNotes';
+import { useSessionGuards } from './hooks/useSessionGuards';
+import { useImport } from './hooks/useImport';
+import { useDemoMigration } from './hooks/useDemoMigration';
+import { useShareTargetNote } from './hooks/useShareTargetNote';
+import { useNoteActions } from './hooks/useNoteActions';
+import { useLockedNotes } from './hooks/useLockedNotes';
+import { useFadedNotes } from './hooks/useFadedNotes';
+import { useSyncActions } from './hooks/useSyncActions';
+import { useTagActions } from './hooks/useTagActions';
 import { useViewTransition } from './hooks/useViewTransition';
 import { useInstallPrompt } from './hooks/useInstallPrompt';
-import { useShareTarget, formatSharedContent } from './hooks/useShareTarget';
-import { useSessionTimeout } from './hooks/useSessionTimeout';
-import { useSessionSettings } from './hooks/useSessionSettings';
-import { useVaultSettings } from './hooks/useVaultSettings';
-import { useIdleTimer } from './hooks/useIdleTimer';
-import { EncryptedConflictModal as ConflictModal } from './components/EncryptedConflictModal';
-import { subscribeToNoteTags } from './services/noteTagSync';
-import { InstallPrompt } from './components/InstallPrompt';
-import { IOSInstallGuide } from './components/IOSInstallGuide';
-import { SessionTimeoutModal } from './components/SessionTimeoutModal';
-import { reportReliabilityIssue } from './utils/reliabilityTelemetry';
+import { useShareTarget } from './hooks/useShareTarget';
+import { migrateLocalStorageKeys } from './utils/legacyStorageKeys';
 import './App.css';
 
-/**
- * Migrate localStorage keys from old 'zenote-' prefix to new 'yidhan-' prefix
- * This ensures existing users don't lose their preferences during the rebrand
- */
-function migrateLocalStorageKeys(): void {
-  const keyMappings: [string, string][] = [
-    ['zenote-theme', 'yidhan-theme'],
-    ['zenote-engagement', 'yidhan-engagement'],
-    ['zenote-install-dismissed', 'yidhan-install-dismissed'],
-    ['zenote-install-prompted', 'yidhan-install-prompted'],
-    ['zenote-ios-guide-dismissed', 'yidhan-ios-guide-dismissed'],
-    ['zenote-demo-state', 'yidhan-demo-state'],
-    ['zenote-demo-content', 'yidhan-demo-content'],
-    ['zenote-shared-content', 'yidhan-shared-content'],
-    ['zenote-ribbon-seen', 'yidhan-ribbon-seen'],
-  ];
-
-  keyMappings.forEach(([oldKey, newKey]) => {
-    const oldValue = localStorage.getItem(oldKey);
-    if (oldValue !== null && localStorage.getItem(newKey) === null) {
-      localStorage.setItem(newKey, oldValue);
-      localStorage.removeItem(oldKey);
-    }
-  });
-}
-
-// Run migration on module load (before React renders)
+// Run before React renders, so a returning user's preferences survive the rebrand.
 migrateLocalStorageKeys();
-
-/** Build a synthetic server version representing a note deleted on another device. */
-function buildDeletedServerVersion(note: LocalNote): HardDeletedServerNoteVersion {
-  const serverTimestamp = new Date(note.serverUpdatedAt ?? Date.now()).toISOString();
-
-  return {
-    id: note.id,
-    user_id: note.userId,
-    title: '',
-    content: '',
-    pinned: note.pinned,
-    deleted_at: new Date().toISOString(),
-    created_at: new Date(note.createdAt).toISOString(),
-    display_updated_at: new Date(note.updatedAt).toISOString(),
-    updated_at: serverTimestamp,
-    encrypted_payload: note.encryptedPayload ?? null,
-    encryption_iv: note.encryptionIv ?? null,
-    encryption_version: note.encryptionVersion ?? null,
-    content_hash: note.contentHash ?? null,
-    hard_deleted: true as const,
-  };
-}
-
-// Long enough to swallow a burst of per-row realtime events, short enough that
-// a single change still lands well inside the cross-device budget.
-const SYNC_REFRESH_COALESCE_MS = 150;
 
 function App() {
   const libraryFooterRef = useRef<HTMLElement>(null);
@@ -214,141 +63,38 @@ function App() {
     recheck: recheckSchema,
   } = useSchemaGuard(Boolean(user));
 
-  // Rehydrate React state after sync pulls in remote changes (2A)
-  // This is safe because the Editor maintains its own local state —
-  // no risk of blowing away in-flight edits.
-  const handleSyncComplete = useCallback(async () => {
-    const uid = user?.id;
-    if (!uid) return;
-    if (!keys) return;
-    try {
-      const refreshedNotes = await fetchDecryptedNotes(uid, keys);
-      setNotes(refreshedNotes);
-      const refreshedTags = await fetchTagsOffline(uid);
-      setTags(refreshedTags);
-    } catch (error) {
-      console.error('Failed to rehydrate after sync:', error);
-    }
-  }, [user?.id, keys]);
-
-  // Realtime tag events arrive one per row, and each full refresh decrypts the
-  // whole library. Collapse a burst — a bulk retag, or a reconnect replaying
-  // missed events — into a single pass.
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scheduleSyncRefresh = useCallback(() => {
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    refreshTimerRef.current = setTimeout(() => {
-      refreshTimerRef.current = null;
-      void handleSyncComplete();
-    }, SYNC_REFRESH_COALESCE_MS);
-  }, [handleSyncComplete]);
-
-  useEffect(() => () => {
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-  }, []);
-
-  const reportRealtimeDisplayFailure = useCallback((
-    operation: 'insert' | 'update',
-    error: unknown
-  ) => {
-    reportReliabilityIssue({
-      category: 'sync',
-      message: 'Realtime note could not be decrypted for display',
-      level: 'warning',
-      data: {
-        operation,
-        userId: user?.id ?? null,
-      },
-    }, error);
-    toast.error('A live note change was saved locally but could not be displayed. Please refresh.');
-  }, [user?.id]);
-
-  // Sync engine for offline support
-  const { conflicts, removeConflict, triggerSync } = useSyncEngine(handleSyncComplete);
-
-  // Ask the browser not to evict the offline database. An unsynced note lives
-  // only there, and best-effort storage can be cleared silently under disk
-  // pressure — which is how blocked notes were lost across a restart.
-  useStoragePersistence();
-  const [activeConflict, setActiveConflict] = useState<typeof conflicts[0] | null>(null);
-  const [isRetryingBlockedChanges, setIsRetryingBlockedChanges] = useState(false);
-  const triggerSyncRef = useRef(triggerSync);
-  triggerSyncRef.current = triggerSync;
-  const realtimeRecoveryInFlightRef = useRef(false);
-
-  const reportRealtimePersistenceFailure = useCallback(async (
-    entity: 'note' | 'tag',
-    operation: 'insert' | 'update' | 'delete',
-    error: unknown
-  ) => {
-    reportReliabilityIssue({
-      category: 'sync',
-      message: 'Realtime change could not be persisted locally',
-      level: 'warning',
-      data: {
-        entity,
-        operation,
-        userId: user?.id ?? null,
-      },
-    }, error);
-    toast.error('A live change could not be saved locally. Recovering sync state now.');
-
-    const uid = user?.id;
-    if (!uid || realtimeRecoveryInFlightRef.current) {
-      return;
-    }
-
-    realtimeRecoveryInFlightRef.current = true;
-
-    try {
-      // Reset pull cursors before scheduling recovery so the next sync
-      // cannot reuse a stale incremental cursor after a dropped realtime write.
-      await invalidateSyncPullCursors(uid);
-      const { outcome } = await triggerSyncRef.current();
-      if (outcome === 'error') {
-        reportReliabilityIssue({
-          category: 'sync',
-          message: 'Realtime persistence recovery sync failed',
-          level: 'warning',
-          data: { entity, operation, userId: uid },
-        });
-      }
-    } catch (recoveryError) {
-      reportReliabilityIssue({
-        category: 'sync',
-        message: 'Failed to schedule recovery after realtime persistence failure',
-        level: 'warning',
-        data: { entity, operation, userId: uid },
-      }, recoveryError);
-    } finally {
-      realtimeRecoveryInFlightRef.current = false;
-    }
-  }, [user?.id]);
-
-  // Coalesced sync trigger: after a save, wait 2s then trigger sync.
-  // Reset on each save to prevent flooding during rapid typing.
-  const coalescedSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const clearCoalescedSyncTimeout = useCallback(() => {
-    if (coalescedSyncTimeoutRef.current) {
-      clearTimeout(coalescedSyncTimeoutRef.current);
-      coalescedSyncTimeoutRef.current = null;
-    }
-  }, []);
-  const triggerCoalescedSync = useCallback(() => {
-    clearCoalescedSyncTimeout();
-    coalescedSyncTimeoutRef.current = setTimeout(() => {
-      coalescedSyncTimeoutRef.current = null;
-      triggerSync();
-    }, 2000);
-  }, [clearCoalescedSyncTimeout, triggerSync]);
-
-  // Clean up coalesced sync timeout on unmount
-  useEffect(() => {
-    return clearCoalescedSyncTimeout;
-  }, [clearCoalescedSyncTimeout]);
-
   // View transitions for smooth navigation
   const { startTransition } = useViewTransition();
+
+  // The URL is the single source of truth for where the app is. `view`, `isDemo`,
+  // `notFound` and `selectedNoteId` are all read off it rather than kept beside it —
+  // four states that could disagree with the address bar became one that cannot.
+  const { route, navigate, replaceRoute } = useRouter({ allowPlayground: import.meta.env.DEV });
+  const view = routeToViewMode(route);
+  const isDemo = route.name === 'demo';
+
+  const { navigateToRoute, navigateHome, navigateToDemo, navigateToDemoDraft, publicPageNav } =
+    useAppNavigation({ navigate, runInTransition: startTransition });
+
+  // The note the reader currently has open, read inside realtime handlers so the
+  // Supabase channel is not re-subscribed every time a note is opened or closed.
+  const selectedNoteIdRef = useRef<string | null>(null);
+
+  const {
+    notes, setNotes, loading,
+    tags, setTags,
+    selectedTagIds, setSelectedTagIds,
+    fadedNotesCount, setFadedNotesCount,
+    conflicts, removeConflict, triggerSync, triggerCoalescedSync,
+  } = useNotesSync({
+    userId: user?.id,
+    keys,
+    isHydrating,
+    openNoteIdRef: selectedNoteIdRef,
+    onOpenNoteRemoved: () => replaceRoute({ name: 'library' }),
+    // Sign-out drops the scroll offsets remembered for this session's history entries.
+    onSignedOut: clearScrollMemory,
+  });
 
   // PWA install prompt management
   const {
@@ -363,308 +109,45 @@ function App() {
   // Share Target handling
   const { sharedData, clearSharedData, hasStoredShare } = useShareTarget();
 
-  // Session settings (timeout + trusted device, per-user)
-  const sessionSettings = useSessionSettings(user?.id ?? null);
-  const effectiveTimeout = sessionSettings.getEffectiveTimeout();
-
-  // Session timeout monitoring (configurable timeout, 5 min warning)
-  const { resetTimeout: resetSessionTimeout, minutesRemaining: sessionMinutesRemaining } = useSessionTimeout({
-    timeoutMinutes: effectiveTimeout,
-    warningMinutes: effectiveTimeout === null ? 0 : Math.min(5, Math.floor(effectiveTimeout / 6)),
-    onWarning: () => setShowSessionTimeoutModal(true),
-    onTimeout: async () => {
-      setShowSessionTimeoutModal(false);
-      lockVault('sign-out');
-      await signOut();
-      toast('Your session has faded. Please sign in again.', {
-        icon: '〇',
-        duration: 4000,
-        style: {
-          background: 'var(--color-bg-secondary)',
-          color: 'var(--color-text-primary)',
-          border: '1px solid var(--glass-border)',
-        },
-      });
-    },
-    enabled: Boolean(user),
+  const {
+    sessionSettings,
+    vaultSettings,
+    showSessionTimeoutModal,
+    sessionMinutesRemaining,
+    handleSessionStay,
+    handleSessionSignOut,
+  } = useSessionGuards({
+    userId: user?.id,
+    isEncryptionSetup,
+    isUnlocked,
+    lockVault,
+    signOut,
   });
 
-  // Vault settings (auto-lock, per-user)
-  const vaultSettings = useVaultSettings(user?.id ?? null);
+  const showAppLoader = useAppLoader(authLoading || loading);
 
-  // Vault auto-lock timer (separate from session timeout)
-  useIdleTimer({
-    minutes: vaultSettings.settings.autoLockMinutes,
-    onIdle: () => {
-      lockVault('auto-lock');
-      toast('Vault locked after inactivity', {
-        icon: '🔒',
-        duration: 3000,
-        style: {
-          background: 'var(--color-bg-secondary)',
-          color: 'var(--color-text-primary)',
-          border: '1px solid var(--glass-border)',
-        },
-      });
-    },
-    enabled: Boolean(user) && isEncryptionSetup && isUnlocked,
-  });
+  const { LoadedEditor, preloadEditorRoute, warmEditorRoute } = useEditorChunk();
 
-  // Handle session timeout modal actions
-  const handleSessionStay = () => {
-    resetSessionTimeout();
-    setShowSessionTimeoutModal(false);
-    toast.success('Session extended', { duration: 2000 });
-  };
-
-  const handleSessionSignOut = async () => {
-    setShowSessionTimeoutModal(false);
-    lockVault('sign-out');
-    await signOut();
-  };
-
-  // Show first conflict when conflicts array changes
-  useEffect(() => {
-    if (conflicts.length > 0 && !activeConflict) {
-      setActiveConflict(conflicts[0]);
-    }
-  }, [conflicts, activeConflict]);
-
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
-  const APP_LOADER_MIN_MS = 200;
-  const appLoading = authLoading || loading;
-  const [showAppLoader, setShowAppLoader] = useState(appLoading);
-  const hasCompletedInitialAppLoadRef = useRef(false);
-  const appLoaderStartedAtRef = useRef<number | null>(null);
-  const appLoaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [view, setView] = useState<ViewMode>(() => {
-    const path = window.location.pathname.replace(/\/$/, '') || '/';
-    const match = ROUTEABLE_VIEWS.find(v => path === `/${v}`);
-    return match || 'library';
-  });
-  const [isDemo, setIsDemo] = useState<boolean>(() => {
-    return window.location.pathname === '/demo';
-  });
-  // Detect unrecognized paths for 404 page
-  const [notFound, setNotFound] = useState<boolean>(() => {
-    const path = window.location.pathname.replace(/\/$/, '') || '/';
-    if (path === '/') return false;
-    if (ROUTEABLE_VIEWS.some(v => path === `/${v}`)) return false;
-    if (path === '/demo') return false;
-    if (path.startsWith('/s/')) return false;
-    if (import.meta.env.DEV && path === '/playground') return false;
-    return true;
-  });
-  // Sync URL pathname for direct-entry routes
-  useEffect(() => {
-    // Don't overwrite /demo path while the demo is active; /playground is dev-only and gated separately
-    const currentPath = window.location.pathname;
-    if (isDemo || (import.meta.env.DEV && currentPath === '/playground')) return;
-    // Don't overwrite 404 path — keep the bad URL visible for debugging
-    if (notFound) return;
-    const expectedPath = ROUTEABLE_VIEWS.includes(view) ? `/${view}` : '/';
-    if (currentPath !== expectedPath) {
-      window.history.pushState({}, '', expectedPath);
-    }
-  }, [view, notFound, isDemo]);
-
-  const navigateToDemo = useCallback(() => {
-    startTransition(() => {
-      setNotFound(false);
-      setView('library');
-      setIsDemo(true);
-      if (window.location.pathname !== '/demo') {
-        window.history.pushState({}, '', '/demo');
-      }
-    });
-  }, [startTransition]);
-
-  const navigateHome = useCallback(() => {
-    startTransition(() => {
-      setNotFound(false);
-      setView('library');
-      setIsDemo(false);
-      if (window.location.pathname !== '/') {
-        window.history.pushState({}, '', '/');
-      }
-    });
-  }, [startTransition]);
-
-  const navigateToPublicView = useCallback((nextView: ViewMode) => {
-    const expectedPath = ROUTEABLE_VIEWS.includes(nextView) ? `/${nextView}` : '/';
-    startTransition(() => {
-      setNotFound(false);
-      setIsDemo(false);
-      setView(nextView);
-      if (window.location.pathname !== expectedPath) {
-        window.history.pushState({}, '', expectedPath);
-      }
-    });
-  }, [startTransition]);
-
-  const navigateToChangelog = useCallback(() => navigateToPublicView('changelog'), [navigateToPublicView]);
-  const navigateToRoadmap = useCallback(() => navigateToPublicView('roadmap'), [navigateToPublicView]);
-  const navigateToPrivacy = useCallback(() => navigateToPublicView('privacy'), [navigateToPublicView]);
-  const navigateToTerms = useCallback(() => navigateToPublicView('terms'), [navigateToPublicView]);
-  const navigateToSupport = useCallback(() => navigateToPublicView('support'), [navigateToPublicView]);
-  const navigateToSecurity = useCallback(() => navigateToPublicView('security'), [navigateToPublicView]);
-
-  const [LoadedEditor, setLoadedEditor] = useState(() => getLoadedEditorComponent());
-  const preloadEditorRoute = useCallback(async () => {
-    if (getLoadedEditorComponent()) {
-      return;
-    }
-
-    try {
-      await loadEditorComponent();
-    } catch {
-      // Fall back to the lazy boundary if the chunk cannot be preloaded.
-    }
-  }, []);
-
-  const warmEditorRoute = useCallback(async () => {
-    const loadedEditor = getLoadedEditorComponent();
-    if (loadedEditor) {
-      setLoadedEditor(() => loadedEditor);
-      return;
-    }
-
-    await preloadEditorRoute();
-
-    const preloadedEditor = getLoadedEditorComponent();
-    if (preloadedEditor) {
-      setLoadedEditor(() => preloadedEditor);
-    }
-  }, [preloadEditorRoute]);
-
-  // Handle browser back/forward navigation
-  useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname.replace(/\/$/, '') || '/';
-
-      // Recompute 404 state for the new URL (mirrors the useState initializer)
-      const isKnownRoute =
-        path === '/' ||
-        ROUTEABLE_VIEWS.some(v => path === `/${v}`) ||
-        path === '/demo' ||
-        path.startsWith('/s/') ||
-        (import.meta.env.DEV && path === '/playground');
-
-      if (!isKnownRoute) {
-        setIsDemo(false);
-        setNotFound(true);
-        return;
-      }
-
-      setNotFound(false);
-      if (path === '/demo') {
-        setIsDemo(true);
-        setView('library');
-        return;
-      }
-
-      setIsDemo(false);
-      const match = ROUTEABLE_VIEWS.find(v => path === `/${v}`);
-      setView(match || 'library');
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
-  // Ref for selectedNoteId — used in realtime handlers to avoid re-creating
-  // the Supabase channel subscription every time a note is opened/closed (2F)
-  const selectedNoteIdRef = useRef<string | null>(null);
-  selectedNoteIdRef.current = selectedNoteId; // Keep in sync on every render
-  const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('yidhan-theme');
-    // Validate that saved theme is a valid Theme value
-    if (saved === 'light' || saved === 'dark') {
-      return saved;
-    }
-    // Match OS preference for first-time visitors (landing page sees their native theme)
-    if (window.matchMedia?.('(prefers-color-scheme: light)').matches) {
-      return 'light';
-    }
-    return 'dark';
-  });
-
-  // Hold the app loader only for the initial cold boot. Post-login note priming
-  // should keep the current shell visible instead of flashing a blocking screen.
-  useEffect(() => {
-    if (appLoading) {
-      if (hasCompletedInitialAppLoadRef.current) {
-        return;
-      }
-
-      if (appLoaderTimerRef.current) {
-        clearTimeout(appLoaderTimerRef.current);
-        appLoaderTimerRef.current = null;
-      }
-      if (!showAppLoader) {
-        setShowAppLoader(true);
-      }
-      if (!appLoaderStartedAtRef.current) {
-        appLoaderStartedAtRef.current = Date.now();
-      }
-      return;
-    }
-
-    hasCompletedInitialAppLoadRef.current = true;
-
-    if (!showAppLoader) {
-      appLoaderStartedAtRef.current = null;
-      return;
-    }
-
-    const startedAt = appLoaderStartedAtRef.current ?? Date.now();
-    const elapsed = Date.now() - startedAt;
-    const remaining = Math.max(0, APP_LOADER_MIN_MS - elapsed);
-
-    if (remaining === 0) {
-      appLoaderStartedAtRef.current = null;
-      setShowAppLoader(false);
-      return;
-    }
-
-    if (appLoaderTimerRef.current) {
-      clearTimeout(appLoaderTimerRef.current);
-    }
-
-    const timeoutId = setTimeout(() => {
-      appLoaderTimerRef.current = null;
-      appLoaderStartedAtRef.current = null;
-      setShowAppLoader(false);
-    }, remaining);
-    appLoaderTimerRef.current = timeoutId;
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        appLoaderTimerRef.current = null;
-      }
-    };
-  }, [appLoading, showAppLoader]);
+  // `/n/<id>` is the note's address, so the open note is read off the route rather
+  // than tracked next to it. A refresh reopens the note for free; there is no second
+  // copy of "which note is open" to fall out of step with the URL.
+  const selectedNoteId = route.name === 'note' ? route.noteId : null;
+  selectedNoteIdRef.current = selectedNoteId;
+  const { theme, toggleTheme: handleThemeToggle } = useAppTheme();
 
   // Search filters the visible library
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [searchFocusToken, setSearchFocusToken] = useState(0);
+  const {
+    searchQuery,
+    debouncedSearchQuery,
+    isSearching,
+    searchFocusToken,
+    handleSearchChange,
+    requestSearchFocus,
+  } = useLibrarySearch();
 
   // Import state with progress tracking
-  const [importProgress, setImportProgress] = useState<{
-    isImporting: boolean;
-    current: number;
-    total: number;
-    phase: 'parsing' | 'importing' | 'finalizing';
-  } | null>(null);
-
-  // Tags state
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  const [showTagModal, setShowTagModal] = useState(false);
-  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const { importProgress, handleExportJSON, handleExportMarkdown, handleImportFile, backupRestore } =
+    useImport({ userId: user?.id, keys, notes, tags, setNotes, setTags });
 
   // Settings modal state
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -673,88 +156,27 @@ function App() {
   const [showLettingGoModal, setShowLettingGoModal] = useState(false);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
 
-  // Session timeout modal state
-  const [showSessionTimeoutModal, setShowSessionTimeoutModal] = useState(false);
-
   // Keyboard shortcuts modal state
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
-
-  // A `.yidhan` file waiting on its backup passphrase (item 38)
-  const [pendingBackupFile, setPendingBackupFile] = useState<File | null>(null);
-  const [backupRestoreError, setBackupRestoreError] = useState<string | null>(null);
-  const [isOpeningBackup, setIsOpeningBackup] = useState(false);
 
   // Auth modal state (for landing page)
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('signup');
 
-  // Faded notes state
-  const [fadedNotes, setFadedNotes] = useState<Note[]>([]);
-  const [fadedNotesCount, setFadedNotesCount] = useState(0);
-  const [fadedNotesLoading, setFadedNotesLoading] = useState(false);
-
-  // Share route state (for viewing E2EE shared notes)
-  // URL format: /s/<22-char-token>/<optional-slug>#k=<43-char-base64url-key>
-  const [shareRoute, setShareRoute] = useState<{ token: string; shareKey: Uint8Array } | null>(
-    () => parseShareRoute(window.location.pathname, window.location.hash)
-  );
-
-  // Defense in depth: clear the URL fragment after reading the share key
-  // Only strip it once the session copy succeeds so the URL remains the
-  // fallback if sessionStorage is unavailable.
-  useEffect(() => {
-    if (shareRoute && window.location.hash.startsWith('#k=')) {
-      const persisted = preserveShareKeyFromLocation(window.location.pathname, window.location.hash);
-      if (persisted) {
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    }
-  }, [shareRoute]);
-
-  // Playground route (dev-only — delete after design iteration complete)
-  const isPlayground = import.meta.env.DEV && window.location.pathname === '/playground';
-
-  // Navigation state persistence (2E) — survives page refresh within same tab
-  const pendingNavRestoreRef = useRef<{ view: ViewMode; selectedNoteId: string | null } | null>(null);
-  // Track previous userId so we can distinguish initial null (auth hydrating)
-  // from sign-out (userId transitions non-null → null)
-  const prevUserIdRef = useRef<string | undefined>(undefined);
-
-  // Debounce timer refs
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const clearSearchTimeout = useCallback(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = null;
-    }
-  }, []);
+  const { shareRoute, dismissShareRoute } = useShareRoute();
 
   // Ref for stable delete callback (avoid re-creating handler on every notes change)
   const notesRef = useRef(notes);
   notesRef.current = notes;
 
-  // Track if we've migrated demo content (prevent duplicate migrations)
-  // Using a ref instead of state because:
-  // 1. We don't need to trigger re-renders when this changes
-  // 2. The value persists across renders without causing effect re-runs
-  // 3. Prevents race conditions if multiple effects try to migrate simultaneously
-  const hasMigratedDemoContent = useRef(false);
-  const isCreatingNoteFromShare = useRef(false);
-
-  // Apply theme to document
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('yidhan-theme', theme);
-  }, [theme]);
-
-  // Redirect from /demo to library when user logs in
-  // Using useEffect to avoid state updates during render
+  // Redirect from /demo to library when user logs in.
+  // Replaced, not pushed: Back from the library should not return to a demo the
+  // user has already left behind.
   useEffect(() => {
     if (isDemo && user) {
-      window.history.replaceState({}, '', '/');
-      setIsDemo(false);
+      replaceRoute({ name: 'library' });
     }
-  }, [isDemo, user]);
+  }, [isDemo, user, replaceRoute]);
 
   useEffect(() => {
     if (user && isEncryptionSetup && isUnlocked && view === 'library') {
@@ -777,529 +199,61 @@ function App() {
     }
   }, [user, hasStoredShare]);
 
-  // Fetch notes when user is authenticated and hydration is complete
-  // Use user?.id as dependency to avoid refetching when user object reference changes
-  // (e.g., when Supabase refreshes the session on tab focus)
-  // Wait for hydration to complete so first-time users see their notes from server
-  const userId = user?.id;
-  useEffect(() => {
-    if (!userId || !keys) return;
-    return subscribeToNoteTags(userId, scheduleSyncRefresh, () => { void triggerSync(); });
-  }, [userId, keys, triggerSync, scheduleSyncRefresh]);
+  useDemoMigration({
+    userId: user?.id,
+    keys,
+    isHydrating,
+    setNotes,
+    setTags,
+    onNoteCreated: (noteId) => navigate({ name: 'note', noteId }),
+  });
 
-  // Track if we've bypassed hydration due to timeout (state to trigger re-render)
-  const [hydrationBypassed, setHydrationBypassed] = useState(false);
+  useShareTargetNote({
+    userId: user?.id,
+    keys,
+    sharedData,
+    clearSharedData,
+    setNotes,
+    onNoteCreated: (noteId) => navigate({ name: 'note', noteId }),
+    onNoteTracked: trackNoteCreated,
+    runInTransition: startTransition,
+  });
 
-  // Reset bypass flag when user changes
-  useEffect(() => {
-    setHydrationBypassed(false);
-  }, [userId]);
-
-  // Restore navigation state from sessionStorage on mount (2E)
-  // Stage 1: Set selectedNoteId immediately so it's ready when notes load.
-  // View switch is deferred to stage 2 (after notes load) to avoid flicker.
-  useEffect(() => {
-    if (!userId) return;
-
-    try {
-      const saved = sessionStorage.getItem(`yidhan-nav-${userId}`);
-      if (!saved) return;
-
-      const parsed = JSON.parse(saved);
-      const validViews: ViewMode[] = ['library', 'editor', 'changelog', 'roadmap', 'faded'];
-
-      if (parsed?.selectedNoteId && validViews.includes(parsed.view)) {
-        pendingNavRestoreRef.current = parsed;
-        setSelectedNoteId(parsed.selectedNoteId);
-      }
-    } catch {
-      // Ignore invalid JSON
-    }
-  }, [userId]);
-
-  // Save navigation state to sessionStorage (2E)
-  // Only persist editor view with a selected note — library is the safe default
-  useEffect(() => {
-    if (!userId) return;
-    if (view === 'editor' && selectedNoteId) {
-      sessionStorage.setItem(
-        `yidhan-nav-${userId}`,
-        JSON.stringify({ view, selectedNoteId })
-      );
-    } else if (!pendingNavRestoreRef.current) {
-      // Only clear when no restore is pending — Stage 1 sets selectedNoteId
-      // before Stage 2 sets view='editor', creating a window where
-      // view='library' + selectedNoteId. Clearing here would erase state
-      // before Stage 2 completes (fatal on mobile app-switch/kill).
-      sessionStorage.removeItem(`yidhan-nav-${userId}`);
-    }
-  }, [view, selectedNoteId, userId]);
-
-  useEffect(() => {
-    if (!userId) {
-      setNotes([]);
-      setLoading(false);
-
-      // Only clear navigation state on actual sign-out (userId went non-null → null),
-      // NOT on initial load when userId starts as null during auth hydration (2E fix)
-      if (prevUserIdRef.current) {
-        // Clear all yidhan-nav-* keys
-        Array.from({ length: sessionStorage.length }, (_, i) => sessionStorage.key(i))
-          .filter(key => key?.startsWith('yidhan-nav-'))
-          .forEach(key => key && sessionStorage.removeItem(key));
-      }
-
-      prevUserIdRef.current = undefined;
-      return;
-    }
-    prevUserIdRef.current = userId;
-
-    // Don't fetch until hydration is complete (first-time users need server data)
-    // UNLESS we've already waited too long (failsafe for Android WebView hangs)
-    if (isHydrating && !hydrationBypassed) {
-      setLoading(true);
-
-      // Failsafe: Maximum wait time for hydration (15 seconds)
-      // This ensures the app never gets stuck on "Loading notes..." forever
-      // even if all other timeout mechanisms fail (Android WebView edge cases)
-      const failsafeTimeout = setTimeout(() => {
-        console.warn('Hydration failsafe triggered - bypassing hydration wait');
-        setHydrationBypassed(true); // This triggers a re-render and effect re-run
-      }, 15000);
-
-      return () => clearTimeout(failsafeTimeout);
-    }
-
-    setLoading(true);
-    if (!keys) {
-      setNotes([]);
-      setLoading(false);
-      return;
-    }
-    fetchDecryptedNotes(userId, keys)
-      .then((loadedNotes) => {
-        setNotes(loadedNotes);
-
-        // Stage 2 of nav restore (2E): validate that the saved note still exists,
-        // then switch to the saved view. If the note was deleted, fall back to library.
-        const pending = pendingNavRestoreRef.current;
-        if (pending?.selectedNoteId) {
-          const noteExists = loadedNotes.some(n => n.id === pending.selectedNoteId);
-          if (noteExists) {
-            setView(pending.view);
-          } else {
-            // Note was deleted since last session
-            setSelectedNoteId(null);
-            sessionStorage.removeItem(`yidhan-nav-${userId}`);
-          }
-        }
-      })
-      .catch((error) => {
-        console.error('Failed to decrypt notes:', error);
-        setNotes([]);
-        toast.error('Could not decrypt your notes. Lock and unlock your vault, then try again.');
-      })
-      .finally(() => {
-        pendingNavRestoreRef.current = null;
-        setLoading(false);
-      });
-
-    // Subscribe to real-time changes (also write to IndexedDB to keep IDB in sync)
-    // For E2EE, decrypt notes from the server before updating React state
-    // Uses keysRef to always read the latest keys (avoids stale closure on lock/unlock)
-    const maybeDecrypt = async (note: Note): Promise<Note> => {
-      const currentKeys = keysRef.current;
-      if (currentKeys) {
-        return decryptNoteFromServer(note, userId, currentKeys);
-      }
-      return note;
-    };
-
-    const unsubscribe = subscribeToNotes(
-      userId,
-      (newNote) => {
-        void (async () => {
-          try {
-            await upsertNoteFromServer(userId, newNote);
-          } catch (error) {
-            console.error('Failed to persist realtime note insert:', error);
-            void reportRealtimePersistenceFailure('note', 'insert', error);
-            return;
-          }
-
-          maybeDecrypt(newNote).then((decrypted) => {
-            setNotes((prev) => {
-              // Avoid duplicates
-              if (prev.some((n) => n.id === decrypted.id)) return prev;
-              // New notes from real-time don't have tags; they'll be fetched on next full load
-              // Set syncStatus: 'synced' since this note came from the server
-              return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
-            });
-          }).catch((error) => {
-            console.error('Failed to decrypt realtime note insert for display:', error);
-            reportRealtimeDisplayFailure('insert', error);
-          });
-        })();
-      },
-      (updatedNote) => {
-        void (async () => {
-          try {
-            await upsertNoteFromServer(userId, updatedNote);
-          } catch (error) {
-            console.error('Failed to persist realtime note update:', error);
-            void reportRealtimePersistenceFailure('note', 'update', error);
-            return;
-          }
-
-          // Check if this is a soft-delete (note now has deletedAt set)
-          if (updatedNote.deletedAt) {
-            // Remove from active notes and update faded count
-            setNotes((prev) => prev.filter((n) => n.id !== updatedNote.id));
-            setFadedNotesCount((prev) => prev + 1);
-            if (selectedNoteIdRef.current === updatedNote.id) {
-              setView('library');
-              setSelectedNoteId(null);
-            }
-            return;
-          }
-
-          // Decrypt and update React state
-          maybeDecrypt(updatedNote).then((decrypted) => {
-            // Check if this is a restore (note no longer has deletedAt)
-            // This handles notes restored from another tab
-            setNotes((prev) => {
-              const existingNote = prev.find((n) => n.id === decrypted.id);
-              if (existingNote) {
-                // Note exists, update it preserving tags and local-only fields
-                return prev.map((n) => {
-                  if (n.id === decrypted.id) {
-                    return { ...decrypted, tags: n.tags, syncStatus: n.syncStatus };
-                  }
-                  return n;
-                });
-              } else {
-                // Note doesn't exist in active list (was restored from faded)
-                // Add it back (tags will be empty, will refresh on next full load)
-                // Set syncStatus: 'synced' since this came from the server
-                setFadedNotesCount((prev) => Math.max(0, prev - 1));
-                return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
-              }
-            });
-          }).catch((error) => {
-            console.error('Failed to decrypt realtime note update for display:', error);
-            reportRealtimeDisplayFailure('update', error);
-          });
-        })();
-      },
-      (deletedId) => {
-        deleteNoteFromServer(userId, deletedId)
-          .then((result) => {
-            if (!result.deleted) {
-              setNotes((prev) =>
-                prev.map((note) =>
-                  note.id === deletedId ? { ...note, syncStatus: 'conflict' as const } : note
-                )
-              );
-
-              reportConflict({
-                entityType: 'note',
-                entityId: deletedId,
-                localVersion: result.localNote,
-                serverVersion: buildDeletedServerVersion(result.localNote),
-              });
-              return;
-            }
-
-            setNotes((prev) => prev.filter((n) => n.id !== deletedId));
-            if (selectedNoteIdRef.current === deletedId) {
-              setView('library');
-              setSelectedNoteId(null);
-            }
-          })
-          .catch((error) => {
-            console.error('Failed to persist realtime note delete:', error);
-            void reportRealtimePersistenceFailure('note', 'delete', error);
-          });
-      }
-    );
-
-    return () => unsubscribe();
-  }, [userId, keys, isHydrating, hydrationBypassed, reportRealtimeDisplayFailure, reportRealtimePersistenceFailure]);
-
-  // Migrate demo content from landing page to user's first note
-  // Dependency: userId (string) instead of user (object) because:
-  // 1. Using the full user object would cause unnecessary re-runs on any user property change
-  // 2. We only care about identity (userId), not other user metadata
-  // 3. String comparison is stable; object reference changes on every auth state update
-  useEffect(() => {
-    if (!userId) {
-      hasMigratedDemoContent.current = false;
-      return;
-    }
-    if (hasMigratedDemoContent.current) return;
-
-    const demoContent = localStorage.getItem(DEMO_CONTENT_STORAGE_KEY);
-    if (!demoContent?.trim()) {
-      return;
-    }
-
-    // Wait for encryption keys before creating note so demo content is encrypted.
-    if (!keys) return;
-
-    hasMigratedDemoContent.current = true;
-
-    // Create note with demo content (sanitize and wrap plain text in paragraph tags for Tiptap)
-    const sanitized = sanitizeText(demoContent);
-    const htmlContent = `<p>${sanitized.replace(/\n/g, '</p><p>')}</p>`;
-    createEncryptedNote(userId, 'My first note', htmlContent, keys)
-      .then((newNote) => {
-        // Clear demo content from localStorage
-        localStorage.removeItem(DEMO_CONTENT_STORAGE_KEY);
-        // Show toast notification
-        toast.success('Your first note has been saved!');
-        // Add to notes list
-        setNotes((prev) => [newNote, ...prev]);
-        // Open the note in editor
-        setSelectedNoteId(newNote.id);
-        setView('editor');
-      })
-      .catch((error: unknown) => {
-        console.error('Failed to migrate demo content:', error);
-        // Reset flag so user can try again
-        hasMigratedDemoContent.current = false;
-      });
-  }, [userId, keys]);
-
-  // Migrate demo notes to authenticated user's account
-  // IMPORTANT: Must wait for hydration to complete to avoid:
-  // 1. needsHydration returning false (skipping server pull)
-  // 2. Hydration clearing IndexedDB and losing demo notes
-  const hasMigratedDemoNotes = useRef(false);
-  useEffect(() => {
-    // Gate on hydration complete to avoid race conditions
-    if (isHydrating) return;
-    if (!userId) {
-      hasMigratedDemoNotes.current = false;
-      return;
-    }
-    if (hasMigratedDemoNotes.current) return;
-
-    // Wait for encryption keys before migrating so demo notes are encrypted.
-    if (!keys) return;
-
-    // Check if user has demo notes to migrate
-    if (!hasDemoState()) {
-      hasMigratedDemoNotes.current = true;
-      return;
-    }
-
-    hasMigratedDemoNotes.current = true;
-
-    // Migrate demo data asynchronously
-    (async () => {
-      try {
-        const { migratedNotes, newTags, noteCount } = await migrateDemoToAccount(userId, keys);
-
-        if (noteCount === 0) return;
-
-        // Update React state with migrated data
-        if (newTags.length > 0) {
-          setTags((prev) => [...prev, ...newTags].sort((a, b) => a.name.localeCompare(b.name)));
-        }
-        setNotes((prev) => [...migratedNotes, ...prev]);
-
-        toast.success(
-          noteCount === 1
-            ? 'Your demo note has been migrated!'
-            : `${noteCount} demo notes have been migrated!`
-        );
-      } catch (error) {
-        console.error('Failed to migrate demo notes:', error);
-        toast.error('Some notes could not be migrated. Please try refreshing.');
-        // Don't clear demo state on error so user can retry
-        hasMigratedDemoNotes.current = false;
-      }
-    })();
-  }, [userId, isHydrating, keys]);
-
-  // Handle Share Target data for authenticated users
-  useEffect(() => {
-    if (!userId || !sharedData) return;
-    // Prevent duplicate note creation (race condition in Strict Mode)
-    if (isCreatingNoteFromShare.current) return;
-
-    // Wait for encryption keys before creating note.
-    // Without this guard, the fallback would create a plaintext note
-    // before the passphrase gate renders.
-    if (!keys) return;
-
-    isCreatingNoteFromShare.current = true;
-
-    const { title, content } = formatSharedContent(sharedData);
-
-    createEncryptedNote(userId, title, content, keys)
-      .then((newNote) => {
-        clearSharedData();
-        trackNoteCreated();
-        toast.success('Note created from share');
-        startTransition(() => {
-          setNotes((prev) => [newNote, ...prev]);
-          setSelectedNoteId(newNote.id);
-          setView('editor');
-        });
-      })
-      .catch((error: unknown) => {
-        console.error('Failed to create note from share:', error);
-        toast.error('Failed to create note from share');
-      })
-      .finally(() => {
-        // Reset flag to allow future share-target launches in same session
-        isCreatingNoteFromShare.current = false;
-      });
-  }, [userId, sharedData, keys, clearSharedData, trackNoteCreated, startTransition]);
-
-  // Fetch tags when user is authenticated and hydration is complete
-  useEffect(() => {
-    if (!userId) {
-      setTags([]);
-      setSelectedTagIds([]);
-      return;
-    }
-
-    // Don't fetch until hydration is complete (first-time users need server data)
-    if (isHydrating) return;
-
-    fetchTagsOffline(userId)
-      .then(setTags)
-      .catch(console.error);
-
-    // Subscribe to real-time tag changes (also write to IndexedDB to keep IDB in sync)
-    const unsubscribeTags = subscribeToTags(
-      userId,
-      (newTag) => {
-        upsertTagFromServer(userId, newTag)
-          .then(() => {
-            setTags((prev) => {
-              if (prev.some((t) => t.id === newTag.id)) return prev;
-              return [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name));
-            });
-            // Membership and tag-definition events can arrive in either order.
-            scheduleSyncRefresh();
-          })
-          .catch((error) => {
-            console.error('Failed to persist realtime tag insert:', error);
-            void reportRealtimePersistenceFailure('tag', 'insert', error);
-          });
-      },
-      (updatedTag) => {
-        upsertTagFromServer(userId, updatedTag)
-          .then(() => {
-            setTags((prev) =>
-              prev.map((t) => (t.id === updatedTag.id ? updatedTag : t))
-            );
-            scheduleSyncRefresh();
-          })
-          .catch((error) => {
-            console.error('Failed to persist realtime tag update:', error);
-            void reportRealtimePersistenceFailure('tag', 'update', error);
-          });
-      },
-      (deletedId) => {
-        deleteTagFromServer(userId, deletedId)
-          .then(() => {
-            setTags((prev) => prev.filter((t) => t.id !== deletedId));
-            setSelectedTagIds((prev) => prev.filter((id) => id !== deletedId));
-            scheduleSyncRefresh();
-          })
-          .catch((error) => {
-            console.error('Failed to persist realtime tag delete:', error);
-            void reportRealtimePersistenceFailure('tag', 'delete', error);
-          });
-      }
-    );
-
-    return () => unsubscribeTags();
-  }, [userId, isHydrating, reportRealtimePersistenceFailure, scheduleSyncRefresh]);
-
-  // Fetch faded notes count when user is authenticated and hydration is complete
-  useEffect(() => {
-    if (!userId) {
-      setFadedNotesCount(0);
-      setFadedNotes([]);
-      return;
-    }
-
-    // Don't fetch until hydration is complete (first-time users need server data)
-    if (isHydrating) return;
-
-    // Cleanup expired notes first, then fetch count
-    // This ensures users never see notes past their 30-day window
-    cleanupExpiredFadedNotes()
-      .then(() => countFadedNotesOffline(userId))
-      .then(setFadedNotesCount)
-      .catch(console.error);
-  }, [userId, isHydrating]);
-
-  // Sort notes: pinned first, then by most recent (memoized to avoid O(n log n) on every render)
-  const sortedNotes = useMemo(() => {
-    return [...notes].sort((a, b) => {
-      // Pinned notes come first
-      if (a.pinned && !b.pinned) return -1;
-      if (!a.pinned && b.pinned) return 1;
-      // Within same pin status, sort by updated time
-      return b.updatedAt.getTime() - a.updatedAt.getTime();
-    });
-  }, [notes]);
-
-  // Tag-filtered notes (pre-search baseline)
-  const tagFilteredNotes = useMemo(() => {
-    if (selectedTagIds.length === 0) return sortedNotes;
-
-    return sortedNotes.filter((note) => {
-      const noteTagIds = note.tags.map((t) => t.id);
-      return selectedTagIds.every((tagId) => noteTagIds.includes(tagId));
-    });
-  }, [sortedNotes, selectedTagIds]);
+  const displayNotes = useVisibleNotes(notes, selectedTagIds, debouncedSearchQuery);
 
   const selectedNoteRecord = notes.find((n) => n.id === selectedNoteId);
-  // A locked note is never opened. Its title and content are empty by construction, so
-  // the editor would show a blank draft over real ciphertext — and the first autosave
-  // would overwrite the note with nothing (item 41).
   const selectedNote = selectedNoteRecord?.decryptionFailed ? undefined : selectedNoteRecord;
-
-  useEffect(() => {
-    if (!selectedNoteRecord?.decryptionFailed) return;
-    startTransition(() => {
-      setView('library');
-      setSelectedNoteId(null);
-    });
-    toast('That note could not be opened on this device.');
-  }, [selectedNoteRecord, startTransition]);
+  // `replaceRoute`, not a push: the reader arrived at `/n/<locked>`, and pushing `/`
+  // would leave that address one Back away.
+  const { retryLockedNotes } = useLockedNotes({
+    openNote: selectedNoteRecord,
+    userId: user?.id,
+    keys,
+    setNotes,
+    onLockedNoteOpened: useCallback(() => replaceRoute({ name: 'library' }), [replaceRoute]),
+  });
 
   const handleNoteClick = useCallback((id: string) => {
     void warmEditorRoute().then(() => {
-      startTransition(() => {
-        setSelectedNoteId(id);
-        setView('editor');
-      });
+      navigateToRoute({ name: 'note', noteId: id });
     });
-  }, [startTransition, warmEditorRoute]);
+  }, [navigateToRoute, warmEditorRoute]);
 
+  // Back from a note is an ordinary navigation, not a history pop: the reader may
+  // have arrived at `/n/<id>` directly, in which case there is nothing behind it.
+  // The scroll offset is restored either way, because the router files it by history
+  // entry rather than by address.
   const handleBack = () => {
-    startTransition(() => {
-      setView('library');
-      setSelectedNoteId(null);
-    });
+    navigateToRoute({ name: 'library' });
   };
 
   const requestLibrarySearch = useCallback(() => {
+    navigateToRoute({ name: 'library' });
     startTransition(() => {
-      setView('library');
-      setSelectedNoteId(null);
-      setSearchFocusToken((prev) => prev + 1);
+      requestSearchFocus();
     });
     scheduleSearchFocus(LIBRARY_SEARCH_INPUT_ID);
-  }, [startTransition]);
+  }, [navigateToRoute, requestSearchFocus, startTransition]);
 
   const handleNewNote = useCallback(async () => {
     if (!user) return;
@@ -1313,861 +267,119 @@ function App() {
       await warmEditorRoute();
       startTransition(() => {
         setNotes((prev) => [newNote, ...prev]);
-        setSelectedNoteId(newNote.id);
-        setView('editor');
+        navigate({ name: 'note', noteId: newNote.id });
       });
     } catch (error) {
       console.error('Failed to create note:', error);
     }
-  }, [user, keys, startTransition, trackNoteCreated, warmEditorRoute]);
+  }, [user, keys, navigate, setNotes, startTransition, trackNoteCreated, warmEditorRoute]);
 
-  const handleCreateNoteShortcut = useEffectEvent((e: KeyboardEvent) => {
-    // Only trigger in library view when user is logged in
-    if (!user || view !== 'library') return;
-
-    // Check for Cmd+N (Mac) or Ctrl+N (Windows/Linux)
-    if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
-      e.preventDefault();
-      handleNewNote();
-    }
-  });
-
-  const handleLibrarySearchShortcut = useEffectEvent((e: KeyboardEvent) => {
-    if (!user || view === 'editor') return;
-
-    const isSearchKey = e.code === 'KeyK' || e.key.toLowerCase() === 'k';
-    if (!(e.metaKey || e.ctrlKey) || e.altKey || !isSearchKey) {
-      return;
-    }
-
-    const target = e.target as HTMLElement | null;
-    if (
-      target &&
-      (target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT' ||
-        target.isContentEditable)
-    ) {
-      return;
-    }
-
-    e.preventDefault();
-
-    if (view === 'library') {
-      setSearchFocusToken((prev) => prev + 1);
+  useAppShortcuts({
+    enabled: Boolean(user),
+    view,
+    onNewNote: () => { void handleNewNote(); },
+    onFocusSearch: () => {
+      requestSearchFocus();
       scheduleSearchFocus(LIBRARY_SEARCH_INPUT_ID);
-      return;
-    }
-
-    requestLibrarySearch();
+    },
+    onRequestLibrarySearch: requestLibrarySearch,
+    onShowShortcuts: () => setShowShortcutsModal(true),
   });
 
-  // Keyboard shortcut: Cmd/Ctrl + N to create new note
-  useEffect(() => {
-    window.addEventListener('keydown', handleCreateNoteShortcut);
-    return () => window.removeEventListener('keydown', handleCreateNoteShortcut);
-  }, []);
+  const { handleNoteUpdate, handleNoteDelete, handleTogglePin } = useNoteActions({
+    userId: user?.id,
+    keys,
+    notes,
+    notesRef,
+    setNotes,
+    setFadedNotesCount,
+    openNoteIdRef: selectedNoteIdRef,
+    onOpenNoteClosed: () => replaceRoute({ name: 'library' }),
+    triggerCoalescedSync,
+  });
 
-  useEffect(() => {
-    document.addEventListener('keydown', handleLibrarySearchShortcut, true);
-    return () => document.removeEventListener('keydown', handleLibrarySearchShortcut, true);
-  }, []);
+  const {
+    fadedNotes,
+    fadedNotesLoading,
+    handleRestoreNote,
+    handlePermanentDelete,
+    handleEmptyFadedNotes,
+  } = useFadedNotes({
+    userId: user?.id,
+    keys,
+    isViewingFaded: view === 'faded',
+    setNotes,
+    setFadedNotesCount,
+  });
 
-  // Keyboard shortcut: ? to show keyboard shortcuts modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only trigger when user is logged in and in library view
-      // Don't trigger if focus is in an input/textarea
-      if (!user || view !== 'library') return;
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        return;
-      }
-
-      if (e.key === '?') {
-        e.preventDefault();
-        setShowShortcutsModal(true);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [user, view]);
-
-  // Note update with offline-first approach
-  // Writes to IndexedDB immediately, queues for sync
-  // Returns a Promise so Editor can track save status accurately
-  const handleNoteUpdate = useCallback(async (updatedNote: Note): Promise<void> => {
-    // Only the locked vault gets the unlock message; a missing user is a
-    // different failure and must not be told to unlock anything.
-    if (!user) throw new Error('Cannot save without a signed-in user');
-    if (!keys) throw new VaultLockedSaveError();
-    // Backstop for the guard above: never write over a note this device could not
-    // read. An empty save here would destroy the ciphertext another device can open.
-    if (notesRef.current.find((n) => n.id === updatedNote.id)?.decryptionFailed) {
-      throw new Error('This note could not be opened on this device, so it was not saved.');
-    }
-
-    // Store previous state for potential rollback
-    const previousNote = notes.find((n) => n.id === updatedNote.id);
-
-    // Update local state immediately for responsiveness (optimistic update)
-    // Set syncStatus: 'pending' so the pending→synced transition is observable (3A)
-    setNotes((prev) =>
-      prev.map((n) => (n.id === updatedNote.id ? { ...updatedNote, syncStatus: 'pending' as const } : n))
-    );
-
-    try {
-      // Encrypt and save to IndexedDB (immediate, works offline)
-      // Sync engine will push encrypted payload to server when online
-      const savedNote = await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
-
-      // applySavedNote carries the same late-acknowledgement guard and also
-      // keeps a pin or soft delete that landed mid-save.
-      setNotes((prev) => prev.map((n) => applySavedNote(n, savedNote, updatedNote)));
-
-      // Trigger coalesced sync (2s after last save) to push changes promptly
-      triggerCoalescedSync();
-    } catch (error) {
-      console.error('Note save failed:', error);
-
-      // Rollback optimistic update
-      if (previousNote) {
-        setNotes((prev) =>
-          prev.map((n) => (n.id === updatedNote.id ? previousNote : n))
-        );
-      }
-
-      // Re-throw so the editor can show its persistent "Not saved" banner,
-      // which carries the Retry and Copy actions. A toast here would be a
-      // second, auto-dismissing notice for the same failure.
-      throw error;
-    }
-  }, [user, keys, notes, triggerCoalescedSync]);
-
-  // Soft delete a note (move to Faded Notes)
-  // Returns true on success, false on failure (for UI recovery in swipe gestures)
-  const handleNoteDelete = useCallback(async (id: string): Promise<boolean> => {
-    if (!user) return false;
-
-    // Find the note before deleting (for potential undo) — read from ref for callback stability
-    const deletedNote = notesRef.current.find((n) => n.id === id);
-
-    try {
-      await softDeleteNoteOffline(user.id, id);
-      setNotes((prev) => prev.filter((n) => n.id !== id));
-      setFadedNotesCount((prev) => prev + 1);
-      if (selectedNoteIdRef.current === id) {
-        setView('library');
-        setSelectedNoteId(null);
-      }
-
-      // Show toast with undo button
-      toast(
-        (t) => (
-          <div className="flex items-center gap-3">
-            <span>Note moved to Faded Notes</span>
-            <button type="button"
-              onClick={async () => {
-                toast.dismiss(t.id);
-                try {
-                  await restoreNoteOffline(user.id, id);
-                  if (deletedNote) {
-                    setNotes((prev) => [{ ...deletedNote, deletedAt: null }, ...prev]);
-                  }
-                  setFadedNotesCount((prev) => Math.max(0, prev - 1));
-                  toast.success('Note restored');
-                } catch {
-                  toast.error('Failed to undo');
-                }
-              }}
-              className="px-2 py-1 text-sm font-medium rounded transition-colors"
-              style={{
-                background: 'var(--color-cta-bg)',
-                color: 'var(--color-cta-text)',
-              }}
-            >
-              Undo
-            </button>
-          </div>
-        ),
-        { duration: 5000 }
-      );
-      return true;
-    } catch (error) {
-      console.error('Failed to delete note:', error);
-      toast.error('Failed to delete note');
-      return false;
-    }
-  }, [user]);
-
-  // Restore a note from Faded Notes
-  const handleRestoreNote = async (id: string) => {
-    if (!user) return;
-
-    try {
-      await restoreNoteOffline(user.id, id);
-      // Find the note in fadedNotes and move it back
-      const restoredNote = fadedNotes.find((n) => n.id === id);
-      if (restoredNote) {
-        setFadedNotes((prev) => prev.filter((n) => n.id !== id));
-        setNotes((prev) => [{ ...restoredNote, deletedAt: null }, ...prev]);
-      }
-      setFadedNotesCount((prev) => Math.max(0, prev - 1));
-      toast.success('Note restored');
-    } catch (error) {
-      console.error('Failed to restore note:', error);
-      toast.error('Failed to restore note');
-    }
-  };
-
-  // Permanently delete a note
-  const handlePermanentDelete = async (id: string) => {
-    if (!user) return;
-
-    try {
-      await permanentDeleteNoteOffline(user.id, id);
-      setFadedNotes((prev) => prev.filter((n) => n.id !== id));
-      setFadedNotesCount((prev) => Math.max(0, prev - 1));
-      toast.success('Note permanently deleted');
-    } catch (error) {
-      console.error('Failed to permanently delete note:', error);
-      toast.error('Failed to delete note');
-    }
-  };
-
-  // Empty all faded notes
-  const handleEmptyFadedNotes = async () => {
-    try {
-      await emptyFadedNotes();
-      setFadedNotes([]);
-      setFadedNotesCount(0);
-      toast.success('All faded notes deleted');
-    } catch (error) {
-      console.error('Failed to empty faded notes:', error);
-      toast.error('Failed to empty faded notes');
-    }
-  };
-
-  // Navigate to Faded Notes view
-  const handleFadedNotesClick = async () => {
+  const handleFadedNotesClick = () => {
     if (!user) return;
     if (!keys) {
       toast.error('Please unlock your vault first');
       return;
     }
-
-    startTransition(() => {
-      setView('faded');
-    });
-    setFadedNotesLoading(true);
-    try {
-      const faded = await fetchDecryptedFadedNotes(user.id, keys);
-      setFadedNotes(faded);
-    } catch (error) {
-      console.error('Failed to fetch faded notes:', error);
-      toast.error('Failed to load faded notes');
-    } finally {
-      setFadedNotesLoading(false);
-    }
+    navigateToRoute({ name: 'faded' });
   };
 
-  const handleTogglePin = useCallback(async (id: string, pinned: boolean) => {
-    if (!user) return;
+  const {
+    activeConflict,
+    isRetryingBlockedChanges,
+    handleConflictResolve,
+    handleConflictDismiss,
+    handleRefresh,
+    handleRetryBlockedChanges,
+  } = useSyncActions({
+    userId: user?.id,
+    keys,
+    setNotes,
+    setTags,
+    conflicts,
+    removeConflict,
+    triggerSync,
+    openNoteIdRef: selectedNoteIdRef,
+    onOpenNoteClosed: () => replaceRoute({ name: 'library' }),
+  });
 
-    try {
-      // Update local state immediately for responsiveness
-      setNotes((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, pinned } : n))
-      );
-      // Persist to IndexedDB, queue for sync
-      await toggleNotePinOffline(user.id, id, pinned);
-    } catch (error) {
-      console.error('Failed to toggle pin:', error);
-      // Revert on error
-      setNotes((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, pinned: !pinned } : n))
-      );
-    }
-  }, [user]);
+  const {
+    showTagModal,
+    editingTag,
+    handleTagToggle,
+    handleClearTagFilter,
+    handleAddTag,
+    handleEditTag,
+    handleSaveTag,
+    handleDeleteTag,
+    handleCloseTagModal,
+    handleNoteTagToggle,
+  } = useTagActions({
+    userId: user?.id,
+    notes,
+    tags,
+    setNotes,
+    setTags,
+    setSelectedTagIds,
+  });
 
-  const handleThemeToggle = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
-  };
+  // Item 29: a note address that no longer resolves. The editor used to `return null`
+  // here, which left a blank page and a URL still claiming to point at a note. Wait
+  // until the notes have actually loaded and the vault is open before deciding a note
+  // is missing — otherwise a refresh would evict the reader from a note that was
+  // simply still decrypting.
+  // `selectedNoteRecord`, not `selectedNote`: a locked note (item 41) is present but
+  // deliberately not opened, and it is not missing. Testing the filtered value would
+  // fire this alongside the locked-note redirect above and tell the reader their note
+  // is gone when it is sitting on the server, readable elsewhere.
+  const missingNoteId =
+    route.name === 'note' && user && isUnlocked && !loading && !selectedNoteRecord
+      ? route.noteId
+      : null;
 
-  // Conflict resolution handler
-  const handleConflictResolve = async (choice: 'local' | 'server' | 'both') => {
-    if (!activeConflict || !user) return;
-    if (!keys) {
-      toast.error('Please unlock your vault before resolving sync conflicts');
-      return;
-    }
-
-    const conflictToResolve = activeConflict;
-
-    try {
-      await resolveConflict(user.id, conflictToResolve, choice, keys);
-      removeConflict(conflictToResolve.entityId);
-      setActiveConflict(null);
-
-      // Refresh notes from IndexedDB after conflict resolution
-      const refreshedNotes = await fetchDecryptedNotes(user.id, keys);
-      setNotes(refreshedNotes);
-
-      const resolvedOriginalMissing = !refreshedNotes.some(
-        (note) => note.id === conflictToResolve.entityId
-      );
-      if (
-        selectedNoteIdRef.current === conflictToResolve.entityId &&
-        resolvedOriginalMissing
-      ) {
-        setView('library');
-        setSelectedNoteId(null);
-      }
-    } catch (error) {
-      console.error('Failed to resolve conflict:', error);
-      toast.error('Failed to resolve conflict. Please try again.');
-      // Still remove the conflict to prevent infinite retry loops
-      // User can trigger a sync to re-detect conflicts if needed
-      removeConflict(conflictToResolve.entityId);
-      setActiveConflict(null);
-    }
-  };
-
-  const handleConflictDismiss = () => {
-    if (activeConflict) {
-      removeConflict(activeConflict.entityId);
-    }
-    setActiveConflict(null);
-  };
-
-  // Pull-to-refresh handler - syncs with server first, then rehydrates state
-  // A locked card's retry: re-read the library and try the ciphertext again. The vault
-  // may have been unlocked with the right passphrase since the failed read.
-  const handleRetryLockedNotes = useCallback(async () => {
-    if (!user || !keys) return;
-    try {
-      setNotes(await fetchDecryptedNotes(user.id, keys));
-    } catch (error) {
-      console.error('Failed to re-read notes:', error);
-      toast.error('Could not open those notes. Lock and unlock your vault, then try again.');
-    }
-  }, [user, keys]);
-
-  const handleRefresh = useCallback(async () => {
-    if (!user) return;
-    if (!keys) {
-      toast.error('Please unlock your vault first');
-      return;
-    }
-
-    try {
-      // Sync with server first (push + pull)
-      const { outcome } = await triggerSync();
-
-      // Rehydrate React state from IndexedDB (now has fresh server data)
-      const refreshedNotes = await fetchDecryptedNotes(user.id, keys);
-      setNotes(refreshedNotes);
-      const refreshedTags = await fetchTagsOffline(user.id);
-      setTags(refreshedTags);
-
-      // Show outcome-specific feedback
-      switch (outcome) {
-        case 'ok':
-          toast.success('Notes refreshed', { duration: 1500 });
-          break;
-        case 'partial':
-          toast('Refreshed, but some changes couldn\u2019t sync', {
-            duration: 3000,
-            icon: '\u26A0\uFE0F',
-          });
-          break;
-        case 'offline':
-          toast('You\u2019re offline. Showing local notes.', {
-            duration: 2000,
-          });
-          break;
-        case 'error':
-          toast.error('Couldn\u2019t reach server. Showing local notes.', {
-            duration: 3000,
-          });
-          break;
-      }
-    } catch (error) {
-      console.error('Refresh failed:', error);
-      toast.error('Failed to refresh notes');
-    }
-  }, [user, triggerSync, keys]);
-
-  const handleRetryBlockedChanges = useCallback(async () => {
-    if (!user || isRetryingBlockedChanges) {
-      return;
-    }
-
-    setIsRetryingBlockedChanges(true);
-    try {
-      const retriedCount = await retryBlockedSyncEntries(user.id);
-      if (retriedCount === 0) {
-        return;
-      }
-
-      const { outcome } = await triggerSync();
-
-      if (outcome === 'ok') {
-        toast.success('Blocked changes sent again', { duration: 2000 });
-        return;
-      }
-
-      if (outcome === 'offline') {
-        toast('Queued blocked changes for the next connection.', {
-          duration: 2500,
-        });
-        return;
-      }
-
-      // Say why. A bare "still need attention" is what left blocked changes
-      // undiagnosable — the reason is already recorded on the queue entry.
-      // The raw Postgres text goes to the console; the toast stays readable.
-      const rawReason = await getBlockedSyncReason(user.id);
-      if (rawReason) console.warn('[sync] blocked entry:', rawReason);
-      const reason = describeSyncFailure(rawReason);
-      toast(
-        reason
-          ? `Some changes are still blocked. ${reason}`
-          : 'Retried blocked changes, but some still need attention.',
-        {
-          duration: 6000,
-          icon: '\u26A0\uFE0F',
-        }
-      );
-    } catch (error) {
-      console.error('Failed to retry blocked changes:', error);
-      toast.error('Failed to retry blocked changes');
-    } finally {
-      setIsRetryingBlockedChanges(false);
-    }
-  }, [user, triggerSync, isRetryingBlockedChanges]);
-
-  // Tag filter handlers
-  const handleTagToggle = (tagId: string) => {
-    // Tag toggle preserves search query — displayNotes re-filters via useMemo
-    setSelectedTagIds((prev) =>
-      prev.includes(tagId)
-        ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId]
-    );
-  };
-
-  const handleClearTagFilter = () => {
-    setSelectedTagIds([]);
-  };
-
-  const handleAddTag = () => {
-    setShowTagModal(true);
-  };
-
-  const handleEditTag = (tag: Tag) => {
-    setEditingTag(tag);
-    setShowTagModal(true);
-  };
-
-  const handleSaveTag = async (name: string, color: import('./types').TagColor) => {
-    if (!user) return;
-
-    if (editingTag) {
-      // Update existing tag
-      const updated = await updateTagOffline(user.id, editingTag.id, { name, color });
-      setTags((prev) =>
-        prev.map((t) => (t.id === updated.id ? updated : t)).sort((a, b) => a.name.localeCompare(b.name))
-      );
-      // Update tags in notes that have this tag
-      setNotes((prev) =>
-        prev.map((note) => ({
-          ...note,
-          tags: note.tags.map((t) => (t.id === updated.id ? updated : t)),
-        }))
-      );
-    } else {
-      // Create new tag
-      const newTag = await createTagOffline(user.id, name, color);
-      setTags((prev) => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)));
-    }
-    setEditingTag(null);
-  };
-
-  const handleDeleteTag = async () => {
-    if (!editingTag || !user) return;
-    await deleteTagOffline(user.id, editingTag.id);
-    setTags((prev) => prev.filter((t) => t.id !== editingTag.id));
-    setSelectedTagIds((prev) => prev.filter((id) => id !== editingTag.id));
-    // Remove tag from all notes locally
-    setNotes((prev) =>
-      prev.map((note) => ({
-        ...note,
-        tags: note.tags.filter((t) => t.id !== editingTag.id),
-      }))
-    );
-    setEditingTag(null);
-  };
-
-  const handleCloseTagModal = () => {
-    setShowTagModal(false);
-    setEditingTag(null);
-  };
-
-  // Toggle tag on a note (add or remove)
-  const handleNoteTagToggle = async (noteId: string, tagId: string) => {
-    if (!user) return;
-
-    const note = notes.find((n) => n.id === noteId);
-    if (!note) return;
-
-    const hasTag = note.tags.some((t) => t.id === tagId);
-    const tag = tags.find((t) => t.id === tagId);
-
-    try {
-      if (hasTag) {
-        await removeTagFromNoteOffline(user.id, noteId, tagId);
-        // Update local state
-        setNotes((prev) =>
-          prev.map((n) =>
-            n.id === noteId
-              ? { ...n, tags: n.tags.filter((t) => t.id !== tagId) }
-              : n
-          )
-        );
-      } else if (tag) {
-        await addTagToNoteOffline(user.id, noteId, tagId);
-        // Update local state
-        setNotes((prev) =>
-          prev.map((n) =>
-            n.id === noteId
-              ? { ...n, tags: [...n.tags, tag] }
-              : n
-          )
-        );
-      }
-    } catch (error) {
-      console.error('Failed to toggle tag:', error);
-    }
-  };
-
-  // Debounced search handler
-  const handleSearchChange = useCallback((query: string) => {
-    setSearchQuery(query);
-
-    clearSearchTimeout();
-
-    if (!query.trim()) {
-      setDebouncedSearchQuery('');
-      return;
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      searchTimeoutRef.current = null;
-      setDebouncedSearchQuery(query);
-    }, 300);
-  }, [clearSearchTimeout]);
-
-  // Clean up search timeout on unmount
   useEffect(() => {
-    return clearSearchTimeout;
-  }, [clearSearchTimeout]);
+    if (!missingNoteId) return;
+    replaceRoute({ name: 'library' });
+    toast('That note is no longer here.');
+  }, [missingNoteId, replaceRoute]);
 
-  // Apply debounced search on top of tag-filtered notes
-  const displayNotes = useNoteSearch(tagFilteredNotes, debouncedSearchQuery);
-
-  const isSearching = debouncedSearchQuery.trim().length > 0;
-
-  // Export to JSON
-  // Opening a `.yidhan` backup. The import handler is declared below, so it is reached
-  // through a ref — the alternative is hoisting the whole 200-line import path above
-  // this, which buys nothing.
-  const handleImportFileRef = useRef<(file: File, decrypted?: string) => Promise<void>>(
-    async () => undefined
-  );
-
-  const handleOpenBackup = useCallback(async (passphrase: string) => {
-    const file = pendingBackupFile;
-    if (!file) return;
-
-    setIsOpeningBackup(true);
-    setBackupRestoreError(null);
-    try {
-      const payload = await openEncryptedBackup(await readFileAsText(file), passphrase);
-      setPendingBackupFile(null);
-      await handleImportFileRef.current(file, payload);
-    } catch (error) {
-      // A damaged file and a wrong passphrase are different problems, and only one of
-      // them is something the reader can do anything about. Say which.
-      const message =
-        error instanceof BackupFormatError || error instanceof BackupPassphraseError
-          ? error.message
-          : 'That backup could not be opened.';
-      console.error('Failed to open backup:', error);
-      setBackupRestoreError(message);
-    } finally {
-      setIsOpeningBackup(false);
-    }
-  }, [pendingBackupFile]);
-
-  // An export that quietly omits notes is worse than one that says it did. A note whose
-  // ciphertext would not open has nothing to write, so it is left out and counted
-  // (item 41).
-  const reportOmittedFromExport = useCallback((noteList: Note[]) => {
-    const { omittedCount } = partitionExportableNotes(noteList);
-    const message = describeOmittedNotes(omittedCount);
-    if (message) toast(message, { duration: 6000, icon: '\u26A0\uFE0F' });
-  }, []);
-
-  const handleExportJSON = useCallback(() => {
-    const json = exportNotesToJSON(notes, tags);
-    const now = new Date();
-    const date = now.toISOString().split('T')[0];
-    const time = now.toTimeString().slice(0, 8).replace(/:/g, ''); // HHMMSS
-    downloadFile(json, `yidhan-backup-${date}-${time}.json`, 'application/json');
-    reportOmittedFromExport(notes);
-  }, [notes, tags, reportOmittedFromExport]);
-
-  // Export to Markdown
-  const handleExportMarkdown = useCallback(() => {
-    downloadMarkdownZip(notes);
-    reportOmittedFromExport(notes);
-  }, [notes, reportOmittedFromExport]);
-
-  // Import file (JSON or Markdown)
-  const handleImportFile = useCallback(async (file: File, decryptedBackup?: string) => {
-    if (!user) return;
-    if (!keys) {
-      toast.error('Please unlock your vault before importing notes');
-      return;
-    }
-
-    // Validate file size before reading
-    if (file.size > MAX_IMPORT_FILE_SIZE) {
-      const maxSizeMB = Math.round(MAX_IMPORT_FILE_SIZE / (1024 * 1024));
-      toast.error(`File too large. Maximum size is ${maxSizeMB}MB.`);
-      return;
-    }
-
-    // A `.yidhan` backup is sealed under a passphrase the reader chose, which nothing
-    // here knows. Ask for it first; the decrypted payload comes back through the
-    // second argument and takes the ordinary JSON path from there (item 38).
-    if (file.name.endsWith(BACKUP_FILE_EXTENSION) && decryptedBackup === undefined) {
-      setPendingBackupFile(file);
-      setBackupRestoreError(null);
-      return;
-    }
-
-    setImportProgress({ isImporting: true, current: 0, total: 0, phase: 'parsing' });
-    try {
-      const content = decryptedBackup ?? (await readFileAsText(file));
-      const isJSON = decryptedBackup !== undefined || file.name.endsWith('.json');
-      const isMarkdown = file.name.endsWith('.md') || file.name.endsWith('.markdown');
-
-      if (isJSON) {
-        // Import JSON backup with validation
-        const data = parseImportedJSON(content);
-        const totalNotes = data.notes.length;
-
-        setImportProgress({ isImporting: true, current: 0, total: totalNotes, phase: 'importing' });
-
-        // Create tags first (if they don't exist)
-        const tagMap = new Map<string, string>(); // name -> id
-        for (const tagData of data.tags) {
-          const existingTag = tags.find(t => t.name.toLowerCase() === tagData.name.toLowerCase());
-          if (existingTag) {
-            tagMap.set(tagData.name, existingTag.id);
-          } else {
-            const newTag = await createTagOffline(user.id, tagData.name, tagData.color as import('./types').TagColor);
-            tagMap.set(tagData.name, newTag.id);
-            setTags(prev => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)));
-          }
-        }
-
-        // Prepare notes for batch insert (keep original tags for later)
-        const originalTagsMap = new Map<number, string[]>();
-        const notesToImport = data.notes.map((noteData, index) => {
-          originalTagsMap.set(index, noteData.tags);
-          return {
-            title: noteData.title,
-            pinned: noteData.pinned,
-            content: sanitizeHtml(noteData.content),
-            createdAt: noteData.createdAt ? new Date(noteData.createdAt) : undefined,
-            updatedAt: noteData.updatedAt ? new Date(noteData.updatedAt) : undefined,
-          };
-        });
-
-        // Batch insert notes with progress callback. Authenticated imports must be encrypted.
-        const progressCb = (completed: number, total: number) => {
-          setImportProgress({ isImporting: true, current: completed, total, phase: 'importing' });
-        };
-        const createdNotes = await createEncryptedNotesBatch(user.id, notesToImport, keys, progressCb);
-
-        // Add tags to notes (this still needs to be sequential due to junction table)
-        setImportProgress({ isImporting: true, current: 0, total: createdNotes.length, phase: 'finalizing' });
-        for (let i = 0; i < createdNotes.length; i++) {
-          const note = createdNotes[i];
-          const originalTags = originalTagsMap.get(i) || [];
-          for (const tagName of originalTags) {
-            const tagId = tagMap.get(tagName);
-            if (tagId) {
-              await addTagToNoteOffline(user.id, note.id, tagId, { preserveUpdatedAt: true });
-            }
-          }
-          setImportProgress({ isImporting: true, current: i + 1, total: createdNotes.length, phase: 'finalizing' });
-        }
-
-        toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
-
-        // Refresh notes from IndexedDB
-        const refreshedNotes = await fetchDecryptedNotes(user.id, keys);
-        setNotes(refreshedNotes);
-
-      } else if (isMarkdown) {
-        // Try to parse as combined multi-note export first
-        const multiNotes = parseMultiNoteMarkdown(content);
-
-        if (multiNotes) {
-          const totalNotes = multiNotes.length;
-          setImportProgress({ isImporting: true, current: 0, total: totalNotes, phase: 'importing' });
-
-          // Collect all unique tags from imported notes
-          const allTagNames = new Set<string>();
-          for (const noteData of multiNotes) {
-            for (const tagName of noteData.tags) {
-              allTagNames.add(tagName);
-            }
-          }
-
-          // Create tag map (create missing tags)
-          const tagMap = new Map<string, string>(); // name -> id
-          for (const tagName of allTagNames) {
-            const existingTag = tags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
-            if (existingTag) {
-              tagMap.set(tagName, existingTag.id);
-            } else {
-              const newTag = await createTagOffline(user.id, tagName, 'stone');
-              tagMap.set(tagName, newTag.id);
-              setTags(prev => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)));
-            }
-          }
-
-          // Prepare notes for batch insert (keep original tags for later)
-          const originalTagsMap = new Map<number, string[]>();
-          const notesToImport = multiNotes.map((noteData, index) => {
-            originalTagsMap.set(index, noteData.tags);
-            return {
-              title: noteData.title,
-              content: sanitizeHtml(markdownToHtml(noteData.content)),
-            };
-          });
-
-          // Batch insert notes with progress callback. Authenticated imports must be encrypted.
-          const mdProgressCb = (completed: number, total: number) => {
-            setImportProgress({ isImporting: true, current: completed, total, phase: 'importing' });
-          };
-          const createdNotes = await createEncryptedNotesBatch(user.id, notesToImport, keys, mdProgressCb);
-
-          // Add tags to notes if any tags were present
-          if (tagMap.size > 0) {
-            setImportProgress({ isImporting: true, current: 0, total: createdNotes.length, phase: 'finalizing' });
-            for (let i = 0; i < createdNotes.length; i++) {
-              const note = createdNotes[i];
-              const originalTags = originalTagsMap.get(i) || [];
-              for (const tagName of originalTags) {
-                const tagId = tagMap.get(tagName);
-                if (tagId) {
-                  await addTagToNoteOffline(user.id, note.id, tagId, { preserveUpdatedAt: true });
-                }
-              }
-              setImportProgress({ isImporting: true, current: i + 1, total: createdNotes.length, phase: 'finalizing' });
-            }
-          }
-
-          // Refresh notes from IndexedDB
-          const refreshedNotes2 = await fetchDecryptedNotes(user.id, keys);
-          setNotes(refreshedNotes2);
-
-          toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
-        } else {
-          // Import single markdown file as a note
-          setImportProgress({ isImporting: true, current: 0, total: 1, phase: 'importing' });
-
-          const lines = content.split('\n');
-          let title = file.name.replace(/\.(md|markdown)$/, '');
-          let noteContent = content;
-          let noteTags: string[] = [];
-          let contentStartIndex = 0;
-
-          // Extract title from first H1 if present
-          if (lines[0]?.startsWith('# ')) {
-            title = lines[0].substring(2).trim();
-            contentStartIndex = 1;
-          }
-
-          // Check for Tags line (e.g., "Tags: tag1, tag2")
-          const nextLine = lines[contentStartIndex]?.trim();
-          if (nextLine?.startsWith('Tags:')) {
-            const tagsStr = nextLine.substring(5).trim();
-            noteTags = tagsStr.split(',').map(t => t.trim()).filter(t => t.length > 0);
-            contentStartIndex++;
-          }
-
-          // Skip empty line after tags if present
-          if (lines[contentStartIndex]?.trim() === '') {
-            contentStartIndex++;
-          }
-
-          noteContent = lines.slice(contentStartIndex).join('\n').trim();
-
-          // Create tag map (create missing tags)
-          const tagMap = new Map<string, string>();
-          for (const tagName of noteTags) {
-            const existingTag = tags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
-            if (existingTag) {
-              tagMap.set(tagName, existingTag.id);
-            } else {
-              const newTag = await createTagOffline(user.id, tagName, 'stone');
-              tagMap.set(tagName, newTag.id);
-              setTags(prev => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)));
-            }
-          }
-
-          // Convert markdown to HTML and sanitize
-          const htmlContent = sanitizeHtml(markdownToHtml(noteContent));
-
-          const newNote = await createEncryptedNote(user.id, title, htmlContent, keys);
-
-          // Add tags to the note
-          for (const tagName of noteTags) {
-            const tagId = tagMap.get(tagName);
-            if (tagId) {
-              await addTagToNoteOffline(user.id, newNote.id, tagId, { preserveUpdatedAt: true });
-            }
-          }
-
-          // Refresh from IndexedDB to get the note with tags
-          const refreshedNotesAll = await fetchDecryptedNotes(user.id, keys);
-          setNotes(refreshedNotesAll);
-
-          toast.success(`Imported "${title}"`);
-        }
-      } else {
-        toast.error('Unsupported file format. Please use .json or .md files.');
-      }
-    } catch (error) {
-      console.error('Import failed:', error);
-      if (error instanceof ValidationError) {
-        toast.error(`Import failed: ${error.message}`);
-      } else {
-        toast.error('Failed to import file. Please check the file format.');
-      }
-    } finally {
-      setImportProgress(null);
-    }
-  }, [user, tags, keys]);
-  handleImportFileRef.current = handleImportFile;
 
   // Show loading while checking auth or fetching notes
   if (showAppLoader) {
@@ -2176,701 +388,192 @@ function App() {
     );
   }
 
-  // Show password reset screen if in recovery mode (even if user is authenticated)
-  if (isPasswordRecovery) {
-    return (
-      <Auth
-        theme={theme}
-        onThemeToggle={handleThemeToggle}
-        initialMode="reset"
-        onPasswordResetComplete={clearPasswordRecovery}
-      />
-    );
-  }
+  const entryScreen = renderEntryScreen({
+    route,
+    theme,
+    onThemeToggle: handleThemeToggle,
+    isSignedIn: Boolean(user),
+    isPasswordRecovery,
+    onPasswordResetComplete: clearPasswordRecovery,
+    shareRoute,
+    onShareInvalid: () => {
+      dismissShareRoute();
+      replaceRoute({ name: 'library' });
+    },
+    nav: publicPageNav,
+    onDemoClick: navigateToDemo,
+    onDemoDraftClick: navigateToDemoDraft,
+    onDemoNoteStarted: () => replaceRoute({ name: 'demo' }),
+    onSignIn: () => {
+      setAuthModalMode('login');
+      setShowAuthModal(true);
+    },
+    onSignUp: () => {
+      setAuthModalMode('signup');
+      setShowAuthModal(true);
+    },
+    onSettingsClick: () => setShowSettingsModal(true),
+    authModal: { isOpen: showAuthModal, mode: authModalMode, onClose: () => setShowAuthModal(false) },
+  });
+  if (entryScreen) return entryScreen;
 
-  // Show shared note view if share route is present
-  if (shareRoute) {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<LoadingFallback message="Loading shared note..." />}>
-          <SharedNoteView
-            token={shareRoute.token}
-            shareKey={shareRoute.shareKey}
-            theme={theme}
-            onThemeToggle={handleThemeToggle}
-            onInvalidToken={() => {
-              // Clear URL and show landing/library
-              clearPersistedShareKey(shareRoute.token);
-              window.history.replaceState({}, '', '/');
-              setShareRoute(null);
-            }}
-            onChangelogClick={() => startTransition(() => setView('changelog'))}
-            onRoadmapClick={() => startTransition(() => setView('roadmap'))}
-          />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
+  // renderEntryScreen returns the landing page whenever there is no user, so this is
+  // unreachable. The guard is for the type checker, not for a case that happens.
+  if (!user) return null;
 
-  // 404 page for unrecognized routes
-  if (notFound) {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<LoadingFallback />}>
-          <NotFoundPage
-            onGoHome={() => {
-              setNotFound(false);
-              setView('library');
-              window.history.replaceState({}, '', '/');
-            }}
-          />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
+  // The deployment guard and the vault, in that order.
+  const accountGate = renderAccountGate({
+    schemaCompatibility,
+    isCheckingSchema,
+    onRecheckSchema: recheckSchema,
+    isEncryptionSetup,
+    isUnlocked,
+  });
+  if (accountGate) return accountGate;
 
-  // Playground for landing page redesign iteration (dev-only, delete after porting)
-  if (isPlayground && PlaygroundPage) {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<LoadingFallback />}>
-          <PlaygroundPage
-            theme={theme}
-            onThemeToggle={handleThemeToggle}
-          />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  // Show demo page for /demo route (accessible without login)
-  if (isDemo && !user) {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<LoadingFallback message="Preparing your practice space..." />}>
-          <DemoPage
-            onSignUp={() => {
-              setAuthModalMode('signup');
-              setShowAuthModal(true);
-            }}
-            onSignIn={() => {
-              setAuthModalMode('login');
-              setShowAuthModal(true);
-            }}
-            theme={theme}
-            onThemeToggle={handleThemeToggle}
-            onHomeClick={navigateHome}
-            onChangelogClick={navigateToChangelog}
-            onRoadmapClick={navigateToRoadmap}
-            onPrivacyClick={navigateToPrivacy}
-            onTermsClick={navigateToTerms}
-            onSupportClick={navigateToSupport}
-          />
-        </Suspense>
-        {showAuthModal && (
-          <Auth
-            theme={theme}
-            onThemeToggle={handleThemeToggle}
-            initialMode={authModalMode}
-            isModal
-            onClose={() => setShowAuthModal(false)}
-          />
-        )}
-      </ErrorBoundary>
-    );
-  }
-
-  // Public pages (accessible without login)
-  if (view === 'changelog') {
-    return (
-      <>
-        <ErrorBoundary>
-          <Suspense fallback={<LoadingFallback />}>
-            <ChangelogPage
-              theme={theme}
-              onThemeToggle={handleThemeToggle}
-              onSignIn={() => {
-                setAuthModalMode('login');
-                setShowAuthModal(true);
-              }}
-              onLogoClick={navigateHome}
-              onRoadmapClick={navigateToRoadmap}
-              onPrivacyClick={navigateToPrivacy}
-              onTermsClick={navigateToTerms}
-              onSupportClick={navigateToSupport}
-              onSettingsClick={() => setShowSettingsModal(true)}
-            />
-          </Suspense>
-        </ErrorBoundary>
-        {showAuthModal && (
-          <Auth
-            theme={theme}
-            onThemeToggle={handleThemeToggle}
-            initialMode={authModalMode}
-            isModal
-            onClose={() => setShowAuthModal(false)}
-          />
-        )}
-      </>
-    );
-  }
-
-  if (view === 'roadmap') {
-    return (
-      <>
-        <ErrorBoundary>
-          <Suspense fallback={<LoadingFallback />}>
-            <RoadmapPage
-              theme={theme}
-              onThemeToggle={handleThemeToggle}
-              onSignIn={() => {
-                setAuthModalMode('login');
-                setShowAuthModal(true);
-              }}
-              onLogoClick={navigateHome}
-              onChangelogClick={navigateToChangelog}
-              onPrivacyClick={navigateToPrivacy}
-              onTermsClick={navigateToTerms}
-              onSupportClick={navigateToSupport}
-              onSettingsClick={() => setShowSettingsModal(true)}
-            />
-          </Suspense>
-        </ErrorBoundary>
-        {showAuthModal && (
-          <Auth
-            theme={theme}
-            onThemeToggle={handleThemeToggle}
-            initialMode={authModalMode}
-            isModal
-            onClose={() => setShowAuthModal(false)}
-          />
-        )}
-      </>
-    );
-  }
-
-  if (view === 'privacy') {
-    return (
-      <>
-        <ErrorBoundary>
-          <Suspense fallback={<LoadingFallback />}>
-            <PrivacyPage
-              onSecurityClick={navigateToSecurity}
-              theme={theme}
-              onThemeToggle={handleThemeToggle}
-              onSignIn={() => {
-                setAuthModalMode('login');
-                setShowAuthModal(true);
-              }}
-              onLogoClick={navigateHome}
-              onChangelogClick={navigateToChangelog}
-              onRoadmapClick={navigateToRoadmap}
-              onPrivacyClick={navigateToPrivacy}
-              onTermsClick={navigateToTerms}
-              onSupportClick={navigateToSupport}
-              onSettingsClick={() => setShowSettingsModal(true)}
-            />
-          </Suspense>
-        </ErrorBoundary>
-        {showAuthModal && (
-          <Auth
-            theme={theme}
-            onThemeToggle={handleThemeToggle}
-            initialMode={authModalMode}
-            isModal
-            onClose={() => setShowAuthModal(false)}
-          />
-        )}
-      </>
-    );
-  }
-
-  if (view === 'terms') {
-    return (
-      <>
-        <ErrorBoundary>
-          <Suspense fallback={<LoadingFallback />}>
-            <TermsPage
-              theme={theme}
-              onThemeToggle={handleThemeToggle}
-              onSignIn={() => {
-                setAuthModalMode('login');
-                setShowAuthModal(true);
-              }}
-              onLogoClick={navigateHome}
-              onChangelogClick={navigateToChangelog}
-              onRoadmapClick={navigateToRoadmap}
-              onPrivacyClick={navigateToPrivacy}
-              onTermsClick={navigateToTerms}
-              onSupportClick={navigateToSupport}
-              onSettingsClick={() => setShowSettingsModal(true)}
-            />
-          </Suspense>
-        </ErrorBoundary>
-        {showAuthModal && (
-          <Auth
-            theme={theme}
-            onThemeToggle={handleThemeToggle}
-            initialMode={authModalMode}
-            isModal
-            onClose={() => setShowAuthModal(false)}
-          />
-        )}
-      </>
-    );
-  }
-
-  if (view === 'support') {
-    return (
-      <>
-        <ErrorBoundary>
-          <Suspense fallback={<LoadingFallback />}>
-            <SupportPage
-              theme={theme}
-              onThemeToggle={handleThemeToggle}
-              onSignIn={() => {
-                setAuthModalMode('login');
-                setShowAuthModal(true);
-              }}
-              onLogoClick={navigateHome}
-              onChangelogClick={navigateToChangelog}
-              onRoadmapClick={navigateToRoadmap}
-              onPrivacyClick={navigateToPrivacy}
-              onTermsClick={navigateToTerms}
-              onSupportClick={navigateToSupport}
-              onSettingsClick={() => setShowSettingsModal(true)}
-            />
-          </Suspense>
-        </ErrorBoundary>
-        {showAuthModal && (
-          <Auth
-            theme={theme}
-            onThemeToggle={handleThemeToggle}
-            initialMode={authModalMode}
-            isModal
-            onClose={() => setShowAuthModal(false)}
-          />
-        )}
-      </>
-    );
-  }
-
-  if (view === 'security') {
-    return (
-      <>
-        <ErrorBoundary>
-          <Suspense fallback={<LoadingFallback />}>
-            <SecurityPage
-              theme={theme}
-              onThemeToggle={handleThemeToggle}
-              onSignIn={() => {
-                setAuthModalMode('login');
-                setShowAuthModal(true);
-              }}
-              onLogoClick={navigateHome}
-              onChangelogClick={navigateToChangelog}
-              onRoadmapClick={navigateToRoadmap}
-              onPrivacyClick={navigateToPrivacy}
-              onTermsClick={navigateToTerms}
-              onSupportClick={navigateToSupport}
-              onSettingsClick={() => setShowSettingsModal(true)}
-            />
-          </Suspense>
-        </ErrorBoundary>
-        {showAuthModal && (
-          <Auth
-            theme={theme}
-            onThemeToggle={handleThemeToggle}
-            initialMode={authModalMode}
-            isModal
-            onClose={() => setShowAuthModal(false)}
-          />
-        )}
-      </>
-    );
-  }
-
-  // Show landing page with auth modal if not logged in
-  if (!user) {
-    return (
-      <>
-        <LandingPage
-          onStartWriting={() => {
-            setAuthModalMode('signup');
-            setShowAuthModal(true);
-          }}
-          onSignIn={() => {
-            setAuthModalMode('login');
-            setShowAuthModal(true);
-          }}
-          theme={theme}
-          onThemeToggle={handleThemeToggle}
-          onDemoClick={navigateToDemo}
-          onChangelogClick={navigateToChangelog}
-          onRoadmapClick={navigateToRoadmap}
-          onPrivacyClick={navigateToPrivacy}
-          onTermsClick={navigateToTerms}
-          onSupportClick={navigateToSupport}
-        />
-        {showAuthModal && (
-          <Auth
-            theme={theme}
-            onThemeToggle={handleThemeToggle}
-            initialMode={authModalMode}
-            isModal
-            onClose={() => setShowAuthModal(false)}
-          />
-        )}
-      </>
-    );
-  }
-
-  // Deployment guard (item 36). Migrations are applied by hand, and a client shipped
-  // ahead of its migration fails only on writes — silently — while reads keep working.
-  // Rather than let the queue fill with writes that cannot land, say so and stop.
-  //
-  // This sits after the auth gate because the check needs a session, and before the
-  // vault gate because unlocking is the step that leads to writing.
-  if (blocksWrites(schemaCompatibility) && schemaCompatibility.status === 'database-behind') {
-    return (
-      <DatabaseUpdatePending
-        appliedVersion={schemaCompatibility.appliedVersion}
-        requiredVersion={schemaCompatibility.requiredVersion}
-        onRetry={recheckSchema}
-        isRetrying={isCheckingSchema}
-      />
-    );
-  }
-
-  // E2EE passphrase gate — after auth, before any authenticated view
-  // user is guaranteed non-null at this point (landing page returned above)
-  if (!isEncryptionSetup) {
-    return <PassphraseSetup />;
-  }
-  if (!isUnlocked) {
-    return <PassphraseUnlock />;
-  }
-
-  // Faded Notes View
   if (view === 'faded') {
     return (
-      <ErrorBoundary>
-        <Suspense fallback={<LoadingFallback message="Loading faded notes..." />}>
-          <FadedNotesView
-            notes={fadedNotes}
-            isLoading={fadedNotesLoading}
-            onBack={() => startTransition(() => setView('library'))}
-            onRestore={handleRestoreNote}
-            onPermanentDelete={handlePermanentDelete}
-            onEmptyAll={handleEmptyFadedNotes}
-            theme={theme}
-            onThemeToggle={handleThemeToggle}
-            onSettingsClick={() => setShowSettingsModal(true)}
-          />
-        </Suspense>
-      </ErrorBoundary>
+      <FadedNotesScreen
+        notes={fadedNotes}
+        isLoading={fadedNotesLoading}
+        onBack={navigateHome}
+        onRestore={handleRestoreNote}
+        onPermanentDelete={handlePermanentDelete}
+        onEmptyAll={handleEmptyFadedNotes}
+        theme={theme}
+        onThemeToggle={handleThemeToggle}
+        onSettingsClick={() => setShowSettingsModal(true)}
+      />
     );
   }
+
+  const sharedModalProps = {
+    tags,
+    showTagModal,
+    editingTag,
+    onCloseTagModal: handleCloseTagModal,
+    onSaveTag: handleSaveTag,
+    onDeleteTag: handleDeleteTag,
+    keys,
+    activeConflict,
+    onConflictResolve: handleConflictResolve,
+    onConflictDismiss: handleConflictDismiss,
+  };
 
   // Library View
   if (view === 'library') {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg-primary)' }}>
-        <a href="#main-content" className="skip-to-content">
-          Skip to content
-        </a>
-        <Header
-          theme={theme}
-          onThemeToggle={handleThemeToggle}
-          onNewNote={handleNewNote}
-          searchFocusToken={searchFocusToken}
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          onExportJSON={handleExportJSON}
-          onExportMarkdown={handleExportMarkdown}
-          onImportFile={handleImportFile}
-          onSettingsClick={() => setShowSettingsModal(true)}
-          onFadedNotesClick={handleFadedNotesClick}
-          fadedNotesCount={fadedNotesCount}
-          onRetryBlockedChanges={handleRetryBlockedChanges}
-          isRetryingBlockedChanges={isRetryingBlockedChanges}
-        />
-        <div id="main-content" className="w-full flex-1 flex flex-col" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <TagFilterBar
-          tags={tags}
-          selectedTagIds={selectedTagIds}
-          onTagToggle={handleTagToggle}
-          onClearFilter={handleClearTagFilter}
-          onAddTag={handleAddTag}
-          onEditTag={handleEditTag}
-        />
-        <ChapteredLibrary
-          footerRef={libraryFooterRef}
-          notes={displayNotes}
-          onNoteClick={handleNoteClick}
-          onRetryLockedNote={handleRetryLockedNotes}
-          onNoteDelete={handleNoteDelete}
-          onTogglePin={handleTogglePin}
-          onNewNote={handleNewNote}
-          onRefresh={handleRefresh}
-          searchQuery={searchQuery}
-          isSearching={isSearching}
-          isLoading={loading && notes.length === 0}
-        />
-        </div>
-
-        {/* Tag Modal */}
-        {showTagModal && (
-          <ErrorBoundary>
-            <Suspense fallback={null}>
-              <TagModal
-                isOpen={showTagModal}
-                onClose={handleCloseTagModal}
-                onSave={handleSaveTag}
-                onDelete={handleDeleteTag}
-                editingTag={editingTag}
-                existingTags={tags}
-              />
-            </Suspense>
-          </ErrorBoundary>
-        )}
-
-        {/* Settings Modal */}
-        {showSettingsModal && (
-          <ErrorBoundary>
-            <Suspense fallback={null}>
-              <SettingsModal
-                isOpen={showSettingsModal}
-                onClose={() => setShowSettingsModal(false)}
-                theme={theme}
-                onThemeToggle={handleThemeToggle}
-                onLetGoClick={() => setShowLettingGoModal(true)}
-                sessionSettings={sessionSettings}
-                vaultSettings={vaultSettings}
-                isVaultUnlocked={isUnlocked}
-                onLockVault={() => lockVault('manual')}
-                onPersistToLocal={persistToLocal}
-              />
-            </Suspense>
-          </ErrorBoundary>
-        )}
-
-        {/* Letting Go Modal (offboarding) */}
-        {showLettingGoModal && (
-          <ErrorBoundary>
-            <Suspense fallback={null}>
-              <LettingGoModal
-                isOpen={showLettingGoModal}
-                onClose={() => setShowLettingGoModal(false)}
-                notes={notes}
-                tags={tags}
-              />
-            </Suspense>
-          </ErrorBoundary>
-        )}
-
-        {/* Welcome Back Prompt (shown when user signs in during grace period) */}
-        {showWelcomeBack && daysUntilRelease !== null && (
-          <WelcomeBackPrompt
-            daysRemaining={daysUntilRelease}
-            onStay={() => setShowWelcomeBack(false)}
-            onContinue={() => setShowWelcomeBack(false)}
-          />
-        )}
-
-        {/* Footer */}
-        <Footer
-          ref={libraryFooterRef}
-          onChangelogClick={navigateToChangelog}
-          onRoadmapClick={navigateToRoadmap}
-          onShortcutsClick={() => setShowShortcutsModal(true)}
-          onPrivacyClick={navigateToPrivacy}
-          onTermsClick={navigateToTerms}
-          onSupportClick={navigateToSupport}
-        />
-
-        {/* Import Loading Overlay with Progress */}
-        {importProgress && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
-          >
-            <div
-              className="px-8 py-6 rounded-lg text-center min-w-[280px]"
-              style={{
-                background: 'var(--color-bg-primary)',
-                border: '1px solid var(--glass-border)',
-              }}
-            >
-              <div
-                className="size-8 mx-auto mb-4 border-2 border-t-transparent rounded-full animate-spin"
-                style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
-              />
-              <p style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-body)' }}>
-                {importProgress.phase === 'parsing' && 'Parsing file...'}
-                {importProgress.phase === 'importing' && (
-                  importProgress.total > 0
-                    ? `Importing notes... ${importProgress.current}/${importProgress.total}`
-                    : 'Importing notes...'
-                )}
-                {importProgress.phase === 'finalizing' && (
-                  `Adding tags... ${importProgress.current}/${importProgress.total}`
-                )}
-              </p>
-              {importProgress.total > 0 && importProgress.phase !== 'parsing' && (
-                <div className="mt-3">
-                  <div
-                    className="h-2 rounded-full overflow-hidden"
-                    style={{ background: 'var(--color-bg-tertiary)' }}
-                  >
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: `${Math.round((importProgress.current / importProgress.total) * 100)}%`,
-                        background: 'var(--color-accent)',
-                      }}
-                    />
-                  </div>
-                  <p
-                    className="text-xs mt-2"
-                    style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
-                  >
-                    {Math.round((importProgress.current / importProgress.total) * 100)}% complete
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Backup passphrase — a `.yidhan` file cannot be read without it (item 38) */}
-        <BackupPassphraseModal
-          mode="open"
-          isOpen={pendingBackupFile !== null}
-          error={backupRestoreError}
-          isBusy={isOpeningBackup}
-          onSubmit={(passphrase) => void handleOpenBackup(passphrase)}
-          onCancel={() => {
-            setPendingBackupFile(null);
-            setBackupRestoreError(null);
-          }}
-        />
-
-        {/* Conflict Resolution Modal */}
-        <ConflictModal
-          keys={keys}
-          conflict={activeConflict}
-          onResolve={handleConflictResolve}
-          onDismiss={handleConflictDismiss}
-        />
-
-        {/* PWA Install Prompt (Chrome/Android) */}
-        {shouldShowPrompt && (
-          <InstallPrompt
+      <LibraryScreen
+        header={{
+          theme,
+          onThemeToggle: handleThemeToggle,
+          onNewNote: handleNewNote,
+          searchFocusToken,
+          searchQuery,
+          onSearchChange: handleSearchChange,
+          onExportJSON: handleExportJSON,
+          onExportMarkdown: handleExportMarkdown,
+          onImportFile: handleImportFile,
+          onSettingsClick: () => setShowSettingsModal(true),
+          onFadedNotesClick: handleFadedNotesClick,
+          fadedNotesCount,
+          onRetryBlockedChanges: handleRetryBlockedChanges,
+          isRetryingBlockedChanges,
+        }}
+        tagFilter={{
+          tags,
+          selectedTagIds,
+          onTagToggle: handleTagToggle,
+          onClearFilter: handleClearTagFilter,
+          onAddTag: handleAddTag,
+          onEditTag: handleEditTag,
+        }}
+        library={{
+          footerRef: libraryFooterRef,
+          notes: displayNotes,
+          onNoteClick: handleNoteClick,
+          onRetryLockedNote: () => { void retryLockedNotes(); },
+          onNoteDelete: handleNoteDelete,
+          onTogglePin: handleTogglePin,
+          onNewNote: handleNewNote,
+          onRefresh: handleRefresh,
+          searchQuery,
+          isSearching,
+          isLoading: loading && notes.length === 0,
+        }}
+        footer={{
+          ref: libraryFooterRef,
+          onChangelogClick: publicPageNav.onChangelogClick,
+          onRoadmapClick: publicPageNav.onRoadmapClick,
+          onShortcutsClick: () => setShowShortcutsModal(true),
+          onPrivacyClick: publicPageNav.onPrivacyClick,
+          onTermsClick: publicPageNav.onTermsClick,
+          onSupportClick: publicPageNav.onSupportClick,
+        }}
+        modals={
+          <AppModals
+            scope="library"
+            {...sharedModalProps}
+            theme={theme}
+            onThemeToggle={handleThemeToggle}
+            notes={notes}
+            showSettingsModal={showSettingsModal}
+            onCloseSettings={() => setShowSettingsModal(false)}
+            onLetGoClick={() => setShowLettingGoModal(true)}
+            sessionSettings={sessionSettings}
+            vaultSettings={vaultSettings}
+            isVaultUnlocked={isUnlocked}
+            onLockVault={() => lockVault('manual')}
+            onPersistToLocal={persistToLocal}
+            showLettingGoModal={showLettingGoModal}
+            onCloseLettingGo={() => setShowLettingGoModal(false)}
+            showWelcomeBack={showWelcomeBack}
+            daysUntilRelease={daysUntilRelease}
+            onDismissWelcomeBack={() => setShowWelcomeBack(false)}
+            importProgress={importProgress}
+            backupRestore={backupRestore}
+            shouldShowInstallPrompt={shouldShowPrompt}
             onInstall={triggerInstall}
-            onDismiss={dismissPrompt}
+            onDismissInstall={dismissPrompt}
+            shouldShowIOSGuide={shouldShowIOSGuide}
+            onDismissIOSGuide={dismissIOSGuide}
+            showSessionTimeoutModal={showSessionTimeoutModal}
+            onSessionStay={handleSessionStay}
+            onSessionSignOut={handleSessionSignOut}
+            sessionMinutesRemaining={sessionMinutesRemaining}
+            showShortcutsModal={showShortcutsModal}
+            onCloseShortcuts={() => setShowShortcutsModal(false)}
           />
-        )}
-
-        {/* iOS Install Guide (Safari) */}
-        {shouldShowIOSGuide && (
-          <IOSInstallGuide onDismiss={dismissIOSGuide} />
-        )}
-
-        {/* Session Timeout Modal */}
-        <SessionTimeoutModal
-          isOpen={showSessionTimeoutModal}
-          onStay={handleSessionStay}
-          onSignOut={handleSessionSignOut}
-          minutesRemaining={sessionMinutesRemaining}
-        />
-
-        {/* Keyboard Shortcuts Modal */}
-        {showShortcutsModal && (
-          <ErrorBoundary>
-            <Suspense fallback={null}>
-              <KeyboardShortcutsModal
-                isOpen={showShortcutsModal}
-                onClose={() => setShowShortcutsModal(false)}
-              />
-            </Suspense>
-          </ErrorBoundary>
-        )}
-      </div>
+        }
+      />
     );
   }
 
   // Editor View
   if (view === 'editor' && selectedNote) {
     return (
-      <>
-        <a href="#main-content" className="skip-to-content">
-          Skip to content
-        </a>
-        <ErrorBoundary>
-          {LoadedEditor ? (
-            <LoadedEditor
-              note={selectedNote}
-              tags={tags}
-              userId={user.id}
-              onBack={handleBack}
-              onRequestSearch={requestLibrarySearch}
-              onUpdate={handleNoteUpdate}
-              onDelete={handleNoteDelete}
-              onToggleTag={handleNoteTagToggle}
-              onCreateTag={handleAddTag}
-              theme={theme}
-              onThemeToggle={handleThemeToggle}
-              onSettingsClick={() => setShowSettingsModal(true)}
-              noteSyncStatus={selectedNote.syncStatus}
-            />
-          ) : (
-            <Suspense fallback={<LoadingFallback message="Loading editor..." />}>
-              <Editor
-                note={selectedNote}
-                tags={tags}
-                userId={user.id}
-                onBack={handleBack}
-                onRequestSearch={requestLibrarySearch}
-                onUpdate={handleNoteUpdate}
-                onDelete={handleNoteDelete}
-                onToggleTag={handleNoteTagToggle}
-                onCreateTag={handleAddTag}
-                theme={theme}
-                onThemeToggle={handleThemeToggle}
-                onSettingsClick={() => setShowSettingsModal(true)}
-                noteSyncStatus={selectedNote.syncStatus}
-              />
-            </Suspense>
-          )}
-        </ErrorBoundary>
-        {/* Tag Modal */}
-        {showTagModal && (
-          <ErrorBoundary>
-            <Suspense fallback={null}>
-              <TagModal
-                isOpen={showTagModal}
-                onClose={handleCloseTagModal}
-                onSave={handleSaveTag}
-                onDelete={handleDeleteTag}
-                editingTag={editingTag}
-                existingTags={tags}
-              />
-            </Suspense>
-          </ErrorBoundary>
-        )}
-
-        {/* Conflict Resolution Modal */}
-        <ConflictModal
-          keys={keys}
-          conflict={activeConflict}
-          onResolve={handleConflictResolve}
-          onDismiss={handleConflictDismiss}
-        />
-      </>
+      <NoteEditorView
+        note={selectedNote}
+        tags={tags}
+        userId={user.id}
+        theme={theme}
+        onBack={handleBack}
+        onRequestSearch={requestLibrarySearch}
+        onUpdate={handleNoteUpdate}
+        onDelete={handleNoteDelete}
+        onToggleTag={handleNoteTagToggle}
+        onCreateTag={handleAddTag}
+        onThemeToggle={handleThemeToggle}
+        onSettingsClick={() => setShowSettingsModal(true)}
+        loadedEditor={LoadedEditor}
+        modals={<AppModals scope="editor" {...sharedModalProps} />}
+      />
     );
   }
 
-  return null;
+  // Reached for the single frame between a note address failing to resolve and the
+  // effect above replacing it with the library. Never a blank page.
+  return <LoadingFallback />;
 }
 
 export default App;

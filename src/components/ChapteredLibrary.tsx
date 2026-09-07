@@ -11,6 +11,7 @@ import {
   getDefaultExpansionState,
   type ChapterKey,
 } from '../utils/temporalGrouping';
+import { scrollRegionProps } from '../routing';
 
 /** A locked card without a retry wired up simply does nothing on click. */
 const noop = () => undefined;
@@ -140,6 +141,7 @@ export function ChapteredLibrary({
         style={{ scrollbarWidth: 'none' }}
         data-testid="library-view"
         aria-busy="true"
+        {...scrollRegionProps}
       />
     );
   }
@@ -279,6 +281,7 @@ export function ChapteredLibrary({
       className="flex-1 overflow-y-auto pb-[calc(8rem+env(safe-area-inset-bottom))] relative"
       style={{ scrollbarWidth: 'none' }}
       data-testid="library-view"
+      {...scrollRegionProps}
     >
       {/* Render each non-empty chapter */}
       {chapters.map((chapter, chapterIndex) => (

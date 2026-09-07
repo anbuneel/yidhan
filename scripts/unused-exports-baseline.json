@@ -17,7 +17,6 @@
     "src/lib/offlineDb.ts|types|HydrationStatus",
     "src/lib/offlineDb.ts|types|SyncQueueStatus",
     "src/lib/offlineDb.ts|types|SyncStatus",
-    "src/services/demoStorage.ts|exports|DEMO_STORAGE_KEY",
     "src/services/demoStorage.ts|exports|DEMO_STORAGE_VERSION",
     "src/services/demoStorage.ts|exports|saveDemoState",
     "src/services/offlineNotes.ts|exports|fetchTagsOffline",

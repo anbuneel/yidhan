@@ -105,6 +105,51 @@ const STARTER_NOTES: DemoNote[] = [
 // IDs of all starter notes for detection
 const STARTER_NOTE_IDS = new Set(STARTER_NOTES.map((n) => n.localId));
 
+/**
+ * Starter copy that shipped in an earlier release and is no longer true.
+ *
+ * `createDefaultState()` only runs for a browser with no stored state, so correcting
+ * the source above left every existing Practice Space still showing the old words. The
+ * welcome note claimed practice drafts were end-to-end encrypted; they are not, and
+ * they never were — a practice draft lives in localStorage in the clear.
+ *
+ * A stored note is corrected only when its content matches one of these strings
+ * *exactly*. Any edit at all, however small, means the words are the reader's and are
+ * left alone.
+ *
+ * There is a second consequence worth naming. `hasStarterNoteBeenEdited()` compares
+ * against the current copy, so an untouched old starter reads as edited — which makes
+ * `hasDemoState()` true and carries the false claim into the account on migration.
+ * Correcting the content at read time fixes that too.
+ */
+const SUPERSEDED_STARTER_CONTENT: Record<string, readonly string[]> = {
+  'starter-welcome': [
+    `<p>A calm space for your thoughts. Pin important notes, organize with tags, and write in focus mode.</p>
+<p>Your notes are end-to-end encrypted — only you can read them.</p>`,
+  ],
+};
+
+/**
+ * Replace superseded starter copy with the current wording, in place.
+ * Returns true when anything changed, so the caller knows to persist.
+ */
+function refreshSupersededStarterCopy(state: DemoState): boolean {
+  let changed = false;
+
+  for (const note of state.notes) {
+    const superseded = SUPERSEDED_STARTER_CONTENT[note.localId];
+    if (!superseded?.includes(note.content)) continue;
+
+    const current = STARTER_NOTES.find((s) => s.localId === note.localId);
+    if (!current || current.content === note.content) continue;
+
+    note.content = current.content;
+    changed = true;
+  }
+
+  return changed;
+}
+
 const DEFAULT_TAGS: DemoTag[] = [
   { localId: 'tag-journal', name: 'Journal', color: 'terracotta', createdAt: Date.now() },
   { localId: 'tag-ideas', name: 'Ideas', color: 'gold', createdAt: Date.now() },
@@ -148,6 +193,9 @@ export function getDemoState(): DemoState {
     const stored = localStorage.getItem(DEMO_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as DemoState;
+      // Correct any starter note still carrying superseded copy. The state is written
+      // back on every read anyway, for lastVisit, so this costs nothing extra.
+      refreshSupersededStarterCopy(parsed);
       // Update last visit timestamp
       parsed.metadata.lastVisit = Date.now();
       saveDemoState(parsed);
@@ -189,6 +237,28 @@ function hasStarterNoteBeenEdited(note: DemoNote): boolean {
     note.content !== original.content ||
     note.pinned !== original.pinned
   );
+}
+
+/**
+ * Whether a set of practice notes contains anything the reader made — a note they
+ * created, or a starter they edited. Unedited starters are not their work.
+ *
+ * Takes notes rather than reading storage so a render can call it freely.
+ */
+export function hasPracticeWork(
+  notes: readonly { id: string; title: string; content: string; pinned: boolean }[]
+): boolean {
+  return notes.some((note) => {
+    if (!STARTER_NOTE_IDS.has(note.id)) return true;
+
+    const original = STARTER_NOTES.find((s) => s.localId === note.id);
+    if (!original) return true;
+    return (
+      note.title !== original.title ||
+      note.content !== original.content ||
+      note.pinned !== original.pinned
+    );
+  });
 }
 
 /**

@@ -21,8 +21,14 @@ test.describe('Authentication', () => {
 
       const isMobileViewport = (page.viewportSize()?.width ?? 0) <= 768;
       if (isMobileViewport) {
+        // Item 45 changed where this lands. It used to reach the Practice Space
+        // *library* — a button that says start writing, answered with a list of notes.
+        // It now opens a draft with the caret already in it, and the address drops back
+        // to `/demo` once that note exists. `e2e/practice-space.spec.ts` owns the
+        // detail; this asserts only that the landing CTA still arrives somewhere you
+        // can write.
         await expect(page).toHaveURL(/\/demo/);
-        await expect(page.getByText(/write freely, no account needed/i)).toBeVisible();
+        await expect(page.getByTestId('note-editor')).toBeVisible();
         return;
       }
 

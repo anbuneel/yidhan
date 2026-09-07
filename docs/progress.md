@@ -152,3 +152,40 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
 - **2026-09-07** — Editor paste, typography, writing metrics, formatting-state
   feedback, find and replace, command access across widths, and the mobile slash
   menu completed — ledger items 52–57 and 116.
+- **2026-09-07** — Notes have addresses — ledger items 28 and 29. `/n/<id>`,
+  `/faded` and `/` are real routes, extracted to `src/routing/`: a pure route table,
+  a scroll memory keyed by history entry rather than by path, and a `useRouter` that
+  owns the History API. Four states that could disagree with the address bar — `view`,
+  `isDemo`, `notFound`, `selectedNoteId` — became one that cannot, and the
+  `yidhan-nav-*` sessionStorage restore they needed is gone with them. Back from a
+  note lands on the library where the reader left it; a refresh reopens the note; a
+  note address that no longer resolves replaces itself with the library and says so,
+  where the editor used to `return null` onto a blank page under a URL still claiming
+  to point at a note.
+- **2026-09-07** — `App.tsx` decomposed, 2,699 lines to 598 — ledger item 63. Twelve
+  hooks and six components, each named for what it owns: `useNotesSync` (the data
+  layer and both realtime subscriptions), `useNoteActions`, `useFadedNotes`,
+  `useTagActions`, `useSyncActions`, `useImport`, `useDemoMigration`,
+  `useShareTargetNote`, `useShareRoute`, `useVisibleNotes`, `useLibrarySearch`,
+  `useAppShortcuts`, `useAppLoader`, `useSessionGuards`, `useAppTheme`,
+  `useEditorChunk`; `LibraryScreen`, `NoteEditorView`, `AppModals`, `PublicPage`,
+  `ImportProgressOverlay`, `entryScreens`. No behaviour change — the five public
+  pages had been written out five times over, and an `isImporting: true` nobody ever
+  read rode along on every import-progress write. The item's `Editor.tsx` half is
+  Lane A's, per the file ownership split, and stays open.
+- **2026-09-07** — The Practice Space becomes a place you can start writing and a place
+  you can leave with your words — ledger items 45, 46 and 152. `/demo/new` is a real
+  address: on a phone "Start writing" now reaches a blinking caret in one tap instead
+  of a library, and the intent is consumed by a route replacement so a refresh does not
+  open a second empty draft. A "Keep these notes" CTA sits in the Practice Space header
+  as the primary action, appearing once there is anything a migration would carry, with
+  New Note stepping back to a secondary treatment so there is one primary rather than
+  two; carrying work into an account was previously reachable only through a dismissible
+  ribbon and a modal that waits for three notes and five minutes. And the welcome
+  starter note stops claiming practice drafts are end-to-end encrypted: the source copy
+  was corrected in an earlier release, but `createDefaultState()` only runs for a
+  browser with no stored state, so every existing Practice Space still showed the old
+  words. Stored starters are now corrected in place, matched byte-for-byte against the
+  superseded text so any edit at all leaves the reader's words alone. That also fixes a
+  second-order bug: an untouched old starter compared unequal to the current copy, so it
+  read as edited — which carried the false claim into the account on migration.

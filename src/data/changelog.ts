@@ -7,6 +7,15 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.17', date: '2026-09-07', changes: [
+    { type: 'feature', text: 'On a phone, Start writing now opens a new note in the Practice Space with the cursor already in it, instead of dropping you at the library' },
+    { type: 'improvement', text: 'Keep these notes is now the Practice Space’s main action, so carrying your practice writing into an account takes one step from anywhere' },
+    { type: 'fix', text: 'The welcome note in older Practice Spaces still said practice drafts were end-to-end encrypted. They are not — they live in this browser in the clear. Untouched copies now say so; anything you edited is left exactly as you wrote it' },
+    { type: 'improvement', text: 'The app shell was rebuilt from one 2,700-line file into named pieces. Nothing looks or behaves differently — it simply becomes harder for a change in one corner to break another' },
+    { type: 'feature', text: 'Every note has its own address. Refreshing reopens the note you were in, links to a note work, and browser Back returns you to the library exactly where you left off' },
+    { type: 'feature', text: 'Faded Notes has its own address too, so you can return to it directly' },
+    { type: 'fix', text: 'Opening a note that has since been released now returns you to the library with a quiet note, instead of a blank page' },
+  ] },
   { version: '3.19.16', date: '2026-09-07', changes: [
     { type: 'improvement', text: 'Markdown-shaped text pastes with its headings, lists, quotes, and other structure while rich clipboard content keeps its original formatting.' },
     { type: 'improvement', text: 'Optional smart typography turns typed quotes, dashes, and ellipses into polished punctuation without changing code.' },
