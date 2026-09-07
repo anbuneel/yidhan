@@ -88,3 +88,12 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   use structured failures; card fading is exactly once with visible failure
   recovery; and unused exports are guarded by an exact audited baseline —
   ledger items 71, 72, 74, 150, 151.
+- **2026-09-07** — Key migration and rotation designed before any of it is built —
+  ledger item 23. `docs/plans/2026-09-07-key-migration-and-rotation-design.md`
+  fixes the wrapped material as the full 64 bytes (both the AES and the HMAC half,
+  because wrapping only the AES key would silently break every save-confirmation
+  path), separates the three key-change flows that were previously one undifferentiated
+  idea, and attaches 26 named tests to items 24, 25, 26 and 103. The two cases that
+  can lose words — a rotation that flips the wrap before re-encrypting, and an
+  offline device that clears its old key before draining its queue — are refused
+  by name.

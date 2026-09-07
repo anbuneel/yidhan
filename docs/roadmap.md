@@ -35,6 +35,11 @@ To start work on an item, move it into the ACTIVE plan and delete it from here.
 
 ### Keys and privacy
 
+Items 24, 25, 26 and 103 are designed in
+`docs/plans/2026-09-07-key-migration-and-rotation-design.md` (item 23). It names the
+flow each key change belongs to and carries the test list each of those four items
+must satisfy; the "done when" below is the summary, that document is the detail.
+
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
 | 24 | Wrapped master key: keep the derived key pair as `K`; derive a KEK from the passphrase with a fresh salt; store `wrap(KEK, K)` in `user_metadata` with a version flag; migrate on next unlock | weeks | Needs #23, #36 | Existing users migrate without re-encrypting a note; killing the app mid-migration and reopening completes it; the key-check still verifies `K` · unit tests for interrupted migration and for both keys surviving the wrap |
