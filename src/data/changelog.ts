@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.15', date: '2026-09-07', changes: [
+    { type: 'fix', text: 'When the app is newer than the database it syncs with, it now says so and holds off writing, instead of quietly queuing changes that could not be saved' },
+  ] },
   { version: '3.19.14', date: '2026-09-07', changes: [
     { type: 'fix', text: 'Choosing a sync-conflict version now retires older queued changes so they cannot overwrite that choice later.' },
     { type: 'fix', text: 'Only one tab sends queued changes at a time, and closing a syncing tab releases the next one without stranding your notes.' },

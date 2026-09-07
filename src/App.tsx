@@ -15,6 +15,7 @@ import { PrivacyPage } from './components/PrivacyPage';
 import { TermsPage } from './components/TermsPage';
 import { SupportPage } from './components/SupportPage';
 import { NotFoundPage } from './components/NotFoundPage';
+import { DatabaseUpdatePending } from './components/DatabaseUpdatePending';
 import { sanitizeText } from './utils/sanitize';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 import { getLoadedEditorComponent, loadEditorComponent } from './utils/editorLoader';
@@ -102,6 +103,8 @@ import { DEMO_CONTENT_STORAGE_KEY, hasDemoState } from './services/demoStorage';
 import { migrateDemoToAccount } from './services/demoMigration';
 import { sanitizeHtml } from './utils/sanitize';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
+import { useSchemaGuard } from './hooks/useSchemaGuard';
+import { blocksWrites } from './services/schemaVersion';
 import { useSyncEngine, resolveConflict } from './hooks/useSyncEngine';
 import { useStoragePersistence } from './hooks/useStoragePersistence';
 import {
@@ -191,6 +194,15 @@ function App() {
 
   // Network connectivity monitoring
   useNetworkStatus();
+
+  // The migration level the database is at, read once the reader is signed in. The
+  // result starts as `unknown`, which fails open: an offline reader must not be locked
+  // out of their own notes because a version check could not reach the server.
+  const {
+    compatibility: schemaCompatibility,
+    isChecking: isCheckingSchema,
+    recheck: recheckSchema,
+  } = useSchemaGuard(Boolean(user));
 
   // Rehydrate React state after sync pulls in remote changes (2A)
   // This is safe because the Editor maintains its own local state —
@@ -2376,6 +2388,23 @@ function App() {
           />
         )}
       </>
+    );
+  }
+
+  // Deployment guard (item 36). Migrations are applied by hand, and a client shipped
+  // ahead of its migration fails only on writes — silently — while reads keep working.
+  // Rather than let the queue fill with writes that cannot land, say so and stop.
+  //
+  // This sits after the auth gate because the check needs a session, and before the
+  // vault gate because unlocking is the step that leads to writing.
+  if (blocksWrites(schemaCompatibility) && schemaCompatibility.status === 'database-behind') {
+    return (
+      <DatabaseUpdatePending
+        appliedVersion={schemaCompatibility.appliedVersion}
+        requiredVersion={schemaCompatibility.requiredVersion}
+        onRetry={recheckSchema}
+        isRetrying={isCheckingSchema}
+      />
     );
   }
 

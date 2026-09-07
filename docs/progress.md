@@ -97,3 +97,16 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   can lose words — a rotation that flips the wrap before re-encrypting, and an
   offline device that clears its old key before draining its queue — are refused
   by name.
+- **2026-09-07** — The deployment guard — ledger item 36. A `schema_version` table
+  holds one row naming the migration level the database is at; the client carries the
+  level it requires and reads the other at startup. When the app is ahead, it shows
+  "a database update is pending" and stops, instead of letting the sync queue fill with
+  writes that cannot land. That silent mode of failure is what
+  `default_user_id_to_auth_uid.sql` produced in production: reads kept working, so
+  nothing looked broken, while every new note failed RLS. The guard **fails open** —
+  offline, unreachable, and an unseeded table all resolve to `unknown`, and `unknown`
+  writes normally, because an offline-first app must not lock a reader out of their own
+  notes over a version check that could not reach the server. Only a version number
+  lower than the build's closes anything. `docs/setup/release-checklist.md` makes
+  `verify_migration_state.sql` a recorded release step, with its output pasted into the
+  PR rather than summarised.
