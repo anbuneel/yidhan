@@ -417,7 +417,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           inFlightSnapshotRef.current = null;
         }
 
-        // Save failed after retries - show error state
+        // Save failed after retries - show error state. A fresh failure must not
+        // carry the previous attempt's copy message.
+        setCopyFailed(false);
         setHasSaveError(true);
         setSaveStatus('error');
 
@@ -1130,10 +1132,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       data-testid="note-editor"
     >
       {hasSaveError && (
-        <div role="alert" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
+        <div role="alert" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-[2px_12px_4px_12px] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
           <span className="mr-auto">Not saved{saveErrorDetail && <span className="block">{saveErrorDetail}</span>}
             {copyFailed && <span className="block">Could not copy — select the text and copy it by hand.</span>}</span>
-          <button type="button" onClick={() => { setCopyFailed(false); void performSave(); }}>Retry</button>
+          <button type="button" onClick={() => { setCopyFailed(false); void performSave(); }}
+            className="rounded-[2px_12px_4px_12px] px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}>Retry</button>
           <button type="button" onClick={async () => {
             try {
               await copyNoteToClipboard({ ...note, title, content });
@@ -1141,7 +1145,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               setHasSaveError(false);
               showCopiedIndicator();
             } catch { setCopyFailed(true); }
-          }}>Copy</button>
+          }}
+            className="rounded-[2px_12px_4px_12px] border px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', background: 'transparent', borderColor: 'var(--glass-border)' }}>Copy</button>
         </div>
       )}
       {/* Sticky Zone: Header only */}
@@ -1155,7 +1161,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           leftContent={leftContent}
           center={centerContent}
           rightActions={rightActions}
-          onSettingsClick={async () => { if (await performSave()) onSettingsClick(); }}
+          // Settings is where a locked vault gets unlocked, so it must not be
+          // gated on a save that fails because the vault is locked. The header
+          // only surfaces it for an authenticated user, which the editor does
+          // not pass today, so this is a latent trap rather than a live one.
+          onSettingsClick={async () => { await performSave(); onSettingsClick(); }}
         />
       </div>
 
