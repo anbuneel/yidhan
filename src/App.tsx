@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useEffectEvent, useRef, Suspense, use
 import toast from 'react-hot-toast';
 import type { Note, Tag, ViewMode, Theme } from './types';
 import { useNoteSearch } from './hooks/useNoteSearch';
+import { applySavedNote } from './utils/applySavedNote';
 import { Header } from './components/Header';
 import { ChapteredLibrary } from './components/ChapteredLibrary';
 import { Auth } from './components/Auth';
@@ -1346,19 +1347,7 @@ function App() {
       // Sync engine will push encrypted payload to server when online
       const savedNote = await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
 
-      // The optimistic update above spread the pre-edit note, so its contentHash
-      // still described the old text. Fold in the recomputed hash so the search
-      // cache keyed on it invalidates. Only the fields this save produced are
-      // taken: savedNote's pinned/deletedAt come from a read predating the
-      // write, so a pin toggle landing mid-save must not be reverted here.
-      // A late acknowledgement must not replace a newer draft either.
-      setNotes((prev) => prev.map((n) => (
-        n.id === savedNote.id && n.title === updatedNote.title && n.content === updatedNote.content
-          ? { ...n, content: savedNote.content, contentHash: savedNote.contentHash,
-              updatedAt: savedNote.updatedAt, encryptedPayload: savedNote.encryptedPayload,
-              encryptionIv: savedNote.encryptionIv, encryptionVersion: savedNote.encryptionVersion }
-          : n
-      )));
+      setNotes((prev) => prev.map((n) => applySavedNote(n, savedNote, updatedNote)));
 
       // Trigger coalesced sync (2s after last save) to push changes promptly
       triggerCoalescedSync();
