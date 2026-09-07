@@ -38,7 +38,7 @@ that must land first.
 
 ## Next
 
-Five lanes, 21 items. Lanes A to D run in parallel on separate branches and own the files named in the handoff; E starts after C merges. Merge order when two are ready: D, B, A, C. Item 87 is the maintainer's own task, not a code lane.
+Five lanes, 20 items. Lanes A to D run in parallel on separate branches and own the files named in the handoff; E starts after C merges. Merge order when two are ready: D, B, A, C. Item 87 is the maintainer's own task, not a code lane.
 
 ### Lane A · Editor fluency · `fix/editor-fluency` · runs in parallel
 
@@ -60,7 +60,6 @@ Five lanes, 21 items. Lanes A to D run in parallel on separate branches and own 
 | 38 | Keys and privacy | Encrypted backup export (`.yidhan`: v2 JSON under a backup key) and import | days |  | A backup restores into a fresh browser profile with identical notes, tags, pinned state, timestamps, and (later) attachments; a truncated file is rejected with a clear message · restore test in CI |
 | 39 | Keys and privacy | Threat-model page at `/security` in the product voice; `security.txt`; states visible metadata (timestamps, sizes, tag names until #101) | days |  | Page live and linked from `/privacy` · copy review |
 | 40 | Keys and privacy | Outbound data audit: Sentry allowlisted fields, URLs, demo and capture paths, error strings | days |  | Audit doc lists every outbound request type and the fields it may carry; scrubber tests cover each · unit tests |
-| 41 | Keys and privacy | One undecryptable note renders as a locked card with retry; library stays usable; exports report incomplete | days |  | Corrupting one payload leaves every other note readable and the export banner says "1 note could not be included" · unit and E2E tests |
 
 ### Lane C · Note addresses and the App.tsx split · `feat/note-urls` · runs in parallel; owns App.tsx
 

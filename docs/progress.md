@@ -110,3 +110,13 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   lower than the build's closes anything. `docs/setup/release-checklist.md` makes
   `verify_migration_state.sql` a recorded release step, with its output pasted into the
   PR rather than summarised.
+- **2026-09-07** — One undecryptable note stops taking the library with it — ledger
+  item 41. `fetchDecryptedNotes` threw if any single payload failed, App caught it, and
+  the reader's whole library rendered empty behind a toast telling them to lock and
+  unlock their vault. Decryption failures are now typed: a row that is not encrypted at
+  all, or still carries plaintext columns, is a violation of the launch invariant and
+  still fails the whole read, closed; a row whose ciphertext will not open is one locked
+  note. Locked notes come back with empty title and content and render as
+  `LockedNoteCard` with a retry, are refused by the editor and by the save path — an
+  empty autosave would destroy ciphertext another device can still read — and are left
+  out of every export with the count reported.

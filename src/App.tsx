@@ -96,6 +96,8 @@ import {
   downloadMarkdownZip,
   markdownToHtml,
   parseMultiNoteMarkdown,
+  partitionExportableNotes,
+  describeOmittedNotes,
   ValidationError,
   MAX_IMPORT_FILE_SIZE,
 } from './utils/exportImport';
@@ -1245,7 +1247,20 @@ function App() {
     });
   }, [sortedNotes, selectedTagIds]);
 
-  const selectedNote = notes.find((n) => n.id === selectedNoteId);
+  const selectedNoteRecord = notes.find((n) => n.id === selectedNoteId);
+  // A locked note is never opened. Its title and content are empty by construction, so
+  // the editor would show a blank draft over real ciphertext — and the first autosave
+  // would overwrite the note with nothing (item 41).
+  const selectedNote = selectedNoteRecord?.decryptionFailed ? undefined : selectedNoteRecord;
+
+  useEffect(() => {
+    if (!selectedNoteRecord?.decryptionFailed) return;
+    startTransition(() => {
+      setView('library');
+      setSelectedNoteId(null);
+    });
+    toast('That note could not be opened on this device.');
+  }, [selectedNoteRecord, startTransition]);
 
   const handleNoteClick = useCallback((id: string) => {
     void warmEditorRoute().then(() => {
@@ -1373,6 +1388,11 @@ function App() {
     // different failure and must not be told to unlock anything.
     if (!user) throw new Error('Cannot save without a signed-in user');
     if (!keys) throw new VaultLockedSaveError();
+    // Backstop for the guard above: never write over a note this device could not
+    // read. An empty save here would destroy the ciphertext another device can open.
+    if (notesRef.current.find((n) => n.id === updatedNote.id)?.decryptionFailed) {
+      throw new Error('This note could not be opened on this device, so it was not saved.');
+    }
 
     // Store previous state for potential rollback
     const previousNote = notes.find((n) => n.id === updatedNote.id);
@@ -1608,6 +1628,18 @@ function App() {
   };
 
   // Pull-to-refresh handler - syncs with server first, then rehydrates state
+  // A locked card's retry: re-read the library and try the ciphertext again. The vault
+  // may have been unlocked with the right passphrase since the failed read.
+  const handleRetryLockedNotes = useCallback(async () => {
+    if (!user || !keys) return;
+    try {
+      setNotes(await fetchDecryptedNotes(user.id, keys));
+    } catch (error) {
+      console.error('Failed to re-read notes:', error);
+      toast.error('Could not open those notes. Lock and unlock your vault, then try again.');
+    }
+  }, [user, keys]);
+
   const handleRefresh = useCallback(async () => {
     if (!user) return;
     if (!keys) {
@@ -1834,18 +1866,29 @@ function App() {
   const isSearching = debouncedSearchQuery.trim().length > 0;
 
   // Export to JSON
+  // An export that quietly omits notes is worse than one that says it did. A note whose
+  // ciphertext would not open has nothing to write, so it is left out and counted
+  // (item 41).
+  const reportOmittedFromExport = useCallback((noteList: Note[]) => {
+    const { omittedCount } = partitionExportableNotes(noteList);
+    const message = describeOmittedNotes(omittedCount);
+    if (message) toast(message, { duration: 6000, icon: '\u26A0\uFE0F' });
+  }, []);
+
   const handleExportJSON = useCallback(() => {
     const json = exportNotesToJSON(notes, tags);
     const now = new Date();
     const date = now.toISOString().split('T')[0];
     const time = now.toTimeString().slice(0, 8).replace(/:/g, ''); // HHMMSS
     downloadFile(json, `yidhan-backup-${date}-${time}.json`, 'application/json');
-  }, [notes, tags]);
+    reportOmittedFromExport(notes);
+  }, [notes, tags, reportOmittedFromExport]);
 
   // Export to Markdown
   const handleExportMarkdown = useCallback(() => {
     downloadMarkdownZip(notes);
-  }, [notes]);
+    reportOmittedFromExport(notes);
+  }, [notes, reportOmittedFromExport]);
 
   // Import file (JSON or Markdown)
   const handleImportFile = useCallback(async (file: File) => {
@@ -2474,6 +2517,7 @@ function App() {
           footerRef={libraryFooterRef}
           notes={displayNotes}
           onNoteClick={handleNoteClick}
+          onRetryLockedNote={handleRetryLockedNotes}
           onNoteDelete={handleNoteDelete}
           onTogglePin={handleTogglePin}
           onNewNote={handleNewNote}

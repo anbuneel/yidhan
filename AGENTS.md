@@ -141,9 +141,17 @@ plaintext-note compatibility, a repair UI, or the removed legacy plaintext APIs 
 lint checks that those service APIs have not returned. If preflight reports unsafe
 rows, that is a data incident: fail closed.
 
-**Encrypted reads fail closed.** Reads, realtime upserts, sync pulls, conflict
-resolution and authenticated imports all reject plaintext note payloads rather than
-degrading. Do not add a permissive fallback.
+**Encrypted reads fail closed — but a locked note is not a plaintext one.** Reads,
+realtime upserts, sync pulls, conflict resolution and authenticated imports all reject
+**plaintext** note payloads rather than degrading, and one such row fails the whole
+read. Do not add a permissive fallback. A note whose *ciphertext* will not open is a
+different case and must not be handled the same way: it comes back with
+`decryptionFailed`, empty title and content, and renders as a locked card — see
+`NoteDecryptionError.reason`. Failing the whole read on one corrupt payload emptied the
+entire library behind a toast telling the reader to lock and unlock their vault. Such a
+note is never opened in the editor and never saved over — an empty autosave would
+destroy ciphertext another device can still read — and exports omit it and report the
+count.
 
 **Fonts are self-hosted and never fetched from Google Fonts.** Subsets live in
 `src/assets/fonts/`, declared in `src/fonts.css`; `font-src 'self'` only in
