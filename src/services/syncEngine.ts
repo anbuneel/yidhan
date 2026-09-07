@@ -1273,7 +1273,10 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
   // Compute pull cursor from synced entries only (pending/conflict may have skewed timestamps)
   const allNotes = await db.notes.toArray();
   const syncedNotes = allNotes.filter(n => n.syncStatus === 'synced');
-  const lastSync = Math.max(...syncedNotes.map(n => n.lastSyncedAt || 0), 0);
+  // Older local records have no hash acknowledgement. Read the server again
+  // before claiming they are synced; a local status alone is not confirmation.
+  const needsConfirmation = syncedNotes.some(note => note.confirmedContentHash === undefined);
+  const lastSync = needsConfirmation ? 0 : Math.max(...syncedNotes.map(n => n.lastSyncedAt || 0), 0);
 
   // --- Note data pull (always runs, no early return) ---
   // Full pull when lastSync is 0 (empty DB, post-migration, or failed hydration);

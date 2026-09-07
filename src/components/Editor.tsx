@@ -175,6 +175,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     currentNoteIdRef.current = note.id;
     setTitle(note.title);
     setContent(note.content);
+    setHasSaveError(false);
+    setSaveErrorDetail('');
     committedSnapshotRef.current = buildSnapshot(note.title, note.content, note.tags);
     inFlightSnapshotRef.current = null;
     setRemoteUpdate(null);
@@ -1139,7 +1141,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             try {
               await copyNoteToClipboard({ ...note, title, content });
               setHasSaveError(false);
-              setSaveStatus('copied');
+              showCopiedIndicator();
             } catch { setSaveStatus('error'); }
           }}>Copy</button>
         </div>

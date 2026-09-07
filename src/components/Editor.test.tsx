@@ -532,7 +532,8 @@ describe('Editor', () => {
     });
   });
 
-  it('copies a failed draft without discarding its words', async () => {
+  it('copies a failed draft without discarding its words and clears the copied indicator', async () => {
+    vi.useFakeTimers();
     render(<Editor {...defaultProps} onUpdate={vi.fn().mockRejectedValue(new Error('Disk unavailable'))} />);
     fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Rescue me' } });
     fireEvent.keyDown(window, { key: 'Escape' });
@@ -540,6 +541,10 @@ describe('Editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy', exact: true }));
     await act(async () => { await Promise.resolve(); });
     expect(exportImport.copyNoteToClipboard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Rescue me' }));
+    expect(screen.getByText('Copied')).toBeInTheDocument();
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(screen.queryByText('Copied')).not.toBeInTheDocument();
+    vi.useRealTimers();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(defaultProps.onBack).not.toHaveBeenCalled();
   });
