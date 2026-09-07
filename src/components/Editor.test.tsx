@@ -549,6 +549,19 @@ describe('Editor', () => {
     expect(defaultProps.onBack).not.toHaveBeenCalled();
   });
 
+  it('says so when the clipboard refuses, keeping the draft and its actions on screen', async () => {
+    vi.mocked(exportImport.copyNoteToClipboard).mockRejectedValueOnce(new Error('Clipboard blocked'));
+    render(<Editor {...defaultProps} onUpdate={vi.fn().mockRejectedValue(new Error('Disk unavailable'))} />);
+    fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Rescue me' } });
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await act(async () => { await Promise.resolve(); });
+    fireEvent.click(screen.getByRole('button', { name: 'Copy', exact: true }));
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not copy');
+    expect(screen.getByRole('button', { name: 'Copy', exact: true })).toBeInTheDocument();
+    expect(defaultProps.onBack).not.toHaveBeenCalled();
+  });
+
   describe('save status indicator', () => {
     it('shows saving indicator during save', async () => {
       // Use a deferred promise to control when save completes

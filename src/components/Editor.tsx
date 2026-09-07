@@ -117,6 +117,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [content, setContent] = useState(note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [hasSaveError, setHasSaveError] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   const [saveErrorDetail, setSaveErrorDetail] = useState('');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [editor, setEditor] = useState<TiptapEditor | null>(null);
@@ -895,14 +896,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               Saving&hellip;
             </>
           )}
-          {saveStatus === 'error' && !hasSaveError && (
-            <>
-              <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Save failed
-            </>
-          )}
           {saveStatus === 'copied' && (
             <>
               <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1135,14 +1128,16 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     >
       {hasSaveError && (
         <div role="alert" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
-          <span className="mr-auto">Not saved{saveErrorDetail && <span className="block">{saveErrorDetail}</span>}</span>
-          <button type="button" onClick={() => void performSave()}>Retry</button>
+          <span className="mr-auto">Not saved{saveErrorDetail && <span className="block">{saveErrorDetail}</span>}
+            {copyFailed && <span className="block">Could not copy — select the text and copy it by hand.</span>}</span>
+          <button type="button" onClick={() => { setCopyFailed(false); void performSave(); }}>Retry</button>
           <button type="button" onClick={async () => {
             try {
               await copyNoteToClipboard({ ...note, title, content });
+              setCopyFailed(false);
               setHasSaveError(false);
               showCopiedIndicator();
-            } catch { setSaveStatus('error'); }
+            } catch { setCopyFailed(true); }
           }}>Copy</button>
         </div>
       )}

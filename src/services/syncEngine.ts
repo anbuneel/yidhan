@@ -1354,6 +1354,19 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
     }
   }
 
+  // A full pull that completed cleanly is the confirmation pass for legacy
+  // records. Any synced note still lacking an acknowledgement was not returned
+  // by it, so record that honestly — the note reads "Saved here" rather than
+  // "Synced" — instead of letting one stray record force a full-table scan on
+  // every sync from here on.
+  if (!notesError && lastSync === 0) {
+    const unconfirmed = (await db.notes.toArray())
+      .filter(n => n.syncStatus === 'synced' && n.confirmedContentHash === undefined);
+    for (const note of unconfirmed) {
+      await db.notes.update(note.id, { confirmedContentHash: null });
+    }
+  }
+
   // --- Tag data pull (always runs regardless of notes outcome) ---
   // Tags currently lack updated_at, so fetch all (full pull).
   // When tags.updated_at migration lands, this will become incremental.
