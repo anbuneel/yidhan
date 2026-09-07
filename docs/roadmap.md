@@ -23,6 +23,8 @@ priority: **lower is not sooner** once an item is here.
   three), `a month or more` — not an estimate.
 - **Needs** names items that must land first. An item with unmet needs cannot be
   promoted.
+- **Done when** is the acceptance test the item ships with: the observable behaviour,
+  then the evidence that proves it. It travels with the item into the ACTIVE plan.
 - Items marked `—` came from the product roadmap and never had a ledger number.
 
 To start work on an item, move it into the ACTIVE plan and delete it from here.
