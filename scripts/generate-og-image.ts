@@ -30,35 +30,34 @@ const LOCKUP_TOP = 60; // Top padding above lockup
 
 // ── Source / output paths ───────────────────────────────────────
 const LOCKUP_PATH = path.join(__dirname, '../images/yidhan-logo-lockup-tight-1200.webp');
+// Pango's fontfile loader needs an SFNT font, not the browser's WOFF2 wrapper.
+// prepare-og-font.py pins weight 300 and gives the font a unique family so an
+// installed Source Sans cannot override it. Licensed under the bundled OFL.
+const FONT_PATH = path.join(__dirname, 'assets/fonts/yidhan-preview.ttf');
 const OUTPUT_PATH = path.join(__dirname, '../public/og-image.png');
 
 // ── Text content ────────────────────────────────────────────────
 const TAGLINE = 'A quiet space for your mind';
 
 /**
- * Build an SVG buffer for the tagline text below the lockup.
+ * Render with the bundled font through Pango, rather than an SVG @import
+ * that depends on the renderer's external-resource and installed-font support.
+ * At 72 DPI, 26 points = 26 pixels; Pango letter spacing uses 1/1024 points.
  */
-function buildTaglineSvg(y: number): Buffer {
-  const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}">
-  <defs>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300&amp;display=swap');
-    </style>
-  </defs>
-  <text
-    x="${WIDTH / 2}"
-    y="${y}"
-    text-anchor="middle"
-    font-family="'Source Sans 3', 'Source Sans Pro', sans-serif"
-    font-weight="300"
-    font-size="26"
-    letter-spacing="1"
-    fill="${TEXT_MUTED}"
-  >${TAGLINE}</text>
-</svg>`.trim();
+async function renderTagline() {
+  if (!fs.existsSync(FONT_PATH)) {
+    throw new Error(`Bundled tagline font not found: ${FONT_PATH}`);
+  }
 
-  return Buffer.from(svg);
+  return sharp({
+    text: {
+      text: `<span foreground="${TEXT_MUTED}" letter_spacing="1024">${TAGLINE}</span>`,
+      font: 'Yidhan Preview 26',
+      fontfile: FONT_PATH,
+      dpi: 72,
+      rgba: true,
+    },
+  }).png().toBuffer({ resolveWithObject: true });
 }
 
 async function generateOgImage() {
@@ -83,9 +82,10 @@ async function generateOgImage() {
 
   const lockupLeft = Math.round((WIDTH - lockupW) / 2);
 
-  // ── Build the tagline SVG ──────────────────────────────────────
-  const taglineY = LOCKUP_TOP + lockupH + 40;
-  const taglineSvg = buildTaglineSvg(taglineY);
+  // The text renderer returns a tight crop. Keep its visible top 20px below
+  // the lockup, matching the previous SVG's 40px baseline offset.
+  const tagline = await renderTagline();
+  const taglineTop = LOCKUP_TOP + lockupH + 20;
 
   // ── Composite everything onto the warm paper background ────────
   await sharp({
@@ -105,9 +105,9 @@ async function generateOgImage() {
       },
       // Tagline
       {
-        input: taglineSvg,
-        left: 0,
-        top: 0,
+        input: tagline.data,
+        left: Math.round((WIDTH - tagline.info.width) / 2),
+        top: taglineTop,
       },
     ])
     .png()

@@ -185,6 +185,16 @@ Full upstream font licenses and copyright notices are in `public/licenses/fonts/
 Vite copies them into `dist/licenses/fonts/` (also packaged by Capacitor), and
 `includeAssets` in `vite.config.ts` precaches them for offline access. Keep these
 notices with the fonts when updating or redistributing them.
+Cormorant includes true italic subsets at `300 600`, so the landing headline uses
+designed italic letterforms instead of a synthesized slant. The OG image generator
+renders its tagline with Sharp's text renderer and the bundled Source Sans 3 latin
+font via `fontfile`; run `npm run og:generate` without a Google Fonts dependency.
+Its build-only `scripts/assets/fonts/yidhan-preview.ttf` is derived from the browser
+WOFF2 at weight 300, with a unique family so installed fonts cannot override it.
+Pango's fontfile loader requires SFNT. When updating Source Sans, regenerate it
+with `python scripts/prepare-og-font.py` (requires `fonttools[woff]` only for
+regeneration). Keep `public/licenses/fonts/source-sans-3-OFL.txt`; the derived
+font also embeds the full license. Normal image generation requires only Node.
 
 ### Logo Mark
 `Logo.tsx` renders the wordmark as live text and the enso mark as `.brand-mark` (in `index.css`): two

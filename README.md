@@ -96,6 +96,7 @@ See [Mobile Gap Analysis](docs/analysis/mobile-ios-gap-analysis-claude.md) for d
 - **Backend:** Supabase (PostgreSQL, Auth, Real-time)
 - **Native:** Capacitor (Android ready, iOS planned)
 - **Fonts:** Cormorant Garamond, Source Sans 3 (self-hosted, no third-party font requests)
+- **Typography assets:** True Cormorant italics for emphasized display text; social-preview image generation uses the bundled Source Sans 3 font.
 
 Bundled fonts use the SIL Open Font License 1.1. Full notices ship with the web and native builds:
 [Cormorant Garamond](public/licenses/fonts/cormorant-garamond-OFL.txt),
