@@ -1347,12 +1347,16 @@ function App() {
       const savedNote = await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
 
       // The optimistic update above spread the pre-edit note, so its contentHash
-      // still described the old text. Fold in the persisted note — which carries
-      // the recomputed hash — so the search cache keyed on it invalidates.
-      // A late acknowledgement must not replace a newer draft or its tags.
+      // still described the old text. Fold in the recomputed hash so the search
+      // cache keyed on it invalidates. Only the fields this save produced are
+      // taken: savedNote's pinned/deletedAt come from a read predating the
+      // write, so a pin toggle landing mid-save must not be reverted here.
+      // A late acknowledgement must not replace a newer draft either.
       setNotes((prev) => prev.map((n) => (
         n.id === savedNote.id && n.title === updatedNote.title && n.content === updatedNote.content
-          ? { ...n, ...savedNote, tags: n.tags }
+          ? { ...n, content: savedNote.content, contentHash: savedNote.contentHash,
+              updatedAt: savedNote.updatedAt, encryptedPayload: savedNote.encryptedPayload,
+              encryptionIv: savedNote.encryptionIv, encryptionVersion: savedNote.encryptionVersion }
           : n
       )));
 

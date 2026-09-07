@@ -130,7 +130,7 @@ export function ChapteredLibrary({
   if (isLoading && notes.length === 0) {
     return (
       <main
-        className="flex-1 overflow-y-auto pb-32 relative"
+        className="flex-1 overflow-y-auto pb-[calc(8rem+env(safe-area-inset-bottom))] relative"
         style={{ scrollbarWidth: 'none' }}
         data-testid="library-view"
         aria-busy="true"
@@ -270,7 +270,7 @@ export function ChapteredLibrary({
   // Library content (rendered inside or outside PullToRefresh based on device)
   const libraryContent = (
     <main
-      className="flex-1 overflow-y-auto pb-32 relative"
+      className="flex-1 overflow-y-auto pb-[calc(8rem+env(safe-area-inset-bottom))] relative"
       style={{ scrollbarWidth: 'none' }}
       data-testid="library-view"
     >

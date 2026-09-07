@@ -58,7 +58,6 @@ Fix what is broken. Items 1 to 22 are all small, need no Mac, no migration, and 
 | 8 | Sync | `note_tags` pulled incrementally and subscribed in realtime | days |  | A tag added on device A appears on device B within the #80 cross-device budget without re-login · two-client integration test |
 | 9 | Sync | Conflict modal decrypts both sides: title, excerpt, word count, device and time, paragraph-level diff; both versions preserved until the user chooses | days |  | Both cards show readable text and a diff; choosing either keeps the other as a revision (#59) or a copy · component test with two ciphertexts |
 | 10 | Sync | Replace the `Math.max(...spread)` cursor computation | days |  | Cursor computed by reduce · unit test at 100k rows |
-
 | 17 | Import and export | Lossless Markdown round-trip: highlight, underline, `h4` to `h6`, alignment | days |  | Editor HTML → Markdown → HTML → sanitized equals the original for every construct the editor can produce · property test |
 | 18 | Import and export | Import accepts the v2 full-account backup; share rows labelled from decrypted titles | days |  | The offboarding export re-imports with identical note count, tags, pinned state, and timestamps · E2E |
 | 19 | Sharing | Replace obsolete sharing expectations with current ones: remove the "never expires" case; the anonymous-view test must carry the `#k=` fragment and decrypt; assert the 30-day cap and the `/s/<token>/<slug>` route | days |  | The sharing suite passes against current behaviour and fails if the fragment is dropped · E2E |
