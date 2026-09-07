@@ -22,6 +22,7 @@ that own them.
 | Database schema | `docs/technical-spec.md` |
 | Screen layouts, keyboard shortcuts, slash commands | `docs/ui-layout.md` |
 | User-facing behaviour specs | `docs/reference/` |
+| Why a review finding was rejected | `docs/reviews/` |
 | Configuration how-to (OAuth, CI, E2E) | `docs/setup/` |
 | Frozen history — **not authoritative for anything** | `docs/archive/` |
 
