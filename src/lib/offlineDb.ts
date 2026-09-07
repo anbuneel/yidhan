@@ -39,6 +39,7 @@ export interface LocalNote {
   encryptionIv: string | null;
   encryptionVersion: number | null;
   contentHash: string | null;
+  confirmedContentHash?: string | null;
 }
 
 // Local tag with sync tracking

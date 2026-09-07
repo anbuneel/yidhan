@@ -79,6 +79,19 @@ export function HeaderShell({
   );
   const userDisplayName = userFullName || userEmail || 'User';
 
+  useEffect(() => {
+    if (!isProfileMenuOpen) return;
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setIsProfileMenuOpen(false);
+      profileMenuRef.current?.querySelector<HTMLButtonElement>('button[aria-expanded]')?.focus();
+    };
+    document.addEventListener('keydown', dismiss, true);
+    return () => document.removeEventListener('keydown', dismiss, true);
+  }, [isProfileMenuOpen]);
+
   // Close profile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

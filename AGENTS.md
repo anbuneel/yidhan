@@ -252,6 +252,8 @@ Avoid: creating new inline `style={{}}` objects for static values that could be 
 - Vertical sidebar toolbar in `EditorSidebar.tsx`: curated 10-button subset (bold, italic, highlight, H1-H3, lists, quote, code block) + focus mode. Visible at ≥1100px, supplements (not replaces) the inline toolbar.
 - Mobile toolbar uses `HeadingCycleButton` (¶→H1→H2→H3→¶) and `OverflowMenu` with `direction="up"` prop
 - Focus mode uses parent-class CSS strategy: `focus-mode-active` on scroll container triggers descendant `.focus-mode-target` elements to fade out
+- Links use `LinkPopover.tsx`, reached from toolbar, sidebar, slash commands, or Ctrl/Cmd+K with selected text; link clicks stay in the editor.
+- Save failures retain the draft with persistent Retry/Copy controls in focus mode. Autosave uses an 800 ms debounce and a 10-second checkpoint through the encrypted local-save path. Synced requires the server-confirmed content hash to match the current note.
 - Editor content is in `RichTextEditor.tsx` (exposes editor via `onEditorReady` callback)
 - Editor styles are in `index.css` under `.rich-text-editor`
 - Add new Tiptap extensions via npm and configure in `RichTextEditor.tsx`
@@ -314,13 +316,19 @@ content...
 - Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase (all payloads encrypted)
 - Legacy plaintext note create/update APIs and unused server read helpers are removed. Launch writes use `encryptedNotes`. Lint also checks that the removed service APIs have not returned; test-only database seeds stay under `src/test/`.
 - Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps. Import timestamps (`createdAt`/`updatedAt`) are forwarded through the sync queue to Supabase INSERT to preserve note chronology. Queue processing uses `buildQueueBatches()` for parallel execution with bounded concurrency (`SYNC_BATCH_CONCURRENCY_LIMIT = 6`); noteTag entries force batch barriers. Stale entries (>24h, 3+ retries, non-create) are auto-blocked to prevent permanent "pending" state. Typed `SyncConflictError` enables clean conflict routing without retry logic.
+- Tag membership (`note_tags`) has no `updated_at`, so `reconcileNoteTags` runs a full paginated scan on **every** pull, not only on reconnect. Realtime is the only steady-state signal for membership, and gating the scan would leave a dropped event uncorrected until the next reconnect. The cost is a membership scan per sync cycle; revisit when `note_tags` gains a timestamp column. Realtime tag events are coalesced into one library refresh (`SYNC_REFRESH_COALESCE_MS`) so a burst costs a single decrypt pass.
 - Server-side `notes_updated_at_trigger` prevents client clock skew issues (fires on UPDATE only; INSERT preserves client-supplied timestamps)
 - Self-echo suppression via `pendingMutations` set prevents realtime re-applying own changes
 - Realtime subscriptions update IndexedDB + React state for cross-device changes
+- Tag memberships reconcile per note on realtime events and use a complete paginated catch-up after disconnects (the junction has no timestamp column). Queued local tag edits remain protected.
+- Conflict previews decrypt both versions in memory, show word counts and paragraph changes, and save the unchosen encrypted content as a separate copy before resolution.
 - All note/tag operations are scoped to authenticated user via RLS
 - Launch database hardening (`supabase/migrations/launch_security_hardening.sql`) resets core RLS policies, removes public table-read share policies, enforces encrypted-only note rows, caps share writes at 30 days, and revokes normal-client access to global SECURITY DEFINER cleanup/migration functions
 - Tags support many-to-many relationship with notes
 - Tag filtering uses AND logic (notes must have ALL selected tags)
+- **Search cache:** Plaintext is cached by note content hash within the mounted library; queries reuse it and card snippets are memoized.
+- **Mobile library:** Gesture guidance is a caption below the first card. The time ribbon appears from 20 notes, reserves an opaque bottom area, and hides near the footer.
+- **Practice privacy:** Fresh starter notes and the landing draft seal state that practice drafts are unencrypted until signup and vault setup. The manifest no longer registers a share target.
 - **Search**: Filters `displayNotes` by debounced query (title + plaintext content). Tag toggle preserves search query. Progressive rendering suspends during search so all matches render at once. Search-empty state shows "No thoughts found" (distinct from library-empty "Your notes await"). `Ctrl+Shift+K` focuses search bar.
 - **Progressive rendering**: Each `ChapterSection` shows 6 cards initially (`INITIAL_CARD_COUNT`), loads 6 more via IntersectionObserver sentinel with drain loop for tall viewports. Fingerprint-based reset (`notes.map(id).join`). Chapters force-expand during search.
 - User's full name is stored in Supabase `user_metadata.full_name`

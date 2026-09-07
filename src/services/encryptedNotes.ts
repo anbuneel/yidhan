@@ -349,27 +349,6 @@ export async function fetchDecryptedFadedNotes(
 }
 
 /**
- * Search notes by decrypting all notes and filtering client-side.
- * Encrypted content cannot be searched on the server or in IndexedDB.
- */
-export async function searchDecryptedNotes(
-  userId: string,
-  query: string,
-  keys: DerivedKeys
-): Promise<Note[]> {
-  const allNotes = await fetchDecryptedNotes(userId, keys);
-
-  if (!query.trim()) return allNotes;
-
-  const lowerQuery = query.toLowerCase();
-  return allNotes.filter((note) =>
-    note.title.toLowerCase().includes(lowerQuery) ||
-    // Strip HTML tags for content search
-    note.content.replace(/<[^>]*>/g, '').toLowerCase().includes(lowerQuery)
-  );
-}
-
-/**
  * Decrypt a single note from a server event (realtime subscription).
  */
 export async function decryptNoteFromServer(

@@ -48,6 +48,7 @@ function localNoteToNote(localNote: LocalNote, tags: Tag[] = []): Note {
     encryptionIv: localNote.encryptionIv,
     encryptionVersion: localNote.encryptionVersion,
     contentHash: localNote.contentHash,
+    confirmedContentHash: localNote.confirmedContentHash,
   };
 }
 
@@ -86,6 +87,7 @@ function dbNoteToLocal(dbNote: DbNote, userId: string): LocalNote {
     encryptionIv: dbNote.encryption_iv ?? null,
     encryptionVersion: dbNote.encryption_version ?? null,
     contentHash: dbNote.content_hash ?? null,
+    confirmedContentHash: dbNote.content_hash ?? null,
   };
 }
 
@@ -492,52 +494,6 @@ export async function fetchFadedNotesOffline(userId: string): Promise<Note[]> {
 }
 
 /**
- * Search notes in IndexedDB
- */
-export async function searchNotesOffline(userId: string, query: string): Promise<Note[]> {
-  if (!query.trim()) {
-    return fetchNotesOffline(userId);
-  }
-
-  const db = getOfflineDb(userId);
-  const searchLower = query.toLowerCase();
-
-  // Get all active notes, filter by search term, and sort
-  const notes = (await db.notes
-    .filter((n) =>
-      n.deletedAt === null &&
-      (n.title.toLowerCase().includes(searchLower) ||
-       n.content.toLowerCase().includes(searchLower))
-    )
-    .toArray())
-    .sort((a, b) => {
-      if (a.pinned !== b.pinned) return b.pinned ? 1 : -1;
-      return b.updatedAt - a.updatedAt;
-    });
-
-  // Get tags (same pattern as above)
-  const noteIds = notes.map((n) => n.id);
-  const noteTags = noteIds.length > 0
-    ? await db.noteTags.where('noteId').anyOf(noteIds).toArray()
-    : [];
-  const tagIds = [...new Set(noteTags.map((nt) => nt.tagId))];
-  const tags = tagIds.length > 0 ? await db.tags.where('id').anyOf(tagIds).toArray() : [];
-  const tagMap = new Map(tags.map((t) => [t.id, localTagToTag(t)]));
-
-  const noteTagMap = new Map<string, Tag[]>();
-  for (const nt of noteTags) {
-    const tag = tagMap.get(nt.tagId);
-    if (tag) {
-      const existing = noteTagMap.get(nt.noteId) || [];
-      existing.push(tag);
-      noteTagMap.set(nt.noteId, existing);
-    }
-  }
-
-  return notes.map((n) => localNoteToNote(n, noteTagMap.get(n.id) || []));
-}
-
-/**
  * Count faded notes in IndexedDB
  */
 export async function countFadedNotesOffline(userId: string): Promise<number> {
@@ -880,16 +836,23 @@ export async function retryBlockedSyncEntries(userId: string): Promise<number> {
 export async function markNoteSynced(
   userId: string,
   noteId: string,
-  serverUpdatedAt: Date
+  serverUpdatedAt: Date,
+  confirmedHash?: string | null
 ): Promise<void> {
   const db = getOfflineDb(userId);
   // Use server timestamp to keep all sync comparisons in same clock domain
   const serverTime = serverUpdatedAt.getTime();
 
-  await db.notes.update(noteId, {
-    syncStatus: 'synced',
-    lastSyncedAt: serverTime,
-    serverUpdatedAt: serverTime,
+  await db.transaction('rw', db.notes, async () => {
+    const note = await db.notes.get(noteId);
+    if (!note) return;
+    const confirmedContentHash = confirmedHash === undefined ? note.confirmedContentHash : confirmedHash;
+    await db.notes.update(noteId, {
+      syncStatus: !note.contentHash || confirmedContentHash === note.contentHash ? 'synced' : 'pending',
+      confirmedContentHash,
+      lastSyncedAt: serverTime,
+      serverUpdatedAt: serverTime,
+    });
   });
 }
 
@@ -1027,6 +990,7 @@ export async function upsertNoteFromServer(
         encryptionIv: note.encryptionIv ?? null,
         encryptionVersion: note.encryptionVersion ?? null,
         contentHash: note.contentHash ?? null,
+        confirmedContentHash: note.contentHash ?? null,
       });
     }
   } else {
@@ -1048,6 +1012,7 @@ export async function upsertNoteFromServer(
       encryptionIv: note.encryptionIv ?? null,
       encryptionVersion: note.encryptionVersion ?? null,
       contentHash: note.contentHash ?? null,
+      confirmedContentHash: note.contentHash ?? null,
     };
     await db.notes.add(localNote);
   }

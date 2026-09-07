@@ -102,7 +102,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/check-manifest.mjs",
     "lint": "eslint . && node scripts/check-removed-note-writes.mjs",
     "preview": "vite preview",
     "test": "vitest",
@@ -140,7 +140,6 @@
     "@tiptap/extension-task-item": "^3.13.0",
     "@tiptap/extension-task-list": "^3.13.0",
     "@tiptap/extension-text-align": "^3.13.0",
-    "@tiptap/extension-underline": "^3.13.0",
     "@tiptap/react": "^3.13.0",
     "@tiptap/starter-kit": "^3.13.0",
     "@tiptap/suggestion": "^3.13.0",

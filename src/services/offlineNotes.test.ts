@@ -287,47 +287,6 @@ describe('offlineNotes', () => {
   });
 
   // ──────────────────────────────────────────────────
-  // searchNotesOffline
-  // ──────────────────────────────────────────────────
-
-  describe('searchNotesOffline', () => {
-    it('should find notes by title', async () => {
-      const { searchNotesOffline } = await import('./offlineNotes');
-
-      await seedOfflineNote(TEST_USER_ID, 'Meeting Agenda', '<p>Items</p>');
-      await seedOfflineNote(TEST_USER_ID, 'Shopping List', '<p>Milk</p>');
-
-      const results = await searchNotesOffline(TEST_USER_ID, 'meeting');
-
-      expect(results).toHaveLength(1);
-      expect(results[0].title).toBe('Meeting Agenda');
-    });
-
-    it('should find notes by content', async () => {
-      const { searchNotesOffline } = await import('./offlineNotes');
-
-      await seedOfflineNote(TEST_USER_ID, 'Recipe', '<p>Add flour</p>');
-      await seedOfflineNote(TEST_USER_ID, 'Notes', '<p>Remember eggs</p>');
-
-      const results = await searchNotesOffline(TEST_USER_ID, 'flour');
-
-      expect(results).toHaveLength(1);
-      expect(results[0].title).toBe('Recipe');
-    });
-
-    it('should return all notes for empty query', async () => {
-      const { searchNotesOffline } = await import('./offlineNotes');
-
-      await seedOfflineNote(TEST_USER_ID, 'A');
-      await seedOfflineNote(TEST_USER_ID, 'B');
-
-      const results = await searchNotesOffline(TEST_USER_ID, '');
-
-      expect(results).toHaveLength(2);
-    });
-  });
-
-  // ──────────────────────────────────────────────────
   // Tag association operations
   // ──────────────────────────────────────────────────
 

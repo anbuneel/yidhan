@@ -1,6 +1,9 @@
+import { VaultLockedSaveError } from '../utils/saveErrors';
 import { useState, useEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
+import { getSaveLabel } from '../utils/saveStatus';
 import type { Note, Tag, Theme } from '../types';
+import { LinkPopover } from './LinkPopover';
 import { RichTextEditor } from './RichTextEditor';
 import { EditorToolbar } from './EditorToolbar';
 import { EditorSidebar } from './EditorSidebar';
@@ -55,7 +58,7 @@ interface EditorProps {
   noteSyncStatus?: 'synced' | 'pending' | 'conflict'; // Note-specific sync status (3A)
 }
 
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'copied' | 'error';
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'copied';
 
 interface NoteSnapshot {
   title: string;
@@ -92,19 +95,10 @@ function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): bo
   return a !== null && b !== null && a.title === b.title && a.content === b.content;
 }
 
-function handleTitleKeyDown(e: React.KeyboardEvent) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    // Focus will move to the editor naturally.
-  }
-}
-
 function getSaveStatusStyle(status: SaveStatus): { color: string; background: string } {
   switch (status) {
     case 'saving':
       return { color: 'var(--color-accent)', background: 'var(--color-accent-glow)' };
-    case 'error':
-      return { color: 'var(--color-error)', background: 'var(--color-error-light)' };
     default:
       return { color: 'var(--color-success)', background: 'var(--color-success-glow)' };
   }
@@ -114,8 +108,30 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [hasSaveError, setHasSaveError] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+  const [saveErrorDetail, setSaveErrorDetail] = useState('');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [editor, setEditor] = useState<TiptapEditor | null>(null);
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      editor?.commands.focus('start');
+    }
+  };
+  const [showLinkPopover, setShowLinkPopover] = useState(false);
+  const closeLinkPopover = useCallback(() => setShowLinkPopover(false), []);
+  const openLinkPopover = useCallback(() => {
+    editor?.chain().extendMarkRange('link').run();
+    setShowLinkPopover(true);
+  }, [editor]);
+  useEffect(() => {
+    const requestLink = (event: Event) => {
+      if (event.target === editor?.view?.dom) openLinkPopover();
+    };
+    document.addEventListener('yidhan:edit-link', requestLink);
+    return () => document.removeEventListener('yidhan:edit-link', requestLink);
+  }, [editor, openLinkPopover]);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showResumeChip, setShowResumeChip] = useState(false);
@@ -171,6 +187,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     currentNoteIdRef.current = note.id;
     setTitle(note.title);
     setContent(note.content);
+    setHasSaveError(false);
+    setSaveErrorDetail('');
     committedSnapshotRef.current = buildSnapshot(note.title, note.content, note.tags);
     inFlightSnapshotRef.current = null;
     setRemoteUpdate(null);
@@ -356,14 +374,25 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const performSave = useCallback(async (): Promise<boolean> => {
     const draftSnapshot = buildSnapshot(title, content, note.tags);
 
-    if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
+    // Nothing to write means nothing is unsaved, so any banner left by an
+    // earlier failure is now untrue. Without this, reverting a draft back to
+    // the last committed text and then pressing Retry took this path and left
+    // the "Not saved" banner on screen with no way to dismiss it.
+    const nothingToSave = (): boolean => {
+      setHasSaveError(false);
+      setSaveErrorDetail('');
+      setCopyFailed(false);
       return true;
+    };
+
+    if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
+      return nothingToSave();
     }
 
     if (inFlightSaveRef.current) {
       await inFlightSaveRef.current;
       if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
-        return true;
+        return nothingToSave();
       }
     }
 
@@ -395,7 +424,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         }
         setRemoteUpdate(null);
 
-        // Show success state
+        // Show success state. A save that worked closes out the whole failure
+        // episode, so a later, unrelated one starts without this one's
+        // clipboard warning.
+        setCopyFailed(false);
+        setHasSaveError(false);
         setSaveStatus('saved');
 
         // Hide indicator after 2 seconds
@@ -403,18 +436,19 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           setSaveStatus('idle');
         }, 2000);
         return true;
-      } catch {
+      } catch (error) {
+        setSaveErrorDetail(error instanceof VaultLockedSaveError ? error.message : '');
         if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
           inFlightSnapshotRef.current = null;
         }
 
-        // Save failed after retries - show error state
-        setSaveStatus('error');
+        // Save failed after retries. The banner carries the message, so the
+        // header indicator just stops claiming anything. copyFailed is left
+        // alone: a background retry that also failed has not fixed the
+        // clipboard, so silently dropping that warning would be a lie.
+        setHasSaveError(true);
+        setSaveStatus('idle');
 
-        // Keep error visible for 5 seconds
-        hideIndicatorTimeoutRef.current = setTimeout(() => {
-          setSaveStatus('idle');
-        }, 5000);
         return false;
       } finally {
         // Clear the in-flight ref when done
@@ -449,6 +483,13 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       }
     };
   }, [title, content, note.title, note.content, performSave]);
+
+  // Bound continuous typing using the same encrypted local-save path as autosave.
+  const checkpoint = useEffectEvent(() => { void performSave(); });
+  useEffect(() => {
+    const timer = setInterval(() => checkpoint(), 10_000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Flush pending auto-save on visibility change / page hide.
   // When user switches apps on mobile, the pending debounce timer may never fire.
@@ -503,6 +544,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     }
     // Escape: exit focus mode first, then save and go back
     if (e.key === 'Escape') {
+      if (e.defaultPrevented || showLinkPopover || showExportMenu || showShareModal || showDeleteConfirm ||
+        document.querySelector('[aria-expanded="true"], [role="dialog"], [role="menu"], [data-editor-popover]')) {
+        return;
+      }
       if (isFocusMode) {
         setIsFocusMode(false);
         return;
@@ -513,8 +558,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         await inFlightSaveRef.current;
       }
       // Then trigger a new save if needed and await it
-      await performSave();
-      onBack();
+      if (await performSave()) onBack();
     }
     // Cmd/Ctrl+Shift+C: copy note to clipboard
     if (e.key === 'c' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
@@ -533,6 +577,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     }
 
     e.preventDefault();
+    if (!e.shiftKey && editor?.isFocused && (!editor.state.selection.empty || editor.isActive('link'))) {
+      openLinkPopover();
+      return;
+    }
     cancelPendingAutoSave();
     if (inFlightSaveRef.current) {
       await inFlightSaveRef.current;
@@ -673,7 +721,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     setShowDeleteConfirm(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
+    // Deleting wins. Flush the draft first so a restored note carries the last
+    // words, but a save that fails must never leave the button looking inert:
+    // someone releasing a note is not asking to keep its final edit.
+    await performSave();
     onDelete(note.id);
   };
 
@@ -685,8 +737,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       await inFlightSaveRef.current;
     }
     // Then trigger a new save if needed and await it
-    await performSave();
-    onBack();
+    if (await performSave()) onBack();
   };
 
   // Scroll to top of note (like Twitter header behavior)
@@ -883,14 +934,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               Saving&hellip;
             </>
           )}
-          {saveStatus === 'error' && (
-            <>
-              <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Save failed
-            </>
-          )}
           {saveStatus === 'copied' && (
             <>
               <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -904,7 +947,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
-              Saved
+              {getSaveLabel({ localSaved: title === committedSnapshotRef.current?.title && content === committedSnapshotRef.current?.content, synced: noteSyncStatus === 'synced',
+                matchesDraft: note.title === title && note.content === content,
+                hash: note.contentHash, confirmedHash: note.confirmedContentHash })}
             </>
           )}
         </span>
@@ -1010,8 +1055,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                     setShowExportMenu(false);
                     // Flush any unsaved edits so ShareModal encrypts the latest content
                     cancelPendingAutoSave();
-                    await performSave();
-                    setShowShareModal(true);
+                    if (await performSave()) setShowShareModal(true);
                   }}
                   className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
                   style={{
@@ -1120,6 +1164,25 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       style={{ background: 'var(--color-bg-primary)' }}
       data-testid="note-editor"
     >
+      {hasSaveError && (
+        <div role="alert" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-[2px_12px_4px_12px] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
+          <span className="mr-auto">Not saved{saveErrorDetail && <span className="block">{saveErrorDetail}</span>}
+            {copyFailed && <span className="block">Could not copy — select the text and copy it by hand.</span>}</span>
+          <button type="button" onClick={() => { setCopyFailed(false); void performSave(); }}
+            className="rounded-[2px_12px_4px_12px] px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}>Retry</button>
+          <button type="button" onClick={async () => {
+            try {
+              await copyNoteToClipboard({ ...note, title, content });
+              setCopyFailed(false);
+              setHasSaveError(false);
+              showCopiedIndicator();
+            } catch { setCopyFailed(true); }
+          }}
+            className="rounded-[2px_12px_4px_12px] border px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', background: 'transparent', borderColor: 'var(--glass-border)' }}>Copy</button>
+        </div>
+      )}
       {/* Sticky Zone: Header only */}
       <div
         className="editor-sticky-zone focus-mode-target"
@@ -1131,7 +1194,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           leftContent={leftContent}
           center={centerContent}
           rightActions={rightActions}
-          onSettingsClick={onSettingsClick}
+          // Settings is where a locked vault gets unlocked, so it must not be
+          // gated on a save that fails because the vault is locked. The header
+          // only surfaces it for an authenticated user, which the editor does
+          // not pass today, so this is a latent trap rather than a live one.
+          onSettingsClick={async () => { await performSave(); onSettingsClick(); }}
         />
       </div>
 
@@ -1257,7 +1324,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
       {/* Vertical sidebar — desktop only; CSS hides below 1100px where inline toolbar shows instead */}
       {!isMobile && (
-        <EditorSidebar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
+        <EditorSidebar editor={editor} onToggleFocusMode={handleToggleFocusMode} onLink={openLinkPopover} />
       )}
 
       {/* Editor Content */}
@@ -1316,7 +1383,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           {/* Inline toolbar — visible on medium desktop (768-1099px), hidden when sidebar shows */}
           {!isMobile && (
             <div className="editor-toolbar-sticky editor-toolbar-medium-fallback focus-mode-target">
-              <EditorToolbar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
+              <EditorToolbar editor={editor} onToggleFocusMode={handleToggleFocusMode} onLink={openLinkPopover} />
             </div>
           )}
 
@@ -1395,7 +1462,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {/* Mobile: Bottom toolbar — fixed at thumb zone */}
       {isMobile && !isFocusMode && (
         <div className="editor-toolbar-bottom">
-          <EditorToolbar editor={editor} variant="bottom" onToggleFocusMode={handleToggleFocusMode} />
+          <EditorToolbar editor={editor} variant="bottom" onToggleFocusMode={handleToggleFocusMode} onLink={openLinkPopover} />
         </div>
       )}
 
@@ -1419,6 +1486,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       )}
 
       {/* Delete Confirmation Dialog */}
+      {showLinkPopover && editor && <LinkPopover editor={editor} onClose={closeLinkPopover} />}
       {showDeleteConfirm && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"

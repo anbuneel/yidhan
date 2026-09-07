@@ -40,6 +40,7 @@ export default defineConfig([
       'react-hooks/preserve-manual-memoization': 'off',
       'react-hooks/set-state-in-effect': 'off',
       'react-hooks/purity': 'off',
+      'no-restricted-exports': ['error', { restrictedNamedExports: ['searchNotesOffline', 'searchDecryptedNotes'] }],
     },
   },
 ])
