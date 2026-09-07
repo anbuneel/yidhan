@@ -40,10 +40,6 @@ To start work on an item, move it into the ACTIVE plan and delete it from here.
 | 24 | Wrapped master key: keep the derived key pair as `K`; derive a KEK from the passphrase with a fresh salt; store `wrap(KEK, K)` in `user_metadata` with a version flag; migrate on next unlock | weeks | Needs #23, #36 | Existing users migrate without re-encrypting a note; killing the app mid-migration and reopening completes it; the key-check still verifies `K` · unit tests for interrupted migration and for both keys surviving the wrap |
 | 25 | Passphrase change by re-wrapping `K` | days | Needs #24 | The new wrap is written and confirmed by the server before the old wrap is invalidated; the key-check version bumps; every other device requires re-unlock on next use; a concurrent change from a second device fails cleanly with a re-prompt · two-device integration test; offline attempt is queued and reported as pending, never as complete |
 | 26 | Recovery kit: random 256-bit key, `wrap(RK, K)`, shown once as grouped base32 with print and copy, confirmation required; unlock via recovery key then set a new passphrase | weeks | Needs #24 | A user who forgets the passphrase enters the recovery key, sees their notes, and sets a new passphrase; the old wrap is then invalidated as in #25 · E2E through the whole path |
-| 38 | Encrypted backup export (`.yidhan`: v2 JSON under a backup key) and import | days |  | A backup restores into a fresh browser profile with identical notes, tags, pinned state, timestamps, and (later) attachments; a truncated file is rejected with a clear message · restore test in CI |
-| 39 | Threat-model page at `/security` in the product voice; `security.txt`; states visible metadata (timestamps, sizes, tag names until #101) | days |  | Page live and linked from `/privacy` · copy review |
-| 40 | Outbound data audit: Sentry allowlisted fields, URLs, demo and capture paths, error strings | days |  | Audit doc lists every outbound request type and the fields it may carry; scrubber tests cover each · unit tests |
-| 41 | One undecryptable note renders as a locked card with retry; library stays usable; exports report incomplete | days |  | Corrupting one payload leaves every other note readable and the export banner says "1 note could not be included" · unit and E2E tests |
 | 47 | Private capture: POST `share_target` with `multipart/form-data` intercepted by the service worker; content stored locally in IndexedDB and encrypted immediately when the vault is unlocked; when locked, held locally in a "waiting for unlock" state and encrypted on unlock; never sent to any server unencrypted; failure and fallback paths defined | weeks | Needs #28, service-worker test harness | A share from another app creates a note without any network request carrying the text, with the vault locked or unlocked · service-worker E2E asserting the request log; locked-vault case covered |
 | 101 | Encrypt tag names (and future collection and attachment names) with AAD `tagId:userId`; append-only migration | weeks | Needs #24, #36 | The server holds no plaintext tag names; filtering and autocomplete still work offline · migration test and a database assertion |
 | 102 | Key exposure at rest, stated honestly: on the web the unlocked key is held in a dedicated Worker so page scripts cannot read it directly (execution isolation, which limits but does not remove XSS reach); persistent protection comes only from a platform keystore (native, #106) or a passkey-wrapped blob (#135); "Remember this browser" copy states the device and XSS exposure plainly | weeks |  | Raw key bytes are no longer readable from `localStorage` or page scope; the setting's copy passes review · unit test on the Worker boundary |
@@ -60,10 +56,6 @@ To start work on an item, move it into the ACTIVE plan and delete it from here.
 | 35 | Server write contract: an RPC `update_note_checked(note_id, expected_hash, expected_updated_at, client_mutation_id, payload)` that returns one of `updated`, `stale` (with the current server row), `missing`, `forbidden`; `client_mutation_id` stored so a replay after a lost response returns the original result; `stale` raises a conflict with both versions preserved; `missing` alone may trigger the local rebuild path; `forbidden` blocks with its reason | days | Needs #36 | two clients writing the same note produce a conflict, never a silent overwrite; a replayed mutation is a no-op; a stale write is never mistaken for a missing row · integration tests for all four outcomes and for replay |
 | 69 | Deletion policy, decided before anything purges: a queued update for a note hard-deleted or purged elsewhere becomes a conflict ("this note was released on another device: restore or discard"), never a silent reinsertion; a permanently failing `create` expires into a blocked state the user can export or discard | days | Needs #35 | the reinsertion path only runs for the `missing` outcome on notes with no server tombstone · integration test with a tombstoned note |
 | 70 | Tombstones for notes and tags written by trigger and pulled by cursor; end the two full-table sweeps | weeks | Needs #36 | Sync makes no `select id` sweep; a note deleted on device A disappears on device B via the tombstone · integration test and query log assertion |
-| 71 | Cross-tab queue ownership with the Web Locks API or a recoverable lease | days |  | Two tabs never sync concurrently; a tab that dies mid-sync releases the lock within 30 s · E2E with two pages |
-| 72 | `isRetryableError` classifies by error code and type, not substrings; `delete` no longer string-matches "0 rows" | days |  | A server error whose message contains "network" is not retried unless its code is transient · unit tests |
-| 73 | `fadedNotesCount` derived from data, not incremented optimistically | days |  | Count equals the faded list length after any sequence of local and realtime deletes · unit test |
-| 74 | Card deletion is exactly-once with deliberate undo: the delete action runs once whether the animation finishes or the card unmounts; a failed delete restores the card with a message; Undo is the only cancellation path | days |  | Typing in search during the delete animation still deletes exactly once; a rejected delete restores the card · component test with unmount-mid-animation and with a rejected `onDelete` |
 | 75 | Server-side `pg_cron` purge for faded notes instead of client-load purge | days | Needs #69, #70 | A purged note leaves a tombstone; a device with a queued update for it gets the #69 conflict, not a resurrection · integration test |
 | 143 | Delta uploads instead of the full blob per autosave | weeks | Start when #118 shipped and #80 shows autosave payloads above 100 KB in normal use | A one-word edit to a 200 KB note uploads under 5 KB · network assertion |
 | 144 | Evaluate Yjs or Automerge for note bodies | a month or more | Start when #143 shipped and conflicts exceed one per user-week in the cohort | Written evaluation with a prototype and a decision · doc |
@@ -83,18 +75,11 @@ To start work on an item, move it into the ACTIVE plan and delete it from here.
 |---|------|--------|-------|-----------|
 | 31 | Structured document format: ProseMirror JSON is the canonical stored form with a `docVersion` inside the encrypted payload; a schema validator (node and mark allow-list checked with the editor schema, not DOMPurify) rejects unknown or malformed nodes on read and write; HTML is derived from JSON for cards, exports, and letters and still passes `sanitizeHtml`; older clients that meet a newer `docVersion` open the note read-only with an "update Yidhan to edit" notice | weeks | Needs #36 | A note with a new node type renders in a newer client, opens read-only in an older client, and exports to clean HTML and Markdown; a malformed JSON payload is rejected without crashing · unit tests for validator, degradation, and export |
 | 34 | Images in the editor: paste, drop, slash command; 5 MB cap, 2048 px downscale, WebP; blob URLs at render | a month or more | Needs #32 | A photo pasted offline syncs and renders on another device; a 20 MB photo is downscaled below the cap · E2E |
-| 52 | Markdown paste through `handlePaste` and `markdownToHtml` | days |  | `## Heading` pastes as a heading; HTML clipboard content is untouched · unit test |
-| 53 | Typography extension: smart quotes, dashes, ellipsis | days |  | Enabled with a setting to disable; code blocks exempt · unit test |
-| 54 | Word and character count, reading time, hover-revealed in the title-zone metadata | days |  | Visible on hover on desktop, tap on mobile · component test |
-| 55 | Find and replace in note: `Cmd+F`, next and previous, decoration highlights | days |  | Works in focus mode; replace-all is undoable in one step · E2E |
-| 56 | Toolbar and sidebar subscribe to editor transactions so active states stay fresh | days |  | Arrow into bold text lights the button · component test |
-| 57 | One command model: same capability set in sidebar, inline toolbar, mobile bar, slash menu, shortcuts, with overflow by width; fixes the hidden inline toolbar at 1100 px and wider; text-align gets UI or the extension is dropped; inline code button | weeks |  | Every command reachable by mouse at every width from 320 px to 1920 px · E2E across four widths |
 | 97 | Heading outline for long notes, hover-revealed on desktop | weeks |  | The outline follows scroll and clicking a heading scrolls to it · E2E |
 | 112 | `spellcheck` and `lang` on the editor; remove the dead `prose-editor` class | days |  | Browser spellcheck underlines a misspelling · E2E |
 | 113 | Code block language and highlighting via lowlight | days | Needs #31 | Language picker in the block; highlighting survives export · unit test |
 | 114 | Undo history isolated per note (`setContent` with history cleared, `emitUpdate: false`) | days |  | Undo after switching notes cannot alter the previous note · unit test |
 | 115 | Untouched new note fades silently on leave | days |  | Leaving a blank new note leaves no card behind · E2E |
-| 116 | Slash menu flips and clamps to the viewport and follows scroll; renderer lifecycle bug on Escape fixed | days |  | The menu is fully visible at the bottom of a 390 px viewport · mobile E2E |
 | 117 | Overflow menu: touch and scroll close, `menuitem` roles, arrow keys | days |  | Axe clean; arrow keys move focus · component test |
 | 127 | Simple tables (Tiptap Table, no formulas, no sorting) | weeks | Start when #31 shipped and the cohort asks for tables | A three-column table round-trips through export and a letter · E2E |
 | 128 | Heading folding | weeks | Start when #97 shipped and long notes over 3,000 words exceed 10 % of the cohort's notes | Folded state persists per note · E2E |
@@ -106,9 +91,6 @@ To start work on an item, move it into the ACTIVE plan and delete it from here.
 
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
-| 30 | List view: one line per note, toggle in header, remembered per device | weeks |  | Toggle works; cards remain the default; 2,000 notes render without jank · E2E and the #80 fixture |
-| 48 | Sort and chapter basis: last edited or created; within chapter by edited, created, title | days |  | Editing an old note can stay in its chapter when "created" is chosen · unit test on grouping |
-| 49 | Card preview mask only when text overflows; cap age fade at 0.9 | days |  | Short previews fully legible; contrast on the Archive chapter passes AA · visual regression and axe |
 | 92 | Note links: `[[` opens the switcher and inserts `/n/<id>`; titles resolve client-side; "Mentioned in" list at the bottom | weeks | Needs #28, #42, #31 | Renaming a note updates every link's text; the linked note lists the mention · E2E |
 | 93 | Tag quality of life: search in selector, rename preserves assignments, Tags page with counts, `#tag` autocomplete in the editor | days |  | Typing `#jour` and Enter assigns "journal" without leaving the editor · E2E |
 | 94 | Templates (notes tagged `template`) and a "Today" daily page in the palette | days | Needs #42 | "Today" opens today's note or creates it once · E2E |
@@ -123,8 +105,6 @@ To start work on an item, move it into the ACTIVE plan and delete it from here.
 
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
-| 50 | Query semantics: multi-term AND, quoted phrases, `tag:`, `is:pinned`, `before:`, `after:`; all matches highlighted | days | Needs #11 | `tag:journal before:2026-03 "exact phrase"` returns only notes matching all three · unit test per operator; operators listed in the `?` modal |
-| 51 | In-memory index (MiniSearch or FlexSearch) with ranking and fuzziness, incremental rebuild; moved to a worker if the main thread shows it | days | Needs #11 | Title matches rank first; p95 under 200 ms at 10k notes · #80 fixture |
 | 100 | Search results honour progressive rendering and virtualization instead of rendering every match at once | days | Needs #99 | 10k matching notes render in under 200 ms · #80 fixture |
 | 142 | Persisted encrypted search index | weeks | Start when #80 shows load-time indexing above 500 ms at the cohort's library size | Cold start with 10k notes reaches a searchable state under 1 s · #80 |
 
@@ -132,12 +112,8 @@ To start work on an item, move it into the ACTIVE plan and delete it from here.
 
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
-| 28 | Note URLs: `/n/<id>`, `/faded`, `/`; history push and pop; scroll restore; routing extracted to `src/routing/` | weeks |  | Browser Back from a note returns to the library at the same scroll position; refresh reopens the note · E2E |
-| 29 | Faded view routeable; editor with a missing note redirects instead of `return null` | days |  | Opening `/n/<deleted>` lands on the library with a quiet notice · E2E |
 | 42 | Quick switcher and command palette: `Cmd+K` focuses it in the library, `Cmd+P` opens it anywhere, `>` lists actions, arrow keys and Enter | weeks | Needs #28 | Any note reachable in three keystrokes from anywhere · E2E |
-| 43 | Keyboard navigation over cards: arrows or j/k, Enter, p, t, Delete with undo | days |  | Library usable without a mouse; focus ring visible · E2E and axe |
 | 44 | Quick capture: PWA `shortcuts` "New note" to `/n/new`; `Cmd+N` inside the editor | days | Needs #28 | Two capture paths work on Android and desktop · E2E |
-| 45 | "Start writing" reaches an editable draft in one action on desktop and mobile; mobile landing CTA opens a new Practice Space note | days |  | One tap, caret blinking · mobile E2E |
 | 96 | Append-to-existing-note capture (append to today's page from the share target) | days | Needs #47, #94 | Shared text lands at the end of today's page, encrypted · service-worker E2E |
 | 145 | Browser clipper with encrypted staging | a month or more | Start when #47 shipped and cohort demand | A clipped page becomes an encrypted note without plaintext leaving the browser · extension test |
 
@@ -176,7 +152,6 @@ To start work on an item, move it into the ACTIVE plan and delete it from here.
 
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
-| 83 | Remove the doubled title in the mobile editor; `h-screen` to `100dvh` | days |  | iOS Safari bars no longer clip the toolbar · real-device check in #81 |
 | 84 | iOS keyboard feasibility spike (one week, needs a Mac): Capacitor shell with the current editor; measure keyboard height tracking, selection, and focus mode in WKWebView; decide go or no-go for #105 | days |  | A written result with measurements and the decision · doc in `docs/plans/` |
 | 85 | Real-device testing checklist per release (keyboards, installed PWA, gestures) | days |  | A release cannot merge without a recorded device pass · checklist in repo, referenced from the release PR template |
 | 105 | iOS Capacitor project: haptics, status bar, keyboard, share sheet, secure storage; App Store privacy labels; TestFlight | weeks | Start when items 1 to 22 and the recovery key (#23 to #27) have shipped, a real-device browser pass (#81) is recorded, and the keyboard spike (#84) says go | TestFlight build passes the #81 device checklist and the failure scenarios · checklist and CI |
@@ -205,7 +180,6 @@ To start work on an item, move it into the ACTIVE plan and delete it from here.
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
 | 27 | Passphrase setup rewritten as three steps: passphrase, recovery key, done | days | Needs #26 | New users cannot finish setup without confirming the recovery key · E2E |
-| 46 | Practice Space to account in one step is the primary demo CTA | days |  | The first note is carried into the account · E2E |
 | 86 | Custom SMTP for auth email; magic-link sign-in | weeks |  | OTP and magic-link emails arrive within one minute in production for 50 consecutive sends · manual verification log |
 | — | Additional OAuth providers, Apple Sign-In first | days |  |
 
@@ -216,7 +190,6 @@ To start work on an item, move it into the ACTIVE plan and delete it from here.
 | 60 | Prerender `/`, `/privacy`, `/terms`, `/support`, `/changelog`, `/roadmap`; hydrate only theme toggle and CTA | weeks |  | Landing JavaScript under 50 KB gzip; content visible with JavaScript disabled · size budget test in CI |
 | 61 | Defer Supabase to first auth, `hash-wasm` to `deriveKey`, Sentry replay via `lazyLoadIntegration`; split the demo page; fix the React chunk; resolve the five static-plus-dynamic import warnings; keep offline assets and font licences precached | days |  | `main` under 300 KB; zero import warnings; offline shell still complete · build assertion and the service-worker E2E |
 | 62 | Input-path work: stop lifting `getHTML()` into `Editor` state on every keystroke; stop re-attaching visibility listeners per character; measure KDF and library decryption | weeks |  | Typing p95 under 100 ms on the long-note fixture · #80 |
-| 63 | Decompose `App.tsx` and `Editor.tsx`: routing, `useNotesSync`, `useImport`, `useDemoMigration`, `useShareTarget`, `PublicPage`; clear interfaces for persistence, note lifecycle, search, attachments, vault | weeks | Needs #28 | `App.tsx` under 600 lines with no behaviour change · existing test suite green after each extraction |
 | 120 | Fix set-state-during-render (`ChapterSection`, `TimeRibbon`); retire react-doctor suppressions progressively | days |  | Suppressions under 5 with no behaviour change · lint |
 | 121 | Migration ordering and drift verification automated in CI against a staging database, plus the release-time check against production from #36 | weeks | Needs #36 | CI fails when the app is ahead of the staging schema; the release PR records the production check · CI |
 

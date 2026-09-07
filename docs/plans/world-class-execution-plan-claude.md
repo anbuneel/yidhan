@@ -38,23 +38,74 @@ that must land first.
 
 ## Next
 
-Seeded from this plan's own ordering and dependency rules after items 1–22
-shipped: three loose ends from that merged block first, then the gates that other
-work declares as `Needs`, then the validation cohort that items 1–22 unblocked.
-**Reorder freely** — a real writer or a measurement outranks this order.
+Five lanes, 28 items. Lanes A to D run in parallel on separate branches and own the files named in the handoff; E starts after C merges. Merge order when two are ready: D, B, A, C. Item 87 is the maintainer's own task, not a code lane.
+
+### Lane A · Editor fluency · `fix/editor-fluency` · runs in parallel
+
+| # | Area | Item | Effort | Needs / start when | Done when |
+|---|------|------|--------|--------------------|-----------|
+| 52 | Editor | Markdown paste through `handlePaste` and `markdownToHtml` | days |  | `## Heading` pastes as a heading; HTML clipboard content is untouched · unit test |
+| 53 | Editor | Typography extension: smart quotes, dashes, ellipsis | days |  | Enabled with a setting to disable; code blocks exempt · unit test |
+| 54 | Editor | Word and character count, reading time, hover-revealed in the title-zone metadata | days |  | Visible on hover on desktop, tap on mobile · component test |
+| 55 | Editor | Find and replace in note: `Cmd+F`, next and previous, decoration highlights | days |  | Works in focus mode; replace-all is undoable in one step · E2E |
+| 56 | Editor | Toolbar and sidebar subscribe to editor transactions so active states stay fresh | days |  | Arrow into bold text lights the button · component test |
+| 57 | Editor | One command model: same capability set in sidebar, inline toolbar, mobile bar, slash menu, shortcuts, with overflow by width; fixes the hidden inline toolbar at 1100 px and wider; text-align gets UI or the extension is dropped; inline code button | weeks |  | Every command reachable by mouse at every width from 320 px to 1920 px · E2E across four widths |
+| 83 | Phone | Remove the doubled title in the mobile editor; `h-screen` to `100dvh` | days |  | iOS Safari bars no longer clip the toolbar · real-device check in #81 |
+| 116 | Editor | Slash menu flips and clamps to the viewport and follows scroll; renderer lifecycle bug on Escape fixed | days |  | The menu is fully visible at the bottom of a 390 px viewport · mobile E2E |
+
+### Lane B · Trust groundwork · `feat/trust-groundwork` · runs in parallel
+
+| # | Area | Item | Effort | Needs / start when | Done when |
+|---|------|------|--------|--------------------|-----------|
+| 23 | Keys and privacy | Key migration and rotation design, written and reviewed before #24: the wrapped material is the full 64 bytes (AES key and HMAC key); three distinct flows (passphrase change by re-wrap; remembered-device invalidation by key-check version bump; compromise rotation by new key and full re-encryption, #103); interrupted migration resumes; two devices changing concurrently resolve to one winner and the other re-prompts; old offline devices with a stale wrap detect the version and re-unlock; restored backups from before the migration open | days |  | Every later key change can name the flow it belongs to and the test that covers it · design doc in `docs/plans/` with the test list, each test attached to #24, #25, #26, or #103 |
+| 36 | Speed and code | Deployment guard: the client reads a `schema_version` row at startup and refuses writes when the app is ahead of the database; `verify_migration_state.sql` becomes a mandatory release step run against the deployment target, recorded in the PR | days |  | An app built ahead of its migration shows a "database update pending" state instead of blocking the queue · unit test on the guard; release checklist in `docs/setup/` |
+| 38 | Keys and privacy | Encrypted backup export (`.yidhan`: v2 JSON under a backup key) and import | days |  | A backup restores into a fresh browser profile with identical notes, tags, pinned state, timestamps, and (later) attachments; a truncated file is rejected with a clear message · restore test in CI |
+| 39 | Keys and privacy | Threat-model page at `/security` in the product voice; `security.txt`; states visible metadata (timestamps, sizes, tag names until #101) | days |  | Page live and linked from `/privacy` · copy review |
+| 40 | Keys and privacy | Outbound data audit: Sentry allowlisted fields, URLs, demo and capture paths, error strings | days |  | Audit doc lists every outbound request type and the fields it may carry; scrubber tests cover each · unit tests |
+| 41 | Keys and privacy | One undecryptable note renders as a locked card with retry; library stays usable; exports report incomplete | days |  | Corrupting one payload leaves every other note readable and the export banner says "1 note could not be included" · unit and E2E tests |
+
+### Lane C · Note addresses and the App.tsx split · `feat/note-urls` · runs in parallel; owns App.tsx
+
+| # | Area | Item | Effort | Needs / start when | Done when |
+|---|------|------|--------|--------------------|-----------|
+| 28 | Navigation | Note URLs: `/n/<id>`, `/faded`, `/`; history push and pop; scroll restore; routing extracted to `src/routing/` | weeks |  | Browser Back from a note returns to the library at the same scroll position; refresh reopens the note · E2E |
+| 29 | Navigation | Faded view routeable; editor with a missing note redirects instead of `return null` | days |  | Opening `/n/<deleted>` lands on the library with a quiet notice · E2E |
+| 63 | Speed and code | Decompose `App.tsx` and `Editor.tsx`: routing, `useNotesSync`, `useImport`, `useDemoMigration`, `useShareTarget`, `PublicPage`; clear interfaces for persistence, note lifecycle, search, attachments, vault | weeks | Needs #28 | `App.tsx` under 600 lines with no behaviour change · existing test suite green after each extraction |
+| 45 | Navigation | "Start writing" reaches an editable draft in one action on desktop and mobile; mobile landing CTA opens a new Practice Space note | days |  | One tap, caret blinking · mobile E2E |
+| 46 | Onboarding | Practice Space to account in one step is the primary demo CTA | days |  | The first note is carried into the account · E2E |
+| 152 | Onboarding | Correct the old encryption claim in existing untouched demo starter copies without changing user-authored drafts | days | No local-data migrations in current scope | Existing unedited starter copies show the current privacy copy |
+
+### Lane D · Sync hardening and CI · `fix/sync-hardening` · runs in parallel
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
 | 150 | Sync | Reconcile pre-existing queued writes when accepting a conflict version; stale updates can remain queued after resolution | days | Needs #9 | Choosing the remote version cannot later replay an older local queued payload · integration test |
-| 152 | Onboarding | Correct the old encryption claim in existing untouched demo starter copies without changing user-authored drafts | days | No local-data migrations in current scope | Existing unedited starter copies show the current privacy copy |
-| 151 | Testing | Enable repository-wide unused-export lint with an audited legacy baseline | days | Needs #12, #20 | Real unused-export rule runs in CI without hiding new unused code |
-| 23 | Keys and privacy | Key migration and rotation design, written and reviewed before #24: the wrapped material is the full 64 bytes (AES key and HMAC key); three distinct flows (passphrase change by re-wrap; remembered-device invalidation by key-check version bump; compromise rotation by new key and full re-encryption, #103); interrupted migration resumes; two devices changing concurrently resolve to one winner and the other re-prompts; old offline devices with a stale wrap detect the version and re-unlock; restored backups from before the migration open | days |  | Every later key change can name the flow it belongs to and the test that covers it · design doc in `docs/plans/` with the test list, each test attached to #24, #25, #26, or #103 |
-| 36 | Speed and code | Deployment guard: the client reads a `schema_version` row at startup and refuses writes when the app is ahead of the database; `verify_migration_state.sql` becomes a mandatory release step run against the deployment target, recorded in the PR | days |  | An app built ahead of its migration shows a "database update pending" state instead of blocking the queue · unit test on the guard; release checklist in `docs/setup/` |
+| 71 | Sync | Cross-tab queue ownership with the Web Locks API or a recoverable lease | days |  | Two tabs never sync concurrently; a tab that dies mid-sync releases the lock within 30 s · E2E with two pages |
+| 72 | Sync | `isRetryableError` classifies by error code and type, not substrings; `delete` no longer string-matches "0 rows" | days |  | A server error whose message contains "network" is not retried unless its code is transient · unit tests |
+| 74 | Sync | Card deletion is exactly-once with deliberate undo: the delete action runs once whether the animation finishes or the card unmounts; a failed delete restores the card with a message; Undo is the only cancellation path | days |  | Typing in search during the delete animation still deletes exactly once; a rejected delete restores the card · component test with unmount-mid-animation and with a rejected `onDelete` |
 | 37 | Testing | Authenticated E2E fixture (test account, vault unlock) and the full Playwright suite in CI | days |  | `npm run e2e` runs in CI on every PR with no skipped authenticated tests · CI log |
+| 151 | Testing | Enable repository-wide unused-export lint with an audited legacy baseline | days | Needs #12, #20 | Real unused-export rule runs in CI without hiding new unused code |
+| 153 | Testing | Verify the "done when" tests for items 6, 8, and 18 (killed-tab recovery, cross-device latency, authenticated backup restore); closes #210 | days | Needs #37 | Each of the three tests runs in CI and passes; a later `docs/progress.md` entry corrects the #201, #202, #204 entries · CI log |
+
+### Lane E · Library and search · `feat/library-search` · starts after C merges
+
+| # | Area | Item | Effort | Needs / start when | Done when |
+|---|------|------|--------|--------------------|-----------|
+| 30 | Library | List view: one line per note, toggle in header, remembered per device | weeks |  | Toggle works; cards remain the default; 2,000 notes render without jank · E2E and the #80 fixture |
+| 43 | Navigation | Keyboard navigation over cards: arrows or j/k, Enter, p, t, Delete with undo | days |  | Library usable without a mouse; focus ring visible · E2E and axe |
+| 48 | Library | Sort and chapter basis: last edited or created; within chapter by edited, created, title | days |  | Editing an old note can stay in its chapter when "created" is chosen · unit test on grouping |
+| 49 | Library | Card preview mask only when text overflows; cap age fade at 0.9 | days |  | Short previews fully legible; contrast on the Archive chapter passes AA · visual regression and axe |
+| 50 | Search | Query semantics: multi-term AND, quoted phrases, `tag:`, `is:pinned`, `before:`, `after:`; all matches highlighted | days | Needs #11 | `tag:journal before:2026-03 "exact phrase"` returns only notes matching all three · unit test per operator; operators listed in the `?` modal |
+| 51 | Search | In-memory index (MiniSearch or FlexSearch) with ranking and fuzziness, incremental rebuild; moved to a worker if the main thread shows it | days | Needs #11 | Title matches rank first; p95 under 200 ms at 10k notes · #80 fixture |
+| 73 | Sync | `fadedNotesCount` derived from data, not incremented optimistically | days |  | Count equals the faded list length after any sequence of local and realtime deletes · unit test |
+
+### Maintainer
+
+| # | Area | Item | Effort | Needs / start when | Done when |
+|---|------|------|--------|--------------------|-----------|
 | 87 | Process | Validation cohort: 8 to 12 target writers for several weeks with their own material and consent for content-free diagnostics; observe capture-to-save, finding an old note, long writing, interruptions, migration, restoration | ongoing | Needs items 1 to 22 shipped | Findings written up and used to reorder `docs/roadmap.md` · doc in `docs/plans/` |
 
 ---
-
 ## Working rules
 
 - Work from **Next**. Anything that risks losing or leaking words jumps the queue.
