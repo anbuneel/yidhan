@@ -11,6 +11,7 @@ export const changelog: ChangelogEntry[] = [
     { type: 'fix', text: 'Imported account backups retain their format version; obsolete plaintext API documentation is removed.' },
     { type: 'fix', text: 'Markdown keeps editor formatting, full account backups restore pins and dates, and shared-note labels use your readable titles' },
     { type: 'improvement', text: 'Removed unused plaintext note APIs and updated letter-sharing verification for encrypted links and the 30-day limit' },
+    { type: 'fix', text: 'Exported Markdown is Markdown again: lists, numbered lists, quotes and code blocks were falling back to raw HTML, so files opened elsewhere showed tags instead of text' },
   ] },
   {
     version: '3.19.8',

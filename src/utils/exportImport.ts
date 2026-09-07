@@ -348,10 +348,11 @@ export function htmlToMarkdown(html: string): string {
   md = md.replace(/<s[^>]*>(.*?)<\/s>/gi, '~~$1~~');
   md = md.replace(/<strike[^>]*>(.*?)<\/strike>/gi, '~~$1~~');
 
-  // Code
-  md = md.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`');
+  // Code — fenced blocks first, or the inline rule consumes the <code> inside
+  // <pre> and leaves a block that can never match.
   md = md.replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gis, '```\n$1\n```\n\n');
   md = md.replace(/<pre[^>]*>(.*?)<\/pre>/gis, '```\n$1\n```\n\n');
+  md = md.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`');
 
   // Task lists (Tiptap format: ul[data-type="taskList"] with li[data-type="taskItem"])
   md = md.replace(/<ul[^>]*data-type="taskList"[^>]*>([\s\S]*?)<\/ul>/gi, (_match, content) => {
@@ -432,7 +433,7 @@ export function markdownToHtml(md: string): string {
   html = html.replace(/>/g, '&gt;');
 
   // Code blocks (before other processing)
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, _lang, code: string) => `<pre><code>${code.replace(/\n$/, '')}</code></pre>`);
 
   // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -455,7 +456,7 @@ export function markdownToHtml(md: string): string {
   html = html.replace(/^---$/gim, '<hr>');
 
   // Blockquotes
-  html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
+  html = html.replace(/^&gt; (.*$)/gim, '<blockquote>$1</blockquote>');
 
   // Task lists (must come before regular unordered lists)
   // Match lines like "- [ ] text" or "- [x] text"
@@ -470,8 +471,10 @@ export function markdownToHtml(md: string): string {
   html = html.replace(/^- (?!\[[ xX]\])(.*)$/gim, '<li>$1</li>');
   html = html.replace(/(<li>(?!<p>).*<\/li>\n?)+/g, '<ul>$&</ul>');
 
-  // Ordered lists
-  html = html.replace(/^\d+\. (.*$)/gim, '<li>$1</li>');
+  // Ordered lists — marked so the unordered wrap above cannot claim them
+  html = html.replace(/^\d+\. (.*$)/gim, '<li data-ordered>$1</li>');
+  html = html.replace(/(<li data-ordered>.*?<\/li>\n?)+/g, '<ol>$&</ol>');
+  html = html.replace(/ data-ordered/g, '');
 
   // Links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
@@ -493,7 +496,9 @@ export function markdownToHtml(md: string): string {
     return `<p>${trimmed}</p>`;
   }).join('');
 
-  // Line breaks within paragraphs
+  // Line breaks within paragraphs. Newlines that merely separate block
+  // elements are structure, not breaks, so drop those first.
+  html = html.replace(/\n+(?=<\/?(?:li|ul|ol|blockquote|pre|h[1-6]|hr|p)\b)/g, '');
   html = html.replace(/\n/g, '<br>');
 
   return html;

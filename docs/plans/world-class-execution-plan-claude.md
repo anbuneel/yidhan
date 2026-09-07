@@ -64,7 +64,6 @@ Fix what is broken. Items 1 to 22 are all small, need no Mac, no migration, and 
 | 14 | Phone | Time ribbon gets its own room: bottom padding, hidden near the footer, hidden under 20 notes | days |  | No overlap on a 390 px viewport · mobile E2E and visual regression |
 | 15 | Onboarding | Practice Space starter note and landing seal say plainly that drafts are not encrypted until signed up | days |  | No screen claims encryption for localStorage content · copy review and a text assertion in the demo E2E |
 | 16 | Keys and privacy | Remove the GET `share_target` from the manifest until #47 ships; the in-app paste path remains; note the removal in the changelog | days |  | The manifest has no `share_target`; no request to any server can carry shared text · manifest assertion in the build test |
-
 | 21 | Process | Update `docs/roadmap.md` "Not Building": tables → databases only; backlinks → graph only; recovery → recovery key planned | days |  | Doc changed |
 | 22 | Process | Raise issue #170 to P1 and link it to #24 to #23 and #103 | days |  | Issue updated |
 

@@ -350,26 +350,37 @@ describe('exportImport', () => {
 
     it('preserves code blocks through a Markdown roundtrip', () => {
       const html = '<pre><code>function test() {}</code></pre>';
+      // Assert real Markdown, not the raw-HTML fallback silently passing.
+      expect(htmlToMarkdown(html)).toBe('```\nfunction test() {}\n```');
       expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
     });
 
     it('preserves unordered lists through a Markdown roundtrip', () => {
       const html = '<ul><li>Item 1</li><li>Item 2</li></ul>';
+      // Assert real Markdown, not the raw-HTML fallback silently passing.
+      expect(htmlToMarkdown(html)).toBe('- Item 1\n- Item 2');
       expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
     });
 
     it('preserves ordered lists through a Markdown roundtrip', () => {
       const html = '<ol><li>First</li><li>Second</li></ol>';
+      // Assert real Markdown, not the raw-HTML fallback silently passing.
+      expect(htmlToMarkdown(html)).toBe('1. First\n2. Second');
       expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
     });
 
     it('preserves task lists through a Markdown roundtrip', () => {
-      const html = '<ul data-type="taskList"><li data-type="taskItem" data-checked="false">Todo</li><li data-type="taskItem" data-checked="true">Done</li></ul>';
+      // Tiptap wraps task item text in a paragraph; match what the editor emits.
+      const html = '<ul data-type="taskList"><li data-type="taskItem" data-checked="false"><p>Todo</p></li><li data-type="taskItem" data-checked="true"><p>Done</p></li></ul>';
+      // Assert real Markdown, not the raw-HTML fallback silently passing.
+      expect(htmlToMarkdown(html)).toBe('- [ ] Todo\n- [x] Done');
       expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
     });
 
     it('preserves blockquotes through a Markdown roundtrip', () => {
       const html = '<blockquote>Quote</blockquote>';
+      // Assert real Markdown, not the raw-HTML fallback silently passing.
+      expect(htmlToMarkdown(html)).toBe('> Quote');
       expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
     });
 
@@ -440,13 +451,7 @@ describe('exportImport', () => {
     });
 
     it('converts blockquotes', () => {
-      // Note: The implementation escapes > before processing, so blockquote
-      // syntax is escaped. This tests actual behavior - the > becomes &gt;
-      // which then gets wrapped in a paragraph.
-      const result = markdownToHtml('> Quote');
-      // The > is escaped and wrapped in paragraph
-      expect(result).toContain('&gt;');
-      expect(result).toContain('Quote');
+      expect(markdownToHtml('> Quote')).toBe('<blockquote>Quote</blockquote>');
     });
 
     it('converts links', () => {
