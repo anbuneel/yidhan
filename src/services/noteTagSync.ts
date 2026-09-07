@@ -3,6 +3,12 @@ import { getOfflineDb } from '../lib/offlineDb';
 
 // Junction rows have no clock column. Realtime pulls only the affected note;
 // a complete, ordered membership scan repairs events missed while disconnected.
+//
+// note_tags also carries no user_id, so neither this query nor the realtime
+// channel below can filter by one. Both are scoped server-side by the
+// note_tags_select_own RLS policy in launch_security_hardening.sql, which joins
+// through notes.user_id = auth.uid() and tags.user_id = auth.uid(); Supabase
+// Realtime enforces RLS for postgres_changes, so a client sees only its rows.
 export async function reconcileNoteTags(userId: string, noteId?: string): Promise<number> {
   const rows: { note_id: string; tag_id: string }[] = [];
   for (let offset = 0; ; offset += 1000) {
@@ -22,7 +28,11 @@ export async function reconcileNoteTags(userId: string, noteId?: string): Promis
     for (const link of local) if (link.syncStatus !== 'synced') protectedLinks.add(`${link.noteId}:${link.tagId}`);
     const localMembership = new Set(local.map(link => `${link.noteId}:${link.tagId}`));
     const membership = new Set(rows.map(row => `${row.note_id}:${row.tag_id}`));
-    const knownNotes = new Set((await db.notes.toArray()).map(note => note.id));
+    // A targeted reconcile only ever touches one note, so ask for that one
+    // rather than reading every note to answer a single existence question.
+    const knownNotes = noteId
+      ? new Set(await db.notes.get(noteId) ? [noteId] : [])
+      : new Set((await db.notes.toArray()).map(note => note.id));
     for (const row of rows) {
       if (!knownNotes.has(row.note_id) || protectedLinks.has(`${row.note_id}:${row.tag_id}`)) continue;
       if (!localMembership.has(`${row.note_id}:${row.tag_id}`)) changed++;
