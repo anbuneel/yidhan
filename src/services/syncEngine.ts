@@ -1434,6 +1434,12 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
     }
   }
 
+  // Deliberately every pull, not only on reconnect. note_tags has no
+  // updated_at, so there is no incremental query to run: the realtime channel
+  // is the only steady-state signal, and a dropped event would otherwise go
+  // uncorrected until the next reconnect. Paying a paginated membership scan
+  // per cycle is the price of tags that cannot silently diverge. Revisit when
+  // note_tags gains a timestamp column and this can become incremental.
   try { pulledTags += await reconcileNoteTags(userId); }
   catch (error) { errors.push({ entity: 'tags', operation: 'membership', error: error instanceof Error ? error : new Error('Could not refresh tag links') }); }
   return { pulledNotes, pulledTags, deletedNotes, deletedTags, errors };
