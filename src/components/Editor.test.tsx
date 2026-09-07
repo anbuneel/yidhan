@@ -7,7 +7,14 @@ import { createMockNote, createMockTag } from '../test/factories';
 import { useAuth } from '../contexts/AuthContext';
 import * as exportImport from '../utils/exportImport';
 
-const keyboardEditor = vi.hoisted(() => ({ commands: { focus: vi.fn(), setContent: vi.fn() } }));
+const keyboardEditor = vi.hoisted(() => ({
+  commands: { focus: vi.fn(), setContent: vi.fn() },
+  isFocused: false,
+  state: { selection: { empty: true, from: 1, to: 1 } },
+  chain: vi.fn(() => ({
+    extendMarkRange: vi.fn(() => ({ run: vi.fn() })),
+  })),
+}));
 
 // Mock dependencies
 vi.mock('../contexts/AuthContext', () => ({
@@ -36,6 +43,10 @@ vi.mock('./FindReplacePanel', () => ({
   FindReplacePanel: ({ onClose }: { onClose: () => void }) => (
     <section aria-label="Find and replace"><button type="button" onClick={onClose}>Close find</button></section>
   ),
+}));
+
+vi.mock('./LinkPopover', () => ({
+  LinkPopover: () => <section role="dialog" aria-label="Edit link" />,
 }));
 
 vi.mock('./TagSelector', () => ({
@@ -119,6 +130,8 @@ describe('Editor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    keyboardEditor.isFocused = false;
+    keyboardEditor.state.selection = { empty: true, from: 1, to: 1 };
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.mocked(useAuth).mockReturnValue({
       user: {
@@ -562,7 +575,24 @@ describe('Editor', () => {
       });
     });
 
-    it('saves and requests search on Cmd+K', async () => {
+    it('opens Link at a collapsed editor caret on unshifted Ctrl/Cmd+K', () => {
+      const onRequestSearch = vi.fn();
+      keyboardEditor.isFocused = true;
+      keyboardEditor.state.selection = { empty: true, from: 1, to: 1 };
+      render(<Editor {...defaultProps} onRequestSearch={onRequestSearch} />);
+
+      fireEvent.keyDown(document, {
+        key: 'k',
+        code: 'KeyK',
+        ctrlKey: true,
+      });
+
+      expect(screen.getByRole('dialog', { name: 'Edit link' })).toBeInTheDocument();
+      expect(keyboardEditor.chain).toHaveBeenCalled();
+      expect(onRequestSearch).not.toHaveBeenCalled();
+    });
+
+    it('saves and requests search on Cmd+Shift+K', async () => {
       const onRequestSearch = vi.fn();
       const onUpdate = vi.fn().mockResolvedValue(undefined);
       render(<Editor {...defaultProps} onUpdate={onUpdate} onRequestSearch={onRequestSearch} />);
@@ -573,6 +603,7 @@ describe('Editor', () => {
       fireEvent.keyDown(document, {
         key: 'K',
         metaKey: true,
+        shiftKey: true,
       });
 
       await waitFor(() => {
@@ -581,7 +612,7 @@ describe('Editor', () => {
       });
     });
 
-    it('does not request search when save fails on Cmd+K', async () => {
+    it('does not request search when save fails on Cmd+Shift+K', async () => {
       const onRequestSearch = vi.fn();
       const onUpdate = vi.fn().mockRejectedValue(new Error('save failed'));
       render(<Editor {...defaultProps} onUpdate={onUpdate} onRequestSearch={onRequestSearch} />);
@@ -592,6 +623,7 @@ describe('Editor', () => {
       fireEvent.keyDown(document, {
         key: 'K',
         ctrlKey: true,
+        shiftKey: true,
       });
 
       await waitFor(() => {

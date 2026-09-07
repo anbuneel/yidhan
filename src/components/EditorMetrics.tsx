@@ -30,8 +30,8 @@ export function EditorMetrics({ editor, isMobile }: EditorMetricsProps) {
         aria-label={`Writing details: ${summary}`}
         aria-expanded={isRevealed}
         onClick={() => { if (isMobile) setIsRevealed((visible) => !visible); }}
-        onFocus={() => setIsRevealed(true)}
-        onBlur={() => { if (!isMobile) setIsRevealed(false); }}
+        onFocus={() => { if (!isMobile) setIsRevealed(true); }}
+        onBlur={() => setIsRevealed(false)}
       >
         <svg aria-hidden="true" className="size-3.5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 4h12M6 9h12M6 14h7M6 19h9" />

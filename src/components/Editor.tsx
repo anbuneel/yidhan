@@ -597,11 +597,15 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       return;
     }
 
-    e.preventDefault();
-    if (!e.shiftKey && editor?.isFocused && (!editor.state.selection.empty || editor.isActive('link'))) {
-      openLinkPopover();
+    if (!e.shiftKey) {
+      if (editor?.isFocused) {
+        e.preventDefault();
+        openLinkPopover();
+      }
       return;
     }
+
+    e.preventDefault();
     cancelPendingAutoSave();
     if (inFlightSaveRef.current) {
       await inFlightSaveRef.current;

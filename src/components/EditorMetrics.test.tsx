@@ -17,7 +17,7 @@ describe('EditorMetrics', () => {
     expect(calculateWritingMetrics('A calm note 🌱')).toEqual({ words: 4, characters: 13, readingMinutes: 1 });
   });
 
-  it('reveals details on desktop hover and mobile tap', () => {
+  it('reveals details on desktop hover and keeps the first mobile focus-then-click tap open', () => {
     const { rerender } = render(<EditorMetrics editor={metricsEditor('one two')} isMobile={false} />);
     const trigger = screen.getByRole('button', { name: /writing details/i });
     expect(screen.getByText(/2 words/)).not.toBeVisible();
@@ -27,7 +27,11 @@ describe('EditorMetrics', () => {
     expect(screen.getByText(/2 words/)).not.toBeVisible();
 
     rerender(<EditorMetrics editor={metricsEditor('one two')} isMobile />);
+    fireEvent.focus(trigger);
+    expect(screen.getByText(/2 words/)).not.toBeVisible();
     fireEvent.click(trigger);
     expect(screen.getByText(/2 words/)).toBeVisible();
+    fireEvent.blur(trigger);
+    expect(screen.getByText(/2 words/)).not.toBeVisible();
   });
 });
