@@ -35,6 +35,13 @@ describe('LinkPopover', () => {
     expect(editor.getText()).toBe('Selected words');
   });
 
+  it('offers an explicit safe link visit without making editor text clicks navigate', () => {
+    mount('<p><a href="https://example.com">Selected words</a></p>');
+    expect(screen.getByRole('link', { name: 'Open link' })).toHaveAttribute('rel', 'noopener noreferrer');
+    fireEvent.change(screen.getByLabelText('Link address'), { target: { value: 'javascript:alert(1)' } });
+    expect(screen.queryByRole('link', { name: 'Open link' })).toBeNull();
+  });
+
   it('rejects unsafe addresses without modifying the note', () => {
     mount();
     fireEvent.change(screen.getByLabelText('Link address'), { target: { value: 'javascript:alert(1)' } });

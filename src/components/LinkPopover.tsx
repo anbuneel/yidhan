@@ -36,6 +36,12 @@ export function LinkPopover({ editor, onClose }: LinkPopoverProps) {
     };
   }, [editor, onClose]);
 
+  let visitAddress: string | undefined;
+  try {
+    const url = new URL(href.trim());
+    if (['https:', 'http:', 'mailto:', 'tel:'].includes(url.protocol)) visitAddress = url.href;
+  } catch { /* Incomplete addresses are not navigable. */ }
+
   const save = () => {
     const address = href.trim();
     try {
@@ -65,6 +71,7 @@ export function LinkPopover({ editor, onClose }: LinkPopoverProps) {
         className="w-full rounded border border-[var(--glass-border)] bg-[var(--color-bg-primary)] px-3 py-2 text-base"
         placeholder="https://example.com" />
       {error && <p id="editor-link-error" role="alert" className="mt-2 text-sm text-[var(--color-error)]">{error}</p>}
+      {hadLink && visitAddress && <a href={visitAddress} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm underline">Open link</a>}
       <div className="mt-4 flex items-center justify-end gap-3 text-sm">
         {hadLink && <button type="button" className="mr-auto text-[var(--color-text-secondary)]" onClick={() => {
           editor.chain().focus().setTextSelection(selection).extendMarkRange('link').unsetLink().run();

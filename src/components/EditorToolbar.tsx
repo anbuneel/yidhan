@@ -421,7 +421,7 @@ export function EditorToolbar({ editor, variant = 'inline', onToggleFocusMode, o
         {/* Overflow opens upward from bottom toolbar */}
         <OverflowMenu direction="up">
           {LinkButton}
-      {UnderlineButton}
+          {UnderlineButton}
           {StrikeButton}
           {HighlightButton}
           {NumberedListButton}
