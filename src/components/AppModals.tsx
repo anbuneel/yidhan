@@ -35,7 +35,7 @@ const KeyboardShortcutsModal = lazyWithRetry(() =>
  * screens each keeping their own copy of the list.
  */
 /** The two modals that can appear over any signed-in screen, library or editor. */
-export interface SharedModalProps {
+interface SharedModalProps {
   tags: Tag[];
   showTagModal: boolean;
   editingTag: Tag | null;
@@ -50,7 +50,7 @@ export interface SharedModalProps {
 }
 
 /** Everything else, which only the library screen has room for. */
-export interface LibraryModalProps extends SharedModalProps {
+interface LibraryModalProps extends SharedModalProps {
   theme: Theme;
   onThemeToggle: () => void;
   notes: Note[];

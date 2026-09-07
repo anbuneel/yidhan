@@ -12,7 +12,7 @@ export const SCROLL_REGION_ATTRIBUTE = 'data-scroll-region';
 /** Spread onto the element that actually scrolls. */
 export const scrollRegionProps = { [SCROLL_REGION_ATTRIBUTE]: '' } as const;
 
-export function findScrollRegion(): HTMLElement | null {
+function findScrollRegion(): HTMLElement | null {
   if (typeof document === 'undefined') return null;
   return document.querySelector<HTMLElement>(`[${SCROLL_REGION_ATTRIBUTE}]`);
 }

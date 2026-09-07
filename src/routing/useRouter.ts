@@ -65,7 +65,7 @@ function readHistoryKey(state: unknown): number | null {
   return typeof key === 'number' && Number.isFinite(key) ? key : null;
 }
 
-export interface NavigateOptions {
+interface NavigateOptions {
   /** Replace the current history entry instead of pushing a new one. */
   replace?: boolean;
 }

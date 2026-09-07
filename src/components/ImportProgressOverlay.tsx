@@ -1,4 +1,4 @@
-export type ImportPhase = 'parsing' | 'importing' | 'finalizing';
+type ImportPhase = 'parsing' | 'importing' | 'finalizing';
 
 export interface ImportProgress {
   phase: ImportPhase;

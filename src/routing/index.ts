@@ -1,30 +1,13 @@
-export {
-  PUBLIC_PAGE_ROUTES,
-  isSameRoute,
-  isScrollRestoringRoute,
-  normalizePath,
-  parseRoute,
-  routeToPath,
-  routeToViewMode,
-  type ParseRouteOptions,
-  type PublicPageName,
-  type Route,
-  type RouteName,
-} from './routes';
+/**
+ * The routing surface the rest of the app consumes.
+ *
+ * Deliberately narrow: only the symbols App and the components actually import.
+ * `routes.ts`, `scrollMemory.ts`, `scrollRegion.ts` and `useRouter.ts` export more
+ * than this to their own tests — re-exporting all of it here would create a second,
+ * wider public API that nothing calls, which is what `npm run lint:exports` is for.
+ */
 
-export {
-  clearScrollMemory,
-  forgetScroll,
-  recallScroll,
-  rememberScroll,
-} from './scrollMemory';
-
-export {
-  SCROLL_REGION_ATTRIBUTE,
-  applyScrollOffset,
-  findScrollRegion,
-  readScrollOffset,
-  scrollRegionProps,
-} from './scrollRegion';
-
-export { useRouter, type NavigateOptions, type Router, type UseRouterOptions } from './useRouter';
+export { routeToViewMode, type PublicPageName, type Route } from './routes';
+export { clearScrollMemory } from './scrollMemory';
+export { scrollRegionProps } from './scrollRegion';
+export { useRouter } from './useRouter';

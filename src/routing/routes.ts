@@ -9,7 +9,7 @@
 import type { ViewMode } from '../types';
 
 /** Public pages that are nothing but a static route segment. */
-export const PUBLIC_PAGE_ROUTES = ['changelog', 'roadmap', 'privacy', 'terms', 'support', 'security'] as const;
+const PUBLIC_PAGE_ROUTES = ['changelog', 'roadmap', 'privacy', 'terms', 'support', 'security'] as const;
 
 export type PublicPageName = (typeof PUBLIC_PAGE_ROUTES)[number];
 
@@ -28,7 +28,6 @@ export type Route =
   | { name: 'playground' }
   | { name: 'notFound'; path: string };
 
-export type RouteName = Route['name'];
 
 export interface ParseRouteOptions {
   /** The playground is a dev-only design surface; in production its path is a 404. */
