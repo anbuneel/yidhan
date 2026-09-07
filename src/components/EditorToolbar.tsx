@@ -114,6 +114,7 @@ function OverflowMenu({ children, direction = 'down' }: OverflowMenuProps) {
           tabIndex={-1}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
+              e.preventDefault();
               setIsOpen(false);
             }
           }}
@@ -156,9 +157,10 @@ interface EditorToolbarProps {
   editor: Editor | null;
   variant?: 'inline' | 'bottom';
   onToggleFocusMode?: () => void;
+  onLink?: () => void;
 }
 
-export function EditorToolbar({ editor, variant = 'inline', onToggleFocusMode }: EditorToolbarProps) {
+export function EditorToolbar({ editor, variant = 'inline', onToggleFocusMode, onLink }: EditorToolbarProps) {
 
   if (!editor) {
     return (
@@ -177,6 +179,12 @@ export function EditorToolbar({ editor, variant = 'inline', onToggleFocusMode }:
   }
 
   // Shared button definitions
+  const LinkButton = (
+    <ToolbarButton onClick={() => onLink?.()} isActive={editor.isActive('link')} title="Link (Ctrl+K)">
+      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-2 2M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l2-2" /></svg>
+    </ToolbarButton>
+  );
+
   const BoldButton = (
     <ToolbarButton
       onClick={() => editor.chain().focus().toggleBold().run()}
@@ -412,6 +420,7 @@ export function EditorToolbar({ editor, variant = 'inline', onToggleFocusMode }:
 
         {/* Overflow opens upward from bottom toolbar */}
         <OverflowMenu direction="up">
+          {LinkButton}
           {UnderlineButton}
           {StrikeButton}
           {HighlightButton}
@@ -439,6 +448,7 @@ export function EditorToolbar({ editor, variant = 'inline', onToggleFocusMode }:
       {/* Text Style */}
       {BoldButton}
       {ItalicButton}
+      {LinkButton}
       {UnderlineButton}
       {StrikeButton}
       {HighlightButton}

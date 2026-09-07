@@ -1,7 +1,6 @@
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
 import TaskList from '@tiptap/extension-task-list';
@@ -83,6 +82,7 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
   // Memoize extensions to prevent recreation on every render
   const extensions = useMemo(() => [
     StarterKit.configure({
+      link: { openOnClick: false },
       heading: {
         levels: [1, 2, 3],
       },
@@ -92,7 +92,6 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
       showOnlyWhenEditable: true,
       showOnlyCurrent: true,
     }),
-    Underline,
     TextAlign.configure({
       types: ['heading', 'paragraph'],
     }),
