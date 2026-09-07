@@ -90,3 +90,6 @@ start-yidhan.bat
 
 # Superpowers brainstorming mockups
 .superpowers/
+
+# Tool scratch output (impeccable critiques)
+.impeccable/

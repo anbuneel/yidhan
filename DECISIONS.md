@@ -1,0 +1,188 @@
+# Decisions
+
+Append-only, newest first. Why the codebase became what it is.
+
+The historical core is immutable. Only two edits are allowed: flipping `Status`
+to `Superseded` with a pointer to the replacement, and adding a dated erratum
+(`**Erratum YYYY-MM-DD:** …`). Never rewrite the original reasoning — a decision
+that turned out wrong is more useful with its reasoning intact than deleted.
+
+This file carries **no live state**. No open-issue gates, no "do not change until
+X", no `file:line` references offered as current guidance. Those rot, and an
+immutable file containing them becomes confidently wrong. Current rules live in
+`CLAUDE.md`.
+
+Entries dated on or before 2026-03-22 are reconstructed from the plan documents
+that recorded them: the working clone's git history is shallow and bottoms out at
+that date, so commit evidence for older decisions is not available here. Their
+reasoning is sourced from the plans now in `docs/archive/`, not invented.
+
+---
+
+## 2026-09-07 — The docs corpus is quarantined behind a retrieval lane rather than curated in place
+
+**Status:** Active
+
+**Why:** 132 of 169 markdown files had not been touched since the first commit in
+visible history while 99 code commits landed on top. 45 live-lane docs still named
+the pre-rebrand product "Zenote"; 21 described a share target that had been
+deliberately removed. Stale docs are written in the same authoritative present
+tense as current ones, so retrieval cannot tell them apart and a grep returns
+confident wrong answers. Moving them to a flat `docs/archive/` excluded by a
+repo-root `.ignore` fixes retrieval, which is the thing that actually hurts,
+without destroying history.
+
+**Rejected:** Per-document triage — it re-litigates the same judgment 95 times and
+still leaves the reader trusting whatever survives. Deleting the corpus — archiving
+is reversible and costs nothing. Warning banners on stale files — they help a human
+reading one file and do nothing for a grep, which is how these docs are actually
+read.
+
+---
+
+## 2026-09-07 — One owner per fact; six canonical docs, and no `status.md`
+
+**Status:** Active
+
+**Why:** Nine files claimed to own "what's true now" — `CLAUDE.md`, `README.md`,
+`docs/Index.md`, `prd.md`, `roadmap.md`, `backlog.md`, the execution ledger, the
+launch-readiness assessment, and `src/data/changelog.ts`. Three were separately
+marked "Living Document", and `backlog.md` opened by deferring to the ledger. Every
+task paid to reconcile them. Each fact now has exactly one owner and every other doc
+links to it.
+
+`status.md` is deliberately absent: it fails the update-trigger test. Nothing
+compels a solo developer to refresh a standing summary, so it rots silently. The
+one ACTIVE plan in `docs/plans/` owns "now" instead, because work moving *is* the
+event that forces the plan to change.
+
+**Rejected:** An `ARCHITECTURE.md` — its real content is invariants, and invariants
+belong always-loaded in `CLAUDE.md` where an agent cannot violate what is in
+context. Creating it would either duplicate tier 0 or move invariants out of
+guaranteed context. Revisit only once `CLAUDE.md` genuinely overflows.
+
+---
+
+## 2026-09-07 — The instruction layer drops rituals that compensated for weaker harnesses
+
+**Status:** Active
+
+**Why:** `CLAUDE.md` mandated a per-document `Author: Claude (Opus 4.x)` header, an
+`## Original Prompt` block, and a `-claude` filename suffix. 95 docs carried the
+attribution across four different Opus versions, 86 carried the prompt block, and 77
+files carried an agent-name suffix. All three encode *who typed it*, not what it is,
+and the suffix actively misleads once a different model edits the file. A
+409-line hand-maintained `docs/Index.md` and a context-exhaustion handoff prompt
+served the same era. Agents glob and grep; the routing table is already in context.
+
+**Rejected:** Renaming the 77 suffixed files — pure churn, and the archive is
+non-authoritative anyway. Stripping stale headers from surviving docs — the same
+churn for a smaller corpus.
+
+---
+
+## 2026-09-04 — Service worker `registerType` stays `'autoUpdate'`
+
+**Status:** Active
+
+**Why:** Under `'prompt'`, a new worker parks in `waiting` until the page posts
+`SKIP_WAITING` — but a client running stale code cannot post it. Browsers stayed
+pinned to an old precached shell indefinitely. This is what stranded clients on
+pre-hardening code against an already-migrated database. The failure is invisible
+in the main E2E suite because it runs against the dev server, which produces no
+service worker at all; `npm run e2e:sw` exists specifically to cover it against a
+real build.
+
+**Rejected:** `'prompt'` with an update toast — it is the more polite UX and it is
+exactly what broke. The politeness is worthless if the client that needs the update
+is the one that cannot ask for it.
+
+---
+
+## 2026-09-04 — Fonts are self-hosted, never fetched from Google Fonts
+
+**Status:** Active
+
+**Why:** A third-party font origin is a privacy leak and a CSP hole on an app whose
+entire proposition is that notes are private. Subsets live in `src/assets/fonts/`,
+`font-src` in `vercel.json` allows `'self'` only, and the service worker precaches
+them. Runtime font caching with `statuses: [0, 200]` is specifically avoided — it
+can pin a browser to fallback fonts permanently.
+
+**Rejected:** Google Fonts CDN for the smaller bundle and edge caching.
+
+---
+
+## 2026-07-14 — Account deletion is server-owned, with a 14-day grace period
+
+**Status:** Active
+
+**Why:** Client-driven deletion cannot be trusted to complete, and immediate
+deletion has no recovery path for a mistaken or coerced action. A service-role
+worker processes due requests, re-checks cancellation state, deletes app data,
+deletes the Supabase Auth user, and writes an audit trail. OAuth accounts verify by
+server-checked email OTP: typed-email confirmation is not proof of control of the
+account.
+
+**Rejected:** Immediate hard delete on request. Typed-email confirmation for OAuth
+users — it proves the user knows their address, which is public information.
+
+---
+
+## 2026-06-21 — Server note rows must be encrypted; no plaintext compatibility path
+
+**Status:** Active
+
+**Why:** `launch_security_hardening.sql` requires encrypted payload metadata and
+empty plaintext `title`/`content` columns, and intentionally *fails* if existing
+rows violate that. A migration that silently tolerates bad rows leaves them
+forever. Legacy plaintext rows were repaired before hardening and the repair tooling
+was then removed: keeping a repair UI in launch builds means keeping a code path
+that reads plaintext notes, which is the thing being eliminated. If preflight ever
+reports unsafe rows again that is a data incident, and the app should fail closed.
+
+**Rejected:** A tolerant migration plus a repair UI. It keeps the vulnerable read
+path alive indefinitely to serve a population that should be empty.
+
+---
+
+## 2026-06-21 — `default_user_id_to_auth_uid.sql` is required, not optional
+
+**Status:** Active
+
+**Why:** Clients stopped sending `user_id` on note and tag inserts. Without the
+column default, every create fails RLS (`42501`) or NOT NULL (`23502`) and blocks in
+the sync queue. Because migrations are applied by hand, a client shipped ahead of
+its migration fails **only on writes**, silently, while reads keep working — which
+looks like a sync bug rather than a missing migration. `verify_migration_state.sql`
+exists to catch exactly this drift.
+
+**Rejected:** Continuing to send `user_id` from the client.
+
+---
+
+## 2026-03-22 — Dark themes use polarity-flipped CTAs
+
+**Status:** Active
+
+**Why:** The "gold luminance trap": darkening gold enough to carry white text at AA
+produces dull olive. Dark themes instead use a bright gold background with dark
+text. Measured contrast — Kintsugi 5.44:1, Washi 7.10:1, Midnight 8.55:1, Mori
+7.29:1 — clears AA everywhere and AAA on the dark themes.
+
+**Rejected:** A single CTA treatment across all themes with per-theme darkening.
+
+---
+
+## 2026-02-21 — Tags stay plaintext while note title and content are encrypted
+
+**Status:** Active
+
+**Why:** Notes are encrypted as a title+content JSON blob under AES-256-GCM with
+AAD (`noteId:userId`), which prevents note-swapping. Tags are deliberately left in
+plaintext so filtering, the `note_tags` junction, and RLS scoping stay server-side
+queries. Encrypting tags would force every filter to become a full client-side
+decrypt pass over the library.
+
+**Rejected:** Encrypting tag names too. The metadata leak is real and accepted:
+tag *names* are visible to the server, note contents are not.

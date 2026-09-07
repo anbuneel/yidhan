@@ -1,0 +1,3 @@
+# Retrieval lanes: history is excluded from default search.
+# For archaeology use `rg --no-ignore` or a direct path.
+docs/archive/

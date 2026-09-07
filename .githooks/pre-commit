@@ -1,5 +1,25 @@
 #!/bin/sh
 set -e
 
-node scripts/sync-agents.mjs --quiet
-git add AGENTS.md
+# AGENTS.md is generated from CLAUDE.md; refresh and stage it from the staged blob.
+# Uses the staged blob (not the worktree) so partial staging cannot desync them.
+if ! git diff --cached --quiet -- CLAUDE.md; then
+  if git cat-file -e :CLAUDE.md 2>/dev/null; then
+    git show :CLAUDE.md > AGENTS.md
+    git add AGENTS.md
+  fi
+fi
+
+# At most one plan ACTIVE, and an ACTIVE plan must carry a 'Last verified' date.
+actives=$(git grep --cached -l -e '^Status: ACTIVE$' -- ':(glob)docs/plans/*.md' 2>/dev/null || true)
+count=0
+for f in $actives; do count=$((count + 1)); done
+if [ "$count" -gt 1 ]; then
+  echo "pre-commit: more than one staged plan has 'Status: ACTIVE':" >&2
+  printf '%s\n' "$actives" >&2
+  exit 1
+fi
+if [ "$count" -eq 1 ] && ! git grep --cached -q -E -e '^Last verified: [0-9]{4}-[0-9]{2}-[0-9]{2}$' -- "$actives"; then
+  echo "pre-commit: ACTIVE plan lacks 'Last verified: YYYY-MM-DD': $actives" >&2
+  exit 1
+fi
