@@ -66,6 +66,8 @@ work declares as `Needs`, then the validation cohort that items 1–22 unblocked
 - `npm run check` on every PR. `npm run e2e` once #37 lands.
 - When a real writer or a measurement says the order is wrong, change the order.
   Nothing else reorders it.
+- The plan holds planned work. GitHub issues hold bugs and loose ends discovered while
+  shipping. Nothing lives in both; an item whose "done when" was never verified stays in **Next**.
 - Permanent non-goals live in `PRODUCT.md`, not here.
 
 ---
