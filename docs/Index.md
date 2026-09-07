@@ -156,7 +156,7 @@ Currently in-progress implementation plans and follow-ups.
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [world-class-execution-plan-claude.md](plans/world-class-execution-plan-claude.md) | **NEW** Master ledger: 140+ sequenced items from the Claude and Codex reviews in four phases, with dependency spine and coverage appendices | 2026-09-07 |
+| [world-class-execution-plan-claude.md](plans/world-class-execution-plan-claude.md) | **NEW** The improvement plan: 148 numbered items from the Claude and Codex reviews in Now / Next / Later / Done lists, with coverage appendices | 2026-09-07 |
 | [account-deletion-workflow-plan.md](plans/account-deletion-workflow-plan.md) | Server-owned account deletion workflow plan and live-verification enablement record | 2026-06-21 |
 | [reliability-hardening-plan-codex.md](active/reliability-hardening-plan-codex.md) | Reliability hardening plan — items 1-3 implemented (PR #163): blocked sync recovery, safe hydration, E2EE telemetry. Items 4-5 deferred. | 2026-03-10 |
 | [launch-critical-fixes-plan-codex.md](active/launch-critical-fixes-plan-codex.md) | Launch-critical fix plan for `#121`, `#154`, `#126`, `#133` — **COMPLETE** (PR #164): sanitizer hardening, vault restore verification, search shortcut replacement, editor save serialization | 2026-03-10 |

@@ -116,7 +116,7 @@ Most of these came from running the built app and pressing keys. Codex looked at
 
 ## The plan, revised
 
-> Superseded on 2026-09-07 by `docs/plans/world-class-execution-plan-claude.md` v1.2, which withdraws the calendar labels below in favour of engineer-week sizing and throughput forecasting, and folds in the Codex plan review.
+> Superseded on 2026-09-07 by `docs/plans/world-class-execution-plan-claude.md` version 2.0, a plain-numbered Now / Next / Later / Done list that withdraws the calendar labels below and folds in the Codex plan review.
 
 | Phase | Length | What changed after the cross-check |
 |-------|--------|------------------------------------|
