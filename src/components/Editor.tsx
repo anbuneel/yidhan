@@ -553,7 +553,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const handleEditorShortcut = useEffectEvent(async (e: KeyboardEvent) => {
     // Cmd/Ctrl+F: find within the current note, including in focus mode.
     if (e.key.toLowerCase() === 'f' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+      if (!editor) return;
       e.preventDefault();
+      if (showFindReplace || document.querySelector(
+        '[aria-expanded="true"], [role="dialog"], [role="menu"], [data-editor-popover]',
+      )) return;
       setShowFindReplace(true);
       return;
     }

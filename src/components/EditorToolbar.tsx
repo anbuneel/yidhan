@@ -8,6 +8,7 @@ import {
   type EditorCommandDefinition,
   type EditorCommandId,
 } from '../editor/editorCommands';
+import { getEditorMenuPosition, type EditorMenuDirection } from '../editor/editorMenuPosition';
 import { useEditorTransactions } from '../editor/useEditorTransactions';
 
 const PRIMARY_COMMANDS: readonly EditorCommandId[] = [
@@ -65,12 +66,13 @@ function ToolbarButton({ command, context, menuItem = false, onRun }: ToolbarBut
 
 interface OverflowMenuProps {
   context: EditorCommandContext;
-  direction: 'down' | 'up' | 'right';
+  direction: EditorMenuDirection;
 }
 
 function OverflowMenu({ context, direction }: OverflowMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -86,15 +88,42 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
       setIsOpen(false);
       triggerRef.current?.focus();
     };
+    const positionPanel = () => {
+      if (!triggerRef.current || !panelRef.current) return;
+      const position = getEditorMenuPosition(
+        triggerRef.current.getBoundingClientRect(),
+        panelRef.current.getBoundingClientRect(),
+        { width: window.innerWidth, height: window.innerHeight },
+        direction,
+      );
+      Object.assign(panelRef.current.style, {
+        position: 'fixed',
+        left: `${position.left}px`,
+        top: `${position.top}px`,
+        right: 'auto',
+        bottom: 'auto',
+        maxHeight: `${position.maxHeight}px`,
+      });
+      panelRef.current.dataset.placement = position.placement;
+    };
 
     document.addEventListener('pointerdown', handlePointerDown);
     document.addEventListener('keydown', handleKeyDown, true);
-    requestAnimationFrame(() => menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus());
+    document.addEventListener('scroll', positionPanel, true);
+    window.addEventListener('resize', positionPanel);
+    positionPanel();
+    const frame = requestAnimationFrame(() => {
+      positionPanel();
+      menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+    });
     return () => {
+      cancelAnimationFrame(frame);
       document.removeEventListener('pointerdown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('scroll', positionPanel, true);
+      window.removeEventListener('resize', positionPanel);
     };
-  }, [isOpen]);
+  }, [direction, isOpen]);
 
   return (
     <div className="editor-command-overflow" ref={menuRef} data-direction={direction}>
@@ -116,6 +145,7 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
       </button>
       {isOpen && (
         <div
+          ref={panelRef}
           className="editor-command-menu"
           role="menu"
           aria-label="All editor commands"

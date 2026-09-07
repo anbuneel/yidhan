@@ -2,11 +2,11 @@ import { Extension } from '@tiptap/core';
 import { ReactRenderer } from '@tiptap/react';
 import Suggestion, { exitSuggestion } from '@tiptap/suggestion';
 import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
-import { EDITOR_COMMANDS } from '../editor/editorCommands';
+import { SLASH_EDITOR_COMMANDS } from '../editor/editorCommands';
 import { getSlashMenuPosition } from '../editor/slashMenuPosition';
 import { CommandList, type CommandListRef, type SlashCommandItem } from './SlashCommandList';
 
-const slashCommandItems: SlashCommandItem[] = EDITOR_COMMANDS.map((definition) => ({
+const slashCommandItems: SlashCommandItem[] = SLASH_EDITOR_COMMANDS.map((definition) => ({
   title: definition.label,
   description: definition.description,
   icon: definition.shortLabel,

@@ -29,6 +29,7 @@ export interface EditorCommandDefinition {
   searchTerms: string[];
   group: EditorCommandGroup;
   shortcut?: string;
+  availableInSlash?: boolean;
   isActive?: (context: EditorCommandContext) => boolean;
   canRun?: (context: EditorCommandContext) => boolean;
   run: (context: EditorCommandContext, slashRange?: Range) => void;
@@ -188,14 +189,16 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
   {
     id: 'undo', label: 'Undo', shortLabel: textLabel('Undo', 'text-[9px]'),
     description: 'Undo the last change', searchTerms: ['history', 'back'], group: 'history', shortcut: 'Ctrl+Z',
+    availableInSlash: false,
     canRun: ({ editor }) => editor.can().undo(),
-    run: ({ editor }, range) => { startChain(editor, range).undo().run(); },
+    run: ({ editor }) => { editor.chain().focus().undo().run(); },
   },
   {
     id: 'redo', label: 'Redo', shortLabel: textLabel('Redo', 'text-[9px]'),
     description: 'Redo the last undone change', searchTerms: ['history', 'forward'], group: 'history', shortcut: 'Ctrl+Shift+Z',
+    availableInSlash: false,
     canRun: ({ editor }) => editor.can().redo(),
-    run: ({ editor }, range) => { startChain(editor, range).redo().run(); },
+    run: ({ editor }) => { editor.chain().focus().redo().run(); },
   },
   {
     id: 'findReplace', label: 'Find and replace', shortLabel: textLabel('Find', 'text-[9px]'),
@@ -220,6 +223,11 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
 ];
 
 export const EDITOR_COMMANDS_BY_ID = new Map(EDITOR_COMMANDS.map((command) => [command.id, command]));
+
+// Typing a slash invocation is itself the newest undo event and clears any
+// redo branch. History commands therefore cannot have truthful slash-menu
+// semantics; they remain available in every mouse toolbar and by shortcut.
+export const SLASH_EDITOR_COMMANDS = EDITOR_COMMANDS.filter((command) => command.availableInSlash !== false);
 
 export function editorCommandTitle(command: EditorCommandDefinition): string {
   return command.shortcut ? `${command.label} (${command.shortcut})` : command.label;

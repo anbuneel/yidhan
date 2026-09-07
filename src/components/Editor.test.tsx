@@ -15,6 +15,7 @@ const keyboardEditor = vi.hoisted(() => ({
     extendMarkRange: vi.fn(() => ({ run: vi.fn() })),
   })),
 }));
+const editorReadyControl = vi.hoisted(() => ({ current: true }));
 
 // Mock dependencies
 vi.mock('../contexts/AuthContext', () => ({
@@ -23,7 +24,9 @@ vi.mock('../contexts/AuthContext', () => ({
 
 vi.mock('./RichTextEditor', () => ({
   RichTextEditor: ({ content, onChange, onBlur, onEditorReady }: { content: string; onChange: (c: string) => void; onBlur: () => void; onEditorReady: (editor: unknown) => void }) => (
-    <div data-testid="rich-text-editor" onBlur={onBlur} ref={() => onEditorReady(keyboardEditor)}>
+    <div data-testid="rich-text-editor" onBlur={onBlur} ref={() => {
+      if (editorReadyControl.current) onEditorReady(keyboardEditor);
+    }}>
       <textarea
         data-testid="editor-content"
         value={content}
@@ -132,6 +135,7 @@ describe('Editor', () => {
     vi.clearAllMocks();
     keyboardEditor.isFocused = false;
     keyboardEditor.state.selection = { empty: true, from: 1, to: 1 };
+    editorReadyControl.current = true;
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.mocked(useAuth).mockReturnValue({
       user: {
@@ -541,6 +545,36 @@ describe('Editor', () => {
       expect(screen.getByText('Focus mode on')).toBeInTheDocument();
       fireEvent.keyDown(window, { key: 'f', ctrlKey: true });
       expect(screen.getByRole('region', { name: 'Find and replace' })).toBeInTheDocument();
+    });
+
+    it('does not overlap find and replace with an open editor menu', () => {
+      const menu = document.createElement('div');
+      menu.setAttribute('role', 'menu');
+      document.body.appendChild(menu);
+      try {
+        render(<Editor {...defaultProps} />);
+        const event = new KeyboardEvent('keydown', {
+          key: 'f',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        });
+        window.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(true);
+        expect(screen.queryByRole('region', { name: 'Find and replace' })).not.toBeInTheDocument();
+      } finally {
+        menu.remove();
+      }
+    });
+
+    it('does not queue find and replace before the editor is ready', () => {
+      editorReadyControl.current = false;
+      const { rerender } = render(<Editor {...defaultProps} />);
+      fireEvent.keyDown(window, { key: 'f', ctrlKey: true });
+
+      editorReadyControl.current = true;
+      rerender(<Editor {...defaultProps} />);
+      expect(screen.queryByRole('region', { name: 'Find and replace' })).not.toBeInTheDocument();
     });
     it('saves and goes back on Escape', async () => {
       const onBack = vi.fn();

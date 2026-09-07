@@ -1,7 +1,7 @@
 import type { Editor } from '@tiptap/react';
 import { useState } from 'react';
 import { useEditorTransactions } from '../editor/useEditorTransactions';
-import { calculateWritingMetrics } from '../editor/writingMetrics';
+import { calculateDocumentWritingMetrics, calculateWritingMetrics } from '../editor/writingMetrics';
 
 interface EditorMetricsProps {
   editor: Editor | null;
@@ -13,8 +13,7 @@ export function EditorMetrics({ editor, isMobile }: EditorMetricsProps) {
   useEditorTransactions(editor);
 
   const doc = editor?.state?.doc;
-  const text = doc?.textBetween(0, doc.content.size, ' ', ' ') ?? '';
-  const metrics = calculateWritingMetrics(text);
+  const metrics = doc ? calculateDocumentWritingMetrics(doc) : calculateWritingMetrics('');
   const summary = `${metrics.words} ${metrics.words === 1 ? 'word' : 'words'}, ${metrics.characters} ${metrics.characters === 1 ? 'character' : 'characters'}, ${metrics.readingMinutes || 'less than 1'} min read`;
 
   return (
