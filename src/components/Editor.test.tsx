@@ -626,6 +626,37 @@ describe('Editor', () => {
       expect(onRequestSearch).not.toHaveBeenCalled();
     });
 
+    /**
+     * The shortcuts modal and `docs/ui-layout.md` both promise Cmd/Ctrl+K focuses
+     * search. The editor rebinds it to Link only while the cursor is in the note; with
+     * focus anywhere else on the screen the promise has to hold. It briefly did not:
+     * the unfocused branch returned without acting and without preventing default, so
+     * the key did nothing and the browser took it to its own address bar.
+     */
+    it('reaches search on unshifted Cmd+K when the cursor is not in the note', async () => {
+      const onRequestSearch = vi.fn();
+      const onUpdate = vi.fn().mockResolvedValue(undefined);
+      keyboardEditor.isFocused = false;
+      render(<Editor {...defaultProps} onUpdate={onUpdate} onRequestSearch={onRequestSearch} />);
+
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'Changed' } });
+
+      const notPrevented = fireEvent.keyDown(document, {
+        key: 'k',
+        code: 'KeyK',
+        metaKey: true,
+      });
+
+      // fireEvent returns false when the handler called preventDefault. Without it the
+      // browser takes Cmd/Ctrl+K to its address bar and the reader loses the keystroke.
+      expect(notPrevented).toBe(false);
+      await waitFor(() => {
+        expect(onRequestSearch).toHaveBeenCalled();
+      });
+      expect(screen.queryByRole('dialog', { name: 'Edit link' })).not.toBeInTheDocument();
+    });
+
     it('saves and requests search on Cmd+Shift+K', async () => {
       const onRequestSearch = vi.fn();
       const onUpdate = vi.fn().mockResolvedValue(undefined);

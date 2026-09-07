@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   clearFind,
   getFindReplaceState,
@@ -35,11 +35,32 @@ export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
     findInputRef.current?.select();
   }, []);
 
-  const close = () => {
+  const close = useCallback(() => {
     clearFind(editor);
     onClose();
     editor.commands.focus();
-  };
+  }, [editor, onClose]);
+
+  /**
+   * Escape closes the panel from anywhere, not only from inside it.
+   *
+   * This panel is modeless: the reader clicks back into the note between searches, and
+   * that is the normal way to use it. While it is open the editor's own Escape handler
+   * stands down — it checks `showFindReplace`, and independently sees this element's
+   * `data-editor-popover` — so a handler scoped to the panel's own subtree left Escape
+   * doing nothing at all once focus moved into the note: the panel would not close, and
+   * save-and-return would not run. The editor's primary exit was dead until the reader
+   * found the ✕ with a mouse.
+   */
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      event.preventDefault();
+      close();
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [close]);
 
   const move = (delta: 1 | -1) => {
     moveFindMatch(editor, delta);
@@ -51,13 +72,6 @@ export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
       className="editor-find-panel"
       aria-label="Find and replace"
       data-editor-popover="find-replace"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          event.stopPropagation();
-          close();
-        }
-      }}
     >
       <div className="editor-find-fields">
         <label>

@@ -191,7 +191,12 @@ Row 2: [Note Title]
 |----------|--------|---------|
 | `Cmd/Ctrl + N` | Create new note | Library |
 | `Cmd/Ctrl + K` | Focus search | Library |
-| `Escape` | Save and go back | Editor |
+| `Cmd/Ctrl + K` | Insert or edit a link | Editor, cursor in the note |
+| `Cmd/Ctrl + K` | Focus search | Editor, cursor elsewhere |
+| `Cmd/Ctrl + Shift + K` | Search all notes | Editor |
+| `Cmd/Ctrl + F` | Find in this note | Editor |
+| `Escape` | Close find, then exit focus mode, then save and go back | Editor |
+| `Cmd/Ctrl + Shift + F` | Toggle focus mode | Editor |
 | `Cmd/Ctrl + Shift + C` | Copy note to clipboard | Editor |
 | `Cmd/Ctrl + B` | Bold | Editor |
 | `Cmd/Ctrl + I` | Italic | Editor |

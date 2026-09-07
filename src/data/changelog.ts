@@ -15,6 +15,7 @@ export const changelog: ChangelogEntry[] = [
     { type: 'feature', text: 'Find and replace works in focus mode, highlights every match, and restores the original text with one undo after Replace All.' },
     { type: 'improvement', text: 'Every editor command is reachable by mouse from phone to wide desktop, with overflow controls where space is limited.' },
     { type: 'fix', text: 'The slash-command menu stays within the viewport, follows scrolling, and reopens correctly after dismissal.' },
+    { type: 'improvement', text: 'While you are writing, Cmd/Ctrl+K adds or edits a link, Cmd/Ctrl+F searches within the note, and Cmd/Ctrl+Shift+K searches every note. The shortcuts window lists all three.' },
   ] },
   { version: '3.19.15', date: '2026-09-07', changes: [
     { type: 'feature', text: 'A security page at /security sets out what encryption protects, what stays visible to us even so — timestamps, note sizes, tag names — and what we have not solved yet' },

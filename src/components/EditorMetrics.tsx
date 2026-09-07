@@ -27,7 +27,15 @@ export function EditorMetrics({ editor, isMobile }: EditorMetricsProps) {
         type="button"
         className="editor-metrics-trigger"
         aria-label={`Writing details: ${summary}`}
-        aria-expanded={isRevealed}
+        /**
+         * Only where the control actually toggles. On a pointer device this reveals on
+         * hover, which is not a disclosure the reader operates — and it left an
+         * `aria-expanded="true"` in the document for as long as the pointer rested
+         * here, which the editor's Escape guard reads as an open menu and stands down
+         * for. Escape stopped working while the pointer sat on a word count. The
+         * summary is in `aria-label` either way, so nothing is lost by omitting it.
+         */
+        aria-expanded={isMobile ? isRevealed : undefined}
         onClick={() => { if (isMobile) setIsRevealed((visible) => !visible); }}
         onFocus={() => { if (!isMobile) setIsRevealed(true); }}
         onBlur={() => setIsRevealed(false)}

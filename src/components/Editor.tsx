@@ -601,11 +601,17 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       return;
     }
 
-    if (!e.shiftKey) {
-      if (editor?.isFocused) {
-        e.preventDefault();
-        openLinkPopover();
-      }
+    // Cmd/Ctrl+K is the link shortcut while the cursor is in the note — the near-universal
+    // one, and what the toolbar tooltip and `editorCommands` both promise. Anywhere else
+    // on this screen it keeps the meaning the shortcuts modal gives it: focus search.
+    //
+    // The `return` that used to sit on the unfocused branch left the key doing nothing
+    // *and* not preventing default, so the browser took Cmd/Ctrl+K to its own address
+    // bar — and search became unreachable from the editor except on Cmd/Ctrl+Shift+K,
+    // which no help surface named.
+    if (!e.shiftKey && editor?.isFocused) {
+      e.preventDefault();
+      openLinkPopover();
       return;
     }
 

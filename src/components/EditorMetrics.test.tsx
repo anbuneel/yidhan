@@ -33,6 +33,33 @@ describe('EditorMetrics', () => {
     editor.destroy();
   });
 
+  /**
+   * The editor's Escape handler stands down whenever `[aria-expanded="true"]` is
+   * anywhere in the document, reading it as an open menu. A hover reveal is not a
+   * disclosure the reader operates, and claiming it was left Escape dead for as long
+   * as the pointer rested on the word count. The summary is in `aria-label` either
+   * way, so nothing is lost by omitting the attribute where it does not apply.
+   */
+  it('does not claim to be an expandable disclosure on a pointer device', () => {
+    render(<EditorMetrics editor={metricsEditor('one two')} isMobile={false} />);
+    const trigger = screen.getByRole('button', { name: /writing details/i });
+    expect(trigger).not.toHaveAttribute('aria-expanded');
+
+    fireEvent.pointerEnter(trigger.parentElement!);
+    expect(screen.getByText(/2 words/)).toBeVisible();
+    expect(trigger).not.toHaveAttribute('aria-expanded');
+    expect(document.querySelector('[aria-expanded="true"]')).toBeNull();
+  });
+
+  it('is an expandable disclosure on touch, where the tap really does toggle it', () => {
+    render(<EditorMetrics editor={metricsEditor('one two')} isMobile />);
+    const trigger = screen.getByRole('button', { name: /writing details/i });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  });
+
   it('reveals details on desktop hover and keeps the first mobile focus-then-click tap open', () => {
     const { rerender } = render(<EditorMetrics editor={metricsEditor('one two')} isMobile={false} />);
     const trigger = screen.getByRole('button', { name: /writing details/i });

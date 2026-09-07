@@ -32,9 +32,15 @@ const shortcuts: ShortcutSection[] = [
   {
     title: 'Editor',
     items: [
+      // The editor rebinds the global Cmd/Ctrl+K to Link while the cursor is in the
+      // note, which is why search gets its own row here rather than relying on the
+      // Global one above.
+      { keys: [modKey, 'K'], description: 'Insert or edit a link' },
+      { keys: [modKey, 'F'], description: 'Find in this note' },
+      { keys: [modKey, 'Shift', 'K'], description: 'Search all notes' },
       { keys: [modKey, 'Shift', 'F'], description: 'Toggle focus mode' },
       { keys: [modKey, 'Shift', 'C'], description: 'Copy note to clipboard' },
-      { keys: ['Esc'], description: 'Exit focus mode / Save and return' },
+      { keys: ['Esc'], description: 'Close find / Exit focus mode / Save and return' },
       { keys: ['/'], description: 'Open slash commands menu' },
     ],
   },
