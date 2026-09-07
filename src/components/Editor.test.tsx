@@ -640,9 +640,11 @@ describe('Editor', () => {
         await Promise.resolve();
       });
 
-      // One failure, one message: the actionable banner replaces the header pill.
+      // One failure, one message: the actionable banner replaces the header pill,
+      // and no empty indicator is left behind in its place.
       expect(screen.getByRole('alert')).toHaveTextContent('Not saved');
       expect(screen.queryByText('Save failed')).toBeNull();
+      expect(document.querySelector('[data-save-status]')).toBeNull();
     });
   });
 

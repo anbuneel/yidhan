@@ -1325,7 +1325,10 @@ function App() {
   // Writes to IndexedDB immediately, queues for sync
   // Returns a Promise so Editor can track save status accurately
   const handleNoteUpdate = useCallback(async (updatedNote: Note): Promise<void> => {
-    if (!user || !keys) throw new VaultLockedSaveError();
+    // Only the locked vault gets the unlock message; a missing user is a
+    // different failure and must not be told to unlock anything.
+    if (!user) throw new Error('Cannot save without a signed-in user');
+    if (!keys) throw new VaultLockedSaveError();
 
     // Store previous state for potential rollback
     const previousNote = notes.find((n) => n.id === updatedNote.id);

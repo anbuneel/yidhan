@@ -57,7 +57,7 @@ interface EditorProps {
   noteSyncStatus?: 'synced' | 'pending' | 'conflict'; // Note-specific sync status (3A)
 }
 
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'copied' | 'error';
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'copied';
 
 interface NoteSnapshot {
   title: string;
@@ -105,8 +105,6 @@ function getSaveStatusStyle(status: SaveStatus): { color: string; background: st
   switch (status) {
     case 'saving':
       return { color: 'var(--color-accent)', background: 'var(--color-accent-glow)' };
-    case 'error':
-      return { color: 'var(--color-error)', background: 'var(--color-error-light)' };
     default:
       return { color: 'var(--color-success)', background: 'var(--color-success-glow)' };
   }
@@ -417,12 +415,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           inFlightSnapshotRef.current = null;
         }
 
-        // Save failed after retries - show error state. A fresh failure must not
-        // carry the previous attempt's copy message.
+        // Save failed after retries. The banner carries the message, so the
+        // header indicator just stops claiming anything. A fresh failure must
+        // not carry the previous attempt's copy message either.
         setCopyFailed(false);
         setHasSaveError(true);
-        setSaveStatus('error');
-
+        setSaveStatus('idle');
 
         return false;
       } finally {
