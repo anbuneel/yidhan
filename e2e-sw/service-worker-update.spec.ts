@@ -29,6 +29,13 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+/**
+ * The precache revision v2's index.html is stamped with. Both the patch below and the
+ * assertion that the client moved read it, because "did the new build take over?" is
+ * exactly "is this revision the one being served?".
+ */
+const V2_REVISION = 'f'.repeat(32);
+
 const CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -114,7 +121,7 @@ test.describe('service worker updates', () => {
     const worker = await readFile(path.join(v2, 'sw.js'), 'utf8');
     const bumped = worker.replace(
       /(\{url:"index\.html",revision:")[0-9a-f]+(")/,
-      '$1ffffffffffffffffffffffffffffffff$2'
+      `$1${V2_REVISION}$2`
     );
     expect(bumped, 'index.html precache revision should be patchable').not.toBe(worker);
     await writeFile(path.join(v2, 'sw.js'), bumped);
@@ -150,17 +157,37 @@ test.describe('service worker updates', () => {
       await registration?.update();
     });
 
-    // The regression this guards: under `prompt` the new worker parks here
+    // The regression this guards: under `prompt` the new worker parks in `waiting`
     // forever, because nothing in the running (old) page can release it.
+    //
+    // Asking only "is `waiting` empty?" does not guard it. That is true *before* the
+    // update is found and while the new worker is still `installing`, so the poll
+    // resolves on its first tick and the reload below races an install that has not
+    // finished — whichever finishes first decides whether the test passes. It held
+    // only while installing happened to beat the next line; 12 KiB more precache was
+    // enough to lose that race.
+    //
+    // So wait for the outcome instead: v2's revision precached, and nothing left
+    // installing or waiting. Under `prompt` this never arrives, which is the point.
+    // The page reloads itself when the new worker claims it, so an evaluate can be
+    // torn down mid-flight — that is progress, not failure, and polls again.
     await expect
       .poll(
-        () => page.evaluate(async () => {
+        () => page.evaluate(async ([revision]) => {
           const registration = await navigator.serviceWorker.getRegistration();
-          return !!registration?.waiting;
-        }),
+          if (registration?.installing) return 'installing';
+          if (registration?.waiting) return 'waiting';
+          for (const name of await caches.keys()) {
+            const cache = await caches.open(name);
+            for (const request of await cache.keys()) {
+              if (request.url.includes(revision)) return 'live';
+            }
+          }
+          return 'old build';
+        }, [V2_REVISION]).catch(() => 'reloading'),
         { message: 'new worker should activate itself, not wait for the page' }
       )
-      .toBe(false);
+      .toBe('live');
 
     await page.reload({ waitUntil: 'networkidle' });
     await expect(page.locator('#sw-smoke-marker')).toHaveCount(1);
