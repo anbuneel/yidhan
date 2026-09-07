@@ -8,7 +8,9 @@ vi.mock('../services/notes', () => ({ fetchSharedNote: vi.fn() }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); sessionStorage.clear(); });
 it('opens an anonymous /s/token/slug letter using its fragment and fails closed without it', async () => {
   const token = generateShareToken(), key = generateShareKey();
-  const ciphertext = await encryptSharePayload(token, key, { version: 1, title: 'A private letter', content: '<p>Only the recipient can open these words.</p>', tags: [], sharedAt: new Date().toISOString() });
+  // Carry tags and block-level content: the deleted sharing e2e spec was the
+  // only thing exercising either rendering path.
+  const ciphertext = await encryptSharePayload(token, key, { version: 1, title: 'A private letter', content: '<h1>Heading</h1><ul><li>Only the recipient can open these words.</li></ul><blockquote>Quoted</blockquote>', tags: [{ name: 'quiet', color: 'sage' }, { name: 'letters', color: 'not-a-colour' }], sharedAt: new Date().toISOString() });
   vi.mocked(fetchSharedNote).mockResolvedValue(ciphertext);
   const route = parseShareRoute('/s/'+token+'/a-private-letter', '#k='+toBase64Url(key))!;
   expect(route.token).toBe(token);
@@ -16,6 +18,11 @@ it('opens an anonymous /s/token/slug letter using its fragment and fails closed 
   render(view(route.shareKey));
   expect(await screen.findByText('Only the recipient can open these words.')).toBeVisible();
   expect(screen.getByText('A private letter')).toBeVisible();
+  expect(screen.getByText('quiet')).toBeVisible();
+  // An unrecognised colour must fall back rather than break the render.
+  expect(screen.getByText('letters')).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Heading' })).toBeVisible();
+  expect(screen.getByText('Quoted')).toBeVisible();
   cleanup(); sessionStorage.clear(); vi.mocked(fetchSharedNote).mockClear();
   const incomplete = parseShareRoute('/s/'+token+'/a-private-letter', '')!;
   render(view(incomplete.shareKey));
