@@ -355,6 +355,23 @@ describe('exportImport', () => {
       expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
     });
 
+    it('preserves a multi-line code block as real fenced Markdown', () => {
+      const html = '<pre><code>function test() {\n  return 1;\n}</code></pre>';
+      expect(htmlToMarkdown(html)).toBe('```\nfunction test() {\n  return 1;\n}\n```');
+      expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
+    });
+
+    it('keeps a blank line inside a code block instead of splitting the block', () => {
+      const html = '<pre><code>first\n\nsecond</code></pre>';
+      expect(htmlToMarkdown(html)).toBe('```\nfirst\n\nsecond\n```');
+      expect(sanitizeHtml(markdownToHtml(htmlToMarkdown(html)))).toBe(sanitizeHtml(html));
+    });
+
+    it('converts an ordered list that follows a bullet list with no blank line', () => {
+      // Markdown written elsewhere need not separate adjacent blocks.
+      expect(markdownToHtml('- Bullet\n1. Number')).toBe('<ul><li>Bullet</li></ul><ol><li>Number</li></ol>');
+    });
+
     it('preserves unordered lists through a Markdown roundtrip', () => {
       const html = '<ul><li>Item 1</li><li>Item 2</li></ul>';
       // Assert real Markdown, not the raw-HTML fallback silently passing.

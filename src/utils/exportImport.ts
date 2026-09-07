@@ -435,6 +435,11 @@ export function markdownToHtml(md: string): string {
   // Code blocks (before other processing)
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, _lang, code: string) => `<pre><code>${code.replace(/\n$/, '')}</code></pre>`);
 
+  // Hold fenced blocks aside: everything below treats a newline as prose, and
+  // the newlines inside a code block are part of the code.
+  const fenced: string[] = [];
+  html = html.replace(/<pre[\s\S]*?<\/pre>/gi, (block) => `\uE000FENCE${fenced.push(block) - 1}\uE000`);
+
   // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
@@ -465,15 +470,15 @@ export function markdownToHtml(md: string): string {
     return `<li data-type="taskItem" data-checked="${isChecked}"><p>${text}</p></li>`;
   });
   // Wrap consecutive task items in taskList
-  html = html.replace(/(<li data-type="taskItem"[^>]*>.*?<\/li>\n?)+/g, '<ul data-type="taskList">$&</ul>');
+  html = html.replace(/(?:<li data-type="taskItem"[^>]*>.*?<\/li>\n?)+/g, (items) => `<ul data-type="taskList">${items.replace(/\n+$/, '')}</ul>\n`);
 
   // Unordered lists (regular, without checkboxes)
   html = html.replace(/^- (?!\[[ xX]\])(.*)$/gim, '<li>$1</li>');
-  html = html.replace(/(<li>(?!<p>).*<\/li>\n?)+/g, '<ul>$&</ul>');
+  html = html.replace(/(?:<li>(?!<p>).*<\/li>\n?)+/g, (items) => `<ul>${items.replace(/\n+$/, '')}</ul>\n`);
 
   // Ordered lists — marked so the unordered wrap above cannot claim them
   html = html.replace(/^\d+\. (.*$)/gim, '<li data-ordered>$1</li>');
-  html = html.replace(/(<li data-ordered>.*?<\/li>\n?)+/g, '<ol>$&</ol>');
+  html = html.replace(/(?:<li data-ordered>.*?<\/li>\n?)+/g, (items) => `<ol>${items.replace(/\n+$/, '')}</ol>\n`);
   html = html.replace(/ data-ordered/g, '');
 
   // Links
@@ -484,7 +489,8 @@ export function markdownToHtml(md: string): string {
   html = lines.map(line => {
     const trimmed = line.trim();
     if (!trimmed) return '';
-    if (trimmed.startsWith('<h') ||
+    if (trimmed.startsWith('\uE000FENCE') ||
+        trimmed.startsWith('<h') ||
         trimmed.startsWith('<ul') ||
         trimmed.startsWith('<ol') ||
         trimmed.startsWith('<li') ||
@@ -501,7 +507,7 @@ export function markdownToHtml(md: string): string {
   html = html.replace(/\n+(?=<\/?(?:li|ul|ol|blockquote|pre|h[1-6]|hr|p)\b)/g, '');
   html = html.replace(/\n/g, '<br>');
 
-  return html;
+  return html.replace(/\uE000FENCE(\d+)\uE000/g, (_match, index: string) => fenced[Number(index)]);
 }
 
 /**

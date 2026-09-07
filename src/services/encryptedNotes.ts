@@ -415,6 +415,7 @@ export async function createEncryptedNotesBatch(
       const noteId = crypto.randomUUID();
       const createdAt = noteData.createdAt?.getTime() ?? now;
       const updatedAt = noteData.updatedAt?.getTime() ?? now;
+      const pinned = noteData.pinned ?? false;
 
       // Encrypt BEFORE writing
       const encrypted = await encryptNote(noteId, userId, validatedTitle, sanitizedContent, keys);
@@ -424,7 +425,7 @@ export async function createEncryptedNotesBatch(
         userId,
         title: '',
         content: '',
-        pinned: noteData.pinned ?? false,
+        pinned,
         deletedAt: null,
         createdAt,
         updatedAt,
@@ -445,7 +446,7 @@ export async function createEncryptedNotesBatch(
         payload: {
           title: '',
           content: '',
-          pinned: noteData.pinned ?? false,
+          pinned,
           createdAt: new Date(createdAt).toISOString(),
           updatedAt: new Date(updatedAt).toISOString(),
           encrypted_payload: encrypted.ciphertext,
@@ -468,7 +469,7 @@ export async function createEncryptedNotesBatch(
         createdAt: new Date(createdAt),
         updatedAt: new Date(updatedAt),
         tags: [],
-        pinned: noteData.pinned ?? false,
+        pinned,
         deletedAt: null,
         syncStatus: 'pending',
         encryptedPayload: encrypted.ciphertext,
