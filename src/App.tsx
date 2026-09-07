@@ -1132,6 +1132,8 @@ function App() {
               if (prev.some((t) => t.id === newTag.id)) return prev;
               return [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name));
             });
+            // Membership and tag-definition events can arrive in either order.
+            void handleSyncComplete();
           })
           .catch((error) => {
             console.error('Failed to persist realtime tag insert:', error);
@@ -1144,6 +1146,7 @@ function App() {
             setTags((prev) =>
               prev.map((t) => (t.id === updatedTag.id ? updatedTag : t))
             );
+            void handleSyncComplete();
           })
           .catch((error) => {
             console.error('Failed to persist realtime tag update:', error);
@@ -1155,6 +1158,7 @@ function App() {
           .then(() => {
             setTags((prev) => prev.filter((t) => t.id !== deletedId));
             setSelectedTagIds((prev) => prev.filter((id) => id !== deletedId));
+            void handleSyncComplete();
           })
           .catch((error) => {
             console.error('Failed to persist realtime tag delete:', error);
@@ -1164,7 +1168,7 @@ function App() {
     );
 
     return () => unsubscribeTags();
-  }, [userId, isHydrating, reportRealtimePersistenceFailure]);
+  }, [userId, isHydrating, reportRealtimePersistenceFailure, handleSyncComplete]);
 
   // Fetch faded notes count when user is authenticated and hydration is complete
   useEffect(() => {

@@ -63,6 +63,16 @@ describe('encryptedNotes', () => {
     await Dexie.delete(db.name);
   });
 
+  it('refreshes readable tag labels when their definition arrives after membership', async () => {
+    const { createEncryptedNote, fetchDecryptedNotes } = await import('./encryptedNotes');
+    const { upsertTagFromServer } = await import('./offlineNotes');
+    const note = await createEncryptedNote(TEST_USER_ID, 'Journal', '<p>Words</p>', keys);
+    await getOfflineDb(TEST_USER_ID).noteTags.put({ noteId: note.id, tagId: 'late-tag', syncStatus: 'synced', lastSyncedAt: 1 });
+    expect((await fetchDecryptedNotes(TEST_USER_ID, keys))[0].tags).toEqual([]);
+    await upsertTagFromServer(TEST_USER_ID, { id: 'late-tag', name: 'Journal', color: 'sage', createdAt: new Date(1) });
+    expect((await fetchDecryptedNotes(TEST_USER_ID, keys))[0].tags[0].name).toBe('Journal');
+  });
+
   it.each(['local', 'server'] as const)('preserves both encrypted bodies when choosing %s', async choice => {
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     const { createEncryptedNote, fetchDecryptedNotes } = await import('./encryptedNotes');
