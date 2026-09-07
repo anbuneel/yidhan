@@ -78,7 +78,8 @@ artifacts are fine.
 
 ```bash
 npm run dev            # Dev server
-npm run check          # typecheck + lint + test + build — mirrors CI, run before pushing
+npm run check:fast     # typecheck + lint + only the tests your diff touches — the inner loop
+npm run check          # typecheck + lint + test + build — mirrors CI, run once before pushing
 npm run test:coverage  # CI additionally enforces coverage thresholds; check locally
 npm run e2e            # Playwright E2E (dev server — produces NO service worker)
 npm run e2e:sw         # Service worker update tests (real production build)

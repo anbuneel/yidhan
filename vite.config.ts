@@ -96,6 +96,10 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     // Use vmThreads pool to avoid "failed to find runner" bug on Windows
     pool: 'vmThreads',
+    // Console output and stack traces from *passing* tests are pure noise in
+    // CI logs and agent context — a green full run emitted ~11k tokens of it.
+    // Failing tests still print their console output and full diagnostics.
+    silent: 'passed-only',
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
