@@ -152,3 +152,13 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
 - **2026-09-07** — Editor paste, typography, writing metrics, formatting-state
   feedback, find and replace, command access across widths, and the mobile slash
   menu completed — ledger items 52–57 and 116.
+- **2026-09-07** — Notes have addresses — ledger items 28 and 29. `/n/<id>`,
+  `/faded` and `/` are real routes, extracted to `src/routing/`: a pure route table,
+  a scroll memory keyed by history entry rather than by path, and a `useRouter` that
+  owns the History API. Four states that could disagree with the address bar — `view`,
+  `isDemo`, `notFound`, `selectedNoteId` — became one that cannot, and the
+  `yidhan-nav-*` sessionStorage restore they needed is gone with them. Back from a
+  note lands on the library where the reader left it; a refresh reopens the note; a
+  note address that no longer resolves replaces itself with the library and says so,
+  where the editor used to `return null` onto a blank page under a URL still claiming
+  to point at a note.

@@ -4,6 +4,7 @@ import type { Note, Theme } from '../types';
 import { FadedNoteCard } from './FadedNoteCard';
 import { HeaderShell } from './HeaderShell';
 import { ModalBackdropButton } from './ModalBackdropButton';
+import { scrollRegionProps } from '../routing';
 
 interface FadedNotesViewProps {
   notes: Note[];
@@ -155,6 +156,7 @@ export function FadedNotesView({
         <main
           className="flex-1 overflow-y-auto pb-32"
           style={{ scrollbarWidth: 'none' }}
+          {...scrollRegionProps}
         >
           <Masonry
             breakpointCols={{

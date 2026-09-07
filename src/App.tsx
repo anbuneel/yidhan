@@ -1,7 +1,7 @@
 import { VaultLockedSaveError } from './utils/saveErrors';
 import { useState, useEffect, useCallback, useEffectEvent, useRef, Suspense, useMemo } from 'react';
 import toast from 'react-hot-toast';
-import type { Note, Tag, ViewMode, Theme } from './types';
+import type { Note, Tag, Theme } from './types';
 import { useNoteSearch } from './hooks/useNoteSearch';
 import { applySavedNote } from './utils/applySavedNote';
 import { Header } from './components/Header';
@@ -34,8 +34,7 @@ import {
   parseShareRoute,
   preserveShareKeyFromLocation,
 } from './utils/shareRoute';
-
-const ROUTEABLE_VIEWS: readonly ViewMode[] = ['changelog', 'roadmap', 'privacy', 'terms', 'support', 'security'];
+import { clearScrollMemory, routeToViewMode, useRouter, type Route } from './routing';
 
 // Lazy load heavy components with smart retry (auto-reloads on chunk errors when safe)
 const Editor = lazyWithRetry(loadEditorComponent);
@@ -58,6 +57,7 @@ const LettingGoModal = lazyWithRetry(() => import('./components/LettingGoModal')
 const KeyboardShortcutsModal = lazyWithRetry(() => import('./components/KeyboardShortcutsModal').then(module => ({ default: module.KeyboardShortcutsModal })));
 import { useAuth } from './contexts/AuthContext';
 import { useEncryption } from './contexts/EncryptionContext';
+import type { DerivedKeys } from './lib/encryption';
 import { PassphraseSetup } from './components/PassphraseSetup';
 import { PassphraseUnlock } from './components/PassphraseUnlock';
 import {
@@ -438,77 +438,27 @@ function App() {
   const hasCompletedInitialAppLoadRef = useRef(false);
   const appLoaderStartedAtRef = useRef<number | null>(null);
   const appLoaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [view, setView] = useState<ViewMode>(() => {
-    const path = window.location.pathname.replace(/\/$/, '') || '/';
-    const match = ROUTEABLE_VIEWS.find(v => path === `/${v}`);
-    return match || 'library';
-  });
-  const [isDemo, setIsDemo] = useState<boolean>(() => {
-    return window.location.pathname === '/demo';
-  });
-  // Detect unrecognized paths for 404 page
-  const [notFound, setNotFound] = useState<boolean>(() => {
-    const path = window.location.pathname.replace(/\/$/, '') || '/';
-    if (path === '/') return false;
-    if (ROUTEABLE_VIEWS.some(v => path === `/${v}`)) return false;
-    if (path === '/demo') return false;
-    if (path.startsWith('/s/')) return false;
-    if (import.meta.env.DEV && path === '/playground') return false;
-    return true;
-  });
-  // Sync URL pathname for direct-entry routes
-  useEffect(() => {
-    // Don't overwrite /demo path while the demo is active; /playground is dev-only and gated separately
-    const currentPath = window.location.pathname;
-    if (isDemo || (import.meta.env.DEV && currentPath === '/playground')) return;
-    // Don't overwrite 404 path — keep the bad URL visible for debugging
-    if (notFound) return;
-    const expectedPath = ROUTEABLE_VIEWS.includes(view) ? `/${view}` : '/';
-    if (currentPath !== expectedPath) {
-      window.history.pushState({}, '', expectedPath);
-    }
-  }, [view, notFound, isDemo]);
+  // The URL is the single source of truth for where the app is. `view`, `isDemo`,
+  // `notFound` and `selectedNoteId` are all read off it rather than kept beside it —
+  // four states that could disagree with the address bar became one that cannot.
+  const { route, navigate, replaceRoute } = useRouter({ allowPlayground: import.meta.env.DEV });
+  const view = routeToViewMode(route);
+  const isDemo = route.name === 'demo';
+  const notFound = route.name === 'notFound';
 
-  const navigateToDemo = useCallback(() => {
-    startTransition(() => {
-      setNotFound(false);
-      setView('library');
-      setIsDemo(true);
-      if (window.location.pathname !== '/demo') {
-        window.history.pushState({}, '', '/demo');
-      }
-    });
-  }, [startTransition]);
+  const navigateToRoute = useCallback((next: Route) => {
+    startTransition(() => navigate(next));
+  }, [navigate, startTransition]);
 
-  const navigateHome = useCallback(() => {
-    startTransition(() => {
-      setNotFound(false);
-      setView('library');
-      setIsDemo(false);
-      if (window.location.pathname !== '/') {
-        window.history.pushState({}, '', '/');
-      }
-    });
-  }, [startTransition]);
+  const navigateToDemo = useCallback(() => navigateToRoute({ name: 'demo' }), [navigateToRoute]);
+  const navigateHome = useCallback(() => navigateToRoute({ name: 'library' }), [navigateToRoute]);
 
-  const navigateToPublicView = useCallback((nextView: ViewMode) => {
-    const expectedPath = ROUTEABLE_VIEWS.includes(nextView) ? `/${nextView}` : '/';
-    startTransition(() => {
-      setNotFound(false);
-      setIsDemo(false);
-      setView(nextView);
-      if (window.location.pathname !== expectedPath) {
-        window.history.pushState({}, '', expectedPath);
-      }
-    });
-  }, [startTransition]);
-
-  const navigateToChangelog = useCallback(() => navigateToPublicView('changelog'), [navigateToPublicView]);
-  const navigateToRoadmap = useCallback(() => navigateToPublicView('roadmap'), [navigateToPublicView]);
-  const navigateToPrivacy = useCallback(() => navigateToPublicView('privacy'), [navigateToPublicView]);
-  const navigateToTerms = useCallback(() => navigateToPublicView('terms'), [navigateToPublicView]);
-  const navigateToSupport = useCallback(() => navigateToPublicView('support'), [navigateToPublicView]);
-  const navigateToSecurity = useCallback(() => navigateToPublicView('security'), [navigateToPublicView]);
+  const navigateToChangelog = useCallback(() => navigateToRoute({ name: 'changelog' }), [navigateToRoute]);
+  const navigateToRoadmap = useCallback(() => navigateToRoute({ name: 'roadmap' }), [navigateToRoute]);
+  const navigateToPrivacy = useCallback(() => navigateToRoute({ name: 'privacy' }), [navigateToRoute]);
+  const navigateToTerms = useCallback(() => navigateToRoute({ name: 'terms' }), [navigateToRoute]);
+  const navigateToSupport = useCallback(() => navigateToRoute({ name: 'support' }), [navigateToRoute]);
+  const navigateToSecurity = useCallback(() => navigateToRoute({ name: 'security' }), [navigateToRoute]);
 
   const [LoadedEditor, setLoadedEditor] = useState(() => getLoadedEditorComponent());
   const preloadEditorRoute = useCallback(async () => {
@@ -538,41 +488,10 @@ function App() {
     }
   }, [preloadEditorRoute]);
 
-  // Handle browser back/forward navigation
-  useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname.replace(/\/$/, '') || '/';
-
-      // Recompute 404 state for the new URL (mirrors the useState initializer)
-      const isKnownRoute =
-        path === '/' ||
-        ROUTEABLE_VIEWS.some(v => path === `/${v}`) ||
-        path === '/demo' ||
-        path.startsWith('/s/') ||
-        (import.meta.env.DEV && path === '/playground');
-
-      if (!isKnownRoute) {
-        setIsDemo(false);
-        setNotFound(true);
-        return;
-      }
-
-      setNotFound(false);
-      if (path === '/demo') {
-        setIsDemo(true);
-        setView('library');
-        return;
-      }
-
-      setIsDemo(false);
-      const match = ROUTEABLE_VIEWS.find(v => path === `/${v}`);
-      setView(match || 'library');
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  // `/n/<id>` is the note's address, so the open note is read off the route rather
+  // than tracked next to it. A refresh reopens the note for free; there is no second
+  // copy of "which note is open" to fall out of step with the URL.
+  const selectedNoteId = route.name === 'note' ? route.noteId : null;
   // Ref for selectedNoteId — used in realtime handlers to avoid re-creating
   // the Supabase channel subscription every time a note is opened/closed (2F)
   const selectedNoteIdRef = useRef<string | null>(null);
@@ -714,8 +633,6 @@ function App() {
   // Playground route (dev-only — delete after design iteration complete)
   const isPlayground = import.meta.env.DEV && window.location.pathname === '/playground';
 
-  // Navigation state persistence (2E) — survives page refresh within same tab
-  const pendingNavRestoreRef = useRef<{ view: ViewMode; selectedNoteId: string | null } | null>(null);
   // Track previous userId so we can distinguish initial null (auth hydrating)
   // from sign-out (userId transitions non-null → null)
   const prevUserIdRef = useRef<string | undefined>(undefined);
@@ -747,14 +664,14 @@ function App() {
     localStorage.setItem('yidhan-theme', theme);
   }, [theme]);
 
-  // Redirect from /demo to library when user logs in
-  // Using useEffect to avoid state updates during render
+  // Redirect from /demo to library when user logs in.
+  // Replaced, not pushed: Back from the library should not return to a demo the
+  // user has already left behind.
   useEffect(() => {
     if (isDemo && user) {
-      window.history.replaceState({}, '', '/');
-      setIsDemo(false);
+      replaceRoute({ name: 'library' });
     }
-  }, [isDemo, user]);
+  }, [isDemo, user, replaceRoute]);
 
   useEffect(() => {
     if (user && isEncryptionSetup && isUnlocked && view === 'library') {
@@ -795,58 +712,15 @@ function App() {
     setHydrationBypassed(false);
   }, [userId]);
 
-  // Restore navigation state from sessionStorage on mount (2E)
-  // Stage 1: Set selectedNoteId immediately so it's ready when notes load.
-  // View switch is deferred to stage 2 (after notes load) to avoid flicker.
-  useEffect(() => {
-    if (!userId) return;
-
-    try {
-      const saved = sessionStorage.getItem(`yidhan-nav-${userId}`);
-      if (!saved) return;
-
-      const parsed = JSON.parse(saved);
-      const validViews: ViewMode[] = ['library', 'editor', 'changelog', 'roadmap', 'faded'];
-
-      if (parsed?.selectedNoteId && validViews.includes(parsed.view)) {
-        pendingNavRestoreRef.current = parsed;
-        setSelectedNoteId(parsed.selectedNoteId);
-      }
-    } catch {
-      // Ignore invalid JSON
-    }
-  }, [userId]);
-
-  // Save navigation state to sessionStorage (2E)
-  // Only persist editor view with a selected note — library is the safe default
-  useEffect(() => {
-    if (!userId) return;
-    if (view === 'editor' && selectedNoteId) {
-      sessionStorage.setItem(
-        `yidhan-nav-${userId}`,
-        JSON.stringify({ view, selectedNoteId })
-      );
-    } else if (!pendingNavRestoreRef.current) {
-      // Only clear when no restore is pending — Stage 1 sets selectedNoteId
-      // before Stage 2 sets view='editor', creating a window where
-      // view='library' + selectedNoteId. Clearing here would erase state
-      // before Stage 2 completes (fatal on mobile app-switch/kill).
-      sessionStorage.removeItem(`yidhan-nav-${userId}`);
-    }
-  }, [view, selectedNoteId, userId]);
-
   useEffect(() => {
     if (!userId) {
       setNotes([]);
       setLoading(false);
 
-      // Only clear navigation state on actual sign-out (userId went non-null → null),
-      // NOT on initial load when userId starts as null during auth hydration (2E fix)
+      // Sign-out drops the scroll offsets remembered for this session's history
+      // entries. The addresses themselves are handled by the route guard below.
       if (prevUserIdRef.current) {
-        // Clear all yidhan-nav-* keys
-        Array.from({ length: sessionStorage.length }, (_, i) => sessionStorage.key(i))
-          .filter(key => key?.startsWith('yidhan-nav-'))
-          .forEach(key => key && sessionStorage.removeItem(key));
+        clearScrollMemory();
       }
 
       prevUserIdRef.current = undefined;
@@ -879,20 +753,6 @@ function App() {
     fetchDecryptedNotes(userId, keys)
       .then((loadedNotes) => {
         setNotes(loadedNotes);
-
-        // Stage 2 of nav restore (2E): validate that the saved note still exists,
-        // then switch to the saved view. If the note was deleted, fall back to library.
-        const pending = pendingNavRestoreRef.current;
-        if (pending?.selectedNoteId) {
-          const noteExists = loadedNotes.some(n => n.id === pending.selectedNoteId);
-          if (noteExists) {
-            setView(pending.view);
-          } else {
-            // Note was deleted since last session
-            setSelectedNoteId(null);
-            sessionStorage.removeItem(`yidhan-nav-${userId}`);
-          }
-        }
       })
       .catch((error) => {
         console.error('Failed to decrypt notes:', error);
@@ -900,7 +760,6 @@ function App() {
         toast.error('Could not decrypt your notes. Lock and unlock your vault, then try again.');
       })
       .finally(() => {
-        pendingNavRestoreRef.current = null;
         setLoading(false);
       });
 
@@ -957,8 +816,7 @@ function App() {
             setNotes((prev) => prev.filter((n) => n.id !== updatedNote.id));
             setFadedNotesCount((prev) => prev + 1);
             if (selectedNoteIdRef.current === updatedNote.id) {
-              setView('library');
-              setSelectedNoteId(null);
+              replaceRoute({ name: 'library' });
             }
             return;
           }
@@ -1012,8 +870,7 @@ function App() {
 
             setNotes((prev) => prev.filter((n) => n.id !== deletedId));
             if (selectedNoteIdRef.current === deletedId) {
-              setView('library');
-              setSelectedNoteId(null);
+              replaceRoute({ name: 'library' });
             }
           })
           .catch((error) => {
@@ -1024,7 +881,7 @@ function App() {
     );
 
     return () => unsubscribe();
-  }, [userId, keys, isHydrating, hydrationBypassed, reportRealtimeDisplayFailure, reportRealtimePersistenceFailure]);
+  }, [userId, keys, isHydrating, hydrationBypassed, replaceRoute, reportRealtimeDisplayFailure, reportRealtimePersistenceFailure]);
 
   // Migrate demo content from landing page to user's first note
   // Dependency: userId (string) instead of user (object) because:
@@ -1060,15 +917,14 @@ function App() {
         // Add to notes list
         setNotes((prev) => [newNote, ...prev]);
         // Open the note in editor
-        setSelectedNoteId(newNote.id);
-        setView('editor');
+        navigate({ name: 'note', noteId: newNote.id });
       })
       .catch((error: unknown) => {
         console.error('Failed to migrate demo content:', error);
         // Reset flag so user can try again
         hasMigratedDemoContent.current = false;
       });
-  }, [userId, keys]);
+  }, [userId, keys, navigate]);
 
   // Migrate demo notes to authenticated user's account
   // IMPORTANT: Must wait for hydration to complete to avoid:
@@ -1144,8 +1000,7 @@ function App() {
         toast.success('Note created from share');
         startTransition(() => {
           setNotes((prev) => [newNote, ...prev]);
-          setSelectedNoteId(newNote.id);
-          setView('editor');
+          navigate({ name: 'note', noteId: newNote.id });
         });
       })
       .catch((error: unknown) => {
@@ -1156,7 +1011,7 @@ function App() {
         // Reset flag to allow future share-target launches in same session
         isCreatingNoteFromShare.current = false;
       });
-  }, [userId, sharedData, keys, clearSharedData, trackNoteCreated, startTransition]);
+  }, [userId, sharedData, keys, clearSharedData, navigate, trackNoteCreated, startTransition]);
 
   // Fetch tags when user is authenticated and hydration is complete
   useEffect(() => {
@@ -1267,39 +1122,36 @@ function App() {
   // would overwrite the note with nothing (item 41).
   const selectedNote = selectedNoteRecord?.decryptionFailed ? undefined : selectedNoteRecord;
 
+  // Under the router the open note *is* the address, so refusing to open a locked note
+  // means correcting the address. `replaceRoute` rather than a push: the reader arrived
+  // at `/n/<locked>`, and pushing `/` would leave that address one Back away.
   useEffect(() => {
     if (!selectedNoteRecord?.decryptionFailed) return;
-    startTransition(() => {
-      setView('library');
-      setSelectedNoteId(null);
-    });
+    replaceRoute({ name: 'library' });
     toast('That note could not be opened on this device.');
-  }, [selectedNoteRecord, startTransition]);
+  }, [selectedNoteRecord, replaceRoute]);
 
   const handleNoteClick = useCallback((id: string) => {
     void warmEditorRoute().then(() => {
-      startTransition(() => {
-        setSelectedNoteId(id);
-        setView('editor');
-      });
+      navigateToRoute({ name: 'note', noteId: id });
     });
-  }, [startTransition, warmEditorRoute]);
+  }, [navigateToRoute, warmEditorRoute]);
 
+  // Back from a note is an ordinary navigation, not a history pop: the reader may
+  // have arrived at `/n/<id>` directly, in which case there is nothing behind it.
+  // The scroll offset is restored either way, because the router files it by history
+  // entry rather than by address.
   const handleBack = () => {
-    startTransition(() => {
-      setView('library');
-      setSelectedNoteId(null);
-    });
+    navigateToRoute({ name: 'library' });
   };
 
   const requestLibrarySearch = useCallback(() => {
+    navigateToRoute({ name: 'library' });
     startTransition(() => {
-      setView('library');
-      setSelectedNoteId(null);
       setSearchFocusToken((prev) => prev + 1);
     });
     scheduleSearchFocus(LIBRARY_SEARCH_INPUT_ID);
-  }, [startTransition]);
+  }, [navigateToRoute, startTransition]);
 
   const handleNewNote = useCallback(async () => {
     if (!user) return;
@@ -1313,13 +1165,12 @@ function App() {
       await warmEditorRoute();
       startTransition(() => {
         setNotes((prev) => [newNote, ...prev]);
-        setSelectedNoteId(newNote.id);
-        setView('editor');
+        navigate({ name: 'note', noteId: newNote.id });
       });
     } catch (error) {
       console.error('Failed to create note:', error);
     }
-  }, [user, keys, startTransition, trackNoteCreated, warmEditorRoute]);
+  }, [user, keys, navigate, startTransition, trackNoteCreated, warmEditorRoute]);
 
   const handleCreateNoteShortcut = useEffectEvent((e: KeyboardEvent) => {
     // Only trigger in library view when user is logged in
@@ -1458,8 +1309,7 @@ function App() {
       setNotes((prev) => prev.filter((n) => n.id !== id));
       setFadedNotesCount((prev) => prev + 1);
       if (selectedNoteIdRef.current === id) {
-        setView('library');
-        setSelectedNoteId(null);
+        replaceRoute({ name: 'library' });
       }
 
       // Show toast with undo button
@@ -1499,7 +1349,7 @@ function App() {
       toast.error('Failed to delete note');
       return false;
     }
-  }, [user]);
+  }, [user, replaceRoute]);
 
   // Restore a note from Faded Notes
   const handleRestoreNote = async (id: string) => {
@@ -1549,27 +1399,35 @@ function App() {
     }
   };
 
-  // Navigate to Faded Notes view
-  const handleFadedNotesClick = async () => {
-    if (!user) return;
-    if (!keys) {
-      toast.error('Please unlock your vault first');
-      return;
-    }
-
-    startTransition(() => {
-      setView('faded');
-    });
+  // `/faded` is an address now, so the fetch hangs off being *on* the route rather
+  // than off the click that used to be the only way to get there. Direct entry, a
+  // refresh, and Back into the view all load the same way.
+  const loadFadedNotes = useCallback(async (ownerId: string, vaultKeys: DerivedKeys) => {
     setFadedNotesLoading(true);
     try {
-      const faded = await fetchDecryptedFadedNotes(user.id, keys);
-      setFadedNotes(faded);
+      setFadedNotes(await fetchDecryptedFadedNotes(ownerId, vaultKeys));
     } catch (error) {
       console.error('Failed to fetch faded notes:', error);
       toast.error('Failed to load faded notes');
     } finally {
       setFadedNotesLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (view !== 'faded' || !userId || !keys) return;
+    void loadFadedNotes(userId, keys);
+  }, [view, userId, keys, loadFadedNotes]);
+
+  // Navigate to Faded Notes view
+  const handleFadedNotesClick = () => {
+    if (!user) return;
+    if (!keys) {
+      toast.error('Please unlock your vault first');
+      return;
+    }
+
+    navigateToRoute({ name: 'faded' });
   };
 
   const handleTogglePin = useCallback(async (id: string, pinned: boolean) => {
@@ -1621,8 +1479,7 @@ function App() {
         selectedNoteIdRef.current === conflictToResolve.entityId &&
         resolvedOriginalMissing
       ) {
-        setView('library');
-        setSelectedNoteId(null);
+        replaceRoute({ name: 'library' });
       }
     } catch (error) {
       console.error('Failed to resolve conflict:', error);
@@ -2169,6 +2026,26 @@ function App() {
   }, [user, tags, keys]);
   handleImportFileRef.current = handleImportFile;
 
+  // Item 29: a note address that no longer resolves. The editor used to `return null`
+  // here, which left a blank page and a URL still claiming to point at a note. Wait
+  // until the notes have actually loaded and the vault is open before deciding a note
+  // is missing — otherwise a refresh would evict the reader from a note that was
+  // simply still decrypting.
+  // `selectedNoteRecord`, not `selectedNote`: a locked note (item 41) is present but
+  // deliberately not opened, and it is not missing. Testing the filtered value would
+  // fire this alongside the locked-note redirect above and tell the reader their note
+  // is gone when it is sitting on the server, readable elsewhere.
+  const missingNoteId =
+    route.name === 'note' && user && isUnlocked && !loading && !selectedNoteRecord
+      ? route.noteId
+      : null;
+
+  useEffect(() => {
+    if (!missingNoteId) return;
+    replaceRoute({ name: 'library' });
+    toast('That note is no longer here.');
+  }, [missingNoteId, replaceRoute]);
+
   // Show loading while checking auth or fetching notes
   if (showAppLoader) {
     return (
@@ -2201,11 +2078,11 @@ function App() {
             onInvalidToken={() => {
               // Clear URL and show landing/library
               clearPersistedShareKey(shareRoute.token);
-              window.history.replaceState({}, '', '/');
+              replaceRoute({ name: 'library' });
               setShareRoute(null);
             }}
-            onChangelogClick={() => startTransition(() => setView('changelog'))}
-            onRoadmapClick={() => startTransition(() => setView('roadmap'))}
+            onChangelogClick={navigateToChangelog}
+            onRoadmapClick={navigateToRoadmap}
           />
         </Suspense>
       </ErrorBoundary>
@@ -2217,13 +2094,7 @@ function App() {
     return (
       <ErrorBoundary>
         <Suspense fallback={<LoadingFallback />}>
-          <NotFoundPage
-            onGoHome={() => {
-              setNotFound(false);
-              setView('library');
-              window.history.replaceState({}, '', '/');
-            }}
-          />
+          <NotFoundPage onGoHome={navigateHome} />
         </Suspense>
       </ErrorBoundary>
     );
@@ -2559,7 +2430,7 @@ function App() {
           <FadedNotesView
             notes={fadedNotes}
             isLoading={fadedNotesLoading}
-            onBack={() => startTransition(() => setView('library'))}
+            onBack={navigateHome}
             onRestore={handleRestoreNote}
             onPermanentDelete={handlePermanentDelete}
             onEmptyAll={handleEmptyFadedNotes}
@@ -2870,7 +2741,9 @@ function App() {
     );
   }
 
-  return null;
+  // Reached for the single frame between a note address failing to resolve and the
+  // effect above replacing it with the library. Never a blank page.
+  return <LoadingFallback />;
 }
 
 export default App;

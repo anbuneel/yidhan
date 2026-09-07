@@ -7,6 +7,11 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.17', date: '2026-09-07', changes: [
+    { type: 'feature', text: 'Every note has its own address. Refreshing reopens the note you were in, links to a note work, and browser Back returns you to the library exactly where you left off' },
+    { type: 'feature', text: 'Faded Notes has its own address too, so you can return to it directly' },
+    { type: 'fix', text: 'Opening a note that has since been released now returns you to the library with a quiet note, instead of a blank page' },
+  ] },
   { version: '3.19.16', date: '2026-09-07', changes: [
     { type: 'improvement', text: 'Markdown-shaped text pastes with its headings, lists, quotes, and other structure while rich clipboard content keeps its original formatting.' },
     { type: 'improvement', text: 'Optional smart typography turns typed quotes, dashes, and ellipses into polished punctuation without changing code.' },
