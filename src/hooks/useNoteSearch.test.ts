@@ -23,3 +23,14 @@ it('parses 2,000 notes once, then searches without any parser work; changed hash
   rerender({ items: notes, query: ' ' });
   expect(result.current).toBe(notes);
 }, 20000);
+
+it('finds edited text even when the caller left the content hash behind', () => {
+  const note = createMockNote({ id: '1', title: 'Groceries', content: '<p>milk, eggs</p>', contentHash: 'stale' });
+  const { result, rerender } = renderHook(({ items, query }) => useNoteSearch(items, query), { initialProps: { items: [note], query: 'bread' } });
+  expect(result.current).toHaveLength(0);
+  // An optimistic update can spread the pre-edit note, carrying its old hash.
+  rerender({ items: [{ ...note, content: '<p>milk, eggs, bread</p>' }], query: 'bread' });
+  expect(result.current.map(n => n.id)).toEqual(['1']);
+  rerender({ items: [{ ...note, content: '<p>milk, eggs, bread</p>' }], query: 'eggs' });
+  expect(result.current.map(n => n.id)).toEqual(['1']);
+});

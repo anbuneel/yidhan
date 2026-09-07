@@ -1,7 +1,7 @@
-import { useNoteSearch } from './hooks/useNoteSearch';
 import { useState, useEffect, useCallback, useEffectEvent, useRef, Suspense, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import type { Note, Tag, ViewMode, Theme } from './types';
+import { useNoteSearch } from './hooks/useNoteSearch';
 import { Header } from './components/Header';
 import { ChapteredLibrary } from './components/ChapteredLibrary';
 import { Auth } from './components/Auth';
@@ -1344,7 +1344,17 @@ function App() {
     try {
       // Encrypt and save to IndexedDB (immediate, works offline)
       // Sync engine will push encrypted payload to server when online
-      await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
+      const savedNote = await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
+
+      // The optimistic update above spread the pre-edit note, so its contentHash
+      // still described the old text. Fold in the persisted note — which carries
+      // the recomputed hash — so the search cache keyed on it invalidates.
+      // A late acknowledgement must not replace a newer draft or its tags.
+      setNotes((prev) => prev.map((n) => (
+        n.id === savedNote.id && n.title === updatedNote.title && n.content === updatedNote.content
+          ? { ...n, ...savedNote, tags: n.tags }
+          : n
+      )));
 
       // Trigger coalesced sync (2s after last save) to push changes promptly
       triggerCoalescedSync();

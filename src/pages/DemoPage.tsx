@@ -23,7 +23,6 @@ import { HeaderShell } from '../components/HeaderShell';
 import { LoadingFallback } from '../components/LoadingFallback';
 import { Logo } from '../components/Logo';
 import { DEMO_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
-
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { getLoadedEditorComponent, loadEditorComponent } from '../utils/editorLoader';
 
