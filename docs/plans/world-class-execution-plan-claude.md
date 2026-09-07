@@ -38,7 +38,7 @@ that must land first.
 
 ## Next
 
-Two lanes, 4 items. Lanes A to D run in parallel on separate branches and own the files named in the handoff; E starts after C merges. Merge order when two are ready: D, B, A, C. Item 87 is the maintainer's own task, not a code lane.
+Two lanes, 4 items. Lanes A and D run in parallel on separate branches and own the files named in the handoff. Lanes B and C are complete and their items have moved to `docs/progress.md`, so E can start. Merge order when both are ready: D, A. Item 87 is the maintainer's own task, not a code lane.
 
 ### Lane A · Editor fluency · `fix/editor-fluency` · runs in parallel
 
