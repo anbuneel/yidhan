@@ -51,9 +51,6 @@ Fix what is broken. Items 1 to 22 are all small, need no Mac, no migration, and 
 | 5 | Saving | Every exit path checks the save result; a failed save keeps the draft, shows a persistent "Not saved" state with Retry and Copy, visible in focus mode | days |  | the note stays open with the state on screen until the save succeeds or the user copies · E2E with a forced `onUpdate` rejection |
 | 6 | Saving | Maximum save interval of 10 s during continuous typing; encrypted local checkpoint | days |  | the killed tab loses at most the last 10 s; reopening shows the checkpoint · E2E |
 | 7 | Saving | Save indicator distinguishes "Saved on this device" from "Synced"; never implies another device has text before the server confirms the revision | days |  | Offline typing shows "Saved here", "Synced" appears only after the server acknowledges · unit test on the status state machine |
-| 8 | Sync | `note_tags` pulled incrementally and subscribed in realtime | days |  | A tag added on device A appears on device B within the #80 cross-device budget without re-login · two-client integration test |
-| 9 | Sync | Conflict modal decrypts both sides: title, excerpt, word count, device and time, paragraph-level diff; both versions preserved until the user chooses | days |  | Both cards show readable text and a diff; choosing either keeps the other as a revision (#59) or a copy · component test with two ciphertexts |
-| 10 | Sync | Replace the `Math.max(...spread)` cursor computation | days |  | Cursor computed by reduce · unit test at 100k rows |
 | 11 | Search | Memoize plaintext per note keyed on `contentHash`; memoize the card snippet | days |  | No `DOMParser` work per keystroke after the first query · profiler assertion in a unit test with 2,000 notes |
 | 12 | Search | Delete `searchNotesOffline`, `searchDecryptedNotes`, and the stale "focused-gaze" comment | days |  | Dead code gone · lint passes with the unused-export rule on |
 | 13 | Phone | Replace the "Quick gesture" modal with a one-line caption under the first card | days |  | No modal on first mobile visit · mobile E2E |
@@ -201,6 +198,8 @@ Items 23 to 34 are the five things that change what the product is: a recovery k
 | 146 | Process | Re-validate Quiet Intelligence against the privacy and writing goals; keep publishing, collaboration, databases, graph view, and cloud AI deferred until demand is observed | days | Start when #87 findings available | Decision recorded per idea · doc |
 | 147 | Process | Keep `docs/prd.md`, `docs/roadmap.md`, and `src/data/roadmap.ts` in step with each shipped phase; mark ledger items done with their PR | days | Start when every phase exit | Docs match shipped behaviour · review at phase exit |
 
+| 150 | Sync | Reconcile pre-existing queued writes when accepting a conflict version; stale updates can remain queued after resolution | days | Needs #9 | Choosing the remote version cannot later replay an older local queued payload · integration test |
+
 ---
 
 ## Done
@@ -214,6 +213,9 @@ Items 23 to 34 are the five things that change what the product is: a recovery k
 | 5 | Saving | Every exit path checks the save result; a failed save keeps the draft, shows a persistent "Not saved" state with Retry and Copy, visible in focus mode | days |  | the note stays open with the state on screen until the save succeeds or the user copies · component tests with forced `onUpdate` rejection (owner override: no Playwright) |
 | 6 | Saving | Maximum save interval of 10 s during continuous typing; encrypted local checkpoint | days |  | the killed tab loses at most the last 10 s; reopening shows the checkpoint · timer component test and encrypted persistence/reopen integration test (owner override: no Playwright) |
 | 7 | Saving | Save indicator distinguishes "Saved on this device" from "Synced"; never implies another device has text before the server confirms the revision | days |  | Offline typing shows "Saved here", "Synced" appears only after the server acknowledges · unit test on the status state machine |
+| 8 | Sync | `note_tags` reconciled per changed note in realtime, with paginated catch-up (no timestamp column) | days |  | A tag added on device A appears on device B within the #80 cross-device budget without re-login · two-client integration test with isolated local stores and simulated transport; live p95 budget remains unverified |
+| 9 | Sync | Conflict modal decrypts both sides: title, excerpt, word count, device and time, paragraph-level diff; both versions preserved until the user chooses | days |  | Both cards show readable text and a diff; choosing either keeps the other as a revision (#59) or a copy · component test with two ciphertexts |
+| 10 | Sync | Replace the `Math.max(...spread)` cursor computation | days |  | Cursor computed by reduce · unit test at 100k rows |
 | 148 | Process | Work off the ledger: no issue tracker duplication; PR titles carry the IDs they close; the Board is the only status record | days |  | Done: convention adopted |
 
 ---

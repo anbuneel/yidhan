@@ -63,6 +63,62 @@ describe('encryptedNotes', () => {
     await Dexie.delete(db.name);
   });
 
+  it('refreshes readable tag labels when their definition arrives after membership', async () => {
+    const { createEncryptedNote, fetchDecryptedNotes } = await import('./encryptedNotes');
+    const { upsertTagFromServer } = await import('./offlineNotes');
+    const note = await createEncryptedNote(TEST_USER_ID, 'Journal', '<p>Words</p>', keys);
+    await getOfflineDb(TEST_USER_ID).noteTags.put({ noteId: note.id, tagId: 'late-tag', syncStatus: 'synced', lastSyncedAt: 1 });
+    expect((await fetchDecryptedNotes(TEST_USER_ID, keys))[0].tags).toEqual([]);
+    await upsertTagFromServer(TEST_USER_ID, { id: 'late-tag', name: 'Journal', color: 'sage', createdAt: new Date(1) });
+    expect((await fetchDecryptedNotes(TEST_USER_ID, keys))[0].tags[0].name).toBe('Journal');
+  });
+
+  it.each(['local', 'server'] as const)('preserves both encrypted bodies when choosing %s', async choice => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const { createEncryptedNote, fetchDecryptedNotes } = await import('./encryptedNotes');
+    const { encryptNote } = await import('../lib/encryption');
+    const { resolveConflict } = await import('../hooks/useSyncEngine');
+    const note = await createEncryptedNote(TEST_USER_ID, 'L'.repeat(200), '<p>Local words</p>', keys);
+    const local = (await getOfflineDb(TEST_USER_ID).notes.get(note.id))!;
+    const remote = await encryptNote(note.id, TEST_USER_ID, 'R'.repeat(200), '<p>Remote words</p>', keys);
+    await resolveConflict(TEST_USER_ID, { entityType: 'note', entityId: note.id, localVersion: local,
+      serverVersion: { id: note.id, title: '', content: '', pinned: false, deleted_at: null,
+        created_at: new Date(1).toISOString(), updated_at: new Date(2).toISOString(),
+        encrypted_payload: remote.ciphertext, encryption_iv: remote.iv, encryption_version: 1, content_hash: remote.contentHash,
+      } }, choice, keys);
+    const restored = await fetchDecryptedNotes(TEST_USER_ID, keys);
+    expect(restored.map(n => n.content).sort()).toEqual(['<p>Local words</p>', '<p>Remote words</p>']);
+    expect(restored.find(n => n.id !== note.id)?.title).toContain('(conflict copy)');
+    expect(restored.find(n => n.id !== note.id)?.title).toHaveLength(200);
+    expect((await getOfflineDb(TEST_USER_ID).notes.toArray()).every(n => n.title === '' && n.content === '')).toBe(true);
+  });
+
+  it('reuses the conflict copy when a failed resolution is retried', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const { createEncryptedNote, fetchDecryptedNotes } = await import('./encryptedNotes');
+    const { encryptNote } = await import('../lib/encryption');
+    const { resolveConflict } = await import('../hooks/useSyncEngine');
+    const db = getOfflineDb(TEST_USER_ID);
+    const note = await createEncryptedNote(TEST_USER_ID, 'Local', '<p>Local words</p>', keys);
+    const local = (await db.notes.get(note.id))!;
+    const remote = await encryptNote(note.id, TEST_USER_ID, 'Remote', '<p>Remote words</p>', keys);
+    const conflict = { entityType: 'note' as const, entityId: note.id, localVersion: local,
+      serverVersion: { id: note.id, title: '', content: '', pinned: false, deleted_at: null,
+        created_at: new Date(1).toISOString(), updated_at: new Date(2).toISOString(),
+        encrypted_payload: remote.ciphertext, encryption_iv: remote.iv, encryption_version: 1, content_hash: remote.contentHash,
+      } };
+
+    // Fail once immediately after the losing version has been copied.
+    const where = vi.spyOn(db.noteTags, 'where').mockImplementationOnce(() => { throw new Error('Queue unavailable'); });
+    await expect(resolveConflict(TEST_USER_ID, conflict, 'local', keys)).rejects.toThrow('Queue unavailable');
+    where.mockRestore();
+
+    await resolveConflict(TEST_USER_ID, conflict, 'local', keys);
+    const restored = await fetchDecryptedNotes(TEST_USER_ID, keys);
+    expect(restored.filter(n => n.title.includes('(conflict copy)'))).toHaveLength(1);
+    expect(restored.map(n => n.content).sort()).toEqual(['<p>Local words</p>', '<p>Remote words</p>']);
+  });
+
   // ──────────────────────────────────────────────────
   // createEncryptedNote
   // ──────────────────────────────────────────────────

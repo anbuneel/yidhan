@@ -114,7 +114,8 @@ import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { useSessionSettings } from './hooks/useSessionSettings';
 import { useVaultSettings } from './hooks/useVaultSettings';
 import { useIdleTimer } from './hooks/useIdleTimer';
-import { ConflictModal } from './components/ConflictModal';
+import { EncryptedConflictModal as ConflictModal } from './components/EncryptedConflictModal';
+import { subscribeToNoteTags } from './services/noteTagSync';
 import { InstallPrompt } from './components/InstallPrompt';
 import { IOSInstallGuide } from './components/IOSInstallGuide';
 import { SessionTimeoutModal } from './components/SessionTimeoutModal';
@@ -172,6 +173,10 @@ function buildDeletedServerVersion(note: LocalNote): HardDeletedServerNoteVersio
   };
 }
 
+// Long enough to swallow a burst of per-row realtime events, short enough that
+// a single change still lands well inside the cross-device budget.
+const SYNC_REFRESH_COALESCE_MS = 150;
+
 function App() {
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
   const { keys, isEncryptionSetup, isUnlocked, lockVault, persistToLocal } = useEncryption();
@@ -200,6 +205,22 @@ function App() {
       console.error('Failed to rehydrate after sync:', error);
     }
   }, [user?.id, keys]);
+
+  // Realtime tag events arrive one per row, and each full refresh decrypts the
+  // whole library. Collapse a burst — a bulk retag, or a reconnect replaying
+  // missed events — into a single pass.
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleSyncRefresh = useCallback(() => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => {
+      refreshTimerRef.current = null;
+      void handleSyncComplete();
+    }, SYNC_REFRESH_COALESCE_MS);
+  }, [handleSyncComplete]);
+
+  useEffect(() => () => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+  }, []);
 
   const reportRealtimeDisplayFailure = useCallback((
     operation: 'insert' | 'update',
@@ -730,6 +751,10 @@ function App() {
   // (e.g., when Supabase refreshes the session on tab focus)
   // Wait for hydration to complete so first-time users see their notes from server
   const userId = user?.id;
+  useEffect(() => {
+    if (!userId || !keys) return;
+    return subscribeToNoteTags(userId, scheduleSyncRefresh, () => { void triggerSync(); });
+  }, [userId, keys, triggerSync, scheduleSyncRefresh]);
 
   // Track if we've bypassed hydration due to timeout (state to trigger re-render)
   const [hydrationBypassed, setHydrationBypassed] = useState(false);
@@ -1127,6 +1152,8 @@ function App() {
               if (prev.some((t) => t.id === newTag.id)) return prev;
               return [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name));
             });
+            // Membership and tag-definition events can arrive in either order.
+            scheduleSyncRefresh();
           })
           .catch((error) => {
             console.error('Failed to persist realtime tag insert:', error);
@@ -1139,6 +1166,7 @@ function App() {
             setTags((prev) =>
               prev.map((t) => (t.id === updatedTag.id ? updatedTag : t))
             );
+            scheduleSyncRefresh();
           })
           .catch((error) => {
             console.error('Failed to persist realtime tag update:', error);
@@ -1150,6 +1178,7 @@ function App() {
           .then(() => {
             setTags((prev) => prev.filter((t) => t.id !== deletedId));
             setSelectedTagIds((prev) => prev.filter((id) => id !== deletedId));
+            scheduleSyncRefresh();
           })
           .catch((error) => {
             console.error('Failed to persist realtime tag delete:', error);
@@ -1159,7 +1188,7 @@ function App() {
     );
 
     return () => unsubscribeTags();
-  }, [userId, isHydrating, reportRealtimePersistenceFailure]);
+  }, [userId, isHydrating, reportRealtimePersistenceFailure, scheduleSyncRefresh]);
 
   // Fetch faded notes count when user is authenticated and hydration is complete
   useEffect(() => {
@@ -2550,6 +2579,7 @@ function App() {
 
         {/* Conflict Resolution Modal */}
         <ConflictModal
+          keys={keys}
           conflict={activeConflict}
           onResolve={handleConflictResolve}
           onDismiss={handleConflictDismiss}
@@ -2653,6 +2683,7 @@ function App() {
 
         {/* Conflict Resolution Modal */}
         <ConflictModal
+          keys={keys}
           conflict={activeConflict}
           onResolve={handleConflictResolve}
           onDismiss={handleConflictDismiss}

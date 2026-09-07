@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useCallback, useState, useRef } from 'react';
+import { MAX_NOTE_TITLE_LENGTH } from '../utils/validation';
 import { Capacitor } from '@capacitor/core';
 import { addReliabilityBreadcrumb } from '../utils/reliabilityTelemetry';
 import { useAuth } from '../contexts/AuthContext';
@@ -316,6 +317,19 @@ export function useSyncEngine(
 }
 
 /**
+ * Conflict copies already written in this session, keyed by note and losing
+ * ciphertext. A resolution that throws part-way has already written the copy,
+ * and App's handler clears the conflict rather than rethrowing, so the same
+ * conflict returns on a later sync pull and resolveConflict runs again from the
+ * top; without this the losing version would be copied once per attempt.
+ *
+ * The get and the set are separated by awaits. Only one resolution runs at a
+ * time through the modal, which disables its buttons while resolving; direct
+ * callers should not race two resolutions for one conflict.
+ */
+const writtenConflictCopies = new Map<string, string>();
+
+/**
  * Resolve a conflict by choosing a version.
  *
  * E2EE-aware: for encrypted notes, pushes encrypted fields (not empty
@@ -386,6 +400,30 @@ export async function resolveConflict(
       await clearOriginalNoteQueueEntries();
     });
   };
+
+  // Persist the unchosen version before touching either original. This uses the
+  // existing encrypted copy path and requires no revision-history migration.
+  let copyKey: string | null = null;
+  if (!isHardDeletedConflict && choice !== 'both') {
+    // Fail closed: choosing a version must never discard an unreadable opposite version.
+    if (!keys || !isEncrypted || !serverIsEncrypted) throw new Error('Both encrypted versions must be available');
+    const { decryptNote } = await import('../lib/encryption');
+    const { createEncryptedNote } = await import('../services/encryptedNotes');
+    const losing = choice === 'local'
+      ? { ciphertext: serverNote.encrypted_payload!, iv: serverNote.encryption_iv! }
+      : { ciphertext: localNote.encryptedPayload!, iv: localNote.encryptionIv! };
+    copyKey = `${localNote.id}:${losing.ciphertext}`;
+    const written = writtenConflictCopies.get(copyKey);
+    // Only reuse a copy that is still on disk, so a user who discards one and
+    // retries still gets the losing version preserved.
+    if (!written || !(await db.notes.get(written))) {
+      const content = await decryptNote(localNote.id, userId, losing, keys.encryptionKey);
+      const suffix = ' (conflict copy)';
+      const copyTitle = content.title.slice(0, MAX_NOTE_TITLE_LENGTH - suffix.length).replace(/[\uD800-\uDBFF]$/, '') + suffix;
+      const copy = await createEncryptedNote(userId, copyTitle, content.content, keys, false);
+      writtenConflictCopies.set(copyKey, copy.id);
+    }
+  }
 
   switch (choice) {
     case 'local': {
@@ -623,4 +661,7 @@ export async function resolveConflict(
       break;
     }
   }
+
+  // Resolution succeeded; nothing left to retry.
+  if (copyKey) writtenConflictCopies.delete(copyKey);
 }

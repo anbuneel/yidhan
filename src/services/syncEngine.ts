@@ -6,6 +6,8 @@
  */
 
 import { Capacitor } from '@capacitor/core';
+import { latestSyncTime } from '../utils/syncCursor';
+import { reconcileNoteTags } from './noteTagSync';
 import { supabase, fetchAllPaginated } from '../lib/supabase';
 import {
   getOfflineDb,
@@ -1277,7 +1279,9 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
   // Older local records have no hash acknowledgement. Read the server again
   // before claiming they are synced; a local status alone is not confirmation.
   const needsConfirmation = syncedNotes.some(note => note.confirmedContentHash === undefined);
-  const lastSync = needsConfirmation ? 0 : Math.max(...syncedNotes.map(n => n.lastSyncedAt || 0), 0);
+  // latestSyncTime filters to synced rows itself, and reduces rather than
+  // spreading, which a large library would overflow the call stack on.
+  const lastSync = needsConfirmation ? 0 : latestSyncTime(allNotes);
 
   // --- Note data pull (always runs, no early return) ---
   // Full pull when lastSync is 0 (empty DB, post-migration, or failed hydration);
@@ -1371,8 +1375,7 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
   // Tags currently lack updated_at, so fetch all (full pull).
   // When tags.updated_at migration lands, this will become incremental.
   const localTags = await db.tags.toArray();
-  const syncedTags = localTags.filter(t => t.syncStatus === 'synced');
-  const lastTagSync = Math.max(...syncedTags.map(t => t.lastSyncedAt || 0), 0);
+  const lastTagSync = latestSyncTime(localTags);
 
   // Try incremental tag pull first; fall back to full pull if column doesn't exist
   let tagResult = lastTagSync > 0
@@ -1454,6 +1457,14 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
     }
   }
 
+  // Deliberately every pull, not only on reconnect. note_tags has no
+  // updated_at, so there is no incremental query to run: the realtime channel
+  // is the only steady-state signal, and a dropped event would otherwise go
+  // uncorrected until the next reconnect. Paying a paginated membership scan
+  // per cycle is the price of tags that cannot silently diverge. Revisit when
+  // note_tags gains a timestamp column and this can become incremental.
+  try { pulledTags += await reconcileNoteTags(userId); }
+  catch (error) { errors.push({ entity: 'tags', operation: 'membership', error: error instanceof Error ? error : new Error('Could not refresh tag links') }); }
   return { pulledNotes, pulledTags, deletedNotes, deletedTags, errors };
 }
 

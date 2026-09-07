@@ -130,8 +130,8 @@ describe('ConflictModal', () => {
   it('should display content previews as plain text', () => {
     render(<ConflictModal {...defaultProps} />);
 
-    expect(screen.getByText('Local content here')).toBeInTheDocument();
-    expect(screen.getByText('Server content here')).toBeInTheDocument();
+    expect(screen.getByText('Local content here', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText('Server content here', { selector: 'p' })).toBeInTheDocument();
   });
 
   it('should show three resolution buttons', () => {

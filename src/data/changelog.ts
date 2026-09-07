@@ -24,6 +24,10 @@ export const changelog: ChangelogEntry[] = [
     ],
   },
   {
+    version: '3.19.11', date: '2026-09-07',
+    changes: [{ type: 'fix', text: 'Conflict copies support long titles; targeted tag refreshes keep labels current even when events arrive out of order' }, { type: 'fix', text: 'Tag changes refresh across devices, conflicts show readable comparisons and preserve a copy, and large libraries sync without cursor overflow' }, { type: 'improvement', text: 'A burst of tag changes from another device now refreshes the library once instead of once per change' }],
+  },
+  {
     version: '3.19.8',
     date: '2026-09-04',
     changes: [

@@ -315,9 +315,12 @@ content...
 - Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase (all payloads encrypted)
 - Legacy plaintext offline note write helpers are disabled in non-test builds; launch code must use `encryptedNotes` so plaintext never enters IndexedDB or the sync queue.
 - Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps. Import timestamps (`createdAt`/`updatedAt`) are forwarded through the sync queue to Supabase INSERT to preserve note chronology. Queue processing uses `buildQueueBatches()` for parallel execution with bounded concurrency (`SYNC_BATCH_CONCURRENCY_LIMIT = 6`); noteTag entries force batch barriers. Stale entries (>24h, 3+ retries, non-create) are auto-blocked to prevent permanent "pending" state. Typed `SyncConflictError` enables clean conflict routing without retry logic.
+- Tag membership (`note_tags`) has no `updated_at`, so `reconcileNoteTags` runs a full paginated scan on **every** pull, not only on reconnect. Realtime is the only steady-state signal for membership, and gating the scan would leave a dropped event uncorrected until the next reconnect. The cost is a membership scan per sync cycle; revisit when `note_tags` gains a timestamp column. Realtime tag events are coalesced into one library refresh (`SYNC_REFRESH_COALESCE_MS`) so a burst costs a single decrypt pass.
 - Server-side `notes_updated_at_trigger` prevents client clock skew issues (fires on UPDATE only; INSERT preserves client-supplied timestamps)
 - Self-echo suppression via `pendingMutations` set prevents realtime re-applying own changes
 - Realtime subscriptions update IndexedDB + React state for cross-device changes
+- Tag memberships reconcile per note on realtime events and use a complete paginated catch-up after disconnects (the junction has no timestamp column). Queued local tag edits remain protected.
+- Conflict previews decrypt both versions in memory, show word counts and paragraph changes, and save the unchosen encrypted content as a separate copy before resolution.
 - All note/tag operations are scoped to authenticated user via RLS
 - Launch database hardening (`supabase/migrations/launch_security_hardening.sql`) resets core RLS policies, removes public table-read share policies, enforces encrypted-only note rows, caps share writes at 30 days, and revokes normal-client access to global SECURITY DEFINER cleanup/migration functions
 - Tags support many-to-many relationship with notes

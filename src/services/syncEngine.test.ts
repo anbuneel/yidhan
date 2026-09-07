@@ -1,3 +1,5 @@
+import { reconcileNoteTags } from './noteTagSync';
+vi.mock('./noteTagSync', () => ({ reconcileNoteTags: vi.fn().mockResolvedValue(0) }));
 /**
  * syncEngine.test.ts — Sync Engine Tests
  *
@@ -101,6 +103,7 @@ const TEST_USER_ID = 'test-user-sync';
 function resetSyncTestState(): void {
   clearSyncState();
   vi.resetAllMocks();
+  vi.mocked(reconcileNoteTags).mockResolvedValue(0);
   entryIdCounter = 0;
   Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
   mockUpdateSyncQueueEntry.mockImplementation(async (userId: string, entry: SyncQueueEntry, updates: Partial<SyncQueueEntry>) => {
