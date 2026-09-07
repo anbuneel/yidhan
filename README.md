@@ -54,7 +54,6 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Public Roadmap** - See what's coming next and features being explored
 - **Footer Navigation** - Quick links to Changelog, Roadmap, and GitHub
 - **PWA Support** - Install to home screen for app-like experience, offline UI shell loads instantly
-- **Share Target** - Share text from other apps directly to Yidhan (Android/Chrome)
 - **Install Prompt** - Friendly reminder to install after using the app
 - **Offline Editing** - Notes persist locally with IndexedDB, automatic sync when back online
 - **Safe Startup Hydration** - Startup cache hydration merges server state without clearing queued local work
@@ -82,11 +81,10 @@ Yidhan is designed mobile-first with progressive enhancement toward native-like 
 **Current capabilities:**
 - Offline editing with IndexedDB persistence
 - Background sync when connection restored
-- Share Target API (receive shared content on Android)
 - View Transitions for smooth navigation
 - Touch-optimized with 48px minimum targets
 
-See [Mobile Gap Analysis](docs/analysis/mobile-ios-gap-analysis-claude.md) for detailed roadmap.
+See [the roadmap](docs/roadmap.md) for what's planned on mobile.
 
 ## Tech Stack
 
@@ -104,8 +102,15 @@ Bundled fonts use the SIL Open Font License 1.1. Full notices ship with the web 
 
 ## Documentation
 
-- **[Product Requirements Document](docs/prd.md)** - Product vision, user personas, feature requirements, user flows, and success metrics
-- **[Technical Specification](docs/technical-spec.md)** - System architecture, database schema, state management, security, and deployment
+- **[PRODUCT.md](PRODUCT.md)** — Why Yidhan exists, who it's for, and what it will never do
+- **[DESIGN.md](DESIGN.md)** — The visual system: tokens, themes, typography, principles
+- **[DECISIONS.md](DECISIONS.md)** — Why the architecture became what it is
+- **[CLAUDE.md](CLAUDE.md)** — Working agreement and architectural invariants (for contributors and agents)
+- **[docs/progress.md](docs/progress.md)** — What shipped, and when
+- **[docs/roadmap.md](docs/roadmap.md)** — What's deferred, and what's refused
+- **[docs/technical-spec.md](docs/technical-spec.md)** — Database schema and system architecture
+
+Older material lives in `docs/archive/`. It is frozen and not authoritative.
 
 ## Getting Started
 
@@ -168,42 +173,27 @@ The live schema includes tables for notes, tags, note_tags, and note_shares, plu
 | `npm run e2e:ui` | Open Playwright UI for interactive testing |
 | `npm run e2e:headed` | Run E2E tests with visible browser |
 | `npm run e2e:report` | View E2E test HTML report |
+| `npm run e2e:sw` | Service worker update tests (real production build) |
+| `npm run doctor` | React Doctor checks |
 
 ## Project Structure
 
 ```
 src/
-├── components/        # React components
-│   ├── Auth.tsx           # Login/signup/Google OAuth/password reset
-│   ├── ChangelogPage.tsx  # Public version history page
-│   ├── Editor.tsx         # Note editor with rich text + tags
-│   ├── EditorToolbar.tsx  # Sticky formatting toolbar
-│   ├── ErrorBoundary.tsx  # Error boundary for graceful error handling
-│   ├── Footer.tsx         # Footer with changelog/roadmap/GitHub links
-│   ├── LandingPage.tsx    # Landing hero/editor reveal with product gallery
-│   ├── Header.tsx         # App header with search, profile menu
-│   ├── Library.tsx        # Notes grid view
-│   ├── SimpleHeader.tsx   # Simple header with clickable logo
-│   ├── NoteCard.tsx       # Individual note card
-│   ├── RichTextEditor.tsx # Tiptap editor wrapper
-│   ├── RoadmapPage.tsx    # Public feature roadmap page
-│   ├── SlashCommand.tsx   # Slash commands extension (headings, lists, formatting)
-│   ├── SettingsModal.tsx  # Settings modal (profile, password, theme)
-│   ├── TagBadge.tsx       # Small tag badge for note cards
-│   ├── TagFilterBar.tsx   # Horizontal tag filter strip
-│   ├── TagModal.tsx       # Modal for creating/editing tags
-│   ├── TagPill.tsx        # Tag pill component
-│   └── TagSelector.tsx    # Dropdown for assigning tags
-├── contexts/          # React contexts (Auth)
-├── data/              # Static data (changelog, roadmap)
-├── hooks/             # Custom React hooks (useNetworkStatus)
-├── lib/               # Supabase client
-├── services/          # API services (notes, tags CRUD)
-├── test/              # Test setup files
-├── types/             # TypeScript types
-├── utils/             # Utility functions (time formatting, export/import, sanitization)
-└── index.css          # Design system & styles
+├── components/   # React components
+├── contexts/     # Auth and encryption contexts
+├── data/         # Changelog and roadmap (product surfaces)
+├── hooks/        # Custom React hooks
+├── lib/          # Supabase client
+├── services/     # Notes, tags, encrypted notes, sync engine
+├── themes/       # Theme definitions
+├── types/        # TypeScript types
+├── utils/        # Export/import, sanitization, storage helpers
+└── index.css     # Design system & styles
 ```
+
+Browse `src/` for the current file list — it is the inventory, and any listing
+here would drift from it.
 
 ## Export & Import
 
