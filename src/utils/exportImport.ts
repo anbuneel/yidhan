@@ -225,7 +225,7 @@ export function exportFullAccountData(
       color: tag.color,
     })),
     shareLinks: shareLinks.map((share) => ({
-      noteTitle: notes.find(note => note.id === share.noteId)?.title || share.noteTitle || 'Untitled',
+      noteTitle: notes.find(note => note.id === share.noteId)?.title || 'Untitled',
       noteId: share.noteId,
       token: share.token,
       expiresAt: share.expiresAt,
@@ -415,6 +415,9 @@ export function htmlToMarkdown(html: string): string {
 
   // Markdown permits raw HTML. Keep a sanitized block when the basic serializer
   // cannot preserve it (marks, alignment, nested structures, whitespace).
+  // The tag list must match the top-level nodes RichTextEditor's extensions can
+  // produce; a new block type added there without being added here would skip
+  // this check silently and export corrupted Markdown.
   if (/^<(?:p|h[1-6]|ul|ol|pre|blockquote|hr)(?:\s|>)/i.test(original) &&
       sanitizeHtml(markdownToHtml(md)) !== original) return original;
   return md;

@@ -23,3 +23,20 @@ it('opens an anonymous /s/token/slug letter using its fragment and fails closed 
   expect(screen.getByText(/incomplete/i)).toBeVisible();
   expect(fetchSharedNote).not.toHaveBeenCalled();
 });
+
+it('shows the faded letter message when the token no longer resolves', async () => {
+  // The deleted sharing e2e spec was the only cover for this branch.
+  vi.mocked(fetchSharedNote).mockResolvedValue(null);
+  const token = generateShareToken(), key = generateShareKey();
+  render(<SharedNoteView token={token} shareKey={key} theme="light" onThemeToggle={vi.fn()}
+    onInvalidToken={vi.fn()} onChangelogClick={vi.fn()} onRoadmapClick={vi.fn()} />);
+  expect(await screen.findByText('This letter has faded')).toBeVisible();
+});
+
+it('reports a failure rather than a fade when the lookup itself errors', async () => {
+  vi.mocked(fetchSharedNote).mockRejectedValue(new Error('Network unreachable'));
+  const token = generateShareToken(), key = generateShareKey();
+  render(<SharedNoteView token={token} shareKey={key} theme="light" onThemeToggle={vi.fn()}
+    onInvalidToken={vi.fn()} onChangelogClick={vi.fn()} onRoadmapClick={vi.fn()} />);
+  expect(await screen.findByText('Something went wrong')).toBeVisible();
+});
