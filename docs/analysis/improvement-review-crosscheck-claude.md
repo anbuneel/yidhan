@@ -13,6 +13,8 @@
 
 ---
 
+> **Execution plan:** every item from this review and the Codex review is sequenced with an ID in [../plans/world-class-execution-plan-claude.md](../plans/world-class-execution-plan-claude.md).
+
 ## What was compared
 
 - **Claude review:** `docs/analysis/world-class-improvements-claude.md` and the visual brief `docs/analysis/world-class-improvements-visual-claude.html` (2026-09-06).

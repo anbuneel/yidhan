@@ -13,6 +13,8 @@
 
 ---
 
+> **Execution plan:** every item from this review and the Codex review is sequenced with an ID in [../plans/world-class-execution-plan-claude.md](../plans/world-class-execution-plan-claude.md).
+
 > **See also:** [improvement-review-crosscheck-claude.md](improvement-review-crosscheck-claude.md) (2026-09-07) cross-checks this review against the Codex review on `main` and revises the plan. Five Codex findings were adopted into Phase 0 and 1.
 
 ---
