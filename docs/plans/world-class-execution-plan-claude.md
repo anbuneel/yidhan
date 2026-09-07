@@ -211,6 +211,9 @@ Items 23 to 34 are the five things that change what the product is: a recovery k
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
+| 5 | Saving | Every exit path checks the save result; a failed save keeps the draft, shows a persistent "Not saved" state with Retry and Copy, visible in focus mode | days |  | the note stays open with the state on screen until the save succeeds or the user copies · component tests with forced `onUpdate` rejection (owner override: no Playwright) |
+| 6 | Saving | Maximum save interval of 10 s during continuous typing; encrypted local checkpoint | days |  | the killed tab loses at most the last 10 s; reopening shows the checkpoint · timer component test and encrypted persistence/reopen integration test (owner override: no Playwright) |
+| 7 | Saving | Save indicator distinguishes "Saved on this device" from "Synced"; never implies another device has text before the server confirms the revision | days |  | Offline typing shows "Saved here", "Synced" appears only after the server acknowledges · unit test on the status state machine |
 | 148 | Process | Work off the ledger: no issue tracker duplication; PR titles carry the IDs they close; the Board is the only status record | days |  | Done: convention adopted |
 
 ---
@@ -473,3 +476,5 @@ Items 23 to 34 are the five things that change what the product is: a recovery k
 | A | A Worker gives execution isolation, not protected persistent storage | Accepted | #102 rewritten to say exactly that and to point persistent protection at #135 and #106 |
 | B | "JSON behind the same sanitizer" is insufficient; the sanitizer takes HTML strings (`src/utils/sanitize.ts:57`) | Yes | #31 rewritten: JSON is canonical with a `docVersion`, validated against the editor schema, HTML derived for display and export, older clients open newer documents read-only |
 | C | Generate issues incrementally for ready work | Declined by the repository owner | The ledger and Board remain the tracker (#148) |
+| 149 | Testing | Stabilize the existing PassphraseUnlock component tests under CPU contention; an untouched full-suite run timed out during typing and leaked partial input into the next case | days | No key-behavior changes | Repeated suite runs isolate cleanup and pass under load |
+

@@ -1324,11 +1324,7 @@ function App() {
   // Writes to IndexedDB immediately, queues for sync
   // Returns a Promise so Editor can track save status accurately
   const handleNoteUpdate = useCallback(async (updatedNote: Note): Promise<void> => {
-    if (!user) return;
-    if (!keys) {
-      toast.error('Vault is locked — changes cannot be saved');
-      return;
-    }
+    if (!user || !keys) throw new Error('The vault must be unlocked to save changes');
 
     // Store previous state for potential rollback
     const previousNote = notes.find((n) => n.id === updatedNote.id);
@@ -1342,7 +1338,8 @@ function App() {
     try {
       // Encrypt and save to IndexedDB (immediate, works offline)
       // Sync engine will push encrypted payload to server when online
-      await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
+      const savedNote = await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
+      setNotes(prev => prev.map(n => n.id === savedNote.id && n.title === updatedNote.title && n.content === updatedNote.content ? { ...n, ...savedNote, tags: n.tags } : n));
 
       // Trigger coalesced sync (2s after last save) to push changes promptly
       triggerCoalescedSync();

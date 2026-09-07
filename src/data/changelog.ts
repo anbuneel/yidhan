@@ -7,6 +7,10 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.10', date: '2026-09-07', changes: [
+    { type: 'fix', text: 'Failed saves keep your draft open with Retry and Copy, including in focus mode; continuous typing saves to this device every ten seconds' },
+    { type: 'improvement', text: 'Saved here confirms local storage; Synced appears only when the server has acknowledged the current content' },
+  ] },
   {
     version: '3.19.8',
     date: '2026-09-04',

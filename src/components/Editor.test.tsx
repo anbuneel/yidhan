@@ -190,6 +190,35 @@ describe('Editor', () => {
   });
 
   describe('auto-save', () => {
+    it('checkpoints continuous typing within ten seconds', async () => {
+      render(<Editor {...defaultProps} />);
+      const title = screen.getByDisplayValue('Test Note');
+      for (let i = 0; i < 20; i++) {
+        fireEvent.change(title, { target: { value: 'Draft ' + i } });
+        await act(async () => { vi.advanceTimersByTime(500); });
+      }
+      expect(defaultProps.onUpdate).toHaveBeenCalledWith(expect.objectContaining({ title: 'Draft 19' }));
+    });
+
+    it.each(['Escape', 'logo', 'footer'])('keeps failed drafts open on %s and exposes Retry and Copy in focus mode', async (exit) => {
+      const update = vi.fn().mockRejectedValue(new Error('Disk unavailable'));
+      render(<Editor {...defaultProps} onUpdate={update} />);
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Keep these words' } });
+      if (exit === 'Escape') fireEvent.keyDown(window, { key: 'Escape' });
+      if (exit === 'logo') fireEvent.click(screen.getByRole('button', { name: 'Yidhan' }));
+      if (exit === 'footer') fireEvent.click(screen.getByText('Return to notes'));
+      await act(async () => { await Promise.resolve(); });
+      expect(defaultProps.onBack).not.toHaveBeenCalled();
+      fireEvent.keyDown(window, { key: 'F', ctrlKey: true, shiftKey: true });
+      await act(async () => { vi.advanceTimersByTime(6000); });
+      expect(screen.getByRole('alert')).toHaveTextContent('Not saved');
+      expect(screen.getByRole('alert').closest('.focus-mode-target')).toBeNull();
+      expect(screen.getByDisplayValue('Keep these words')).toBeInTheDocument();
+      update.mockResolvedValue(undefined);
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      await act(async () => { await Promise.resolve(); });
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
     it('triggers save after 800ms of inactivity', async () => {
       const onUpdate = vi.fn().mockResolvedValue(undefined);
       render(<Editor {...defaultProps} onUpdate={onUpdate} />);
@@ -501,6 +530,18 @@ describe('Editor', () => {
     });
   });
 
+  it('copies a failed draft without discarding its words', async () => {
+    render(<Editor {...defaultProps} onUpdate={vi.fn().mockRejectedValue(new Error('Disk unavailable'))} />);
+    fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Rescue me' } });
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await act(async () => { await Promise.resolve(); });
+    fireEvent.click(screen.getByRole('button', { name: 'Copy', exact: true }));
+    await act(async () => { await Promise.resolve(); });
+    expect(exportImport.copyNoteToClipboard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Rescue me' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(defaultProps.onBack).not.toHaveBeenCalled();
+  });
+
   describe('save status indicator', () => {
     it('shows saving indicator during save', async () => {
       // Use a deferred promise to control when save completes
@@ -545,7 +586,7 @@ describe('Editor', () => {
         await Promise.resolve();
       });
 
-      expect(screen.getByText('Saved')).toBeInTheDocument();
+      expect(screen.getByText('Saved here')).toBeInTheDocument();
     });
 
     it('shows error indicator when save fails', async () => {
@@ -584,7 +625,7 @@ describe('Editor', () => {
       // Transition to synced
       rerender(<Editor {...defaultProps} noteSyncStatus="synced" />);
 
-      expect(screen.getByText('Saved')).toBeInTheDocument();
+      expect(screen.getByText('Saved here')).toBeInTheDocument();
     });
 
     it('does not show "Saved" if noteSyncStatus was already synced (no transition)', async () => {
@@ -596,7 +637,7 @@ describe('Editor', () => {
       rerender(<Editor {...defaultProps} noteSyncStatus="synced" />);
 
       // Should not show saved indicator (no pending→synced transition occurred)
-      expect(screen.queryByText('Saved')).not.toBeInTheDocument();
+      expect(screen.queryByText('Saved here')).not.toBeInTheDocument();
     });
 
     it('does not show "Saved" during active save (saveStatus is saving)', async () => {
@@ -647,14 +688,14 @@ describe('Editor', () => {
 
       rerender(<Editor {...defaultProps} noteSyncStatus="synced" />);
 
-      expect(screen.getByText('Saved')).toBeInTheDocument();
+      expect(screen.getByText('Saved here')).toBeInTheDocument();
 
       // Advance 2 seconds
       await act(async () => {
         vi.advanceTimersByTime(2000);
       });
 
-      expect(screen.queryByText('Saved')).not.toBeInTheDocument();
+      expect(screen.queryByText('Saved here')).not.toBeInTheDocument();
     });
   });
 

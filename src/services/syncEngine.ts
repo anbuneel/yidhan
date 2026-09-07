@@ -524,13 +524,13 @@ async function processNoteOperation(
       // Check if note already exists on server (idempotency)
       const { data: existing } = await supabase
         .from('notes')
-        .select('id, updated_at')
+        .select('id, updated_at, content_hash')
         .eq('id', noteId)
         .maybeSingle();
 
       if (existing) {
         // Already created, mark as synced using server timestamp
-        await markNoteSynced(userId, noteId, new Date(existing.updated_at));
+        await markNoteSynced(userId, noteId, new Date(existing.updated_at), existing.content_hash);
         return true;
       }
 
@@ -569,7 +569,7 @@ async function processNoteOperation(
         );
       }
 
-      await markNoteSynced(userId, noteId, createdAt);
+      await markNoteSynced(userId, noteId, createdAt, encryptedPayload.content_hash);
       return true;
     }
 
@@ -647,7 +647,9 @@ async function processNoteOperation(
       // Note no longer exists locally — nothing left to sync.
       if (!updatedAt) return true;
 
-      await markNoteSynced(userId, noteId, updatedAt);
+      const confirmedHash = updated ? updated.content_hash : (await supabase
+        .from('notes').select('content_hash').eq('id', noteId).maybeSingle()).data?.content_hash;
+      await markNoteSynced(userId, noteId, updatedAt, confirmedHash);
       return true;
     }
 
@@ -1324,6 +1326,7 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
       encryptionIv: serverNote.encryption_iv ?? null,
       encryptionVersion: serverNote.encryption_version ?? null,
       contentHash: serverNote.content_hash ?? null,
+      confirmedContentHash: serverNote.content_hash ?? null,
     });
     pulledNotes++;
   }

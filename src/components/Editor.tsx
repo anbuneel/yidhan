@@ -1,5 +1,6 @@
 import { useState, useEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
+import { getSaveLabel } from '../utils/saveStatus';
 import type { Note, Tag, Theme } from '../types';
 import { RichTextEditor } from './RichTextEditor';
 import { EditorToolbar } from './EditorToolbar';
@@ -114,6 +115,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [hasSaveError, setHasSaveError] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [editor, setEditor] = useState<TiptapEditor | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -396,6 +398,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         setRemoteUpdate(null);
 
         // Show success state
+        setHasSaveError(false);
         setSaveStatus('saved');
 
         // Hide indicator after 2 seconds
@@ -409,12 +412,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         }
 
         // Save failed after retries - show error state
+        setHasSaveError(true);
         setSaveStatus('error');
 
-        // Keep error visible for 5 seconds
-        hideIndicatorTimeoutRef.current = setTimeout(() => {
-          setSaveStatus('idle');
-        }, 5000);
+
         return false;
       } finally {
         // Clear the in-flight ref when done
@@ -449,6 +450,13 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       }
     };
   }, [title, content, note.title, note.content, performSave]);
+
+  // Bound continuous typing using the same encrypted local-save path as autosave.
+  const checkpoint = useEffectEvent(() => { void performSave(); });
+  useEffect(() => {
+    const timer = setInterval(() => checkpoint(), 10_000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Flush pending auto-save on visibility change / page hide.
   // When user switches apps on mobile, the pending debounce timer may never fire.
@@ -513,8 +521,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         await inFlightSaveRef.current;
       }
       // Then trigger a new save if needed and await it
-      await performSave();
-      onBack();
+      if (await performSave()) onBack();
     }
     // Cmd/Ctrl+Shift+C: copy note to clipboard
     if (e.key === 'c' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
@@ -673,8 +680,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     setShowDeleteConfirm(true);
   };
 
-  const confirmDelete = () => {
-    onDelete(note.id);
+  const confirmDelete = async () => {
+    if (await performSave()) onDelete(note.id);
+    else setShowDeleteConfirm(false);
   };
 
   // Handle logo click: save and go back (awaits any in-flight save)
@@ -685,8 +693,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       await inFlightSaveRef.current;
     }
     // Then trigger a new save if needed and await it
-    await performSave();
-    onBack();
+    if (await performSave()) onBack();
   };
 
   // Scroll to top of note (like Twitter header behavior)
@@ -904,7 +911,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
-              Saved
+              {getSaveLabel({ localSaved: title === committedSnapshotRef.current?.title && content === committedSnapshotRef.current?.content, synced: noteSyncStatus === 'synced',
+                matchesDraft: note.title === title && note.content === content,
+                hash: note.contentHash, confirmedHash: note.confirmedContentHash })}
             </>
           )}
         </span>
@@ -1010,8 +1019,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                     setShowExportMenu(false);
                     // Flush any unsaved edits so ShareModal encrypts the latest content
                     cancelPendingAutoSave();
-                    await performSave();
-                    setShowShareModal(true);
+                    if (await performSave()) setShowShareModal(true);
                   }}
                   className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
                   style={{
@@ -1120,6 +1128,19 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       style={{ background: 'var(--color-bg-primary)' }}
       data-testid="note-editor"
     >
+      {hasSaveError && (
+        <div role="alert" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
+          <span className="mr-auto">Not saved</span>
+          <button type="button" onClick={() => void performSave()}>Retry</button>
+          <button type="button" onClick={async () => {
+            try {
+              await copyNoteToClipboard({ ...note, title, content });
+              setHasSaveError(false);
+              setSaveStatus('copied');
+            } catch { setSaveStatus('error'); }
+          }}>Copy</button>
+        </div>
+      )}
       {/* Sticky Zone: Header only */}
       <div
         className="editor-sticky-zone focus-mode-target"
@@ -1131,7 +1152,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           leftContent={leftContent}
           center={centerContent}
           rightActions={rightActions}
-          onSettingsClick={onSettingsClick}
+          onSettingsClick={async () => { if (await performSave()) onSettingsClick(); }}
         />
       </div>
 
