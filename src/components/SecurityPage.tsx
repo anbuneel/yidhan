@@ -222,11 +222,11 @@ export function SecurityPage({
                 If you find a problem, please tell us before telling anyone else, and give
                 us a reasonable window to fix it. Write to{' '}
                 <a
-                  href="mailto:security@yidhan.app"
+                  href="mailto:anbs.dev@gmail.com"
                   className="underline underline-offset-4"
                   style={{ color: 'var(--color-accent)' }}
                 >
-                  security@yidhan.app
+                  anbs.dev@gmail.com
                 </a>
                 . The same address is published at{' '}
                 <a

@@ -73,9 +73,9 @@ describe('SecurityPage', () => {
   it('points at security.txt and a contact address', () => {
     render(<SecurityPage {...nav} />);
 
-    expect(screen.getByRole('link', { name: /security@yidhan\.app/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /anbs\.dev@gmail\.com/i })).toHaveAttribute(
       'href',
-      'mailto:security@yidhan.app'
+      'mailto:anbs.dev@gmail.com'
     );
     expect(screen.getByRole('link', { name: /security\.txt/i })).toHaveAttribute(
       'href',
