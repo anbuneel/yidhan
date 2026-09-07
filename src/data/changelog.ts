@@ -15,6 +15,15 @@ export const changelog: ChangelogEntry[] = [
     { type: 'fix', text: 'Letting a note fade always works, even when its last edit could not be saved' },
   ] },
   {
+    version: '3.19.9',
+    date: '2026-09-07',
+    changes: [
+      { type: 'fix', text: 'Escape closes tag and profile menus, and link controls offer an explicit Open link action' },
+      { type: 'fix', text: 'Add, edit, and remove links from the editor controls or slash menu; Ctrl/Cmd+K links selected text, and clicking a link keeps your note open' },
+      { type: 'fix', text: 'Enter in a note title moves into the writing area, Escape closes the slash menu without leaving the note, and underline formatting initializes cleanly' },
+    ],
+  },
+  {
     version: '3.19.8',
     date: '2026-09-04',
     changes: [

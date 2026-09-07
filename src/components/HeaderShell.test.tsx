@@ -40,6 +40,19 @@ describe('HeaderShell', () => {
     });
   });
 
+  it('closes the profile menu and consumes Escape before editor exit', () => {
+    vi.mocked(useAuth).mockReturnValue({ ...vi.mocked(useAuth).getMockImplementation()!(), user: { id: 'fixture', user_metadata: {} } } as ReturnType<typeof useAuth>);
+    render(<HeaderShell {...defaultProps} />);
+    const trigger = screen.getByRole('button', { name: 'Profile menu' });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('menu')).toBeVisible();
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    fireEvent(document, event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
   describe('rendering', () => {
     it('renders the logo by default', () => {
       render(<HeaderShell {...defaultProps} />);

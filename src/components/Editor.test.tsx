@@ -7,14 +7,16 @@ import { createMockNote, createMockTag } from '../test/factories';
 import { useAuth } from '../contexts/AuthContext';
 import * as exportImport from '../utils/exportImport';
 
+const keyboardEditor = vi.hoisted(() => ({ commands: { focus: vi.fn(), setContent: vi.fn() } }));
+
 // Mock dependencies
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: vi.fn(),
 }));
 
 vi.mock('./RichTextEditor', () => ({
-  RichTextEditor: ({ content, onChange, onBlur }: { content: string; onChange: (c: string) => void; onBlur: () => void }) => (
-    <div data-testid="rich-text-editor" onBlur={onBlur}>
+  RichTextEditor: ({ content, onChange, onBlur, onEditorReady }: { content: string; onChange: (c: string) => void; onBlur: () => void; onEditorReady: (editor: unknown) => void }) => (
+    <div data-testid="rich-text-editor" onBlur={onBlur} ref={() => onEditorReady(keyboardEditor)}>
       <textarea
         data-testid="editor-content"
         value={content}
@@ -23,6 +25,8 @@ vi.mock('./RichTextEditor', () => ({
     </div>
   ),
 }));
+
+vi.mock('./EditorSidebar', () => ({ EditorSidebar: () => null }));
 
 vi.mock('./EditorToolbar', () => ({
   EditorToolbar: () => <div data-testid="editor-toolbar">Toolbar</div>,
@@ -138,6 +142,29 @@ describe('Editor', () => {
     vi.useRealTimers();
   });
 
+  it('does not leave the note when Escape has already been handled', async () => {
+    render(<Editor {...defaultProps} />);
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    event.preventDefault();
+    fireEvent(document, event);
+    await act(async () => {});
+    expect(defaultProps.onBack).not.toHaveBeenCalled();
+  });
+
+  it.each(['menu', 'dialog'])('does not leave the note behind an open %s', async (role) => {
+    render(<Editor {...defaultProps} />);
+    const popup = document.createElement('div');
+    popup.setAttribute('role', role);
+    document.body.appendChild(popup);
+    try {
+      fireEvent.keyDown(document, { key: 'Escape' });
+      await act(async () => {});
+      expect(defaultProps.onBack).not.toHaveBeenCalled();
+    } finally {
+      popup.remove();
+    }
+  });
+
   describe('rendering', () => {
     it('renders the note title', () => {
       render(<Editor {...defaultProps} />);
@@ -178,6 +205,14 @@ describe('Editor', () => {
   });
 
   describe('title editing', () => {
+    it('moves title Enter to the start of the body, except during composition', () => {
+      render(<Editor {...defaultProps} />);
+      const title = screen.getByLabelText('Note title');
+      fireEvent.keyDown(title, { key: 'Enter', isComposing: true });
+      expect(keyboardEditor.commands.focus).not.toHaveBeenCalled();
+      fireEvent.keyDown(title, { key: 'Enter' });
+      expect(keyboardEditor.commands.focus).toHaveBeenCalledWith('start');
+    });
     it('updates title on change', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Editor {...defaultProps} />);

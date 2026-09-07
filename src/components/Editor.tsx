@@ -3,6 +3,7 @@ import { useState, useEffect, useEffectEvent, useRef, useCallback } from 'react'
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { getSaveLabel } from '../utils/saveStatus';
 import type { Note, Tag, Theme } from '../types';
+import { LinkPopover } from './LinkPopover';
 import { RichTextEditor } from './RichTextEditor';
 import { EditorToolbar } from './EditorToolbar';
 import { EditorSidebar } from './EditorSidebar';
@@ -94,13 +95,6 @@ function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): bo
   return a !== null && b !== null && a.title === b.title && a.content === b.content;
 }
 
-function handleTitleKeyDown(e: React.KeyboardEvent) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    // Focus will move to the editor naturally.
-  }
-}
-
 function getSaveStatusStyle(status: SaveStatus): { color: string; background: string } {
   switch (status) {
     case 'saving':
@@ -119,6 +113,25 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [saveErrorDetail, setSaveErrorDetail] = useState('');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [editor, setEditor] = useState<TiptapEditor | null>(null);
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      editor?.commands.focus('start');
+    }
+  };
+  const [showLinkPopover, setShowLinkPopover] = useState(false);
+  const closeLinkPopover = useCallback(() => setShowLinkPopover(false), []);
+  const openLinkPopover = useCallback(() => {
+    editor?.chain().extendMarkRange('link').run();
+    setShowLinkPopover(true);
+  }, [editor]);
+  useEffect(() => {
+    const requestLink = (event: Event) => {
+      if (event.target === editor?.view?.dom) openLinkPopover();
+    };
+    document.addEventListener('yidhan:edit-link', requestLink);
+    return () => document.removeEventListener('yidhan:edit-link', requestLink);
+  }, [editor, openLinkPopover]);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showResumeChip, setShowResumeChip] = useState(false);
@@ -531,6 +544,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     }
     // Escape: exit focus mode first, then save and go back
     if (e.key === 'Escape') {
+      if (e.defaultPrevented || showLinkPopover || showExportMenu || showShareModal || showDeleteConfirm ||
+        document.querySelector('[aria-expanded="true"], [role="dialog"], [role="menu"], [data-editor-popover]')) {
+        return;
+      }
       if (isFocusMode) {
         setIsFocusMode(false);
         return;
@@ -560,6 +577,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     }
 
     e.preventDefault();
+    if (!e.shiftKey && editor?.isFocused && (!editor.state.selection.empty || editor.isActive('link'))) {
+      openLinkPopover();
+      return;
+    }
     cancelPendingAutoSave();
     if (inFlightSaveRef.current) {
       await inFlightSaveRef.current;
@@ -1303,7 +1324,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
       {/* Vertical sidebar — desktop only; CSS hides below 1100px where inline toolbar shows instead */}
       {!isMobile && (
-        <EditorSidebar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
+        <EditorSidebar editor={editor} onToggleFocusMode={handleToggleFocusMode} onLink={openLinkPopover} />
       )}
 
       {/* Editor Content */}
@@ -1362,7 +1383,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           {/* Inline toolbar — visible on medium desktop (768-1099px), hidden when sidebar shows */}
           {!isMobile && (
             <div className="editor-toolbar-sticky editor-toolbar-medium-fallback focus-mode-target">
-              <EditorToolbar editor={editor} onToggleFocusMode={handleToggleFocusMode} />
+              <EditorToolbar editor={editor} onToggleFocusMode={handleToggleFocusMode} onLink={openLinkPopover} />
             </div>
           )}
 
@@ -1441,7 +1462,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {/* Mobile: Bottom toolbar — fixed at thumb zone */}
       {isMobile && !isFocusMode && (
         <div className="editor-toolbar-bottom">
-          <EditorToolbar editor={editor} variant="bottom" onToggleFocusMode={handleToggleFocusMode} />
+          <EditorToolbar editor={editor} variant="bottom" onToggleFocusMode={handleToggleFocusMode} onLink={openLinkPopover} />
         </div>
       )}
 
@@ -1465,6 +1486,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       )}
 
       {/* Delete Confirmation Dialog */}
+      {showLinkPopover && editor && <LinkPopover editor={editor} onClose={closeLinkPopover} />}
       {showDeleteConfirm && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
