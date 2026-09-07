@@ -42,6 +42,13 @@ describe('LinkPopover', () => {
     expect(screen.queryByRole('link', { name: 'Open link' })).toBeNull();
   });
 
+  it('stores the parsed address rather than the raw input', () => {
+    mount();
+    fireEvent.change(screen.getByLabelText('Link address'), { target: { value: '  HTTPS://Example.com/path  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save link' }));
+    expect(editor.getHTML()).toContain('href="https://example.com/path"');
+  });
+
   it('rejects unsafe addresses without modifying the note', () => {
     mount();
     fireEvent.change(screen.getByLabelText('Link address'), { target: { value: 'javascript:alert(1)' } });

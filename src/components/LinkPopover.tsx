@@ -43,10 +43,13 @@ export function LinkPopover({ editor, onClose }: LinkPopoverProps) {
   } catch { /* Incomplete addresses are not navigable. */ }
 
   const save = () => {
-    const address = href.trim();
+    // Store the parsed address, not the raw input, so the value that was vetted
+    // is the value that lands in the note.
+    let address: string;
     try {
-      const url = new URL(address);
+      const url = new URL(href.trim());
       if (!['https:', 'http:', 'mailto:', 'tel:'].includes(url.protocol)) throw new Error('Unsupported address');
+      address = url.href;
     } catch {
       setError('Enter a full web address, email link, or phone link.');
       return;
