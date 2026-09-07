@@ -114,6 +114,7 @@ function OverflowMenu({ children, direction = 'down' }: OverflowMenuProps) {
           tabIndex={-1}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
+              e.preventDefault();
               setIsOpen(false);
             }
           }}

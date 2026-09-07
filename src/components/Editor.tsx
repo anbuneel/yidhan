@@ -92,13 +92,6 @@ function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): bo
   return a !== null && b !== null && a.title === b.title && a.content === b.content;
 }
 
-function handleTitleKeyDown(e: React.KeyboardEvent) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    // Focus will move to the editor naturally.
-  }
-}
-
 function getSaveStatusStyle(status: SaveStatus): { color: string; background: string } {
   switch (status) {
     case 'saving':
@@ -116,6 +109,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [editor, setEditor] = useState<TiptapEditor | null>(null);
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      editor?.commands.focus('start');
+    }
+  };
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showResumeChip, setShowResumeChip] = useState(false);
@@ -503,6 +502,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     }
     // Escape: exit focus mode first, then save and go back
     if (e.key === 'Escape') {
+      if (e.defaultPrevented || showExportMenu || showShareModal || showDeleteConfirm ||
+        document.querySelector('[aria-expanded="true"], [role="dialog"], [role="menu"], [data-editor-popover]')) {
+        return;
+      }
       if (isFocusMode) {
         setIsFocusMode(false);
         return;

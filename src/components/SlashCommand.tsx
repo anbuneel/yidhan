@@ -1,6 +1,6 @@
 import { Extension } from '@tiptap/core';
 import { ReactRenderer } from '@tiptap/react';
-import Suggestion from '@tiptap/suggestion';
+import Suggestion, { exitSuggestion } from '@tiptap/suggestion';
 import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 import { CommandList, type CommandListRef, type SlashCommandItem } from './SlashCommandList';
 
@@ -277,6 +277,7 @@ export const SlashCommand = Extension.create({
               });
 
               popup = document.createElement('div');
+              popup.dataset.editorPopover = 'slash';
               popup.style.position = 'fixed';
               popup.style.zIndex = '50';
               document.body.appendChild(popup);
@@ -311,8 +312,8 @@ export const SlashCommand = Extension.create({
 
             onKeyDown: (props: SuggestionKeyDownProps) => {
               if (props.event.key === 'Escape') {
-                popup?.remove();
-                component?.destroy();
+                props.event.preventDefault();
+                exitSuggestion(props.view);
                 return true;
               }
 
@@ -322,6 +323,8 @@ export const SlashCommand = Extension.create({
             onExit: () => {
               popup?.remove();
               component?.destroy();
+              popup = null;
+              component = null;
             },
           };
         },
