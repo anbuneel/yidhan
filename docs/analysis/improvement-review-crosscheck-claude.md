@@ -116,6 +116,8 @@ Most of these came from running the built app and pressing keys. Codex looked at
 
 ## The plan, revised
 
+> Superseded on 2026-09-07 by `docs/plans/world-class-execution-plan-claude.md` v1.2, which withdraws the calendar labels below in favour of engineer-week sizing and throughput forecasting, and folds in the Codex plan review.
+
 | Phase | Length | What changed after the cross-check |
 |-------|--------|------------------------------------|
 | 0. Fix the snags | 2 to 3 weeks | **Added from Codex:** honest save failure on every exit path, a ten-second maximum save interval, "saved here" versus "synced", the server-side write precondition, the Practice Space and landing copy fix, delete the stale share test. **Kept from Claude:** Enter, Esc, link button, blank conflict screen, tag sync, gesture pop-up, ribbon, lossy export. |
