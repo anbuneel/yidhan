@@ -400,7 +400,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         }
         setRemoteUpdate(null);
 
-        // Show success state
+        // Show success state. A save that worked closes out the whole failure
+        // episode, so a later, unrelated one starts without this one's
+        // clipboard warning.
+        setCopyFailed(false);
         setHasSaveError(false);
         setSaveStatus('saved');
 
@@ -416,9 +419,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         }
 
         // Save failed after retries. The banner carries the message, so the
-        // header indicator just stops claiming anything. A fresh failure must
-        // not carry the previous attempt's copy message either.
-        setCopyFailed(false);
+        // header indicator just stops claiming anything. copyFailed is left
+        // alone: a background retry that also failed has not fixed the
+        // clipboard, so silently dropping that warning would be a lie.
         setHasSaveError(true);
         setSaveStatus('idle');
 

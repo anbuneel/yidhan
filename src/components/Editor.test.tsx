@@ -575,6 +575,23 @@ describe('Editor', () => {
     expect(defaultProps.onBack).not.toHaveBeenCalled();
   });
 
+  it('keeps the clipboard warning while background checkpoints keep failing', async () => {
+    vi.useFakeTimers();
+    vi.mocked(exportImport.copyNoteToClipboard).mockRejectedValueOnce(new Error('Clipboard blocked'));
+    render(<Editor {...defaultProps} onUpdate={vi.fn().mockRejectedValue(new Error('Disk unavailable'))} />);
+    fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Rescue me' } });
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await act(async () => { await Promise.resolve(); });
+    fireEvent.click(screen.getByRole('button', { name: 'Copy', exact: true }));
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not copy');
+
+    // The 10s checkpoint retries on its own; failing again fixes nothing.
+    await act(async () => { await vi.advanceTimersByTimeAsync(11000); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not copy');
+    vi.useRealTimers();
+  });
+
   describe('save status indicator', () => {
     it('shows saving indicator during save', async () => {
       // Use a deferred promise to control when save completes
