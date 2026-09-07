@@ -582,22 +582,6 @@ export async function queueSyncOperation(
 }
 
 /**
- * Create a new note offline
- * Generates local UUID, writes to IndexedDB, queues for sync
- */
-
-/**
- * Create multiple notes offline (for batch imports)
- * Writes all notes to IndexedDB first, then queues for sync
- * Returns created notes with progress callback support
- */
-
-/**
- * Update a note offline
- * Updates IndexedDB immediately, queues for sync
- */
-
-/**
  * Soft-delete a note offline (move to Faded Notes)
  */
 export async function softDeleteNoteOffline(

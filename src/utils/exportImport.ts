@@ -28,7 +28,7 @@ interface ExportedTag {
 }
 
 interface ExportData {
-  version: 1;
+  version: 1 | 2;
   exportedAt: string;
   notes: ExportedNote[];
   tags: ExportedTag[];
@@ -302,7 +302,7 @@ export function parseImportedJSON(jsonString: string): ExportData {
     : new Date().toISOString();
 
   return {
-    version: 1,
+    version: d.version,
     exportedAt,
     notes,
     tags,
