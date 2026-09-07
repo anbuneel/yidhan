@@ -38,7 +38,7 @@ that must land first.
 
 ## Next
 
-Five lanes, 23 items. Lanes A to D run in parallel on separate branches and own the files named in the handoff; E starts after C merges. Merge order when two are ready: D, B, A, C. Item 87 is the maintainer's own task, not a code lane.
+Five lanes, 17 items. Lanes A to D run in parallel on separate branches and own the files named in the handoff; E starts after C merges. Merge order when two are ready: D, B, A, C. Item 87 is the maintainer's own task, not a code lane.
 
 ### Lane A · Editor fluency · `fix/editor-fluency` · runs in parallel
 
@@ -57,12 +57,6 @@ Five lanes, 23 items. Lanes A to D run in parallel on separate branches and own 
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
-| 23 | Keys and privacy | Key migration and rotation design, written and reviewed before #24: the wrapped material is the full 64 bytes (AES key and HMAC key); three distinct flows (passphrase change by re-wrap; remembered-device invalidation by key-check version bump; compromise rotation by new key and full re-encryption, #103); interrupted migration resumes; two devices changing concurrently resolve to one winner and the other re-prompts; old offline devices with a stale wrap detect the version and re-unlock; restored backups from before the migration open | days |  | Every later key change can name the flow it belongs to and the test that covers it · design doc in `docs/plans/` with the test list, each test attached to #24, #25, #26, or #103 |
-| 36 | Speed and code | Deployment guard: the client reads a `schema_version` row at startup and refuses writes when the app is ahead of the database; `verify_migration_state.sql` becomes a mandatory release step run against the deployment target, recorded in the PR | days |  | An app built ahead of its migration shows a "database update pending" state instead of blocking the queue · unit test on the guard; release checklist in `docs/setup/` |
-| 38 | Keys and privacy | Encrypted backup export (`.yidhan`: v2 JSON under a backup key) and import | days |  | A backup restores into a fresh browser profile with identical notes, tags, pinned state, timestamps, and (later) attachments; a truncated file is rejected with a clear message · restore test in CI |
-| 39 | Keys and privacy | Threat-model page at `/security` in the product voice; `security.txt`; states visible metadata (timestamps, sizes, tag names until #101) | days |  | Page live and linked from `/privacy` · copy review |
-| 40 | Keys and privacy | Outbound data audit: Sentry allowlisted fields, URLs, demo and capture paths, error strings | days |  | Audit doc lists every outbound request type and the fields it may carry; scrubber tests cover each · unit tests |
-| 41 | Keys and privacy | One undecryptable note renders as a locked card with retry; library stays usable; exports report incomplete | days |  | Corrupting one payload leaves every other note readable and the export banner says "1 note could not be included" · unit and E2E tests |
 
 ### Lane C · Note addresses and the App.tsx split · `feat/note-urls` · runs in parallel; owns App.tsx
 

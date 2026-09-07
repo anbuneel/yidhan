@@ -307,6 +307,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      schema_version: {
+        Row: {
+          id: boolean;
+          version: number;
+          applied_at: string;
+          note: string | null;
+        };
+        Insert: {
+          id?: boolean;
+          version: number;
+          applied_at?: string;
+          note?: string | null;
+        };
+        Update: {
+          id?: boolean;
+          version?: number;
+          applied_at?: string;
+          note?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

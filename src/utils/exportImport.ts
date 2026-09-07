@@ -139,11 +139,40 @@ function validateExportedTag(tag: unknown, index: number): ExportedTag {
 /**
  * Export notes to JSON format
  */
+/**
+ * Split notes into the ones an export can carry and the ones it cannot (item 41).
+ *
+ * A note whose ciphertext would not open has no title and no content to write, so
+ * including it would put an empty note in the file where the reader's words should be.
+ * It is left out — and the count is returned so the caller can say so, rather than
+ * handing over a file that is quietly short.
+ */
+export interface ExportableNotes {
+  exportable: Note[];
+  /** Notes left out because they could not be decrypted. */
+  omittedCount: number;
+}
+
+export function partitionExportableNotes(notes: Note[]): ExportableNotes {
+  const exportable = notes.filter((note) => !note.decryptionFailed);
+  return { exportable, omittedCount: notes.length - exportable.length };
+}
+
+/** The sentence to show when an export left notes behind. Empty when it did not. */
+export function describeOmittedNotes(omittedCount: number): string {
+  if (omittedCount <= 0) return '';
+  return omittedCount === 1
+    ? '1 note could not be included — it could not be opened on this device.'
+    : `${omittedCount} notes could not be included — they could not be opened on this device.`;
+}
+
 export function exportNotesToJSON(notes: Note[], tags: Tag[]): string {
+  const { exportable } = partitionExportableNotes(notes);
+
   const exportData: ExportData = {
     version: 1,
     exportedAt: new Date().toISOString(),
-    notes: notes.map((note) => ({
+    notes: exportable.map((note) => ({
       title: note.title,
       content: note.content,
       tags: note.tags.map((t) => t.name),
@@ -205,6 +234,8 @@ export function exportFullAccountData(
   }>,
   profile: { displayName: string | null; email: string }
 ): string {
+  const { exportable } = partitionExportableNotes(notes);
+
   const exportData: FullAccountExport = {
     version: 2,
     exportedAt: new Date().toISOString(),
@@ -212,7 +243,7 @@ export function exportFullAccountData(
       displayName: profile.displayName,
       email: profile.email,
     },
-    notes: notes.map((note) => ({
+    notes: exportable.map((note) => ({
       title: note.title,
       content: note.content,
       tags: note.tags.map((t) => t.name),
@@ -558,7 +589,7 @@ export function exportNoteToMarkdown(note: Note): string {
  * Export all notes to Markdown (as individual files)
  */
 export function exportAllNotesToMarkdown(notes: Note[]): { filename: string; content: string }[] {
-  return notes.map((note, index) => {
+  return partitionExportableNotes(notes).exportable.map((note, index) => {
     const sanitizedTitle = (note.title || `Untitled-${index + 1}`)
       .replace(/[^a-zA-Z0-9-_ ]/g, '')
       .replace(/\s+/g, '-')
@@ -575,8 +606,10 @@ export function exportAllNotesToMarkdown(notes: Note[]): { filename: string; con
  * Create and download a combined markdown file with all notes
  */
 export async function downloadMarkdownZip(notes: Note[]): Promise<void> {
+  const { exportable } = partitionExportableNotes(notes);
+
   // Each note uses the same format, joined by separator
-  const combined = notes.map(note => exportNoteToMarkdown(note)).join('\n\n---\n\n');
+  const combined = exportable.map(note => exportNoteToMarkdown(note)).join('\n\n---\n\n');
 
   const now = new Date();
   const date = now.toISOString().split('T')[0];

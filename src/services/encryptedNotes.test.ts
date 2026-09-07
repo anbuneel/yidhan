@@ -323,7 +323,7 @@ describe('encryptedNotes', () => {
       expect(notes).toEqual([]);
     });
 
-    it('should fail closed when any note is corrupted', async () => {
+    it('locks a corrupted note and leaves every other note readable (item 41)', async () => {
       const { createEncryptedNote, fetchDecryptedNotes } = await import('./encryptedNotes');
 
       // Create a valid note
@@ -351,9 +351,20 @@ describe('encryptedNotes', () => {
       });
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      await expect(fetchDecryptedNotes(TEST_USER_ID, keys)).rejects.toThrow(
-        'Failed to decrypt 1 of 2 notes'
-      );
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const notes = await fetchDecryptedNotes(TEST_USER_ID, keys);
+
+      // Before item 41 this threw, App caught it, and the whole library went empty.
+      expect(notes).toHaveLength(2);
+      const valid = notes.find((n) => n.id !== 'corrupted-note');
+      expect(valid?.title).toBe('Valid Note');
+      expect(valid?.decryptionFailed).toBeUndefined();
+
+      const locked = notes.find((n) => n.id === 'corrupted-note');
+      expect(locked?.decryptionFailed).toBe(true);
+      // Nothing to show, and nothing to leak.
+      expect(locked?.title).toBe('');
+      expect(locked?.content).toBe('');
 
       expect(consoleSpy).toHaveBeenCalled();
       expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
@@ -365,20 +376,23 @@ describe('encryptedNotes', () => {
       );
 
       consoleSpy.mockRestore();
+      warnSpy.mockRestore();
     });
 
-    it('should fail to decrypt with wrong keys', async () => {
+    it('locks a note the current keys cannot open', async () => {
       const { createEncryptedNote, fetchDecryptedNotes } = await import('./encryptedNotes');
 
       await createEncryptedNote(TEST_USER_ID, 'Secret', '<p>Secret</p>', keys);
 
       const wrongKeys = await deriveTestKeys();
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      await expect(fetchDecryptedNotes(TEST_USER_ID, wrongKeys)).rejects.toThrow(
-        'Failed to decrypt 1 of 1 notes'
-      );
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const notes = await fetchDecryptedNotes(TEST_USER_ID, wrongKeys);
 
-      // Decryption with wrong key should fail — note skipped
+      expect(notes).toHaveLength(1);
+      expect(notes[0].decryptionFailed).toBe(true);
+      expect(notes[0].title).toBe('');
+
       expect(consoleSpy).toHaveBeenCalled();
       expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -387,6 +401,69 @@ describe('encryptedNotes', () => {
         }),
         expect.anything()
       );
+
+      consoleSpy.mockRestore();
+      warnSpy.mockRestore();
+    });
+
+    it('still fails the whole read, closed, on an unencrypted row', async () => {
+      // The launch invariant: server note rows must be encrypted. A plaintext row is a
+      // data incident, not a locked note, and must not be presented as either.
+      const { createEncryptedNote, fetchDecryptedNotes, NoteDecryptionError } =
+        await import('./encryptedNotes');
+
+      await createEncryptedNote(TEST_USER_ID, 'Valid Note', '<p>Valid</p>', keys);
+
+      const db = getOfflineDb(TEST_USER_ID);
+      await db.notes.add({
+        id: 'plaintext-note',
+        userId: TEST_USER_ID,
+        title: 'Readable without a key',
+        content: '<p>Readable without a key</p>',
+        pinned: false,
+        deletedAt: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        syncStatus: 'synced',
+        lastSyncedAt: null,
+        serverUpdatedAt: null,
+        localUpdatedAt: Date.now(),
+        encryptedPayload: null,
+        encryptionIv: null,
+        encryptionVersion: null,
+        contentHash: null,
+      });
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      await expect(fetchDecryptedNotes(TEST_USER_ID, keys)).rejects.toBeInstanceOf(
+        NoteDecryptionError
+      );
+      await expect(fetchDecryptedNotes(TEST_USER_ID, keys)).rejects.toMatchObject({
+        reason: 'plaintext',
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    it('fails closed on a row that carries both ciphertext and plaintext columns', async () => {
+      const { createEncryptedNote, fetchDecryptedNotes } = await import('./encryptedNotes');
+
+      await createEncryptedNote(TEST_USER_ID, 'Valid Note', '<p>Valid</p>', keys);
+
+      const db = getOfflineDb(TEST_USER_ID);
+      const stored = await db.notes.toArray();
+      const encrypted = stored[0];
+      await db.notes.add({
+        ...encrypted,
+        id: 'half-plaintext',
+        title: 'Still readable',
+        content: '<p>Still readable</p>',
+      });
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      await expect(fetchDecryptedNotes(TEST_USER_ID, keys)).rejects.toMatchObject({
+        reason: 'plaintext',
+      });
 
       consoleSpy.mockRestore();
     });

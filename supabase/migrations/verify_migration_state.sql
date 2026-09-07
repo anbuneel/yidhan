@@ -58,6 +58,16 @@ WITH checks(check_name, ok) AS (
     ('notes updated_at trigger', EXISTS (
       SELECT 1 FROM pg_trigger WHERE tgname = 'notes_updated_at_trigger')),
 
+    -- add_schema_version.sql
+    --
+    -- Existence only. A `SELECT ... FROM public.schema_version` here would fail at
+    -- parse time on a database that has not had the migration applied — which is
+    -- precisely when this script is run. The migration seeds its own row; read the
+    -- level with `SELECT version FROM public.schema_version` once this reads applied.
+    ('schema_version table', EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'schema_version')),
+
     -- add_account_deletion_workflow.sql
     ('account_deletion_requests table', EXISTS (
       SELECT 1 FROM information_schema.tables

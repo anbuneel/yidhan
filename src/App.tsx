@@ -14,7 +14,16 @@ import { RoadmapPage } from './components/RoadmapPage';
 import { PrivacyPage } from './components/PrivacyPage';
 import { TermsPage } from './components/TermsPage';
 import { SupportPage } from './components/SupportPage';
+import { SecurityPage } from './components/SecurityPage';
 import { NotFoundPage } from './components/NotFoundPage';
+import { BackupPassphraseModal } from './components/BackupPassphraseModal';
+import { DatabaseUpdatePending } from './components/DatabaseUpdatePending';
+import {
+  BACKUP_FILE_EXTENSION,
+  BackupFormatError,
+  BackupPassphraseError,
+  openEncryptedBackup,
+} from './utils/encryptedBackup';
 import { sanitizeText } from './utils/sanitize';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 import { getLoadedEditorComponent, loadEditorComponent } from './utils/editorLoader';
@@ -26,7 +35,7 @@ import {
   preserveShareKeyFromLocation,
 } from './utils/shareRoute';
 
-const ROUTEABLE_VIEWS: readonly ViewMode[] = ['changelog', 'roadmap', 'privacy', 'terms', 'support'];
+const ROUTEABLE_VIEWS: readonly ViewMode[] = ['changelog', 'roadmap', 'privacy', 'terms', 'support', 'security'];
 
 // Lazy load heavy components with smart retry (auto-reloads on chunk errors when safe)
 const Editor = lazyWithRetry(loadEditorComponent);
@@ -95,6 +104,8 @@ import {
   downloadMarkdownZip,
   markdownToHtml,
   parseMultiNoteMarkdown,
+  partitionExportableNotes,
+  describeOmittedNotes,
   ValidationError,
   MAX_IMPORT_FILE_SIZE,
 } from './utils/exportImport';
@@ -102,6 +113,8 @@ import { DEMO_CONTENT_STORAGE_KEY, hasDemoState } from './services/demoStorage';
 import { migrateDemoToAccount } from './services/demoMigration';
 import { sanitizeHtml } from './utils/sanitize';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
+import { useSchemaGuard } from './hooks/useSchemaGuard';
+import { blocksWrites } from './services/schemaVersion';
 import { useSyncEngine, resolveConflict } from './hooks/useSyncEngine';
 import { useStoragePersistence } from './hooks/useStoragePersistence';
 import {
@@ -191,6 +204,15 @@ function App() {
 
   // Network connectivity monitoring
   useNetworkStatus();
+
+  // The migration level the database is at, read once the reader is signed in. The
+  // result starts as `unknown`, which fails open: an offline reader must not be locked
+  // out of their own notes because a version check could not reach the server.
+  const {
+    compatibility: schemaCompatibility,
+    isChecking: isCheckingSchema,
+    recheck: recheckSchema,
+  } = useSchemaGuard(Boolean(user));
 
   // Rehydrate React state after sync pulls in remote changes (2A)
   // This is safe because the Editor maintains its own local state —
@@ -486,6 +508,7 @@ function App() {
   const navigateToPrivacy = useCallback(() => navigateToPublicView('privacy'), [navigateToPublicView]);
   const navigateToTerms = useCallback(() => navigateToPublicView('terms'), [navigateToPublicView]);
   const navigateToSupport = useCallback(() => navigateToPublicView('support'), [navigateToPublicView]);
+  const navigateToSecurity = useCallback(() => navigateToPublicView('security'), [navigateToPublicView]);
 
   const [LoadedEditor, setLoadedEditor] = useState(() => getLoadedEditorComponent());
   const preloadEditorRoute = useCallback(async () => {
@@ -655,6 +678,11 @@ function App() {
 
   // Keyboard shortcuts modal state
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
+  // A `.yidhan` file waiting on its backup passphrase (item 38)
+  const [pendingBackupFile, setPendingBackupFile] = useState<File | null>(null);
+  const [backupRestoreError, setBackupRestoreError] = useState<string | null>(null);
+  const [isOpeningBackup, setIsOpeningBackup] = useState(false);
 
   // Auth modal state (for landing page)
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -1233,7 +1261,20 @@ function App() {
     });
   }, [sortedNotes, selectedTagIds]);
 
-  const selectedNote = notes.find((n) => n.id === selectedNoteId);
+  const selectedNoteRecord = notes.find((n) => n.id === selectedNoteId);
+  // A locked note is never opened. Its title and content are empty by construction, so
+  // the editor would show a blank draft over real ciphertext — and the first autosave
+  // would overwrite the note with nothing (item 41).
+  const selectedNote = selectedNoteRecord?.decryptionFailed ? undefined : selectedNoteRecord;
+
+  useEffect(() => {
+    if (!selectedNoteRecord?.decryptionFailed) return;
+    startTransition(() => {
+      setView('library');
+      setSelectedNoteId(null);
+    });
+    toast('That note could not be opened on this device.');
+  }, [selectedNoteRecord, startTransition]);
 
   const handleNoteClick = useCallback((id: string) => {
     void warmEditorRoute().then(() => {
@@ -1361,6 +1402,11 @@ function App() {
     // different failure and must not be told to unlock anything.
     if (!user) throw new Error('Cannot save without a signed-in user');
     if (!keys) throw new VaultLockedSaveError();
+    // Backstop for the guard above: never write over a note this device could not
+    // read. An empty save here would destroy the ciphertext another device can open.
+    if (notesRef.current.find((n) => n.id === updatedNote.id)?.decryptionFailed) {
+      throw new Error('This note could not be opened on this device, so it was not saved.');
+    }
 
     // Store previous state for potential rollback
     const previousNote = notes.find((n) => n.id === updatedNote.id);
@@ -1596,6 +1642,18 @@ function App() {
   };
 
   // Pull-to-refresh handler - syncs with server first, then rehydrates state
+  // A locked card's retry: re-read the library and try the ciphertext again. The vault
+  // may have been unlocked with the right passphrase since the failed read.
+  const handleRetryLockedNotes = useCallback(async () => {
+    if (!user || !keys) return;
+    try {
+      setNotes(await fetchDecryptedNotes(user.id, keys));
+    } catch (error) {
+      console.error('Failed to re-read notes:', error);
+      toast.error('Could not open those notes. Lock and unlock your vault, then try again.');
+    }
+  }, [user, keys]);
+
   const handleRefresh = useCallback(async () => {
     if (!user) return;
     if (!keys) {
@@ -1822,21 +1880,63 @@ function App() {
   const isSearching = debouncedSearchQuery.trim().length > 0;
 
   // Export to JSON
+  // Opening a `.yidhan` backup. The import handler is declared below, so it is reached
+  // through a ref — the alternative is hoisting the whole 200-line import path above
+  // this, which buys nothing.
+  const handleImportFileRef = useRef<(file: File, decrypted?: string) => Promise<void>>(
+    async () => undefined
+  );
+
+  const handleOpenBackup = useCallback(async (passphrase: string) => {
+    const file = pendingBackupFile;
+    if (!file) return;
+
+    setIsOpeningBackup(true);
+    setBackupRestoreError(null);
+    try {
+      const payload = await openEncryptedBackup(await readFileAsText(file), passphrase);
+      setPendingBackupFile(null);
+      await handleImportFileRef.current(file, payload);
+    } catch (error) {
+      // A damaged file and a wrong passphrase are different problems, and only one of
+      // them is something the reader can do anything about. Say which.
+      const message =
+        error instanceof BackupFormatError || error instanceof BackupPassphraseError
+          ? error.message
+          : 'That backup could not be opened.';
+      console.error('Failed to open backup:', error);
+      setBackupRestoreError(message);
+    } finally {
+      setIsOpeningBackup(false);
+    }
+  }, [pendingBackupFile]);
+
+  // An export that quietly omits notes is worse than one that says it did. A note whose
+  // ciphertext would not open has nothing to write, so it is left out and counted
+  // (item 41).
+  const reportOmittedFromExport = useCallback((noteList: Note[]) => {
+    const { omittedCount } = partitionExportableNotes(noteList);
+    const message = describeOmittedNotes(omittedCount);
+    if (message) toast(message, { duration: 6000, icon: '\u26A0\uFE0F' });
+  }, []);
+
   const handleExportJSON = useCallback(() => {
     const json = exportNotesToJSON(notes, tags);
     const now = new Date();
     const date = now.toISOString().split('T')[0];
     const time = now.toTimeString().slice(0, 8).replace(/:/g, ''); // HHMMSS
     downloadFile(json, `yidhan-backup-${date}-${time}.json`, 'application/json');
-  }, [notes, tags]);
+    reportOmittedFromExport(notes);
+  }, [notes, tags, reportOmittedFromExport]);
 
   // Export to Markdown
   const handleExportMarkdown = useCallback(() => {
     downloadMarkdownZip(notes);
-  }, [notes]);
+    reportOmittedFromExport(notes);
+  }, [notes, reportOmittedFromExport]);
 
   // Import file (JSON or Markdown)
-  const handleImportFile = useCallback(async (file: File) => {
+  const handleImportFile = useCallback(async (file: File, decryptedBackup?: string) => {
     if (!user) return;
     if (!keys) {
       toast.error('Please unlock your vault before importing notes');
@@ -1850,10 +1950,19 @@ function App() {
       return;
     }
 
+    // A `.yidhan` backup is sealed under a passphrase the reader chose, which nothing
+    // here knows. Ask for it first; the decrypted payload comes back through the
+    // second argument and takes the ordinary JSON path from there (item 38).
+    if (file.name.endsWith(BACKUP_FILE_EXTENSION) && decryptedBackup === undefined) {
+      setPendingBackupFile(file);
+      setBackupRestoreError(null);
+      return;
+    }
+
     setImportProgress({ isImporting: true, current: 0, total: 0, phase: 'parsing' });
     try {
-      const content = await readFileAsText(file);
-      const isJSON = file.name.endsWith('.json');
+      const content = decryptedBackup ?? (await readFileAsText(file));
+      const isJSON = decryptedBackup !== undefined || file.name.endsWith('.json');
       const isMarkdown = file.name.endsWith('.md') || file.name.endsWith('.markdown');
 
       if (isJSON) {
@@ -2058,6 +2167,7 @@ function App() {
       setImportProgress(null);
     }
   }, [user, tags, keys]);
+  handleImportFileRef.current = handleImportFile;
 
   // Show loading while checking auth or fetching notes
   if (showAppLoader) {
@@ -2245,6 +2355,7 @@ function App() {
         <ErrorBoundary>
           <Suspense fallback={<LoadingFallback />}>
             <PrivacyPage
+              onSecurityClick={navigateToSecurity}
               theme={theme}
               onThemeToggle={handleThemeToggle}
               onSignIn={() => {
@@ -2344,6 +2455,41 @@ function App() {
     );
   }
 
+  if (view === 'security') {
+    return (
+      <>
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingFallback />}>
+            <SecurityPage
+              theme={theme}
+              onThemeToggle={handleThemeToggle}
+              onSignIn={() => {
+                setAuthModalMode('login');
+                setShowAuthModal(true);
+              }}
+              onLogoClick={navigateHome}
+              onChangelogClick={navigateToChangelog}
+              onRoadmapClick={navigateToRoadmap}
+              onPrivacyClick={navigateToPrivacy}
+              onTermsClick={navigateToTerms}
+              onSupportClick={navigateToSupport}
+              onSettingsClick={() => setShowSettingsModal(true)}
+            />
+          </Suspense>
+        </ErrorBoundary>
+        {showAuthModal && (
+          <Auth
+            theme={theme}
+            onThemeToggle={handleThemeToggle}
+            initialMode={authModalMode}
+            isModal
+            onClose={() => setShowAuthModal(false)}
+          />
+        )}
+      </>
+    );
+  }
+
   // Show landing page with auth modal if not logged in
   if (!user) {
     return (
@@ -2376,6 +2522,23 @@ function App() {
           />
         )}
       </>
+    );
+  }
+
+  // Deployment guard (item 36). Migrations are applied by hand, and a client shipped
+  // ahead of its migration fails only on writes — silently — while reads keep working.
+  // Rather than let the queue fill with writes that cannot land, say so and stop.
+  //
+  // This sits after the auth gate because the check needs a session, and before the
+  // vault gate because unlocking is the step that leads to writing.
+  if (blocksWrites(schemaCompatibility) && schemaCompatibility.status === 'database-behind') {
+    return (
+      <DatabaseUpdatePending
+        appliedVersion={schemaCompatibility.appliedVersion}
+        requiredVersion={schemaCompatibility.requiredVersion}
+        onRetry={recheckSchema}
+        isRetrying={isCheckingSchema}
+      />
     );
   }
 
@@ -2445,6 +2608,7 @@ function App() {
           footerRef={libraryFooterRef}
           notes={displayNotes}
           onNoteClick={handleNoteClick}
+          onRetryLockedNote={handleRetryLockedNotes}
           onNoteDelete={handleNoteDelete}
           onTogglePin={handleTogglePin}
           onNewNote={handleNewNote}
@@ -2577,6 +2741,19 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* Backup passphrase — a `.yidhan` file cannot be read without it (item 38) */}
+        <BackupPassphraseModal
+          mode="open"
+          isOpen={pendingBackupFile !== null}
+          error={backupRestoreError}
+          isBusy={isOpeningBackup}
+          onSubmit={(passphrase) => void handleOpenBackup(passphrase)}
+          onCancel={() => {
+            setPendingBackupFile(null);
+            setBackupRestoreError(null);
+          }}
+        />
 
         {/* Conflict Resolution Modal */}
         <ConflictModal

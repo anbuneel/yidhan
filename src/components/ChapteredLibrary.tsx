@@ -12,6 +12,9 @@ import {
   type ChapterKey,
 } from '../utils/temporalGrouping';
 
+/** A locked card without a retry wired up simply does nothing on click. */
+const noop = () => undefined;
+
 // Mobile breakpoint matching masonry grid (700px)
 const MOBILE_BREAKPOINT = 700;
 
@@ -19,6 +22,8 @@ interface ChapteredLibraryProps {
   footerRef?: RefObject<HTMLElement | null>;
   notes: Note[];
   onNoteClick: (id: string) => void;
+  /** Re-read the library so a note that failed to decrypt can be tried again. */
+  onRetryLockedNote?: () => void;
   onNoteDelete: (id: string) => void;
   onTogglePin: (id: string, pinned: boolean) => void;
   onNewNote?: () => void;
@@ -32,6 +37,7 @@ export function ChapteredLibrary({
   footerRef,
   notes,
   onNoteClick,
+  onRetryLockedNote,
   onNoteDelete,
   onTogglePin,
   onNewNote,
@@ -285,6 +291,7 @@ export function ChapteredLibrary({
           defaultExpanded={defaultExpansion[chapter.key as ChapterKey]}
           isPinned={chapter.isPinned}
           onNoteClick={onNoteClick}
+          onRetryLockedNote={onRetryLockedNote ?? noop}
           onNoteDelete={onNoteDelete}
           onTogglePin={onTogglePin}
           isCompact={isCompact}

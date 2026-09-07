@@ -22,7 +22,11 @@ import {
   MAX_IMPORT_NOTES,
   MAX_TITLE_LENGTH,
   MAX_TAG_NAME_LENGTH,
+  exportFullAccountData,
+  partitionExportableNotes,
+  describeOmittedNotes,
 } from './exportImport';
+import type { Note } from '../types';
 import { createMockNote, createMockTag } from '../test/factories';
 
 describe('exportImport', () => {
@@ -954,5 +958,71 @@ describe('exportImport', () => {
     it('has correct MAX_TAG_NAME_LENGTH value', () => {
       expect(MAX_TAG_NAME_LENGTH).toBe(20);
     });
+  });
+});
+
+// ============================================================================
+// Locked notes in exports (item 41)
+// ============================================================================
+
+describe('exports leave out notes that could not be opened', () => {
+  function note(overrides: Partial<Note> & { id: string }): Note {
+    return {
+      title: overrides.id,
+      content: `<p>${overrides.id}</p>`,
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-01-01'),
+      tags: [],
+      pinned: false,
+      ...overrides,
+    };
+  }
+
+  const readable = note({ id: 'readable' });
+  const locked = note({ id: 'locked', title: '', content: '', decryptionFailed: true });
+
+  it('partitions readable notes from locked ones', () => {
+    const { exportable, omittedCount } = partitionExportableNotes([readable, locked]);
+
+    expect(exportable.map((n) => n.id)).toEqual(['readable']);
+    expect(omittedCount).toBe(1);
+  });
+
+  it('reports nothing omitted when every note is readable', () => {
+    expect(partitionExportableNotes([readable]).omittedCount).toBe(0);
+    expect(describeOmittedNotes(0)).toBe('');
+  });
+
+  it('says "1 note could not be included" for exactly one', () => {
+    expect(describeOmittedNotes(1)).toMatch(/^1 note could not be included/);
+  });
+
+  it('pluralises for more than one', () => {
+    expect(describeOmittedNotes(3)).toMatch(/^3 notes could not be included/);
+  });
+
+  it('keeps a locked note out of the JSON export', () => {
+    const parsed = JSON.parse(exportNotesToJSON([readable, locked], [])) as {
+      notes: { title: string }[];
+    };
+
+    expect(parsed.notes).toHaveLength(1);
+    expect(parsed.notes[0].title).toBe('readable');
+  });
+
+  it('keeps a locked note out of the Markdown export', () => {
+    const files = exportAllNotesToMarkdown([readable, locked]);
+
+    expect(files).toHaveLength(1);
+    expect(files[0].content).toContain('readable');
+  });
+
+  it('keeps a locked note out of a full account backup', () => {
+    const backup = JSON.parse(
+      exportFullAccountData([readable, locked], [], [], { displayName: null, email: 'a@b.c' })
+    ) as { notes: { title: string }[] };
+
+    expect(backup.notes).toHaveLength(1);
+    expect(backup.notes[0].title).toBe('readable');
   });
 });

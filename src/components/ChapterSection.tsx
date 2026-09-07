@@ -6,6 +6,7 @@ import type { ChapterKey } from '../utils/temporalGrouping';
 import { WATERLINE_TEXT } from '../utils/temporalGrouping';
 import { NoteCard } from './NoteCard';
 import { SwipeableNoteCard } from './SwipeableNoteCard';
+import { LockedNoteCard } from './LockedNoteCard';
 import { useTouchCapable } from '../hooks/useMobileDetect';
 
 const INITIAL_CARD_COUNT = 6;
@@ -18,6 +19,8 @@ interface ChapterSectionProps {
   defaultExpanded: boolean;
   isPinned?: boolean;
   onNoteClick: (id: string) => void;
+  /** Re-read the library so a note that failed to decrypt can be tried again. */
+  onRetryLockedNote: () => void;
   onNoteDelete: (id: string) => void;
   onTogglePin: (id: string, pinned: boolean) => void;
   isCompact?: boolean;
@@ -43,6 +46,7 @@ export const ChapterSection = memo(function ChapterSection({
   defaultExpanded,
   isPinned = false,
   onNoteClick,
+  onRetryLockedNote,
   onNoteDelete,
   onTogglePin,
   isCompact = false,
@@ -315,7 +319,16 @@ export const ChapterSection = memo(function ChapterSection({
                       animationDelay: `${Math.min(index * 0.06, 0.6)}s`,
                     }}
                   >
-                    {isTouchDevice ? (
+                    {note.decryptionFailed ? (
+                      // A note whose ciphertext would not open. It has no title, no
+                      // preview and nothing to open, so it does not get a note card —
+                      // opening it would show a blank editor over an empty draft.
+                      <LockedNoteCard
+                        note={note}
+                        onRetry={onRetryLockedNote}
+                        isCompact={isCompact}
+                      />
+                    ) : isTouchDevice ? (
                       <SwipeableNoteCard
                         note={note}
                         onClick={onNoteClick}
@@ -367,6 +380,7 @@ export const ChapterSection = memo(function ChapterSection({
   prev.isSearching === next.isSearching &&
   prev.showGestureHint === next.showGestureHint &&
   prev.onNoteClick === next.onNoteClick &&
+  prev.onRetryLockedNote === next.onRetryLockedNote &&
   prev.onNoteDelete === next.onNoteDelete &&
   prev.onTogglePin === next.onTogglePin
 );

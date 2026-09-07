@@ -30,6 +30,37 @@ import { hasEmptyPlaintextColumns } from '../utils/noteEncryptionInvariant';
  * to surface data corruption immediately rather than silently returning
  * an empty note.
  */
+/**
+ * Why a note could not be read (item 41).
+ *
+ * The distinction is the whole point. `plaintext` means the row is not encrypted, or
+ * still carries plaintext columns — a violation of the launch invariant, and the read
+ * must fail closed, hard, for the whole library. `undecryptable` means the row *is*
+ * encrypted and the ciphertext would not open: a wrong key, or corruption. That is one
+ * locked note, not a reason to hide every other note the reader has.
+ */
+export type NoteDecryptionFailure = 'plaintext' | 'undecryptable';
+
+export class NoteDecryptionError extends Error {
+  readonly noteId: string;
+  readonly reason: NoteDecryptionFailure;
+
+  constructor(noteId: string, reason: NoteDecryptionFailure, message: string, cause?: unknown) {
+    super(message, cause === undefined ? undefined : { cause });
+    this.name = 'NoteDecryptionError';
+    this.noteId = noteId;
+    this.reason = reason;
+  }
+}
+
+/**
+ * A note we know exists but cannot read. Title and content are empty by construction —
+ * the ciphertext never opened, so there is nothing to show and nothing to leak.
+ */
+function toLockedNote(note: Note): Note {
+  return { ...note, title: '', content: '', decryptionFailed: true };
+}
+
 async function decryptNoteIfNeeded(
   note: Note,
   userId: string,
@@ -42,7 +73,11 @@ async function decryptNoteIfNeeded(
 
   // Detect partial encryption state — this should never happen
   if (!hasPayload && !hasIv && !hasVersion && !hasHash) {
-    const error = new Error(`Note ${note.id} is not encrypted; refusing to load plaintext note content`);
+    const error = new NoteDecryptionError(
+      note.id,
+      'plaintext',
+      `Note ${note.id} is not encrypted; refusing to load plaintext note content`
+    );
     reportReliabilityIssue({
       category: 'vault',
       message: 'Encrypted note decryption failed',
@@ -55,7 +90,11 @@ async function decryptNoteIfNeeded(
   }
 
   if (!hasPayload || !hasIv || !hasVersion || !hasHash) {
-    const error = new Error(
+    // Half-encrypted: some of the payload is there and some is not. The row cannot be
+    // opened, and it is not a plaintext note either — it is corruption, so it locks.
+    const error = new NoteDecryptionError(
+      note.id,
+      'undecryptable',
       `Note ${note.id} has corrupted encryption state: ` +
       `payload=${hasPayload}, iv=${hasIv}, version=${hasVersion}, hash=${hasHash}`
     );
@@ -71,7 +110,11 @@ async function decryptNoteIfNeeded(
   }
 
   if (!hasEmptyPlaintextColumns(note)) {
-    const error = new Error(`Note ${note.id} has encrypted fields but still contains plaintext columns`);
+    const error = new NoteDecryptionError(
+      note.id,
+      'plaintext',
+      `Note ${note.id} has encrypted fields but still contains plaintext columns`
+    );
     reportReliabilityIssue({
       category: 'vault',
       message: 'Encrypted note decryption failed',
@@ -101,7 +144,12 @@ async function decryptNoteIfNeeded(
         source: 'note_decryption',
       },
     }, error);
-    throw error;
+    throw new NoteDecryptionError(
+      note.id,
+      'undecryptable',
+      `Note ${note.id} could not be decrypted`,
+      error
+    );
   }
 }
 
@@ -279,10 +327,50 @@ export async function updateEncryptedNote(
 }
 
 /**
+ * Resolve a batch of decryption attempts.
+ *
+ * A `plaintext` failure is a violation of the launch invariant and still fails the
+ * whole read, closed — the library must never present an unencrypted row as a note.
+ * An `undecryptable` one locks that note and nothing else: before item 41, a single
+ * corrupt payload threw here, App caught it, and the reader's entire library went
+ * empty behind a toast telling them to lock and unlock their vault.
+ */
+function resolveDecryptionResults(
+  notes: Note[],
+  results: PromiseSettledResult<Note>[],
+  label: string
+): Note[] {
+  const resolved: Note[] = [];
+  let lockedCount = 0;
+
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      resolved.push(result.value);
+      return;
+    }
+
+    const reason: unknown = result.reason;
+    if (reason instanceof NoteDecryptionError && reason.reason === 'plaintext') {
+      throw reason;
+    }
+
+    console.error(`Failed to decrypt ${label}:`, reason);
+    lockedCount++;
+    resolved.push(toLockedNote(notes[index]));
+  });
+
+  if (lockedCount > 0) {
+    console.warn(`[vault] ${lockedCount} of ${notes.length} ${label}s could not be decrypted`);
+  }
+
+  return resolved;
+}
+
+/**
  * Fetch all notes and decrypt them.
  *
- * Fails closed if any note cannot be decrypted so the UI never silently
- * hides notes or exports partial data.
+ * A note whose ciphertext will not open comes back locked (item 41), so the rest of
+ * the library stays readable. A note that is not encrypted at all still throws.
  */
 export async function fetchDecryptedNotes(
   userId: string,
@@ -294,29 +382,12 @@ export async function fetchDecryptedNotes(
     notes.map((note) => decryptNoteIfNeeded(note, userId, keys))
   );
 
-  const decrypted: Note[] = [];
-  let failedCount = 0;
-  for (const result of results) {
-    if (result.status === 'fulfilled') {
-      decrypted.push(result.value);
-    } else {
-      failedCount++;
-      console.error('Failed to decrypt note:', result.reason);
-    }
-  }
-
-  if (failedCount > 0) {
-    throw new Error(
-      `Failed to decrypt ${failedCount} of ${notes.length} notes. Lock and unlock your vault, then try again.`
-    );
-  }
-
-  return decrypted;
+  return resolveDecryptionResults(notes, results, 'note');
 }
 
 /**
  * Fetch faded (soft-deleted) notes and decrypt them.
- * Same fail-closed pattern as fetchDecryptedNotes.
+ * Same rule as fetchDecryptedNotes: one locked note, not an empty view.
  */
 export async function fetchDecryptedFadedNotes(
   userId: string,
@@ -328,24 +399,7 @@ export async function fetchDecryptedFadedNotes(
     notes.map((note) => decryptNoteIfNeeded(note, userId, keys))
   );
 
-  const decrypted: Note[] = [];
-  let failedCount = 0;
-  for (const result of results) {
-    if (result.status === 'fulfilled') {
-      decrypted.push(result.value);
-    } else {
-      failedCount++;
-      console.error('Failed to decrypt faded note:', result.reason);
-    }
-  }
-
-  if (failedCount > 0) {
-    throw new Error(
-      `Failed to decrypt ${failedCount} of ${notes.length} faded notes. Lock and unlock your vault, then try again.`
-    );
-  }
-
-  return decrypted;
+  return resolveDecryptionResults(notes, results, 'faded note');
 }
 
 /**

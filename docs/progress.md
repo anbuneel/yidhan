@@ -88,3 +88,64 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   use structured failures; card fading is exactly once with visible failure
   recovery; and unused exports are guarded by an exact audited baseline —
   ledger items 71, 72, 74, 150, 151.
+- **2026-09-07** — Key migration and rotation designed before any of it is built —
+  ledger item 23. `docs/plans/2026-09-07-key-migration-and-rotation-design.md`
+  fixes the wrapped material as the full 64 bytes (both the AES and the HMAC half,
+  because wrapping only the AES key would silently break every save-confirmation
+  path), separates the three key-change flows that were previously one undifferentiated
+  idea, and attaches 29 named tests to items 24, 25, 26 and 103. Review then found
+  four more ways the design could have lost words or left a retired passphrase
+  working — a rotation holding its new key only in memory, a sync gate that stopped
+  only the rotating tab, a lock keyed on a counter that does not move until the pass
+  ends, and a passphrase change that left the legacy credential describing the old
+  passphrase. Each is now refused by name, with the reasoning that was wrong kept
+  next to it rather than deleted.
+- **2026-09-07** — The deployment guard — ledger item 36. A `schema_version` table
+  holds one row naming the migration level the database is at; the client carries the
+  level it requires and reads the other at startup. When the app is ahead, it shows
+  "a database update is pending" and stops, instead of letting the sync queue fill with
+  writes that cannot land. That silent mode of failure is what
+  `default_user_id_to_auth_uid.sql` produced in production: reads kept working, so
+  nothing looked broken, while every new note failed RLS. The guard **fails open** —
+  offline, unreachable, and an unseeded table all resolve to `unknown`, and `unknown`
+  writes normally, because an offline-first app must not lock a reader out of their own
+  notes over a version check that could not reach the server. Only a version number
+  lower than the build's closes anything. `docs/setup/release-checklist.md` makes
+  `verify_migration_state.sql` a recorded release step, with its output pasted into the
+  PR rather than summarised.
+- **2026-09-07** — One undecryptable note stops taking the library with it — ledger
+  item 41. `fetchDecryptedNotes` threw if any single payload failed, App caught it, and
+  the reader's whole library rendered empty behind a toast telling them to lock and
+  unlock their vault. Decryption failures are now typed: a row that is not encrypted at
+  all, or still carries plaintext columns, is a violation of the launch invariant and
+  still fails the whole read, closed; a row whose ciphertext will not open is one locked
+  note. Locked notes come back with empty title and content and render as
+  `LockedNoteCard` with a retry, are refused by the editor and by the save path — an
+  empty autosave would destroy ciphertext another device can still read — and are left
+  out of every export with the count reported.
+- **2026-09-07** — Encrypted backups — ledger item 38. A `.yidhan` file is the existing
+  v2 account export sealed with AES-256-GCM under a key derived from a backup
+  passphrase the reader chooses, so a backup on a shared machine or a cloud drive is
+  not a plaintext copy of everything they have written. The backup key is deliberately
+  **not** the vault key: a backup sealed under `K` would stop opening the moment `K`
+  changed, so a compromise rotation (item 103) would turn every old backup into noise —
+  see `docs/plans/2026-09-07-key-migration-and-rotation-design.md` §4.3. The salt and
+  format version are bound into the AAD, so an envelope cannot be relabelled or have
+  one file's header swapped onto another's ciphertext. A damaged or truncated file and a
+  wrong passphrase are separated deliberately: structural checks run before any crypto,
+  so the two failures carry different messages, and only one of them is something the
+  reader can act on.
+- **2026-09-07** — The threat model, written down — ledger items 39 and 40. `/security`
+  says what an attacker would get and what they would not, including the parts that are
+  not solved: an unlocked vault does not survive a compromised browser, "Remember this
+  browser" trades a real convenience for a real cost, a forgotten passphrase is
+  unrecoverable, practice drafts are unencrypted on the device, and there has been no
+  independent review. It names the metadata encryption does not hide — timestamps,
+  sizes, counts, and tag names, which are plaintext on the server until item 101 —
+  rather than letting "end-to-end encrypted" carry an implication it cannot support.
+  `/.well-known/security.txt` publishes where to report, and `/privacy` links across.
+  `docs/reference/outbound-data.md` is the inventory behind it: every request type the
+  app makes and every field it may carry, with one scrubber test per row. Writing it
+  found something — `encryption_salt` was reaching Sentry unredacted. The salt is not a
+  secret, but it is a stable per-user identifier and an error report has no use for one,
+  so it is redacted now.
