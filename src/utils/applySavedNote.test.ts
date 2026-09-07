@@ -17,6 +17,14 @@ describe('applySavedNote', () => {
     expect(applySavedNote(current, saved, draft).contentHash).toBe('fresh');
   });
 
+  it('adopts the title the save normalised, not the raw one typed', () => {
+    // validateNoteTitle trims and strips markup before the title is encrypted.
+    const typed = { title: '  Groceries  ', content: draft.content };
+    const current = createMockNote({ id: '1', ...typed, contentHash: 'stale' });
+    const normalised = createMockNote({ ...saved, title: 'Groceries' });
+    expect(applySavedNote(current, normalised, typed).title).toBe('Groceries');
+  });
+
   it('keeps a pin toggle that landed while the save was in flight', () => {
     const current = createMockNote({ id: '1', ...draft, contentHash: 'stale', pinned: true });
     const merged = applySavedNote(current, saved, draft);
