@@ -1,3 +1,4 @@
+import { useNoteSearch } from './hooks/useNoteSearch';
 import { useState, useEffect, useCallback, useEffectEvent, useRef, Suspense, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import type { Note, Tag, ViewMode, Theme } from './types';
@@ -12,7 +13,7 @@ import { PrivacyPage } from './components/PrivacyPage';
 import { TermsPage } from './components/TermsPage';
 import { SupportPage } from './components/SupportPage';
 import { NotFoundPage } from './components/NotFoundPage';
-import { sanitizeText, htmlToPlainText } from './utils/sanitize';
+import { sanitizeText } from './utils/sanitize';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 import { getLoadedEditorComponent, loadEditorComponent } from './utils/editorLoader';
 import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
@@ -599,7 +600,7 @@ function App() {
     };
   }, [appLoading, showAppLoader]);
 
-  // Search state (focused-gaze model: highlights matches instead of filtering)
+  // Search filters the visible library
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [searchFocusToken, setSearchFocusToken] = useState(0);
@@ -1761,7 +1762,7 @@ function App() {
     }
   };
 
-  // Debounced search handler (focused-gaze: highlights, doesn't filter)
+  // Debounced search handler
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
 
@@ -1784,14 +1785,7 @@ function App() {
   }, [clearSearchTimeout]);
 
   // Apply debounced search on top of tag-filtered notes
-  const displayNotes = useMemo(() => {
-    const q = debouncedSearchQuery.trim().toLowerCase();
-    if (!q) return tagFilteredNotes;
-    return tagFilteredNotes.filter((note) => {
-      if (note.title.toLowerCase().includes(q)) return true;
-      return htmlToPlainText(note.content).toLowerCase().includes(q);
-    });
-  }, [debouncedSearchQuery, tagFilteredNotes]);
+  const displayNotes = useNoteSearch(tagFilteredNotes, debouncedSearchQuery);
 
   const isSearching = debouncedSearchQuery.trim().length > 0;
 

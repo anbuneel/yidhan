@@ -4,7 +4,6 @@ import { ChapterSection } from './ChapterSection';
 import { ChapterNav } from './ChapterNav';
 import { TimeRibbon } from './TimeRibbon';
 import { PullToRefresh } from './PullToRefresh';
-import { GestureHint } from './GestureHint';
 import { useTouchCapable, useMobileDetect } from '../hooks/useMobileDetect';
 import {
   groupNotesByChapter,
@@ -273,8 +272,9 @@ export function ChapteredLibrary({
       data-testid="library-view"
     >
       {/* Render each non-empty chapter */}
-      {chapters.map((chapter) => (
+      {chapters.map((chapter, chapterIndex) => (
         <ChapterSection
+          showGestureHint={isMobile && chapterIndex === 0}
           key={chapter.key}
           chapterKey={chapter.key as ChapterKey}
           label={chapter.label}
@@ -312,13 +312,11 @@ export function ChapteredLibrary({
 
       {/* Time Ribbon - Mobile (bottom scrubber) */}
       <TimeRibbon
+        noteCount={notes.length}
         chapters={navChapters}
         currentChapter={currentChapter}
         onChapterClick={scrollToChapter}
       />
-
-      {/* Gesture Hint - Mobile only, shows once when notes exist */}
-      <GestureHint enabled={isMobile && notes.length > 0} />
     </>
   );
 }

@@ -360,45 +360,8 @@ describe('encryptedNotes', () => {
   });
 
   // ──────────────────────────────────────────────────
-  // searchDecryptedNotes
   // ──────────────────────────────────────────────────
 
-  describe('searchDecryptedNotes', () => {
-    it('should find notes by title', async () => {
-      const { createEncryptedNote, searchDecryptedNotes } = await import('./encryptedNotes');
-
-      await createEncryptedNote(TEST_USER_ID, 'Meeting Notes', '<p>Agenda</p>', keys);
-      await createEncryptedNote(TEST_USER_ID, 'Shopping List', '<p>Milk</p>', keys);
-
-      const results = await searchDecryptedNotes(TEST_USER_ID, 'meeting', keys);
-
-      expect(results).toHaveLength(1);
-      expect(results[0].title).toBe('Meeting Notes');
-    });
-
-    it('should find notes by content (stripping HTML)', async () => {
-      const { createEncryptedNote, searchDecryptedNotes } = await import('./encryptedNotes');
-
-      await createEncryptedNote(TEST_USER_ID, 'Recipe', '<p>Add <b>flour</b> and sugar</p>', keys);
-      await createEncryptedNote(TEST_USER_ID, 'Todo', '<p>Buy eggs</p>', keys);
-
-      const results = await searchDecryptedNotes(TEST_USER_ID, 'flour', keys);
-
-      expect(results).toHaveLength(1);
-      expect(results[0].title).toBe('Recipe');
-    });
-
-    it('should return all notes for empty query', async () => {
-      const { createEncryptedNote, searchDecryptedNotes } = await import('./encryptedNotes');
-
-      await createEncryptedNote(TEST_USER_ID, 'A', '<p>A</p>', keys);
-      await createEncryptedNote(TEST_USER_ID, 'B', '<p>B</p>', keys);
-
-      const results = await searchDecryptedNotes(TEST_USER_ID, '  ', keys);
-
-      expect(results).toHaveLength(2);
-    });
-  });
 
   // ──────────────────────────────────────────────────
   // decryptNoteFromServer

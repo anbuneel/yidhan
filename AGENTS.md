@@ -320,6 +320,9 @@ content...
 - Launch database hardening (`supabase/migrations/launch_security_hardening.sql`) resets core RLS policies, removes public table-read share policies, enforces encrypted-only note rows, caps share writes at 30 days, and revokes normal-client access to global SECURITY DEFINER cleanup/migration functions
 - Tags support many-to-many relationship with notes
 - Tag filtering uses AND logic (notes must have ALL selected tags)
+- **Search cache:** Plaintext is cached by note content hash within the mounted library; queries reuse it and card snippets are memoized.
+- **Mobile library:** Gesture guidance is a caption below the first card. The time ribbon appears from 20 notes, reserves an opaque bottom area, and hides near the footer.
+- **Practice privacy:** Fresh starter notes and the landing draft seal state that practice drafts are unencrypted until signup and vault setup. The manifest no longer registers a share target.
 - **Search**: Filters `displayNotes` by debounced query (title + plaintext content). Tag toggle preserves search query. Progressive rendering suspends during search so all matches render at once. Search-empty state shows "No thoughts found" (distinct from library-empty "Your notes await"). `Ctrl+Shift+K` focuses search bar.
 - **Progressive rendering**: Each `ChapterSection` shows 6 cards initially (`INITIAL_CARD_COUNT`), loads 6 more via IntersectionObserver sentinel with drain loop for tall viewports. Fingerprint-based reset (`notes.map(id).join`). Chapters force-expand during search.
 - User's full name is stored in Supabase `user_metadata.full_name`

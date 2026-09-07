@@ -277,7 +277,7 @@ export function LandingPage({
               <div className="landing-hero-foot">
                 <span className={`landing-seal${hasWritten ? ' show' : ''}`}>
                   <span className="landing-seal-dot" aria-hidden="true" />
-                  Locked before it leaves your hands.
+                  Saved here, not encrypted. Sign up to encrypt your notes.
                 </span>
                 {hasWritten && (
                   <button
@@ -345,7 +345,7 @@ export function LandingPage({
             <p className="landing-kicker">What stays yours</p>
             <h2 className="landing-piece-title">Locked before it leaves your hands.</h2>
             <p className="landing-piece-body">
-              Every word is encrypted on your device before it syncs — so it reaches your
+              After signup and vault setup, every word is encrypted on your device before it syncs — so it reaches your
               other screens, but never ours in a form we can read. It works offline, and the
               code is open for anyone to check.
             </p>
@@ -354,7 +354,7 @@ export function LandingPage({
                 Start writing
               </button>
               <p className="landing-micro">
-                No account needed — your first words stay on this device.
+                No account needed to try it. Practice drafts stay here without encryption.
               </p>
             </div>
           </div>

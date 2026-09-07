@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useEffectEvent, useRef } from 'react'
 import { type ChapterKey } from '../utils/temporalGrouping';
 
 interface TimeRibbonProps {
+  noteCount: number;
   chapters: { key: ChapterKey; label: string }[];
   currentChapter: ChapterKey | null;
   onChapterClick: (key: ChapterKey) => void;
@@ -26,9 +27,18 @@ const RETURNING_TIMEOUT = 5000; // 5s for returning users
 
 export function TimeRibbon({
   chapters,
+  noteCount,
   currentChapter,
   onChapterClick,
 }: TimeRibbonProps) {
+  const [nearFooter, setNearFooter] = useState(false);
+  useEffect(() => {
+    const footer = document.querySelector("footer");
+    if (!footer) return;
+    const observer = new IntersectionObserver(([entry]) => setNearFooter(entry.isIntersecting), { rootMargin: "120px 0px" });
+    observer.observe(footer);
+    return () => observer.disconnect();
+  }, []);
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -118,7 +128,7 @@ export function TimeRibbon({
   );
 
   // Don't render if only one chapter
-  if (chapters.length <= 1) {
+  if (noteCount < 20 || nearFooter || chapters.length <= 1) {
     return null;
   }
 
@@ -127,11 +137,12 @@ export function TimeRibbon({
     : chapters[0]?.label || '';
 
   return (
+    <div className="fixed inset-x-0 bottom-0 z-40 h-[calc(7rem+env(safe-area-inset-bottom))] border-t border-[var(--glass-border)] bg-[var(--color-bg-primary)] md:hidden">
     <nav
       className={`
-        fixed bottom-6 left-1/2 -translate-x-1/2
+        absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2
         flex items-center gap-2
-        px-4 py-3
+        px-3 py-3 max-w-[calc(100vw-2rem)]
         rounded-full
         backdrop-blur-md
         md:hidden
@@ -147,7 +158,7 @@ export function TimeRibbon({
       aria-label="Time navigation"
     >
       {/* Timeline track */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-0">
         {chapters.map((chapter) => {
           const isActive = currentChapter === chapter.key;
 
@@ -157,7 +168,7 @@ export function TimeRibbon({
               onClick={() => handleChapterClick(chapter.key)}
               className="
                 inline-flex items-center justify-center
-                min-w-[48px] min-h-[48px]
+                min-w-[36px] min-h-[48px]
                 md:min-w-0 md:min-h-0
                 rounded-full
                 transition-all duration-300
@@ -193,7 +204,7 @@ export function TimeRibbon({
           ml-2 pl-3
           border-l
           text-xs font-medium
-          min-w-[50px]
+          min-w-[38px]
         "
         style={{
           borderColor: 'var(--glass-border)',
@@ -204,5 +215,6 @@ export function TimeRibbon({
         {currentLabel}
       </div>
     </nav>
+    </div>
   );
 }

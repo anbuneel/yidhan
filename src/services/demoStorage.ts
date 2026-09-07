@@ -56,7 +56,7 @@ const STARTER_NOTES: DemoNote[] = [
     localId: 'starter-welcome',
     title: 'Welcome to Yidhan',
     content: `<p>A calm space for your thoughts. Pin important notes, organize with tags, and write in focus mode.</p>
-<p>Your notes are end-to-end encrypted — only you can read them.</p>`,
+<p>Practice drafts are saved on this device and are not encrypted. Sign up and set up your vault to encrypt your notes.</p>`,
     pinned: true,
     tagIds: [],
     createdAt: Date.now(),

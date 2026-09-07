@@ -1,3 +1,4 @@
+import { useNoteSearch } from '../hooks/useNoteSearch';
 /**
  * DemoPage
  *
@@ -22,7 +23,7 @@ import { HeaderShell } from '../components/HeaderShell';
 import { LoadingFallback } from '../components/LoadingFallback';
 import { Logo } from '../components/Logo';
 import { DEMO_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
-import { htmlToPlainText } from '../utils/sanitize';
+
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { getLoadedEditorComponent, loadEditorComponent } from '../utils/editorLoader';
 
@@ -103,7 +104,7 @@ export function DemoPage({
   const [view, setView] = useState<'library' | 'editor'>('library');
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 
-  // Search state (focused-gaze model: highlights matches instead of filtering)
+  // Search filters the visible library
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [searchFocusToken, setSearchFocusToken] = useState(0);
@@ -198,14 +199,7 @@ export function DemoPage({
   }, [clearSearchTimeout]);
 
   // Apply debounced search on top of tag-filtered notes
-  const displayNotes = useMemo(() => {
-    const q = debouncedSearchQuery.trim().toLowerCase();
-    if (!q) return tagFilteredNotes;
-    return tagFilteredNotes.filter((note) => {
-      if (note.title.toLowerCase().includes(q)) return true;
-      return htmlToPlainText(note.content).toLowerCase().includes(q);
-    });
-  }, [debouncedSearchQuery, tagFilteredNotes]);
+  const displayNotes = useNoteSearch(tagFilteredNotes, debouncedSearchQuery);
 
   const isSearching = debouncedSearchQuery.trim().length > 0;
 

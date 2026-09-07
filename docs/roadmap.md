@@ -148,12 +148,12 @@
 
 ## Not Building (Intentional Omissions)
 
-*Features we've explicitly decided against. These preserve the "quiet" philosophy.*
+*Features we've explicitly decided against. These preserve the "quiet" philosophy. A recovery key is planned; recovery is not an intentional omission.*
 
 | Feature | Why Not | Source |
 |---------|---------|--------|
-| Databases / tables | That's Notion's game | [strategic review](active/strategic-viability-review-claude.md) |
-| Graph view / backlinks | That's Obsidian's game | [strategic review](active/strategic-viability-review-claude.md) |
+| Databases (simple tables remain planned) | That's Notion's game | [strategic review](active/strategic-viability-review-claude.md) |
+| Graph view (backlinks remain planned) | That's Obsidian's game | [strategic review](active/strategic-viability-review-claude.md) |
 | Real-time collaboration | That's Notion/Craft's game. Single-user only is a design choice | [collaboration analysis](analysis/collaboration-feature-analysis-claude.md) |
 | Folders / hierarchy | Contradicts temporal chapters philosophy | [strategic review](active/strategic-viability-review-claude.md) |
 | Push notifications | Contradicts calm technology philosophy | — |
