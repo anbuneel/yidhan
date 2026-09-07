@@ -361,14 +361,25 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const performSave = useCallback(async (): Promise<boolean> => {
     const draftSnapshot = buildSnapshot(title, content, note.tags);
 
-    if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
+    // Nothing to write means nothing is unsaved, so any banner left by an
+    // earlier failure is now untrue. Without this, reverting a draft back to
+    // the last committed text and then pressing Retry took this path and left
+    // the "Not saved" banner on screen with no way to dismiss it.
+    const nothingToSave = (): boolean => {
+      setHasSaveError(false);
+      setSaveErrorDetail('');
+      setCopyFailed(false);
       return true;
+    };
+
+    if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
+      return nothingToSave();
     }
 
     if (inFlightSaveRef.current) {
       await inFlightSaveRef.current;
       if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
-        return true;
+        return nothingToSave();
       }
     }
 

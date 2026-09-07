@@ -592,6 +592,24 @@ describe('Editor', () => {
     vi.useRealTimers();
   });
 
+  it('clears the banner when Retry runs on a draft reverted to its saved text', async () => {
+    const onUpdate = vi.fn().mockRejectedValue(new Error('Vault is locked'));
+    render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+    const title = screen.getByDisplayValue('Test Note');
+
+    fireEvent.change(title, { target: { value: 'Typed while locked' } });
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Not saved');
+
+    // Undo the edit: the note now matches what is already on disk, so there is
+    // nothing left unsaved and Retry must say so rather than do nothing.
+    fireEvent.change(title, { target: { value: 'Test Note' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   describe('save status indicator', () => {
     it('shows saving indicator during save', async () => {
       // Use a deferred promise to control when save completes
