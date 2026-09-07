@@ -21,7 +21,7 @@ export const BACKUP_FORMAT_VERSION = 1;
 export const BACKUP_FILE_EXTENSION = '.yidhan';
 
 /** Same cost as the vault's KDF. A backup is offline-attackable, so it gets the same. */
-export const BACKUP_ARGON2_PARAMS = {
+const BACKUP_ARGON2_PARAMS = {
   parallelism: 1,
   iterations: 3,
   memorySize: 65536, // 64 MB
@@ -34,7 +34,7 @@ const IV_LENGTH_BYTES = 12;
 const GCM_TAG_LENGTH_BYTES = 16;
 
 /** Guard against a hostile file asking for gigabytes of allocation. */
-export const MAX_BACKUP_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_BACKUP_FILE_SIZE = 50 * 1024 * 1024;
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();

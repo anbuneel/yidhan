@@ -93,10 +93,13 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   fixes the wrapped material as the full 64 bytes (both the AES and the HMAC half,
   because wrapping only the AES key would silently break every save-confirmation
   path), separates the three key-change flows that were previously one undifferentiated
-  idea, and attaches 26 named tests to items 24, 25, 26 and 103. The two cases that
-  can lose words — a rotation that flips the wrap before re-encrypting, and an
-  offline device that clears its old key before draining its queue — are refused
-  by name.
+  idea, and attaches 29 named tests to items 24, 25, 26 and 103. Review then found
+  four more ways the design could have lost words or left a retired passphrase
+  working — a rotation holding its new key only in memory, a sync gate that stopped
+  only the rotating tab, a lock keyed on a counter that does not move until the pass
+  ends, and a passphrase change that left the legacy credential describing the old
+  passphrase. Each is now refused by name, with the reasoning that was wrong kept
+  next to it rather than deleted.
 - **2026-09-07** — The deployment guard — ledger item 36. A `schema_version` table
   holds one row naming the migration level the database is at; the client carries the
   level it requires and reads the other at startup. When the app is ahead, it shows

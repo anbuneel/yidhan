@@ -5,6 +5,13 @@ Last verified: 2026-09-07
 
 The design that items 24, 25, 26 and 103 implement. Item 23 is this document.
 
+**On the status line.** Item 23 — writing and reviewing this design — is finished, and
+`docs/progress.md` records it. The *design* is still a proposal, because the work it
+describes has not been built. Those are two different things and the header tracks the
+second, which is what a reader needs to know. It flips to ACTIVE when someone picks up
+item 24, and it does not move to `docs/archive/` before then: archiving a document that
+four open items depend on would bury the thing they are supposed to be built from.
+
 Today the vault key **is** the passphrase. `deriveKeys()` runs Argon2id over the
 passphrase and a stored salt, takes 64 bytes out, and splits them: the first 32
 become the AES-256-GCM note key, the last 32 become the HMAC-SHA-256 content-hash
@@ -40,10 +47,19 @@ So the wrapped material is the concatenation `rawEncryptionKey || rawHashKey`, 6
 bytes, generated once by `crypto.getRandomValues()` at migration time. `K` is
 never derived from anything and never leaves the device unwrapped.
 
-**The KEK is derived, `K` is random.** `KEK = Argon2id(passphrase, kekSalt)`, same
-parameters as today (`ARGON2_PARAMS`), a *fresh* 16-byte `kekSalt` that is not the
-existing `encryption_salt`. Reusing the old salt would make the KEK bit-identical
-to the pre-migration key, so a stolen pre-migration key would unwrap `K` forever.
+**The KEK is derived, `K` is random.** `KEK = Argon2id(passphrase, kekSalt)` with the
+same *cost* as today — `parallelism`, `iterations` and `memorySize` from
+`ARGON2_PARAMS` — but **`hashLength: 32`, not 64**. `ARGON2_PARAMS.hashLength` is 64
+because the existing derivation splits its output into an AES key and an HMAC key;
+the KEK is a single AES-256-GCM key and 64 bytes cannot be imported as one. Taking
+the cost constants wholesale would produce a KEK that fails `importKey` before it
+wrapped a single account. Derive 32 bytes directly rather than deriving 64 and
+truncating: a truncation is an undocumented convention that the next reader has to
+guess at.
+
+The salt is a *fresh* 16-byte `kekSalt`, not the existing `encryption_salt`. Reusing
+the old salt would make the KEK bit-identical to the pre-migration key, so a stolen
+pre-migration key would unwrap `K` forever.
 
 **The wrap is AES-256-GCM with AAD.** `wrap(KEK, K)` = AES-GCM over the 64 bytes
 with a fresh 12-byte IV and AAD `vault:<userId>:<wrapVersion>`. Binding the user
@@ -109,15 +125,24 @@ of this document: every later key change names the flow it belongs to.
 2. Derive `KEK'` from the new passphrase with a **fresh** `kekSalt'`.
 3. Compute `wrap(KEK', K)` with a fresh IV and AAD carrying `wrapVersion + 1`.
 4. Compute a new key-check under `K` with a new IV, `keyCheckVersion + 1`.
-5. Write `{kekSalt', wrappedKey', wrapIv', keyCheck', keyCheckIv',
-   keyCheckVersion+1, wrapVersion+1}` in **one** `updateUser` call.
-6. Re-read the user and confirm `wrapVersion` advanced before treating the change
-   as done. Until that read returns, the UI says "changing", never "changed".
+5. Re-encrypt the **legacy** key-check under `K` with a KEK derived from the new
+   passphrase and a fresh legacy salt, so the retired passphrase stops opening the
+   vault through an old client (§3.3).
+6. Write `{kekSalt', wrappedKey', wrapIv', keyCheck', keyCheckIv',
+   keyCheckVersion+1, wrapVersion+1, encryption_salt', encryption_key_check'}` in
+   **one conditional write**, applied only if the stored `wrapVersion` is still `n`
+   (§4.1). A read-back is not a substitute; a losing writer must be rejected by the
+   server, not discover its loss later.
+7. On rejection: discard the typed passphrase, tell the user it was changed on
+   another device, and ask them to unlock again. Until the write is *accepted*, the
+   UI says "changing", never "changed".
 
-The old wrap is invalidated by being overwritten — there is no window where both
-wraps are valid, because it is a single write. Step 6 is the rule the item's "done
-when" states: *the new wrap is written and confirmed by the server before the old
-wrap is invalidated*. Read as: nothing local is discarded until the server confirms.
+Everything moves in that one write, and that is the point: the new wrap, the bumped
+versions and the retired legacy credential cannot land separately. The old wrap is
+invalidated by being overwritten, so there is no window where two wraps are valid.
+Steps 6 and 7 together are the item's "done when" — *the new wrap is written and
+confirmed by the server before the old wrap is invalidated* — read as: nothing local
+is discarded until the server accepts.
 
 Offline, this flow does not run. It is not queued as a note write is queued. The UI
 reports it as pending and refuses to claim success, because a wrap written only
@@ -133,47 +158,105 @@ implicitly, the `keyCheckVersion` that was current when it stored them. On every
 restore path the device verifies the stored key against the *server's current*
 key-check. After 2.1 or 2.3 the server's `keyCheckVersion` has advanced:
 
-- **After a passphrase change (2.1):** `K` is unchanged, so the remembered key still
-  decrypts the new key-check. The verification passes. The device stays unlocked.
-  This is correct — the passphrase changed, the key did not, and forcing a re-prompt
-  would teach users that changing a passphrase costs them every device.
-- **After a rotation (2.3):** `K` changed, so the remembered key fails the new
-  key-check. The device clears its remembered blob and prompts for the passphrase.
-  This is the invalidation.
+The check is **the stored version against the server's version**, not merely whether
+the stored key still decrypts. That distinction is the whole mechanism, and getting
+it wrong is how an earlier draft of this document broke a repository invariant:
+
+- **After a passphrase change (2.1):** `K` is unchanged, so a remembered key would
+  still decrypt the new key-check — which is exactly why decryption cannot be the
+  test. The device compares the `keyCheckVersion` it stored alongside the blob with
+  the server's. The server's is higher, so the blob is stale: the device clears it
+  and prompts for the passphrase, whether or not the bytes would still have worked.
+- **After a rotation (2.3):** the version has advanced *and* `K` has changed, so the
+  device fails both tests. Same outcome, and the version test is what makes it
+  immediate rather than dependent on a decryption attempt.
+
 - **After any change, on a device that cannot reach the server:** it verifies against
   its cached key-check and stays unlocked on local data. §4.3 covers what it does
   when it reconnects.
 
-The distinction matters for copy: a passphrase change must not promise that other
-devices are locked out, because they are not. Only 2.3 does that. Item 25's "every
-other device requires re-unlock on next use" is satisfied for the *passphrase* — a
-device that locks and re-prompts needs the new passphrase — not for a device that is
-currently unlocked with a remembered key.
+An earlier draft of this section argued the opposite — that a passphrase change should
+leave remembered devices unlocked, because `K` had not changed and re-prompting would
+"teach users that changing a passphrase costs them every device." That was wrong on
+both counts, and it is recorded here rather than deleted because it is the mistake a
+future reader is most likely to make again.
+
+It contradicted the invariant in `CLAUDE.md` that every restore path verifies the
+key-check *so that a stale key after a passphrase change is caught*. And it broke the
+reason people change a passphrase: they believe the old one is compromised. A change
+that silently leaves every remembered session unlocked is not a change they would
+recognise as one. Item 25's "every other device requires re-unlock on next use" is a
+requirement, not a description to be reinterpreted until the design satisfies it.
+
+The stored `keyCheckVersion` is therefore not decoration. A remembered blob that does
+not carry one is treated as stale.
 
 ### 2.3 Compromise rotation — new `K`, full re-encryption (item 103)
 
 The expensive one. Used when `K` itself may be exposed: a stolen device, a leaked
 `localStorage` blob, an XSS report.
 
-1. **Pause sync.** No queue drains, no realtime upserts apply, no pulls run. A note
-   written under `K_old` after the re-encryption pass has read it would survive the
-   rotation as unreadable ciphertext.
-2. Generate `K_new` (64 random bytes) and a fresh `kekSalt`.
-3. Write a `rotation` record — server-side, alongside the vault object — holding
-   `{fromWrapVersion, toWrapVersion, startedAt, cursor}`. This is the resume point.
+1. **Take the rotation lock, server-side.** A compare-and-set write claiming
+   `rotation = {owner, startedAt, fromWrapVersion: n}`, conditional on there being no
+   live rotation and on `wrapVersion` still being `n`. If the claim fails, another
+   rotation owns the vault and this one stops before touching a row.
+
+   The lock cannot be `wrapVersion` itself. `wrapVersion` does not advance until step
+   6, so two rotations starting at `n` would both keep reading `n` before every batch
+   and both would pass a "has the version moved?" check while alternately rewriting
+   rows under two different random keys. Checking after the fact is too late: by then
+   the other rotation has already written. The claim has to happen before the first
+   batch, and it has to be atomic.
+
+2. **Raise the rotation gate for every device, not this one.** The gate is the
+   `rotation` record written in step 1, and every client reads it: while it is live
+   and not owned by this device, that client refuses to push and refuses to pull.
+
+   `pauseSync()` in `src/services/syncEngine.ts` is module-local state in one tab's
+   JavaScript process. It stops *this* device. It has no effect on a second device,
+   which will happily pull an already-rotated row and fail to decrypt it — and because
+   encrypted reads fail closed, that breaks the second device's library immediately —
+   or push an edit made under `K_old` into a row the pass has already moved past,
+   leaving old-key ciphertext behind after the rotation "finished". An earlier draft
+   of this document said "sync is paused" and meant only the local flag. It is not
+   sufficient and it was not a small gap.
+
+3. **Generate `K_new` (64 random bytes) and a fresh `kekSalt`, then persist a
+   recoverable copy of `K_new` before rewriting anything.** Write
+   `rotation.pendingWrap = wrap(KEK_new, K_new)` — the same wrap format as
+   `vault.wrappedKey`, alongside its own salt and IV — as part of the same record.
+
+   This is the step whose absence would have been unrecoverable data loss. If
+   `K_new` lives only in the rotating tab's memory and that tab dies after the first
+   batch, the client restarts holding `K_old`, cannot decrypt the rows already
+   rotated, and cannot regenerate a random key it never wrote down. Those notes would
+   be gone permanently — and the cursor resume this document promises, and test
+   103-T3, would both be impossible. `pendingWrap` is what makes the cursor mean
+   anything.
+
 4. Re-encrypt every note: read the row, decrypt under `K_old`, re-encrypt under
    `K_new` with a fresh IV, recompute `content_hash` under the new HMAC half, write.
-   Advance `cursor`. Batched, ordered by `id`, resumable at any point. Shares
-   (item 122's `note_shares` rows) carry per-share keys and are unaffected; the
+   Advance `cursor` in the same record. Batched, ordered by `id`, resumable at any
+   point — on resume, unwrap `K_new` from `pendingWrap` and continue from `cursor`.
+   Shares (item 122's `note_shares` rows) carry per-share keys and are unaffected; the
    `expires_at` cap means they age out on their own.
-5. Only when the cursor reaches the end: write the new wrap, key-check, and
-   `wrapVersion + 1`.
-6. Resume sync.
 
-Step 5 last is the whole design. While the pass runs, the server still advertises
-`K_old`'s wrap, so any device that unlocks mid-rotation gets `K_old` and reads the
-not-yet-rotated rows correctly — and cannot write, because sync is paused. Flipping
-the wrap first would strand every already-rotated row on every other device.
+5. **Only when the cursor reaches the end:** promote `pendingWrap` to
+   `vault.wrappedKey`, write the new key-check, and set `wrapVersion = n + 1`.
+
+6. Clear the `rotation` record. Sync resumes on every device on its next read of it.
+
+Step 5 landing last is the whole design. While the pass runs, the server still
+advertises `K_old`'s wrap, so any device that unlocks mid-rotation gets `K_old` and
+reads the not-yet-rotated rows correctly — and cannot write, because the gate in step
+2 is server-side. Flipping the wrap first would strand every already-rotated row on
+every other device.
+
+Note what `pendingWrap` costs: for the duration of the pass, both `K_old` and `K_new`
+are recoverable from the server by anyone holding the passphrase. That is the correct
+trade — the alternative is a window in which a crash destroys notes — but it means a
+rotation is not complete as a security event until step 6, and copy should not claim
+otherwise while it is running.
 
 "After rotation no ciphertext on the server decrypts under the old key" is checked
 by re-reading every row and asserting `decrypt(K_old, row)` throws.
@@ -244,17 +327,36 @@ derived path and then migrates. So:
 - **Old client, migrated account:** ignores the `vault` object, uses
   `encryption_salt` and the legacy key-check, derives the same 64 bytes, works. This
   is why step 5 waits.
-- **Old client after a passphrase change (2.1):** the legacy fields still describe
-  the *old* passphrase, so the old client unlocks with the old passphrase and gets
-  `K` — which is still correct, because 2.1 does not change `K`. It will not accept
-  the new passphrase. Acceptable and bounded: the release that removes the legacy
-  fields ends it, and until then the old client is not wrong, only behind.
+- **Old client after a passphrase change (2.1):** this is the case that forces 2.1 to
+  do more than re-wrap, and an earlier draft of this document got it wrong.
 
-That last row is the reason item 24 needs the deployment guard (item 36) shipped
-first. A client that is *ahead* of its database is the failure the guard catches; a
-client that is *behind* its account's vault version is this row, and the guard's
-`schema_version` read is where a future "your app is too old for this vault" message
-belongs.
+  The legacy fields describe the *old* passphrase. An old client ignores the `vault`
+  object entirely, derives `K` from `encryption_salt` with the old passphrase, and
+  unlocks every note. **The old passphrase therefore remains a working credential
+  after the user has changed it** — not through a subtle race, but by design, for as
+  long as the compatibility window lasts. The earlier draft called this "not wrong,
+  only behind." It is wrong: a revoked credential that still opens the vault is a
+  revocation that did not happen, and test 25-T2 asserts the opposite of what would
+  actually be true.
+
+  So **2.1 must invalidate the legacy path in the same write that re-wraps.** At §2.1
+  step 5, computed into the single conditional write of step 6, the legacy
+  `encryption_key_check` is re-encrypted
+  under `K` using a KEK derived from the **new** passphrase and its own fresh legacy
+  salt — so an old client's derivation from the old passphrase no longer verifies, and
+  the old client re-prompts rather than unlocking. The legacy fields stay present (an
+  old client must still be able to unlock with the *current* passphrase); what changes
+  is that they stop describing the retired one.
+
+  This is why the compatibility window has to be short, and why the release that
+  removes the legacy fields should be scheduled rather than left open-ended: every
+  extra field that has to be kept in step with a passphrase change is another place
+  the two can silently diverge.
+
+Item 24 needs the deployment guard (item 36) shipped first. A client that is *ahead*
+of its database is the failure the guard catches; a client that is *behind* its
+account's vault version is the row above, and the guard's `schema_version` read is
+where a future "your app is too old for this vault" message belongs.
 
 ---
 
@@ -267,25 +369,43 @@ Both devices read `wrapVersion = n`. Both compute a new wrap. Both write.
 `updateUser` has no compare-and-set, so the second write wins the storage and the
 first device believes it succeeded. That is the bug this section exists to prevent.
 
-**Resolution: the writer verifies, and the loser re-prompts.** After writing, a
-device re-reads the vault object and checks that `wrapVersion === n + 1` **and** that
-`wrappedKey` is byte-identical to what it wrote. If either differs, another device
-won; the local change is abandoned, the passphrase the user typed is discarded, and
-the UI says the passphrase was changed on another device and asks them to unlock
-again. Never "changed" — the user must know which passphrase is live.
+**Resolution: the write itself must be conditional. A read-back is not enough.**
 
-If both devices somehow read back their own write (a genuine last-writer-wins tie),
-the one whose bytes are not in the final read loses on its *next* read, at the
-latest on the next unlock, when its wrap fails to unwrap. It re-prompts. The vault
-is never corrupted, because both wraps wrap the *same* `K` — only one passphrase
-survives, and no data is lost either way.
+An earlier draft of this section proposed exactly that — write, then re-read and check
+your own bytes came back — and it does not work. The ordinary interleaving defeats it:
 
-For 2.3 this is stricter: a rotation checks `wrapVersion` before every batch write
-and aborts if it moved. Two concurrent rotations would produce two different `K`s and
-a half-and-half library, which is data loss. Aborting on a version move is what stops
-it. Real compare-and-set belongs with item 136's move to a table, where a
-`WHERE wrap_version = n` update makes this a database guarantee instead of a
-convention; until then the read-back is what we have and the test asserts it.
+```
+A: write wrapVersion n+1, wrap_A     A: read back → n+1, wrap_A ✓ "success"
+                                     B: write wrapVersion n+1, wrap_B
+                                     B: read back → n+1, wrap_B ✓ "success"
+```
+
+Both devices report success. Only B's passphrase is live. A learns it lost at its next
+unlock, which may be days later, and in the meantime has told its user the passphrase
+was changed. That is precisely the outcome item 25 forbids: a change reported as
+complete when it is not.
+
+So the vault object needs a conditional write — a compare-and-set on `wrapVersion`, or
+an operation token that a second writer at the same version cannot overwrite. Only one
+writer at version `n` may produce version `n + 1`; the other is rejected by the server,
+and *being rejected* is what makes it re-prompt, immediately and correctly.
+
+`supabase.auth.updateUser` offers no such condition, which means **this design depends
+on item 136** — moving the vault object out of `user_metadata` and into a table, where
+`UPDATE ... WHERE wrap_version = n` is a database guarantee rather than a convention.
+Item 136 is currently listed as an independent follow-up; it is not. Item 25 cannot be
+implemented safely before it, and the roadmap should say so.
+
+Until then the honest position is that concurrent passphrase changes are not safe, and
+the feature waits — not that a read-back approximates the guarantee. No data is lost
+either way, because both wraps wrap the *same* `K`; what is lost is the user's
+knowledge of which passphrase is live, and that is not a small thing to be wrong about.
+
+For 2.3 the same conclusion applies harder, and §2.3 step 1 states it: a rotation
+claims a server-side lock before its first batch. Two concurrent rotations produce two
+different `K`s and a half-and-half library, which *is* data loss, and no after-the-fact
+version check can prevent it — `wrapVersion` does not move until the pass finishes, so
+both rotations would see an unchanged version right up until the damage was done.
 
 ### 4.2 A device that has been offline across a change
 
@@ -342,6 +462,7 @@ tests listed against it and nothing else.
 | 24-T5 | The key-check still verifies `K` after migration | `verifyKeyCheck` against `vault.keyCheck` passes with unwrapped `K` and fails with 64 other bytes. §1.2 |
 | 24-T6 | The KEK salt is not the legacy salt | `vault.kekSalt !== encryption_salt`, and the KEK derived from the legacy salt does not unwrap. §1 |
 | 24-T7 | A migrated account still opens on the legacy path | With the vault object present, the legacy fields still derive a key that decrypts existing notes. §3.3 |
+| 24-T8 | The KEK is one 32-byte key, not the 64 the legacy derivation produces | The KEK derivation asks Argon2id for 32 bytes rather than reusing `ARGON2_PARAMS.hashLength`; the result imports as AES-256-GCM, and a 64-byte derivation passed to the same `importKey` call throws. §1 |
 
 ### Item 25 — passphrase change
 
@@ -351,9 +472,10 @@ tests listed against it and nothing else.
 | 25-T2 | The old passphrase stops working | Unwrapping with the old passphrase fails. §2.1 |
 | 25-T3 | Nothing is discarded before the server confirms | With the `updateUser` write failing, the old passphrase still unlocks and the UI reported no success. §2.1 |
 | 25-T4 | `wrapVersion` and `keyCheckVersion` both advance | Exactly one increment each, in a single write. §2.1 |
-| 25-T5 | Two devices changing concurrently — one wins | Two-device integration test: device B's write lands last; device A's read-back mismatches, A abandons its change and re-prompts; B's passphrase is the live one; `K` is unchanged for both. §4.1 |
+| 25-T5 | Two devices changing concurrently — the loser is rejected by the server | Two-device integration test against a conditional write: both devices read `wrapVersion = n`, both attempt `n → n+1`; the second write is **rejected**, not applied. A never reports success, discards the typed passphrase and re-prompts; B's passphrase is the live one; `K` is unchanged for both. A read-back-only implementation fails this test, because both writes land. §4.1 |
 | 25-T6 | An offline change is reported as pending, never complete | With the network down, the flow does not queue, does not claim success, and the old passphrase still unlocks. §2.1 |
-| 25-T7 | A remembered device stays unlocked after a passphrase change | `K` unchanged → the remembered blob passes the new key-check → no re-prompt. §2.2 |
+| 25-T7 | A remembered device is re-prompted after a passphrase change | The stored blob still *decrypts* the new key-check — `K` did not change — and the device re-prompts anyway, because the `keyCheckVersion` it stored is behind the server's. A remembered blob carrying no version is treated as stale and also re-prompts. This is the test that fails if the version comparison is replaced by a decryption attempt. §2.2 |
+| 25-T8 | The retired passphrase stops working on an old client too | After the change, a client that ignores the `vault` object and derives from `encryption_salt` fails to verify the legacy key-check with the **old** passphrase, and succeeds with the **new** one. Without §2.1 step 5 this test fails: the old passphrase still unlocks. §3.3 |
 
 ### Item 26 — recovery kit
 
@@ -370,11 +492,12 @@ tests listed against it and nothing else.
 |---|---|---|
 | 103-T1 | No ciphertext survives under the old key | After rotation, every row fails to decrypt under `K_old` and succeeds under `K_new`. §2.3 |
 | 103-T2 | The wrap flips last | With the re-encryption pass made to fail midway, the server still advertises `K_old`'s wrap and every not-yet-rotated row is readable. §2.3 |
-| 103-T3 | An interrupted rotation resumes from the cursor | Restarting after a mid-pass failure rotates the remaining rows and no others. §2.3 |
-| 103-T4 | Sync is paused for the whole pass | No queue drain, pull, or realtime upsert applies between step 1 and step 6. §2.3 |
+| 103-T3 | An interrupted rotation resumes from the cursor with a `K_new` it never held in memory | The rotating client is destroyed mid-pass and restarted holding only `K_old`. It unwraps `K_new` from `rotation.pendingWrap`, rotates the remaining rows and no others, and every row — rotated before and after the interruption — opens under `K_new`. With `pendingWrap` absent, the already-rotated rows are unrecoverable, which is the failure this test exists to catch. §2.3 |
+| 103-T4 | The gate stops a *second* device, not only the rotating one | Two-device integration test: while the `rotation` record is live and owned by device A, device B refuses to push and refuses to pull — B's library is not emptied by a fail-closed read of an already-rotated row, and an edit B made under `K_old` is not pushed into a row the pass has moved past. A local `pauseSync()` flag alone fails this test. On device A, no queue drain, pull or realtime upsert applies between step 1 and step 6. §2.3 |
 | 103-T5 | A remembered device is forced to re-unlock | The stored `K_old` fails the new key-check; the blob is cleared and the passphrase is required. §2.2 |
 | 103-T6 | An offline device's queued writes survive | Integration test: a device queues writes under `K_old`, a rotation happens, the device reconnects — the queued payloads are decrypted under `K_old` and re-encrypted under `K_new`, and no queued note is lost. §4.2 |
-| 103-T7 | A concurrent rotation aborts instead of interleaving | A second rotation started against a moved `wrapVersion` aborts before writing any row. §4.1 |
+| 103-T7 | A concurrent rotation aborts instead of interleaving | A second rotation attempts its compare-and-set claim while device A's `rotation` record is live — with `wrapVersion` still at `n`, because it does not move until the pass ends — and the claim is rejected before a single row is written. An implementation that gates on `wrapVersion` instead of on the claim fails this test. §2.3 + §4.1 |
+| 103-T9 | `pendingWrap` is durable before the first row is rewritten | Ordering test: the write that persists `rotation.pendingWrap` is observed on the server before any note row's `encrypted_payload` changes. Reversing the two fails the test, and would be the data loss 103-T3 recovers from. §2.3 |
 | 103-T8 | A pre-migration backup restores into a rotated account | Item 38's restore path re-encrypts under the current `K`; every note opens. §4.3 |
 
 ---
@@ -387,8 +510,18 @@ tests listed against it and nothing else.
   equal to the pre-migration key and keep a stolen key useful forever.
 - **Flipping the wrap before the re-encryption pass finishes.** §2.3. It strands
   every already-rotated row on every other device.
-- **Treating a passphrase change as a device lockout.** §2.2. It is not one, and copy
-  that says otherwise is a false security promise.
+- **Leaving remembered devices unlocked through a passphrase change.** §2.2. `K` is
+  unchanged, so the stored bytes still work — which is exactly why "does it still
+  decrypt?" cannot be the test. A change the user made because the old passphrase was
+  compromised must cost every remembered session, or it is not a change.
+- **Using `wrapVersion` as the rotation lock.** §2.3. It does not advance until the
+  pass finishes, so two rotations both read an unmoved version and both proceed. The
+  claim has to be a compare-and-set taken before the first batch.
+- **Holding `K_new` only in the rotating tab's memory.** §2.3. A tab that dies after
+  the first batch takes the only copy of the key with it, and the rows already
+  rewritten are gone for good.
+- **Approximating a conditional write with a read-back.** §4.1. Both writers read back
+  their own bytes and both report success; only one passphrase is live.
 - **Clearing `K_old` on a version mismatch before draining the queue.** §4.2. It
   destroys unsynced words, which is the one thing this product must never do.
 - **Putting a wrapped `K` in a backup.** §4.3. It would make backups stop opening

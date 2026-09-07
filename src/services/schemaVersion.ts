@@ -39,7 +39,7 @@ export type SchemaCompatibility =
    */
   | { status: 'unknown'; reason: SchemaUnknownReason };
 
-export type SchemaUnknownReason =
+type SchemaUnknownReason =
   | 'offline'
   | 'unreachable'
   /** The table is not there. A database that predates this migration is version 0. */
