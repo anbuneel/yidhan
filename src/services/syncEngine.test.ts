@@ -1874,6 +1874,75 @@ describe('fullSync', () => {
     expect(result.processed).toBe(0); // empty push queue
     expect(result.pullErrors).toHaveLength(0);
   });
+
+  it('reports sync activity until a deferred full sync completes', async () => {
+    const pullGate = createDeferred<{ data: never[]; error: null }>();
+    mockFetchAllPaginated
+      .mockReturnValueOnce(pullGate.promise)
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
+    mockGetPendingSyncQueue.mockResolvedValue([]);
+
+    const run = fullSync(TEST_USER_ID);
+    expect(isSyncInProgress()).toBe(true);
+    await vi.waitFor(() => expect(mockFetchAllPaginated).toHaveBeenCalledTimes(1));
+    expect(isSyncInProgress()).toBe(true);
+
+    pullGate.resolve({ data: [], error: null });
+    await run;
+
+    expect(isSyncInProgress()).toBe(false);
+  });
+
+  it('holds queue ownership continuously across the full-sync pull and push phases', async () => {
+    const pullGate = createDeferred<{ data: never[]; error: null }>();
+    const fullSyncPushGate = createDeferred<SyncQueueEntry[]>();
+    const concurrentQueueGate = createDeferred<SyncQueueEntry[]>();
+    const queueOrder: string[] = [];
+
+    mockFetchAllPaginated
+      .mockReturnValueOnce(pullGate.promise)
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
+    mockGetPendingSyncQueue
+      .mockImplementationOnce(async () => {
+        queueOrder.push('full-sync-push');
+        return fullSyncPushGate.promise;
+      })
+      .mockImplementationOnce(async () => {
+        queueOrder.push('concurrent-queue');
+        return concurrentQueueGate.promise;
+      });
+
+    const fullRun = fullSync(TEST_USER_ID);
+    await vi.waitFor(() => expect(mockFetchAllPaginated).toHaveBeenCalledTimes(1));
+
+    const concurrentQueueRun = processQueue(TEST_USER_ID);
+    await Promise.resolve();
+    expect(mockGetPendingSyncQueue).not.toHaveBeenCalled();
+
+    pullGate.resolve({ data: [], error: null });
+    await vi.waitFor(() => expect(mockGetPendingSyncQueue).toHaveBeenCalledTimes(1));
+    expect(queueOrder).toEqual(['full-sync-push']);
+
+    // Keep the full-sync push open long enough to prove the concurrent public
+    // queue run cannot enter in a lock gap between pull and push.
+    await Promise.resolve();
+    expect(mockGetPendingSyncQueue).toHaveBeenCalledTimes(1);
+
+    fullSyncPushGate.resolve([]);
+    await fullRun;
+    await vi.waitFor(() => expect(mockGetPendingSyncQueue).toHaveBeenCalledTimes(2));
+    expect(isSyncInProgress()).toBe(true);
+
+    concurrentQueueGate.resolve([]);
+    await concurrentQueueRun;
+
+    expect(queueOrder).toEqual(['full-sync-push', 'concurrent-queue']);
+    expect(isSyncInProgress()).toBe(false);
+  });
 });
 
 describe('syncEngine — recovery from permanently blocked entries', () => {

@@ -81,9 +81,10 @@ const STALE_SYNC_ENTRY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const STALE_SYNC_ENTRY_MIN_RETRIES = 3;
 export const SYNC_BATCH_CONCURRENCY_LIMIT = 6;
 
-// Sync state
-let isSyncing = false;
-let syncPromise: Promise<SyncResult> | null = null;
+// Sync activity is tokenized so one operation finishing cannot report idle
+// while another public pull/full-sync/queue run is still waiting or active.
+const activeSyncOperations = new Set<symbol>();
+const queueSyncPromises = new Map<string, Promise<SyncResult>>();
 
 // Pause/resume state for E2EE (gate sync during migration or key rotation)
 // Uses a shared Promise so all concurrent waiters resolve when resumed
@@ -122,6 +123,17 @@ export function resumeSync(): void {
 async function waitForUnpause(): Promise<void> {
   if (!isPaused || !pausePromise) return;
   return pausePromise;
+}
+
+async function trackSyncOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const token = Symbol('sync-operation');
+  activeSyncOperations.add(token);
+
+  try {
+    return await operation();
+  } finally {
+    activeSyncOperations.delete(token);
+  }
 }
 
 export interface SyncResult {
@@ -1180,24 +1192,27 @@ async function processQueuedEntryAndPersist(
  * Process the entire sync queue
  * Called when coming back online or periodically
  */
-export async function processQueue(userId: string): Promise<SyncResult> {
-  // Wait if sync is paused (E2EE migration, key rotation)
-  await waitForUnpause();
-
-  // Prevent concurrent syncs
-  if (isSyncing && syncPromise) {
-    return syncPromise;
+export function processQueue(userId: string): Promise<SyncResult> {
+  const existing = queueSyncPromises.get(userId);
+  if (existing) {
+    return existing;
   }
 
-  isSyncing = true;
-  syncPromise = withCrossTabSyncLock(userId, () => doProcessQueue(userId));
+  const run = trackSyncOperation(async () => {
+    // Wait if sync is paused (E2EE migration, key rotation)
+    await waitForUnpause();
+    return withCrossTabSyncLock(userId, () => doProcessQueue(userId));
+  });
+  queueSyncPromises.set(userId, run);
 
-  try {
-    return await syncPromise;
-  } finally {
-    isSyncing = false;
-    syncPromise = null;
-  }
+  const clearIfCurrent = () => {
+    if (queueSyncPromises.get(userId) === run) {
+      queueSyncPromises.delete(userId);
+    }
+  };
+  void run.then(clearIfCurrent, clearIfCurrent);
+
+  return run;
 }
 
 async function doProcessQueue(userId: string): Promise<SyncResult> {
@@ -1280,9 +1295,16 @@ async function doProcessQueue(userId: string): Promise<SyncResult> {
  * Both entity pulls (notes, tags) run independently — a notes error
  * does not prevent the tag pull from executing.
  */
-export async function pullRemoteChanges(userId: string): Promise<PullResult> {
-  // Wait if sync is paused (E2EE migration, key rotation)
-  await waitForUnpause();
+export function pullRemoteChanges(userId: string): Promise<PullResult> {
+  return trackSyncOperation(async () => {
+    // Wait if sync is paused (E2EE migration, key rotation)
+    await waitForUnpause();
+    return withCrossTabSyncLock(userId, () => doPullRemoteChanges(userId));
+  });
+}
+
+/** Pull implementation for callers that already own the per-user sync lock. */
+async function doPullRemoteChanges(userId: string): Promise<PullResult> {
 
   const db = getOfflineDb(userId);
   const errors: PullError[] = [];
@@ -1490,29 +1512,34 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
  * Full sync: pull remote changes then push local queue.
  * Returns FullSyncResult with both pull and push outcomes.
  */
-export async function fullSync(userId: string): Promise<FullSyncResult> {
-  // Wait if sync is paused (E2EE migration, key rotation)
-  await waitForUnpause();
+export function fullSync(userId: string): Promise<FullSyncResult> {
+  return trackSyncOperation(async () => {
+    // Wait if sync is paused (E2EE migration, key rotation)
+    await waitForUnpause();
 
-  // Pull first to get latest server state
-  const pullResult = await pullRemoteChanges(userId);
+    // Hold one ownership boundary across both phases. Calling the public pull
+    // or queue functions here would try to reacquire the same non-reentrant
+    // Web Lock and deadlock. It would also leave a gap where another tab could
+    // push a stale payload after our pull but before our own queue processing.
+    return withCrossTabSyncLock(userId, async () => {
+      const pullResult = await doPullRemoteChanges(userId);
+      const pushResult = await doProcessQueue(userId);
 
-  // Then process our queue
-  const pushResult = await processQueue(userId);
-
-  return {
-    ...pushResult,
-    pulled: { notes: pullResult.pulledNotes, tags: pullResult.pulledTags },
-    deleted: { notes: pullResult.deletedNotes, tags: pullResult.deletedTags },
-    pullErrors: pullResult.errors,
-  };
+      return {
+        ...pushResult,
+        pulled: { notes: pullResult.pulledNotes, tags: pullResult.pulledTags },
+        deleted: { notes: pullResult.deletedNotes, tags: pullResult.deletedTags },
+        pullErrors: pullResult.errors,
+      };
+    });
+  });
 }
 
 /**
  * Get sync status
  */
 export function isSyncInProgress(): boolean {
-  return isSyncing;
+  return activeSyncOperations.size > 0;
 }
 
 /**
@@ -1527,9 +1554,10 @@ export function clearSyncState(): void {
   // Clear pending mutations
   pendingMutations.clear();
 
-  // Reset sync state
-  isSyncing = false;
-  syncPromise = null;
+  // Reset sync state. In-flight finally handlers delete only their own tokens,
+  // so they cannot clear activity registered after logout/reset.
+  activeSyncOperations.clear();
+  queueSyncPromises.clear();
 
   // Clear conflict handler
   onConflictDetected = null;
