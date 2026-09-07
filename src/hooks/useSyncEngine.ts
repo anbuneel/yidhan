@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useCallback, useState, useRef } from 'react';
+import { MAX_NOTE_TITLE_LENGTH } from '../utils/validation';
 import { Capacitor } from '@capacitor/core';
 import { addReliabilityBreadcrumb } from '../utils/reliabilityTelemetry';
 import { useAuth } from '../contexts/AuthContext';
@@ -390,6 +391,7 @@ export async function resolveConflict(
   // Persist the unchosen version before touching either original. This uses the
   // existing encrypted copy path and requires no revision-history migration.
   if (!isHardDeletedConflict && choice !== 'both') {
+    // Fail closed: choosing a version must never discard an unreadable opposite version.
     if (!keys || !isEncrypted || !serverIsEncrypted) throw new Error('Both encrypted versions must be available');
     const { decryptNote } = await import('../lib/encryption');
     const { createEncryptedNote } = await import('../services/encryptedNotes');
@@ -397,7 +399,9 @@ export async function resolveConflict(
       ? { ciphertext: serverNote.encrypted_payload!, iv: serverNote.encryption_iv! }
       : { ciphertext: localNote.encryptedPayload!, iv: localNote.encryptionIv! };
     const content = await decryptNote(localNote.id, userId, losing, keys.encryptionKey);
-    await createEncryptedNote(userId, content.title + ' (conflict copy)', content.content, keys, false);
+    const suffix = ' (conflict copy)';
+    const copyTitle = content.title.slice(0, MAX_NOTE_TITLE_LENGTH - suffix.length).replace(/[\uD800-\uDBFF]$/, '') + suffix;
+    await createEncryptedNote(userId, copyTitle, content.content, keys, false);
   }
 
   switch (choice) {

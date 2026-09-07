@@ -36,7 +36,7 @@ export async function reconcileNoteTags(userId: string, noteId?: string): Promis
   return changed;
 }
 
-export function subscribeToNoteTags(userId: string, onChange: () => void): () => void {
+export function subscribeToNoteTags(userId: string, onChange: () => void, onReady: () => void = onChange): () => void {
   let stopped = false;
   let work = Promise.resolve();
   const channel = supabase.channel(`note-tags-${userId}`).on('postgres_changes', {
@@ -50,6 +50,6 @@ export function subscribeToNoteTags(userId: string, onChange: () => void): () =>
       await reconcileNoteTags(userId, noteId);
       if (!stopped) onChange();
     }).catch(error => { if (!stopped) console.warn('Tag links could not be refreshed', error); });
-  }).subscribe(status => { if (!stopped && status === 'SUBSCRIBED') onChange(); });
+  }).subscribe(status => { if (!stopped && status === 'SUBSCRIBED') onReady(); });
   return () => { stopped = true; void supabase.removeChannel(channel); };
 }

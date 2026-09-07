@@ -13,7 +13,7 @@ vi.mock('../lib/supabase', () => ({ supabase: {
     return q;
   },
   channel: () => {
-    const c = { on: (_event: string, _filter: unknown, handler: (event: unknown) => void) => { transport.handlers.push(handler); return c; }, subscribe: () => c };
+    const c = { on: (_event: string, _filter: unknown, handler: (event: unknown) => void) => { transport.handlers.push(handler); return c; }, subscribe: (ready: (status: string) => void) => { ready('SUBSCRIBED'); return c; } };
     return c;
   }, removeChannel: vi.fn(),
 } }));
@@ -37,13 +37,17 @@ async function seed() {
 it('makes an added tag visible in two isolated client stores without changing the note or signing in again', async () => {
   await seed();
   const changedA = vi.fn(), changedB = vi.fn();
-  const stopA = subscribeToNoteTags(clients[0], changedA), stopB = subscribeToNoteTags(clients[1], changedB);
+  const ready = vi.fn();
+  const stopA = subscribeToNoteTags(clients[0], changedA, ready), stopB = subscribeToNoteTags(clients[1], changedB, ready);
+  expect(ready).toHaveBeenCalledTimes(2);
+  expect(changedA).not.toHaveBeenCalled();
   const start = Date.now();
   transport.rows.push({ note_id: 'shared-note', tag_id: 'journal' });
   for (const handler of transport.handlers) handler({ new: transport.rows[0], old: {} });
   await waitFor(() => { expect(changedA).toHaveBeenCalled(); expect(changedB).toHaveBeenCalled(); }, { timeout: 5000 });
   for (const id of clients) expect(await getOfflineDb(id).noteTags.get(['shared-note', 'journal'])).toBeDefined();
   expect(Date.now() - start).toBeLessThan(5000);
+  expect(ready).toHaveBeenCalledTimes(2); // Targeted events do not trigger another full catch-up.
   stopA(); stopB();
 });
 it('retains local queued removals and never deletes links from a failed listing', async () => {

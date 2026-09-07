@@ -732,7 +732,7 @@ function App() {
   const userId = user?.id;
   useEffect(() => {
     if (!userId || !keys) return;
-    return subscribeToNoteTags(userId, () => { void handleSyncComplete(); void triggerSync(); });
+    return subscribeToNoteTags(userId, () => { void handleSyncComplete(); }, () => { void triggerSync(); });
   }, [userId, keys, triggerSync, handleSyncComplete]);
 
 
