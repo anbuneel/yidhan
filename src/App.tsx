@@ -735,7 +735,6 @@ function App() {
     return subscribeToNoteTags(userId, () => { void handleSyncComplete(); }, () => { void triggerSync(); });
   }, [userId, keys, triggerSync, handleSyncComplete]);
 
-
   // Track if we've bypassed hydration due to timeout (state to trigger re-render)
   const [hydrationBypassed, setHydrationBypassed] = useState(false);
 

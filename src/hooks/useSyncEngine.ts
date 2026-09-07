@@ -317,6 +317,14 @@ export function useSyncEngine(
 }
 
 /**
+ * Conflict copies already written in this session, keyed by note and losing
+ * ciphertext. ConflictModal leaves a conflict on screen when resolution
+ * throws, so a retry re-enters resolveConflict from the top; without this the
+ * losing version would be copied again on every attempt.
+ */
+const writtenConflictCopies = new Map<string, string>();
+
+/**
  * Resolve a conflict by choosing a version.
  *
  * E2EE-aware: for encrypted notes, pushes encrypted fields (not empty
@@ -390,6 +398,7 @@ export async function resolveConflict(
 
   // Persist the unchosen version before touching either original. This uses the
   // existing encrypted copy path and requires no revision-history migration.
+  let copyKey: string | null = null;
   if (!isHardDeletedConflict && choice !== 'both') {
     // Fail closed: choosing a version must never discard an unreadable opposite version.
     if (!keys || !isEncrypted || !serverIsEncrypted) throw new Error('Both encrypted versions must be available');
@@ -398,10 +407,17 @@ export async function resolveConflict(
     const losing = choice === 'local'
       ? { ciphertext: serverNote.encrypted_payload!, iv: serverNote.encryption_iv! }
       : { ciphertext: localNote.encryptedPayload!, iv: localNote.encryptionIv! };
-    const content = await decryptNote(localNote.id, userId, losing, keys.encryptionKey);
-    const suffix = ' (conflict copy)';
-    const copyTitle = content.title.slice(0, MAX_NOTE_TITLE_LENGTH - suffix.length).replace(/[\uD800-\uDBFF]$/, '') + suffix;
-    await createEncryptedNote(userId, copyTitle, content.content, keys, false);
+    copyKey = `${localNote.id}:${losing.ciphertext}`;
+    const written = writtenConflictCopies.get(copyKey);
+    // Only reuse a copy that is still on disk, so a user who discards one and
+    // retries still gets the losing version preserved.
+    if (!written || !(await db.notes.get(written))) {
+      const content = await decryptNote(localNote.id, userId, losing, keys.encryptionKey);
+      const suffix = ' (conflict copy)';
+      const copyTitle = content.title.slice(0, MAX_NOTE_TITLE_LENGTH - suffix.length).replace(/[\uD800-\uDBFF]$/, '') + suffix;
+      const copy = await createEncryptedNote(userId, copyTitle, content.content, keys, false);
+      writtenConflictCopies.set(copyKey, copy.id);
+    }
   }
 
   switch (choice) {
@@ -640,4 +656,7 @@ export async function resolveConflict(
       break;
     }
   }
+
+  // Resolution succeeded; nothing left to retry.
+  if (copyKey) writtenConflictCopies.delete(copyKey);
 }
