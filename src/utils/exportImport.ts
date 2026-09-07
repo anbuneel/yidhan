@@ -17,6 +17,7 @@ interface ExportedNote {
   title: string;
   content: string;
   tags: string[]; // Tag names
+  pinned: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,7 +28,7 @@ interface ExportedTag {
 }
 
 interface ExportData {
-  version: 1;
+  version: 1 | 2;
   exportedAt: string;
   notes: ExportedNote[];
   tags: ExportedTag[];
@@ -110,7 +111,7 @@ function validateExportedNote(note: unknown, index: number): ExportedNote {
   const createdAt = new Date(createdAtMs).toISOString();
   const updatedAt = new Date(updatedAtMs).toISOString();
 
-  return { title, content, tags, createdAt, updatedAt };
+  return { title, content, tags, pinned: n.pinned === true, createdAt, updatedAt };
 }
 
 /**
@@ -146,6 +147,7 @@ export function exportNotesToJSON(notes: Note[], tags: Tag[]): string {
       title: note.title,
       content: note.content,
       tags: note.tags.map((t) => t.name),
+      pinned: note.pinned,
       createdAt: note.createdAt.toISOString(),
       updatedAt: note.updatedAt.toISOString(),
     })),
@@ -223,7 +225,7 @@ export function exportFullAccountData(
       color: tag.color,
     })),
     shareLinks: shareLinks.map((share) => ({
-      noteTitle: share.noteTitle,
+      noteTitle: notes.find(note => note.id === share.noteId)?.title || 'Untitled',
       noteId: share.noteId,
       token: share.token,
       expiresAt: share.expiresAt,
@@ -270,7 +272,7 @@ export function parseImportedJSON(jsonString: string): ExportData {
   const d = data as Record<string, unknown>;
 
   // Validate version
-  if (d.version !== 1) {
+  if (d.version !== 1 && d.version !== 2) {
     throw new ValidationError('Invalid or unsupported export version');
   }
 
@@ -300,7 +302,7 @@ export function parseImportedJSON(jsonString: string): ExportData {
     : new Date().toISOString();
 
   return {
-    version: 1,
+    version: d.version,
     exportedAt,
     notes,
     tags,
@@ -323,12 +325,15 @@ export function readFileAsText(file: File): Promise<string> {
  * Convert HTML to Markdown (basic conversion)
  */
 export function htmlToMarkdown(html: string): string {
+  const original = sanitizeHtml(html);
   let md = html;
 
   // Headers
   md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
   md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
   md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+
+  md = md.replace(/<h([4-6])[^>]*>(.*?)<\/h\1>/gi, (_match, level, text) => '#'.repeat(Number(level)) + ' ' + text + '\n\n');
 
   // Bold and italic
   md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
@@ -343,10 +348,11 @@ export function htmlToMarkdown(html: string): string {
   md = md.replace(/<s[^>]*>(.*?)<\/s>/gi, '~~$1~~');
   md = md.replace(/<strike[^>]*>(.*?)<\/strike>/gi, '~~$1~~');
 
-  // Code
-  md = md.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`');
+  // Code — fenced blocks first, or the inline rule consumes the <code> inside
+  // <pre> and leaves a block that can never match.
   md = md.replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gis, '```\n$1\n```\n\n');
   md = md.replace(/<pre[^>]*>(.*?)<\/pre>/gis, '```\n$1\n```\n\n');
+  md = md.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`');
 
   // Task lists (Tiptap format: ul[data-type="taskList"] with li[data-type="taskItem"])
   md = md.replace(/<ul[^>]*data-type="taskList"[^>]*>([\s\S]*?)<\/ul>/gi, (_match, content) => {
@@ -407,6 +413,13 @@ export function htmlToMarkdown(html: string): string {
   md = md.replace(/\n{3,}/g, '\n\n');
   md = md.trim();
 
+  // Markdown permits raw HTML. Keep a sanitized block when the basic serializer
+  // cannot preserve it (marks, alignment, nested structures, whitespace).
+  // The tag list must match the top-level nodes RichTextEditor's extensions can
+  // produce; a new block type added there without being added here would skip
+  // this check silently and export corrupted Markdown.
+  if (/^<(?:p|h[1-6]|ul|ol|pre|blockquote|hr)(?:\s|>)/i.test(original) &&
+      sanitizeHtml(markdownToHtml(md)) !== original) return original;
   return md;
 }
 
@@ -414,6 +427,7 @@ export function htmlToMarkdown(html: string): string {
  * Convert Markdown to HTML (basic conversion)
  */
 export function markdownToHtml(md: string): string {
+  if (/^\s*<(?:p|h[1-6]|ul|ol|pre|blockquote|hr)(?:\s|>)/i.test(md)) return sanitizeHtml(md.trim());
   let html = md;
 
   // Escape HTML
@@ -422,12 +436,18 @@ export function markdownToHtml(md: string): string {
   html = html.replace(/>/g, '&gt;');
 
   // Code blocks (before other processing)
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, _lang, code: string) => `<pre><code>${code.replace(/\n$/, '')}</code></pre>`);
+
+  // Hold fenced blocks aside: everything below treats a newline as prose, and
+  // the newlines inside a code block are part of the code.
+  const fenced: string[] = [];
+  html = html.replace(/<pre[\s\S]*?<\/pre>/gi, (block) => `\uE000FENCE${fenced.push(block) - 1}\uE000`);
 
   // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
   // Headers
+  html = html.replace(/^(#{4,6}) (.*)$/gm, (_match, marks, text) => '<h' + marks.length + '>' + text + '</h' + marks.length + '>');
   html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
   html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
   html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
@@ -444,7 +464,7 @@ export function markdownToHtml(md: string): string {
   html = html.replace(/^---$/gim, '<hr>');
 
   // Blockquotes
-  html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
+  html = html.replace(/^&gt; (.*$)/gim, '<blockquote>$1</blockquote>');
 
   // Task lists (must come before regular unordered lists)
   // Match lines like "- [ ] text" or "- [x] text"
@@ -453,14 +473,16 @@ export function markdownToHtml(md: string): string {
     return `<li data-type="taskItem" data-checked="${isChecked}"><p>${text}</p></li>`;
   });
   // Wrap consecutive task items in taskList
-  html = html.replace(/(<li data-type="taskItem"[^>]*>.*?<\/li>\n?)+/g, '<ul data-type="taskList">$&</ul>');
+  html = html.replace(/(?:<li data-type="taskItem"[^>]*>.*?<\/li>\n?)+/g, (items) => `<ul data-type="taskList">${items.replace(/\n+$/, '')}</ul>\n`);
 
   // Unordered lists (regular, without checkboxes)
   html = html.replace(/^- (?!\[[ xX]\])(.*)$/gim, '<li>$1</li>');
-  html = html.replace(/(<li>(?!<p>).*<\/li>\n?)+/g, '<ul>$&</ul>');
+  html = html.replace(/(?:<li>(?!<p>).*<\/li>\n?)+/g, (items) => `<ul>${items.replace(/\n+$/, '')}</ul>\n`);
 
-  // Ordered lists
-  html = html.replace(/^\d+\. (.*$)/gim, '<li>$1</li>');
+  // Ordered lists — marked so the unordered wrap above cannot claim them
+  html = html.replace(/^\d+\. (.*$)/gim, '<li data-ordered>$1</li>');
+  html = html.replace(/(?:<li data-ordered>.*?<\/li>\n?)+/g, (items) => `<ol>${items.replace(/\n+$/, '')}</ol>\n`);
+  html = html.replace(/ data-ordered/g, '');
 
   // Links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
@@ -470,7 +492,8 @@ export function markdownToHtml(md: string): string {
   html = lines.map(line => {
     const trimmed = line.trim();
     if (!trimmed) return '';
-    if (trimmed.startsWith('<h') ||
+    if (trimmed.startsWith('\uE000FENCE') ||
+        trimmed.startsWith('<h') ||
         trimmed.startsWith('<ul') ||
         trimmed.startsWith('<ol') ||
         trimmed.startsWith('<li') ||
@@ -482,10 +505,12 @@ export function markdownToHtml(md: string): string {
     return `<p>${trimmed}</p>`;
   }).join('');
 
-  // Line breaks within paragraphs
+  // Line breaks within paragraphs. Newlines that merely separate block
+  // elements are structure, not breaks, so drop those first.
+  html = html.replace(/\n+(?=<\/?(?:li|ul|ol|blockquote|pre|h[1-6]|hr|p)\b)/g, '');
   html = html.replace(/\n/g, '<br>');
 
-  return html;
+  return html.replace(/\uE000FENCE(\d+)\uE000/g, (_match, index: string) => fenced[Number(index)]);
 }
 
 /**

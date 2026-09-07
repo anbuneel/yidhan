@@ -10,6 +10,7 @@
  */
 
 import 'fake-indexeddb/auto';
+import { seedOfflineNote } from '../test/seedOfflineNote';
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import Dexie from 'dexie';
 
@@ -81,195 +82,14 @@ describe('offlineNotes', () => {
   });
 
   // ──────────────────────────────────────────────────
-  // createNoteOffline
-  // ──────────────────────────────────────────────────
-
-  describe('createNoteOffline', () => {
-    it('should create a note in IndexedDB with correct fields', async () => {
-      const { createNoteOffline } = await import('./offlineNotes');
-
-      const note = await createNoteOffline(TEST_USER_ID, 'My Note', '<p>Content</p>');
-
-      expect(note.id).toBeDefined();
-      expect(note.title).toBe('My Note');
-      expect(note.content).toBe('<p>Content</p>');
-      expect(note.pinned).toBe(false);
-      expect(note.deletedAt).toBeNull();
-      expect(note.tags).toEqual([]);
-      expect(note.syncStatus).toBe('pending');
-    });
-
-    it('should persist the note in IndexedDB', async () => {
-      const { createNoteOffline } = await import('./offlineNotes');
-
-      const note = await createNoteOffline(TEST_USER_ID, 'Persisted', '<p>Check</p>');
-
-      const db = getOfflineDb(TEST_USER_ID);
-      const stored = await db.notes.get(note.id);
-
-      expect(stored).toBeDefined();
-      expect(stored!.title).toBe('Persisted');
-      expect(stored!.syncStatus).toBe('pending');
-    });
-
-    it('should create a sync queue entry', async () => {
-      const { createNoteOffline } = await import('./offlineNotes');
-
-      const note = await createNoteOffline(TEST_USER_ID, 'Queued', '<p>Q</p>');
-
-      const db = getOfflineDb(TEST_USER_ID);
-      const queue = await db.syncQueue.toArray();
-
-      expect(queue).toHaveLength(1);
-      expect(queue[0].operation).toBe('create');
-      expect(queue[0].entityType).toBe('note');
-      expect(queue[0].entityId).toBe(note.id);
-      expect(queue[0].retryCount).toBe(0);
-      expect(queue[0].status).toBe('pending');
-      expect(queue[0].lastError).toBeNull();
-    });
-
-    it('should handle empty title and content', async () => {
-      const { createNoteOffline } = await import('./offlineNotes');
-
-      const note = await createNoteOffline(TEST_USER_ID);
-
-      expect(note.title).toBe('');
-      expect(note.content).toBe('');
-    });
-
-    it('should generate unique IDs for each note', async () => {
-      const { createNoteOffline } = await import('./offlineNotes');
-
-      const note1 = await createNoteOffline(TEST_USER_ID, 'A');
-      const note2 = await createNoteOffline(TEST_USER_ID, 'B');
-
-      expect(note1.id).not.toBe(note2.id);
-    });
-  });
-
-  // ──────────────────────────────────────────────────
-  // updateNoteOffline
-  // ──────────────────────────────────────────────────
-
-  describe('updateNoteOffline', () => {
-    it('should update title and content in IndexedDB', async () => {
-      const { createNoteOffline, updateNoteOffline } = await import('./offlineNotes');
-
-      const created = await createNoteOffline(TEST_USER_ID, 'Old Title', '<p>Old</p>');
-
-      const updated = await updateNoteOffline(TEST_USER_ID, {
-        ...created,
-        title: 'New Title',
-        content: '<p>New</p>',
-      });
-
-      expect(updated.title).toBe('New Title');
-      expect(updated.content).toBe('<p>New</p>');
-
-      const db = getOfflineDb(TEST_USER_ID);
-      const stored = await db.notes.get(created.id);
-      expect(stored!.title).toBe('New Title');
-    });
-
-    it('should mark status as pending after update', async () => {
-      const { createNoteOffline, updateNoteOffline } = await import('./offlineNotes');
-
-      const created = await createNoteOffline(TEST_USER_ID, 'Note', '<p>V1</p>');
-
-      // Simulate synced state
-      const db = getOfflineDb(TEST_USER_ID);
-      await db.notes.update(created.id, { syncStatus: 'synced' });
-
-      const updated = await updateNoteOffline(TEST_USER_ID, {
-        ...created,
-        title: 'Updated',
-        content: '<p>V2</p>',
-      });
-
-      expect(updated.syncStatus).toBe('pending');
-    });
-
-    it('should compact previous update entries in sync queue', async () => {
-      const { createNoteOffline, updateNoteOffline } = await import('./offlineNotes');
-
-      const created = await createNoteOffline(TEST_USER_ID, 'Note', '<p>V1</p>');
-
-      await updateNoteOffline(TEST_USER_ID, { ...created, title: 'V2', content: '<p>V2</p>' });
-      await updateNoteOffline(TEST_USER_ID, { ...created, title: 'V3', content: '<p>V3</p>' });
-
-      const db = getOfflineDb(TEST_USER_ID);
-      const queue = await db.syncQueue.toArray();
-      const updates = queue.filter((e) => e.operation === 'update' && e.entityId === created.id);
-
-      // Only 1 update should remain after compaction
-      expect(updates).toHaveLength(1);
-    });
-
-    it('should preserve blocked update entries when queueing a new update', async () => {
-      const { createNoteOffline, updateNoteOffline } = await import('./offlineNotes');
-
-      const created = await createNoteOffline(TEST_USER_ID, 'Note', '<p>V1</p>');
-      const db = getOfflineDb(TEST_USER_ID);
-      await db.syncQueue.clear();
-
-      await db.syncQueue.add({
-        clientMutationId: 'blocked-update-entry',
-        operation: 'update',
-        entityType: 'note',
-        entityId: created.id,
-        payload: { title: 'Blocked', content: '<p>Blocked</p>' },
-        createdAt: 1,
-        retryCount: 5,
-        status: 'blocked',
-        lastError: 'network timeout',
-        lastAttemptAt: 2,
-        blockedAt: 2,
-        updatedAt: 2,
-      });
-
-      await updateNoteOffline(TEST_USER_ID, {
-        ...created,
-        title: 'New Title',
-        content: '<p>V2</p>',
-      });
-
-      const updates = (await db.syncQueue.toArray()).filter(
-        (entry) => entry.operation === 'update' && entry.entityId === created.id
-      );
-
-      expect(updates).toHaveLength(2);
-      expect(updates.filter((entry) => entry.status === 'blocked')).toHaveLength(1);
-      expect(updates.filter((entry) => entry.status === 'pending')).toHaveLength(1);
-    });
-
-    it('should throw for non-existent note', async () => {
-      const { updateNoteOffline } = await import('./offlineNotes');
-
-      await expect(
-        updateNoteOffline(TEST_USER_ID, {
-          id: 'non-existent',
-          title: 'X',
-          content: 'X',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          tags: [],
-          pinned: false,
-          deletedAt: null,
-        })
-      ).rejects.toThrow('not found');
-    });
-  });
-
-  // ──────────────────────────────────────────────────
   // softDeleteNoteOffline / restoreNoteOffline
   // ──────────────────────────────────────────────────
 
   describe('softDeleteNoteOffline', () => {
     it('should set deletedAt timestamp on the note', async () => {
-      const { createNoteOffline, softDeleteNoteOffline } = await import('./offlineNotes');
+      const { softDeleteNoteOffline } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'To Delete', '<p>Bye</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'To Delete', '<p>Bye</p>');
       await softDeleteNoteOffline(TEST_USER_ID, note.id);
 
       const db = getOfflineDb(TEST_USER_ID);
@@ -280,9 +100,9 @@ describe('offlineNotes', () => {
     });
 
     it('should queue a soft_delete sync operation', async () => {
-      const { createNoteOffline, softDeleteNoteOffline } = await import('./offlineNotes');
+      const { softDeleteNoteOffline } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'Del', '<p>D</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'Del', '<p>D</p>');
       await softDeleteNoteOffline(TEST_USER_ID, note.id);
 
       const db = getOfflineDb(TEST_USER_ID);
@@ -296,9 +116,9 @@ describe('offlineNotes', () => {
 
   describe('restoreNoteOffline', () => {
     it('should clear deletedAt and queue restore operation', async () => {
-      const { createNoteOffline, softDeleteNoteOffline, restoreNoteOffline } = await import('./offlineNotes');
+      const { softDeleteNoteOffline, restoreNoteOffline } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'Restore Me', '<p>R</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'Restore Me', '<p>R</p>');
       await softDeleteNoteOffline(TEST_USER_ID, note.id);
       await restoreNoteOffline(TEST_USER_ID, note.id);
 
@@ -319,9 +139,9 @@ describe('offlineNotes', () => {
 
   describe('permanentDeleteNoteOffline', () => {
     it('should remove note from IndexedDB and clean up associations', async () => {
-      const { createNoteOffline, permanentDeleteNoteOffline } = await import('./offlineNotes');
+      const { permanentDeleteNoteOffline } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'Gone', '<p>G</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'Gone', '<p>G</p>');
 
       // Add a tag association
       const db = getOfflineDb(TEST_USER_ID);
@@ -337,9 +157,9 @@ describe('offlineNotes', () => {
     });
 
     it('should queue a delete sync operation', async () => {
-      const { createNoteOffline, permanentDeleteNoteOffline } = await import('./offlineNotes');
+      const { permanentDeleteNoteOffline } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'Perm Del', '<p>D</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'Perm Del', '<p>D</p>');
       await permanentDeleteNoteOffline(TEST_USER_ID, note.id);
 
       const db = getOfflineDb(TEST_USER_ID);
@@ -356,9 +176,9 @@ describe('offlineNotes', () => {
 
   describe('toggleNotePinOffline', () => {
     it('should toggle pin status and queue sync', async () => {
-      const { createNoteOffline, toggleNotePinOffline } = await import('./offlineNotes');
+      const { toggleNotePinOffline } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'Pin Me', '<p>P</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'Pin Me', '<p>P</p>');
 
       await toggleNotePinOffline(TEST_USER_ID, note.id, true);
 
@@ -378,10 +198,10 @@ describe('offlineNotes', () => {
 
   describe('fetchNotesOffline', () => {
     it('should return only active notes (not soft-deleted)', async () => {
-      const { createNoteOffline, softDeleteNoteOffline, fetchNotesOffline } = await import('./offlineNotes');
+      const { softDeleteNoteOffline, fetchNotesOffline } = await import('./offlineNotes');
 
-      await createNoteOffline(TEST_USER_ID, 'Active', '<p>A</p>');
-      const toDelete = await createNoteOffline(TEST_USER_ID, 'Deleted', '<p>D</p>');
+      await seedOfflineNote(TEST_USER_ID, 'Active', '<p>A</p>');
+      const toDelete = await seedOfflineNote(TEST_USER_ID, 'Deleted', '<p>D</p>');
       await softDeleteNoteOffline(TEST_USER_ID, toDelete.id);
 
       const notes = await fetchNotesOffline(TEST_USER_ID);
@@ -391,12 +211,12 @@ describe('offlineNotes', () => {
     });
 
     it('should sort pinned notes first, then by updatedAt descending', async () => {
-      const { createNoteOffline, toggleNotePinOffline, fetchNotesOffline } = await import('./offlineNotes');
+      const { toggleNotePinOffline, fetchNotesOffline } = await import('./offlineNotes');
 
-      const note1 = await createNoteOffline(TEST_USER_ID, 'Older', '<p>1</p>');
+      const note1 = await seedOfflineNote(TEST_USER_ID, 'Older', '<p>1</p>');
       // Wait a tick so timestamps differ
       await new Promise((r) => setTimeout(r, 10));
-      await createNoteOffline(TEST_USER_ID, 'Newer', '<p>2</p>');
+      await seedOfflineNote(TEST_USER_ID, 'Newer', '<p>2</p>');
       await toggleNotePinOffline(TEST_USER_ID, note1.id, true);
 
       const notes = await fetchNotesOffline(TEST_USER_ID);
@@ -406,9 +226,9 @@ describe('offlineNotes', () => {
     });
 
     it('should include tag associations', async () => {
-      const { createNoteOffline, fetchNotesOffline } = await import('./offlineNotes');
+      const { fetchNotesOffline } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'Tagged', '<p>T</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'Tagged', '<p>T</p>');
 
       const db = getOfflineDb(TEST_USER_ID);
       await seedTag('tag-fetch-1', 'Important', 'terracotta');
@@ -426,10 +246,10 @@ describe('offlineNotes', () => {
     });
 
     it('should apply tag filter with AND logic', async () => {
-      const { createNoteOffline, addTagToNoteOffline, fetchNotesOffline } = await import('./offlineNotes');
+      const { addTagToNoteOffline, fetchNotesOffline } = await import('./offlineNotes');
 
-      const note1 = await createNoteOffline(TEST_USER_ID, 'HasBoth', '<p>B</p>');
-      const note2 = await createNoteOffline(TEST_USER_ID, 'HasOne', '<p>O</p>');
+      const note1 = await seedOfflineNote(TEST_USER_ID, 'HasBoth', '<p>B</p>');
+      const note2 = await seedOfflineNote(TEST_USER_ID, 'HasOne', '<p>O</p>');
 
       await seedTag('tf-a', 'A', 'gold');
       await seedTag('tf-b', 'B', 'forest');
@@ -452,10 +272,10 @@ describe('offlineNotes', () => {
 
   describe('fetchFadedNotesOffline', () => {
     it('should return only soft-deleted notes', async () => {
-      const { createNoteOffline, softDeleteNoteOffline, fetchFadedNotesOffline } = await import('./offlineNotes');
+      const { softDeleteNoteOffline, fetchFadedNotesOffline } = await import('./offlineNotes');
 
-      await createNoteOffline(TEST_USER_ID, 'Active', '<p>A</p>');
-      const faded = await createNoteOffline(TEST_USER_ID, 'Faded', '<p>F</p>');
+      await seedOfflineNote(TEST_USER_ID, 'Active', '<p>A</p>');
+      const faded = await seedOfflineNote(TEST_USER_ID, 'Faded', '<p>F</p>');
       await softDeleteNoteOffline(TEST_USER_ID, faded.id);
 
       const notes = await fetchFadedNotesOffline(TEST_USER_ID);
@@ -472,9 +292,9 @@ describe('offlineNotes', () => {
 
   describe('addTagToNoteOffline', () => {
     it('should create a note-tag association', async () => {
-      const { createNoteOffline, addTagToNoteOffline } = await import('./offlineNotes');
+      const { addTagToNoteOffline } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'Tagged', '<p>T</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'Tagged', '<p>T</p>');
 
       await seedTag('tag-assoc-1', 'Work', 'indigo');
       await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-assoc-1');
@@ -486,9 +306,9 @@ describe('offlineNotes', () => {
     });
 
     it('should not duplicate existing association', async () => {
-      const { createNoteOffline, addTagToNoteOffline } = await import('./offlineNotes');
+      const { addTagToNoteOffline } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'Note', '<p>N</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'Note', '<p>N</p>');
 
       await seedTag('tag-dup-1', 'Dup', 'stone');
 
@@ -501,9 +321,9 @@ describe('offlineNotes', () => {
     });
 
     it('should queue add_tag sync operation', async () => {
-      const { createNoteOffline, addTagToNoteOffline } = await import('./offlineNotes');
+      const { addTagToNoteOffline } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'N', '<p>N</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'N', '<p>N</p>');
 
       await seedTag('tag-q-1', 'Q', 'sage');
       await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-q-1');
@@ -515,16 +335,12 @@ describe('offlineNotes', () => {
     });
 
     it('preserves imported updatedAt when tagging imported notes', async () => {
-      const { createNotesBatchOffline, addTagToNoteOffline } = await import('./offlineNotes');
+      const { addTagToNoteOffline } = await import('./offlineNotes');
       const importedCreatedAt = new Date('2024-01-01T00:00:00Z');
       const importedUpdatedAt = new Date('2024-01-05T00:00:00Z');
 
-      const [note] = await createNotesBatchOffline(TEST_USER_ID, [{
-        title: 'Imported',
-        content: '<p>Preserve me</p>',
-        createdAt: importedCreatedAt,
-        updatedAt: importedUpdatedAt,
-      }]);
+      const note = await seedOfflineNote(TEST_USER_ID, 'Imported', '<p>Preserve me</p>');
+      await getOfflineDb(TEST_USER_ID).notes.update(note.id, { createdAt: importedCreatedAt.getTime(), updatedAt: importedUpdatedAt.getTime() });
 
       await seedTag('tag-import-1', 'Imported', 'sage');
       await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-import-1', { preserveUpdatedAt: true });
@@ -537,9 +353,9 @@ describe('offlineNotes', () => {
 
   describe('removeTagFromNoteOffline', () => {
     it('should remove the note-tag association and queue sync', async () => {
-      const { createNoteOffline, addTagToNoteOffline, removeTagFromNoteOffline } = await import('./offlineNotes');
+      const { addTagToNoteOffline, removeTagFromNoteOffline } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'N', '<p>N</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'N', '<p>N</p>');
 
       await seedTag('tag-rm-1', 'Remove', 'plum');
 
@@ -562,9 +378,9 @@ describe('offlineNotes', () => {
 
   describe('getPendingSyncQueue', () => {
     it('should return entries in dependency order (creates first)', async () => {
-      const { createNoteOffline, addTagToNoteOffline, getPendingSyncQueue } = await import('./offlineNotes');
+      const { addTagToNoteOffline, getPendingSyncQueue } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'N', '<p>N</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'N', '<p>N</p>');
 
       await seedTag('tag-order-1', 'Order', 'clay');
       await addTagToNoteOffline(TEST_USER_ID, note.id, 'tag-order-1');
@@ -621,12 +437,12 @@ describe('offlineNotes', () => {
 
   describe('getPendingSyncCount', () => {
     it('should return count of pending operations only', async () => {
-      const { createNoteOffline, getPendingSyncCount, getBlockedSyncCount } = await import('./offlineNotes');
+      const { getPendingSyncCount, getBlockedSyncCount } = await import('./offlineNotes');
 
       expect(await getPendingSyncCount(TEST_USER_ID)).toBe(0);
 
-      await createNoteOffline(TEST_USER_ID, 'A');
-      await createNoteOffline(TEST_USER_ID, 'B');
+      await seedOfflineNote(TEST_USER_ID, 'A');
+      await seedOfflineNote(TEST_USER_ID, 'B');
 
       const db = getOfflineDb(TEST_USER_ID);
       await db.syncQueue.add({
@@ -684,10 +500,10 @@ describe('offlineNotes', () => {
 
   describe('hydration', () => {
     it('should skip hydration when queued work exists', async () => {
-      const { createNoteOffline, hydrateFromServer } = await import('./offlineNotes');
+      const { hydrateFromServer } = await import('./offlineNotes');
       const fromMock = vi.mocked(supabase.from);
 
-      const note = await createNoteOffline(TEST_USER_ID, 'Local only', '<p>Keep me</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'Local only', '<p>Keep me</p>');
 
       await hydrateFromServer(TEST_USER_ID);
 
@@ -841,9 +657,9 @@ describe('offlineNotes', () => {
     });
 
     it('should update existing synced note from server', async () => {
-      const { createNoteOffline, upsertNoteFromServer } = await import('./offlineNotes');
+      const { upsertNoteFromServer } = await import('./offlineNotes');
 
-      const local = await createNoteOffline(TEST_USER_ID, 'Local', '<p>L</p>');
+      const local = await seedOfflineNote(TEST_USER_ID, 'Local', '<p>L</p>');
 
       // Mark as synced
       const db = getOfflineDb(TEST_USER_ID);
@@ -870,9 +686,9 @@ describe('offlineNotes', () => {
     });
 
     it('should preserve pending syncStatus when server version is newer', async () => {
-      const { createNoteOffline, upsertNoteFromServer } = await import('./offlineNotes');
+      const { upsertNoteFromServer } = await import('./offlineNotes');
 
-      const local = await createNoteOffline(TEST_USER_ID, 'My Edit', '<p>Edited</p>');
+      const local = await seedOfflineNote(TEST_USER_ID, 'My Edit', '<p>Edited</p>');
 
       const serverNote = {
         id: local.id,
@@ -926,9 +742,9 @@ describe('offlineNotes', () => {
 
   describe('deleteNoteFromServer', () => {
     it('should remove note and tag associations from IndexedDB when local state is clean', async () => {
-      const { createNoteOffline, deleteNoteFromServer } = await import('./offlineNotes');
+      const { deleteNoteFromServer } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'To Remove', '<p>R</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'To Remove', '<p>R</p>');
 
       const db = getOfflineDb(TEST_USER_ID);
       await db.noteTags.add({ noteId: note.id, tagId: 'some-tag', syncStatus: 'synced', lastSyncedAt: Date.now() });
@@ -952,9 +768,9 @@ describe('offlineNotes', () => {
     });
 
     it('should preserve notes with unsynced work and mark them as conflicts', async () => {
-      const { createNoteOffline, deleteNoteFromServer } = await import('./offlineNotes');
+      const { deleteNoteFromServer } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'Pending Note', '<p>Keep me</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'Pending Note', '<p>Keep me</p>');
 
       const db = getOfflineDb(TEST_USER_ID);
       await db.noteTags.add({
@@ -980,9 +796,9 @@ describe('offlineNotes', () => {
     });
 
     it('should throw when conflict state cannot be persisted locally', async () => {
-      const { createNoteOffline, deleteNoteFromServer } = await import('./offlineNotes');
+      const { deleteNoteFromServer } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'Pending Note', '<p>Keep me</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'Pending Note', '<p>Keep me</p>');
       const db = getOfflineDb(TEST_USER_ID);
       const updateSpy = vi
         .spyOn(db.notes, 'update')
@@ -1001,57 +817,15 @@ describe('offlineNotes', () => {
   // Batch operations
   // ──────────────────────────────────────────────────
 
-  describe('createNotesBatchOffline', () => {
-    it('should bulk-create notes with sync queue entries', async () => {
-      const { createNotesBatchOffline, fetchNotesOffline } = await import('./offlineNotes');
-
-      const batch = [
-        { title: 'Batch 1', content: '<p>B1</p>' },
-        { title: 'Batch 2', content: '<p>B2</p>' },
-        { title: 'Batch 3', content: '<p>B3</p>' },
-      ];
-
-      const results = await createNotesBatchOffline(TEST_USER_ID, batch);
-
-      expect(results).toHaveLength(3);
-
-      const allNotes = await fetchNotesOffline(TEST_USER_ID);
-      expect(allNotes).toHaveLength(3);
-
-      const db = getOfflineDb(TEST_USER_ID);
-      const queue = await db.syncQueue.toArray();
-      expect(queue).toHaveLength(3);
-    });
-
-    it('should report progress', async () => {
-      const { createNotesBatchOffline } = await import('./offlineNotes');
-
-      const batch = Array.from({ length: 5 }, (_, i) => ({
-        title: `Note ${i}`,
-        content: `<p>${i}</p>`,
-      }));
-
-      const progressCalls: Array<[number, number]> = [];
-      await createNotesBatchOffline(TEST_USER_ID, batch, (completed, total) => {
-        progressCalls.push([completed, total]);
-      });
-
-      expect(progressCalls.length).toBeGreaterThan(0);
-      const last = progressCalls[progressCalls.length - 1];
-      expect(last[0]).toBe(5);
-      expect(last[1]).toBe(5);
-    });
-  });
-
   // ──────────────────────────────────────────────────
   // markNoteSynced
   // ──────────────────────────────────────────────────
 
   describe('markNoteSynced', () => {
     it('should update sync status and server timestamp', async () => {
-      const { createNoteOffline, markNoteSynced } = await import('./offlineNotes');
+      const { markNoteSynced } = await import('./offlineNotes');
 
-      const note = await createNoteOffline(TEST_USER_ID, 'Sync Me', '<p>S</p>');
+      const note = await seedOfflineNote(TEST_USER_ID, 'Sync Me', '<p>S</p>');
       const serverTime = new Date('2026-01-15T12:00:00Z');
 
       await markNoteSynced(TEST_USER_ID, note.id, serverTime);

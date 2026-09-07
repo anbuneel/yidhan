@@ -289,7 +289,8 @@ See [docs/ui-layout.md](docs/ui-layout.md) for detailed ASCII diagrams of all UI
 - Keyboard shortcuts and slash commands
 
 ## Copy & Export
-Functions in `src/utils/exportImport.ts`. Batch insert via `createNotesBatch()` in `src/services/notes.ts`.
+Functions in `src/utils/exportImport.ts`. Authenticated batch imports use `createEncryptedNotesBatch()` in `src/services/encryptedNotes.ts`. Both v1 note exports and v2 account backups restore notes and tags, including pin state and original timestamps. Full backup share labels come from decrypted note titles.
+Markdown uses sanitized HTML blocks when ordinary Markdown would lose editor formatting; imports sanitize those blocks before use.
 
 Markdown export format (used by all export/import):
 ```markdown
@@ -313,7 +314,7 @@ content...
 - **Safe hydration:** Startup hydration uses local metadata and merge behavior to avoid clearing queued local work during recovery paths.
 - **Persistent storage:** An unsynced note lives only in IndexedDB, which browsers treat as best-effort and may clear under disk pressure. `useStoragePersistence` (via `src/utils/storagePersistence.ts`) requests `navigator.storage.persist()` on launch and again on `appinstalled`, since Chrome grants it to installed apps without asking. When the browser declines and unsynced work has lingered, the sync indicator says the changes are on this device only and offers Install; a denial is reported to Sentry once per session. Native platforms count as granted, and browsers without the API are not flagged; an API that throws counts as denied, since only a grant makes storage safe.
 - Notes sync via offline-first architecture: IndexedDB (Dexie) → sync queue → Supabase (all payloads encrypted)
-- Legacy plaintext offline note write helpers are disabled in non-test builds; launch code must use `encryptedNotes` so plaintext never enters IndexedDB or the sync queue.
+- Legacy plaintext note create/update APIs and unused server read helpers are removed. Launch writes use `encryptedNotes`. Lint also checks that the removed service APIs have not returned; test-only database seeds stay under `src/test/`.
 - Sync engine: incremental pull (cursor-based), paginated fetches, server-authoritative timestamps. Import timestamps (`createdAt`/`updatedAt`) are forwarded through the sync queue to Supabase INSERT to preserve note chronology. Queue processing uses `buildQueueBatches()` for parallel execution with bounded concurrency (`SYNC_BATCH_CONCURRENCY_LIMIT = 6`); noteTag entries force batch barriers. Stale entries (>24h, 3+ retries, non-create) are auto-blocked to prevent permanent "pending" state. Typed `SyncConflictError` enables clean conflict routing without retry logic.
 - Tag membership (`note_tags`) has no `updated_at`, so `reconcileNoteTags` runs a full paginated scan on **every** pull, not only on reconnect. Realtime is the only steady-state signal for membership, and gating the scan would leave a dropped event uncorrected until the next reconnect. The cost is a membership scan per sync cycle; revisit when `note_tags` gains a timestamp column. Realtime tag events are coalesced into one library refresh (`SYNC_REFRESH_COALESCE_MS`) so a burst costs a single decrypt pass.
 - Server-side `notes_updated_at_trigger` prevents client clock skew issues (fires on UPDATE only; INSERT preserves client-supplied timestamps)

@@ -515,6 +515,26 @@ describe('encryptedNotes', () => {
   // ──────────────────────────────────────────────────
 
   describe('createEncryptedNotesBatch', () => {
+    it('restores a v2 account backup into encrypted storage with tags, pins and dates intact', async () => {
+      const { exportFullAccountData, parseImportedJSON } = await import('../utils/exportImport');
+      const { createMockNote, createMockTag } = await import('../test/factories');
+      const { createTagOffline } = await import('./offlineTags');
+      const { addTagToNoteOffline } = await import('./offlineNotes');
+      const { createEncryptedNotesBatch, fetchDecryptedNotes } = await import('./encryptedNotes');
+      const tag = createMockTag({ name: 'Journal', color: 'sage' });
+      const original = createMockNote({ title: 'Backup words', content: '<p>Keep this</p>', tags: [tag], pinned: true });
+      const parsed = parseImportedJSON(exportFullAccountData([original], [tag], [], { displayName: null, email: 'fixture@example.com' }));
+      const restoredTag = await createTagOffline(TEST_USER_ID, parsed.tags[0].name, 'sage');
+      const restored = await createEncryptedNotesBatch(TEST_USER_ID, parsed.notes.map(n => ({ ...n, tags: undefined, createdAt: new Date(n.createdAt), updatedAt: new Date(n.updatedAt) })), keys);
+      await addTagToNoteOffline(TEST_USER_ID, restored[0].id, restoredTag.id, { preserveUpdatedAt: true });
+      const reopened = await fetchDecryptedNotes(TEST_USER_ID, keys);
+      expect(reopened).toHaveLength(1);
+      expect(reopened[0]).toMatchObject({ title: original.title, content: original.content, pinned: true, createdAt: original.createdAt, updatedAt: original.updatedAt });
+      expect(reopened[0].tags[0]).toMatchObject({ name: tag.name, color: tag.color });
+      const stored = await getOfflineDb(TEST_USER_ID).notes.get(restored[0].id);
+      expect(stored?.title).toBe('');
+      expect(stored?.encryptedPayload).toBeTruthy();
+    });
     it('should batch-create multiple encrypted notes', async () => {
       const { createEncryptedNotesBatch, fetchDecryptedNotes } = await import('./encryptedNotes');
 

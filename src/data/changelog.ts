@@ -7,6 +7,12 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.13', date: '2026-09-07', changes: [
+    { type: 'fix', text: 'Imported account backups retain their format version; obsolete plaintext API documentation is removed.' },
+    { type: 'fix', text: 'Markdown keeps editor formatting, full account backups restore pins and dates, and shared-note labels use your readable titles' },
+    { type: 'improvement', text: 'Removed unused plaintext note APIs and updated letter-sharing verification for encrypted links and the 30-day limit' },
+    { type: 'fix', text: 'Exported Markdown is Markdown again: lists, numbered lists, quotes and code blocks were falling back to raw HTML, so files opened elsewhere showed tags instead of text' },
+  ] },
   { version: '3.19.12', date: '2026-09-07', changes: [
     { type: 'fix', text: 'Mobile time navigation follows the library footer without reacting to unrelated page footers.' },
     { type: 'fix', text: 'Search reuses note text, mobile gesture guidance stays beside your notes, and time navigation leaves room to read' },
