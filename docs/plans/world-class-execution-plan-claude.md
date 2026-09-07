@@ -55,7 +55,6 @@ Fix what is broken. Items 1 to 22 are all small, need no Mac, no migration, and 
 | 5 | Saving | Every exit path checks the save result; a failed save keeps the draft, shows a persistent "Not saved" state with Retry and Copy, visible in focus mode | days |  | the note stays open with the state on screen until the save succeeds or the user copies · E2E with a forced `onUpdate` rejection |
 | 6 | Saving | Maximum save interval of 10 s during continuous typing; encrypted local checkpoint | days |  | the killed tab loses at most the last 10 s; reopening shows the checkpoint · E2E |
 | 7 | Saving | Save indicator distinguishes "Saved on this device" from "Synced"; never implies another device has text before the server confirms the revision | days |  | Offline typing shows "Saved here", "Synced" appears only after the server acknowledges · unit test on the status state machine |
-
 | 11 | Search | Memoize plaintext per note keyed on `contentHash`; memoize the card snippet | days |  | No `DOMParser` work per keystroke after the first query · profiler assertion in a unit test with 2,000 notes |
 | 12 | Search | Delete `searchNotesOffline`, `searchDecryptedNotes`, and the stale "focused-gaze" comment | days |  | Dead code gone · lint passes with the unused-export rule on |
 | 13 | Phone | Replace the "Quick gesture" modal with a one-line caption under the first card | days |  | No modal on first mobile visit · mobile E2E |
