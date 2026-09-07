@@ -2,243 +2,26 @@ import { Extension } from '@tiptap/core';
 import { ReactRenderer } from '@tiptap/react';
 import Suggestion, { exitSuggestion } from '@tiptap/suggestion';
 import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
+import { SLASH_EDITOR_COMMANDS } from '../editor/editorCommands';
+import { getSlashMenuPosition } from '../editor/slashMenuPosition';
 import { CommandList, type CommandListRef, type SlashCommandItem } from './SlashCommandList';
 
-// Timestamp formatting functions
-function formatDate(): string {
-  return new Date().toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
+const slashCommandItems: SlashCommandItem[] = SLASH_EDITOR_COMMANDS.map((definition) => ({
+  title: definition.label,
+  description: definition.description,
+  icon: definition.shortLabel,
+  searchTerms: [definition.id, ...definition.searchTerms],
+  command: ({ editor, range }) => definition.run({ editor }, range),
+}));
 
-function formatTime(): string {
-  return new Date().toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-}
-
-function formatDateTime(): string {
-  return `${formatDate()} at ${formatTime()}`;
-}
-
-// Slash command icons
-const icons = {
-  heading1: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h8" />
-    </svg>
-  ),
-  heading2: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h10" />
-    </svg>
-  ),
-  heading3: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h6" />
-    </svg>
-  ),
-  bulletList: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h.01M8 6h12M4 12h.01M8 12h12M4 18h.01M8 18h12" />
-    </svg>
-  ),
-  numberedList: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h.01M8 6h12M4 12h.01M8 12h12M4 18h.01M8 18h12" />
-      <text x="2" y="7" fontSize="5" fill="currentColor" stroke="none">1</text>
-    </svg>
-  ),
-  todoList: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-    </svg>
-  ),
-  quote: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4z" />
-    </svg>
-  ),
-  code: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-    </svg>
-  ),
-  highlight: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-    </svg>
-  ),
-  divider: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 12h16" />
-    </svg>
-  ),
-  date: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  ),
-  time: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  now: (
-    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-};
-
-const slashCommandItems: SlashCommandItem[] = [
-  {
-    title: 'Link', description: 'Insert or edit a link', searchTerms: ['url', 'href', 'link'],
-    icon: <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-2 2M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l2-2" /></svg>,
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).run();
-      editor.view.dom.dispatchEvent(new Event('yidhan:edit-link', { bubbles: true }));
-    },
-  },
-  // Headings
-  {
-    title: 'Heading 1',
-    description: 'Large section heading',
-    icon: icons.heading1,
-    searchTerms: ['h1', 'heading', 'title', 'large'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).setNode('heading', { level: 1 }).run();
-    },
-  },
-  {
-    title: 'Heading 2',
-    description: 'Medium section heading',
-    icon: icons.heading2,
-    searchTerms: ['h2', 'heading', 'subtitle', 'medium'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).setNode('heading', { level: 2 }).run();
-    },
-  },
-  {
-    title: 'Heading 3',
-    description: 'Small section heading',
-    icon: icons.heading3,
-    searchTerms: ['h3', 'heading', 'small'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).setNode('heading', { level: 3 }).run();
-    },
-  },
-  // Lists
-  {
-    title: 'Bullet List',
-    description: 'Create a bullet point list',
-    icon: icons.bulletList,
-    searchTerms: ['bullet', 'list', 'unordered', 'ul'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleBulletList().run();
-    },
-  },
-  {
-    title: 'Numbered List',
-    description: 'Create a numbered list',
-    icon: icons.numberedList,
-    searchTerms: ['numbered', 'list', 'ordered', 'ol', 'number'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleOrderedList().run();
-    },
-  },
-  {
-    title: 'Todo List',
-    description: 'Create a task checklist',
-    icon: icons.todoList,
-    searchTerms: ['todo', 'task', 'checkbox', 'check', 'checklist'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleTaskList().run();
-    },
-  },
-  // Block formatting
-  {
-    title: 'Quote',
-    description: 'Add a block quote',
-    icon: icons.quote,
-    searchTerms: ['quote', 'blockquote', 'callout'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleBlockquote().run();
-    },
-  },
-  {
-    title: 'Code Block',
-    description: 'Add a code snippet',
-    icon: icons.code,
-    searchTerms: ['code', 'codeblock', 'pre', 'snippet'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleCodeBlock().run();
-    },
-  },
-  {
-    title: 'Highlight',
-    description: 'Highlight text with color',
-    icon: icons.highlight,
-    searchTerms: ['highlight', 'mark', 'background', 'color'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleHighlight().run();
-    },
-  },
-  // Divider
-  {
-    title: 'Divider',
-    description: 'Insert horizontal line',
-    icon: icons.divider,
-    searchTerms: ['divider', 'hr', 'line', 'separator'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).setHorizontalRule().run();
-    },
-  },
-  // Timestamps
-  {
-    title: 'Date',
-    description: 'Insert current date',
-    icon: icons.date,
-    searchTerms: ['date', 'today', 'day'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).insertContent(formatDate()).run();
-    },
-  },
-  {
-    title: 'Time',
-    description: 'Insert current time',
-    icon: icons.time,
-    searchTerms: ['time', 'clock', 'hour'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).insertContent(formatTime()).run();
-    },
-  },
-  {
-    title: 'Now',
-    description: 'Insert date and time',
-    icon: icons.now,
-    searchTerms: ['now', 'timestamp', 'datetime'],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).insertContent(formatDateTime()).run();
-    },
-  },
-];
-
-// Filter items based on query
 function filterItems(query: string): SlashCommandItem[] {
-  const lowerQuery = query.toLowerCase();
-  return slashCommandItems.filter((item) => {
-    const titleMatch = item.title.toLowerCase().includes(lowerQuery);
-    const searchMatch = item.searchTerms.some((term) => term.includes(lowerQuery));
-    return titleMatch || searchMatch;
-  });
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  return slashCommandItems.filter((item) => (
+    item.title.toLocaleLowerCase().includes(normalizedQuery)
+    || item.searchTerms.some((term) => term.toLocaleLowerCase().includes(normalizedQuery))
+  ));
 }
 
-// Create the slash command extension
 export const SlashCommand = Extension.create({
   name: 'slashCommand',
 
@@ -254,9 +37,7 @@ export const SlashCommand = Extension.create({
           editor: SuggestionProps['editor'];
           range: SuggestionProps['range'];
           props: SlashCommandItem;
-        }) => {
-          props.command({ editor, range });
-        },
+        }) => props.command({ editor, range }),
       },
     };
   },
@@ -270,70 +51,74 @@ export const SlashCommand = Extension.create({
         render: () => {
           let component: ReactRenderer<CommandListRef> | null = null;
           let popup: HTMLDivElement | null = null;
+          let latestProps: SuggestionProps | null = null;
+
+          const positionPopup = () => {
+            const anchor = latestProps?.clientRect?.();
+            if (!popup || !anchor) return;
+            const menu = popup.getBoundingClientRect();
+            const position = getSlashMenuPosition(anchor, menu, {
+              width: window.innerWidth,
+              height: window.innerHeight,
+            });
+            popup.style.left = `${position.left}px`;
+            popup.style.top = `${position.top}px`;
+            popup.style.maxHeight = `${position.maxHeight}px`;
+            popup.dataset.placement = position.placement;
+          };
+
+          const destroyPopup = () => {
+            document.removeEventListener('scroll', positionPopup, true);
+            window.removeEventListener('resize', positionPopup);
+            popup?.remove();
+            component?.destroy();
+            popup = null;
+            component = null;
+            latestProps = null;
+          };
+
+          const updateComponent = (props: SuggestionProps) => {
+            latestProps = props;
+            component?.updateProps({
+              items: props.items as SlashCommandItem[],
+              command: (item: SlashCommandItem) => props.command(item),
+            });
+            positionPopup();
+          };
 
           return {
             onStart: (props: SuggestionProps) => {
+              latestProps = props;
               component = new ReactRenderer(CommandList, {
                 props: {
-                  // Tiptap's Suggestion types items as unknown[]; they are SlashCommandItem[] because filterItems() supplies them
                   items: props.items as SlashCommandItem[],
-                  command: (item: SlashCommandItem) => {
-                    props.command(item);
-                  },
+                  command: (item: SlashCommandItem) => props.command(item),
                 },
                 editor: props.editor,
               });
-
               popup = document.createElement('div');
               popup.dataset.editorPopover = 'slash';
+              popup.className = 'slash-command-popup';
               popup.style.position = 'fixed';
               popup.style.zIndex = '50';
-              document.body.appendChild(popup);
               popup.appendChild(component.element);
-
-              const rect = props.clientRect?.();
-              if (rect) {
-                popup.style.left = `${rect.left}px`;
-                popup.style.top = `${rect.bottom + 8}px`;
-              }
+              document.body.appendChild(popup);
+              document.addEventListener('scroll', positionPopup, true);
+              window.addEventListener('resize', positionPopup);
+              positionPopup();
+              requestAnimationFrame(positionPopup);
             },
-
-            onUpdate: (props: SuggestionProps) => {
-              if (component) {
-                component.updateProps({
-                  // Same Tiptap Suggestion type widening — safe because filterItems() produces SlashCommandItem[]
-                  items: props.items as SlashCommandItem[],
-                  command: (item: SlashCommandItem) => {
-                    props.command(item);
-                  },
-                });
-              }
-
-              if (popup && props.clientRect) {
-                const rect = props.clientRect();
-                if (rect) {
-                  popup.style.left = `${rect.left}px`;
-                  popup.style.top = `${rect.bottom + 8}px`;
-                }
-              }
-            },
-
+            onUpdate: updateComponent,
             onKeyDown: (props: SuggestionKeyDownProps) => {
               if (props.event.key === 'Escape') {
                 props.event.preventDefault();
+                props.event.stopPropagation();
                 exitSuggestion(props.view);
                 return true;
               }
-
               return component?.ref?.onKeyDown(props) ?? false;
             },
-
-            onExit: () => {
-              popup?.remove();
-              component?.destroy();
-              popup = null;
-              component = null;
-            },
+            onExit: destroyPopup,
           };
         },
       }),

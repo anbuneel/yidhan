@@ -7,7 +7,15 @@ import { createMockNote, createMockTag } from '../test/factories';
 import { useAuth } from '../contexts/AuthContext';
 import * as exportImport from '../utils/exportImport';
 
-const keyboardEditor = vi.hoisted(() => ({ commands: { focus: vi.fn(), setContent: vi.fn() } }));
+const keyboardEditor = vi.hoisted(() => ({
+  commands: { focus: vi.fn(), setContent: vi.fn() },
+  isFocused: false,
+  state: { selection: { empty: true, from: 1, to: 1 } },
+  chain: vi.fn(() => ({
+    extendMarkRange: vi.fn(() => ({ run: vi.fn() })),
+  })),
+}));
+const editorReadyControl = vi.hoisted(() => ({ current: true }));
 
 // Mock dependencies
 vi.mock('../contexts/AuthContext', () => ({
@@ -16,7 +24,9 @@ vi.mock('../contexts/AuthContext', () => ({
 
 vi.mock('./RichTextEditor', () => ({
   RichTextEditor: ({ content, onChange, onBlur, onEditorReady }: { content: string; onChange: (c: string) => void; onBlur: () => void; onEditorReady: (editor: unknown) => void }) => (
-    <div data-testid="rich-text-editor" onBlur={onBlur} ref={() => onEditorReady(keyboardEditor)}>
+    <div data-testid="rich-text-editor" onBlur={onBlur} ref={() => {
+      if (editorReadyControl.current) onEditorReady(keyboardEditor);
+    }}>
       <textarea
         data-testid="editor-content"
         value={content}
@@ -30,6 +40,16 @@ vi.mock('./EditorSidebar', () => ({ EditorSidebar: () => null }));
 
 vi.mock('./EditorToolbar', () => ({
   EditorToolbar: () => <div data-testid="editor-toolbar">Toolbar</div>,
+}));
+
+vi.mock('./FindReplacePanel', () => ({
+  FindReplacePanel: ({ onClose }: { onClose: () => void }) => (
+    <section aria-label="Find and replace"><button type="button" onClick={onClose}>Close find</button></section>
+  ),
+}));
+
+vi.mock('./LinkPopover', () => ({
+  LinkPopover: () => <section role="dialog" aria-label="Edit link" />,
 }));
 
 vi.mock('./TagSelector', () => ({
@@ -55,16 +75,19 @@ vi.mock('./HeaderShell', () => ({
   HeaderShell: ({
     onThemeToggle,
     leftContent,
-    rightActions
+    rightActions,
+    center,
   }: {
     theme: string;
     onThemeToggle: () => void;
     leftContent?: React.ReactNode;
     rightActions?: React.ReactNode;
+    center?: React.ReactNode;
   }) => (
     <div data-testid="header-shell">
       <div data-testid="header-left">{leftContent}</div>
       <button type="button" onClick={onThemeToggle}>Toggle Theme</button>
+      <div data-testid="header-center">{center}</div>
       <div data-testid="header-right">{rightActions}</div>
     </div>
   ),
@@ -110,6 +133,9 @@ describe('Editor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    keyboardEditor.isFocused = false;
+    keyboardEditor.state.selection = { empty: true, from: 1, to: 1 };
+    editorReadyControl.current = true;
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.mocked(useAuth).mockReturnValue({
       user: {
@@ -171,6 +197,12 @@ describe('Editor', () => {
       expect(screen.getByDisplayValue('Test Note')).toBeInTheDocument();
     });
 
+    it('keeps the mobile header title slot empty and uses the dynamic viewport height', () => {
+      render(<Editor {...defaultProps} />);
+      expect(screen.getByTestId('header-center')).toBeEmptyDOMElement();
+      expect(screen.getByTestId('note-editor')).toHaveClass('h-[100dvh]');
+    });
+
     it('renders the header with title in breadcrumb', () => {
       render(<Editor {...defaultProps} />);
       // The header left content should include the note title
@@ -180,7 +212,7 @@ describe('Editor', () => {
 
     it('renders the editor toolbar', () => {
       render(<Editor {...defaultProps} />);
-      expect(screen.getByTestId('editor-toolbar')).toBeInTheDocument();
+      expect(screen.getAllByTestId('editor-toolbar')).toHaveLength(2);
     });
 
     it('renders the tag selector', () => {
@@ -507,6 +539,43 @@ describe('Editor', () => {
   });
 
   describe('keyboard shortcuts', () => {
+    it('opens find and replace while focus mode is active', () => {
+      render(<Editor {...defaultProps} />);
+      fireEvent.keyDown(window, { key: 'f', ctrlKey: true, shiftKey: true });
+      expect(screen.getByText('Focus mode on')).toBeInTheDocument();
+      fireEvent.keyDown(window, { key: 'f', ctrlKey: true });
+      expect(screen.getByRole('region', { name: 'Find and replace' })).toBeInTheDocument();
+    });
+
+    it('does not overlap find and replace with an open editor menu', () => {
+      const menu = document.createElement('div');
+      menu.setAttribute('role', 'menu');
+      document.body.appendChild(menu);
+      try {
+        render(<Editor {...defaultProps} />);
+        const event = new KeyboardEvent('keydown', {
+          key: 'f',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        });
+        window.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(true);
+        expect(screen.queryByRole('region', { name: 'Find and replace' })).not.toBeInTheDocument();
+      } finally {
+        menu.remove();
+      }
+    });
+
+    it('does not queue find and replace before the editor is ready', () => {
+      editorReadyControl.current = false;
+      const { rerender } = render(<Editor {...defaultProps} />);
+      fireEvent.keyDown(window, { key: 'f', ctrlKey: true });
+
+      editorReadyControl.current = true;
+      rerender(<Editor {...defaultProps} />);
+      expect(screen.queryByRole('region', { name: 'Find and replace' })).not.toBeInTheDocument();
+    });
     it('saves and goes back on Escape', async () => {
       const onBack = vi.fn();
       const onUpdate = vi.fn().mockResolvedValue(undefined);
@@ -540,7 +609,55 @@ describe('Editor', () => {
       });
     });
 
-    it('saves and requests search on Cmd+K', async () => {
+    it('opens Link at a collapsed editor caret on unshifted Ctrl/Cmd+K', () => {
+      const onRequestSearch = vi.fn();
+      keyboardEditor.isFocused = true;
+      keyboardEditor.state.selection = { empty: true, from: 1, to: 1 };
+      render(<Editor {...defaultProps} onRequestSearch={onRequestSearch} />);
+
+      fireEvent.keyDown(document, {
+        key: 'k',
+        code: 'KeyK',
+        ctrlKey: true,
+      });
+
+      expect(screen.getByRole('dialog', { name: 'Edit link' })).toBeInTheDocument();
+      expect(keyboardEditor.chain).toHaveBeenCalled();
+      expect(onRequestSearch).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The shortcuts modal and `docs/ui-layout.md` both promise Cmd/Ctrl+K focuses
+     * search. The editor rebinds it to Link only while the cursor is in the note; with
+     * focus anywhere else on the screen the promise has to hold. It briefly did not:
+     * the unfocused branch returned without acting and without preventing default, so
+     * the key did nothing and the browser took it to its own address bar.
+     */
+    it('reaches search on unshifted Cmd+K when the cursor is not in the note', async () => {
+      const onRequestSearch = vi.fn();
+      const onUpdate = vi.fn().mockResolvedValue(undefined);
+      keyboardEditor.isFocused = false;
+      render(<Editor {...defaultProps} onUpdate={onUpdate} onRequestSearch={onRequestSearch} />);
+
+      const titleInput = screen.getByDisplayValue('Test Note');
+      fireEvent.change(titleInput, { target: { value: 'Changed' } });
+
+      const notPrevented = fireEvent.keyDown(document, {
+        key: 'k',
+        code: 'KeyK',
+        metaKey: true,
+      });
+
+      // fireEvent returns false when the handler called preventDefault. Without it the
+      // browser takes Cmd/Ctrl+K to its address bar and the reader loses the keystroke.
+      expect(notPrevented).toBe(false);
+      await waitFor(() => {
+        expect(onRequestSearch).toHaveBeenCalled();
+      });
+      expect(screen.queryByRole('dialog', { name: 'Edit link' })).not.toBeInTheDocument();
+    });
+
+    it('saves and requests search on Cmd+Shift+K', async () => {
       const onRequestSearch = vi.fn();
       const onUpdate = vi.fn().mockResolvedValue(undefined);
       render(<Editor {...defaultProps} onUpdate={onUpdate} onRequestSearch={onRequestSearch} />);
@@ -551,6 +668,7 @@ describe('Editor', () => {
       fireEvent.keyDown(document, {
         key: 'K',
         metaKey: true,
+        shiftKey: true,
       });
 
       await waitFor(() => {
@@ -559,7 +677,7 @@ describe('Editor', () => {
       });
     });
 
-    it('does not request search when save fails on Cmd+K', async () => {
+    it('does not request search when save fails on Cmd+Shift+K', async () => {
       const onRequestSearch = vi.fn();
       const onUpdate = vi.fn().mockRejectedValue(new Error('save failed'));
       render(<Editor {...defaultProps} onUpdate={onUpdate} onRequestSearch={onRequestSearch} />);
@@ -570,6 +688,7 @@ describe('Editor', () => {
       fireEvent.keyDown(document, {
         key: 'K',
         ctrlKey: true,
+        shiftKey: true,
       });
 
       await waitFor(() => {

@@ -5,8 +5,14 @@ import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
+import { DOMParser as ProseMirrorDOMParser } from '@tiptap/pm/model';
+import type { EditorView } from '@tiptap/pm/view';
 import { useEffect, useEffectEvent, useRef, useMemo, useCallback, useState } from 'react';
 import { SlashCommand } from './SlashCommand';
+import { FindReplace } from '../editor/FindReplace';
+import { SmartTypography } from '../editor/SmartTypography';
+import { markdownToHtml } from '../utils/exportImport';
+import { sanitizeHtml } from '../utils/sanitize';
 import {
   saveCursorPosition as persistCursorPosition,
   getEditorPosition,
@@ -34,6 +40,28 @@ const cursorPositionCache = new Map<string, { from: number; to: number }>();
 
 // Track which notes have had their initial focus applied (for new notes)
 const initialFocusApplied = new Set<string>();
+
+function isMarkdownClipboardText(text: string): boolean {
+  return /(^|\n)\s*(?:#{1,6}\s|>|[-*+]\s|\d+\.\s|```|---\s*$)/m.test(text)
+    || /(?:\*\*[^*]+\*\*|~~[^~]+~~|`[^`]+`|\[[^\]]+\]\([^)]+\))/.test(text);
+}
+
+function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
+  const clipboard = event.clipboardData;
+  if (!clipboard || clipboard.getData('text/html').trim()) return false;
+
+  const text = clipboard.getData('text/plain');
+  if (!text || !isMarkdownClipboardText(text)) return false;
+
+  event.preventDefault();
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = sanitizeHtml(markdownToHtml(text));
+  const slice = ProseMirrorDOMParser.fromSchema(view.state.schema).parseSlice(wrapper, {
+    preserveWhitespace: true,
+  });
+  view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView().setMeta('paste', true));
+  return true;
+}
 
 // Get cursor position: prefer in-memory cache (fast), fallback to localStorage (cross-session)
 function getCursorPosition(noteId: string): CursorPosition | null {
@@ -102,6 +130,8 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
     TaskItem.configure({
       nested: true,
     }),
+    SmartTypography,
+    FindReplace,
     SlashCommand,
   ], []);
 
@@ -118,6 +148,7 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
       attributes: {
         class: 'prose-editor',
       },
+      handlePaste,
     },
   });
 
