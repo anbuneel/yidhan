@@ -48,16 +48,18 @@ Fix what is broken. Items 1 to 22 are all small, need no Mac, no migration, and 
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
-| 1 | Editor | `Enter` in the title moves focus to the body at position 0 | days |  | Typing a title and pressing Enter puts the caret in the body · E2E keystroke test |
-| 2 | Editor | `Escape` handler returns early on `defaultPrevented` or any open popover; slash menu calls `preventDefault` | days |  | Escape on the slash menu closes only the menu; note stays open · E2E test |
-| 3 | Editor | Link extension: `openOnClick: false`, link popover (insert, edit, remove), entries in toolbar, sidebar, slash menu; `Cmd+K` with a selection inserts a link | days |  | A link can be added, edited, and removed by mouse; clicking one stays in the app · E2E test |
-| 4 | Editor | Remove the duplicate `Underline` registration | days |  | No Tiptap duplicate-name warning · console assertion in the editor unit test |
 | 5 | Saving | Every exit path checks the save result; a failed save keeps the draft, shows a persistent "Not saved" state with Retry and Copy, visible in focus mode | days |  | the note stays open with the state on screen until the save succeeds or the user copies · E2E with a forced `onUpdate` rejection |
 | 6 | Saving | Maximum save interval of 10 s during continuous typing; encrypted local checkpoint | days |  | the killed tab loses at most the last 10 s; reopening shows the checkpoint · E2E |
 | 7 | Saving | Save indicator distinguishes "Saved on this device" from "Synced"; never implies another device has text before the server confirms the revision | days |  | Offline typing shows "Saved here", "Synced" appears only after the server acknowledges · unit test on the status state machine |
 | 8 | Sync | `note_tags` pulled incrementally and subscribed in realtime | days |  | A tag added on device A appears on device B within the #80 cross-device budget without re-login · two-client integration test |
 | 9 | Sync | Conflict modal decrypts both sides: title, excerpt, word count, device and time, paragraph-level diff; both versions preserved until the user chooses | days |  | Both cards show readable text and a diff; choosing either keeps the other as a revision (#59) or a copy · component test with two ciphertexts |
 | 10 | Sync | Replace the `Math.max(...spread)` cursor computation | days |  | Cursor computed by reduce · unit test at 100k rows |
+| 11 | Search | Memoize plaintext per note keyed on `contentHash`; memoize the card snippet | days |  | No `DOMParser` work per keystroke after the first query · profiler assertion in a unit test with 2,000 notes |
+| 12 | Search | Delete `searchNotesOffline`, `searchDecryptedNotes`, and the stale "focused-gaze" comment | days |  | Dead code gone · lint passes with the unused-export rule on |
+| 13 | Phone | Replace the "Quick gesture" modal with a one-line caption under the first card | days |  | No modal on first mobile visit · mobile E2E |
+| 14 | Phone | Time ribbon gets its own room: bottom padding, hidden near the footer, hidden under 20 notes | days |  | No overlap on a 390 px viewport · mobile E2E and visual regression |
+| 15 | Onboarding | Practice Space starter note and landing seal say plainly that drafts are not encrypted until signed up | days |  | No screen claims encryption for localStorage content · copy review and a text assertion in the demo E2E |
+| 16 | Keys and privacy | Remove the GET `share_target` from the manifest until #47 ships; the in-app paste path remains; note the removal in the changelog | days |  | The manifest has no `share_target`; no request to any server can carry shared text · manifest assertion in the build test |
 | 17 | Import and export | Lossless Markdown round-trip: highlight, underline, `h4` to `h6`, alignment | days |  | Editor HTML → Markdown → HTML → sanitized equals the original for every construct the editor can produce · property test |
 | 18 | Import and export | Import accepts the v2 full-account backup; share rows labelled from decrypted titles | days |  | The offboarding export re-imports with identical note count, tags, pinned state, and timestamps · E2E |
 | 19 | Sharing | Replace obsolete sharing expectations with current ones: remove the "never expires" case; the anonymous-view test must carry the `#k=` fragment and decrypt; assert the 30-day cap and the `/s/<token>/<slug>` route | days |  | The sharing suite passes against current behaviour and fails if the fragment is dropped · E2E |
@@ -197,6 +199,7 @@ Items 23 to 34 are the five things that change what the product is: a recovery k
 | 146 | Process | Re-validate Quiet Intelligence against the privacy and writing goals; keep publishing, collaboration, databases, graph view, and cloud AI deferred until demand is observed | days | Start when #87 findings available | Decision recorded per idea · doc |
 | 147 | Process | Keep `docs/prd.md`, `docs/roadmap.md`, and `src/data/roadmap.ts` in step with each shipped phase; mark ledger items done with their PR | days | Start when every phase exit | Docs match shipped behaviour · review at phase exit |
 
+| 150 | Sync | Reconcile pre-existing queued writes when accepting a conflict version; stale updates can remain queued after resolution | days | Needs #9 | Choosing the remote version cannot later replay an older local queued payload · integration test |
 | 151 | Testing | Enable repository-wide unused-export lint with an audited legacy baseline | days | Needs #12, #20 | Real unused-export rule runs in CI without hiding new unused code |
 | 152 | Onboarding | Correct the old encryption claim in existing untouched demo starter copies without changing user-authored drafts | days | No local-data migrations in current scope | Existing unedited starter copies show the current privacy copy |
 
@@ -206,6 +209,16 @@ Items 23 to 34 are the five things that change what the product is: a recovery k
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
+| 1 | Editor | `Enter` in the title moves focus to the body at position 0 | days |  | Typing a title and pressing Enter puts the caret in the body · integrated-browser keystroke verification (owner override: no Playwright) |
+| 2 | Editor | `Escape` handler returns early on `defaultPrevented` or any open popover; slash menu calls `preventDefault` | days |  | Escape on the slash menu closes only the menu; note stays open · editor unit tests and integrated-browser verification (owner override: no Playwright) |
+| 3 | Editor | Link extension: `openOnClick: false`, link popover (insert, edit, remove), entries in toolbar, sidebar, slash menu; `Cmd+K` with a selection inserts a link | days |  | A link can be added, edited, and removed by mouse; clicking one stays in the app · component tests and integrated-browser verification (owner override: no Playwright) |
+| 4 | Editor | Remove the duplicate `Underline` registration | days |  | No Tiptap duplicate-name warning · console assertion in the editor unit test |
+| 5 | Saving | Every exit path checks the save result; a failed save keeps the draft, shows a persistent "Not saved" state with Retry and Copy, visible in focus mode | days |  | the note stays open with the state on screen until the save succeeds or the user copies · component tests with forced `onUpdate` rejection (owner override: no Playwright) |
+| 6 | Saving | Maximum save interval of 10 s during continuous typing; encrypted local checkpoint | days |  | the killed tab loses at most the last 10 s; reopening shows the checkpoint · timer component test and encrypted persistence/reopen integration test (owner override: no Playwright) |
+| 7 | Saving | Save indicator distinguishes "Saved on this device" from "Synced"; never implies another device has text before the server confirms the revision | days |  | Offline typing shows "Saved here", "Synced" appears only after the server acknowledges · unit test on the status state machine |
+| 8 | Sync | `note_tags` reconciled per changed note in realtime, with paginated catch-up (no timestamp column) | days |  | A tag added on device A appears on device B within the #80 cross-device budget without re-login · two-client integration test with isolated local stores and simulated transport; live p95 budget remains unverified |
+| 9 | Sync | Conflict modal decrypts both sides: title, excerpt, word count, device and time, paragraph-level diff; both versions preserved until the user chooses | days |  | Both cards show readable text and a diff; choosing either keeps the other as a revision (#59) or a copy · component test with two ciphertexts |
+| 10 | Sync | Replace the `Math.max(...spread)` cursor computation | days |  | Cursor computed by reduce · unit test at 100k rows |
 | 11 | Search | Memoize plaintext per note keyed on `contentHash`; memoize the card snippet | days |  | No `DOMParser` work per keystroke after the first query · profiler assertion in a unit test with 2,000 notes |
 | 12 | Search | Delete `searchNotesOffline`, `searchDecryptedNotes`, and the stale "focused-gaze" comment | days |  | Dead code gone · lint passes with removed-export bans; repository-wide unused-export lint deferred to #151 |
 | 13 | Phone | Replace the "Quick gesture" modal with a one-line caption under the first card | days |  | No modal on first mobile visit · component test and integrated-browser check |
@@ -476,3 +489,5 @@ Items 23 to 34 are the five things that change what the product is: a recovery k
 | A | A Worker gives execution isolation, not protected persistent storage | Accepted | #102 rewritten to say exactly that and to point persistent protection at #135 and #106 |
 | B | "JSON behind the same sanitizer" is insufficient; the sanitizer takes HTML strings (`src/utils/sanitize.ts:57`) | Yes | #31 rewritten: JSON is canonical with a `docVersion`, validated against the editor schema, HTML derived for display and export, older clients open newer documents read-only |
 | C | Generate issues incrementally for ready work | Declined by the repository owner | The ledger and Board remain the tracker (#148) |
+| 149 | Testing | Stabilize the existing PassphraseUnlock component tests under CPU contention; an untouched full-suite run timed out during typing and leaked partial input into the next case | days | No key-behavior changes | Repeated suite runs isolate cleanup and pass under load |
+

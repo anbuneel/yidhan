@@ -23,6 +23,7 @@ export interface Note {
   encryptionIv?: string | null;
   encryptionVersion?: number | null;
   contentHash?: string | null;
+  confirmedContentHash?: string | null;
 }
 
 export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded' | 'privacy' | 'terms' | 'support';

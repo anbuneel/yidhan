@@ -6,6 +6,8 @@
  */
 
 import { Capacitor } from '@capacitor/core';
+import { latestSyncTime } from '../utils/syncCursor';
+import { reconcileNoteTags } from './noteTagSync';
 import { supabase, fetchAllPaginated } from '../lib/supabase';
 import {
   getOfflineDb,
@@ -524,13 +526,13 @@ async function processNoteOperation(
       // Check if note already exists on server (idempotency)
       const { data: existing } = await supabase
         .from('notes')
-        .select('id, updated_at')
+        .select('id, updated_at, content_hash')
         .eq('id', noteId)
         .maybeSingle();
 
       if (existing) {
         // Already created, mark as synced using server timestamp
-        await markNoteSynced(userId, noteId, new Date(existing.updated_at));
+        await markNoteSynced(userId, noteId, new Date(existing.updated_at), existing.content_hash);
         return true;
       }
 
@@ -569,7 +571,7 @@ async function processNoteOperation(
         );
       }
 
-      await markNoteSynced(userId, noteId, createdAt);
+      await markNoteSynced(userId, noteId, createdAt, encryptedPayload.content_hash);
       return true;
     }
 
@@ -647,7 +649,10 @@ async function processNoteOperation(
       // Note no longer exists locally — nothing left to sync.
       if (!updatedAt) return true;
 
-      await markNoteSynced(userId, noteId, updatedAt);
+      // The reinsert path writes encryptedPayload.content_hash verbatim, so the
+      // confirmed hash is already in scope — no second round trip needed.
+      const confirmedHash = updated ? updated.content_hash : encryptedPayload.content_hash;
+      await markNoteSynced(userId, noteId, updatedAt, confirmedHash);
       return true;
     }
 
@@ -1271,7 +1276,12 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
   // Compute pull cursor from synced entries only (pending/conflict may have skewed timestamps)
   const allNotes = await db.notes.toArray();
   const syncedNotes = allNotes.filter(n => n.syncStatus === 'synced');
-  const lastSync = Math.max(...syncedNotes.map(n => n.lastSyncedAt || 0), 0);
+  // Older local records have no hash acknowledgement. Read the server again
+  // before claiming they are synced; a local status alone is not confirmation.
+  const needsConfirmation = syncedNotes.some(note => note.confirmedContentHash === undefined);
+  // latestSyncTime filters to synced rows itself, and reduces rather than
+  // spreading, which a large library would overflow the call stack on.
+  const lastSync = needsConfirmation ? 0 : latestSyncTime(allNotes);
 
   // --- Note data pull (always runs, no early return) ---
   // Full pull when lastSync is 0 (empty DB, post-migration, or failed hydration);
@@ -1324,6 +1334,7 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
       encryptionIv: serverNote.encryption_iv ?? null,
       encryptionVersion: serverNote.encryption_version ?? null,
       contentHash: serverNote.content_hash ?? null,
+      confirmedContentHash: serverNote.content_hash ?? null,
     });
     pulledNotes++;
   }
@@ -1347,12 +1358,24 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
     }
   }
 
+  // A full pull that completed cleanly is the confirmation pass for legacy
+  // records. Any synced note still lacking an acknowledgement was not returned
+  // by it, so record that honestly — the note reads "Saved here" rather than
+  // "Synced" — instead of letting one stray record force a full-table scan on
+  // every sync from here on.
+  if (!notesError && lastSync === 0) {
+    const unconfirmed = (await db.notes.toArray())
+      .filter(n => n.syncStatus === 'synced' && n.confirmedContentHash === undefined);
+    for (const note of unconfirmed) {
+      await db.notes.update(note.id, { confirmedContentHash: null });
+    }
+  }
+
   // --- Tag data pull (always runs regardless of notes outcome) ---
   // Tags currently lack updated_at, so fetch all (full pull).
   // When tags.updated_at migration lands, this will become incremental.
   const localTags = await db.tags.toArray();
-  const syncedTags = localTags.filter(t => t.syncStatus === 'synced');
-  const lastTagSync = Math.max(...syncedTags.map(t => t.lastSyncedAt || 0), 0);
+  const lastTagSync = latestSyncTime(localTags);
 
   // Try incremental tag pull first; fall back to full pull if column doesn't exist
   let tagResult = lastTagSync > 0
@@ -1434,6 +1457,14 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
     }
   }
 
+  // Deliberately every pull, not only on reconnect. note_tags has no
+  // updated_at, so there is no incremental query to run: the realtime channel
+  // is the only steady-state signal, and a dropped event would otherwise go
+  // uncorrected until the next reconnect. Paying a paginated membership scan
+  // per cycle is the price of tags that cannot silently diverge. Revisit when
+  // note_tags gains a timestamp column and this can become incremental.
+  try { pulledTags += await reconcileNoteTags(userId); }
+  catch (error) { errors.push({ entity: 'tags', operation: 'membership', error: error instanceof Error ? error : new Error('Could not refresh tag links') }); }
   return { pulledNotes, pulledTags, deletedNotes, deletedTags, errors };
 }
 

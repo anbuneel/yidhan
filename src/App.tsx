@@ -1,3 +1,4 @@
+import { VaultLockedSaveError } from './utils/saveErrors';
 import { useState, useEffect, useCallback, useEffectEvent, useRef, Suspense, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import type { Note, Tag, ViewMode, Theme } from './types';
@@ -115,7 +116,8 @@ import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { useSessionSettings } from './hooks/useSessionSettings';
 import { useVaultSettings } from './hooks/useVaultSettings';
 import { useIdleTimer } from './hooks/useIdleTimer';
-import { ConflictModal } from './components/ConflictModal';
+import { EncryptedConflictModal as ConflictModal } from './components/EncryptedConflictModal';
+import { subscribeToNoteTags } from './services/noteTagSync';
 import { InstallPrompt } from './components/InstallPrompt';
 import { IOSInstallGuide } from './components/IOSInstallGuide';
 import { SessionTimeoutModal } from './components/SessionTimeoutModal';
@@ -173,6 +175,10 @@ function buildDeletedServerVersion(note: LocalNote): HardDeletedServerNoteVersio
   };
 }
 
+// Long enough to swallow a burst of per-row realtime events, short enough that
+// a single change still lands well inside the cross-device budget.
+const SYNC_REFRESH_COALESCE_MS = 150;
+
 function App() {
   const libraryFooterRef = useRef<HTMLElement>(null);
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
@@ -202,6 +208,22 @@ function App() {
       console.error('Failed to rehydrate after sync:', error);
     }
   }, [user?.id, keys]);
+
+  // Realtime tag events arrive one per row, and each full refresh decrypts the
+  // whole library. Collapse a burst — a bulk retag, or a reconnect replaying
+  // missed events — into a single pass.
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleSyncRefresh = useCallback(() => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => {
+      refreshTimerRef.current = null;
+      void handleSyncComplete();
+    }, SYNC_REFRESH_COALESCE_MS);
+  }, [handleSyncComplete]);
+
+  useEffect(() => () => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+  }, []);
 
   const reportRealtimeDisplayFailure = useCallback((
     operation: 'insert' | 'update',
@@ -732,6 +754,10 @@ function App() {
   // (e.g., when Supabase refreshes the session on tab focus)
   // Wait for hydration to complete so first-time users see their notes from server
   const userId = user?.id;
+  useEffect(() => {
+    if (!userId || !keys) return;
+    return subscribeToNoteTags(userId, scheduleSyncRefresh, () => { void triggerSync(); });
+  }, [userId, keys, triggerSync, scheduleSyncRefresh]);
 
   // Track if we've bypassed hydration due to timeout (state to trigger re-render)
   const [hydrationBypassed, setHydrationBypassed] = useState(false);
@@ -1129,6 +1155,8 @@ function App() {
               if (prev.some((t) => t.id === newTag.id)) return prev;
               return [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name));
             });
+            // Membership and tag-definition events can arrive in either order.
+            scheduleSyncRefresh();
           })
           .catch((error) => {
             console.error('Failed to persist realtime tag insert:', error);
@@ -1141,6 +1169,7 @@ function App() {
             setTags((prev) =>
               prev.map((t) => (t.id === updatedTag.id ? updatedTag : t))
             );
+            scheduleSyncRefresh();
           })
           .catch((error) => {
             console.error('Failed to persist realtime tag update:', error);
@@ -1152,6 +1181,7 @@ function App() {
           .then(() => {
             setTags((prev) => prev.filter((t) => t.id !== deletedId));
             setSelectedTagIds((prev) => prev.filter((id) => id !== deletedId));
+            scheduleSyncRefresh();
           })
           .catch((error) => {
             console.error('Failed to persist realtime tag delete:', error);
@@ -1161,7 +1191,7 @@ function App() {
     );
 
     return () => unsubscribeTags();
-  }, [userId, isHydrating, reportRealtimePersistenceFailure]);
+  }, [userId, isHydrating, reportRealtimePersistenceFailure, scheduleSyncRefresh]);
 
   // Fetch faded notes count when user is authenticated and hydration is complete
   useEffect(() => {
@@ -1327,11 +1357,10 @@ function App() {
   // Writes to IndexedDB immediately, queues for sync
   // Returns a Promise so Editor can track save status accurately
   const handleNoteUpdate = useCallback(async (updatedNote: Note): Promise<void> => {
-    if (!user) return;
-    if (!keys) {
-      toast.error('Vault is locked — changes cannot be saved');
-      return;
-    }
+    // Only the locked vault gets the unlock message; a missing user is a
+    // different failure and must not be told to unlock anything.
+    if (!user) throw new Error('Cannot save without a signed-in user');
+    if (!keys) throw new VaultLockedSaveError();
 
     // Store previous state for potential rollback
     const previousNote = notes.find((n) => n.id === updatedNote.id);
@@ -1347,6 +1376,8 @@ function App() {
       // Sync engine will push encrypted payload to server when online
       const savedNote = await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
 
+      // applySavedNote carries the same late-acknowledgement guard and also
+      // keeps a pin or soft delete that landed mid-save.
       setNotes((prev) => prev.map((n) => applySavedNote(n, savedNote, updatedNote)));
 
       // Trigger coalesced sync (2s after last save) to push changes promptly
@@ -1361,12 +1392,9 @@ function App() {
         );
       }
 
-      // Show error toast
-      toast.error('Failed to save note locally. Please try again.', {
-        duration: 5000,
-      });
-
-      // Re-throw so Editor can show error state
+      // Re-throw so the editor can show its persistent "Not saved" banner,
+      // which carries the Retry and Copy actions. A toast here would be a
+      // second, auto-dismissing notice for the same failure.
       throw error;
     }
   }, [user, keys, notes, triggerCoalescedSync]);
@@ -2551,6 +2579,7 @@ function App() {
 
         {/* Conflict Resolution Modal */}
         <ConflictModal
+          keys={keys}
           conflict={activeConflict}
           onResolve={handleConflictResolve}
           onDismiss={handleConflictDismiss}
@@ -2654,6 +2683,7 @@ function App() {
 
         {/* Conflict Resolution Modal */}
         <ConflictModal
+          keys={keys}
           conflict={activeConflict}
           onResolve={handleConflictResolve}
           onDismiss={handleConflictDismiss}
