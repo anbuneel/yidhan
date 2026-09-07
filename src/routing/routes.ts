@@ -17,7 +17,12 @@ export type Route =
   | { name: 'library' }
   | { name: 'note'; noteId: string }
   | { name: 'faded' }
-  | { name: 'demo' }
+  /**
+   * `newNote` addresses `/demo/new`: open the Practice Space with a fresh, empty note
+   * already in the editor. It is what the mobile "Start writing" button reaches, so
+   * one tap lands on a blinking caret rather than on a library (item 45).
+   */
+  | { name: 'demo'; newNote?: boolean }
   | { name: PublicPageName }
   | { name: 'share'; token: string }
   | { name: 'playground' }
@@ -63,6 +68,7 @@ export function parseRoute(pathname: string, options: ParseRouteOptions = {}): R
   if (path === '/') return { name: 'library' };
   if (path === '/faded') return { name: 'faded' };
   if (path === '/demo') return { name: 'demo' };
+  if (path === '/demo/new') return { name: 'demo', newNote: true };
   if (path === '/playground') {
     return options.allowPlayground ? { name: 'playground' } : { name: 'notFound', path };
   }
@@ -110,7 +116,7 @@ export function routeToPath(route: Route): string {
     case 'faded':
       return '/faded';
     case 'demo':
-      return '/demo';
+      return route.newNote ? '/demo/new' : '/demo';
     case 'playground':
       return '/playground';
     case 'share':
@@ -127,6 +133,9 @@ export function isSameRoute(a: Route, b: Route): boolean {
   if (a.name === 'note' && b.name === 'note') return a.noteId === b.noteId;
   if (a.name === 'share' && b.name === 'share') return a.token === b.token;
   if (a.name === 'notFound' && b.name === 'notFound') return a.path === b.path;
+  // `/demo` and `/demo/new` are the same screen but not the same intent: replacing one
+  // with the other is how the "new note" intent is consumed after it fires.
+  if (a.name === 'demo' && b.name === 'demo') return Boolean(a.newNote) === Boolean(b.newNote);
   return true;
 }
 

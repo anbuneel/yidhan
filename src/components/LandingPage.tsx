@@ -11,6 +11,12 @@ interface LandingPageProps {
   theme: Theme;
   onThemeToggle: () => void;
   onDemoClick: () => void;
+  /**
+   * The Practice Space, opened straight into an empty note. On a phone the in-place
+   * hero reveal fights the keyboard (viewport shift), so "Start writing" routes here
+   * instead — one tap to a blinking caret rather than one tap to a library (item 45).
+   */
+  onDemoDraftClick: () => void;
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
   onPrivacyClick: () => void;
@@ -32,6 +38,7 @@ export function LandingPage({
   theme,
   onThemeToggle,
   onDemoClick,
+  onDemoDraftClick,
   onChangelogClick,
   onRoadmapClick,
   onPrivacyClick,
@@ -102,7 +109,7 @@ export function LandingPage({
 
   const handleStartWriting = () => {
     if (isMobileViewport()) {
-      onDemoClick();
+      onDemoDraftClick();
       return;
     }
     enterWriting();
@@ -110,7 +117,7 @@ export function LandingPage({
 
   const handleCloseStart = () => {
     if (isMobileViewport()) {
-      onDemoClick();
+      onDemoDraftClick();
       return;
     }
     const reducedMotion = prefersReducedMotion();

@@ -78,6 +78,9 @@ function App() {
   }, [navigate, startTransition]);
 
   const navigateToDemo = useCallback(() => navigateToRoute({ name: 'demo' }), [navigateToRoute]);
+  // The mobile "Start writing" path: /demo/new opens the Practice Space already in an
+  // empty note, so the button reaches a caret rather than a library (item 45).
+  const navigateToDemoDraft = useCallback(() => navigateToRoute({ name: 'demo', newNote: true }), [navigateToRoute]);
   const navigateHome = useCallback(() => navigateToRoute({ name: 'library' }), [navigateToRoute]);
 
   const navigateToChangelog = useCallback(() => navigateToRoute({ name: 'changelog' }), [navigateToRoute]);
@@ -422,6 +425,8 @@ function App() {
     },
     nav: publicPageNav,
     onDemoClick: navigateToDemo,
+    onDemoDraftClick: navigateToDemoDraft,
+    onDemoNoteStarted: () => replaceRoute({ name: 'demo' }),
     onSignIn: () => {
       setAuthModalMode('login');
       setShowAuthModal(true);

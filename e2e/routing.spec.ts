@@ -1,5 +1,5 @@
-import { test, expect } from './fixtures';
-import { createNote, deleteNoteFromLibrary } from './fixtures';
+import { test as base, expect } from '@playwright/test';
+import { test, createNote, deleteNoteFromLibrary } from './fixtures';
 
 /**
  * Note addresses — items 28 and 29.
@@ -85,12 +85,58 @@ test.describe('Note addresses', () => {
     await expect(page.getByText(/no longer here/i)).toBeVisible();
   });
 
-  test('a malformed note address is a 404, not a blank page', async ({
-    authenticatedPage: page,
-  }) => {
+});
+
+/**
+ * Addresses that resolve without an account. Unlike the specs above these run in CI
+ * today, so the router itself has real-browser coverage before item 37 lands.
+ */
+base.describe('Addresses without an account', () => {
+  base('a malformed note address is a 404, and keeps the bad URL visible', async ({ page }) => {
     await page.goto('/n/a/b');
 
-    await expect(page.getByText(/404|not found|lost/i).first()).toBeVisible();
+    await expect(page.getByText(/this path leads nowhere/i)).toBeVisible();
     await expect(page).toHaveURL(/\/n\/a\/b$/);
   });
+
+  base('an unknown address is a 404', async ({ page }) => {
+    await page.goto('/definitely-not-a-route');
+
+    await expect(page.getByText(/this path leads nowhere/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/definitely-not-a-route$/);
+  });
+
+  base('a trailing slash names the same place', async ({ page }) => {
+    await page.goto('/privacy/');
+    await expect(page.getByRole('heading', { name: /privacy/i }).first()).toBeVisible();
+  });
+
+  base('the 404 page leads home', async ({ page }) => {
+    await page.goto('/nope');
+    await page.getByRole('button', { name: /return home/i }).click();
+
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  base('public pages push history, so Back returns to where you were', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /privacy/i }).first().click();
+    await expect(page).toHaveURL(/\/privacy$/);
+
+    await page.getByRole('button', { name: /terms/i }).first().click();
+    await expect(page).toHaveURL(/\/terms$/);
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/privacy$/);
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  base('a signed-out visitor at /faded lands on the landing page, not a blank one',
+    async ({ page }) => {
+      await page.goto('/faded');
+
+      await expect(page.getByRole('button', { name: /start writing/i }).first()).toBeVisible();
+    });
 });

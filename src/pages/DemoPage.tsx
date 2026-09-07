@@ -13,6 +13,7 @@ import { useNoteSearch } from '../hooks/useNoteSearch';
 import { useState, useCallback, useEffect, useEffectEvent, useMemo, Suspense, useRef } from 'react';
 import type { Note, Tag, Theme, TagColor } from '../types';
 import { useDemoState } from '../hooks/useDemoState';
+import { hasPracticeWork } from '../services/demoStorage';
 import { useSoftPrompt } from '../hooks/useSoftPrompt';
 import { ImpermanenceRibbon } from '../components/demo/ImpermanenceRibbon';
 import { InvitationModal } from '../components/demo/InvitationModal';
@@ -41,6 +42,13 @@ let lastHandledDemoSearchFocusToken = 0;
 
 interface DemoPageProps {
   onSignUp: () => void;
+  /**
+   * Arrive with an empty note already open (item 45). `/demo/new` is what the mobile
+   * "Start writing" button reaches, so one tap lands on a blinking caret.
+   */
+  startWithNewNote?: boolean;
+  /** Called once the arrival note exists, so the address can drop back to `/demo`. */
+  onNewNoteStarted?: () => void;
   onSignIn: () => void;
   theme: Theme;
   onThemeToggle: () => void;
@@ -54,6 +62,8 @@ interface DemoPageProps {
 
 export function DemoPage({
   onSignUp,
+  startWithNewNote = false,
+  onNewNoteStarted,
   onSignIn,
   theme,
   onThemeToggle,
@@ -98,6 +108,10 @@ export function DemoPage({
 
   // First-run: show welcome intro until user creates their first note
   const hasOnlyStarterNotes = notes.length > 0 && notes.every((n) => n.id.startsWith('starter-'));
+
+  // Anything the reader made — a note of their own, or a starter they edited. It is
+  // exactly what a migration would carry, so the CTA never offers to keep nothing.
+  const hasPracticeWorkToKeep = useMemo(() => hasPracticeWork(notes), [notes]);
 
 
   // View state
@@ -215,6 +229,16 @@ export function DemoPage({
     setSelectedNoteId(newNote.id);
     setView('editor');
   }, [createNote, warmEditorRoute]);
+  // Create the arrival note exactly once. The guard is a ref rather than state
+  // because Strict Mode runs the effect twice, and a second note would be a second
+  // empty draft the reader never asked for.
+  const hasStartedArrivalNote = useRef(false);
+  useEffect(() => {
+    if (!startWithNewNote || loading || hasStartedArrivalNote.current) return;
+    hasStartedArrivalNote.current = true;
+    void handleNewNote().then(() => onNewNoteStarted?.());
+  }, [startWithNewNote, loading, handleNewNote, onNewNoteStarted]);
+
   const handleCreateNoteShortcut = useEffectEvent((e: KeyboardEvent) => {
     if (view !== 'library') return;
     if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
@@ -443,6 +467,8 @@ export function DemoPage({
           theme={theme}
           onThemeToggle={onThemeToggle}
           onNewNote={handleNewNote}
+          showKeepCta={hasPracticeWorkToKeep}
+          onKeep={onSignUp}
           searchFocusToken={searchFocusToken}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
@@ -545,6 +571,15 @@ interface DemoHeaderProps {
   theme: Theme;
   onThemeToggle: () => void;
   onNewNote: () => void;
+  /**
+   * Carrying the practice work into an account is the Practice Space's primary
+   * action (item 46), so it lives in the header rather than only in a dismissible
+   * ribbon and a modal that waits for three notes and five minutes. It appears once
+   * there is something to keep, and New Note steps back to a secondary treatment
+   * while it is there, so there is one primary and not two.
+   */
+  showKeepCta: boolean;
+  onKeep: () => void;
   searchFocusToken: number;
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -556,6 +591,8 @@ function DemoHeader({
   theme,
   onThemeToggle,
   onNewNote,
+  showKeepCta,
+  onKeep,
   searchFocusToken,
   searchQuery,
   onSearchChange,
@@ -714,6 +751,39 @@ function DemoHeader({
         </div>
       }
       rightActions={
+        <div className="flex items-center gap-2">
+        {showKeepCta && (
+          <button
+            type="button"
+            onClick={onKeep}
+            className="
+              px-3 sm:px-4 py-2
+              rounded-full
+              flex items-center gap-2
+              transition-all duration-300
+              focus:outline-none
+              focus:ring-2
+              focus:ring-[var(--color-accent)]
+              focus:ring-offset-2
+              shrink-0
+              touch-press
+            "
+            style={{
+              background: 'var(--color-cta-bg)',
+              color: 'var(--color-cta-text)',
+              boxShadow: '0 4px 20px var(--color-accent-glow)',
+              fontFamily: 'var(--font-body)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--color-cta-bg)';
+            }}
+          >
+            <span className="text-sm font-medium whitespace-nowrap">Keep these notes</span>
+          </button>
+        )}
         <button type="button"
           onClick={onNewNote}
           className="
@@ -728,17 +798,34 @@ function DemoHeader({
             shrink-0
             touch-press
           "
-          style={{
-            background: 'var(--color-cta-bg)',
-            color: 'var(--color-cta-text)',
-            boxShadow: '0 4px 20px var(--color-accent-glow)',
-            fontFamily: 'var(--font-body)',
-          }}
+          style={
+            showKeepCta
+              ? {
+                  background: 'transparent',
+                  color: 'var(--color-accent)',
+                  border: '1px solid var(--glass-border)',
+                  fontFamily: 'var(--font-body)',
+                }
+              : {
+                  background: 'var(--color-cta-bg)',
+                  color: 'var(--color-cta-text)',
+                  boxShadow: '0 4px 20px var(--color-accent-glow)',
+                  fontFamily: 'var(--font-body)',
+                }
+          }
           onMouseEnter={(e) => {
+            if (showKeepCta) {
+              e.currentTarget.style.borderColor = 'var(--color-accent)';
+              return;
+            }
             e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
             e.currentTarget.style.boxShadow = '0 6px 24px var(--color-accent-glow)';
           }}
           onMouseLeave={(e) => {
+            if (showKeepCta) {
+              e.currentTarget.style.borderColor = 'var(--glass-border)';
+              return;
+            }
             e.currentTarget.style.background = 'var(--color-cta-bg)';
             e.currentTarget.style.boxShadow = '0 4px 20px var(--color-accent-glow)';
           }}
@@ -749,6 +836,7 @@ function DemoHeader({
           </svg>
           <span className="hidden sm:inline text-sm font-medium">New Note</span>
         </button>
+        </div>
       }
     />
   );

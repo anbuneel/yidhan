@@ -43,6 +43,14 @@ describe('parseRoute', () => {
     expect(parseRoute('/demo')).toEqual({ name: 'demo' });
   });
 
+  it('reads the demo arrival address', () => {
+    expect(parseRoute('/demo/new')).toEqual({ name: 'demo', newNote: true });
+  });
+
+  it('does not mistake another demo path for the arrival address', () => {
+    expect(parseRoute('/demo/anything')).toEqual({ name: 'notFound', path: '/demo/anything' });
+  });
+
   it('reads every public page', () => {
     for (const page of ['changelog', 'roadmap', 'privacy', 'terms', 'support'] as const) {
       expect(parseRoute(`/${page}`)).toEqual({ name: page });
@@ -89,6 +97,7 @@ describe('routeToPath', () => {
     [{ name: 'note', noteId: 'abc' }, '/n/abc'],
     [{ name: 'faded' }, '/faded'],
     [{ name: 'demo' }, '/demo'],
+    [{ name: 'demo', newNote: true }, '/demo/new'],
     [{ name: 'changelog' }, '/changelog'],
     [{ name: 'support' }, '/support'],
     [{ name: 'playground' }, '/playground'],
@@ -118,6 +127,15 @@ describe('isSameRoute', () => {
     expect(isSameRoute({ name: 'notFound', path: '/a' }, { name: 'notFound', path: '/b' })).toBe(
       false
     );
+  });
+
+  it('separates the demo from the demo with a note waiting', () => {
+    // Replacing one with the other is how the arrival intent is consumed.
+    expect(isSameRoute({ name: 'demo' }, { name: 'demo', newNote: true })).toBe(false);
+    expect(isSameRoute({ name: 'demo', newNote: true }, { name: 'demo', newNote: true })).toBe(
+      true
+    );
+    expect(isSameRoute({ name: 'demo' }, { name: 'demo', newNote: false })).toBe(true);
   });
 
   it('treats parameterless routes of the same name as one place', () => {

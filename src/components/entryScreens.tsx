@@ -40,6 +40,9 @@ export interface EntryScreenProps {
 
   nav: PublicPageNav;
   onDemoClick: () => void;
+  onDemoDraftClick: () => void;
+  /** Drop the `/demo/new` intent once the arrival note exists. */
+  onDemoNoteStarted: () => void;
   onSignIn: () => void;
   onSignUp: () => void;
   onSettingsClick: () => void;
@@ -60,6 +63,8 @@ export function renderEntryScreen({
   onShareInvalid,
   nav,
   onDemoClick,
+  onDemoDraftClick,
+  onDemoNoteStarted,
   onSignIn,
   onSignUp,
   onSettingsClick,
@@ -131,6 +136,8 @@ export function renderEntryScreen({
         <Suspense fallback={<LoadingFallback message="Preparing your practice space..." />}>
           <DemoPage
             onSignUp={onSignUp}
+            startWithNewNote={route.newNote === true}
+            onNewNoteStarted={onDemoNoteStarted}
             onSignIn={onSignIn}
             theme={theme}
             onThemeToggle={onThemeToggle}
@@ -170,6 +177,7 @@ export function renderEntryScreen({
           theme={theme}
           onThemeToggle={onThemeToggle}
           onDemoClick={onDemoClick}
+          onDemoDraftClick={onDemoDraftClick}
           onChangelogClick={nav.onChangelogClick}
           onRoadmapClick={nav.onRoadmapClick}
           onPrivacyClick={nav.onPrivacyClick}

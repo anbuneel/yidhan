@@ -173,3 +173,19 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   pages had been written out five times over, and an `isImporting: true` nobody ever
   read rode along on every import-progress write. The item's `Editor.tsx` half is
   Lane A's, per the file ownership split, and stays open.
+- **2026-09-07** — The Practice Space becomes a place you can start writing and a place
+  you can leave with your words — ledger items 45, 46 and 152. `/demo/new` is a real
+  address: on a phone "Start writing" now reaches a blinking caret in one tap instead
+  of a library, and the intent is consumed by a route replacement so a refresh does not
+  open a second empty draft. A "Keep these notes" CTA sits in the Practice Space header
+  as the primary action, appearing once there is anything a migration would carry, with
+  New Note stepping back to a secondary treatment so there is one primary rather than
+  two; carrying work into an account was previously reachable only through a dismissible
+  ribbon and a modal that waits for three notes and five minutes. And the welcome
+  starter note stops claiming practice drafts are end-to-end encrypted: the source copy
+  was corrected in an earlier release, but `createDefaultState()` only runs for a
+  browser with no stored state, so every existing Practice Space still showed the old
+  words. Stored starters are now corrected in place, matched byte-for-byte against the
+  superseded text so any edit at all leaves the reader's words alone. That also fixes a
+  second-order bug: an untouched old starter compared unequal to the current copy, so it
+  read as edited — which carried the false claim into the account on migration.
