@@ -7,6 +7,13 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.10', date: '2026-09-07', changes: [
+    { type: 'fix', text: 'Copy feedback clears after draft recovery, and older notes verify their saved state against the server.' },
+    { type: 'fix', text: 'Unsaved drafts explain when the vault needs unlocking; sync acknowledgements preserve an explicitly missing hash.' },
+    { type: 'fix', text: 'Failed saves keep your draft open with Retry and Copy, including in focus mode; continuous typing saves to this device every ten seconds' },
+    { type: 'improvement', text: 'Saved here confirms local storage; Synced appears only when the server has acknowledged the current content' },
+    { type: 'fix', text: 'Letting a note fade always works, even when its last edit could not be saved' },
+  ] },
   {
     version: '3.19.9',
     date: '2026-09-07',

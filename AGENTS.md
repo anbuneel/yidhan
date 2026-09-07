@@ -253,6 +253,7 @@ Avoid: creating new inline `style={{}}` objects for static values that could be 
 - Mobile toolbar uses `HeadingCycleButton` (¶→H1→H2→H3→¶) and `OverflowMenu` with `direction="up"` prop
 - Focus mode uses parent-class CSS strategy: `focus-mode-active` on scroll container triggers descendant `.focus-mode-target` elements to fade out
 - Links use `LinkPopover.tsx`, reached from toolbar, sidebar, slash commands, or Ctrl/Cmd+K with selected text; link clicks stay in the editor.
+- Save failures retain the draft with persistent Retry/Copy controls in focus mode. Autosave uses an 800 ms debounce and a 10-second checkpoint through the encrypted local-save path. Synced requires the server-confirmed content hash to match the current note.
 - Editor content is in `RichTextEditor.tsx` (exposes editor via `onEditorReady` callback)
 - Editor styles are in `index.css` under `.rich-text-editor`
 - Add new Tiptap extensions via npm and configure in `RichTextEditor.tsx`

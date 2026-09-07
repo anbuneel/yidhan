@@ -655,7 +655,8 @@ describe('processQueue behavior', () => {
     expect(mockMarkNoteSynced).toHaveBeenCalledWith(
       TEST_USER_ID,
       'note-abc',
-      new Date('2026-01-15T00:00:00Z')
+      new Date('2026-01-15T00:00:00Z'),
+      'hash-note-abc'
     );
   });
 
@@ -1363,7 +1364,7 @@ describe('conflict detection via processQueue', () => {
     });
     // Second call: actual update
     const updateChain = buildChain({
-      data: { id: noteId, updated_at: new Date(now + 5000).toISOString() },
+      data: { id: noteId, updated_at: new Date(now + 5000).toISOString(), content_hash: sameHash },
     });
     mockFrom
       .mockReturnValueOnce(checkChain) // select * for conflict check
@@ -1423,6 +1424,26 @@ describe('pullRemoteChanges behavior', () => {
     expect(stored!.title).toBe('');
     expect(stored!.encryptedPayload).toBe('ciphertext-pulled-note-1');
     expect(stored!.syncStatus).toBe('synced');
+    // Simulate an existing synced note from before hash acknowledgements shipped.
+    await db.notes.update(serverNote.id, { confirmedContentHash: undefined });
+    const gt = vi.fn().mockReturnThis();
+    const query = { select: () => query, gt };
+    mockFrom.mockReturnValue(query);
+    for (const requiresConfirmation of [true, false]) {
+      gt.mockClear();
+      mockFetchAllPaginated
+        .mockImplementationOnce(async factory => {
+          factory();
+          if (requiresConfirmation) expect(gt).not.toHaveBeenCalled();
+          else expect(gt).toHaveBeenCalledWith('updated_at', serverNote.updated_at.replace('Z', '.000Z'));
+          return { data: [serverNote], error: null };
+        })
+        .mockResolvedValueOnce({ data: [{ id: serverNote.id }], error: null })
+        .mockResolvedValueOnce({ data: [], error: null })
+        .mockResolvedValueOnce({ data: [], error: null });
+      await pullRemoteChanges(TEST_USER_ID);
+      expect((await db.notes.get(serverNote.id))?.confirmedContentHash).toBe(serverNote.content_hash);
+    }
   });
 
   it('should reject plaintext notes pulled from the server', async () => {

@@ -524,13 +524,13 @@ async function processNoteOperation(
       // Check if note already exists on server (idempotency)
       const { data: existing } = await supabase
         .from('notes')
-        .select('id, updated_at')
+        .select('id, updated_at, content_hash')
         .eq('id', noteId)
         .maybeSingle();
 
       if (existing) {
         // Already created, mark as synced using server timestamp
-        await markNoteSynced(userId, noteId, new Date(existing.updated_at));
+        await markNoteSynced(userId, noteId, new Date(existing.updated_at), existing.content_hash);
         return true;
       }
 
@@ -569,7 +569,7 @@ async function processNoteOperation(
         );
       }
 
-      await markNoteSynced(userId, noteId, createdAt);
+      await markNoteSynced(userId, noteId, createdAt, encryptedPayload.content_hash);
       return true;
     }
 
@@ -647,7 +647,10 @@ async function processNoteOperation(
       // Note no longer exists locally — nothing left to sync.
       if (!updatedAt) return true;
 
-      await markNoteSynced(userId, noteId, updatedAt);
+      // The reinsert path writes encryptedPayload.content_hash verbatim, so the
+      // confirmed hash is already in scope — no second round trip needed.
+      const confirmedHash = updated ? updated.content_hash : encryptedPayload.content_hash;
+      await markNoteSynced(userId, noteId, updatedAt, confirmedHash);
       return true;
     }
 
@@ -1271,7 +1274,10 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
   // Compute pull cursor from synced entries only (pending/conflict may have skewed timestamps)
   const allNotes = await db.notes.toArray();
   const syncedNotes = allNotes.filter(n => n.syncStatus === 'synced');
-  const lastSync = Math.max(...syncedNotes.map(n => n.lastSyncedAt || 0), 0);
+  // Older local records have no hash acknowledgement. Read the server again
+  // before claiming they are synced; a local status alone is not confirmation.
+  const needsConfirmation = syncedNotes.some(note => note.confirmedContentHash === undefined);
+  const lastSync = needsConfirmation ? 0 : Math.max(...syncedNotes.map(n => n.lastSyncedAt || 0), 0);
 
   // --- Note data pull (always runs, no early return) ---
   // Full pull when lastSync is 0 (empty DB, post-migration, or failed hydration);
@@ -1324,6 +1330,7 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
       encryptionIv: serverNote.encryption_iv ?? null,
       encryptionVersion: serverNote.encryption_version ?? null,
       contentHash: serverNote.content_hash ?? null,
+      confirmedContentHash: serverNote.content_hash ?? null,
     });
     pulledNotes++;
   }
@@ -1344,6 +1351,19 @@ export async function pullRemoteChanges(userId: string): Promise<PullResult> {
         await db.notes.delete(localNote.id);
         deletedNotes++;
       }
+    }
+  }
+
+  // A full pull that completed cleanly is the confirmation pass for legacy
+  // records. Any synced note still lacking an acknowledgement was not returned
+  // by it, so record that honestly — the note reads "Saved here" rather than
+  // "Synced" — instead of letting one stray record force a full-table scan on
+  // every sync from here on.
+  if (!notesError && lastSync === 0) {
+    const unconfirmed = (await db.notes.toArray())
+      .filter(n => n.syncStatus === 'synced' && n.confirmedContentHash === undefined);
+    for (const note of unconfirmed) {
+      await db.notes.update(note.id, { confirmedContentHash: null });
     }
   }
 

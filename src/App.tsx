@@ -1,3 +1,4 @@
+import { VaultLockedSaveError } from './utils/saveErrors';
 import { useState, useEffect, useCallback, useEffectEvent, useRef, Suspense, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import type { Note, Tag, ViewMode, Theme } from './types';
@@ -1324,11 +1325,10 @@ function App() {
   // Writes to IndexedDB immediately, queues for sync
   // Returns a Promise so Editor can track save status accurately
   const handleNoteUpdate = useCallback(async (updatedNote: Note): Promise<void> => {
-    if (!user) return;
-    if (!keys) {
-      toast.error('Vault is locked — changes cannot be saved');
-      return;
-    }
+    // Only the locked vault gets the unlock message; a missing user is a
+    // different failure and must not be told to unlock anything.
+    if (!user) throw new Error('Cannot save without a signed-in user');
+    if (!keys) throw new VaultLockedSaveError();
 
     // Store previous state for potential rollback
     const previousNote = notes.find((n) => n.id === updatedNote.id);
@@ -1342,7 +1342,9 @@ function App() {
     try {
       // Encrypt and save to IndexedDB (immediate, works offline)
       // Sync engine will push encrypted payload to server when online
-      await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
+      const savedNote = await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
+      // A late save acknowledgement must not replace a newer draft or its tags.
+      setNotes(prev => prev.map(n => n.id === savedNote.id && n.title === updatedNote.title && n.content === updatedNote.content ? { ...n, ...savedNote, tags: n.tags } : n));
 
       // Trigger coalesced sync (2s after last save) to push changes promptly
       triggerCoalescedSync();
@@ -1356,12 +1358,9 @@ function App() {
         );
       }
 
-      // Show error toast
-      toast.error('Failed to save note locally. Please try again.', {
-        duration: 5000,
-      });
-
-      // Re-throw so Editor can show error state
+      // Re-throw so the editor can show its persistent "Not saved" banner,
+      // which carries the Retry and Copy actions. A toast here would be a
+      // second, auto-dismissing notice for the same failure.
       throw error;
     }
   }, [user, keys, notes, triggerCoalescedSync]);
