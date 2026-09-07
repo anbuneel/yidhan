@@ -1,3 +1,4 @@
+import { VaultLockedSaveError } from '../utils/saveErrors';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -201,7 +202,7 @@ describe('Editor', () => {
     });
 
     it.each(['Escape', 'logo', 'footer'])('keeps failed drafts open on %s and exposes Retry and Copy in focus mode', async (exit) => {
-      const update = vi.fn().mockRejectedValue(new Error('Disk unavailable'));
+      const update = vi.fn().mockRejectedValue(new VaultLockedSaveError());
       render(<Editor {...defaultProps} onUpdate={update} />);
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Keep these words' } });
       if (exit === 'Escape') fireEvent.keyDown(window, { key: 'Escape' });
@@ -212,6 +213,7 @@ describe('Editor', () => {
       fireEvent.keyDown(window, { key: 'F', ctrlKey: true, shiftKey: true });
       await act(async () => { vi.advanceTimersByTime(6000); });
       expect(screen.getByRole('alert')).toHaveTextContent('Not saved');
+      expect(screen.getByRole('alert')).toHaveTextContent('Unlock your vault before retrying');
       expect(screen.getByRole('alert').closest('.focus-mode-target')).toBeNull();
       expect(screen.getByDisplayValue('Keep these words')).toBeInTheDocument();
       update.mockResolvedValue(undefined);

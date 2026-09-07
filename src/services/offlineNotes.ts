@@ -1083,7 +1083,7 @@ export async function markNoteSynced(
   await db.transaction('rw', db.notes, async () => {
     const note = await db.notes.get(noteId);
     if (!note) return;
-    const confirmedContentHash = confirmedHash ?? note.confirmedContentHash;
+    const confirmedContentHash = confirmedHash === undefined ? note.confirmedContentHash : confirmedHash;
     await db.notes.update(noteId, {
       syncStatus: !note.contentHash || confirmedContentHash === note.contentHash ? 'synced' : 'pending',
       confirmedContentHash,

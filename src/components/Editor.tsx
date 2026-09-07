@@ -1,3 +1,4 @@
+import { VaultLockedSaveError } from '../utils/saveErrors';
 import { useState, useEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { getSaveLabel } from '../utils/saveStatus';
@@ -116,6 +117,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [content, setContent] = useState(note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [hasSaveError, setHasSaveError] = useState(false);
+  const [saveErrorDetail, setSaveErrorDetail] = useState('');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [editor, setEditor] = useState<TiptapEditor | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -406,7 +408,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           setSaveStatus('idle');
         }, 2000);
         return true;
-      } catch {
+      } catch (error) {
+        setSaveErrorDetail(error instanceof VaultLockedSaveError ? error.message : '');
         if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
           inFlightSnapshotRef.current = null;
         }
@@ -1130,7 +1133,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     >
       {hasSaveError && (
         <div role="alert" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
-          <span className="mr-auto">Not saved</span>
+          <span className="mr-auto">Not saved{saveErrorDetail && <span className="block">{saveErrorDetail}</span>}</span>
           <button type="button" onClick={() => void performSave()}>Retry</button>
           <button type="button" onClick={async () => {
             try {

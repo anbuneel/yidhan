@@ -1,3 +1,4 @@
+import { VaultLockedSaveError } from './utils/saveErrors';
 import { useState, useEffect, useCallback, useEffectEvent, useRef, Suspense, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import type { Note, Tag, ViewMode, Theme } from './types';
@@ -1324,7 +1325,7 @@ function App() {
   // Writes to IndexedDB immediately, queues for sync
   // Returns a Promise so Editor can track save status accurately
   const handleNoteUpdate = useCallback(async (updatedNote: Note): Promise<void> => {
-    if (!user || !keys) throw new Error('The vault must be unlocked to save changes');
+    if (!user || !keys) throw new VaultLockedSaveError();
 
     // Store previous state for potential rollback
     const previousNote = notes.find((n) => n.id === updatedNote.id);
@@ -1339,6 +1340,7 @@ function App() {
       // Encrypt and save to IndexedDB (immediate, works offline)
       // Sync engine will push encrypted payload to server when online
       const savedNote = await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
+      // A late save acknowledgement must not replace a newer draft or its tags.
       setNotes(prev => prev.map(n => n.id === savedNote.id && n.title === updatedNote.title && n.content === updatedNote.content ? { ...n, ...savedNote, tags: n.tags } : n));
 
       // Trigger coalesced sync (2s after last save) to push changes promptly

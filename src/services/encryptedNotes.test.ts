@@ -83,6 +83,9 @@ describe('encryptedNotes', () => {
     expect((await db.notes.get(original.id))?.syncStatus).toBe('pending');
     await markNoteSynced(TEST_USER_ID, original.id, new Date(), saved.contentHash);
     expect((await db.notes.get(original.id))?.syncStatus).toBe('synced');
+    await markNoteSynced(TEST_USER_ID, original.id, new Date(), null);
+    expect((await db.notes.get(original.id))?.confirmedContentHash).toBeNull();
+    expect((await db.notes.get(original.id))?.syncStatus).toBe('pending');
   });
 
   describe('createEncryptedNote', () => {
