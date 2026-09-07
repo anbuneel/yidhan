@@ -11,7 +11,7 @@ export type EditorCommandId =
   | 'date' | 'time' | 'now'
   | 'undo' | 'redo' | 'findReplace' | 'smartTypography' | 'focusMode';
 
-export type EditorCommandGroup = 'text' | 'structure' | 'insert' | 'history' | 'view';
+type EditorCommandGroup = 'text' | 'structure' | 'insert' | 'history' | 'view';
 
 export interface EditorCommandContext {
   editor: Editor;

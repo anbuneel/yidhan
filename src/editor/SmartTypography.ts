@@ -19,7 +19,7 @@ declare module '@tiptap/core' {
   }
 }
 
-export function loadSmartTypographyPreference(): boolean {
+function loadSmartTypographyPreference(): boolean {
   try {
     return localStorage.getItem(SMART_TYPOGRAPHY_STORAGE_KEY) !== 'false';
   } catch {

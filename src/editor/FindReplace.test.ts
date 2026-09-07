@@ -28,6 +28,22 @@ describe('FindReplace', () => {
     editor.destroy();
   });
 
+  it('keeps immediately preceding typing when replace all is undone', () => {
+    const editor = new Editor({
+      extensions: [StarterKit, FindReplace],
+      content: '<p></p>',
+    });
+
+    editor.commands.insertContent('alpha beta alpha');
+    setFindQuery(editor, 'alpha');
+    expect(replaceAllMatches(editor, 'omega')).toBe(2);
+    expect(editor.getText()).toBe('omega beta omega');
+
+    editor.commands.undo();
+    expect(editor.getText()).toBe('alpha beta alpha');
+    editor.destroy();
+  });
+
   it('finds and replaces the continuous text users see across adjacent marks', () => {
     const editor = new Editor({
       extensions: [StarterKit, FindReplace],

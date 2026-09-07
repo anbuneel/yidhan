@@ -1,9 +1,10 @@
 import { Extension } from '@tiptap/core';
 import type { Editor } from '@tiptap/react';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { closeHistory } from '@tiptap/pm/history';
 import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
 
-export interface FindMatch {
+interface FindMatch {
   from: number;
   to: number;
 }
@@ -151,7 +152,7 @@ export function replaceCurrentMatch(editor: Editor, replacement: string): boolea
   const match = state.matches[state.activeIndex];
   if (!match) return false;
 
-  const transaction = editor.state.tr
+  const transaction = closeHistory(editor.state.tr)
     .insertText(replacement, match.from, match.to)
     .setMeta(findReplaceKey, { type: 'activate', index: state.activeIndex });
   editor.view.dispatch(transaction);
@@ -162,7 +163,9 @@ export function replaceAllMatches(editor: Editor, replacement: string): number {
   const state = getFindReplaceState(editor);
   if (state.matches.length === 0) return 0;
 
-  const transaction = editor.state.tr;
+  // Keep the replacement separate from immediately preceding typing so one
+  // undo restores the user's text rather than erasing the whole typing burst.
+  const transaction = closeHistory(editor.state.tr);
   [...state.matches].reverse().forEach(({ from, to }) => {
     transaction.insertText(replacement, from, to);
   });

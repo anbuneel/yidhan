@@ -10,6 +10,9 @@ const commandIds = [
 
 async function openBlankPracticeNote(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/demo');
+  // Demo hydration seeds its starter notes asynchronously. Waiting for the
+  // seed prevents an early new-note click from racing that initial state load.
+  await expect(page.getByRole('heading', { name: 'Welcome to Yidhan', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'New note', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'New note', exact: true }).click();
   await expect(page.getByTestId('note-editor')).toBeVisible();
@@ -99,6 +102,9 @@ test.describe('editor fluency', () => {
     await page.keyboard.press('Escape');
     await expect(popup).not.toBeAttached();
     await expect(page.getByTestId('note-editor')).toBeVisible();
+    // Escape dismisses the suggestion without deleting its trigger. Remove
+    // that slash before entering a fresh, valid trigger at the same caret.
+    await page.keyboard.press('Backspace');
     await page.keyboard.type('/');
     await expect(page.locator('[data-editor-popover="slash"]')).toBeVisible();
   });

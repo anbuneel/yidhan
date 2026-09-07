@@ -12,6 +12,9 @@ export const changelog: ChangelogEntry[] = [
     { type: 'improvement', text: 'Optional smart typography turns typed quotes, dashes, and ellipses into polished punctuation without changing code.' },
     { type: 'feature', text: 'Writing details reveal word and character counts plus reading time on hover or tap.' },
     { type: 'fix', text: 'Editor controls now update immediately when the cursor moves into or out of formatted text.' },
+    { type: 'feature', text: 'Find and replace works in focus mode, highlights every match, and restores the original text with one undo after Replace All.' },
+    { type: 'improvement', text: 'Every editor command is reachable by mouse from phone to wide desktop, with overflow controls where space is limited.' },
+    { type: 'fix', text: 'The slash-command menu stays within the viewport, follows scrolling, and reopens correctly after dismissal.' },
   ] },
   { version: '3.19.15', date: '2026-09-07', changes: [
     { type: 'feature', text: 'A security page at /security sets out what encryption protects, what stays visible to us even so — timestamps, note sizes, tag names — and what we have not solved yet' },
