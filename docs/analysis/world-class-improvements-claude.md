@@ -13,6 +13,10 @@
 
 ---
 
+> **See also:** [improvement-review-crosscheck-claude.md](improvement-review-crosscheck-claude.md) (2026-09-07) cross-checks this review against the Codex review on `main` and revises the plan. Five Codex findings were adopted into Phase 0 and 1.
+
+---
+
 ## How this was produced
 
 This analysis is grounded in the code as of v3.19.8 (commit `c7b6bbe`), not in the marketing copy:
@@ -75,7 +79,7 @@ Ratings are relative to the target user (reflective writer, minimalist professio
 | Offline-first with sync | Strong | Strong | Strong | Strong | Weak |
 | Zero-knowledge encryption | Strong, best in class | Opt-in (ADP) | None | None | None |
 | Key recovery and rotation | Gap | Strong | n/a | n/a | n/a |
-| Browser-first, cross-platform | Strong | Weak | None | Adequate | Strong |
+| Browser-first, cross-platform | Strong | Weak | Adequate (web beta) | Adequate | Strong |
 | Sharing and publishing | Adequate (E2EE letters) | Adequate | Basic | Strong | Strong |
 | Import and export | Adequate, lossy | Weak | Strong | Strong | Adequate |
 | Mobile native feel | Adequate (PWA, Android WebView) | Strong | Strong | Strong | Adequate |
