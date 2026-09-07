@@ -334,6 +334,19 @@ describe('Editor', () => {
       expect(onDelete).toHaveBeenCalledWith('note-123');
     });
 
+    it('still releases the note when the pending save fails', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onDelete = vi.fn();
+      render(<Editor {...defaultProps} onDelete={onDelete}
+        onUpdate={vi.fn().mockRejectedValue(new Error('Disk unavailable'))} />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Doomed' } });
+      await user.click(screen.getByLabelText('Delete note'));
+      await user.click(screen.getByRole('button', { name: 'Let it fade' }));
+
+      expect(onDelete).toHaveBeenCalledWith('note-123');
+    });
+
     it('closes confirmation when clicking backdrop', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Editor {...defaultProps} />);

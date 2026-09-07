@@ -687,8 +687,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   };
 
   const confirmDelete = async () => {
-    if (await performSave()) onDelete(note.id);
-    else setShowDeleteConfirm(false);
+    // Deleting wins. Flush the draft first so a restored note carries the last
+    // words, but a save that fails must never leave the button looking inert:
+    // someone releasing a note is not asking to keep its final edit.
+    await performSave();
+    onDelete(note.id);
   };
 
   // Handle logo click: save and go back (awaits any in-flight save)
