@@ -18,7 +18,7 @@ that own them.
 | Colour, type, spacing, component rules, voice | `DESIGN.md` |
 | What shipped, and when | `docs/progress.md` |
 | What's deferred, and what's refused | `docs/roadmap.md` |
-| What we're working on right now | the one `Status: ACTIVE` plan in `docs/plans/` |
+| What we're working on right now | the `Status: ACTIVE` plans in `docs/plans/` |
 | Database schema | `docs/technical-spec.md` |
 | Screen layouts, keyboard shortcuts, slash commands | `docs/ui-layout.md` |
 | User-facing behaviour specs | `docs/reference/` |
@@ -45,8 +45,12 @@ Status: PROPOSAL | ACTIVE | COMPLETE | SUPERSEDED
 Last verified: YYYY-MM-DD
 ```
 
-**At most one plan is ACTIVE**, enforced by `.githooks/pre-commit`. Intent shifts →
-the old plan flips to SUPERSEDED in the same commit that creates its replacement.
+**At most two plans are ACTIVE**, enforced by `.githooks/pre-commit`. The cap is
+one by default; it is two today by deliberate exception (`DECISIONS.md`,
+2026-09-07) because the product ledger and the documentation overhaul are
+orthogonal lanes. Do not add a third — close one, or record why in `DECISIONS.md`
+and raise `MAX_ACTIVE_PLANS`. Intent shifts → the old plan flips to SUPERSEDED in
+the same commit that creates its replacement.
 Work ships → it flips to COMPLETE and moves to `docs/archive/`. A blocker's detail
 belongs in its GitHub issue; the plan links it and records only the effect on the
 milestone.

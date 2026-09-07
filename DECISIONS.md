@@ -19,6 +19,54 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-07 — Two ACTIVE plans are allowed, capped at two
+
+**Status:** Active
+
+**Why:** The one-ACTIVE-plan rule exists so "what are we working on now" has a
+single answer. Two lanes were genuinely in flight and orthogonal: the product
+engineering ledger and the documentation overhaul. Forcing one to PROPOSAL would
+have made the file lie about what was being worked on, which is the failure the
+rule was meant to prevent, not an instance of following it.
+
+The cap was raised to two in `.githooks/pre-commit` rather than removed, so a
+third ACTIVE plan still fails and raising it again requires an entry here saying
+why. The `Last verified` requirement now applies to every ACTIVE plan, not just
+the first one found.
+
+The cost is accepted and real: with two ACTIVE plans, "now" has two answers, and
+that only stays legible while the lanes stay orthogonal. If two ACTIVE plans ever
+contend for the same files or the same week, close one.
+
+**Rejected:** Deleting the cap entirely — it is the only thing stopping the
+drift back to nine owners of "now". Keeping the overhaul at PROPOSAL — an ACTIVE
+plan is supposed to describe reality, and the overhaul was reality. A per-lane
+ACTIVE allowance — inventing a lane concept to justify a count of two is more
+structure than the problem needs.
+
+---
+
+## 2026-09-07 — The execution ledger owns only committed work
+
+**Status:** Active
+
+**Why:** The 60KB ledger was the ninth owner of "what's true now", and it had
+become internally inconsistent: items 5–22 appeared in **both** its Next and Done
+tables, contradicting its own stated rule that every item sits in exactly one of
+four lists. A file that contradicts itself cannot be the answer to "what next".
+
+Split along ownership lines: shipped items to `docs/progress.md`, the 128
+deferred items to `docs/roadmap.md`, review-coverage appendices frozen in
+`docs/archive/`. Item numbers were preserved through the move because commit
+messages, PR titles and GitHub issues cross-reference them — renumbering would
+have broken that for no gain. The ledger keeps Now and Next only.
+
+**Rejected:** Leaving the deferred items in the plan — a plan holding 128
+someday-items is a roadmap wearing a plan's header, and it is what let the Next
+list go stale unnoticed. Renumbering into the roadmap's own scheme.
+
+---
+
 ## 2026-09-07 — The docs corpus is quarantined behind a retrieval lane rather than curated in place
 
 **Status:** Active

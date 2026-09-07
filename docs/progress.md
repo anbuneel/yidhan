@@ -60,17 +60,26 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
 - **2026-09-04** — Fonts self-hosted; logo mark made theme-aware. (#197)
 - **2026-09-05** — Browser asked to persist the offline database via
   `navigator.storage.persist()`. (#199)
-- **2026-09-07** — Editor keyboard navigation and link controls fixed. (#200)
+- **2026-09-07** — Editor keyboard navigation and link controls fixed — ledger items 1–4. (#200)
 - **2026-09-07** — Saving and recovery: failed saves retain the draft with Retry
-  and Copy; ten-second local checkpoints. (#201)
+  and Copy; ten-second local checkpoints; "Saved here" distinguished from
+  "Synced" — ledger items 5–7. (#201)
 - **2026-09-07** — Tag sync reconciliation, readable conflict previews, and
-  large-library cursor handling. (#202)
+  large-library cursor handling — ledger items 8–10. (#202)
 - **2026-09-07** — Search caching, mobile spacing, and practice-privacy copy;
-  manifest share target removed. (#203)
+  manifest share target removed — ledger items 11–16, 21, 22. (#203)
 - **2026-09-07** — Lossless Markdown export, account backup restore fidelity,
-  sharing verification, and removal of legacy plaintext note APIs. (#204)
+  sharing verification, and removal of legacy plaintext note APIs — ledger
+  items 17–20. (#204)
 - **2026-09-07** — Documentation and instruction layer overhauled: 169 files
   quarantined to `docs/archive/` behind a retrieval lane, six canonical docs
   installed (`CLAUDE.md`, `PRODUCT.md`, `DECISIONS.md`, `DESIGN.md`,
   `docs/progress.md`, `docs/roadmap.md`), plan lifecycle enforced by a pre-commit
   hook, and per-doc model-attribution rituals dropped.
+- **2026-09-07** — Execution ledger split so each fact has one owner: shipped
+  items folded into this file, the 128 deferred items moved to
+  `docs/roadmap.md` keeping their numbers, and the review-coverage appendices
+  frozen in `docs/archive/`. The ledger had listed items 5–22 in both its Next
+  and Done tables, contradicting its own rule that an item sits in exactly one
+  list. It now carries only committed work, alongside the ledger convention
+  adopted as item 148.

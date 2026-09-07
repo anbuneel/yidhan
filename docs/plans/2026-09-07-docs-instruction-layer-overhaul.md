@@ -1,12 +1,12 @@
 # Docs & instruction-layer overhaul
 
-Status: PROPOSAL
+Status: ACTIVE
 Last verified: 2026-09-07
 
-Filed as PROPOSAL, not ACTIVE: `world-class-execution-plan-claude.md` holds the
-single ACTIVE slot because it tracks in-flight product work. This plan is executed
-and complete in substance; it stays PROPOSAL so the one-ACTIVE-plan invariant is
-not violated. Flip to COMPLETE and archive once the execution ledger is retired.
+ACTIVE alongside `world-class-execution-plan-claude.md` by deliberate exception —
+see `DECISIONS.md` (2026-09-07). The two cover orthogonal lanes: that plan owns
+product work, this one owns the documentation and instruction layer. The
+pre-commit cap is 2; a third ACTIVE plan still fails.
 
 ---
 
