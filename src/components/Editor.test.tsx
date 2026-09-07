@@ -614,7 +614,9 @@ describe('Editor', () => {
         await Promise.resolve();
       });
 
-      expect(screen.getByText('Save failed')).toBeInTheDocument();
+      // One failure, one message: the actionable banner replaces the header pill.
+      expect(screen.getByRole('alert')).toHaveTextContent('Not saved');
+      expect(screen.queryByText('Save failed')).toBeNull();
     });
   });
 

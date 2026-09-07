@@ -1355,12 +1355,9 @@ function App() {
         );
       }
 
-      // Show error toast
-      toast.error('Failed to save note locally. Please try again.', {
-        duration: 5000,
-      });
-
-      // Re-throw so Editor can show error state
+      // Re-throw so the editor can show its persistent "Not saved" banner,
+      // which carries the Retry and Copy actions. A toast here would be a
+      // second, auto-dismissing notice for the same failure.
       throw error;
     }
   }, [user, keys, notes, triggerCoalescedSync]);

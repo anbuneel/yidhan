@@ -647,8 +647,9 @@ async function processNoteOperation(
       // Note no longer exists locally — nothing left to sync.
       if (!updatedAt) return true;
 
-      const confirmedHash = updated ? updated.content_hash : (await supabase
-        .from('notes').select('content_hash').eq('id', noteId).maybeSingle()).data?.content_hash;
+      // The reinsert path writes encryptedPayload.content_hash verbatim, so the
+      // confirmed hash is already in scope — no second round trip needed.
+      const confirmedHash = updated ? updated.content_hash : encryptedPayload.content_hash;
       await markNoteSynced(userId, noteId, updatedAt, confirmedHash);
       return true;
     }

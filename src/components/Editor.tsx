@@ -895,7 +895,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               Saving&hellip;
             </>
           )}
-          {saveStatus === 'error' && (
+          {saveStatus === 'error' && !hasSaveError && (
             <>
               <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
