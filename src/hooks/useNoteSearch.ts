@@ -12,6 +12,8 @@ export function useNoteSearch(notes: Note[], query: string): Note[] {
       const old = cache.current.get(note.id);
       next.set(note.id, old?.revision === revision ? old : { revision, text: htmlToPlainText(note.content).toLowerCase() });
     }
+    // Idempotent memoization only: every entry is checked against this render's revision.
+    // Updating synchronously lets consecutive renders reuse text without an effect lag.
     cache.current = next;
     return next;
   }, [notes]);

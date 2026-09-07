@@ -1,3 +1,5 @@
+import { createRef } from 'react';
+import { Footer } from './Footer';
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { TimeRibbon } from './TimeRibbon';
@@ -12,19 +14,23 @@ it('puts a caption under the first card without a modal', () => {
   expect(screen.getByText('Swipe right to pin a note.')).toBeVisible();
 });
 it('hides the ribbon for small libraries and when the footer approaches', () => {
+  const footerRef = createRef<HTMLElement>();
+  const observe = vi.fn();
   let notify: IntersectionObserverCallback = () => {};
   window.IntersectionObserver = class {
     constructor(callback: IntersectionObserverCallback) { notify = callback; }
-    root = null; rootMargin = ''; thresholds = []; observe() {} unobserve() {} disconnect() {} takeRecords() { return []; }
+    root = null; rootMargin = ''; thresholds = []; observe = observe; unobserve() {} disconnect() {} takeRecords() { return []; }
   };
   const chapters = [{ key: 'pinned' as const, label: 'Pinned' }, { key: 'thisWeek' as const, label: 'Week' }];
-  const view = (count: number) => <><footer>End of library</footer><TimeRibbon noteCount={count} chapters={chapters} currentChapter="thisWeek" onChapterClick={vi.fn()} /></>;
+  const view = (count: number) => <><footer>Unrelated footer</footer><Footer ref={footerRef} onChangelogClick={vi.fn()} onRoadmapClick={vi.fn()} /><TimeRibbon footerRef={footerRef} noteCount={count} chapters={chapters} currentChapter="thisWeek" onChapterClick={vi.fn()} /></>;
   const { rerender } = render(view(19));
-  expect(screen.queryByRole('navigation')).toBeNull();
+  expect(observe).toHaveBeenCalledWith(footerRef.current);
+  expect(observe).not.toHaveBeenCalledWith(screen.getByText('Unrelated footer'));
+  expect(screen.queryByRole('navigation', { name: 'Time navigation' })).toBeNull();
   rerender(view(20));
-  expect(screen.getByRole('navigation')).toBeVisible();
+  expect(screen.getByRole('navigation', { name: 'Time navigation' })).toBeVisible();
   act(() => notify([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver));
-  expect(screen.queryByRole('navigation')).toBeNull();
+  expect(screen.queryByRole('navigation', { name: 'Time navigation' })).toBeNull();
 });
 it('plainly labels fresh Practice Space drafts as unencrypted', () => {
   const welcome = createDemoStarterPreviewState().notes.find(n => n.localId === 'starter-welcome')!;

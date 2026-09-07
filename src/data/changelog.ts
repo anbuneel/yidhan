@@ -8,6 +8,7 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   { version: '3.19.12', date: '2026-09-07', changes: [
+    { type: 'fix', text: 'Mobile time navigation follows the library footer without reacting to unrelated page footers.' },
     { type: 'fix', text: 'Search reuses note text, mobile gesture guidance stays beside your notes, and time navigation leaves room to read' },
     { type: 'fix', text: 'Practice drafts are clearly labelled as unencrypted; receiving shared text through the app manifest is removed until private capture is ready' },
   ] },

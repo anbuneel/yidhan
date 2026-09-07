@@ -152,8 +152,8 @@
 
 | Feature | Why Not | Source |
 |---------|---------|--------|
-| Databases (simple tables remain planned) | That's Notion's game | [strategic review](active/strategic-viability-review-claude.md) |
-| Graph view (backlinks remain planned) | That's Obsidian's game | [strategic review](active/strategic-viability-review-claude.md) |
+| Databases | That's Notion's game | [strategic review](active/strategic-viability-review-claude.md) |
+| Graph view | That's Obsidian's game | [strategic review](active/strategic-viability-review-claude.md) |
 | Real-time collaboration | That's Notion/Craft's game. Single-user only is a design choice | [collaboration analysis](analysis/collaboration-feature-analysis-claude.md) |
 | Folders / hierarchy | Contradicts temporal chapters philosophy | [strategic review](active/strategic-viability-review-claude.md) |
 | Push notifications | Contradicts calm technology philosophy | — |

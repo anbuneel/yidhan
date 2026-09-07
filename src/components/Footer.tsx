@@ -1,6 +1,8 @@
+import type { Ref } from 'react';
 import './Footer.css';
 
 interface FooterProps {
+  ref?: Ref<HTMLElement>;
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
   onShortcutsClick?: () => void;
@@ -41,6 +43,7 @@ function FooterItem({
 }
 
 export function Footer({
+  ref,
   onChangelogClick,
   onRoadmapClick,
   onShortcutsClick,
@@ -49,7 +52,7 @@ export function Footer({
   onSupportClick,
 }: FooterProps) {
   return (
-    <footer className="py-6 px-4 text-center shrink-0">
+    <footer ref={ref} className="py-6 px-4 text-center shrink-0">
       <nav
         className="flex items-center justify-center gap-2 text-sm flex-wrap"
         style={{

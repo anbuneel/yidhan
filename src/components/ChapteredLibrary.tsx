@@ -1,3 +1,4 @@
+import type { RefObject } from 'react';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import type { Note } from '../types';
 import { ChapterSection } from './ChapterSection';
@@ -15,6 +16,7 @@ import {
 const MOBILE_BREAKPOINT = 700;
 
 interface ChapteredLibraryProps {
+  footerRef?: RefObject<HTMLElement | null>;
   notes: Note[];
   onNoteClick: (id: string) => void;
   onNoteDelete: (id: string) => void;
@@ -27,6 +29,7 @@ interface ChapteredLibraryProps {
 }
 
 export function ChapteredLibrary({
+  footerRef,
   notes,
   onNoteClick,
   onNoteDelete,
@@ -312,6 +315,7 @@ export function ChapteredLibrary({
 
       {/* Time Ribbon - Mobile (bottom scrubber) */}
       <TimeRibbon
+        footerRef={footerRef}
         noteCount={notes.length}
         chapters={navChapters}
         currentChapter={currentChapter}

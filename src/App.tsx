@@ -173,6 +173,7 @@ function buildDeletedServerVersion(note: LocalNote): HardDeletedServerNoteVersio
 }
 
 function App() {
+  const libraryFooterRef = useRef<HTMLElement>(null);
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
   const { keys, isEncryptionSetup, isUnlocked, lockVault, persistToLocal } = useEncryption();
   // Ref for encryption keys — used in realtime handlers to avoid stale closures
@@ -2409,6 +2410,7 @@ function App() {
           onEditTag={handleEditTag}
         />
         <ChapteredLibrary
+          footerRef={libraryFooterRef}
           notes={displayNotes}
           onNoteClick={handleNoteClick}
           onNoteDelete={handleNoteDelete}
@@ -2482,6 +2484,7 @@ function App() {
 
         {/* Footer */}
         <Footer
+          ref={libraryFooterRef}
           onChangelogClick={navigateToChangelog}
           onRoadmapClick={navigateToRoadmap}
           onShortcutsClick={() => setShowShortcutsModal(true)}

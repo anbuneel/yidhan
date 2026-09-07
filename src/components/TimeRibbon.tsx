@@ -1,7 +1,9 @@
+import type { RefObject } from 'react';
 import { useState, useEffect, useCallback, useEffectEvent, useRef } from 'react';
 import { type ChapterKey } from '../utils/temporalGrouping';
 
 interface TimeRibbonProps {
+  footerRef?: RefObject<HTMLElement | null>;
   noteCount: number;
   chapters: { key: ChapterKey; label: string }[];
   currentChapter: ChapterKey | null;
@@ -26,6 +28,7 @@ const FIRST_TIME_TIMEOUT = 6000; // 6s for first-time users
 const RETURNING_TIMEOUT = 5000; // 5s for returning users
 
 export function TimeRibbon({
+  footerRef,
   chapters,
   noteCount,
   currentChapter,
@@ -33,12 +36,12 @@ export function TimeRibbon({
 }: TimeRibbonProps) {
   const [nearFooter, setNearFooter] = useState(false);
   useEffect(() => {
-    const footer = document.querySelector("footer");
+    const footer = footerRef?.current;
     if (!footer) return;
     const observer = new IntersectionObserver(([entry]) => setNearFooter(entry.isIntersecting), { rootMargin: "120px 0px" });
     observer.observe(footer);
     return () => observer.disconnect();
-  }, []);
+  }, [footerRef]);
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

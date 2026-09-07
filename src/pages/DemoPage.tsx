@@ -1,4 +1,3 @@
-import { useNoteSearch } from '../hooks/useNoteSearch';
 /**
  * DemoPage
  *
@@ -10,6 +9,7 @@ import { useNoteSearch } from '../hooks/useNoteSearch';
  * (3+ notes AND 5+ minutes).
  */
 
+import { useNoteSearch } from '../hooks/useNoteSearch';
 import { useState, useCallback, useEffect, useEffectEvent, useMemo, Suspense, useRef } from 'react';
 import type { Note, Tag, Theme, TagColor } from '../types';
 import { useDemoState } from '../hooks/useDemoState';
@@ -65,6 +65,7 @@ export function DemoPage({
   onTermsClick,
   onSupportClick,
 }: DemoPageProps) {
+  const libraryFooterRef = useRef<HTMLElement>(null);
   // Demo state management
   const {
     notes,
@@ -507,6 +508,7 @@ export function DemoPage({
         )}
 
         <ChapteredLibrary
+          footerRef={libraryFooterRef}
           notes={displayNotes}
           onNoteClick={handleNoteClick}
           onNoteDelete={handleNoteDelete}
@@ -519,6 +521,7 @@ export function DemoPage({
 
         {/* Footer */}
         <Footer
+          ref={libraryFooterRef}
           onChangelogClick={onChangelogClick}
           onRoadmapClick={onRoadmapClick}
           onShortcutsClick={() => setShowShortcutsModal(true)}
