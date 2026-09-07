@@ -32,6 +32,12 @@ vi.mock('./EditorToolbar', () => ({
   EditorToolbar: () => <div data-testid="editor-toolbar">Toolbar</div>,
 }));
 
+vi.mock('./FindReplacePanel', () => ({
+  FindReplacePanel: ({ onClose }: { onClose: () => void }) => (
+    <section aria-label="Find and replace"><button type="button" onClick={onClose}>Close find</button></section>
+  ),
+}));
+
 vi.mock('./TagSelector', () => ({
   TagSelector: ({ onCreateTag }: { onCreateTag?: () => void }) => (
     <div data-testid="tag-selector">
@@ -55,16 +61,19 @@ vi.mock('./HeaderShell', () => ({
   HeaderShell: ({
     onThemeToggle,
     leftContent,
-    rightActions
+    rightActions,
+    center,
   }: {
     theme: string;
     onThemeToggle: () => void;
     leftContent?: React.ReactNode;
     rightActions?: React.ReactNode;
+    center?: React.ReactNode;
   }) => (
     <div data-testid="header-shell">
       <div data-testid="header-left">{leftContent}</div>
       <button type="button" onClick={onThemeToggle}>Toggle Theme</button>
+      <div data-testid="header-center">{center}</div>
       <div data-testid="header-right">{rightActions}</div>
     </div>
   ),
@@ -171,6 +180,12 @@ describe('Editor', () => {
       expect(screen.getByDisplayValue('Test Note')).toBeInTheDocument();
     });
 
+    it('keeps the mobile header title slot empty and uses the dynamic viewport height', () => {
+      render(<Editor {...defaultProps} />);
+      expect(screen.getByTestId('header-center')).toBeEmptyDOMElement();
+      expect(screen.getByTestId('note-editor')).toHaveClass('h-[100dvh]');
+    });
+
     it('renders the header with title in breadcrumb', () => {
       render(<Editor {...defaultProps} />);
       // The header left content should include the note title
@@ -180,7 +195,7 @@ describe('Editor', () => {
 
     it('renders the editor toolbar', () => {
       render(<Editor {...defaultProps} />);
-      expect(screen.getByTestId('editor-toolbar')).toBeInTheDocument();
+      expect(screen.getAllByTestId('editor-toolbar')).toHaveLength(2);
     });
 
     it('renders the tag selector', () => {
@@ -507,6 +522,13 @@ describe('Editor', () => {
   });
 
   describe('keyboard shortcuts', () => {
+    it('opens find and replace while focus mode is active', () => {
+      render(<Editor {...defaultProps} />);
+      fireEvent.keyDown(window, { key: 'f', ctrlKey: true, shiftKey: true });
+      expect(screen.getByText('Focus mode on')).toBeInTheDocument();
+      fireEvent.keyDown(window, { key: 'f', ctrlKey: true });
+      expect(screen.getByRole('region', { name: 'Find and replace' })).toBeInTheDocument();
+    });
     it('saves and goes back on Escape', async () => {
       const onBack = vi.fn();
       const onUpdate = vi.fn().mockResolvedValue(undefined);

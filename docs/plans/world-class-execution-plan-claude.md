@@ -38,17 +38,13 @@ that must land first.
 
 ## Next
 
-Five lanes, 17 items. Lanes A to D run in parallel on separate branches and own the files named in the handoff; E starts after C merges. Merge order when two are ready: D, B, A, C. Item 87 is the maintainer's own task, not a code lane.
+Five lanes, 13 items. Lanes A to D run in parallel on separate branches and own the files named in the handoff; E starts after C merges. Merge order when two are ready: D, B, A, C. Item 87 is the maintainer's own task, not a code lane.
 
 ### Lane A · Editor fluency · `fix/editor-fluency` · runs in parallel
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
-| 52 | Editor | Markdown paste through `handlePaste` and `markdownToHtml` | days |  | `## Heading` pastes as a heading; HTML clipboard content is untouched · unit test |
-| 53 | Editor | Typography extension: smart quotes, dashes, ellipsis | days |  | Enabled with a setting to disable; code blocks exempt · unit test |
-| 54 | Editor | Word and character count, reading time, hover-revealed in the title-zone metadata | days |  | Visible on hover on desktop, tap on mobile · component test |
 | 55 | Editor | Find and replace in note: `Cmd+F`, next and previous, decoration highlights | days |  | Works in focus mode; replace-all is undoable in one step · E2E |
-| 56 | Editor | Toolbar and sidebar subscribe to editor transactions so active states stay fresh | days |  | Arrow into bold text lights the button · component test |
 | 57 | Editor | One command model: same capability set in sidebar, inline toolbar, mobile bar, slash menu, shortcuts, with overflow by width; fixes the hidden inline toolbar at 1100 px and wider; text-align gets UI or the extension is dropped; inline code button | weeks |  | Every command reachable by mouse at every width from 320 px to 1920 px · E2E across four widths |
 | 83 | Phone | Remove the doubled title in the mobile editor; `h-screen` to `100dvh` | days |  | iOS Safari bars no longer clip the toolbar · real-device check in #81 |
 | 116 | Editor | Slash menu flips and clamps to the viewport and follows scroll; renderer lifecycle bug on Escape fixed | days |  | The menu is fully visible at the bottom of a 390 px viewport · mobile E2E |

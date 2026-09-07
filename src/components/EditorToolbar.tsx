@@ -1,486 +1,200 @@
 import type { Editor } from '@tiptap/react';
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  EDITOR_COMMANDS,
+  EDITOR_COMMANDS_BY_ID,
+  editorCommandTitle,
+  type EditorCommandContext,
+  type EditorCommandDefinition,
+  type EditorCommandId,
+} from '../editor/editorCommands';
+import { useEditorTransactions } from '../editor/useEditorTransactions';
+
+const PRIMARY_COMMANDS: readonly EditorCommandId[] = [
+  'bold', 'italic', 'inlineCode', 'heading1', 'bulletList', 'undo', 'redo',
+];
+
+const WIDE_COMMANDS: readonly EditorCommandId[] = [
+  'link', 'underline', 'strike', 'highlight', 'heading2', 'heading3',
+  'orderedList', 'taskList', 'blockquote', 'codeBlock',
+];
+
+const SIDEBAR_COMMANDS: readonly EditorCommandId[] = [
+  'bold', 'italic', 'inlineCode', 'heading1', 'bulletList', 'blockquote',
+];
 
 interface ToolbarButtonProps {
-  onClick: () => void;
-  isActive?: boolean;
-  disabled?: boolean;
-  children: React.ReactNode;
-  title: string;
+  command: EditorCommandDefinition;
+  context: EditorCommandContext;
+  menuItem?: boolean;
+  onRun?: () => void;
 }
 
-function ToolbarButton({
-  onClick,
-  isActive = false,
-  disabled = false,
-  children,
-  title,
-}: ToolbarButtonProps) {
+function ToolbarButton({ command, context, menuItem = false, onRun }: ToolbarButtonProps) {
+  const isActive = command.isActive?.(context) ?? false;
+  const disabled = !(command.canRun?.(context) ?? true);
+  const title = editorCommandTitle(command);
+
   return (
-    <button type="button"
-      onClick={onClick}
+    <button
+      type="button"
+      onClick={() => {
+        command.run(context);
+        onRun?.();
+      }}
       disabled={disabled}
       title={title}
       aria-label={title}
-      className={`
-        size-8
-        flex items-center justify-center
-        rounded-md
-        transition-all duration-200
-        disabled:opacity-30
-      `}
-      style={{
-        background: isActive ? 'var(--color-accent)' : 'transparent',
-        color: isActive ? 'var(--color-on-accent)' : 'var(--color-text-secondary)',
-      }}
-      onMouseEnter={(e) => {
-        if (!isActive && !disabled) {
-          e.currentTarget.style.background = 'var(--color-bg-tertiary)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.background = 'transparent';
-        }
-      }}
+      aria-pressed={command.isActive ? isActive : undefined}
+      role={menuItem ? 'menuitem' : undefined}
+      className={menuItem ? 'editor-command-menu-item' : 'editor-command-button'}
+      data-command-id={command.id}
+      data-active={isActive || undefined}
     >
-      {children}
+      <span className="editor-command-icon" aria-hidden="true">{command.shortLabel}</span>
+      {menuItem && (
+        <span className="editor-command-menu-copy">
+          <span>{command.label}</span>
+          <span>{command.description}</span>
+        </span>
+      )}
+      {menuItem && command.shortcut && <kbd>{command.shortcut}</kbd>}
     </button>
   );
 }
 
-function ToolbarDivider() {
-  return (
-    <div
-      className="w-px h-5 mx-1"
-      style={{ background: 'var(--glass-border)' }}
-    />
-  );
-}
-
-// Overflow menu for toolbar (supports upward/downward opening)
 interface OverflowMenuProps {
-  children: React.ReactNode;
-  direction?: 'down' | 'up';
+  context: EditorCommandContext;
+  direction: 'down' | 'up' | 'right';
 }
 
-function OverflowMenu({ children, direction = 'down' }: OverflowMenuProps) {
+function OverflowMenu({ context, direction }: OverflowMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  // Close menu when clicking outside
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setIsOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      setIsOpen(false);
+      triggerRef.current?.focus();
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown, true);
+    requestAnimationFrame(() => menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus());
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
   }, [isOpen]);
 
-  const positionStyle = direction === 'up'
-    ? { bottom: '100%', marginBottom: '8px' }
-    : { top: '100%', marginTop: '4px' };
-
   return (
-    <div className="relative" ref={menuRef}>
-      <ToolbarButton
-        onClick={() => setIsOpen(!isOpen)}
-        isActive={isOpen}
-        title="More formatting options"
+    <div className="editor-command-overflow" ref={menuRef} data-direction={direction}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="editor-command-button"
+        aria-label="More editor commands"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        data-active={isOpen || undefined}
+        onClick={() => setIsOpen((open) => !open)}
       >
-        <svg className="size-4" fill="currentColor" viewBox="0 0 24 24">
-          <circle cx="5" cy="12" r="2" />
-          <circle cx="12" cy="12" r="2" />
-          <circle cx="19" cy="12" r="2" />
+        <svg aria-hidden="true" className="size-4" fill="currentColor" viewBox="0 0 24 24">
+          <circle cx="5" cy="12" r="1.6" />
+          <circle cx="12" cy="12" r="1.6" />
+          <circle cx="19" cy="12" r="1.6" />
         </svg>
-      </ToolbarButton>
+      </button>
       {isOpen && (
         <div
-          className="absolute right-0 p-1.5 rounded-lg z-50 flex flex-wrap gap-0.5"
-          style={{
-            ...positionStyle,
-            background: 'var(--color-bg-secondary)',
-            border: '1px solid var(--glass-border)',
-            boxShadow: 'var(--shadow-sm)',
-            minWidth: '200px',
-            maxWidth: '280px',
-          }}
+          className="editor-command-menu"
           role="menu"
-          tabIndex={-1}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              e.preventDefault();
-              setIsOpen(false);
-            }
+          aria-label="All editor commands"
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+            event.preventDefault();
+            const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')];
+            const current = items.indexOf(document.activeElement as HTMLButtonElement);
+            const delta = event.key === 'ArrowDown' ? 1 : -1;
+            items[(current + delta + items.length) % items.length]?.focus();
           }}
-          onClick={() => setIsOpen(false)}
         >
-          {children}
+          {EDITOR_COMMANDS.map((command) => (
+            <ToolbarButton
+              key={command.id}
+              command={command}
+              context={context}
+              menuItem
+              onRun={() => setIsOpen(false)}
+            />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-// Heading cycle button: ¶ → H1 → H2 → H3 → ¶
-function HeadingCycleButton({ editor }: { editor: Editor }) {
-  const currentLevel =
-    editor.isActive('heading', { level: 1 }) ? 1
-    : editor.isActive('heading', { level: 2 }) ? 2
-    : editor.isActive('heading', { level: 3 }) ? 3
-    : 0;
-
-  const label = currentLevel > 0 ? `H${currentLevel}` : '¶';
-
-  function cycleHeading(): void {
-    switch (currentLevel) {
-      case 1: editor.chain().focus().toggleHeading({ level: 2 }).run(); break;
-      case 2: editor.chain().focus().toggleHeading({ level: 3 }).run(); break;
-      case 3: editor.chain().focus().setParagraph().run(); break;
-      default: editor.chain().focus().toggleHeading({ level: 1 }).run(); break;
-    }
-  }
-
-  return (
-    <ToolbarButton onClick={cycleHeading} isActive={currentLevel > 0} title="Cycle heading level">
-      <span className="text-xs font-bold">{label}</span>
-    </ToolbarButton>
-  );
-}
-
-interface EditorToolbarProps {
+export interface EditorToolbarProps {
   editor: Editor | null;
-  variant?: 'inline' | 'bottom';
+  variant?: 'inline' | 'bottom' | 'sidebar';
+  isFocusMode?: boolean;
+  onFindReplace?: () => void;
   onToggleFocusMode?: () => void;
   onLink?: () => void;
 }
 
-export function EditorToolbar({ editor, variant = 'inline', onToggleFocusMode, onLink }: EditorToolbarProps) {
+export function EditorToolbar({
+  editor,
+  variant = 'inline',
+  isFocusMode,
+  onFindReplace,
+  onToggleFocusMode,
+  onLink,
+}: EditorToolbarProps) {
+  useEditorTransactions(editor);
 
-  if (!editor) {
-    return (
-      <div
-        className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg flex-wrap"
-        style={{
-          background: 'var(--color-bg-secondary)',
-          border: '1px solid var(--glass-border)',
-          boxShadow: 'var(--shadow-sm)',
-          minHeight: '44px',
-        }}
-      >
-        {/* Placeholder while editor loads */}
-      </div>
-    );
-  }
+  if (!editor) return <div className="editor-command-toolbar" data-variant={variant} aria-hidden="true" />;
 
-  // Shared button definitions
-  const LinkButton = (
-    <ToolbarButton onClick={() => onLink?.()} isActive={editor.isActive('link')} title="Link (Ctrl+K)">
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-2 2M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l2-2" /></svg>
-    </ToolbarButton>
-  );
+  const context: EditorCommandContext = {
+    editor,
+    isFocusMode,
+    onFindReplace,
+    onToggleFocusMode,
+    onLink,
+  };
+  const visibleIds = variant === 'sidebar' ? SIDEBAR_COMMANDS : PRIMARY_COMMANDS;
+  const overflowDirection = variant === 'bottom' ? 'up' : variant === 'sidebar' ? 'right' : 'down';
 
-  const BoldButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleBold().run()}
-      isActive={editor.isActive('bold')}
-      title="Bold (Ctrl+B)"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-        <path d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z" />
-        <path d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z" />
-      </svg>
-    </ToolbarButton>
-  );
-
-  const ItalicButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleItalic().run()}
-      isActive={editor.isActive('italic')}
-      title="Italic (Ctrl+I)"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10 4h4m2 0l-6 16m-2 0h4" />
-      </svg>
-    </ToolbarButton>
-  );
-
-  const UnderlineButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleUnderline().run()}
-      isActive={editor.isActive('underline')}
-      title="Underline (Ctrl+U)"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 4v7a5 5 0 0010 0V4M5 20h14" />
-      </svg>
-    </ToolbarButton>
-  );
-
-  const StrikeButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleStrike().run()}
-      isActive={editor.isActive('strike')}
-      title="Strikethrough"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16 4H9a3 3 0 00-3 3v0a3 3 0 003 3h6a3 3 0 013 3v0a3 3 0 01-3 3H7M4 12h16" />
-      </svg>
-    </ToolbarButton>
-  );
-
-  const HighlightButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleHighlight().run()}
-      isActive={editor.isActive('highlight')}
-      title="Highlight"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-      </svg>
-    </ToolbarButton>
-  );
-
-  const H1Button = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-      isActive={editor.isActive('heading', { level: 1 })}
-      title="Heading 1"
-    >
-      <span className="text-xs font-bold">H1</span>
-    </ToolbarButton>
-  );
-
-  const H2Button = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-      isActive={editor.isActive('heading', { level: 2 })}
-      title="Heading 2"
-    >
-      <span className="text-xs font-bold">H2</span>
-    </ToolbarButton>
-  );
-
-  const H3Button = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-      isActive={editor.isActive('heading', { level: 3 })}
-      title="Heading 3"
-    >
-      <span className="text-xs font-bold">H3</span>
-    </ToolbarButton>
-  );
-
-  const BulletListButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleBulletList().run()}
-      isActive={editor.isActive('bulletList')}
-      title="Bullet List"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h.01M8 6h12M4 12h.01M8 12h12M4 18h.01M8 18h12" />
-      </svg>
-    </ToolbarButton>
-  );
-
-  const NumberedListButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleOrderedList().run()}
-      isActive={editor.isActive('orderedList')}
-      title="Numbered List"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h.01M4 12h.01M4 18h.01M8 6h12M8 12h12M8 18h12" />
-        <text x="2" y="7" fontSize="6" fill="currentColor">1</text>
-        <text x="2" y="13" fontSize="6" fill="currentColor">2</text>
-        <text x="2" y="19" fontSize="6" fill="currentColor">3</text>
-      </svg>
-    </ToolbarButton>
-  );
-
-  const TaskListButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleTaskList().run()}
-      isActive={editor.isActive('taskList')}
-      title="Task List"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-      </svg>
-    </ToolbarButton>
-  );
-
-  const QuoteButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleBlockquote().run()}
-      isActive={editor.isActive('blockquote')}
-      title="Quote"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4z" />
-      </svg>
-    </ToolbarButton>
-  );
-
-  const CodeBlockButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-      isActive={editor.isActive('codeBlock')}
-      title="Code Block"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-      </svg>
-    </ToolbarButton>
-  );
-
-  const HorizontalRuleButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().setHorizontalRule().run()}
-      title="Horizontal Rule"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 12h16" />
-      </svg>
-    </ToolbarButton>
-  );
-
-  const UndoButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().undo().run()}
-      disabled={!editor.can().undo()}
-      title="Undo (Ctrl+Z)"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a5 5 0 015 5v2M3 10l4-4m-4 4l4 4" />
-      </svg>
-    </ToolbarButton>
-  );
-
-  const RedoButton = (
-    <ToolbarButton
-      onClick={() => editor.chain().focus().redo().run()}
-      disabled={!editor.can().redo()}
-      title="Redo (Ctrl+Shift+Z)"
-    >
-      <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 10H11a5 5 0 00-5 5v2m15-7l-4-4m4 4l-4 4" />
-      </svg>
-    </ToolbarButton>
-  );
-
-  const FocusModeSection = onToggleFocusMode ? (
-    <>
-      <ToolbarDivider />
-      <ToolbarButton
-        onClick={onToggleFocusMode}
-        title="Focus mode (Ctrl+Shift+F)"
-      >
-        <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-        </svg>
-      </ToolbarButton>
-    </>
-  ) : null;
-
-  // Bottom toolbar variant: compact bar for thumb zone
-  if (variant === 'bottom') {
-    return (
-      <div
-        className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg"
-        style={{
-          background: 'var(--color-bg-secondary)',
-          border: '1px solid var(--glass-border)',
-          boxShadow: 'var(--shadow-sm)',
-        }}
-      >
-        {BoldButton}
-        {ItalicButton}
-
-        <ToolbarDivider />
-
-        <HeadingCycleButton editor={editor} />
-
-        <ToolbarDivider />
-
-        {BulletListButton}
-        {TaskListButton}
-
-        <ToolbarDivider />
-
-        {UndoButton}
-        {RedoButton}
-
-        <ToolbarDivider />
-
-        {/* Overflow opens upward from bottom toolbar */}
-        <OverflowMenu direction="up">
-          {LinkButton}
-          {UnderlineButton}
-          {StrikeButton}
-          {HighlightButton}
-          {NumberedListButton}
-          {QuoteButton}
-          {CodeBlockButton}
-          {HorizontalRuleButton}
-        </OverflowMenu>
-
-        {FocusModeSection}
-      </div>
-    );
-  }
-
-  // Desktop layout: Full toolbar
   return (
     <div
-      className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg flex-wrap"
-      style={{
-        background: 'var(--color-bg-secondary)',
-        border: '1px solid var(--glass-border)',
-        boxShadow: 'var(--shadow-sm)',
-      }}
+      className="editor-command-toolbar"
+      data-variant={variant}
+      role="toolbar"
+      aria-label="Formatting and editor commands"
+      aria-orientation={variant === 'sidebar' ? 'vertical' : 'horizontal'}
     >
-      {/* Text Style */}
-      {BoldButton}
-      {ItalicButton}
-      {LinkButton}
-      {UnderlineButton}
-      {StrikeButton}
-      {HighlightButton}
-
-      <ToolbarDivider />
-
-      {/* Headings */}
-      {H1Button}
-      {H2Button}
-      {H3Button}
-
-      <ToolbarDivider />
-
-      {/* Lists */}
-      {BulletListButton}
-      {NumberedListButton}
-      {TaskListButton}
-
-      <ToolbarDivider />
-
-      {/* Block Elements */}
-      {QuoteButton}
-      {CodeBlockButton}
-      {HorizontalRuleButton}
-
-      <ToolbarDivider />
-
-      {/* Undo/Redo */}
-      {UndoButton}
-      {RedoButton}
-
-      {FocusModeSection}
+      {visibleIds.map((id) => {
+        const command = EDITOR_COMMANDS_BY_ID.get(id);
+        return command ? <ToolbarButton key={id} command={command} context={context} /> : null;
+      })}
+      {variant === 'inline' && WIDE_COMMANDS.map((id) => {
+        const command = EDITOR_COMMANDS_BY_ID.get(id);
+        return command ? (
+          <span className="editor-command-wide" key={id}>
+            <ToolbarButton command={command} context={context} />
+          </span>
+        ) : null;
+      })}
+      <OverflowMenu context={context} direction={overflowDirection} />
     </div>
   );
 }

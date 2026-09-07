@@ -7,6 +7,12 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.16', date: '2026-09-07', changes: [
+    { type: 'improvement', text: 'Markdown-shaped text pastes with its headings, lists, quotes, and other structure while rich clipboard content keeps its original formatting.' },
+    { type: 'improvement', text: 'Optional smart typography turns typed quotes, dashes, and ellipses into polished punctuation without changing code.' },
+    { type: 'feature', text: 'Writing details reveal word and character counts plus reading time on hover or tap.' },
+    { type: 'fix', text: 'Editor controls now update immediately when the cursor moves into or out of formatted text.' },
+  ] },
   { version: '3.19.15', date: '2026-09-07', changes: [
     { type: 'feature', text: 'A security page at /security sets out what encryption protects, what stays visible to us even so — timestamps, note sizes, tag names — and what we have not solved yet' },
     { type: 'improvement', text: 'Error reports no longer carry the salt used to derive your keys. It was never a secret, but it identified you across reports and served no purpose there' },

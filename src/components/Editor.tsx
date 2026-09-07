@@ -7,6 +7,8 @@ import { LinkPopover } from './LinkPopover';
 import { RichTextEditor } from './RichTextEditor';
 import { EditorToolbar } from './EditorToolbar';
 import { EditorSidebar } from './EditorSidebar';
+import { EditorMetrics } from './EditorMetrics';
+import { FindReplacePanel } from './FindReplacePanel';
 import { TagSelector } from './TagSelector';
 import { ShareModal } from './ShareModal';
 import { formatShortDate, formatRelativeTime } from '../utils/formatTime';
@@ -120,11 +122,14 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     }
   };
   const [showLinkPopover, setShowLinkPopover] = useState(false);
+  const [showFindReplace, setShowFindReplace] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const closeLinkPopover = useCallback(() => setShowLinkPopover(false), []);
   const openLinkPopover = useCallback(() => {
     editor?.chain().extendMarkRange('link').run();
     setShowLinkPopover(true);
   }, [editor]);
+  const openFindReplace = useCallback(() => setShowFindReplace(true), []);
   useEffect(() => {
     const requestLink = (event: Event) => {
       if (event.target === editor?.view?.dom) openLinkPopover();
@@ -132,11 +137,21 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     document.addEventListener('yidhan:edit-link', requestLink);
     return () => document.removeEventListener('yidhan:edit-link', requestLink);
   }, [editor, openLinkPopover]);
+  useEffect(() => {
+    const requestAction = (event: Event) => {
+      if (event.target !== editor?.view?.dom) return;
+      const action = (event as CustomEvent<{ action?: string }>).detail?.action;
+      if (action === 'link') openLinkPopover();
+      if (action === 'findReplace') openFindReplace();
+      if (action === 'focusMode') setIsFocusMode((active) => !active);
+    };
+    document.addEventListener('yidhan:editor-action', requestAction);
+    return () => document.removeEventListener('yidhan:editor-action', requestAction);
+  }, [editor, openFindReplace, openLinkPopover]);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showResumeChip, setShowResumeChip] = useState(false);
   const savedScrollPositionRef = useRef<number | null>(null);
-  const [isFocusMode, setIsFocusMode] = useState(false);
   const isMobile = useMobileDetect();
   useKeyboardHeight(); // Sets --keyboard-height CSS var for bottom toolbar positioning
   const titleRef = useRef<HTMLTextAreaElement>(null);
@@ -536,6 +551,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   }, [cancelPendingAutoSave, title, content, note.title, note.content, performSave]);
 
   const handleEditorShortcut = useEffectEvent(async (e: KeyboardEvent) => {
+    // Cmd/Ctrl+F: find within the current note, including in focus mode.
+    if (e.key.toLowerCase() === 'f' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+      e.preventDefault();
+      setShowFindReplace(true);
+      return;
+    }
     // Cmd/Ctrl+Shift+F: toggle focus mode
     if (e.key.toLowerCase() === 'f' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
       e.preventDefault();
@@ -544,7 +565,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     }
     // Escape: exit focus mode first, then save and go back
     if (e.key === 'Escape') {
-      if (e.defaultPrevented || showLinkPopover || showExportMenu || showShareModal || showDeleteConfirm ||
+      if (e.defaultPrevented || showLinkPopover || showFindReplace || showExportMenu || showShareModal || showDeleteConfirm ||
         document.querySelector('[aria-expanded="true"], [role="dialog"], [role="menu"], [data-editor-popover]')) {
         return;
       }
@@ -889,25 +910,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     </div>
   );
 
-  // Center content: Mobile note title only (clicks to scroll to top)
-  const centerContent = (
-    <button type="button"
-      onClick={handleScrollToTop}
-      className="sm:hidden flex items-center min-w-0"
-      style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-    >
-      <span
-        className="truncate text-sm font-medium"
-        style={{
-          fontFamily: 'var(--font-body)',
-          color: 'var(--color-text-primary)',
-        }}
-      >
-        {title || 'Untitled'}
-      </span>
-    </button>
-  );
-
   // Right actions: Save status + Export button + Delete button
   const rightActions = (
     <div className="flex items-center gap-2">
@@ -1160,7 +1162,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   return (
     <div
       ref={scrollContainerRef}
-      className={`h-screen overflow-y-auto ${isFocusMode ? 'focus-mode-active' : ''}`}
+      className={`h-[100dvh] overflow-y-auto ${isFocusMode ? 'focus-mode-active' : ''}`}
       style={{ background: 'var(--color-bg-primary)' }}
       data-testid="note-editor"
     >
@@ -1192,7 +1194,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           theme={theme}
           onThemeToggle={onThemeToggle}
           leftContent={leftContent}
-          center={centerContent}
           rightActions={rightActions}
           // Settings is where a locked vault gets unlocked, so it must not be
           // gated on a save that fails because the vault is locked. The header
@@ -1201,6 +1202,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           onSettingsClick={async () => { await performSave(); onSettingsClick(); }}
         />
       </div>
+
+      {showFindReplace && editor && (
+        <FindReplacePanel editor={editor} onClose={() => setShowFindReplace(false)} />
+      )}
 
       {/* Resume chip - shown when reopening a note with saved scroll position */}
       {showResumeChip && (
@@ -1324,7 +1329,13 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
       {/* Vertical sidebar — desktop only; CSS hides below 1100px where inline toolbar shows instead */}
       {!isMobile && (
-        <EditorSidebar editor={editor} onToggleFocusMode={handleToggleFocusMode} onLink={openLinkPopover} />
+        <EditorSidebar
+          editor={editor}
+          isFocusMode={isFocusMode}
+          onFindReplace={openFindReplace}
+          onToggleFocusMode={handleToggleFocusMode}
+          onLink={openLinkPopover}
+        />
       )}
 
       {/* Editor Content */}
@@ -1368,24 +1379,31 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 onCreateTag={onCreateTag}
                 variant="inline"
               />
-              <span
-                className="editor-timestamps text-xs"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-tertiary)',
-                }}
-              >
-                {formatShortDate(note.createdAt)} · {formatRelativeTime(note.updatedAt)}
+              <span className="editor-title-meta-details">
+                <EditorMetrics editor={editor} isMobile={isMobile} />
+                <span
+                  className="editor-timestamps text-xs"
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    color: 'var(--color-text-tertiary)',
+                  }}
+                >
+                  {formatShortDate(note.createdAt)} · {formatRelativeTime(note.updatedAt)}
+                </span>
               </span>
             </div>
           </div>
 
-          {/* Inline toolbar — visible on medium desktop (768-1099px), hidden when sidebar shows */}
-          {!isMobile && (
-            <div className="editor-toolbar-sticky editor-toolbar-medium-fallback focus-mode-target">
-              <EditorToolbar editor={editor} onToggleFocusMode={handleToggleFocusMode} onLink={openLinkPopover} />
-            </div>
-          )}
+          {/* Inline toolbar remains available on every desktop width; the sidebar supplements it. */}
+          <div className="editor-toolbar-sticky editor-toolbar-inline focus-mode-target">
+            <EditorToolbar
+              editor={editor}
+              isFocusMode={isFocusMode}
+              onFindReplace={openFindReplace}
+              onToggleFocusMode={handleToggleFocusMode}
+              onLink={openLinkPopover}
+            />
+          </div>
 
           {/* Decorative divider — gradient line between title zone and body */}
           <div className="editor-title-divider focus-mode-target" aria-hidden="true" />
@@ -1460,9 +1478,16 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       </main>
 
       {/* Mobile: Bottom toolbar — fixed at thumb zone */}
-      {isMobile && !isFocusMode && (
+      {!isFocusMode && (
         <div className="editor-toolbar-bottom">
-          <EditorToolbar editor={editor} variant="bottom" onToggleFocusMode={handleToggleFocusMode} onLink={openLinkPopover} />
+          <EditorToolbar
+            editor={editor}
+            variant="bottom"
+            isFocusMode={isFocusMode}
+            onFindReplace={openFindReplace}
+            onToggleFocusMode={handleToggleFocusMode}
+            onLink={openLinkPopover}
+          />
         </div>
       )}
 

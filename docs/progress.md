@@ -149,3 +149,5 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   found something — `encryption_salt` was reaching Sentry unredacted. The salt is not a
   secret, but it is a stable per-user identifier and an error report has no use for one,
   so it is redacted now.
+- **2026-09-07** — Editor paste, typography, writing metrics, and formatting-state
+  feedback completed — ledger items 52–54 and 56.

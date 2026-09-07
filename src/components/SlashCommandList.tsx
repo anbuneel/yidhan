@@ -1,6 +1,7 @@
 import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 import {
   useCallback,
+  useEffect,
   useImperativeHandle,
   useState,
   type ReactNode,
@@ -28,6 +29,8 @@ interface CommandListProps {
 export function CommandList({ items, command, ref }: CommandListProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
+  useEffect(() => setSelectedIndex(0), [items]);
+
   const safeSelectedIndex = items.length > 0 ? selectedIndex % items.length : 0;
 
   const selectItem = useCallback(
@@ -43,11 +46,13 @@ export function CommandList({ items, command, ref }: CommandListProps) {
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }: SuggestionKeyDownProps) => {
       if (event.key === 'ArrowUp') {
+        if (items.length === 0) return true;
         setSelectedIndex((prev) => (prev + items.length - 1) % items.length);
         return true;
       }
 
       if (event.key === 'ArrowDown') {
+        if (items.length === 0) return true;
         setSelectedIndex((prev) => (prev + 1) % items.length);
         return true;
       }
@@ -65,13 +70,8 @@ export function CommandList({ items, command, ref }: CommandListProps) {
     return (
       <div
         className="slash-command-menu"
-        style={{
-          background: 'var(--color-bg-secondary)',
-          border: '1px solid var(--glass-border)',
-          borderRadius: '8px',
-          padding: '8px',
-          boxShadow: 'var(--shadow-sm)',
-        }}
+        role="menu"
+        aria-label="Editor commands"
       >
         <div
           className="text-sm"
@@ -86,20 +86,16 @@ export function CommandList({ items, command, ref }: CommandListProps) {
   return (
     <div
       className="slash-command-menu"
-      style={{
-        background: 'var(--color-bg-secondary)',
-        border: '1px solid var(--glass-border)',
-        borderRadius: '8px',
-        padding: '4px',
-        boxShadow: 'var(--shadow-sm)',
-        minWidth: '200px',
-      }}
+      role="menu"
+      aria-label="Editor commands"
     >
       {items.map((item, index) => (
         <button type="button"
           key={item.title}
           onClick={() => selectItem(index)}
-          className="w-full text-left px-3 py-2 rounded-md transition-colors duration-150 flex items-start gap-3"
+          className="slash-command-item"
+          role="menuitem"
+          aria-current={index === safeSelectedIndex ? 'true' : undefined}
           style={{
             background: index === safeSelectedIndex ? 'var(--color-bg-tertiary)' : 'transparent',
             fontFamily: 'var(--font-body)',
