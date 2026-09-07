@@ -2,6 +2,8 @@
 
 Exploratory enhancements and deferred ideas — not committed work. Items graduate to GitHub issues when ready for implementation.
 
+> **Sequenced plan:** the master ledger of improvement work from the September 2026 Claude and Codex reviews lives in [plans/world-class-execution-plan-claude.md](plans/world-class-execution-plan-claude.md). Items there supersede overlapping entries below.
+
 **Sections:** [Landing Page](#landing-page) · [Design & Polish](#design--polish) · [Editor](#editor) · [Mobile & Native](#mobile--native) · [Features](#features) · [Security & Trust](#security--trust) · [Infrastructure](#infrastructure)
 
 ---

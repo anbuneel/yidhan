@@ -51,7 +51,10 @@ Design analysis and feature exploration (AI-authored).
 
 | Document | Description | Date |
 |----------|-------------|------|
-| [launch-readiness-review-claude.md](analysis/launch-readiness-review-claude.md) | **NEW** Pre-launch comprehensive review: 4 blockers (offboarding job, passphrase dead-end, SMTP, copy), 12 open findings | 2026-07-06 |
+| [world-class-improvements-claude.md](analysis/world-class-improvements-claude.md) | **NEW** World-class improvement analysis: competitive scorecard vs Apple Notes/Bear/Craft/Notion, 10 prioritized moves, 25 verified defects, 4-phase plan | 2026-09-06 |
+| [world-class-improvements-visual-claude.html](analysis/world-class-improvements-visual-claude.html) | **NEW** Visual brief companion: real screenshots with numbered pins, ten moves, four-step plan (open in a browser) | 2026-09-06 |
+| [improvement-review-crosscheck-claude.md](analysis/improvement-review-crosscheck-claude.md) | **NEW** Cross-check of the Claude and Codex improvement reviews: shared, Claude-only, Codex-only with feedback, revised plan | 2026-09-07 |
+| [launch-readiness-review-claude.md](analysis/launch-readiness-review-claude.md) | Pre-launch comprehensive review: 4 blockers (offboarding job, passphrase dead-end, SMTP, copy), 12 open findings | 2026-07-06 |
 | [supabase-free-tier-vs-pro-claude.md](analysis/supabase-free-tier-vs-pro-claude.md) | **NEW** Supabase free vs Pro cost analysis: $0 hardening path (SMTP, backups, keep-alive), when to upgrade | 2026-07-06 |
 | [react-doctor-100-fixes-codex.md](analysis/react-doctor-100-fixes-codex.md) | React Doctor 100 cleanup summary: semantic fixes, small extractions, validation, and remaining lint gap | 2026-06-01 |
 | [design-audit-impeccable-skill-claude.md](analysis/design-audit-impeccable-skill-claude.md) | **NEW** Impeccable audit: a11y, performance, theming, responsive — 20 findings, 0 critical | 2026-03-28 |
@@ -153,6 +156,7 @@ Currently in-progress implementation plans and follow-ups.
 
 | Document | Description | Date |
 |----------|-------------|------|
+| [world-class-execution-plan-claude.md](plans/world-class-execution-plan-claude.md) | **NEW** The improvement plan: 148 numbered items from the Claude and Codex reviews in Now / Next / Later / Done lists, with coverage appendices | 2026-09-07 |
 | [account-deletion-workflow-plan.md](plans/account-deletion-workflow-plan.md) | Server-owned account deletion workflow plan and live-verification enablement record | 2026-06-21 |
 | [reliability-hardening-plan-codex.md](active/reliability-hardening-plan-codex.md) | Reliability hardening plan — items 1-3 implemented (PR #163): blocked sync recovery, safe hydration, E2EE telemetry. Items 4-5 deferred. | 2026-03-10 |
 | [launch-critical-fixes-plan-codex.md](active/launch-critical-fixes-plan-codex.md) | Launch-critical fix plan for `#121`, `#154`, `#126`, `#133` — **COMPLETE** (PR #164): sanitizer hardening, vault restore verification, search shortcut replacement, editor save serialization | 2026-03-10 |
@@ -301,6 +305,15 @@ See [mobile-ios-overhaul-plan.md](plans/mobile-ios-overhaul-plan.md) for full na
 ## Chronological Index
 
 All analysis, review, and reference docs ordered by creation date (newest first).
+
+### 2026-09 (September)
+
+| Date | Document | Category |
+|------|----------|----------|
+| 09-06 | [world-class-improvements-claude.md](analysis/world-class-improvements-claude.md) | Strategy / analysis |
+| 09-07 | [world-class-execution-plan-claude.md](plans/world-class-execution-plan-claude.md) | Execution plan |
+| 09-07 | [improvement-review-crosscheck-claude.md](analysis/improvement-review-crosscheck-claude.md) | Review cross-check |
+| 09-06 | [world-class-improvements-visual-claude.html](analysis/world-class-improvements-visual-claude.html) | Visual brief |
 
 ### 2026-07 (July)
 
