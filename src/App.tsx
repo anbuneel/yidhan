@@ -2,6 +2,8 @@ import { VaultLockedSaveError } from './utils/saveErrors';
 import { useState, useEffect, useCallback, useEffectEvent, useRef, Suspense, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import type { Note, Tag, ViewMode, Theme } from './types';
+import { useNoteSearch } from './hooks/useNoteSearch';
+import { applySavedNote } from './utils/applySavedNote';
 import { Header } from './components/Header';
 import { ChapteredLibrary } from './components/ChapteredLibrary';
 import { Auth } from './components/Auth';
@@ -13,7 +15,7 @@ import { PrivacyPage } from './components/PrivacyPage';
 import { TermsPage } from './components/TermsPage';
 import { SupportPage } from './components/SupportPage';
 import { NotFoundPage } from './components/NotFoundPage';
-import { sanitizeText, htmlToPlainText } from './utils/sanitize';
+import { sanitizeText } from './utils/sanitize';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 import { getLoadedEditorComponent, loadEditorComponent } from './utils/editorLoader';
 import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
@@ -178,6 +180,7 @@ function buildDeletedServerVersion(note: LocalNote): HardDeletedServerNoteVersio
 const SYNC_REFRESH_COALESCE_MS = 150;
 
 function App() {
+  const libraryFooterRef = useRef<HTMLElement>(null);
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
   const { keys, isEncryptionSetup, isUnlocked, lockVault, persistToLocal } = useEncryption();
   // Ref for encryption keys — used in realtime handlers to avoid stale closures
@@ -621,7 +624,7 @@ function App() {
     };
   }, [appLoading, showAppLoader]);
 
-  // Search state (focused-gaze model: highlights matches instead of filtering)
+  // Search filters the visible library
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [searchFocusToken, setSearchFocusToken] = useState(0);
@@ -1372,8 +1375,10 @@ function App() {
       // Encrypt and save to IndexedDB (immediate, works offline)
       // Sync engine will push encrypted payload to server when online
       const savedNote = await updateEncryptedNote(user.id, updatedNote.id, updatedNote.title, updatedNote.content, keys);
-      // A late save acknowledgement must not replace a newer draft or its tags.
-      setNotes(prev => prev.map(n => n.id === savedNote.id && n.title === updatedNote.title && n.content === updatedNote.content ? { ...n, ...savedNote, tags: n.tags } : n));
+
+      // applySavedNote carries the same late-acknowledgement guard and also
+      // keeps a pin or soft delete that landed mid-save.
+      setNotes((prev) => prev.map((n) => applySavedNote(n, savedNote, updatedNote)));
 
       // Trigger coalesced sync (2s after last save) to push changes promptly
       triggerCoalescedSync();
@@ -1789,7 +1794,7 @@ function App() {
     }
   };
 
-  // Debounced search handler (focused-gaze: highlights, doesn't filter)
+  // Debounced search handler
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
 
@@ -1812,14 +1817,7 @@ function App() {
   }, [clearSearchTimeout]);
 
   // Apply debounced search on top of tag-filtered notes
-  const displayNotes = useMemo(() => {
-    const q = debouncedSearchQuery.trim().toLowerCase();
-    if (!q) return tagFilteredNotes;
-    return tagFilteredNotes.filter((note) => {
-      if (note.title.toLowerCase().includes(q)) return true;
-      return htmlToPlainText(note.content).toLowerCase().includes(q);
-    });
-  }, [debouncedSearchQuery, tagFilteredNotes]);
+  const displayNotes = useNoteSearch(tagFilteredNotes, debouncedSearchQuery);
 
   const isSearching = debouncedSearchQuery.trim().length > 0;
 
@@ -2443,6 +2441,7 @@ function App() {
           onEditTag={handleEditTag}
         />
         <ChapteredLibrary
+          footerRef={libraryFooterRef}
           notes={displayNotes}
           onNoteClick={handleNoteClick}
           onNoteDelete={handleNoteDelete}
@@ -2516,6 +2515,7 @@ function App() {
 
         {/* Footer */}
         <Footer
+          ref={libraryFooterRef}
           onChangelogClick={navigateToChangelog}
           onRoadmapClick={navigateToRoadmap}
           onShortcutsClick={() => setShowShortcutsModal(true)}

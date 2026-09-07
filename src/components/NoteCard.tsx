@@ -33,7 +33,7 @@ export const NoteCard = memo(function NoteCard({
   const htmlPreview = useMemo(() => sanitizeHtml(note.content), [note.content]);
 
   // Search snippet: ~40 chars around the first match with <mark> highlighting
-  const searchSnippet = (() => {
+  const searchSnippet = useMemo(() => {
     if (!searchQuery) return null;
     const query = searchQuery.toLowerCase();
     const idx = plainText.toLowerCase().indexOf(query);
@@ -45,7 +45,7 @@ export const NoteCard = memo(function NoteCard({
     const match = escapeHtml(plainText.slice(idx, idx + searchQuery.length));
     const after = escapeHtml(plainText.slice(idx + searchQuery.length, end));
     return `${start > 0 ? '...' : ''}${before}<mark>${match}</mark>${after}${end < plainText.length ? '...' : ''}`;
-  })();
+  }, [plainText, searchQuery]);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();

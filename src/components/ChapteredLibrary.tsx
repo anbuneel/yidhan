@@ -1,10 +1,10 @@
+import type { RefObject } from 'react';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import type { Note } from '../types';
 import { ChapterSection } from './ChapterSection';
 import { ChapterNav } from './ChapterNav';
 import { TimeRibbon } from './TimeRibbon';
 import { PullToRefresh } from './PullToRefresh';
-import { GestureHint } from './GestureHint';
 import { useTouchCapable, useMobileDetect } from '../hooks/useMobileDetect';
 import {
   groupNotesByChapter,
@@ -16,6 +16,7 @@ import {
 const MOBILE_BREAKPOINT = 700;
 
 interface ChapteredLibraryProps {
+  footerRef?: RefObject<HTMLElement | null>;
   notes: Note[];
   onNoteClick: (id: string) => void;
   onNoteDelete: (id: string) => void;
@@ -28,6 +29,7 @@ interface ChapteredLibraryProps {
 }
 
 export function ChapteredLibrary({
+  footerRef,
   notes,
   onNoteClick,
   onNoteDelete,
@@ -128,7 +130,7 @@ export function ChapteredLibrary({
   if (isLoading && notes.length === 0) {
     return (
       <main
-        className="flex-1 overflow-y-auto pb-32 relative"
+        className="flex-1 overflow-y-auto pb-[calc(8rem+env(safe-area-inset-bottom))] relative"
         style={{ scrollbarWidth: 'none' }}
         data-testid="library-view"
         aria-busy="true"
@@ -268,13 +270,14 @@ export function ChapteredLibrary({
   // Library content (rendered inside or outside PullToRefresh based on device)
   const libraryContent = (
     <main
-      className="flex-1 overflow-y-auto pb-32 relative"
+      className="flex-1 overflow-y-auto pb-[calc(8rem+env(safe-area-inset-bottom))] relative"
       style={{ scrollbarWidth: 'none' }}
       data-testid="library-view"
     >
       {/* Render each non-empty chapter */}
-      {chapters.map((chapter) => (
+      {chapters.map((chapter, chapterIndex) => (
         <ChapterSection
+          showGestureHint={isMobile && chapterIndex === 0}
           key={chapter.key}
           chapterKey={chapter.key as ChapterKey}
           label={chapter.label}
@@ -312,13 +315,12 @@ export function ChapteredLibrary({
 
       {/* Time Ribbon - Mobile (bottom scrubber) */}
       <TimeRibbon
+        footerRef={footerRef}
+        noteCount={notes.length}
         chapters={navChapters}
         currentChapter={currentChapter}
         onChapterClick={scrollToChapter}
       />
-
-      {/* Gesture Hint - Mobile only, shows once when notes exist */}
-      <GestureHint enabled={isMobile && notes.length > 0} />
     </>
   );
 }

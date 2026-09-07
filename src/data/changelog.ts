@@ -7,6 +7,15 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.12', date: '2026-09-07', changes: [
+    { type: 'fix', text: 'Mobile time navigation follows the library footer without reacting to unrelated page footers.' },
+    { type: 'fix', text: 'Search reuses note text, mobile gesture guidance stays beside your notes, and time navigation leaves room to read' },
+    { type: 'fix', text: 'Practice drafts are clearly labelled as unencrypted; receiving shared text through the app manifest is removed until private capture is ready' },
+  ] },
+  {
+    version: '3.19.11', date: '2026-09-07',
+    changes: [{ type: 'fix', text: 'Conflict copies support long titles; targeted tag refreshes keep labels current even when events arrive out of order' }, { type: 'fix', text: 'Tag changes refresh across devices, conflicts show readable comparisons and preserve a copy, and large libraries sync without cursor overflow' }, { type: 'improvement', text: 'A burst of tag changes from another device now refreshes the library once instead of once per change' }],
+  },
   { version: '3.19.10', date: '2026-09-07', changes: [
     { type: 'fix', text: 'Copy feedback clears after draft recovery, and older notes verify their saved state against the server.' },
     { type: 'fix', text: 'Unsaved drafts explain when the vault needs unlocking; sync acknowledgements preserve an explicitly missing hash.' },
@@ -22,10 +31,6 @@ export const changelog: ChangelogEntry[] = [
       { type: 'fix', text: 'Add, edit, and remove links from the editor controls or slash menu; Ctrl/Cmd+K links selected text, and clicking a link keeps your note open' },
       { type: 'fix', text: 'Enter in a note title moves into the writing area, Escape closes the slash menu without leaving the note, and underline formatting initializes cleanly' },
     ],
-  },
-  {
-    version: '3.19.11', date: '2026-09-07',
-    changes: [{ type: 'fix', text: 'Conflict copies support long titles; targeted tag refreshes keep labels current even when events arrive out of order' }, { type: 'fix', text: 'Tag changes refresh across devices, conflicts show readable comparisons and preserve a copy, and large libraries sync without cursor overflow' }, { type: 'improvement', text: 'A burst of tag changes from another device now refreshes the library once instead of once per change' }],
   },
   {
     version: '3.19.8',

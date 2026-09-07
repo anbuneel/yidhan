@@ -1,3 +1,4 @@
+import { GestureHint } from './GestureHint';
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import Masonry from 'react-masonry-css';
 import type { Note } from '../types';
@@ -22,6 +23,7 @@ interface ChapterSectionProps {
   isCompact?: boolean;
   searchQuery?: string;
   isSearching?: boolean;
+  showGestureHint?: boolean;
 }
 
 // Visual treatment based on chapter age (subtle opacity reduction for older notes)
@@ -46,6 +48,7 @@ export const ChapterSection = memo(function ChapterSection({
   isCompact = false,
   searchQuery,
   isSearching = false,
+  showGestureHint = false,
 }: ChapterSectionProps) {
   // Detect touch capability for swipe gestures
   const isTouchDevice = useTouchCapable();
@@ -331,6 +334,7 @@ export const ChapterSection = memo(function ChapterSection({
                         searchQuery={isSearching ? searchQuery : undefined}
                       />
                     )}
+                    {showGestureHint && index === 0 && <GestureHint />}
                   </div>
                 ))}
               </Masonry>
@@ -361,6 +365,7 @@ export const ChapterSection = memo(function ChapterSection({
   prev.isCompact === next.isCompact &&
   prev.searchQuery === next.searchQuery &&
   prev.isSearching === next.isSearching &&
+  prev.showGestureHint === next.showGestureHint &&
   prev.onNoteClick === next.onNoteClick &&
   prev.onNoteDelete === next.onNoteDelete &&
   prev.onTogglePin === next.onTogglePin
