@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, memo } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback, memo } from 'react';
 import type { Note } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
@@ -7,7 +7,7 @@ import { sanitizeHtml, sanitizeText, htmlToPlainText, escapeHtml } from '../util
 interface NoteCardProps {
   note: Note;
   onClick: (id: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => boolean | void | Promise<boolean | void>;
   onTogglePin: (id: string, pinned: boolean) => void;
   isCompact?: boolean;
   isDecorative?: boolean;
@@ -24,7 +24,14 @@ export const NoteCard = memo(function NoteCard({
   searchQuery
 }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const deleteRequestedRef = useRef(false);
+  const mountedRef = useRef(true);
+  const noteIdRef = useRef(note.id);
+  const onDeleteRef = useRef(onDelete);
+  noteIdRef.current = note.id;
+  onDeleteRef.current = onDelete;
 
   // Plain text for compact mode and search (memoized to avoid repeated DOMPurify calls)
   const plainText = useMemo(() => htmlToPlainText(note.content), [note.content]);
@@ -49,31 +56,54 @@ export const NoteCard = memo(function NoteCard({
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    deleteRequestedRef.current = false;
+    setDeleteError(null);
     setIsDeleting(true);
   };
 
   useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const requestDelete = useCallback(() => {
+    if (deleteRequestedRef.current) return;
+    deleteRequestedRef.current = true;
+
+    void Promise.resolve()
+      .then(() => onDeleteRef.current(noteIdRef.current))
+      .then((deleted) => {
+        if (deleted === false && mountedRef.current) {
+          setIsDeleting(false);
+          setDeleteError('This note could not be faded. Try again.');
+        }
+      })
+      .catch(() => {
+        if (mountedRef.current) {
+          setIsDeleting(false);
+          setDeleteError('This note could not be faded. Try again.');
+        }
+      });
+  }, []);
+
+  useEffect(() => {
     if (!isDeleting) return;
     const el = cardRef.current;
-    if (!el) return;
-    const noteId = note.id;
-    const deleteNote = onDelete;
-    let called = false;
-    const handleAnimationEnd = () => {
-      if (!called) {
-        called = true;
-        deleteNote(noteId);
-      }
-    };
+    if (!el) {
+      requestDelete();
+      return;
+    }
+    const handleAnimationEnd = () => requestDelete();
     el.addEventListener('animationend', handleAnimationEnd, { once: true });
     return () => {
       el.removeEventListener('animationend', handleAnimationEnd);
-      if (!called) {
-        called = true;
-        deleteNote(noteId);
-      }
+      // Search/filter changes can unmount the card before animationend. The
+      // ref guard makes cleanup and animation completion one logical action.
+      requestDelete();
     };
-  }, [isDeleting, note.id, onDelete]);
+  }, [isDeleting, requestDelete]);
 
   const handlePinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -268,6 +298,7 @@ export const NoteCard = memo(function NoteCard({
         {!isCompact && !isDecorative && (
           <button type="button"
             onClick={handleDeleteClick}
+            disabled={isDeleting}
             className="
               relative z-20
               size-10
@@ -298,6 +329,16 @@ export const NoteCard = memo(function NoteCard({
           </button>
         )}
       </div>
+
+      {deleteError && (
+        <p
+          role="alert"
+          className="relative z-20 mt-3 text-xs"
+          style={{ color: 'var(--color-destructive)' }}
+        >
+          {deleteError}
+        </p>
+      )}
 
     </div>
   );

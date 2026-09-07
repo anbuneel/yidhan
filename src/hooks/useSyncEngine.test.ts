@@ -75,6 +75,30 @@ function buildHardDeleteConflict(localNote: LocalNote): ConflictInfo {
   };
 }
 
+function buildUpdateConflict(localNote: LocalNote): ConflictInfo {
+  const serverUpdatedAt = new Date(localNote.localUpdatedAt + 1000).toISOString();
+
+  return {
+    entityType: 'note',
+    entityId: localNote.id,
+    localVersion: localNote,
+    serverVersion: {
+      id: localNote.id,
+      user_id: localNote.userId,
+      title: '',
+      content: '',
+      pinned: false,
+      deleted_at: null,
+      created_at: new Date(localNote.createdAt).toISOString(),
+      updated_at: serverUpdatedAt,
+      encrypted_payload: `server-${localNote.encryptedPayload}`,
+      encryption_iv: `server-${localNote.encryptionIv}`,
+      encryption_version: 1,
+      content_hash: `server-${localNote.contentHash}`,
+    },
+  };
+}
+
 describe('resolveConflict hard-delete handling', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -360,5 +384,245 @@ describe('resolveConflict hard-delete handling', () => {
 
     const originalNoteTags = await db.noteTags.where('noteId').equals(localNote.id).toArray();
     expect(originalNoteTags).toHaveLength(0);
+  });
+
+  it('atomically retires stale note writes when accepting the server version', async () => {
+    const { resolveConflict } = await import('./useSyncEngine');
+    const db = getOfflineDb(TEST_USER_ID);
+    const now = Date.now();
+    const localNote: LocalNote = {
+      id: 'note-update-server',
+      userId: TEST_USER_ID,
+      title: '',
+      content: '',
+      pinned: true,
+      deletedAt: null,
+      createdAt: now - 5000,
+      updatedAt: now,
+      syncStatus: 'conflict',
+      lastSyncedAt: now - 10000,
+      serverUpdatedAt: now - 10000,
+      localUpdatedAt: now,
+      encryptedPayload: 'ciphertext-update-server',
+      encryptionIv: 'iv-update-server',
+      encryptionVersion: 1,
+      contentHash: 'hash-update-server',
+    };
+    await db.notes.add(localNote);
+    await db.syncQueue.bulkAdd([
+      {
+        clientMutationId: 'stale-blocked-update',
+        operation: 'update',
+        entityType: 'note',
+        entityId: localNote.id,
+        payload: { content_hash: 'stale-hash' },
+        createdAt: now - 2000,
+        retryCount: 5,
+        status: 'blocked',
+      },
+      {
+        clientMutationId: 'stale-pending-pin',
+        operation: 'pin',
+        entityType: 'note',
+        entityId: localNote.id,
+        payload: { pinned: true },
+        createdAt: now - 1000,
+        retryCount: 0,
+        status: 'pending',
+      },
+      {
+        clientMutationId: 'independent-tag-write',
+        operation: 'add_tag',
+        entityType: 'noteTag',
+        entityId: `${localNote.id}:tag-kept`,
+        payload: { noteId: localNote.id, tagId: 'tag-kept' },
+        createdAt: now,
+        retryCount: 0,
+        status: 'pending',
+      },
+    ]);
+    const conflict = buildUpdateConflict(localNote);
+    updateSingleMock.mockResolvedValue({
+      data: { updated_at: '2026-09-07T18:00:00.000Z' },
+      error: null,
+    });
+
+    await resolveConflict(TEST_USER_ID, conflict, 'server', TEST_KEYS);
+
+    const originalWrites = await db.syncQueue
+      .filter((entry) => entry.entityType === 'note' && entry.entityId === localNote.id)
+      .toArray();
+    expect(originalWrites).toHaveLength(0);
+    expect(await db.syncQueue.get({ clientMutationId: 'independent-tag-write' })).toBeDefined();
+    expect(await db.notes.get(localNote.id)).toMatchObject({
+      syncStatus: 'synced',
+      contentHash: conflict.serverVersion.content_hash,
+      confirmedContentHash: conflict.serverVersion.content_hash,
+    });
+  });
+
+  it('replaces stale writes with only the selected local version while offline', async () => {
+    const { resolveConflict } = await import('./useSyncEngine');
+    const db = getOfflineDb(TEST_USER_ID);
+    const now = Date.now();
+    const localNote: LocalNote = {
+      id: 'note-update-local',
+      userId: TEST_USER_ID,
+      title: '',
+      content: '',
+      pinned: true,
+      deletedAt: null,
+      createdAt: now - 5000,
+      updatedAt: now,
+      syncStatus: 'conflict',
+      lastSyncedAt: now - 10000,
+      serverUpdatedAt: now - 10000,
+      localUpdatedAt: now,
+      encryptedPayload: 'ciphertext-update-local',
+      encryptionIv: 'iv-update-local',
+      encryptionVersion: 1,
+      contentHash: 'hash-update-local',
+    };
+    await db.notes.add(localNote);
+    await db.syncQueue.bulkAdd([
+      {
+        clientMutationId: 'stale-local-update',
+        operation: 'update',
+        entityType: 'note',
+        entityId: localNote.id,
+        payload: { content_hash: 'older-hash' },
+        createdAt: now - 2000,
+        retryCount: 5,
+        status: 'blocked',
+      },
+      {
+        clientMutationId: 'stale-local-soft-delete',
+        operation: 'soft_delete',
+        entityType: 'note',
+        entityId: localNote.id,
+        payload: { deletedAt: new Date(now - 1000).toISOString() },
+        createdAt: now - 1000,
+        retryCount: 0,
+        status: 'pending',
+      },
+    ]);
+
+    const onlineSpy = vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false);
+    await resolveConflict(TEST_USER_ID, buildUpdateConflict(localNote), 'local', TEST_KEYS);
+    onlineSpy.mockRestore();
+
+    const originalWrites = await db.syncQueue
+      .filter((entry) => entry.entityType === 'note' && entry.entityId === localNote.id)
+      .toArray();
+    expect(originalWrites).toHaveLength(1);
+    expect(originalWrites[0]).toMatchObject({
+      operation: 'update',
+      status: 'pending',
+      retryCount: 0,
+      payload: {
+        encrypted_payload: localNote.encryptedPayload,
+        content_hash: localNote.contentHash,
+      },
+    });
+    expect((await db.notes.get(localNote.id))?.syncStatus).toBe('pending');
+  });
+
+  it('keeps the selected server repair pending when its direct write fails', async () => {
+    const { resolveConflict } = await import('./useSyncEngine');
+    const db = getOfflineDb(TEST_USER_ID);
+    const now = Date.now();
+    const localNote: LocalNote = {
+      id: 'note-server-repair-pending',
+      userId: TEST_USER_ID,
+      title: '',
+      content: '',
+      pinned: false,
+      deletedAt: null,
+      createdAt: now - 5000,
+      updatedAt: now,
+      syncStatus: 'conflict',
+      lastSyncedAt: now - 10000,
+      serverUpdatedAt: now - 10000,
+      localUpdatedAt: now,
+      encryptedPayload: 'ciphertext-repair-pending',
+      encryptionIv: 'iv-repair-pending',
+      encryptionVersion: 1,
+      contentHash: 'hash-repair-pending',
+    };
+    await db.notes.add(localNote);
+    updateSingleMock.mockResolvedValue({
+      data: null,
+      error: new Error('temporary write failure'),
+    });
+    const conflict = buildUpdateConflict(localNote);
+
+    await resolveConflict(TEST_USER_ID, conflict, 'server', TEST_KEYS);
+
+    expect(await db.notes.get(localNote.id)).toMatchObject({
+      syncStatus: 'pending',
+      contentHash: conflict.serverVersion.content_hash,
+    });
+    const repairWrites = await db.syncQueue
+      .filter((entry) => entry.entityType === 'note' && entry.entityId === localNote.id)
+      .toArray();
+    expect(repairWrites).toHaveLength(1);
+    expect(repairWrites[0]).toMatchObject({
+      operation: 'update',
+      status: 'pending',
+      payload: { content_hash: conflict.serverVersion.content_hash },
+    });
+  });
+
+  it('retires original writes while keeping only the new copy write for both', async () => {
+    const { resolveConflict } = await import('./useSyncEngine');
+    const db = getOfflineDb(TEST_USER_ID);
+    const now = Date.now();
+    const localNote: LocalNote = {
+      id: 'note-update-both',
+      userId: TEST_USER_ID,
+      title: '',
+      content: '',
+      pinned: true,
+      deletedAt: null,
+      createdAt: now - 5000,
+      updatedAt: now,
+      syncStatus: 'conflict',
+      lastSyncedAt: now - 10000,
+      serverUpdatedAt: now - 10000,
+      localUpdatedAt: now,
+      encryptedPayload: 'ciphertext-update-both',
+      encryptionIv: 'iv-update-both',
+      encryptionVersion: 1,
+      contentHash: 'hash-update-both',
+    };
+    await db.notes.add(localNote);
+    await db.syncQueue.add({
+      clientMutationId: 'stale-both-update',
+      operation: 'update',
+      entityType: 'note',
+      entityId: localNote.id,
+      payload: { content_hash: 'stale-both-hash' },
+      createdAt: now - 1000,
+      retryCount: 2,
+      status: 'pending',
+    });
+    const conflict = buildUpdateConflict(localNote);
+    updateSingleMock.mockResolvedValue({
+      data: { updated_at: '2026-09-07T18:01:00.000Z' },
+      error: null,
+    });
+
+    await resolveConflict(TEST_USER_ID, conflict, 'both', TEST_KEYS);
+
+    const queue = await db.syncQueue.toArray();
+    expect(queue.filter((entry) => entry.entityId === localNote.id)).toHaveLength(0);
+    expect(queue).toHaveLength(1);
+    expect(queue[0]).toMatchObject({ operation: 'create', entityType: 'note' });
+    expect(queue[0].entityId).not.toBe(localNote.id);
+    expect(await db.notes.get(localNote.id)).toMatchObject({
+      syncStatus: 'synced',
+      contentHash: conflict.serverVersion.content_hash,
+      confirmedContentHash: conflict.serverVersion.content_hash,
+    });
   });
 });

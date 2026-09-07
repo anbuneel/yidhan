@@ -38,7 +38,7 @@ that must land first.
 
 ## Next
 
-Five lanes, 28 items. Lanes A to D run in parallel on separate branches and own the files named in the handoff; E starts after C merges. Merge order when two are ready: D, B, A, C. Item 87 is the maintainer's own task, not a code lane.
+Five lanes, 23 items. Lanes A to D run in parallel on separate branches and own the files named in the handoff; E starts after C merges. Merge order when two are ready: D, B, A, C. Item 87 is the maintainer's own task, not a code lane.
 
 ### Lane A · Editor fluency · `fix/editor-fluency` · runs in parallel
 
@@ -79,12 +79,7 @@ Five lanes, 28 items. Lanes A to D run in parallel on separate branches and own 
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
-| 150 | Sync | Reconcile pre-existing queued writes when accepting a conflict version; stale updates can remain queued after resolution | days | Needs #9 | Choosing the remote version cannot later replay an older local queued payload · integration test |
-| 71 | Sync | Cross-tab queue ownership with the Web Locks API or a recoverable lease | days |  | Two tabs never sync concurrently; a tab that dies mid-sync releases the lock within 30 s · E2E with two pages |
-| 72 | Sync | `isRetryableError` classifies by error code and type, not substrings; `delete` no longer string-matches "0 rows" | days |  | A server error whose message contains "network" is not retried unless its code is transient · unit tests |
-| 74 | Sync | Card deletion is exactly-once with deliberate undo: the delete action runs once whether the animation finishes or the card unmounts; a failed delete restores the card with a message; Undo is the only cancellation path | days |  | Typing in search during the delete animation still deletes exactly once; a rejected delete restores the card · component test with unmount-mid-animation and with a rejected `onDelete` |
 | 37 | Testing | Authenticated E2E fixture (test account, vault unlock) and the full Playwright suite in CI | days |  | `npm run e2e` runs in CI on every PR with no skipped authenticated tests · CI log |
-| 151 | Testing | Enable repository-wide unused-export lint with an audited legacy baseline | days | Needs #12, #20 | Real unused-export rule runs in CI without hiding new unused code |
 | 153 | Testing | Verify the "done when" tests for items 6, 8, and 18 (killed-tab recovery, cross-device latency, authenticated backup restore); closes #210 | days | Needs #37 | Each of the three tests runs in CI and passes; a later `docs/progress.md` entry corrects the #201, #202, #204 entries · CI log |
 
 ### Lane E · Library and search · `feat/library-search` · starts after C merges

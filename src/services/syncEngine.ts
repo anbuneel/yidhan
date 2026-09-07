@@ -37,6 +37,7 @@ import {
   isLaunchEncryptedDbNote,
   requireEncryptedQueuePayload,
 } from '../utils/noteEncryptionInvariant';
+import { withCrossTabSyncLock } from './syncLock';
 
 // Lazy check for native platform (avoids issues at module initialization)
 let _isNative: boolean | null = null;
@@ -632,6 +633,15 @@ async function processNoteOperation(
         ...encryptedPayload,
         // updated_at is set by server-side trigger (notes_updated_at_trigger)
       };
+      if (typeof data.pinned === 'boolean') {
+        updatePayload.pinned = data.pinned;
+      }
+      if (data.deleted_at === null || typeof data.deleted_at === 'string') {
+        updatePayload.deleted_at = data.deleted_at;
+      }
+      if (typeof data.display_updated_at === 'string') {
+        updatePayload.display_updated_at = data.display_updated_at;
+      }
 
       const { data: updated, error } = await supabase
         .from('notes')
@@ -705,8 +715,10 @@ async function processNoteOperation(
         .delete()
         .eq('id', noteId);
 
-      // Ignore "not found" errors for deletes
-      if (error && !error.message.includes('0 rows')) throw error;
+      // PostgREST DELETE is idempotent: a missing row is a successful response
+      // with zero affected rows. Any returned error is therefore real and must
+      // retain its code instead of being suppressed because of message text.
+      if (error) throw error;
       return true;
     }
 
@@ -823,8 +835,7 @@ async function processTagOperation(
     case 'delete': {
       const { error } = await supabase.from('tags').delete().eq('id', tagId);
 
-      // Ignore "not found" errors
-      if (error && !error.message.includes('0 rows')) throw error;
+      if (error) throw error;
       return true;
     }
 
@@ -877,53 +888,60 @@ async function processNoteTagOperation(
   }
 }
 
+const TRANSIENT_ERROR_CODES = new Set([
+  // PostgreSQL serialization/deadlock/lock availability.
+  '40001',
+  '40P01',
+  '55P03',
+  // A noteTag can race the note/tag create that it depends on.
+  '23503',
+  // PostgREST JWT refresh race.
+  'PGRST301',
+  // Browser/Node transport codes surfaced by fetch implementations.
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'EHOSTUNREACH',
+  'ENETDOWN',
+  'ENETUNREACH',
+  'ETIMEDOUT',
+  'UND_ERR_CONNECT_TIMEOUT',
+]);
+
 /**
- * Check if an error is retryable (5xx, network errors)
+ * Check if an error is retryable using structured transport/server signals.
+ * Error prose is diagnostic only: matching words such as "network" can turn a
+ * deterministic authorization or validation failure into an endless retry.
  */
 function isRetryableError(error: unknown): boolean {
   if (error instanceof RetryableSyncError) {
     return true;
   }
 
-  if (error instanceof Error) {
-    const message = error.message.toLowerCase();
-    // Network errors
-    if (
-      message.includes('network') ||
-      message.includes('fetch') ||
-      message.includes('timeout') ||
-      message.includes('connection')
-    ) {
-      return true;
-    }
+  // The Fetch standard rejects transport failures with TypeError. DOM-backed
+  // fetch implementations can instead surface a named NetworkError/TimeoutError.
+  if (error instanceof TypeError) {
+    return true;
+  }
+  if (
+    typeof DOMException !== 'undefined' &&
+    error instanceof DOMException &&
+    (error.name === 'NetworkError' || error.name === 'TimeoutError')
+  ) {
+    return true;
   }
 
-  // Check for HTTP status codes
+  // Check explicit HTTP/Postgres/PostgREST/transport codes.
   const err = error as { status?: number; code?: string };
-  if (err.status && err.status >= 500) {
+  if (
+    err.status === 408 ||
+    err.status === 425 ||
+    err.status === 429 ||
+    (typeof err.status === 'number' && err.status >= 500)
+  ) {
     return true;
   }
 
-  // PostgreSQL/Supabase error codes that are retryable
-  if (err.code === '40001' || err.code === '40P01') {
-    return true; // Serialization failure, deadlock
-  }
-
-  // Foreign-key violation: the parent note or tag has not synced yet. Ordering,
-  // not corruption — this settles once the parent lands.
-  if (err.code === '23503') {
-    return true;
-  }
-
-  // An expired or not-yet-refreshed JWT resolves on its own once the Supabase
-  // client refreshes the session, so this is a wait, not a permanent block.
-  // PostgrestError carries code/message/details/hint but no HTTP status, so
-  // the code is what identifies this — a `status === 401` test never fires.
-  if (err.code === 'PGRST301') {
-    return true;
-  }
-
-  return false;
+  return typeof err.code === 'string' && TRANSIENT_ERROR_CODES.has(err.code);
 }
 
 function getErrorMessage(error: unknown): string {
@@ -1172,7 +1190,7 @@ export async function processQueue(userId: string): Promise<SyncResult> {
   }
 
   isSyncing = true;
-  syncPromise = doProcessQueue(userId);
+  syncPromise = withCrossTabSyncLock(userId, () => doProcessQueue(userId));
 
   try {
     return await syncPromise;
