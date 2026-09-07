@@ -15,7 +15,14 @@ import { PrivacyPage } from './components/PrivacyPage';
 import { TermsPage } from './components/TermsPage';
 import { SupportPage } from './components/SupportPage';
 import { NotFoundPage } from './components/NotFoundPage';
+import { BackupPassphraseModal } from './components/BackupPassphraseModal';
 import { DatabaseUpdatePending } from './components/DatabaseUpdatePending';
+import {
+  BACKUP_FILE_EXTENSION,
+  BackupFormatError,
+  BackupPassphraseError,
+  openEncryptedBackup,
+} from './utils/encryptedBackup';
 import { sanitizeText } from './utils/sanitize';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 import { getLoadedEditorComponent, loadEditorComponent } from './utils/editorLoader';
@@ -669,6 +676,11 @@ function App() {
 
   // Keyboard shortcuts modal state
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
+  // A `.yidhan` file waiting on its backup passphrase (item 38)
+  const [pendingBackupFile, setPendingBackupFile] = useState<File | null>(null);
+  const [backupRestoreError, setBackupRestoreError] = useState<string | null>(null);
+  const [isOpeningBackup, setIsOpeningBackup] = useState(false);
 
   // Auth modal state (for landing page)
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -1866,6 +1878,37 @@ function App() {
   const isSearching = debouncedSearchQuery.trim().length > 0;
 
   // Export to JSON
+  // Opening a `.yidhan` backup. The import handler is declared below, so it is reached
+  // through a ref — the alternative is hoisting the whole 200-line import path above
+  // this, which buys nothing.
+  const handleImportFileRef = useRef<(file: File, decrypted?: string) => Promise<void>>(
+    async () => undefined
+  );
+
+  const handleOpenBackup = useCallback(async (passphrase: string) => {
+    const file = pendingBackupFile;
+    if (!file) return;
+
+    setIsOpeningBackup(true);
+    setBackupRestoreError(null);
+    try {
+      const payload = await openEncryptedBackup(await readFileAsText(file), passphrase);
+      setPendingBackupFile(null);
+      await handleImportFileRef.current(file, payload);
+    } catch (error) {
+      // A damaged file and a wrong passphrase are different problems, and only one of
+      // them is something the reader can do anything about. Say which.
+      const message =
+        error instanceof BackupFormatError || error instanceof BackupPassphraseError
+          ? error.message
+          : 'That backup could not be opened.';
+      console.error('Failed to open backup:', error);
+      setBackupRestoreError(message);
+    } finally {
+      setIsOpeningBackup(false);
+    }
+  }, [pendingBackupFile]);
+
   // An export that quietly omits notes is worse than one that says it did. A note whose
   // ciphertext would not open has nothing to write, so it is left out and counted
   // (item 41).
@@ -1891,7 +1934,7 @@ function App() {
   }, [notes, reportOmittedFromExport]);
 
   // Import file (JSON or Markdown)
-  const handleImportFile = useCallback(async (file: File) => {
+  const handleImportFile = useCallback(async (file: File, decryptedBackup?: string) => {
     if (!user) return;
     if (!keys) {
       toast.error('Please unlock your vault before importing notes');
@@ -1905,10 +1948,19 @@ function App() {
       return;
     }
 
+    // A `.yidhan` backup is sealed under a passphrase the reader chose, which nothing
+    // here knows. Ask for it first; the decrypted payload comes back through the
+    // second argument and takes the ordinary JSON path from there (item 38).
+    if (file.name.endsWith(BACKUP_FILE_EXTENSION) && decryptedBackup === undefined) {
+      setPendingBackupFile(file);
+      setBackupRestoreError(null);
+      return;
+    }
+
     setImportProgress({ isImporting: true, current: 0, total: 0, phase: 'parsing' });
     try {
-      const content = await readFileAsText(file);
-      const isJSON = file.name.endsWith('.json');
+      const content = decryptedBackup ?? (await readFileAsText(file));
+      const isJSON = decryptedBackup !== undefined || file.name.endsWith('.json');
       const isMarkdown = file.name.endsWith('.md') || file.name.endsWith('.markdown');
 
       if (isJSON) {
@@ -2113,6 +2165,7 @@ function App() {
       setImportProgress(null);
     }
   }, [user, tags, keys]);
+  handleImportFileRef.current = handleImportFile;
 
   // Show loading while checking auth or fetching notes
   if (showAppLoader) {
@@ -2650,6 +2703,19 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* Backup passphrase — a `.yidhan` file cannot be read without it (item 38) */}
+        <BackupPassphraseModal
+          mode="open"
+          isOpen={pendingBackupFile !== null}
+          error={backupRestoreError}
+          isBusy={isOpeningBackup}
+          onSubmit={(passphrase) => void handleOpenBackup(passphrase)}
+          onCancel={() => {
+            setPendingBackupFile(null);
+            setBackupRestoreError(null);
+          }}
+        />
 
         {/* Conflict Resolution Modal */}
         <ConflictModal

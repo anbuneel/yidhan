@@ -9,11 +9,13 @@ import {
   downloadFile,
   exportFullAccountData,
 } from '../utils/exportImport';
+import { buildBackupFilename, createEncryptedBackup } from '../utils/encryptedBackup';
+import { BackupPassphraseModal } from './BackupPassphraseModal';
 import { fetchAllNoteShares } from '../services/notes';
 import type { Note, Tag } from '../types';
 import { ModalBackdropButton } from './ModalBackdropButton';
 
-type PendingAction = 'fullBackup' | 'letGo' | null;
+type PendingAction = 'fullBackup' | 'encryptedBackup' | 'letGo' | null;
 
 interface LettingGoModalProps {
   isOpen: boolean;
@@ -26,6 +28,9 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
   const { initiateOffboarding, signOut, user, isRecentlyReauthed } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isExportingFull, setIsExportingFull] = useState(false);
+  // The encrypted `.yidhan` backup needs a passphrase before anything is written.
+  const [showBackupPassphrase, setShowBackupPassphrase] = useState(false);
+  const [isSealingBackup, setIsSealingBackup] = useState(false);
 
   // Re-auth state
   const [showReAuthModal, setShowReAuthModal] = useState(false);
@@ -87,6 +92,49 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
     }
   };
 
+  const handleExportEncryptedBackup = () => {
+    if (!user) return;
+
+    if (REAUTH_FOR_SENSITIVE_ACTIONS && !isRecentlyReauthed()) {
+      setPendingAction('encryptedBackup');
+      setShowReAuthModal(true);
+      return;
+    }
+    setShowBackupPassphrase(true);
+  };
+
+  /**
+   * Seal a full account export into a `.yidhan` file (item 38).
+   *
+   * The same payload as the plain JSON backup — notes, tags, pinned state, original
+   * timestamps — but encrypted before it reaches the disk, so a backup on a shared
+   * machine or a cloud drive is not a plaintext copy of everything the reader wrote.
+   */
+  const performEncryptedBackup = async (passphrase: string) => {
+    if (!user) return;
+
+    setIsSealingBackup(true);
+    try {
+      const shareLinks = await fetchAllNoteShares();
+      const profile = {
+        displayName: user.user_metadata?.full_name || null,
+        email: user.email || '',
+      };
+
+      const payload = exportFullAccountData(notes, tags, shareLinks, profile);
+      const sealed = await createEncryptedBackup(payload, passphrase);
+      downloadFile(sealed, buildBackupFilename(), 'application/octet-stream');
+
+      setShowBackupPassphrase(false);
+      toast.success('Encrypted backup saved');
+    } catch (error) {
+      console.error('Failed to create encrypted backup:', error);
+      toast.error('Failed to create the encrypted backup. Please try again.');
+    } finally {
+      setIsSealingBackup(false);
+    }
+  };
+
   // Initiate account departure - requires re-auth
   const handleLetGo = () => {
     setPendingAction('letGo');
@@ -133,6 +181,8 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
     // Execute the pending action
     if (pendingAction === 'fullBackup') {
       performFullBackup();
+    } else if (pendingAction === 'encryptedBackup') {
+      setShowBackupPassphrase(true);
     } else if (pendingAction === 'letGo') {
       performLetGo(confirmationToken);
     }
@@ -169,6 +219,15 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
         onCancel={handleReAuthCancel}
         actionDescription={getActionDescription()}
         sensitiveAction={pendingAction === 'letGo' ? 'account_deletion' : undefined}
+      />
+
+      {/* Backup passphrase — asked for before a `.yidhan` file is written (item 38) */}
+      <BackupPassphraseModal
+        mode="create"
+        isOpen={showBackupPassphrase}
+        isBusy={isSealingBackup}
+        onSubmit={(passphrase) => void performEncryptedBackup(passphrase)}
+        onCancel={() => setShowBackupPassphrase(false)}
       />
 
       <div
@@ -357,6 +416,33 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               }}
             >
               {isExportingFull ? 'Preparing...' : 'Full Backup'}
+            </button>
+            <button type="button"
+              onClick={handleExportEncryptedBackup}
+              disabled={isSealingBackup}
+              className="
+                w-full mt-2 py-2 px-3
+                text-sm
+                rounded-lg
+                transition-all duration-200
+                disabled:opacity-50
+              "
+              style={{
+                fontFamily: 'var(--font-body)',
+                background: 'transparent',
+                border: '1px solid var(--glass-border)',
+                color: 'var(--color-text-primary)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isSealingBackup) {
+                  e.currentTarget.style.borderColor = 'var(--color-accent)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--glass-border)';
+              }}
+            >
+              {isSealingBackup ? 'Encrypting...' : 'Encrypted Backup (.yidhan)'}
             </button>
             <p
               className="mt-2 text-xs"

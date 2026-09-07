@@ -120,3 +120,15 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   `LockedNoteCard` with a retry, are refused by the editor and by the save path — an
   empty autosave would destroy ciphertext another device can still read — and are left
   out of every export with the count reported.
+- **2026-09-07** — Encrypted backups — ledger item 38. A `.yidhan` file is the existing
+  v2 account export sealed with AES-256-GCM under a key derived from a backup
+  passphrase the reader chooses, so a backup on a shared machine or a cloud drive is
+  not a plaintext copy of everything they have written. The backup key is deliberately
+  **not** the vault key: a backup sealed under `K` would stop opening the moment `K`
+  changed, so a compromise rotation (item 103) would turn every old backup into noise —
+  see `docs/plans/2026-09-07-key-migration-and-rotation-design.md` §4.3. The salt and
+  format version are bound into the AAD, so an envelope cannot be relabelled or have
+  one file's header swapped onto another's ciphertext. A damaged or truncated file and a
+  wrong passphrase are separated deliberately: structural checks run before any crypto,
+  so the two failures carry different messages, and only one of them is something the
+  reader can act on.
