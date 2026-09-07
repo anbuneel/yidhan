@@ -162,3 +162,14 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   note address that no longer resolves replaces itself with the library and says so,
   where the editor used to `return null` onto a blank page under a URL still claiming
   to point at a note.
+- **2026-09-07** — `App.tsx` decomposed, 2,699 lines to 598 — ledger item 63. Twelve
+  hooks and six components, each named for what it owns: `useNotesSync` (the data
+  layer and both realtime subscriptions), `useNoteActions`, `useFadedNotes`,
+  `useTagActions`, `useSyncActions`, `useImport`, `useDemoMigration`,
+  `useShareTargetNote`, `useShareRoute`, `useVisibleNotes`, `useLibrarySearch`,
+  `useAppShortcuts`, `useAppLoader`, `useSessionGuards`, `useAppTheme`,
+  `useEditorChunk`; `LibraryScreen`, `NoteEditorView`, `AppModals`, `PublicPage`,
+  `ImportProgressOverlay`, `entryScreens`. No behaviour change — the five public
+  pages had been written out five times over, and an `isImporting: true` nobody ever
+  read rode along on every import-progress write. The item's `Editor.tsx` half is
+  Lane A's, per the file ownership split, and stays open.

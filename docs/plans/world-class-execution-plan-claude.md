@@ -38,7 +38,7 @@ that must land first.
 
 ## Next
 
-Three lanes, 8 items. Lanes A to D run in parallel on separate branches and own the files named in the handoff; E starts after C merges. Merge order when two are ready: D, B, A, C. Item 87 is the maintainer's own task, not a code lane.
+Three lanes, 7 items. Lanes A to D run in parallel on separate branches and own the files named in the handoff; E starts after C merges. Merge order when two are ready: D, B, A, C. Item 87 is the maintainer's own task, not a code lane.
 
 ### Lane A · Editor fluency · `fix/editor-fluency` · runs in parallel
 
@@ -55,7 +55,6 @@ Three lanes, 8 items. Lanes A to D run in parallel on separate branches and own 
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
-| 63 | Speed and code | Decompose `App.tsx` and `Editor.tsx`: `useNotesSync`, `useImport`, `useDemoMigration`, `useShareTarget`, `PublicPage`; clear interfaces for persistence, note lifecycle, search, attachments, vault | weeks |  | `App.tsx` under 600 lines with no behaviour change · existing test suite green after each extraction |
 | 45 | Navigation | "Start writing" reaches an editable draft in one action on desktop and mobile; mobile landing CTA opens a new Practice Space note | days |  | One tap, caret blinking · mobile E2E |
 | 46 | Onboarding | Practice Space to account in one step is the primary demo CTA | days |  | The first note is carried into the account · E2E |
 | 152 | Onboarding | Correct the old encryption claim in existing untouched demo starter copies without changing user-authored drafts | days | No local-data migrations in current scope | Existing unedited starter copies show the current privacy copy |
