@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from 'react';
 import type { Theme } from '../types';
-import type { Route } from '../routing';
+import { isPublicPageRoute, type Route } from '../routing';
 import { Auth } from './Auth';
 import { LandingPage } from './LandingPage';
 import { NotFoundPage } from './NotFoundPage';
@@ -50,7 +50,6 @@ export interface EntryScreenProps {
   authModal: { isOpen: boolean; mode: 'login' | 'signup'; onClose: () => void };
 }
 
-const PUBLIC_PAGE_NAMES = ['changelog', 'roadmap', 'privacy', 'terms', 'support'] as const;
 
 export function renderEntryScreen({
   route,
@@ -154,10 +153,10 @@ export function renderEntryScreen({
     );
   }
 
-  if ((PUBLIC_PAGE_NAMES as readonly string[]).includes(route.name)) {
+  if (isPublicPageRoute(route)) {
     return (
       <PublicPage
-        page={route.name as (typeof PUBLIC_PAGE_NAMES)[number]}
+        page={route.name}
         theme={theme}
         onThemeToggle={onThemeToggle}
         onSignIn={onSignIn}

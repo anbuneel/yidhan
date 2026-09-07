@@ -60,6 +60,16 @@ function isPublicPageName(segment: string): segment is PublicPageName {
   return (PUBLIC_PAGE_ROUTES as readonly string[]).includes(segment);
 }
 
+/**
+ * Whether a route is one of the public pages, asked of the route rather than of a
+ * name list the caller keeps its own copy of. `/security` was added to the table and
+ * to `PublicPage` while a duplicate list in `entryScreens` still named five pages, so
+ * the address parsed and then rendered the landing page. One list, asked this way.
+ */
+export function isPublicPageRoute(route: Route): route is { name: PublicPageName } {
+  return isPublicPageName(route.name);
+}
+
 /** Turn a pathname into the route it names. Never throws; unknown paths are `notFound`. */
 export function parseRoute(pathname: string, options: ParseRouteOptions = {}): Route {
   const path = normalizePath(pathname);

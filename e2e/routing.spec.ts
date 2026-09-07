@@ -139,4 +139,22 @@ base.describe('Addresses without an account', () => {
 
       await expect(page.getByRole('button', { name: /start writing/i }).first()).toBeVisible();
     });
+
+  /**
+   * `/security` arrived with Lane B against the pre-router App, where public pages were
+   * a `ROUTEABLE_VIEWS` string list. Carrying it into the route table is the kind of
+   * port that fails silently — the page still builds, the link still renders, and the
+   * address simply 404s. This is the test that would have caught that.
+   */
+  base('the threat model has an address, reached from /privacy', async ({ page }) => {
+    await page.goto('/privacy');
+    await page.getByRole('button', { name: /security page/i }).click();
+
+    await expect(page).toHaveURL(/\/security$/);
+    await expect(page.getByRole('heading', { name: /^security$/i }).first()).toBeVisible();
+
+    // And directly, because a link someone was sent has to resolve too.
+    await page.goto('/security');
+    await expect(page.getByText(/what is visible to us, even so/i)).toBeVisible();
+  });
 });

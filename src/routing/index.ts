@@ -7,7 +7,7 @@
  * wider public API that nothing calls, which is what `npm run lint:exports` is for.
  */
 
-export { routeToViewMode, type PublicPageName, type Route } from './routes';
+export { isPublicPageRoute, routeToViewMode, type PublicPageName, type Route } from './routes';
 export { clearScrollMemory } from './scrollMemory';
 export { scrollRegionProps } from './scrollRegion';
 export { useRouter } from './useRouter';

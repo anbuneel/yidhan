@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  isPublicPageRoute,
   isSameRoute,
   isScrollRestoringRoute,
   normalizePath,
@@ -54,6 +55,27 @@ describe('parseRoute', () => {
   it('reads every public page', () => {
     for (const page of ['changelog', 'roadmap', 'privacy', 'terms', 'support', 'security'] as const) {
       expect(parseRoute(`/${page}`)).toEqual({ name: page });
+    }
+  });
+
+  /**
+   * `entryScreens` used to keep its own list of public page names, so `/security` parsed
+   * as a route and then rendered the landing page — a duplicate that could only ever
+   * drift. Every page the table parses must answer to this predicate, which is what the
+   * renderer now asks.
+   */
+  it('agrees with itself about which routes are public pages', () => {
+    for (const page of ['changelog', 'roadmap', 'privacy', 'terms', 'support', 'security'] as const) {
+      expect(isPublicPageRoute(parseRoute(`/${page}`))).toBe(true);
+    }
+    for (const route of [
+      parseRoute('/'),
+      parseRoute('/faded'),
+      parseRoute('/demo'),
+      parseRoute('/n/abc'),
+      parseRoute('/nope'),
+    ]) {
+      expect(isPublicPageRoute(route)).toBe(false);
     }
   });
 
