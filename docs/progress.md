@@ -270,3 +270,6 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   the chapter. Making the card's timestamp follow the basis means passing the choice
   through `ChapterSection` into `NoteCard`, and item 49 is changing the card's age fade
   in the same files. It should be picked up once item 49 has landed.
+- **2026-09-08** — Library card previews fade only when their content is
+  clipped, and chapter age fading stops at 90% opacity so Archive notes remain
+  legible — ledger item 49.

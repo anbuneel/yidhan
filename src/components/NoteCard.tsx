@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback, memo } from 'react';
+import { useState, useMemo, useRef, useEffect, useLayoutEffect, useCallback, memo } from 'react';
 import type { Note } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
@@ -27,7 +27,9 @@ export const NoteCard = memo(function NoteCard({
 }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isPreviewOverflowing, setIsPreviewOverflowing] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const deleteRequestedRef = useRef(false);
   const mountedRef = useRef(true);
   const noteIdRef = useRef(note.id);
@@ -40,6 +42,26 @@ export const NoteCard = memo(function NoteCard({
   const compactPreview = plainText.slice(0, 80) + (plainText.length > 80 ? '...' : '');
   // Sanitized HTML preview preserves task list checkboxes, formatting structure
   const htmlPreview = useMemo(() => sanitizeHtml(note.content), [note.content]);
+
+  useLayoutEffect(() => {
+    if (isCompact) return;
+
+    const preview = previewRef.current;
+    if (!preview) return;
+
+    const updateOverflow = () => {
+      const isOverflowing = preview.scrollHeight > preview.clientHeight;
+      setIsPreviewOverflowing((current) =>
+        current === isOverflowing ? current : isOverflowing
+      );
+    };
+
+    updateOverflow();
+    const resizeObserver = new ResizeObserver(updateOverflow);
+    resizeObserver.observe(preview);
+
+    return () => resizeObserver.disconnect();
+  }, [htmlPreview, isCompact]);
 
   // Search snippet: ~40 chars around the first match with <mark> highlighting
   const searchSnippet = useMemo(() => {
@@ -253,11 +275,12 @@ export const NoteCard = memo(function NoteCard({
         </p>
       ) : (
         <div
-          className="overflow-hidden note-card-preview"
+          ref={previewRef}
+          className={`overflow-hidden note-card-preview ${isPreviewOverflowing ? 'note-card-preview-overflowing' : ''}`}
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-secondary)',
-            // Content-driven height up to ~5 lines; the bottom mask fades the cut.
+            // Content-driven height up to ~5 lines; overflowing text fades at the cut.
             maxHeight: '8em',
           }}
           dangerouslySetInnerHTML={{ __html: htmlPreview || 'No content' }}

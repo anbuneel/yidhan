@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.22', date: '2026-09-08', changes: [
+    { type: 'fix', text: 'Short library previews now stay fully legible, and older notes remain readable instead of fading too far' },
+  ] },
   { version: '3.19.21', date: '2026-09-08', changes: [
     { type: 'feature', text: 'Your library can now group chapters by when a note was written rather than when it was last edited, so revisiting an old thought no longer drags it into This Week' },
     { type: 'feature', text: 'Notes within a chapter can be ordered by last edited, when written, or by title. Both choices are remembered on this device' },

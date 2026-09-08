@@ -913,7 +913,10 @@ body::before {
   line-height: 1.6;
   color: var(--color-text-secondary);
   position: relative;
-  /* Smooth fade-out at bottom using mask-image */
+}
+
+/* Smooth fade-out only when the preview is clipped. */
+.note-card-preview-overflowing {
   mask-image: linear-gradient(
     to bottom,
     black 0%,
