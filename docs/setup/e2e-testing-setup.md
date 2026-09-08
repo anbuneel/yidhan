@@ -30,6 +30,13 @@ All three are required together. The account is end-to-end encrypted, so signing
 in lands on the vault gate, not the library — see **Creating a Test User** below.
 Set two of the three and the authenticated tests skip as if none were set.
 
+`playwright.config.ts` loads `.env.local` into the runner's own `process.env`, so
+this file is all you need — no exporting in the shell. (Vite also reads it, but only
+for the dev server it starts as a child, which never reaches the Playwright process.
+Without that explicit load the authenticated tests skip silently even when the file
+is correct.) A real environment variable always wins over the file, so CI secrets are
+never overridden by a stray local copy.
+
 ### CI/CD (GitHub Actions)
 
 The `e2e` job in `.github/workflows/ci.yml` runs `npm run e2e` on every PR and every
@@ -146,6 +153,10 @@ E2E_TEST_PASSPHRASE=... # Not VITE_E2E_TEST_PASSPHRASE
 ```
 
 All three must be set. Missing any one skips the authenticated tests.
+
+`.env.local` is loaded by `playwright.config.ts`. If you have exported one of these
+variables in your shell with an empty or stale value, that wins over the file — unset
+it and re-run.
 
 ### "The E2E test account has no vault"
 

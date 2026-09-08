@@ -1,4 +1,19 @@
 import { defineConfig, devices } from '@playwright/test';
+import { loadEnv } from 'vite';
+
+// Load `.env.local` into this process.
+//
+// The credentials are read by the fixture from `process.env`, in the Playwright
+// runner. Vite reads `.env.local` too, but only for the dev server it starts as a
+// child — that never populates the parent, so following the documented setup and
+// running `npx playwright test` would leave E2E_TEST_* unset and silently skip
+// every authenticated test. Real environment variables win, so CI secrets are
+// never overridden by a stray local file.
+for (const [key, value] of Object.entries(loadEnv('test', process.cwd(), ['E2E_', 'VITE_']))) {
+  if (process.env[key] === undefined) {
+    process.env[key] = value;
+  }
+}
 
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 const chromiumLaunchOptions = chromiumExecutablePath
