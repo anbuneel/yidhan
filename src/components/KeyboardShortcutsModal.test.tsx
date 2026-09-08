@@ -50,4 +50,22 @@ describe('KeyboardShortcutsModal', () => {
     render(<KeyboardShortcutsModal isOpen onClose={vi.fn()} />);
     expect(screen.getByText(/close find/i)).toBeInTheDocument();
   });
+
+  it('lists every library search operator and phrase syntax', () => {
+    render(<KeyboardShortcutsModal isOpen onClose={vi.fn()} />);
+
+    const librarySection = screen.getByText('Library').closest('div');
+    expect(librarySection).not.toBeNull();
+    const library = within(librarySection as HTMLElement);
+    for (const syntax of [
+      'word word',
+      '"exact phrase"',
+      'tag:name',
+      'is:pinned',
+      'before:YYYY-MM[-DD]',
+      'after:YYYY-MM[-DD]',
+    ]) {
+      expect(library.getByText(syntax)).toBeInTheDocument();
+    }
+  });
 });

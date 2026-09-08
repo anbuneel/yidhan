@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.23', date: '2026-09-08', changes: [
+    { type: 'feature', text: 'Library search now supports required words, exact phrases, tags, pinned notes, and inclusive before or after dates, with every text match highlighted' },
+  ] },
   { version: '3.19.22', date: '2026-09-08', changes: [
     { type: 'fix', text: 'Short library previews now stay fully legible, and older notes remain readable instead of fading too far' },
   ] },

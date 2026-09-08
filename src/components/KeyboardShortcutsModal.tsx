@@ -52,6 +52,12 @@ const shortcuts: ShortcutSection[] = [
       { keys: ['Enter'], description: 'Open selected note' },
       { keys: ['P'], description: 'Pin or unpin selected note' },
       { keys: ['Delete'], description: 'Fade selected note' },
+      { keys: ['word word'], description: 'Match every term' },
+      { keys: ['"exact phrase"'], description: 'Match words together' },
+      { keys: ['tag:name'], description: 'Filter by tag' },
+      { keys: ['is:pinned'], description: 'Show pinned notes' },
+      { keys: ['before:YYYY-MM[-DD]'], description: 'Updated on or before (inclusive)' },
+      { keys: ['after:YYYY-MM[-DD]'], description: 'Updated on or after (inclusive)' },
     ],
   },
   {

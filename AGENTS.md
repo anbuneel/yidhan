@@ -256,10 +256,14 @@ strategy: `focus-mode-active` on the scroll container fades descendant
 draft with persistent Retry/Copy controls. The manuscript glow is positioned by a
 ref-based `requestAnimationFrame` scroll handler — zero re-renders; keep it that way.
 
-**Library** — search filters `displayNotes` by debounced query over title and plaintext
-content, reusing a cache keyed by note content hash. Progressive rendering suspends during
-search so all matches render at once; chapters force-expand. Search-empty ("No thoughts
-found") is deliberately distinct from library-empty ("Your notes await").
+**Library** — search parses the debounced query into metadata filters (`tag:`,
+`is:pinned`, `before:`, `after:`) and a separate free-text remainder. Free-text terms use
+AND semantics over title and plaintext content; quotes keep a phrase together. Tag names
+match case-insensitively, and date filters compare `updatedAt` inclusively at day or month
+precision. Invalid supported operators are ignored rather than shown as errors. Plaintext
+conversion reuses an in-memory cache keyed by note content hash and is never persisted. Progressive rendering
+suspends during search so all matches render at once; chapters force-expand. Search-empty
+("No thoughts found") is deliberately distinct from library-empty ("Your notes await").
 
 **Lazy chunks** — mid-session service worker activation can invalidate lazy chunk URLs.
 `lazyWithRetry` plus the `unhandledrejection` handler in `main.tsx` recover with one

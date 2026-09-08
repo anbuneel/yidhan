@@ -521,7 +521,7 @@ function App() {
           onTogglePin: handleTogglePin,
           onNewNote: handleNewNote,
           onRefresh: handleRefresh,
-          searchQuery,
+          searchQuery: debouncedSearchQuery,
           isSearching,
           isLoading: loading && notes.length === 0,
           focusedNoteId,

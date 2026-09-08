@@ -2,7 +2,9 @@ import { useState, useMemo, useRef, useEffect, useLayoutEffect, useCallback, mem
 import type { Note } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
-import { sanitizeHtml, sanitizeText, htmlToPlainText, escapeHtml } from '../utils/sanitize';
+import { sanitizeHtml, sanitizeText, htmlToPlainText } from '../utils/sanitize';
+import { parseSearchQuery } from '../utils/searchQuery';
+import { buildSearchSnippet, highlightSearchText } from '../utils/searchText';
 
 interface NoteCardProps {
   note: Note;
@@ -42,6 +44,14 @@ export const NoteCard = memo(function NoteCard({
   const compactPreview = plainText.slice(0, 80) + (plainText.length > 80 ? '...' : '');
   // Sanitized HTML preview preserves task list checkboxes, formatting structure
   const htmlPreview = useMemo(() => sanitizeHtml(note.content), [note.content]);
+  const searchTerms = useMemo(
+    () => searchQuery ? parseSearchQuery(searchQuery).textTerms : [],
+    [searchQuery]
+  );
+  const highlightedTitle = useMemo(() => {
+    if (searchTerms.length === 0) return sanitizeText(note.title);
+    return highlightSearchText(htmlToPlainText(note.title), searchTerms);
+  }, [note.title, searchTerms]);
 
   useLayoutEffect(() => {
     if (isCompact) return;
@@ -63,20 +73,12 @@ export const NoteCard = memo(function NoteCard({
     return () => resizeObserver.disconnect();
   }, [htmlPreview, isCompact]);
 
-  // Search snippet: ~40 chars around the first match with <mark> highlighting
+  // Search snippets cover every content match. Operators are metadata filters,
+  // so only the parsed free-text remainder is highlighted.
   const searchSnippet = useMemo(() => {
-    if (!searchQuery) return null;
-    const query = searchQuery.toLowerCase();
-    const idx = plainText.toLowerCase().indexOf(query);
-    if (idx === -1) return null;
-
-    const start = Math.max(0, idx - 20);
-    const end = Math.min(plainText.length, idx + searchQuery.length + 20);
-    const before = escapeHtml(plainText.slice(start, idx));
-    const match = escapeHtml(plainText.slice(idx, idx + searchQuery.length));
-    const after = escapeHtml(plainText.slice(idx + searchQuery.length, end));
-    return `${start > 0 ? '...' : ''}${before}<mark>${match}</mark>${after}${end < plainText.length ? '...' : ''}`;
-  }, [plainText, searchQuery]);
+    if (searchTerms.length === 0) return null;
+    return buildSearchSnippet(plainText, searchTerms);
+  }, [plainText, searchTerms]);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -258,12 +260,23 @@ export const NoteCard = memo(function NoteCard({
             fontFamily: 'var(--font-display)',
             color: 'var(--color-text-primary)',
           }}
-          dangerouslySetInnerHTML={{ __html: sanitizeText(note.title) || 'Untitled' }}
+          dangerouslySetInnerHTML={{ __html: highlightedTitle || 'Untitled' }}
         />
       </div>
 
-      {/* Preview - HTML in full mode (preserves task lists), plain text in compact */}
-      {isCompact ? (
+      {/* Search results use the match snippets; ordinary cards keep their rich preview. */}
+      {searchSnippet ? (
+        <p
+          className="text-sm overflow-hidden"
+          style={{
+            fontFamily: 'var(--font-body)',
+            color: 'var(--color-text-secondary)',
+            lineHeight: 1.6,
+            maxHeight: '8em',
+          }}
+          dangerouslySetInnerHTML={{ __html: searchSnippet }}
+        />
+      ) : isCompact ? (
         <p
           className="flex-1 overflow-hidden text-sm truncate"
           style={{
@@ -284,19 +297,6 @@ export const NoteCard = memo(function NoteCard({
             maxHeight: '8em',
           }}
           dangerouslySetInnerHTML={{ __html: htmlPreview || 'No content' }}
-        />
-      )}
-
-      {/* Search snippet with match highlighting */}
-      {searchSnippet && (
-        <p
-          className="text-xs mt-1 overflow-hidden"
-          style={{
-            fontFamily: 'var(--font-body)',
-            color: 'var(--color-text-tertiary)',
-            lineHeight: 1.4,
-          }}
-          dangerouslySetInnerHTML={{ __html: searchSnippet }}
         />
       )}
 
