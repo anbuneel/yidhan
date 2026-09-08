@@ -9,10 +9,14 @@ Yidhan uses GitHub Actions for continuous integration. `fast-checks` gates every
 
 | Change Type | fast-checks | full-tests | service-worker | e2e |
 |-------------|-------------|------------|----------------|-----|
-| Docs only (`docs/**`, `*.md`, `LICENSE`) | Skipped | Skipped | Skipped | Skipped |
+| Docs only (`docs/**`, `*.md`) | ~1min | Skipped | ~1min | secrets-gated |
 | Config only (`.yml`, `.json`, etc.) | ~1min | Skipped | ~1min | secrets-gated |
 | Source code (`src/**`) | ~1min | ~1min | ~1min | secrets-gated |
 | Pull Request (any files) | ~1min | ~1min | ~1min | secrets-gated |
+
+Only `full-tests` is conditional. `service-worker` runs on everything on purpose: it is
+the only thing that exercises the update path, and a job that skips on the change that
+breaks it guards nothing.
 
 ## Workflow Structure
 
@@ -20,13 +24,9 @@ Yidhan uses GitHub Actions for continuous integration. `fast-checks` gates every
 ┌─────────────────┐
 │   Push to main  │
 │   or Open PR    │
+│  (no filtering) │
 └────────┬────────┘
          │
-         ▼
-    ┌────────────┐
-    │ paths-ignore?──────► docs/**, *.md, LICENSE
-    └────┬───────┘         (CI skipped entirely)
-         │ no
          ▼
 ┌─────────────────┐
 │  fast-checks    │
@@ -97,16 +97,20 @@ See `docs/setup/e2e-testing-setup.md` for the secrets it needs.
 
 ## Path Filtering
 
-CI is completely skipped for documentation-only changes:
+There is none, deliberately. It was removed on 2026-09-07.
 
-```yaml
-paths-ignore:
-  - 'docs/**'
-  - '*.md'
-  - 'LICENSE'
-```
+The push trigger used to carry `paths-ignore: ['docs/**', '*.md', 'LICENSE']`, which
+conflicted with branch protection. `main` requires the `fast-checks` status, and a
+workflow that never triggers never reports one — so on a docs-only push the check sat in
+**"expected"** forever rather than failing. The push could then only land by bypassing
+the rule, which `enforce_admins: false` silently permitted for the repository owner and
+denied to everyone else, with no way for them to satisfy it. That contradicted the
+"small doc touch-ups may go direct to main" rule in `CLAUDE.md`.
 
-This means commits that only touch these paths won't trigger any CI jobs.
+Filtering by path and requiring a status check on the same branch cannot both hold. The
+required check won: a minute of CI on a docs commit is the price of the protection rule
+meaning something. Do not reintroduce `paths-ignore` on the push trigger without also
+removing `fast-checks` from the required checks on `main`.
 
 ## Configuration
 
@@ -118,12 +122,15 @@ The workflow is defined in `.github/workflows/ci.yml`.
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
-      - 'LICENSE'
   pull_request:
     branches: [main]
+```
+
+Branch protection on `main` (classic, not a ruleset):
+
+```json
+"required_status_checks": { "contexts": ["fast-checks"], "strict": true },
+"enforce_admins": false
 ```
 
 ### Conditional Test Execution
@@ -160,7 +167,15 @@ View CI status at: https://github.com/anbuneel/yidhan/actions
 
 ### CI not running on push
 
-Check if your changes only touched paths in `paths-ignore`. This is intentional for docs-only changes.
+It should now run on every push to `main`. If it does not, check the trigger has not had
+`paths-ignore` reintroduced — see Path Filtering above for why that breaks the required
+status check.
+
+### A required check is stuck on "expected"
+
+The workflow never triggered, so no status was ever reported. "Expected" is not a failure;
+it is GitHub waiting for a report that is not coming. Find out why the workflow did not
+run rather than bypassing the rule.
 
 ### Tests not running on push
 
@@ -177,6 +192,8 @@ If you need to force full tests on a non-src change, you can:
 
 ## History
 
+- **2026-09-07**: Removed `paths-ignore` from the push trigger — it conflicted with the
+  `fast-checks` required status check on `main` (see Path Filtering).
 - **2026-09-07**: Added the `e2e` job, secrets-gated. Fixed the Type check step, which ran
   `npx tsc --noEmit` against a `"files": []` root config and therefore checked nothing. (#224)
 - **2026-09-04**: Added the `service-worker` job.

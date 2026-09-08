@@ -1,17 +1,19 @@
 name: CI
 
 on:
+  # No paths-ignore on push. Branch protection requires the `fast-checks` status on
+  # main, and a workflow that never triggers never reports one — so the check sat in
+  # "expected" forever and a docs-only push could only land by bypassing the rule as
+  # an admin. Anyone else was blocked outright with no way to satisfy it, which
+  # contradicts the "docs touch-ups may go direct to main" rule in CLAUDE.md.
+  # A minute of CI on a docs commit is what makes that protection rule mean anything.
   push:
     branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
-      - 'LICENSE'
   pull_request:
     branches: [main]
 
 jobs:
-  # Fast checks - runs on every qualifying push/PR (~30s)
+  # Fast checks - runs on every push to main and every PR
   fast-checks:
     runs-on: ubuntu-latest
     steps:

@@ -23,11 +23,20 @@ async function readFileIfExists(filePath) {
   }
 }
 
+// Compare on normalised newlines, not raw bytes. `CLAUDE.md` is a working-copy file and
+// picks up CRLF under `core.autocrlf` on Windows, while `.githooks/pre-commit` writes
+// `AGENTS.md` from the git blob, which is always LF. The two are then identical in content
+// and different in bytes, so a raw comparison fails `--check` on a Windows checkout while
+// passing in CI. Only the line endings may differ — every other byte must match.
+function sameContent(a, b) {
+  return a.replace(/\r\n/g, '\n') === b.replace(/\r\n/g, '\n');
+}
+
 try {
   const claudeContent = await fs.readFile(claudePath, 'utf8');
   const agentsContent = await readFileIfExists(agentsPath);
 
-  if (claudeContent === agentsContent) {
+  if (sameContent(claudeContent, agentsContent)) {
     if (!quiet) {
       console.log('AGENTS.md already matches CLAUDE.md.');
     }
