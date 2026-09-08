@@ -11,10 +11,10 @@ if ! git diff --cached --quiet -- CLAUDE.md; then
 fi
 
 # A bounded number of ACTIVE plans, each carrying a 'Last verified' date.
-# The cap is 2 by deliberate exception (see DECISIONS.md, 2026-09-07): the product
-# ledger and the documentation overhaul are orthogonal lanes. It is NOT a licence
-# to open a third - raising this number needs a DECISIONS.md entry saying why.
-MAX_ACTIVE_PLANS=2
+# One ACTIVE plan, so "what are we working on now" has one answer. It was 2 while
+# the documentation overhaul ran alongside the product ledger; that plan is now
+# COMPLETE (DECISIONS.md, 2026-09-08). Raising this needs a DECISIONS.md entry.
+MAX_ACTIVE_PLANS=1
 
 actives=$(git grep --cached -l -e '^Status: ACTIVE$' -- ':(glob)docs/plans/*.md' 2>/dev/null || true)
 count=0

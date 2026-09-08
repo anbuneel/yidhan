@@ -19,6 +19,31 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-08 — Back to one ACTIVE plan
+
+**Status:** Active
+
+**Why:** The documentation overhaul shipped. Every box in its Execution section
+is ticked and the six canonical docs it installed are the ones in use, so it is
+COMPLETE and lives in `docs/archive/`. The second lane no longer exists.
+
+The exception that raised `MAX_ACTIVE_PLANS` to 2 named that specific pair of
+plans. An exception that outlives the thing it was granted for stops being an
+exception and quietly becomes the default — which is the drift the cap exists to
+prevent. The comment in `.githooks/pre-commit` justifying the 2 named a plan now
+sitting in the archive, so it would have been false on its face.
+
+The cap is 1 again. Raising it is still allowed and still needs an entry here
+saying why, which is the same door the overhaul came through.
+
+**Rejected:** Leaving the cap at 2 because a second plan might be wanted later —
+nothing is using the slot today, and raising it again costs one paragraph at the
+moment there is a real second lane, which is when the decision can actually be
+judged. Deleting the cap now that the exception is spent — the cap is the only
+thing that stopped nine documents claiming to own "now".
+
+---
+
 ## 2026-09-08 — Adversarial cases are written before the happy path
 
 **Status:** Active
@@ -147,7 +172,7 @@ keep in agreement.
 
 ## 2026-09-07 — Two ACTIVE plans are allowed, capped at two
 
-**Status:** Active
+**Status:** Superseded by "Back to one ACTIVE plan" (2026-09-08)
 
 **Why:** The one-ACTIVE-plan rule exists so "what are we working on now" has a
 single answer. Two lanes were genuinely in flight and orthogonal: the product

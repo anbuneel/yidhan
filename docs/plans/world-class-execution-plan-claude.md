@@ -11,10 +11,6 @@ Shipped items moved to `docs/progress.md`. Deferred items moved to
 cross-references still resolve. The review-coverage appendices are frozen in
 `docs/archive/world-class-execution-plan-review-coverage.md`.
 
-This plan and `2026-09-07-docs-instruction-layer-overhaul.md` are both ACTIVE by
-deliberate exception — see `DECISIONS.md` (2026-09-07). They cover orthogonal
-lanes: this one product work, the other the documentation layer.
-
 ## How to read this
 
 - **Item.** One thing to do, with a plain number and the area it touches.

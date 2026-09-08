@@ -1,12 +1,12 @@
 # Docs & instruction-layer overhaul
 
-Status: ACTIVE
-Last verified: 2026-09-07
+Status: COMPLETE
+Last verified: 2026-09-08
 
-ACTIVE alongside `world-class-execution-plan-claude.md` by deliberate exception —
-see `DECISIONS.md` (2026-09-07). The two cover orthogonal lanes: that plan owns
-product work, this one owns the documentation and instruction layer. The
-pre-commit cap is 2; a third ACTIVE plan still fails.
+COMPLETE on 2026-09-08: every box below is ticked and the six canonical docs it
+installed are the ones in use. The two-ACTIVE-plan exception it shared with
+`world-class-execution-plan-claude.md` ended with it, and the cap is back to 1
+(`DECISIONS.md`, 2026-09-08).
 
 ---
 
