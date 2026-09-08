@@ -8,15 +8,20 @@ import { test as base, expect, Page } from '@playwright/test';
 // Test user credentials - MUST be set via environment variables
 // Set these in .env.local (git-ignored) or as CI secrets
 // See .env.example for documentation
+//
+// The passphrase is not optional. Every account is end-to-end encrypted, so
+// signing in lands on the vault gate, not the library. Without it the fixture
+// could sign in and go no further.
 export const TEST_USER = {
   email: process.env.E2E_TEST_EMAIL || '',
   password: process.env.E2E_TEST_PASSWORD || '',
+  passphrase: process.env.E2E_TEST_PASSPHRASE || '',
   name: 'E2E Test User',
 };
 
 // Check if E2E credentials are configured
 export const E2E_CREDENTIALS_CONFIGURED = Boolean(
-  TEST_USER.email && TEST_USER.password
+  TEST_USER.email && TEST_USER.password && TEST_USER.passphrase
 );
 
 // Extend base test with custom fixtures
@@ -27,7 +32,7 @@ export const test = base.extend<{
   // Skips test if E2E credentials are not configured
   authenticatedPage: async ({ page }, use, testInfo) => {
     if (!E2E_CREDENTIALS_CONFIGURED) {
-      testInfo.skip(true, 'E2E credentials not configured. Set E2E_TEST_EMAIL and E2E_TEST_PASSWORD in .env.local');
+      testInfo.skip(true, 'E2E credentials not configured. Set E2E_TEST_EMAIL, E2E_TEST_PASSWORD and E2E_TEST_PASSPHRASE in .env.local');
       return;
     }
     await loginUser(page, TEST_USER.email, TEST_USER.password);
@@ -38,9 +43,19 @@ export const test = base.extend<{
 export { expect };
 
 /**
- * Login helper - navigates to app and logs in
+ * Login helper - navigates to app, signs in, and unlocks the vault.
+ *
+ * Signing in is not enough to reach the library. Every account is end-to-end
+ * encrypted, so `renderAccountGate` stands one of two screens in the way:
+ * `PassphraseUnlock` when the vault exists, `PassphraseSetup` when it does not.
+ * This walks the unlock; it deliberately refuses to walk the setup.
  */
-export async function loginUser(page: Page, email: string, password: string): Promise<void> {
+export async function loginUser(
+  page: Page,
+  email: string,
+  password: string,
+  passphrase: string = TEST_USER.passphrase
+): Promise<void> {
   await page.goto('/');
 
   // Click Sign In button on landing page
@@ -57,8 +72,54 @@ export async function loginUser(page: Page, email: string, password: string): Pr
   // Submit login (use form's submit button, not header button)
   await page.locator('form').getByRole('button', { name: /sign in/i }).click();
 
-  // Wait for redirect to library
-  await expect(page.getByTestId('library-view')).toBeVisible({ timeout: 10000 });
+  await unlockVault(page, passphrase);
+}
+
+/**
+ * Wait out the vault gate after a sign-in, unlocking if asked.
+ *
+ * Three screens can follow a sign-in, so wait for whichever arrives first rather
+ * than guessing. Both passphrase forms carry `id="passphrase"`, so they are told
+ * apart by their headings.
+ */
+async function unlockVault(page: Page, passphrase: string): Promise<void> {
+  const library = page.getByTestId('library-view');
+  const unlockGate = page.getByRole('heading', { name: 'Unlock Your Notes', exact: true });
+  const setupGate = page.getByRole('heading', { name: 'Protect Your Notes', exact: true });
+
+  await expect(library.or(unlockGate).or(setupGate).first()).toBeVisible({ timeout: 15000 });
+
+  // A vault that does not exist yet is a provisioning problem, not a test step.
+  // Creating one here would derive a fresh key against whatever passphrase the
+  // environment happens to hold, orphaning every note the account already has —
+  // and a rerun against a half-provisioned account would do it silently. Fail
+  // loudly and let a human create the vault once.
+  if (await setupGate.isVisible()) {
+    throw new Error(
+      'The E2E test account has no vault. Sign in as this account once by hand, ' +
+      'create its vault using the passphrase in E2E_TEST_PASSPHRASE, then re-run. ' +
+      'The fixture will not create the vault: doing so on a half-provisioned ' +
+      'account would silently create a second one and strand the existing notes.'
+    );
+  }
+
+  if (await unlockGate.isVisible()) {
+    if (!passphrase) {
+      throw new Error(
+        'The vault is locked but E2E_TEST_PASSPHRASE is not set. Set it in ' +
+        '.env.local (locally) or as a repository secret (CI).'
+      );
+    }
+
+    await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
+    await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+
+    // Argon2id at 64 MB and 3 iterations is seconds of work in wasm, and a wrong
+    // passphrase surfaces as the unlock form simply staying put.
+    await expect(unlockGate).toBeHidden({ timeout: 20000 });
+  }
+
+  await expect(library).toBeVisible({ timeout: 15000 });
 }
 
 /**

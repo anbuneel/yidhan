@@ -19,6 +19,51 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-08 — The browser suite runs on placeholder Supabase values, not behind a secret gate
+
+**Status:** Active
+
+**Why:** `npm run e2e` had a CI job that was gated, step by step, on the
+`VITE_SUPABASE_URL` secret being present. No secret was ever added, so the job
+passed in seconds having run nothing. That is worse than no job: the suite read
+as coverage while `e2e/auth.spec.ts` sat on `main` asserting behaviour item 45
+had already replaced, green through CI on two PRs (#223).
+
+`src/lib/supabase.ts` throws at import without a URL and anon key, so the app
+cannot boot without them and the gate looked forced. It is not. The
+unauthenticated half of the suite makes no Supabase network call — it exercises
+routing, 404s, the public pages, the Practice Space (localStorage only), editor
+fluency and cross-tab sync-lock ownership. Measured on this commit against
+`https://placeholder.invalid`: 66 passed, 128 skipped, 0 failed across Desktop Chrome
+and Pixel 5 — the same 66 the issue measured. 33 of the 97 tests per project need no
+credentials. The
+one unauthenticated spec that does POST to Supabase, "shows error for invalid
+credentials", already accepts a connectivity error as a pass, so an unreachable
+host is a pass by its own terms.
+
+So the job now supplies placeholders when the secrets are absent and runs
+unconditionally. A fork, a first-time contributor and the maintainer all get the
+same gating suite; real secrets, when present, override the placeholders and add
+the 64 authenticated tests per project on top.
+
+The cost is accepted: the unauthenticated specs now prove only that the app works
+against a Supabase that is not there. Any future spec that needs a real server
+belongs in the authenticated half, which still skips without credentials. If a
+spec is ever added that quietly depends on a reachable Supabase, it will fail on
+forks first, which is the right place to find out.
+
+**Rejected:** Keeping the gate on the Supabase secrets and ungating only once the
+maintainer adds them — it leaves #223 open and keeps the job reading as coverage
+it does not provide, and it makes contributor PRs and forks permanently ungated
+even after the secrets land. Pointing the placeholder at a real but empty
+Supabase project — a second project to provision and pay attention to, to buy
+network calls that no unauthenticated spec makes. Splitting the suite into two
+jobs, one ungated and one gated — the skip logic in `e2e/fixtures.ts` already
+draws that line per test, and duplicating it in the workflow gives two places to
+keep in agreement.
+
+---
+
 ## 2026-09-07 — Two ACTIVE plans are allowed, capped at two
 
 **Status:** Active

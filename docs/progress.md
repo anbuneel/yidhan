@@ -210,3 +210,25 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   economy section; the `D:\anbs-dev` parent `CLAUDE.md` is deleted and the Roughdraft
   instructions moved to a skill, taking the always-loaded layer from ~5,800 to ~4,100
   tokens.
+- **2026-09-08** — The browser suite runs in CI on every PR, and the authenticated
+  fixture unlocks the vault — ledger item 37, closing #223. The `e2e` job existed but
+  gated every step on the `VITE_SUPABASE_URL` secret, which was never added, so it
+  passed in seconds having run nothing while `e2e/auth.spec.ts` sat on `main` asserting
+  behaviour item 45 had already replaced. The job is now ungated: the unauthenticated
+  half of the suite makes no Supabase network call, so placeholder values boot the app:
+  66 passed, 128 skipped, 0 failed against `https://placeholder.invalid` across Desktop
+  Chrome and Pixel 5 (`DECISIONS.md`, 2026-09-08). Forks and first-time contributors get the same gating
+  suite as the maintainer. `loginUser()` now waits for whichever of the library, the
+  unlock form or the setup form arrives after sign-in, fills `E2E_TEST_PASSPHRASE` on
+  the unlock form, and fails with a provisioning message on the setup form rather than
+  creating a second vault over an account that already has notes. The per-test timeout
+  moves to 60s to cover the Argon2id derivation.
+
+  **Not verified end to end.** The unlock path has not been run against a real account:
+  that needs a test user in Supabase whose vault has been created once by hand, plus
+  the five repository secrets (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`,
+  `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`, `E2E_TEST_PASSPHRASE`), and only the
+  maintainer can do that. Until then the authenticated tests skip in CI and item 37's
+  "done when" — no skipped authenticated tests — is not met. Item 153 stays blocked on
+  it. #210 exists because a previous entry claimed verification that had not happened;
+  this entry does not repeat that.

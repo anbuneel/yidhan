@@ -1,7 +1,7 @@
 # Yidhan improvement plan
 
 Status: ACTIVE
-Last verified: 2026-09-07
+Last verified: 2026-09-08
 
 The engineering ledger for product work. It owns **what is committed now** —
 nothing else.
@@ -38,7 +38,7 @@ that must land first.
 
 ## Next
 
-Two lanes, 4 items. Lanes A and D run in parallel on separate branches and own the files named in the handoff. Lanes B and C are complete and their items have moved to `docs/progress.md`, so E can start. Merge order when both are ready: D, A. Item 87 is the maintainer's own task, not a code lane.
+Three lanes, 9 items. Lanes A and D run in parallel on separate branches and own the files named in the handoff. Lanes B and C are complete and their items have moved to `docs/progress.md`; Lane C shipped in PR #213 and item 11, which items 50 and 51 needed, shipped in PR #203 — so Lane E is unblocked and can be picked up whenever someone has the room. Merge order when A and D are both ready: D, A. Item 87 is the maintainer's own task, not a code lane.
 
 ### Lane A · Editor fluency · `fix/editor-fluency` · runs in parallel
 
@@ -55,10 +55,9 @@ Two lanes, 4 items. Lanes A and D run in parallel on separate branches and own t
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
-| 37 | Testing | Authenticated E2E fixture (test account, vault unlock) and the full Playwright suite in CI | days |  | `npm run e2e` runs in CI on every PR with no skipped authenticated tests · CI log |
-| 153 | Testing | Verify the "done when" tests for items 6, 8, and 18 (killed-tab recovery, cross-device latency, authenticated backup restore); closes #210 | days | Needs #37 | Each of the three tests runs in CI and passes; a later `docs/progress.md` entry corrects the #201, #202, #204 entries · CI log |
+| 153 | Testing | Verify the "done when" tests for items 6, 8, and 18 (killed-tab recovery, cross-device latency, authenticated backup restore); closes #210 | days | Item 37 shipped the fixture and the CI job. Still needs the maintainer to provision the test account and add the five repository secrets, or the authenticated tests skip. | Each of the three tests runs in CI and passes; a later `docs/progress.md` entry corrects the #201, #202, #204 entries · CI log |
 
-### Lane E · Library and search · `feat/library-search` · starts after C merges
+### Lane E · Library and search · `feat/library-search` · unblocked, not started
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
@@ -85,7 +84,8 @@ Two lanes, 4 items. Lanes A and D run in parallel on separate branches and own t
 - The "done when" is the test. It ships in the same PR as the item, never later.
 - Anything needing a database change ships with the migration guard (#36) and
   `verify_migration_state.sql` run against the deployment target.
-- `npm run check` on every PR. `npm run e2e` once #37 lands.
+- `npm run check` on every PR. `npm run e2e` runs in CI on every PR (item 37), so run it
+  locally only for the spec covering a flow you changed.
 - When a real writer or a measurement says the order is wrong, change the order.
   Nothing else reorders it.
 - The plan holds planned work. GitHub issues hold bugs and loose ends discovered while

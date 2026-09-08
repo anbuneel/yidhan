@@ -23,28 +23,39 @@ Create a `.env.local` file (git-ignored) with your test credentials:
 # E2E Testing credentials
 E2E_TEST_EMAIL=your-test-email@example.com
 E2E_TEST_PASSWORD=your-secure-password
+E2E_TEST_PASSPHRASE=the-test-account-vault-passphrase
 ```
+
+All three are required together. The account is end-to-end encrypted, so signing
+in lands on the vault gate, not the library — see **Creating a Test User** below.
+Set two of the three and the authenticated tests skip as if none were set.
 
 ### CI/CD (GitHub Actions)
 
-The `e2e` job already exists in `.github/workflows/ci.yml` and already passes all four
-secrets. Nothing in the workflow needs editing — only the secrets need adding, under
-**Settings → Secrets and variables → Actions**.
+The `e2e` job in `.github/workflows/ci.yml` runs `npm run e2e` on every PR and every
+push to `main`. **It is not gated on any secret** — without them it supplies placeholder
+Supabase values, so the unauthenticated half of the suite runs and gates the merge on a
+fork and on a first-time contributor's PR exactly as it does for the maintainer
+(`DECISIONS.md`, 2026-09-08).
 
-Two tiers, because they fail differently:
+Secrets are added under **Settings → Secrets and variables → Actions**. They fall into
+two tiers:
 
 | Secret | Without it |
 |---|---|
-| `VITE_SUPABASE_URL` | **The job does nothing.** `src/lib/supabase.ts` throws without it, so the app never boots and every test would fail. The job's heavy steps are gated on this secret being present: it prints a notice and passes in a few seconds. |
-| `VITE_SUPABASE_ANON_KEY` | Same — set it alongside the URL. |
-| `E2E_TEST_EMAIL` | The 60 tests using the `authenticatedPage` fixture skip. The other 26 still run. |
+| `VITE_SUPABASE_URL` | The job falls back to `https://placeholder.invalid`. The app boots; the unauthenticated tests run and pass, because none of them makes a Supabase network call. |
+| `VITE_SUPABASE_ANON_KEY` | Same — falls back to a placeholder key. |
+| `E2E_TEST_EMAIL` | The tests using the `authenticatedPage` fixture skip. The unauthenticated ones still run. |
 | `E2E_TEST_PASSWORD` | Same as above. |
+| `E2E_TEST_PASSPHRASE` | Same as above. The vault gate stands between sign-in and the library, so a passphrase-less run could not reach a single authenticated assertion. |
 
-So adding just the two Supabase secrets turns the job on and gets 26 tests; adding all four
-gets all 86.
+So the job gates merges today with no secrets at all. Adding the two Supabase secrets
+points it at a real project; adding all five runs the authenticated tests too.
 
 Point the Supabase secrets at a project you are willing to have test data written to. The
 suite creates and deletes notes and tags as the test user.
+
+**The test account has to be provisioned by hand first.** See **Creating a Test User**.
 
 ## Running E2E Tests
 
@@ -64,13 +75,31 @@ npm run e2e:report
 
 ## Test Behavior Without Credentials
 
-If `E2E_TEST_EMAIL` or `E2E_TEST_PASSWORD` are not set:
+If any of `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` or `E2E_TEST_PASSPHRASE` is not set:
 
 - Tests using `authenticatedPage` fixture will **skip** (not fail)
 - Tests using `testWithCredentials` will **skip**
 - Tests that don't require authentication will still run
 
 This allows the test suite to run partially in environments without credentials configured.
+
+## The Vault Step
+
+Signing in does not reach the library. `src/components/accountGates.tsx` renders
+`PassphraseUnlock` when the account's vault exists and `PassphraseSetup` when it does
+not, so `loginUser()` in `e2e/fixtures.ts` waits for whichever of the three screens —
+library, unlock, setup — arrives first.
+
+- **Library:** nothing to do; the vault was already unlocked in this context.
+- **Unlock:** fills the `Passphrase` field with `E2E_TEST_PASSPHRASE`, submits, and
+  waits for the library. Argon2id at 64 MB and 3 iterations takes seconds, which is why
+  `playwright.config.ts` allows 60s per test.
+- **Setup:** **fails the test** with a message telling you to create the vault by hand.
+
+The fixture will not create a vault. Deriving a fresh key against whatever passphrase the
+environment happens to hold would orphan every note the account already has, and a rerun
+against a half-provisioned account would do it silently. Provisioning is a one-time manual
+step, on purpose.
 
 ## Creating a Test User
 
@@ -80,6 +109,16 @@ This allows the test suite to run partially in environments without credentials 
 4. Use a dedicated email (e.g., `e2e-test@your-domain.com`)
 5. Set a strong password (min 8 characters)
 6. Save credentials securely (password manager recommended)
+
+Then create its vault, once, by hand:
+
+7. Run the app (`npm run dev`) and sign in as the test user
+8. The app shows **Protect Your Notes**. Enter a passphrase of at least 12 characters
+   that also meets the strength policy, and confirm it
+9. Use that exact passphrase as `E2E_TEST_PASSPHRASE`
+
+Until step 9 is done the authenticated tests skip, and a run configured with a passphrase
+but no vault fails with a message pointing back here.
 
 ### Security Best Practices
 
@@ -95,9 +134,23 @@ This allows the test suite to run partially in environments without credentials 
 
 Check that your `.env.local` has the correct variable names:
 ```bash
-E2E_TEST_EMAIL=...    # Not VITE_E2E_TEST_EMAIL
-E2E_TEST_PASSWORD=... # Not VITE_E2E_TEST_PASSWORD
+E2E_TEST_EMAIL=...      # Not VITE_E2E_TEST_EMAIL
+E2E_TEST_PASSWORD=...   # Not VITE_E2E_TEST_PASSWORD
+E2E_TEST_PASSPHRASE=... # Not VITE_E2E_TEST_PASSPHRASE
 ```
+
+All three must be set. Missing any one skips the authenticated tests.
+
+### "The E2E test account has no vault"
+
+The account exists but has never had a vault created. Follow steps 7-9 of **Creating a
+Test User**. The fixture will not do this for you.
+
+### The unlock never completes
+
+The passphrase in `E2E_TEST_PASSPHRASE` does not match the account's vault. A wrong
+passphrase leaves the unlock form in place, so the fixture times out waiting for it to
+go away. Five wrong attempts also lock the form for 60 seconds.
 
 ### Authentication failing
 
@@ -107,9 +160,10 @@ E2E_TEST_PASSWORD=... # Not VITE_E2E_TEST_PASSWORD
 
 ### Tests timing out
 
-Increase the timeout in `playwright.config.ts`:
+The per-test timeout is 60s, set in `playwright.config.ts`, which covers the sign-in
+round trip and the Argon2id vault unlock. Raise it there if a slow runner needs more:
 ```typescript
-timeout: 30000, // 30 seconds per test
+timeout: 60 * 1000,
 ```
 
 ## File Structure

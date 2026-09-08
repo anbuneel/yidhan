@@ -69,8 +69,14 @@ export default defineConfig({
     timeout: 120 * 1000,
   },
 
-  // Global timeout for each test
-  timeout: 30 * 1000,
+  // Global timeout for each test.
+  //
+  // 60s rather than 30s because the authenticated fixture now unlocks the vault
+  // before a test body starts, and Argon2id at 64 MB and 3 iterations is seconds
+  // of wasm work on a shared CI runner — on top of the sign-in round trip. This
+  // is a ceiling, not a cost: the unauthenticated specs finish in about a second
+  // each and are unaffected.
+  timeout: 60 * 1000,
 
   // Expect timeout
   expect: {
