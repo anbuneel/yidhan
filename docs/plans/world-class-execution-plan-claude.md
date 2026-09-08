@@ -34,26 +34,29 @@ that must land first.
 
 ## Next
 
-Three lanes, 6 items. Lanes A and D run in parallel on separate branches and own the files named in the handoff. Lanes B and C are complete and their items have moved to `docs/progress.md`; Lane C shipped in PR #213 and item 11, which items 50 and 51 needed, shipped in PR #203 — so Lane E is unblocked. Items 48, 49, and 73 have shipped from it; the rest can be picked up whenever someone has the room. Merge order when A and D are both ready: D, A. Item 87 is the maintainer's own task, not a code lane.
+Five items across three code lanes, plus item 87, which is the maintainer's own task.
 
-### Lane A · Editor fluency · `fix/editor-fluency` · runs in parallel
+Lanes group related work. They are not branches: each item gets its own branch off `main`,
+which is what items 43, 48 and 49 did. Anything in a lane can be picked up whenever
+someone has the room.
+
+Lanes B and C are complete and their items have moved to `docs/progress.md`. Lane C
+shipped in PR #213, and item 11 — which items 50 and 51 needed — shipped in PR #203, so
+Lane E is unblocked; items 48, 49 and 73 have already shipped from it.
+
+### Lane A · Editor fluency
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
 | 83 | Phone | Remove the doubled title in the mobile editor; `h-screen` to `100dvh` | days |  | iOS Safari bars no longer clip the toolbar · real-device check in #81 |
 
-### Lane B · Trust groundwork · `feat/trust-groundwork` · runs in parallel
-
-| # | Area | Item | Effort | Needs / start when | Done when |
-|---|------|------|--------|--------------------|-----------|
-
-### Lane D · Sync hardening and CI · `fix/sync-hardening` · runs in parallel
+### Lane D · Sync hardening and CI
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
 | 153 | Testing | Verify the "done when" tests for items 6, 8, and 18 (killed-tab recovery, cross-device latency, authenticated backup restore); closes #210 | days | Item 37 shipped the fixture and the CI job. Still needs the maintainer to provision the test account and add the five repository secrets, or the authenticated tests skip. | Each of the three tests runs in CI and passes; a later `docs/progress.md` entry corrects the #201, #202, #204 entries · CI log |
 
-### Lane E · Library and search · `feat/library-search` · unblocked, in progress
+### Lane E · Library and search
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
