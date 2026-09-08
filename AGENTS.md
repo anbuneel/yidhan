@@ -64,6 +64,13 @@ that owner. Also add a `src/data/changelog.ts` entry — that is a product surfa
 **Review audits.** Write one only when findings were **rejected or disputed**. Otherwise
 the PR thread is the record.
 
+**Test where the feature should not fire, not just where it should.** A "done when"
+says what the feature does, so tests written from it check only that. The bugs are
+usually where new code meets old code. Write those cases first: does it fire from the
+other surface, behind an open dialog, on the wrong element, or break after a remount?
+Item 43 passed every check with six of these bugs, then passed again with one left
+(`DECISIONS.md`, 2026-09-08).
+
 **No agent-name file suffixes** (`-claude`, `-codex`) and no per-doc model attribution.
 Date prefixes on dated artifacts are fine.
 

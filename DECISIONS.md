@@ -19,6 +19,46 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-08 — Adversarial cases are written before the happy path
+
+**Status:** Active
+
+**Why:** Item 43 (keyboard navigation over library cards) passed every gate —
+typecheck, lint, the export audit, 1,255 unit tests and the browser suite — while
+carrying six bugs. A second push fixed five and passed again with the sixth still
+there. None were in the new code by itself. All six were where it met old code:
+
+- `Delete` destroyed Practice Space notes outright, with no undo. The signed-in
+  path fades with an Undo toast. A keystroke could take words back with no way
+  to recover them.
+- `Enter`, `P` and `Delete` acted on the selected card after `Tab` had moved focus
+  to another control.
+- Card shortcuts stayed armed behind an open dialog, including one that appears on
+  its own and so never moves focus off the card.
+- `P` passed the current pin state where the caller expects the desired one, so it
+  never toggled.
+- Selection could move to a card outside the viewport, with nothing scrolled.
+- `Cmd/Ctrl+K` stopped focusing Practice Space search after leaving and returning
+  to `/demo`, because the shortcut was rerouted through component state guarded by
+  a module-scoped value that does not reset with it.
+
+The item's "done when" was "library usable without a mouse; focus ring visible".
+That says what the feature does. Tests written from it checked that and nothing
+else, so every check passed. No test asked the other question: where should this
+*not* fire? Acceptance criteria should keep saying what done means, so the fix is
+in how tests are written, not in rewriting the criteria.
+
+**Rejected:** Raising the coverage threshold or requiring a test count per item —
+coverage was already enforced and already green; the gap was the kind of case
+written, not the number. Requiring a reviewer sign-off before merge — the defects
+survived an automated review pass and a human read of the summary, and a second
+pair of eyes on the same happy-path framing finds the same nothing. Writing the
+rule as "test edge cases" — too vague to act on, which is why the rule in
+`CLAUDE.md` names the shapes: the other surface, behind a dialog, the wrong
+target, after a remount.
+
+---
+
 ## 2026-09-08 — The Playwright failure report is not uploaded from a credentialed CI run
 
 **Status:** Active
