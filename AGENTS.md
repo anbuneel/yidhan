@@ -124,8 +124,9 @@ a report. Multi-agent review is for changes touching encryption, sync or auth; a
 ## Commands
 
 `package.json` is the full list. `npm run check` (typecheck + lint + test + build)
-mirrors CI and must pass before pushing; CI also enforces coverage thresholds, so check
-`npm run test:coverage` locally. `npm run e2e` runs against the dev server and produces
+mirrors CI and must pass before pushing anything that touches `src/`; CI also enforces
+coverage thresholds, so check `npm run test:coverage` locally. A docs-only change runs
+the sync check instead — see **Session economy**. `npm run e2e` runs against the dev server and produces
 **no service worker** — `npm run e2e:sw` is the only suite that tests service worker
 behaviour.
 
@@ -256,14 +257,12 @@ strategy: `focus-mode-active` on the scroll container fades descendant
 draft with persistent Retry/Copy controls. The manuscript glow is positioned by a
 ref-based `requestAnimationFrame` scroll handler — zero re-renders; keep it that way.
 
-**Library** — search parses the debounced query into metadata filters (`tag:`,
-`is:pinned`, `before:`, `after:`) and a separate free-text remainder. Free-text terms use
-AND semantics over title and plaintext content; quotes keep a phrase together. Tag names
-match case-insensitively, and date filters compare `updatedAt` inclusively at day or month
-precision. Invalid supported operators are ignored rather than shown as errors. Plaintext
-conversion reuses an in-memory cache keyed by note content hash and is never persisted. Progressive rendering
-suspends during search so all matches render at once; chapters force-expand. Search-empty
-("No thoughts found") is deliberately distinct from library-empty ("Your notes await").
+**Library** — search parses the query into metadata filters and a free-text remainder;
+`src/utils/searchQuery.ts` owns the grammar, `docs/ui-layout.md` lists the operators.
+**The plaintext cache is in memory only and is never persisted** — a persisted index is
+roadmap item 142, not an optimisation to add in passing. Progressive rendering suspends
+during search so all matches render at once; chapters force-expand. Search-empty ("No
+thoughts found") is deliberately distinct from library-empty ("Your notes await").
 
 **Lazy chunks** — mid-session service worker activation can invalidate lazy chunk URLs.
 `lazyWithRetry` plus the `unhandledrejection` handler in `main.tsx` recover with one

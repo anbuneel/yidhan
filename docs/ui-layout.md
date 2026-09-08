@@ -254,6 +254,29 @@ with the notes rather than following the reader down the page.
 - Hidden on the empty library, on a search that found nothing, and while the library is
   still loading — there is nothing to arrange.
 
+## Search Operators (library search box)
+
+Free-text words are ANDed. A quoted phrase is matched whole. Operators combine with each
+other and with free text.
+
+| Operator | Meaning |
+|---|---|
+| `word another` | Both words must appear, in title or content |
+| `"exact phrase"` | The phrase, matched whole |
+| `tag:journal` | Has that tag. Case-insensitive |
+| `is:pinned` | Pinned notes only |
+| `before:2026-03` | Edited on or before that date. Day or month precision |
+| `after:2026-03-01` | Edited on or after that date |
+
+- Dates compare `updatedAt` against the reader's local calendar, and both bounds are
+  inclusive.
+- An operator inside quotes is literal text: `"tag:journal"` searches for that string.
+- An empty `tag:` or an unparseable date is ignored rather than shown as an error.
+- Locked notes stay visible with no query, but cannot match free text — there is nothing
+  decrypted to match against.
+
+The `?` modal lists these under Library.
+
 ## Note Card
 
 ```
