@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as sanitize from '../utils/sanitize';
 import { createMockNote } from '../test/factories';
-import { useNoteSearch } from './useNoteSearch';
+import { useNoteSearch, useNoteSearchResults } from './useNoteSearch';
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -99,6 +99,14 @@ describe('query semantics', () => {
     const note = createMockNote({ id: 'fuzzy', title: 'Autumn harvest' });
 
     expect(search([note], 'harvst')).toEqual([note]);
+  });
+
+  it('reports the indexed token that satisfied a fuzzy match', () => {
+    const note = createMockNote({ id: 'fuzzy', title: 'Autumn harvest' });
+    const { result } = renderHook(() => useNoteSearchResults([note], 'harvst'));
+
+    expect(result.current.notes).toEqual([note]);
+    expect(result.current.matchedTermsByNoteId.get('fuzzy')).toEqual(['harvest']);
   });
 
   it('does not use prefix or fuzzy matching for a one-character query', () => {

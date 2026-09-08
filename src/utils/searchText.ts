@@ -1,14 +1,13 @@
 import { escapeHtml } from './sanitize';
-import type { SearchTextTerm } from './searchQuery';
 
 interface TextMatch {
   start: number;
   end: number;
 }
 
-function findTextMatches(text: string, terms: SearchTextTerm[]): TextMatch[] {
+function findTextMatches(text: string, terms: readonly string[]): TextMatch[] {
   const normalizedText = text.toLowerCase();
-  const normalizedTerms = [...new Set(terms.map(({ normalized }) => normalized))]
+  const normalizedTerms = [...new Set(terms.map((term) => term.toLowerCase()))]
     .filter(Boolean);
   const matches: TextMatch[] = [];
 
@@ -36,7 +35,7 @@ function findTextMatches(text: string, terms: SearchTextTerm[]): TextMatch[] {
   return merged;
 }
 
-export function highlightSearchText(text: string, terms: SearchTextTerm[]): string {
+export function highlightSearchText(text: string, terms: readonly string[]): string {
   const matches = findTextMatches(text, terms);
   if (matches.length === 0) return escapeHtml(text);
 
@@ -52,7 +51,7 @@ export function highlightSearchText(text: string, terms: SearchTextTerm[]): stri
 
 export function buildSearchSnippet(
   text: string,
-  terms: SearchTextTerm[],
+  terms: readonly string[],
   contextLength = 24
 ): string | null {
   const matches = findTextMatches(text, terms);

@@ -12,13 +12,13 @@
 
 import { useMemo } from 'react';
 import type { Note } from '../types';
-import { useNoteSearch } from './useNoteSearch';
+import { useNoteSearchResults } from './useNoteSearch';
 
-export function useVisibleNotes(
+export function useVisibleNoteSearch(
   notes: Note[],
   selectedTagIds: string[],
   searchQuery: string
-): Note[] {
+) {
   const sortedNotes = useMemo(
     () =>
       [...notes].sort((a, b) => {
@@ -38,5 +38,13 @@ export function useVisibleNotes(
     });
   }, [sortedNotes, selectedTagIds]);
 
-  return useNoteSearch(tagFilteredNotes, searchQuery);
+  return useNoteSearchResults(tagFilteredNotes, searchQuery);
+}
+
+export function useVisibleNotes(
+  notes: Note[],
+  selectedTagIds: string[],
+  searchQuery: string
+): Note[] {
+  return useVisibleNoteSearch(notes, selectedTagIds, searchQuery).notes;
 }

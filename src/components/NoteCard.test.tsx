@@ -162,4 +162,25 @@ describe('NoteCard search highlighting', () => {
       'tag:journal'
     );
   });
+
+  it('highlights the indexed word and builds a snippet for a fuzzy content match', () => {
+    const note = createMockNote({
+      id: 'fuzzy-result',
+      title: 'Autumn plans',
+      content: '<p>A long introduction before the orchard harvest begins.</p>',
+    });
+    const { container } = render(
+      <NoteCard
+        note={note}
+        onClick={vi.fn()}
+        onDelete={vi.fn()}
+        onTogglePin={vi.fn()}
+        searchQuery="harvst"
+        searchMatchTerms={['harvest']}
+      />
+    );
+
+    expect(container.querySelector('mark')).toHaveTextContent('harvest');
+    expect(container.querySelector('.search-snippet')).toHaveTextContent('orchard harvest');
+  });
 });

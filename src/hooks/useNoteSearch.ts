@@ -25,6 +25,13 @@ interface RankedResult {
   id: string;
   score: number;
   titleMatches: number;
+  matchedTerms: Set<string>;
+}
+
+export interface NoteSearchResults {
+  notes: Note[];
+  matchedTermsByNoteId: ReadonlyMap<string, readonly string[]>;
+  isRankedSearch: boolean;
 }
 
 const SEARCH_OPTIONS = {
@@ -122,6 +129,12 @@ function rankedTextMatches(state: SearchIndexState, terms: SearchTextTerm[]): Ra
         titleMatches: (term.quoted
           ? phraseMatchesTitle(document, term)
           : hasTitleMatch(result)) ? 1 : 0,
+        // MiniSearch reports the indexed token that satisfied a fuzzy or prefix
+        // query. Cards use that exact token so every visible result can show why
+        // it matched. Quoted phrases remain one literal highlight.
+        matchedTerms: new Set(term.quoted
+          ? [term.normalized]
+          : Object.keys(result.match)),
       });
     }
 
@@ -138,6 +151,7 @@ function rankedTextMatches(state: SearchIndexState, terms: SearchTextTerm[]): Ra
       }
       aggregate.score += next.score;
       aggregate.titleMatches += next.titleMatches;
+      next.matchedTerms.forEach((matchedTerm) => aggregate.matchedTerms.add(matchedTerm));
     }
   }
 
@@ -165,7 +179,7 @@ function matchesFilters(note: Note, filters: SearchQueryFilters): boolean {
   return true;
 }
 
-export function useNoteSearch(notes: Note[], query: string): Note[] {
+export function useNoteSearchResults(notes: Note[], query: string): NoteSearchResults {
   // This mounted library owns the index. Its plaintext never leaves process memory.
   const state = useRef<SearchIndexState | null>(null);
   if (!state.current) state.current = createSearchIndex();
@@ -176,16 +190,38 @@ export function useNoteSearch(notes: Note[], query: string): Note[] {
   }, [notes]);
   const parsedQuery = useMemo(() => parseSearchQuery(query), [query]);
   return useMemo(() => {
-    if (!query.trim()) return notes;
+    if (!query.trim()) {
+      return { notes, matchedTermsByNoteId: new Map(), isRankedSearch: false };
+    }
 
     if (parsedQuery.textTerms.length === 0) {
-      return notes.filter((note) => matchesFilters(note, parsedQuery.filters));
+      return {
+        notes: notes.filter((note) => matchesFilters(note, parsedQuery.filters)),
+        matchedTermsByNoteId: new Map(),
+        isRankedSearch: false,
+      };
     }
 
     const notesById = new Map(notes.map((note) => [note.id, note]));
-    return rankedTextMatches(indexState, parsedQuery.textTerms)
-      .map(({ id }) => notesById.get(id))
-      .filter((note): note is Note => note !== undefined)
-      .filter((note) => matchesFilters(note, parsedQuery.filters));
+    const rankedMatches = rankedTextMatches(indexState, parsedQuery.textTerms)
+      .filter(({ id }) => {
+        const note = notesById.get(id);
+        return note !== undefined && matchesFilters(note, parsedQuery.filters);
+      });
+
+    return {
+      notes: rankedMatches
+        .map(({ id }) => notesById.get(id))
+        .filter((note): note is Note => note !== undefined),
+      matchedTermsByNoteId: new Map(
+        rankedMatches.map(({ id, matchedTerms }) => [id, [...matchedTerms]])
+      ),
+      isRankedSearch: true,
+    };
   }, [notes, query, indexState, parsedQuery]);
+}
+
+/** Compatibility wrapper for callers that only need the ranked notes. */
+export function useNoteSearch(notes: Note[], query: string): Note[] {
+  return useNoteSearchResults(notes, query).notes;
 }

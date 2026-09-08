@@ -17,6 +17,8 @@ interface UseLibraryCardNavigationOptions {
    * or the keyboard walks the notes in an order the reader cannot see.
    */
   arrangement?: ChapterArrangement;
+  /** Preserve the relevance order supplied by the free-text search index. */
+  isRankedSearch?: boolean;
   onOpen: (id: string) => void;
   onTogglePin: (id: string, pinned: boolean) => void;
   onDelete: (id: string) => void;
@@ -26,6 +28,7 @@ interface UseLibraryCardNavigationOptions {
 export function useLibraryCardNavigation({
   notes,
   arrangement,
+  isRankedSearch = false,
   onOpen,
   onTogglePin,
   onDelete,
@@ -33,10 +36,11 @@ export function useLibraryCardNavigation({
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
 
   const navigableNotes = useMemo(
-    () => groupNotesByChapter(notes, arrangement)
-      .flatMap((chapter) => chapter.notes)
+    () => (isRankedSearch
+      ? notes
+      : groupNotesByChapter(notes, arrangement).flatMap((chapter) => chapter.notes))
       .filter((note) => !note.decryptionFailed),
-    [notes, arrangement]
+    [notes, arrangement, isRankedSearch]
   );
 
   useEffect(() => {

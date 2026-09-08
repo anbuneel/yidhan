@@ -2,7 +2,7 @@ import { GestureHint } from './GestureHint';
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import Masonry from 'react-masonry-css';
 import type { Note } from '../types';
-import type { ChapterKey } from '../utils/temporalGrouping';
+import type { LibrarySectionKey } from '../utils/temporalGrouping';
 import { WATERLINE_TEXT } from '../utils/temporalGrouping';
 import { NoteCard } from './NoteCard';
 import { SwipeableNoteCard } from './SwipeableNoteCard';
@@ -13,7 +13,7 @@ const INITIAL_CARD_COUNT = 6;
 const BATCH_SIZE = 6;
 
 interface ChapterSectionProps {
-  chapterKey: ChapterKey;
+  chapterKey: LibrarySectionKey;
   label: string;
   notes: Note[];
   defaultExpanded: boolean;
@@ -25,13 +25,15 @@ interface ChapterSectionProps {
   onTogglePin: (id: string, pinned: boolean) => void;
   isCompact?: boolean;
   searchQuery?: string;
+  searchMatchTerms?: ReadonlyMap<string, readonly string[]>;
   isSearching?: boolean;
   showGestureHint?: boolean;
   focusedNoteId?: string | null;
 }
 
 // Visual treatment based on chapter age (subtle opacity reduction for older notes)
-const CHAPTER_OPACITY: Record<ChapterKey, number> = {
+const CHAPTER_OPACITY: Record<LibrarySectionKey, number> = {
+  search: 1.0,
   pinned: 1.0,
   thisWeek: 1.0,
   lastWeek: 0.95,
@@ -52,6 +54,7 @@ export const ChapterSection = memo(function ChapterSection({
   onTogglePin,
   isCompact = false,
   searchQuery,
+  searchMatchTerms,
   isSearching = false,
   showGestureHint = false,
   focusedNoteId,
@@ -354,6 +357,7 @@ export const ChapterSection = memo(function ChapterSection({
                         onTogglePin={onTogglePin}
                         isCompact={isCompact}
                         searchQuery={isSearching ? searchQuery : undefined}
+                        searchMatchTerms={searchMatchTerms?.get(note.id)}
                         isFocused={note.id === focusedNoteId}
                       />
                     ) : (
@@ -364,6 +368,7 @@ export const ChapterSection = memo(function ChapterSection({
                         onTogglePin={onTogglePin}
                         isCompact={isCompact}
                         searchQuery={isSearching ? searchQuery : undefined}
+                        searchMatchTerms={searchMatchTerms?.get(note.id)}
                         isFocused={note.id === focusedNoteId}
                       />
                     )}
@@ -402,6 +407,7 @@ export const ChapterSection = memo(function ChapterSection({
   prev.isPinned === next.isPinned &&
   prev.isCompact === next.isCompact &&
   prev.searchQuery === next.searchQuery &&
+  prev.searchMatchTerms === next.searchMatchTerms &&
   prev.isSearching === next.isSearching &&
   prev.showGestureHint === next.showGestureHint &&
   prev.onNoteClick === next.onNoteClick &&
