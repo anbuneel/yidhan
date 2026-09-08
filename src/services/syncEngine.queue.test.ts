@@ -189,10 +189,15 @@ describe('processQueue behavior', () => {
     });
 
     const syncPromise = processQueue(TEST_USER_ID);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(noteIdempotencyChain.maybeSingle).toHaveBeenCalledTimes(1);
-    expect(tagIdempotencyChain.maybeSingle).toHaveBeenCalledTimes(1);
+    // Poll rather than sleeping one macrotask. processQueue reads the queue out of
+    // IndexedDB before it reaches maybeSingle, and under full-suite parallel load a
+    // single setTimeout(0) expired first: the assertion saw 0 calls, and the run left
+    // half-started here went on to consume the deferred reads the next test had
+    // allocated, failing that one too.
+    await vi.waitFor(() => {
+      expect(noteIdempotencyChain.maybeSingle).toHaveBeenCalledTimes(1);
+      expect(tagIdempotencyChain.maybeSingle).toHaveBeenCalledTimes(1);
+    });
 
     noteIdempotencyDeferred.resolve({ data: null, error: null });
     tagIdempotencyDeferred.resolve({ data: null, error: null });

@@ -73,7 +73,7 @@ describe('useRouter', () => {
   });
 
   it('pushes an address when navigating', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
 
     await user.click(screen.getByRole('button', { name: 'open note' }));
@@ -83,7 +83,7 @@ describe('useRouter', () => {
   });
 
   it('does not push a second entry for the route already showing', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
 
     const pushSpy = vi.spyOn(window.history, 'pushState');
@@ -93,7 +93,7 @@ describe('useRouter', () => {
   });
 
   it('replaces without adding an entry, so Back skips the corrected address', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     window.history.replaceState(null, '', '/n/gone');
     render(<Harness />);
 
@@ -106,7 +106,7 @@ describe('useRouter', () => {
   });
 
   it('follows Back to the previous address', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
 
     await user.click(screen.getByRole('button', { name: 'open note' }));
@@ -119,7 +119,7 @@ describe('useRouter', () => {
   });
 
   it('restores the library scroll position on Back from a note', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
 
     const region = screen.getByTestId('region');
@@ -137,7 +137,7 @@ describe('useRouter', () => {
   });
 
   it('does not restore an offset onto a route the user navigated to afresh', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
 
     const region = screen.getByTestId('region');
@@ -152,7 +152,7 @@ describe('useRouter', () => {
   });
 
   it('keeps retrying while the list is still rendering', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
 
     const region = screen.getByTestId('region');
@@ -173,7 +173,7 @@ describe('useRouter', () => {
   });
 
   it('remembers the faded view separately from the library', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
 
     const region = screen.getByTestId('region');

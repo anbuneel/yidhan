@@ -62,7 +62,7 @@ describe('PassphraseSetup', () => {
   });
 
   it('should enable submit when all fields are valid', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PassphraseSetup />);
 
     await user.type(screen.getByLabelText('Passphrase'), 'mypassphrase123');
@@ -74,7 +74,7 @@ describe('PassphraseSetup', () => {
   });
 
   it('should show mismatch inline hint when confirm differs', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PassphraseSetup />);
 
     await user.type(screen.getByLabelText('Passphrase'), 'mypassphrase123');
@@ -84,7 +84,7 @@ describe('PassphraseSetup', () => {
   });
 
   it('shows a weak strength hint for short passphrases', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PassphraseSetup />);
 
     await user.type(screen.getByLabelText('Passphrase'), 'short');
@@ -93,7 +93,7 @@ describe('PassphraseSetup', () => {
   });
 
   it('shows a strong strength hint for long varied passphrases', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PassphraseSetup />);
 
     await user.type(screen.getByLabelText('Passphrase'), 'Long-Quiet-Passphrase-2026!');
@@ -108,7 +108,7 @@ describe('PassphraseSetup', () => {
     mockCreateEncryptedNote.mockResolvedValue({ id: 'note-id' });
     mockAddTagToNoteOffline.mockResolvedValue(undefined);
     const onComplete = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseSetup onComplete={onComplete} />);
 
@@ -129,7 +129,7 @@ describe('PassphraseSetup', () => {
     mockCreateTagOffline.mockResolvedValue({ id: 'tag-recipes-id', name: 'Recipes', color: 'sage' });
     mockCreateEncryptedNote.mockResolvedValue({ id: 'note-id' });
     mockAddTagToNoteOffline.mockResolvedValue(undefined);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseSetup />);
 
@@ -160,7 +160,7 @@ describe('PassphraseSetup', () => {
     mockSetupPassphrase.mockResolvedValue(mockKeys);
     mockCreateTagOffline.mockRejectedValue(new Error('DB error'));
     const onComplete = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseSetup onComplete={onComplete} />);
 
@@ -178,7 +178,7 @@ describe('PassphraseSetup', () => {
 
   it('should show error if setupPassphrase fails', async () => {
     mockSetupPassphrase.mockRejectedValue(new Error('Key derivation failed'));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseSetup />);
 
@@ -195,7 +195,7 @@ describe('PassphraseSetup', () => {
   it('should show submitting state during setup', async () => {
     // Make setupPassphrase hang
     mockSetupPassphrase.mockReturnValue(new Promise(() => {}));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseSetup />);
 

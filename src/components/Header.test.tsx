@@ -57,7 +57,7 @@ describe('Header', () => {
   });
 
   it('does not replay an old focus request after remount', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     function Harness() {
       const [searchFocusToken, setSearchFocusToken] = useState(0);
@@ -87,7 +87,7 @@ describe('Header', () => {
   });
 
   it('clears and blurs search on Escape', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onSearchChange = vi.fn();
     render(<Header {...defaultProps} searchQuery="hello" onSearchChange={onSearchChange} />);
 

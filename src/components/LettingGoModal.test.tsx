@@ -119,7 +119,7 @@ describe('LettingGoModal re-auth feature switch', () => {
   });
 
   it('exports the full backup without re-auth when the switch is off', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderLettingGoModal();
 
     await user.click(screen.getByRole('button', { name: 'Full Backup' }));
@@ -145,7 +145,7 @@ describe('LettingGoModal re-auth feature switch', () => {
 
   it('requires re-auth before full backup when the switch is on', async () => {
     featureFlags.reauthForSensitiveActions = true;
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderLettingGoModal();
 
     await user.click(screen.getByRole('button', { name: 'Full Backup' }));
@@ -158,7 +158,7 @@ describe('LettingGoModal re-auth feature switch', () => {
   });
 
   it('requires server confirmation before account departure when the switch is off', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderLettingGoModal();
 
     await user.click(screen.getByRole('button', { name: 'Let go' }));
@@ -179,7 +179,7 @@ describe('LettingGoModal re-auth feature switch', () => {
 
   it('requires server confirmation before account departure when the switch is on', async () => {
     featureFlags.reauthForSensitiveActions = true;
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderLettingGoModal();
 
     await user.click(screen.getByRole('button', { name: 'Let go' }));
