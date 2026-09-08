@@ -73,13 +73,12 @@ Context is the scarce resource. Each rule below costs a sentence and saves tens 
 thousands of tokens.
 
 **One lane per session.** A plan may batch six items; a session should not. Finish one
-cohesive change, then start fresh with a short state summary. Holding `Editor.tsx` +
-`syncEngine.ts` + `syncEngine.test.ts` at once is ~48k tokens of source before any
-reasoning happens.
+cohesive change, then start fresh with a short state summary. Holding `Editor.tsx` and
+`syncEngine.ts` together is roughly 30k tokens of source before any reasoning happens.
 
-**Six files exceed 10k tokens — never read them whole.** `changelog.ts` (~18k),
-`Editor.tsx` (~17k), `index.css` (~14k), `syncEngine.ts` (~14k), `Editor.test.tsx`
-(~12k), `SettingsModal.tsx` (~10k). Grep for the symbol, or read a line range.
+**Never read a large file whole.** `changelog.ts`, `Editor.tsx`, `index.css`,
+`syncEngine.ts` and `Editor.test.tsx` each exceed 10k tokens. Grep for the symbol, or
+read a line range.
 
 **The syncEngine tests are four files**, split by concern: `syncEngine.state`,
 `.queue`, `.conflicts`, `.pull`. Module mocks live in `src/test/syncEngineMocks.ts`,
