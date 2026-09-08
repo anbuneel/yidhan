@@ -101,6 +101,10 @@ read the file whole.
 `npx vitest run src/services/<name>.test.ts`. Run `npm run check` once, before pushing,
 not after every edit.
 
+**A docs-only change needs `node scripts/sync-agents.mjs --check`, not `npm run check`.**
+That is the only gate it can fail. CI agrees: the `full-tests` job skips a push to `main`
+that does not touch `src/`.
+
 **Playwright is not in `npm run check`, but the suite does run in CI** — the `e2e` job
 runs `npm run e2e` on every PR, so a red spec blocks the merge. Still do not run
 `npm run e2e` by default; it is minutes. If you changed a flow it covers, run that spec
@@ -128,7 +132,8 @@ behaviour.
 ## Git workflow
 
 Feature work goes through a branch and a PR. Small, low-risk changes (typos, doc
-touch-ups) may go direct to main after `npm run check`.
+touch-ups) may go direct to main — after `npm run check`, or the sync check alone if
+the change is docs-only.
 
 `AGENTS.md` is generated from `CLAUDE.md` — never edit it directly. The pre-commit hook
 regenerates and stages it from the staged blob. Arm hooks once with
