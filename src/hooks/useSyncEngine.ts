@@ -99,7 +99,8 @@ export function mapSyncOutcome(result: FullSyncResult): SyncOutcome {
  * Hook that manages the sync engine lifecycle
  */
 export function useSyncEngine(
-  onSyncComplete?: (result: FullSyncResult) => void
+  onSyncComplete?: (result: FullSyncResult) => void,
+  onSyncPullComplete?: (result: FullSyncResult) => void
 ): SyncState {
   const { user, isHydrating } = useAuth();
   const { isOnline, onReconnect } = useNetworkStatus();
@@ -116,6 +117,8 @@ export function useSyncEngine(
   // Stable ref for onSyncComplete to avoid re-creating doSync on every render
   const onSyncCompleteRef = useRef(onSyncComplete);
   onSyncCompleteRef.current = onSyncComplete;
+  const onSyncPullCompleteRef = useRef(onSyncPullComplete);
+  onSyncPullCompleteRef.current = onSyncPullComplete;
 
   // Re-run latch: when triggerSync is called while a sync is in progress,
   // set this flag. After doSync completes, if the latch is set, run again.
@@ -149,6 +152,9 @@ export function useSyncEngine(
     const syncExecution = (async (): Promise<TriggerSyncResult> => {
       try {
         const result = await fullSync(user.id);
+        // The pull may have changed faded membership even when nothing needs a full
+        // library rehydrate. Let consumers reconcile their small derived values.
+        onSyncPullCompleteRef.current?.(result);
         if (mountedRef.current) {
           setLastResult(result);
           setLastSyncAt(new Date());

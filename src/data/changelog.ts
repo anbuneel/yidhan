@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.19', date: '2026-09-08', changes: [
+    { type: 'fix', text: 'The Faded Notes badge now stays accurate after notes are restored, released, or changed on another device' },
+  ] },
   { version: '3.19.18', date: '2026-09-08', changes: [
     { type: 'improvement', text: 'The full browser test suite now runs automatically on every change, so a broken flow is caught before it reaches you rather than after' },
   ] },

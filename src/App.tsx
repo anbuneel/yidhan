@@ -84,7 +84,7 @@ function App() {
     notes, setNotes, loading,
     tags, setTags,
     selectedTagIds, setSelectedTagIds,
-    fadedNotesCount, setFadedNotesCount,
+    fadedNotesCount, refreshFadedNotesCount,
     conflicts, removeConflict, triggerSync, triggerCoalescedSync,
   } = useNotesSync({
     userId: user?.id,
@@ -292,7 +292,7 @@ function App() {
     notes,
     notesRef,
     setNotes,
-    setFadedNotesCount,
+    refreshFadedNotesCount,
     openNoteIdRef: selectedNoteIdRef,
     onOpenNoteClosed: () => replaceRoute({ name: 'library' }),
     triggerCoalescedSync,
@@ -309,7 +309,7 @@ function App() {
     keys,
     isViewingFaded: view === 'faded',
     setNotes,
-    setFadedNotesCount,
+    refreshFadedNotesCount,
   });
 
   const handleFadedNotesClick = () => {

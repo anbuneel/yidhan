@@ -26,7 +26,7 @@ export interface UseNoteActionsOptions {
   /** Stable read of the notes array, so the delete callback does not change identity. */
   notesRef: React.RefObject<Note[]>;
   setNotes: Dispatch<SetStateAction<Note[]>>;
-  setFadedNotesCount: Dispatch<SetStateAction<number>>;
+  refreshFadedNotesCount: () => Promise<void>;
   openNoteIdRef: React.RefObject<string | null>;
   /** Close the editor when the note it is showing is the one being deleted. */
   onOpenNoteClosed: () => void;
@@ -45,7 +45,7 @@ export function useNoteActions({
   notes,
   notesRef,
   setNotes,
-  setFadedNotesCount,
+  refreshFadedNotesCount,
   openNoteIdRef,
   onOpenNoteClosed,
   triggerCoalescedSync,
@@ -113,7 +113,7 @@ export function useNoteActions({
     try {
       await softDeleteNoteOffline(userId, id);
       setNotes((prev) => prev.filter((n) => n.id !== id));
-      setFadedNotesCount((prev) => prev + 1);
+      await refreshFadedNotesCount();
       if (openNoteIdRef.current === id) {
         onOpenNoteClosed();
       }
@@ -131,7 +131,7 @@ export function useNoteActions({
                   if (deletedNote) {
                     setNotes((prev) => [{ ...deletedNote, deletedAt: null }, ...prev]);
                   }
-                  setFadedNotesCount((prev) => Math.max(0, prev - 1));
+                  await refreshFadedNotesCount();
                   toast.success('Note restored');
                 } catch {
                   toast.error('Failed to undo');
@@ -155,7 +155,7 @@ export function useNoteActions({
       toast.error('Failed to delete note');
       return false;
     }
-  }, [userId, notesRef, setNotes, setFadedNotesCount, openNoteIdRef, onOpenNoteClosed]);
+  }, [userId, notesRef, setNotes, refreshFadedNotesCount, openNoteIdRef, onOpenNoteClosed]);
 
   const handleTogglePin = useCallback(async (id: string, pinned: boolean) => {
     if (!userId) return;
