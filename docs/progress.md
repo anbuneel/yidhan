@@ -235,3 +235,9 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
 - **2026-09-08** — Faded Notes badge count is reconciled from IndexedDB after
   local changes, realtime events, sync pulls, and expiry cleanup instead of
   being incremented optimistically — ledger item 73. (#227)
+- **2026-09-08** — Library cards support keyboard selection — ledger item 43.
+  Arrow keys or J/K move a roving focus across chapter boundaries; Enter opens
+  the selected note, P pins it, and Delete fades it with the existing Undo
+  toast. Selecting an unrendered or collapsed card reveals it first, so long
+  libraries remain progressively rendered without trapping the keyboard. `t`
+  is deferred to the roadmap until item 93 supplies a per-note tag picker.

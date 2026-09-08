@@ -10,7 +10,10 @@
  */
 
 import { useNoteSearch } from '../hooks/useNoteSearch';
-import { useState, useCallback, useEffect, useEffectEvent, useMemo, Suspense, useRef } from 'react';
+import toast from 'react-hot-toast';
+import { useAppShortcuts } from '../hooks/useAppShortcuts';
+import { useLibraryCardNavigation } from '../hooks/useLibraryCardNavigation';
+import { useState, useCallback, useEffect, useMemo, Suspense, useRef } from 'react';
 import type { Note, Tag, Theme, TagColor } from '../types';
 import { useDemoState } from '../hooks/useDemoState';
 import { hasPracticeWork } from '../services/demoStorage';
@@ -84,6 +87,7 @@ export function DemoPage({
     createNote,
     updateNote,
     deleteNote,
+    restoreNote,
     createTag,
     updateTag,
     deleteTag,
@@ -239,20 +243,6 @@ export function DemoPage({
     void handleNewNote().then(() => onNewNoteStarted?.());
   }, [startWithNewNote, loading, handleNewNote, onNewNoteStarted]);
 
-  const handleCreateNoteShortcut = useEffectEvent((e: KeyboardEvent) => {
-    if (view !== 'library') return;
-    if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
-      e.preventDefault();
-      void handleNewNote();
-    }
-  });
-
-  // Keyboard shortcut: Cmd/Ctrl + N to create new note
-  useEffect(() => {
-    window.addEventListener('keydown', handleCreateNoteShortcut);
-    return () => window.removeEventListener('keydown', handleCreateNoteShortcut);
-  }, []);
-
   const handleNoteClick = useCallback((id: string) => {
     void warmEditorRoute().then(() => {
       setSelectedNoteId(id);
@@ -284,13 +274,41 @@ export function DemoPage({
 
   const handleNoteDelete = useCallback(
     (id: string) => {
-      deleteNote(id);
+      const deletedNote = notes.find((note) => note.id === id);
+      if (!deletedNote || !deleteNote(id)) return;
+
       if (selectedNoteId === id) {
         setView('library');
         setSelectedNoteId(null);
       }
+
+      toast(
+        (t) => (
+          <div className="flex items-center gap-3">
+            <span>Note removed from Practice Space</span>
+            <button type="button"
+              onClick={() => {
+                toast.dismiss(t.id);
+                if (restoreNote(deletedNote)) {
+                  toast.success('Note restored');
+                } else {
+                  toast.error('Could not restore note');
+                }
+              }}
+              className="px-2 py-1 text-sm font-medium rounded transition-colors"
+              style={{
+                background: 'var(--color-cta-bg)',
+                color: 'var(--color-cta-text)',
+              }}
+            >
+              Undo
+            </button>
+          </div>
+        ),
+        { duration: 5000 }
+      );
     },
-    [deleteNote, selectedNoteId]
+    [deleteNote, notes, restoreNote, selectedNoteId]
   );
 
   const handleTogglePin = useCallback(
@@ -299,6 +317,28 @@ export function DemoPage({
     },
     [updateNote]
   );
+
+  const { focusedNoteId, handleLibraryCardKeyDown } = useLibraryCardNavigation({
+    notes: displayNotes,
+    onOpen: handleNoteClick,
+    onTogglePin: handleTogglePin,
+    onDelete: handleNoteDelete,
+  });
+
+  // `searchFocusToken` is DemoPage state but `lastHandledDemoSearchFocusToken` is
+  // module scope, so the token survives a DemoPage unmount while the state resets to
+  // 0. Routing Cmd/Ctrl+K through the token therefore went dead after leaving and
+  // returning to /demo. Focus the input directly, as App.tsx does; the token stays for
+  // the editor-to-library request, which is what it was built for.
+  useAppShortcuts({
+    enabled: !showTagModal && !showShortcutsModal && !shouldShowPrompt,
+    view,
+    onNewNote: () => { void handleNewNote(); },
+    onFocusSearch: () => scheduleSearchFocus(DEMO_SEARCH_INPUT_ID),
+    onRequestLibrarySearch: handleRequestSearch,
+    onShowShortcuts: () => setShowShortcutsModal(true),
+    onLibraryCardKeyDown: handleLibraryCardKeyDown,
+  });
 
   const handleNoteTagToggle = useCallback(
     (noteId: string, tagId: string) => {
@@ -541,6 +581,7 @@ export function DemoPage({
           onNewNote={handleNewNote}
           searchQuery={searchQuery}
           isSearching={isSearching}
+          focusedNoteId={focusedNoteId}
         />
         </div>
 
@@ -601,33 +642,6 @@ function DemoHeader({
 }: DemoHeaderProps) {
   const searchRef = useRef<HTMLInputElement>(null);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-
-  // Keyboard shortcut for search
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isSearchKey = e.code === 'KeyK' || e.key.toLowerCase() === 'k';
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || !isSearchKey) {
-        return;
-      }
-
-      const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT' ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-
-      e.preventDefault();
-      scheduleSearchFocus(DEMO_SEARCH_INPUT_ID);
-    };
-
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, []);
 
   useEffect(() => {
     if (searchFocusToken === 0 || searchFocusToken === lastHandledDemoSearchFocusToken) {

@@ -32,6 +32,7 @@ interface ChapteredLibraryProps {
   searchQuery?: string;
   isSearching?: boolean;
   isLoading?: boolean;
+  focusedNoteId?: string | null;
 }
 
 export function ChapteredLibrary({
@@ -46,6 +47,7 @@ export function ChapteredLibrary({
   searchQuery,
   isSearching = false,
   isLoading = false,
+  focusedNoteId,
 }: ChapteredLibraryProps) {
   // Auto-detect compact mode based on viewport width (mobile = compact)
   const [isCompact, setIsCompact] = useState(() => {
@@ -300,6 +302,7 @@ export function ChapteredLibrary({
           isCompact={isCompact}
           searchQuery={searchQuery}
           isSearching={isSearching}
+          focusedNoteId={focusedNoteId}
         />
       ))}
     </main>

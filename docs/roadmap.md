@@ -98,6 +98,7 @@ must satisfy; the "done when" below is the summary, that document is the detail.
 |---|------|--------|-------|-----------|
 | 92 | Note links: `[[` opens the switcher and inserts `/n/<id>`; titles resolve client-side; "Mentioned in" list at the bottom | weeks | Needs #28, #42, #31 | Renaming a note updates every link's text; the linked note lists the mention · E2E |
 | 93 | Tag quality of life: search in selector, rename preserves assignments, Tags page with counts, `#tag` autocomplete in the editor | days |  | Typing `#jour` and Enter assigns "journal" without leaving the editor · E2E |
+| — | Keyboard tag assignment from a selected library card | days | Needs item 93's note tag picker | `t` opens the existing per-note picker without adding a second card control · E2E |
 | 94 | Templates (notes tagged `template`) and a "Today" daily page in the palette | days | Needs #42 | "Today" opens today's note or creates it once · E2E |
 | 95 | Saved searches in the palette | days | Needs #42, #50 | A saved search reopens with its operators and result set · E2E |
 | 98 | Multi-select and bulk actions in list view only: tag, pin, fade, export | weeks | Needs #30 | Shift-click ranges; bulk fade is undoable in one step · E2E |

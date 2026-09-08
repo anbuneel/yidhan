@@ -8,6 +8,8 @@ import {
   hasPracticeWork,
   getDemoDataForMigration,
   updateDemoNote,
+  deleteDemoNote,
+  restoreDemoNote,
   type DemoState,
 } from './demoStorage';
 
@@ -126,6 +128,26 @@ describe('starter copy correction (item 152)', () => {
 
     expect(hasDemoState()).toBe(true);
     expect(getDemoDataForMigration().notes.map((n) => n.localId)).toEqual(['starter-welcome']);
+  });
+});
+
+describe('Practice Space deletion', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('restores an undone note with its original identity, tags, and timestamps', () => {
+    const created = createDemoNote({
+      title: 'Keep this thought',
+      content: '<p>Still here</p>',
+      pinned: true,
+      tagIds: ['tag-ideas'],
+    });
+
+    expect(deleteDemoNote(created.localId)).toBe(true);
+    expect(restoreDemoNote(created)).toBe(true);
+
+    expect(getDemoState().notes[0]).toEqual(created);
   });
 });
 

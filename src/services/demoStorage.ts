@@ -348,6 +348,16 @@ export function deleteDemoNote(localId: string): boolean {
   return true;
 }
 
+/** Restore a Practice Space note after a short-lived Undo action. */
+export function restoreDemoNote(note: DemoNote): boolean {
+  const state = getDemoState();
+  if (state.notes.some((existing) => existing.localId === note.localId)) return false;
+
+  state.notes.unshift(note);
+  saveDemoState(state);
+  return true;
+}
+
 /**
  * Get a single demo note by localId
  */

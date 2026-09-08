@@ -11,6 +11,7 @@ import {
   createDemoNote,
   updateDemoNote,
   deleteDemoNote,
+  restoreDemoNote,
   getDemoNote,
   createDemoTag,
   updateDemoTag,
@@ -71,6 +72,7 @@ export interface UseDemoStateReturn {
   createNote: (note: { title: string; content: string; pinned?: boolean; tagIds?: string[] }) => Note;
   updateNote: (id: string, updates: { title?: string; content?: string; pinned?: boolean }) => Note | null;
   deleteNote: (id: string) => boolean;
+  restoreNote: (note: Note) => boolean;
   getNote: (id: string) => Note | null;
 
   // Tag operations
@@ -164,6 +166,23 @@ export function useDemoState(): UseDemoStateReturn {
     [refreshState]
   );
 
+  const restoreNoteHandler = useCallback(
+    (note: Note): boolean => {
+      const restored = restoreDemoNote({
+        localId: note.id,
+        title: note.title,
+        content: note.content,
+        pinned: note.pinned,
+        tagIds: note.tags.map((tag) => tag.id),
+        createdAt: note.createdAt.getTime(),
+        updatedAt: note.updatedAt.getTime(),
+      });
+      if (restored) refreshState();
+      return restored;
+    },
+    [refreshState]
+  );
+
   const getNoteHandler = useCallback(
     (id: string): Note | null => {
       const demoNote = getDemoNote(id);
@@ -247,6 +266,7 @@ export function useDemoState(): UseDemoStateReturn {
     createNote: createNoteHandler,
     updateNote: updateNoteHandler,
     deleteNote: deleteNoteHandler,
+    restoreNote: restoreNoteHandler,
     getNote: getNoteHandler,
 
     createTag: createTagHandler,

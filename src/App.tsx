@@ -19,6 +19,7 @@ import { useAppTheme } from './hooks/useAppTheme';
 import { useAppNavigation } from './hooks/useAppNavigation';
 import { useLibrarySearch } from './hooks/useLibrarySearch';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
+import { useLibraryCardNavigation } from './hooks/useLibraryCardNavigation';
 import { useAppLoader } from './hooks/useAppLoader';
 import { useEditorChunk } from './hooks/useEditorChunk';
 import { useShareRoute } from './hooks/useShareRoute';
@@ -274,18 +275,6 @@ function App() {
     }
   }, [user, keys, navigate, setNotes, startTransition, trackNoteCreated, warmEditorRoute]);
 
-  useAppShortcuts({
-    enabled: Boolean(user),
-    view,
-    onNewNote: () => { void handleNewNote(); },
-    onFocusSearch: () => {
-      requestSearchFocus();
-      scheduleSearchFocus(LIBRARY_SEARCH_INPUT_ID);
-    },
-    onRequestLibrarySearch: requestLibrarySearch,
-    onShowShortcuts: () => setShowShortcutsModal(true),
-  });
-
   const { handleNoteUpdate, handleNoteDelete, handleTogglePin } = useNoteActions({
     userId: user?.id,
     keys,
@@ -296,6 +285,13 @@ function App() {
     openNoteIdRef: selectedNoteIdRef,
     onOpenNoteClosed: () => replaceRoute({ name: 'library' }),
     triggerCoalescedSync,
+  });
+
+  const { focusedNoteId, handleLibraryCardKeyDown } = useLibraryCardNavigation({
+    notes: displayNotes,
+    onOpen: handleNoteClick,
+    onTogglePin: handleTogglePin,
+    onDelete: handleNoteDelete,
   });
 
   const {
@@ -358,6 +354,30 @@ function App() {
     setNotes,
     setTags,
     setSelectedTagIds,
+  });
+
+  // Card shortcuts are destructive (Delete fades a note), so they stay off while any
+  // dialog is open. The roving-focus target check already rejects most of these, but
+  // not every modal moves focus off the card when it opens.
+  const isAnyModalOpen =
+    showSettingsModal ||
+    showLettingGoModal ||
+    showWelcomeBack ||
+    showShortcutsModal ||
+    showAuthModal ||
+    showTagModal;
+
+  useAppShortcuts({
+    enabled: Boolean(user) && !isAnyModalOpen,
+    view,
+    onNewNote: () => { void handleNewNote(); },
+    onFocusSearch: () => {
+      requestSearchFocus();
+      scheduleSearchFocus(LIBRARY_SEARCH_INPUT_ID);
+    },
+    onRequestLibrarySearch: requestLibrarySearch,
+    onShowShortcuts: () => setShowShortcutsModal(true),
+    onLibraryCardKeyDown: handleLibraryCardKeyDown,
   });
 
   // Item 29: a note address that no longer resolves. The editor used to `return null`
@@ -500,6 +520,7 @@ function App() {
           searchQuery,
           isSearching,
           isLoading: loading && notes.length === 0,
+          focusedNoteId,
         }}
         footer={{
           ref: libraryFooterRef,

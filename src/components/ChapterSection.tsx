@@ -27,6 +27,7 @@ interface ChapterSectionProps {
   searchQuery?: string;
   isSearching?: boolean;
   showGestureHint?: boolean;
+  focusedNoteId?: string | null;
 }
 
 // Visual treatment based on chapter age (subtle opacity reduction for older notes)
@@ -53,6 +54,7 @@ export const ChapterSection = memo(function ChapterSection({
   searchQuery,
   isSearching = false,
   showGestureHint = false,
+  focusedNoteId,
 }: ChapterSectionProps) {
   // Detect touch capability for swipe gestures
   const isTouchDevice = useTouchCapable();
@@ -99,6 +101,22 @@ export const ChapterSection = memo(function ChapterSection({
   const displayNotes = isSearching ? notes : notes.slice(0, visibleCount);
   const hasMore = !isSearching && visibleCount < notes.length;
   const remainingCount = Math.max(0, notes.length - visibleCount);
+  const focusedNoteIndex = focusedNoteId
+    ? notes.findIndex((note) => note.id === focusedNoteId)
+    : -1;
+
+  // Keyboard selection is allowed to cross collapsed and progressively-rendered
+  // chapters. Reveal the target before its card receives roving focus.
+  useEffect(() => {
+    if (focusedNoteIndex === -1) return;
+
+    if (isCollapsible && !isPinned && !isSearching) {
+      setIsExpanded(true);
+    }
+    if (!isSearching && focusedNoteIndex >= visibleCount) {
+      setVisibleCount((count) => Math.min(notes.length, Math.max(count, focusedNoteIndex + BATCH_SIZE)));
+    }
+  }, [focusedNoteIndex, isCollapsible, isPinned, isSearching, notes.length, visibleCount]);
 
   // Count-aware masonry: when a chapter holds fewer cards than the viewport's
   // column count, cap the columns to the card count and centre the group so a
@@ -336,6 +354,7 @@ export const ChapterSection = memo(function ChapterSection({
                         onTogglePin={onTogglePin}
                         isCompact={isCompact}
                         searchQuery={isSearching ? searchQuery : undefined}
+                        isFocused={note.id === focusedNoteId}
                       />
                     ) : (
                       <NoteCard
@@ -345,6 +364,7 @@ export const ChapterSection = memo(function ChapterSection({
                         onTogglePin={onTogglePin}
                         isCompact={isCompact}
                         searchQuery={isSearching ? searchQuery : undefined}
+                        isFocused={note.id === focusedNoteId}
                       />
                     )}
                     {showGestureHint && index === 0 && <GestureHint />}
@@ -369,7 +389,12 @@ export const ChapterSection = memo(function ChapterSection({
       )}
     </section>
   );
-}, (prev, next) =>
+}, (prev, next) => {
+  const focusChangedInThisChapter = prev.focusedNoteId !== next.focusedNoteId && (
+    prev.notes.some((note) => note.id === prev.focusedNoteId || note.id === next.focusedNoteId)
+  );
+
+  return !focusChangedInThisChapter &&
   prev.notes === next.notes &&
   prev.chapterKey === next.chapterKey &&
   prev.label === next.label &&
@@ -382,5 +407,5 @@ export const ChapterSection = memo(function ChapterSection({
   prev.onNoteClick === next.onNoteClick &&
   prev.onRetryLockedNote === next.onRetryLockedNote &&
   prev.onNoteDelete === next.onNoteDelete &&
-  prev.onTogglePin === next.onTogglePin
-);
+  prev.onTogglePin === next.onTogglePin;
+});
