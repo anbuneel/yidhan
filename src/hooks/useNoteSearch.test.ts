@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as sanitize from '../utils/sanitize';
 import { createMockNote } from '../test/factories';
 import { useNoteSearch } from './useNoteSearch';
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 function search(notes: ReturnType<typeof createMockNote>[], query: string) {
   return renderHook(() => useNoteSearch(notes, query)).result.current;
@@ -33,7 +36,7 @@ it('parses 2,000 notes once, then searches without any parser work; changed hash
   // measuring speed in the first place.
 }, 60000);
 
-it('finds edited text even when the caller left the content hash behind', () => {
+it('updates an edited entry and fully removes a deleted one, even with a stale content hash', () => {
   const note = createMockNote({ id: '1', title: 'Groceries', content: '<p>milk, eggs</p>', contentHash: 'stale' });
   const { result, rerender } = renderHook(({ items, query }) => useNoteSearch(items, query), { initialProps: { items: [note], query: 'bread' } });
   expect(result.current).toHaveLength(0);
@@ -42,9 +45,72 @@ it('finds edited text even when the caller left the content hash behind', () => 
   expect(result.current.map(n => n.id)).toEqual(['1']);
   rerender({ items: [{ ...note, content: '<p>milk, eggs, bread</p>' }], query: 'eggs' });
   expect(result.current.map(n => n.id)).toEqual(['1']);
+
+  rerender({ items: [], query: 'bread' });
+  expect(result.current).toEqual([]);
+  // Reusing the ID proves the old posting was removed, not merely hidden because
+  // its note happened to be absent from this render.
+  rerender({ items: [{ ...note, content: '<p>milk only</p>' }], query: 'bread' });
+  expect(result.current).toEqual([]);
+});
+
+it('indexes a note created while the query is already active', () => {
+  const { result, rerender } = renderHook(
+    ({ items }) => useNoteSearch(items, 'newborn'),
+    { initialProps: { items: [] as ReturnType<typeof createMockNote>[] } }
+  );
+  expect(result.current).toEqual([]);
+
+  const created = createMockNote({ id: 'created', content: '<p>A newborn thought.</p>' });
+  rerender({ items: [created] });
+  expect(result.current).toEqual([created]);
+});
+
+it('keeps the plaintext index inside memory and performs no persistence or network writes', () => {
+  const localStorageWrite = vi.spyOn(Storage.prototype, 'setItem');
+  const indexedDbOpen = vi.fn();
+  const fetchRequest = vi.fn();
+  vi.stubGlobal('indexedDB', { open: indexedDbOpen });
+  vi.stubGlobal('fetch', fetchRequest);
+
+  const note = createMockNote({ id: 'private', title: 'Private', content: '<p>Plaintext thought</p>' });
+  const { rerender } = renderHook(
+    ({ items, query }) => useNoteSearch(items, query),
+    { initialProps: { items: [note], query: 'plaintext' } }
+  );
+  rerender({ items: [{ ...note, content: '<p>Changed plaintext thought</p>' }], query: 'changed' });
+
+  expect(localStorageWrite).not.toHaveBeenCalled();
+  expect(indexedDbOpen).not.toHaveBeenCalled();
+  expect(fetchRequest).not.toHaveBeenCalled();
 });
 
 describe('query semantics', () => {
+  it('ranks a title match above the same match in content', () => {
+    const notes = [
+      createMockNote({ id: 'content', title: 'Field notes', content: '<p>Quiet harvest</p>' }),
+      createMockNote({ id: 'title', title: 'Quiet harvest', content: '<p>Field notes</p>' }),
+    ];
+
+    expect(search(notes, 'harvest').map(({ id }) => id)).toEqual(['title', 'content']);
+  });
+
+  it('finds a longer term with one missing character', () => {
+    const note = createMockNote({ id: 'fuzzy', title: 'Autumn harvest' });
+
+    expect(search([note], 'harvst')).toEqual([note]);
+  });
+
+  it('does not use prefix or fuzzy matching for a one-character query', () => {
+    const notes = [
+      createMockNote({ id: 'alpha', title: 'Alpha' }),
+      createMockNote({ id: 'apricot', content: '<p>Apricot</p>' }),
+      createMockNote({ id: 'beta', content: '<p>Beta</p>' }),
+    ];
+
+    expect(search(notes, 'a')).toEqual([]);
+  });
+
   it('requires every free-text term, across title and content', () => {
     const notes = [
       createMockNote({ id: 'both', title: 'Quiet harvest', content: '<p>golden field</p>' }),
@@ -125,7 +191,8 @@ describe('query semantics', () => {
     expect(search(notes, '"tag:journal"').map(({ id }) => id)).toEqual(['literal']);
   });
 
-  it('keeps locked notes unfiltered but excludes them from free-text results', () => {
+  it('never indexes locked notes and removes an entry when decryption later fails', () => {
+    const text = vi.spyOn(sanitize, 'htmlToPlainText');
     const locked = createMockNote({
       id: 'locked',
       title: '',
@@ -134,9 +201,25 @@ describe('query semantics', () => {
       pinned: true,
     });
 
-    expect(search([locked], '')).toEqual([locked]);
-    expect(search([locked], 'anything')).toEqual([]);
-    expect(search([locked], 'is:pinned')).toEqual([locked]);
+    const { result, rerender } = renderHook(
+      ({ items, query }) => useNoteSearch(items, query),
+      { initialProps: { items: [locked], query: '' } }
+    );
+    expect(result.current).toEqual([locked]);
+    expect(text).not.toHaveBeenCalled();
+
+    rerender({ items: [locked], query: 'anything' });
+    expect(result.current).toEqual([]);
+    rerender({ items: [locked], query: 'is:pinned' });
+    expect(result.current).toEqual([locked]);
+
+    const unlocked = { ...locked, title: 'Recovered thought', decryptionFailed: false };
+    rerender({ items: [unlocked], query: 'recovered' });
+    expect(result.current).toEqual([unlocked]);
+    expect(text).toHaveBeenCalledTimes(1);
+
+    rerender({ items: [locked], query: 'recovered' });
+    expect(result.current).toEqual([]);
   });
 
   it('combines tag, month boundary, and phrase filters with AND semantics', () => {

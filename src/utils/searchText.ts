@@ -6,16 +6,6 @@ interface TextMatch {
   end: number;
 }
 
-export function matchesSearchText(
-  normalizedTitle: string,
-  normalizedContent: string,
-  terms: SearchTextTerm[]
-): boolean {
-  return terms.every(({ normalized }) =>
-    normalizedTitle.includes(normalized) || normalizedContent.includes(normalized)
-  );
-}
-
 function findTextMatches(text: string, terms: SearchTextTerm[]): TextMatch[] {
   const normalizedText = text.toLowerCase();
   const normalizedTerms = [...new Set(terms.map(({ normalized }) => normalized))]

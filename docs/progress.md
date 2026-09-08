@@ -282,3 +282,12 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   visible free-text match is highlighted; locked notes remain in an unfiltered
   library but cannot match text they could not decrypt. The plaintext cache
   remains memory-only and is never written to localStorage or IndexedDB.
+- **2026-09-08** — Library free-text search uses an incrementally maintained
+  MiniSearch index with ranked, prefix, and fuzzy results — ledger item 51.
+  Title matches always precede content-only matches. Locked notes never enter
+  the index; edits replace their exact entry, deletes remove it, and a note
+  created during an active query appears immediately. One-character terms use
+  exact-token matching only, so typo tolerance cannot turn them into library-wide
+  noise. The plaintext index is component-owned memory and makes no storage or
+  network writes. A generated 10,000-note test measured 42.13 ms p95 across 40
+  mixed queries, with no claim that the unbuilt item 80 fixture exists.

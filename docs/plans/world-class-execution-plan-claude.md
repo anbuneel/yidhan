@@ -34,7 +34,7 @@ that must land first.
 
 ## Next
 
-Five items across three code lanes, plus item 87, which is the maintainer's own task.
+Three items across three code lanes, plus item 87, which is the maintainer's own task.
 
 Lanes group related work. They are not branches: each item gets its own branch off `main`,
 which is what items 43, 48 and 49 did. Anything in a lane can be picked up whenever
@@ -42,7 +42,7 @@ someone has the room.
 
 Lanes B and C are complete and their items have moved to `docs/progress.md`. Lane C
 shipped in PR #213, and item 11 — which items 50 and 51 needed — shipped in PR #203, so
-Lane E is unblocked; items 48, 49 and 73 have already shipped from it.
+Lane E is unblocked; items 48, 49, 50, 51 and 73 have already shipped from it.
 
 ### Lane A · Editor fluency
 
@@ -61,7 +61,6 @@ Lane E is unblocked; items 48, 49 and 73 have already shipped from it.
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
 | 30 | Library | List view: one line per note, toggle in header, remembered per device | weeks |  | Toggle works; cards remain the default; 2,000 notes render without jank · E2E and the #80 fixture |
-| 51 | Search | In-memory index (MiniSearch or FlexSearch) with ranking and fuzziness, incremental rebuild; moved to a worker if the main thread shows it | days | Needs #11 | Title matches rank first; p95 under 200 ms at 10k notes · #80 fixture |
 
 ### Maintainer
 
