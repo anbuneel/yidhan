@@ -138,3 +138,28 @@ describe('NoteCard preview mask', () => {
     expect(container.querySelector('.note-card-preview-overflowing')).toBeNull();
   });
 });
+
+describe('NoteCard search highlighting', () => {
+  it('highlights every free-text match while leaving operators out of the highlight', () => {
+    const note = createMockNote({
+      id: 'search-result',
+      title: 'Alpha alpha',
+      content: '<p>Beta beta and alpha.</p>',
+    });
+    const { container } = render(
+      <NoteCard
+        note={note}
+        onClick={vi.fn()}
+        onDelete={vi.fn()}
+        onTogglePin={vi.fn()}
+        searchQuery="tag:journal alpha beta"
+      />
+    );
+
+    expect([...container.querySelectorAll('mark')].map((mark) => mark.textContent))
+      .toEqual(['Alpha', 'alpha', 'Beta', 'beta', 'alpha']);
+    expect(container.querySelector('mark')?.closest('.note-card')).not.toHaveTextContent(
+      'tag:journal'
+    );
+  });
+});

@@ -579,7 +579,7 @@ export function DemoPage({
           onNoteDelete={handleNoteDelete}
           onTogglePin={handleTogglePin}
           onNewNote={handleNewNote}
-          searchQuery={searchQuery}
+          searchQuery={debouncedSearchQuery}
           isSearching={isSearching}
           focusedNoteId={focusedNoteId}
         />

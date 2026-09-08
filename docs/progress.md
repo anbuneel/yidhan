@@ -273,3 +273,12 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
 - **2026-09-08** — Library card previews fade only when their content is
   clipped, and chapter age fading stops at 90% opacity so Archive notes remain
   legible — ledger item 49.
+- **2026-09-08** — Library search understands multiple required terms, quoted
+  phrases, and `tag:`, `is:pinned`, `before:`, and `after:` filters — ledger
+  item 50. Tags match without regard to case. Date filters use the note's
+  updated calendar date and include the named day or month. Invalid operators,
+  including an empty `tag:` or an invalid date, are ignored rather than shown as
+  errors. Operators inside quotes are literal text. Every
+  visible free-text match is highlighted; locked notes remain in an unfiltered
+  library but cannot match text they could not decrypt. The plaintext cache
+  remains memory-only and is never written to localStorage or IndexedDB.
