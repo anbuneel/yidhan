@@ -3,6 +3,13 @@
  *
  * Tests the returning user E2EE unlock screen.
  * Validates form behavior, error states, and sign-out flow.
+ *
+ * `userEvent.setup({ delay: null })` is deliberate. The lockout test types
+ * 80 characters across five attempts, and user-event's default per-keystroke
+ * delay pushed that past the 5s timeout whenever the full suite ran in
+ * parallel. The timeout left keystrokes in flight that landed in the next
+ * test's input, so a second, unrelated test failed with an interleaved
+ * passphrase. Keep the delay disabled.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -61,7 +68,7 @@ describe('PassphraseUnlock', () => {
   });
 
   it('should enable unlock button when passphrase is entered', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PassphraseUnlock />);
 
     await user.type(screen.getByLabelText('Passphrase'), 'mypassphrase');
@@ -72,7 +79,7 @@ describe('PassphraseUnlock', () => {
 
   it('should call unlockWithPassphrase on submit', async () => {
     mockUnlockWithPassphrase.mockResolvedValue(true);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseUnlock />);
 
@@ -86,7 +93,7 @@ describe('PassphraseUnlock', () => {
 
   it('should show error for incorrect passphrase', async () => {
     mockUnlockWithPassphrase.mockResolvedValue(false);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseUnlock />);
 
@@ -100,7 +107,7 @@ describe('PassphraseUnlock', () => {
 
   it('should clear passphrase field after failed attempt', async () => {
     mockUnlockWithPassphrase.mockResolvedValue(false);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseUnlock />);
 
@@ -115,7 +122,7 @@ describe('PassphraseUnlock', () => {
 
   it('locks the form after repeated incorrect attempts', async () => {
     mockUnlockWithPassphrase.mockResolvedValue(false);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseUnlock />);
 
@@ -136,7 +143,7 @@ describe('PassphraseUnlock', () => {
       'yidhan-user-unlock-1-vault-unlock-lockout',
       JSON.stringify({ failedAttempts: 5, lockedUntil: Date.now() + 60_000 })
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseUnlock />);
 
@@ -154,7 +161,7 @@ describe('PassphraseUnlock', () => {
       JSON.stringify({ failedAttempts: 2, lockedUntil: null })
     );
     mockUnlockWithPassphrase.mockResolvedValue(true);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseUnlock />);
 
@@ -170,7 +177,7 @@ describe('PassphraseUnlock', () => {
   it('should show error when unlock throws', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockUnlockWithPassphrase.mockRejectedValue(new Error('Crypto error'));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseUnlock />);
 
@@ -189,7 +196,7 @@ describe('PassphraseUnlock', () => {
     mockUnlockWithPassphrase.mockRejectedValue(
       new Error('Vault metadata is incomplete. Please sign out and sign back in.')
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseUnlock />);
 
@@ -207,7 +214,7 @@ describe('PassphraseUnlock', () => {
 
   it('should show submitting state during unlock', async () => {
     mockUnlockWithPassphrase.mockReturnValue(new Promise(() => {}));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<PassphraseUnlock />);
 
@@ -218,7 +225,7 @@ describe('PassphraseUnlock', () => {
   });
 
   it('should show empty passphrase error on submit without input', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PassphraseUnlock />);
 
     // Type then clear to bypass the disabled button, then force-submit
@@ -235,7 +242,7 @@ describe('PassphraseUnlock', () => {
   });
 
   it('should lock vault and sign out when sign-out button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PassphraseUnlock />);
 
     await user.click(screen.getByRole('button', { name: 'Sign out' }));
@@ -254,7 +261,7 @@ describe('PassphraseUnlock', () => {
   });
 
   it('should call setRememberBrowser when checkbox is toggled', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PassphraseUnlock />);
 
     await user.click(screen.getByRole('checkbox'));

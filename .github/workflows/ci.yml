@@ -31,7 +31,7 @@ jobs:
         run: npm run docs:sync-agents:check
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Lint
         run: npm run lint
@@ -95,3 +95,67 @@ jobs:
 
       - name: Service worker update tests
         run: npm run e2e:sw
+
+  # Full browser suite (~10min, serial)
+  #
+  # 86 tests across 10 specs, on Desktop Chrome and Pixel 5. Written for CI from
+  # the start (forbidOnly, retries: 2, workers: 1) but never had a job, so it
+  # gated nothing and only ran when someone remembered to run it locally.
+  #
+  # It needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to boot the app at all —
+  # src/lib/supabase.ts throws without them. The 60 tests using the
+  # authenticatedPage fixture additionally need E2E_TEST_EMAIL and
+  # E2E_TEST_PASSWORD; without those the fixture skips them and the other 26 run.
+  #
+  # The heavy steps are gated on the Supabase secret being present, so this job
+  # stays green and does nothing until the secrets are configured.
+  e2e:
+    runs-on: ubuntu-latest
+    needs: fast-checks
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check configuration
+        id: cfg
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        run: |
+          if [ -n "$SUPABASE_URL" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Browser suite skipped. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY repository secrets to enable it, plus E2E_TEST_EMAIL and E2E_TEST_PASSWORD for the 60 authenticated tests."
+          fi
+
+      - name: Setup Node.js
+        if: steps.cfg.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.cfg.outputs.ready == 'true'
+        run: npm ci
+
+      - name: Install Playwright browser
+        if: steps.cfg.outputs.ready == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser suite
+        if: steps.cfg.outputs.ready == 'true'
+        run: npm run e2e -- --reporter=line
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+
+      - name: Upload report on failure
+        if: failure() && steps.cfg.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

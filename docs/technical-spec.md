@@ -119,6 +119,20 @@ App.tsx (State Container)
 
 ## Data Models
 
+### Changing the schema
+
+Apply changes in this order, or clients ship ahead of the database and writes fail
+silently:
+
+1. Update the schema in the Supabase SQL editor.
+2. Add a migration under `supabase/migrations/`.
+3. Update `src/types/database.ts`.
+4. Update the service functions.
+5. Update `src/types.ts` if the domain type changed.
+
+Then run `supabase/migrations/verify_migration_state.sql` after deploying; every row
+should read `applied`.
+
 ### Database Schema
 
 ```sql
