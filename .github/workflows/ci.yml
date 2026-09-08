@@ -100,17 +100,24 @@ jobs:
 
   # Full browser suite (~10min, serial)
   #
-  # 86 tests across 10 specs, on Desktop Chrome and Pixel 5. Written for CI from
-  # the start (forbidOnly, retries: 2, workers: 1) but never had a job, so it
-  # gated nothing and only ran when someone remembered to run it locally.
+  # 97 tests across 10 specs, run on Desktop Chrome and Pixel 5 — 194 runs. Written
+  # for CI from the start (forbidOnly, retries: 2, workers: 1) but for a long time had
+  # no job, so it gated nothing and only ran when someone remembered to run it locally.
+  # That is how `e2e/auth.spec.ts` kept asserting behaviour item 45 had already
+  # replaced, green through CI on two PRs (#223).
   #
-  # It needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to boot the app at all —
-  # src/lib/supabase.ts throws without them. The 60 tests using the
-  # authenticatedPage fixture additionally need E2E_TEST_EMAIL and
-  # E2E_TEST_PASSWORD; without those the fixture skips them and the other 26 run.
+  # This job is deliberately NOT gated on any secret. `src/lib/supabase.ts` throws
+  # without a URL and anon key, so the app cannot boot without them — but the
+  # unauthenticated half of the suite never reaches Supabase over the network, so
+  # placeholder values are enough to boot it. Measured on this commit: with
+  # `https://placeholder.invalid`, 66 passed, 128 skipped, 0 failed across both
+  # projects — 33 of the 97 per project need no credentials.
+  # The one unauthenticated spec that does POST to Supabase — "shows error for
+  # invalid credentials" — already accepts a connectivity error as a pass.
   #
-  # The heavy steps are gated on the Supabase secret being present, so this job
-  # stays green and does nothing until the secrets are configured.
+  # So a fork, a first-time contributor and the maintainer all get the same
+  # gating suite. Real secrets, when present, override the placeholders and add
+  # the 64 authenticated tests per project on top.
   e2e:
     runs-on: ubuntu-latest
     needs: fast-checks
@@ -118,46 +125,74 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Check configuration
-        id: cfg
-        env:
-          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-        run: |
-          if [ -n "$SUPABASE_URL" ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Browser suite skipped. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY repository secrets to enable it, plus E2E_TEST_EMAIL and E2E_TEST_PASSWORD for the 60 authenticated tests."
-          fi
-
       - name: Setup Node.js
-        if: steps.cfg.outputs.ready == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
-        if: steps.cfg.outputs.ready == 'true'
         run: npm ci
 
       - name: Install Playwright browser
-        if: steps.cfg.outputs.ready == 'true'
         run: npx playwright install --with-deps chromium
 
-      - name: Browser suite
-        if: steps.cfg.outputs.ready == 'true'
-        run: npm run e2e -- --reporter=line
+      # Whether this run typed real credentials into a browser. Only true/false
+      # is written out, never the secret. See the upload step for why it matters.
+      - name: Check for authenticated credentials
+        id: creds
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+          E2E_TEST_PASSPHRASE: ${{ secrets.E2E_TEST_PASSPHRASE }}
+        run: |
+          if [ -n "$E2E_TEST_PASSWORD" ] || [ -n "$E2E_TEST_PASSPHRASE" ]; then
+            echo "authenticated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "authenticated=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Browser suite
+        run: npm run e2e -- --reporter=line,html
+        env:
+          # Placeholders only when the secret is absent. They boot the app; they
+          # do not reach a server. Anything needing a real Supabase is in the
+          # authenticated half, which skips without E2E_TEST_* anyway.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.invalid' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
+          # All three are required together. E2E_TEST_PASSPHRASE unlocks the
+          # account's vault — without it the fixture would sign in and stop at the
+          # vault gate, so it skips instead.
           E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
           E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+          E2E_TEST_PASSPHRASE: ${{ secrets.E2E_TEST_PASSPHRASE }}
 
+      # Uploaded only when this run had NO authenticated credentials.
+      #
+      # A Playwright failure report contains the values typed into the page, in
+      # plaintext, in more than one place. Verified on this branch with a canary
+      # string: `playwright-report/data/<hash>.md` — the error-context attachment
+      # written on every failure — renders the accessibility tree including
+      # `textbox "Password": <the value>`, and the trace zip carries it four more
+      # times in the action log and the source snapshot. `type="password"` is a
+      # rendering mask, not value redaction, and turning traces off would not help
+      # because error-context is not a trace.
+      #
+      # So once E2E_TEST_PASSWORD and E2E_TEST_PASSPHRASE are set, one failing
+      # authenticated test would publish the test account's password and its vault
+      # passphrase to anyone who can read this run's artifacts. The passphrase is
+      # E2EE key material. Fail closed: skip the upload rather than ship it.
+      #
+      # Without credentials there is nothing to leak — the placeholders are in this
+      # file — so the report still uploads for the runs everyone actually debugs.
       - name: Upload report on failure
-        if: failure() && steps.cfg.outputs.ready == 'true'
+        if: failure() && steps.creds.outputs.authenticated == 'false'
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+      - name: Explain the withheld report
+        if: failure() && steps.creds.outputs.authenticated == 'true'
+        run: |
+          echo "::notice::Playwright report withheld. This run used real E2E credentials, and a failure report embeds typed values (the account password and vault passphrase) in plaintext. Reproduce locally with your own .env.local, or add a redaction step before re-enabling the upload."

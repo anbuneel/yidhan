@@ -1,4 +1,19 @@
 import { defineConfig, devices } from '@playwright/test';
+import { loadEnv } from 'vite';
+
+// Load `.env.local` into this process.
+//
+// The credentials are read by the fixture from `process.env`, in the Playwright
+// runner. Vite reads `.env.local` too, but only for the dev server it starts as a
+// child — that never populates the parent, so following the documented setup and
+// running `npx playwright test` would leave E2E_TEST_* unset and silently skip
+// every authenticated test. Real environment variables win, so CI secrets are
+// never overridden by a stray local file.
+for (const [key, value] of Object.entries(loadEnv('test', process.cwd(), ['E2E_', 'VITE_']))) {
+  if (process.env[key] === undefined) {
+    process.env[key] = value;
+  }
+}
 
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 const chromiumLaunchOptions = chromiumExecutablePath
@@ -69,8 +84,14 @@ export default defineConfig({
     timeout: 120 * 1000,
   },
 
-  // Global timeout for each test
-  timeout: 30 * 1000,
+  // Global timeout for each test.
+  //
+  // 60s rather than 30s because the authenticated fixture now unlocks the vault
+  // before a test body starts, and Argon2id at 64 MB and 3 iterations is seconds
+  // of wasm work on a shared CI runner — on top of the sign-in round trip. This
+  // is a ceiling, not a cost: the unauthenticated specs finish in about a second
+  // each and are unaffected.
+  timeout: 60 * 1000,
 
   // Expect timeout
   expect: {

@@ -9,14 +9,14 @@ Yidhan uses GitHub Actions for continuous integration. `fast-checks` gates every
 
 | Change Type | fast-checks | full-tests | service-worker | e2e |
 |-------------|-------------|------------|----------------|-----|
-| Docs only (`docs/**`, `*.md`) | ~1min | Skipped | ~1min | secrets-gated |
-| Config only (`.yml`, `.json`, etc.) | ~1min | Skipped | ~1min | secrets-gated |
-| Source code (`src/**`) | ~1min | ~1min | ~1min | secrets-gated |
-| Pull Request (any files) | ~1min | ~1min | ~1min | secrets-gated |
+| Docs only (`docs/**`, `*.md`) | ~1min | Skipped | ~1min | ~3min |
+| Config only (`.yml`, `.json`, etc.) | ~1min | Skipped | ~1min | ~3min |
+| Source code (`src/**`) | ~1min | ~1min | ~1min | ~3min |
+| Pull Request (any files) | ~1min | ~1min | ~1min | ~3min |
 
-Only `full-tests` is conditional. `service-worker` runs on everything on purpose: it is
-the only thing that exercises the update path, and a job that skips on the change that
-breaks it guards nothing.
+Only `full-tests` is conditional. `service-worker` and `e2e` run on everything on purpose:
+each is the only thing that exercises its path in a real browser, and a job that skips on
+the change that breaks it guards nothing.
 
 ## Workflow Structure
 
@@ -43,11 +43,11 @@ breaks it guards nothing.
     ┌────────────┐      ┌─────────────────┐   ┌─────────────────┐
     │ PR or src/ │      │ service-worker  │   │      e2e        │
     │ changed?   │      │                 │   │                 │
-    └────┬───────┘      │ • e2e:sw        │   │ secrets set?    │
-         │ yes          │   (2 tests,     │   │  no ──► notice  │
-         ▼              │   real build)   │   │  yes ─► 86 tests│
-┌─────────────────┐     └─────────────────┘   └─────────────────┘
-│  full-tests     │
+    └────┬───────┘      │ • e2e:sw        │   │ • npm run e2e   │
+         │ yes          │   (2 tests,     │   │   always runs   │
+         ▼              │   real build)   │   │   + auth tests  │
+┌─────────────────┐     └─────────────────┘   │   with secrets  │
+│  full-tests     │                           └─────────────────┘
 │                 │
 │  • vitest       │
 │    + coverage   │
@@ -87,13 +87,35 @@ an old build for months before this job existed.
 
 ### e2e
 
-The full browser suite: 86 tests across 10 specs, on Desktop Chrome and Pixel 5.
+The full browser suite — `npm run e2e`, 97 tests across 10 specs, run on Desktop Chrome
+and Pixel 5 for 194 runs. It runs on every PR and every push to `main`, and a red spec
+fails the build.
 
-The heavy steps are gated on `VITE_SUPABASE_URL` being present. `src/lib/supabase.ts`
-throws without it, so an unconfigured repository would go red rather than skip. With no
-secrets the job prints a notice and passes in a few seconds.
+**It is not gated on any secret.** `src/lib/supabase.ts` throws without a URL and anon
+key, so the app cannot boot without them, but the unauthenticated half of the suite makes
+no Supabase network call — so the job supplies `https://placeholder.invalid` and a
+placeholder key when the secrets are absent. Measured on the commit that introduced this:
+66 passed, 128 skipped, 0 failed against those placeholders — 33 of the 97 tests per
+project need no credentials. A fork and a
+first-time contributor's PR therefore get the same gating suite as the maintainer
+(`DECISIONS.md`, 2026-09-08).
 
-See `docs/setup/e2e-testing-setup.md` for the secrets it needs.
+Real secrets, when set, override the placeholders. The tests using the `authenticatedPage`
+fixture additionally need `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` and `E2E_TEST_PASSPHRASE`;
+without all three they skip cleanly. The passphrase is what carries the fixture past the
+vault gate — every account is end-to-end encrypted, so sign-in alone reaches
+`PassphraseUnlock`, not the library.
+
+The test account has to be provisioned by hand once, including creating its vault. The
+fixture unlocks a vault; it will not create one. See `docs/setup/e2e-testing-setup.md`.
+
+**The failure report is not uploaded from a credentialed run.** A Playwright report
+embeds typed values in plaintext — the error-context attachment renders the password
+field's value in its accessibility tree, and the trace carries it too — so a failing
+authenticated test would publish the account password and the vault passphrase to anyone
+who can read the run's artifacts. The upload is gated on the credentials being absent;
+a credentialed failure prints a notice instead (`DECISIONS.md`, 2026-09-08). Do not
+re-open that gate without a redaction step.
 
 ## Path Filtering
 
@@ -194,6 +216,10 @@ If you need to force full tests on a non-src change, you can:
 
 - **2026-09-07**: Removed `paths-ignore` from the push trigger — it conflicted with the
   `fast-checks` required status check on `main` (see Path Filtering).
+- **2026-09-08**: Ungated the `e2e` job — it now runs `npm run e2e` on every PR using
+  placeholder Supabase values when the secrets are absent, so it gates merges on forks
+  too. Added `E2E_TEST_PASSPHRASE` so the fixture can unlock the test account's vault.
+  (item 37, #223)
 - **2026-09-07**: Added the `e2e` job, secrets-gated. Fixed the Type check step, which ran
   `npx tsc --noEmit` against a `"files": []` root config and therefore checked nothing. (#224)
 - **2026-09-04**: Added the `service-worker` job.

@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.18', date: '2026-09-08', changes: [
+    { type: 'improvement', text: 'The full browser test suite now runs automatically on every change, so a broken flow is caught before it reaches you rather than after' },
+  ] },
   { version: '3.19.17', date: '2026-09-07', changes: [
     { type: 'feature', text: 'On a phone, Start writing now opens a new note in the Practice Space with the cursor already in it, instead of dropping you at the library' },
     { type: 'improvement', text: 'Keep these notes is now the Practice Space’s main action, so carrying your practice writing into an account takes one step from anywhere' },

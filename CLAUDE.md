@@ -93,9 +93,12 @@ read the file whole.
 `npx vitest run src/services/<name>.test.ts`. Run `npm run check` once, before pushing,
 not after every edit.
 
-**Playwright is not in `npm run check` and not in CI.** Do not run `npm run e2e` by
-default. If you changed a flow it covers, run that spec alone:
-`npx playwright test e2e/<name>.spec.ts --project=chromium --reporter=line`.
+**Playwright is not in `npm run check`, but the suite does run in CI** — the `e2e` job
+runs `npm run e2e` on every PR, so a red spec blocks the merge. Still do not run
+`npm run e2e` by default; it is minutes. If you changed a flow it covers, run that spec
+alone: `npx playwright test e2e/<name>.spec.ts --project=chromium --reporter=line`.
+The authenticated specs need `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` and
+`E2E_TEST_PASSPHRASE` and skip without them.
 
 **Never poll a subagent or a CI run.** Spawn independent agents in one message, then end
 the turn — completion arrives as a notification. Re-checking "is it done yet" replays the

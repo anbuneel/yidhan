@@ -19,6 +19,92 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-08 — The Playwright failure report is not uploaded from a credentialed CI run
+
+**Status:** Active
+
+**Why:** A Playwright failure report embeds the values typed into the page, in
+plaintext. Verified with a canary string on the branch that made the `e2e` job
+live: `playwright-report/data/<hash>.md` — the error-context attachment written on
+every failure — renders the accessibility tree as
+`textbox "Password" [active]: <the value>`, and the trace zip carries the same
+string four more times across the action log and the source snapshot.
+`type="password"` on the input is a rendering mask, not value redaction.
+
+That matters because `loginUser()` now types the vault passphrase. Once
+`E2E_TEST_PASSWORD` and `E2E_TEST_PASSPHRASE` are set as repository secrets, one
+failing authenticated test would publish the test account's password *and* its
+vault passphrase to anyone who can read the run's artifacts. The passphrase is
+E2EE key material; the repository already treats leaked test credentials as an
+incident (`docs/setup/e2e-testing-setup.md`, 2025-12-28).
+
+So the upload step is gated on the credentials being *absent*. Without them there
+is nothing to leak — the placeholders are in the workflow file — so the report
+still uploads for the runs contributors and forks actually debug. A credentialed
+run that fails prints a notice instead, pointing at local reproduction.
+
+The cost is accepted and real: an authenticated test that fails only in CI has no
+downloadable trace, which is exactly the case item 153 will care about. The fix
+when that bites is a redaction pass over the report before upload, not re-opening
+the upload.
+
+**Rejected:** Turning off `trace` and `video` — the plainest leak is
+error-context, which is written on the first failure whether or not tracing is on,
+so this looks like a fix and is not one. Uploading with a shorter retention or a
+restricted artifact — retention is not a permission, and the exposure is to
+everyone who can read the run either way. Scrubbing the secrets out of the report
+in the job — the right long-term answer, but a redaction pass that misses one
+encoding fails open silently, and this PR should not be where that is written
+under time pressure. Doing nothing because no secrets are configured yet — this
+PR is precisely what makes the credentialed path executable for the first time.
+
+---
+
+## 2026-09-08 — The browser suite runs on placeholder Supabase values, not behind a secret gate
+
+**Status:** Active
+
+**Why:** `npm run e2e` had a CI job that was gated, step by step, on the
+`VITE_SUPABASE_URL` secret being present. No secret was ever added, so the job
+passed in seconds having run nothing. That is worse than no job: the suite read
+as coverage while `e2e/auth.spec.ts` sat on `main` asserting behaviour item 45
+had already replaced, green through CI on two PRs (#223).
+
+`src/lib/supabase.ts` throws at import without a URL and anon key, so the app
+cannot boot without them and the gate looked forced. It is not. The
+unauthenticated half of the suite makes no Supabase network call — it exercises
+routing, 404s, the public pages, the Practice Space (localStorage only), editor
+fluency and cross-tab sync-lock ownership. Measured on this commit against
+`https://placeholder.invalid`: 66 passed, 128 skipped, 0 failed across Desktop Chrome
+and Pixel 5 — the same 66 the issue measured. 33 of the 97 tests per project need no
+credentials. The
+one unauthenticated spec that does POST to Supabase, "shows error for invalid
+credentials", already accepts a connectivity error as a pass, so an unreachable
+host is a pass by its own terms.
+
+So the job now supplies placeholders when the secrets are absent and runs
+unconditionally. A fork, a first-time contributor and the maintainer all get the
+same gating suite; real secrets, when present, override the placeholders and add
+the 64 authenticated tests per project on top.
+
+The cost is accepted: the unauthenticated specs now prove only that the app works
+against a Supabase that is not there. Any future spec that needs a real server
+belongs in the authenticated half, which still skips without credentials. If a
+spec is ever added that quietly depends on a reachable Supabase, it will fail on
+forks first, which is the right place to find out.
+
+**Rejected:** Keeping the gate on the Supabase secrets and ungating only once the
+maintainer adds them — it leaves #223 open and keeps the job reading as coverage
+it does not provide, and it makes contributor PRs and forks permanently ungated
+even after the secrets land. Pointing the placeholder at a real but empty
+Supabase project — a second project to provision and pay attention to, to buy
+network calls that no unauthenticated spec makes. Splitting the suite into two
+jobs, one ungated and one gated — the skip logic in `e2e/fixtures.ts` already
+draws that line per test, and duplicating it in the workflow gives two places to
+keep in agreement.
+
+---
+
 ## 2026-09-07 — Two ACTIVE plans are allowed, capped at two
 
 **Status:** Active
