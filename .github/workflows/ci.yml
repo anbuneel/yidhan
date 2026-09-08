@@ -137,6 +137,20 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      # Whether this run typed real credentials into a browser. Only true/false
+      # is written out, never the secret. See the upload step for why it matters.
+      - name: Check for authenticated credentials
+        id: creds
+        env:
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+          E2E_TEST_PASSPHRASE: ${{ secrets.E2E_TEST_PASSPHRASE }}
+        run: |
+          if [ -n "$E2E_TEST_PASSWORD" ] || [ -n "$E2E_TEST_PASSPHRASE" ]; then
+            echo "authenticated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "authenticated=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Browser suite
         run: npm run e2e -- --reporter=line,html
         env:
@@ -152,10 +166,33 @@ jobs:
           E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
           E2E_TEST_PASSPHRASE: ${{ secrets.E2E_TEST_PASSPHRASE }}
 
+      # Uploaded only when this run had NO authenticated credentials.
+      #
+      # A Playwright failure report contains the values typed into the page, in
+      # plaintext, in more than one place. Verified on this branch with a canary
+      # string: `playwright-report/data/<hash>.md` — the error-context attachment
+      # written on every failure — renders the accessibility tree including
+      # `textbox "Password": <the value>`, and the trace zip carries it four more
+      # times in the action log and the source snapshot. `type="password"` is a
+      # rendering mask, not value redaction, and turning traces off would not help
+      # because error-context is not a trace.
+      #
+      # So once E2E_TEST_PASSWORD and E2E_TEST_PASSPHRASE are set, one failing
+      # authenticated test would publish the test account's password and its vault
+      # passphrase to anyone who can read this run's artifacts. The passphrase is
+      # E2EE key material. Fail closed: skip the upload rather than ship it.
+      #
+      # Without credentials there is nothing to leak — the placeholders are in this
+      # file — so the report still uploads for the runs everyone actually debugs.
       - name: Upload report on failure
-        if: failure()
+        if: failure() && steps.creds.outputs.authenticated == 'false'
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+      - name: Explain the withheld report
+        if: failure() && steps.creds.outputs.authenticated == 'true'
+        run: |
+          echo "::notice::Playwright report withheld. This run used real E2E credentials, and a failure report embeds typed values (the account password and vault passphrase) in plaintext. Reproduce locally with your own .env.local, or add a redaction step before re-enabling the upload."

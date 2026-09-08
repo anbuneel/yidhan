@@ -127,6 +127,12 @@ but no vault fails with a message pointing back here.
 - Never commit credentials to git
 - Rotate credentials if accidentally exposed
 - Consider using a throwaway email domain for test accounts
+- Never re-enable the CI report upload for a credentialed run without redacting it
+  first. A Playwright failure report renders the passphrase and password in plaintext —
+  in the error-context attachment as well as the trace — so the `e2e` job withholds it
+  when credentials are present (`DECISIONS.md`, 2026-09-08). A local run writes the same
+  report to `playwright-report/`, so treat that directory as secret-bearing too; it is
+  git-ignored, do not attach it to an issue.
 
 ## Troubleshooting
 

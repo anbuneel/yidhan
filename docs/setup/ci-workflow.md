@@ -109,6 +109,14 @@ vault gate — every account is end-to-end encrypted, so sign-in alone reaches
 The test account has to be provisioned by hand once, including creating its vault. The
 fixture unlocks a vault; it will not create one. See `docs/setup/e2e-testing-setup.md`.
 
+**The failure report is not uploaded from a credentialed run.** A Playwright report
+embeds typed values in plaintext — the error-context attachment renders the password
+field's value in its accessibility tree, and the trace carries it too — so a failing
+authenticated test would publish the account password and the vault passphrase to anyone
+who can read the run's artifacts. The upload is gated on the credentials being absent;
+a credentialed failure prints a notice instead (`DECISIONS.md`, 2026-09-08). Do not
+re-open that gate without a redaction step.
+
 ## Path Filtering
 
 There is none, deliberately. It was removed on 2026-09-07.

@@ -19,6 +19,47 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-08 — The Playwright failure report is not uploaded from a credentialed CI run
+
+**Status:** Active
+
+**Why:** A Playwright failure report embeds the values typed into the page, in
+plaintext. Verified with a canary string on the branch that made the `e2e` job
+live: `playwright-report/data/<hash>.md` — the error-context attachment written on
+every failure — renders the accessibility tree as
+`textbox "Password" [active]: <the value>`, and the trace zip carries the same
+string four more times across the action log and the source snapshot.
+`type="password"` on the input is a rendering mask, not value redaction.
+
+That matters because `loginUser()` now types the vault passphrase. Once
+`E2E_TEST_PASSWORD` and `E2E_TEST_PASSPHRASE` are set as repository secrets, one
+failing authenticated test would publish the test account's password *and* its
+vault passphrase to anyone who can read the run's artifacts. The passphrase is
+E2EE key material; the repository already treats leaked test credentials as an
+incident (`docs/setup/e2e-testing-setup.md`, 2025-12-28).
+
+So the upload step is gated on the credentials being *absent*. Without them there
+is nothing to leak — the placeholders are in the workflow file — so the report
+still uploads for the runs contributors and forks actually debug. A credentialed
+run that fails prints a notice instead, pointing at local reproduction.
+
+The cost is accepted and real: an authenticated test that fails only in CI has no
+downloadable trace, which is exactly the case item 153 will care about. The fix
+when that bites is a redaction pass over the report before upload, not re-opening
+the upload.
+
+**Rejected:** Turning off `trace` and `video` — the plainest leak is
+error-context, which is written on the first failure whether or not tracing is on,
+so this looks like a fix and is not one. Uploading with a shorter retention or a
+restricted artifact — retention is not a permission, and the exposure is to
+everyone who can read the run either way. Scrubbing the secrets out of the report
+in the job — the right long-term answer, but a redaction pass that misses one
+encoding fails open silently, and this PR should not be where that is written
+under time pressure. Doing nothing because no secrets are configured yet — this
+PR is precisely what makes the credentialed path executable for the first time.
+
+---
+
 ## 2026-09-08 — The browser suite runs on placeholder Supabase values, not behind a secret gate
 
 **Status:** Active
