@@ -45,6 +45,16 @@ const shortcuts: ShortcutSection[] = [
     ],
   },
   {
+    title: 'Library',
+    items: [
+      { keys: ['↑', '↓'], description: 'Move between cards' },
+      { keys: ['J', 'K'], description: 'Move between cards' },
+      { keys: ['Enter'], description: 'Open selected note' },
+      { keys: ['P'], description: 'Pin or unpin selected note' },
+      { keys: ['Delete'], description: 'Fade selected note' },
+    ],
+  },
+  {
     title: 'Slash Commands',
     items: [
       { keys: ['/h1'], description: 'Large heading' },

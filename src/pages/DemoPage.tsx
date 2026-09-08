@@ -10,7 +10,9 @@
  */
 
 import { useNoteSearch } from '../hooks/useNoteSearch';
-import { useState, useCallback, useEffect, useEffectEvent, useMemo, Suspense, useRef } from 'react';
+import { useAppShortcuts } from '../hooks/useAppShortcuts';
+import { useLibraryCardNavigation } from '../hooks/useLibraryCardNavigation';
+import { useState, useCallback, useEffect, useMemo, Suspense, useRef } from 'react';
 import type { Note, Tag, Theme, TagColor } from '../types';
 import { useDemoState } from '../hooks/useDemoState';
 import { hasPracticeWork } from '../services/demoStorage';
@@ -23,7 +25,7 @@ import { Footer } from '../components/Footer';
 import { HeaderShell } from '../components/HeaderShell';
 import { LoadingFallback } from '../components/LoadingFallback';
 import { Logo } from '../components/Logo';
-import { DEMO_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
+import { DEMO_SEARCH_INPUT_ID } from '../utils/searchFocus';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { getLoadedEditorComponent, loadEditorComponent } from '../utils/editorLoader';
 
@@ -239,20 +241,6 @@ export function DemoPage({
     void handleNewNote().then(() => onNewNoteStarted?.());
   }, [startWithNewNote, loading, handleNewNote, onNewNoteStarted]);
 
-  const handleCreateNoteShortcut = useEffectEvent((e: KeyboardEvent) => {
-    if (view !== 'library') return;
-    if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
-      e.preventDefault();
-      void handleNewNote();
-    }
-  });
-
-  // Keyboard shortcut: Cmd/Ctrl + N to create new note
-  useEffect(() => {
-    window.addEventListener('keydown', handleCreateNoteShortcut);
-    return () => window.removeEventListener('keydown', handleCreateNoteShortcut);
-  }, []);
-
   const handleNoteClick = useCallback((id: string) => {
     void warmEditorRoute().then(() => {
       setSelectedNoteId(id);
@@ -299,6 +287,23 @@ export function DemoPage({
     },
     [updateNote]
   );
+
+  const { focusedNoteId, handleLibraryCardKeyDown } = useLibraryCardNavigation({
+    notes: displayNotes,
+    onOpen: handleNoteClick,
+    onTogglePin: handleTogglePin,
+    onDelete: handleNoteDelete,
+  });
+
+  useAppShortcuts({
+    enabled: true,
+    view,
+    onNewNote: () => { void handleNewNote(); },
+    onFocusSearch: () => setSearchFocusToken((token) => token + 1),
+    onRequestLibrarySearch: handleRequestSearch,
+    onShowShortcuts: () => setShowShortcutsModal(true),
+    onLibraryCardKeyDown: handleLibraryCardKeyDown,
+  });
 
   const handleNoteTagToggle = useCallback(
     (noteId: string, tagId: string) => {
@@ -541,6 +546,7 @@ export function DemoPage({
           onNewNote={handleNewNote}
           searchQuery={searchQuery}
           isSearching={isSearching}
+          focusedNoteId={focusedNoteId}
         />
         </div>
 
@@ -601,33 +607,6 @@ function DemoHeader({
 }: DemoHeaderProps) {
   const searchRef = useRef<HTMLInputElement>(null);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-
-  // Keyboard shortcut for search
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isSearchKey = e.code === 'KeyK' || e.key.toLowerCase() === 'k';
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || !isSearchKey) {
-        return;
-      }
-
-      const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT' ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-
-      e.preventDefault();
-      scheduleSearchFocus(DEMO_SEARCH_INPUT_ID);
-    };
-
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, []);
 
   useEffect(() => {
     if (searchFocusToken === 0 || searchFocusToken === lastHandledDemoSearchFocusToken) {

@@ -12,6 +12,7 @@ interface NoteCardProps {
   isCompact?: boolean;
   isDecorative?: boolean;
   searchQuery?: string;
+  isFocused?: boolean;
 }
 
 export const NoteCard = memo(function NoteCard({
@@ -21,7 +22,8 @@ export const NoteCard = memo(function NoteCard({
   onTogglePin,
   isCompact = false,
   isDecorative = false,
-  searchQuery
+  searchQuery,
+  isFocused = false,
 }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -68,6 +70,12 @@ export const NoteCard = memo(function NoteCard({
     };
   }, []);
 
+  useEffect(() => {
+    if (isFocused) {
+      cardRef.current?.focus({ preventScroll: true });
+    }
+  }, [isFocused]);
+
   const requestDelete = useCallback(() => {
     if (deleteRequestedRef.current) return;
     deleteRequestedRef.current = true;
@@ -113,6 +121,9 @@ export const NoteCard = memo(function NoteCard({
   return (
     <div
       ref={cardRef}
+      role={isDecorative ? undefined : 'group'}
+      tabIndex={isDecorative ? undefined : isFocused ? 0 : -1}
+      aria-label={isDecorative ? undefined : `Note: ${note.title || 'Untitled'}`}
       className={`
         group
         note-card
@@ -346,5 +357,6 @@ export const NoteCard = memo(function NoteCard({
   prev.note === next.note &&
   prev.isCompact === next.isCompact &&
   prev.isDecorative === next.isDecorative &&
-  prev.searchQuery === next.searchQuery
+  prev.searchQuery === next.searchQuery &&
+  prev.isFocused === next.isFocused
 );

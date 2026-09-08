@@ -17,6 +17,7 @@ export interface UseAppShortcutsOptions {
   onFocusSearch: () => void;
   onRequestLibrarySearch: () => void;
   onShowShortcuts: () => void;
+  onLibraryCardKeyDown?: (event: KeyboardEvent) => boolean;
 }
 
 /** True when the event landed in something the reader is typing into. */
@@ -37,6 +38,7 @@ export function useAppShortcuts({
   onFocusSearch,
   onRequestLibrarySearch,
   onShowShortcuts,
+  onLibraryCardKeyDown,
 }: UseAppShortcutsOptions): void {
   const handleCreateNoteShortcut = useEffectEvent((e: KeyboardEvent) => {
     if (!enabled || view !== 'library') return;
@@ -74,6 +76,13 @@ export function useAppShortcuts({
     }
   });
 
+  const handleLibraryCardShortcuts = useEffectEvent((e: KeyboardEvent) => {
+    if (!enabled || view !== 'library' || isTypingTarget(e.target)) return;
+    if (onLibraryCardKeyDown?.(e)) {
+      e.preventDefault();
+    }
+  });
+
   useEffect(() => {
     window.addEventListener('keydown', handleCreateNoteShortcut);
     return () => window.removeEventListener('keydown', handleCreateNoteShortcut);
@@ -87,5 +96,10 @@ export function useAppShortcuts({
   useEffect(() => {
     window.addEventListener('keydown', handleShortcutsShortcut);
     return () => window.removeEventListener('keydown', handleShortcutsShortcut);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleLibraryCardShortcuts);
+    return () => window.removeEventListener('keydown', handleLibraryCardShortcuts);
   }, []);
 }

@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.20', date: '2026-09-08', changes: [
+    { type: 'feature', text: 'You can now move through library cards with arrow keys or J and K, then open, pin, or fade the selected note without reaching for a mouse' },
+  ] },
   { version: '3.19.19', date: '2026-09-08', changes: [
     { type: 'fix', text: 'The Faded Notes badge now stays accurate after notes are restored, released, or changed on another device' },
   ] },
