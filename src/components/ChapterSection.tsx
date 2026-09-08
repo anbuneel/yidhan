@@ -36,8 +36,8 @@ const CHAPTER_OPACITY: Record<ChapterKey, number> = {
   thisWeek: 1.0,
   lastWeek: 0.95,
   thisMonth: 0.90,
-  earlier: 0.85,
-  archive: 0.80,
+  earlier: 0.90,
+  archive: 0.90,
 };
 
 export const ChapterSection = memo(function ChapterSection({
