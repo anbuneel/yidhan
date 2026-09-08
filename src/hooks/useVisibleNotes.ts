@@ -4,6 +4,10 @@
  * The order matters. Sorting before filtering keeps the chapter grouping stable, and
  * searching last means the tag filter is the baseline a query narrows rather than
  * something the query has to reproduce.
+ *
+ * This is the baseline order only. What the reader sees inside a chapter is decided by
+ * `groupNotesByChapter`, which sorts by their chosen key — so that both the cards and
+ * the keyboard read one ordering rather than two that can drift apart.
  */
 
 import { useMemo } from 'react';

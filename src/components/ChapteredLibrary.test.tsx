@@ -4,8 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { ChapteredLibrary } from './ChapteredLibrary';
 import { createMockNote } from '../test/factories';
 
-// Mock the temporalGrouping module
-vi.mock('../utils/temporalGrouping', () => ({
+// Mock the two grouping functions, keeping the module's real vocabulary — the arrange
+// controls read their option lists from it.
+vi.mock('../utils/temporalGrouping', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../utils/temporalGrouping')>()),
   groupNotesByChapter: vi.fn(),
   getDefaultExpansionState: vi.fn(),
 }));
@@ -341,6 +343,156 @@ describe('ChapteredLibrary', () => {
       expect(callArg[1].id).toBe('old');
     });
 
+    it('passes the reader’s arrangement to the grouping', () => {
+      render(
+        <ChapteredLibrary
+          {...defaultProps}
+          notes={[createMockNote({ id: '1' })]}
+          arrangement={{ basis: 'created', sort: 'title' }}
+        />
+      );
+
+      expect(temporalGrouping.groupNotesByChapter).toHaveBeenCalledWith(
+        expect.anything(),
+        { basis: 'created', sort: 'title' }
+      );
+    });
+
+    it('groups by last edited when no arrangement is given', () => {
+      render(<ChapteredLibrary {...defaultProps} notes={[createMockNote({ id: '1' })]} />);
+
+      expect(temporalGrouping.groupNotesByChapter).toHaveBeenCalledWith(
+        expect.anything(),
+        { basis: 'updated', sort: 'updated' }
+      );
+    });
+  });
+
+  describe('arrange controls', () => {
+    const notes = [createMockNote({ id: '1' })];
+
+    const arrangeProps = {
+      arrangement: { basis: 'updated' as const, sort: 'updated' as const },
+      onBasisChange: vi.fn(),
+      onSortChange: vi.fn(),
+    };
+
+    beforeEach(() => {
+      vi.mocked(temporalGrouping.groupNotesByChapter).mockReturnValue([
+        { key: 'thisWeek', label: 'This Week', notes },
+      ]);
+    });
+
+    it('offers the basis and order choices', () => {
+      render(<ChapteredLibrary {...defaultProps} notes={notes} {...arrangeProps} />);
+
+      expect(screen.getByRole('group', { name: 'Group chapters by' })).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Order notes by' })).toBeInTheDocument();
+    });
+
+    it('marks the current choice as pressed', () => {
+      render(
+        <ChapteredLibrary
+          {...defaultProps}
+          notes={notes}
+          {...arrangeProps}
+          arrangement={{ basis: 'created', sort: 'title' }}
+        />
+      );
+
+      // Both groups offer "Edited"; the spoken name has to say which one is meant.
+      expect(
+        screen.getByRole('button', { name: 'Group chapters by written', pressed: true })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Group chapters by edited', pressed: false })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Order notes by title', pressed: true })
+      ).toBeInTheDocument();
+    });
+
+    it('reports a basis choice without touching the order', async () => {
+      const onBasisChange = vi.fn();
+      const onSortChange = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <ChapteredLibrary
+          {...defaultProps}
+          notes={notes}
+          {...arrangeProps}
+          onBasisChange={onBasisChange}
+          onSortChange={onSortChange}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Group chapters by written' }));
+
+      expect(onBasisChange).toHaveBeenCalledWith('created');
+      expect(onSortChange).not.toHaveBeenCalled();
+    });
+
+    it('reports an order choice without touching the basis', async () => {
+      const onBasisChange = vi.fn();
+      const onSortChange = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <ChapteredLibrary
+          {...defaultProps}
+          notes={notes}
+          {...arrangeProps}
+          onBasisChange={onBasisChange}
+          onSortChange={onSortChange}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Order notes by title' }));
+
+      expect(onSortChange).toHaveBeenCalledWith('title');
+      expect(onBasisChange).not.toHaveBeenCalled();
+    });
+
+    it('stays out of the way when the reader cannot change the arrangement', () => {
+      render(<ChapteredLibrary {...defaultProps} notes={notes} />);
+
+      expect(screen.queryByRole('group', { name: 'Group chapters by' })).not.toBeInTheDocument();
+    });
+
+    it('does not offer arranging an empty library', () => {
+      vi.mocked(temporalGrouping.groupNotesByChapter).mockReturnValue([]);
+
+      render(<ChapteredLibrary {...defaultProps} notes={[]} {...arrangeProps} />);
+
+      expect(screen.queryByRole('group', { name: 'Group chapters by' })).not.toBeInTheDocument();
+      expect(screen.getByText('Your notes await')).toBeInTheDocument();
+    });
+
+    it('does not offer arranging a search that found nothing', () => {
+      vi.mocked(temporalGrouping.groupNotesByChapter).mockReturnValue([]);
+
+      render(<ChapteredLibrary {...defaultProps} notes={[]} isSearching {...arrangeProps} />);
+
+      expect(screen.queryByRole('group', { name: 'Group chapters by' })).not.toBeInTheDocument();
+    });
+
+    it('does not offer arranging a library that has not loaded yet', () => {
+      vi.mocked(temporalGrouping.groupNotesByChapter).mockReturnValue([]);
+
+      render(<ChapteredLibrary {...defaultProps} notes={[]} isLoading {...arrangeProps} />);
+
+      expect(screen.queryByRole('group', { name: 'Group chapters by' })).not.toBeInTheDocument();
+    });
+
+    it('still offers arranging while a search is showing matches', () => {
+      render(
+        <ChapteredLibrary {...defaultProps} notes={notes} isSearching searchQuery="k" {...arrangeProps} />
+      );
+
+      expect(screen.getByRole('group', { name: 'Group chapters by' })).toBeInTheDocument();
+    });
+  });
+
+  describe('expansion state', () => {
     it('calls getDefaultExpansionState with note count', () => {
       const notes = [
         createMockNote({ id: '1' }),

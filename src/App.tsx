@@ -24,6 +24,7 @@ import { useAppLoader } from './hooks/useAppLoader';
 import { useEditorChunk } from './hooks/useEditorChunk';
 import { useShareRoute } from './hooks/useShareRoute';
 import { useVisibleNotes } from './hooks/useVisibleNotes';
+import { useLibraryArrangement } from './hooks/useLibraryArrangement';
 import { useSessionGuards } from './hooks/useSessionGuards';
 import { useImport } from './hooks/useImport';
 import { useDemoMigration } from './hooks/useDemoMigration';
@@ -222,6 +223,8 @@ function App() {
 
   const displayNotes = useVisibleNotes(notes, selectedTagIds, debouncedSearchQuery);
 
+  const { arrangement, setBasis, setSort } = useLibraryArrangement(user?.id ?? null);
+
   const selectedNoteRecord = notes.find((n) => n.id === selectedNoteId);
   const selectedNote = selectedNoteRecord?.decryptionFailed ? undefined : selectedNoteRecord;
   // `replaceRoute`, not a push: the reader arrived at `/n/<locked>`, and pushing `/`
@@ -289,6 +292,7 @@ function App() {
 
   const { focusedNoteId, handleLibraryCardKeyDown } = useLibraryCardNavigation({
     notes: displayNotes,
+    arrangement,
     onOpen: handleNoteClick,
     onTogglePin: handleTogglePin,
     onDelete: handleNoteDelete,
@@ -521,6 +525,9 @@ function App() {
           isSearching,
           isLoading: loading && notes.length === 0,
           focusedNoteId,
+          arrangement,
+          onBasisChange: setBasis,
+          onSortChange: setSort,
         }}
         footer={{
           ref: libraryFooterRef,

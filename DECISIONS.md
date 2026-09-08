@@ -19,6 +19,39 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-08 — Chapter grouping owns the within-chapter order
+
+**Status:** Active
+
+**Why:** Item 48 lets the reader pick which timestamp decides a chapter and how notes
+order inside one. The order could have lived in `useVisibleNotes`, which already sorted
+the library before filtering, with `groupNotesByChapter` left as a pure grouper. It
+lives in `groupNotesByChapter` instead, because that function is called twice per render
+from two places: `ChapteredLibrary` to draw the cards, and `useLibraryCardNavigation` to
+build the keyboard order. A sort held anywhere else is a sort the second caller can
+disagree with, and a keyboard that walks notes in an order the reader cannot see is the
+same defect shape item 43 shipped six of.
+
+Two rules fall out of the same reasoning. Pinned notes ignore the basis — a pinned note
+is pinned whichever timestamp is read — while the order *within* Pinned does follow the
+chosen sort, since Pinned is a chapter like any other. And grouping only reorders: every
+note in, exactly once out, under any arrangement. Nothing about the reader's choice may
+filter, or a search result would quietly stop being one.
+
+Ties are broken explicitly — newest edit, then id — rather than left to `Array.sort`
+stability over whatever order the caller happened to supply. Duplicate titles and
+identical timestamps are common (an untitled note, a bulk import), and an order that
+depends on the input order shuffles when an unrelated note changes.
+
+**Rejected:** Sorting in `useVisibleNotes` and leaving grouping pure — the two callers
+drift, as above. Sorting in `ChapterSection` — the keyboard order never sees it at all,
+and item 49 is in that file. Making the card's timestamp follow the basis in the same
+change — it is the right thing to do and is recorded as unfinished in
+`docs/progress.md`, but it lands in `ChapterSection` and `NoteCard` alongside item 49's
+age-fade work, so it waits for that to land rather than colliding with it.
+
+---
+
 ## 2026-09-08 — Adversarial cases are written before the happy path
 
 **Status:** Active

@@ -7,6 +7,10 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.21', date: '2026-09-08', changes: [
+    { type: 'feature', text: 'Your library can now group chapters by when a note was written rather than when it was last edited, so revisiting an old thought no longer drags it into This Week' },
+    { type: 'feature', text: 'Notes within a chapter can be ordered by last edited, when written, or by title. Both choices are remembered on this device' },
+  ] },
   { version: '3.19.20', date: '2026-09-08', changes: [
     { type: 'feature', text: 'You can now move through library cards with arrow keys or J and K, then open, pin, or fade the selected note without reaching for a mouse' },
   ] },

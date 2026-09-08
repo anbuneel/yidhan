@@ -241,3 +241,32 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   toast. Selecting an unrendered or collapsed card reveals it first, so long
   libraries remain progressively rendered without trapping the keyboard. `t`
   is deferred to the roadmap until item 93 supplies a per-note tag picker.
+- **2026-09-08** — The reader chooses how the library is arranged — ledger item 48.
+  "Chapters by" picks the timestamp a chapter is decided from: `Edited`, as before, or
+  `Written`, which leaves an old note in the chapter its writing date earned however
+  often it is revised. "Notes by" picks the order inside a chapter — edited, written, or
+  title. Both are remembered per user in localStorage and default to today's behaviour,
+  so nothing changes for a reader who never touches them.
+
+  `groupNotesByChapter` now owns the within-chapter order as well as the grouping. That
+  is deliberate: `useLibraryCardNavigation` groups a second time to build its keyboard
+  order, and two sorts in two places would have drifted apart, which is exactly the
+  class of bug item 43 shipped six of. `useVisibleNotes` keeps its baseline sort but no
+  longer decides what the reader sees.
+
+  The Practice Space keeps the default arrangement: there is no account to remember a
+  choice against, so the controls are not offered there.
+
+  Pinned notes ignore the basis — a pinned note is pinned whichever timestamp is read —
+  though the order within Pinned does follow the chosen sort. Grouping only reorders: it
+  never filters, so a search result stays a search result under any arrangement. Title
+  order is case- and accent-insensitive and reads digits as numbers; untitled notes go
+  last, and duplicate titles fall back to the newest edit and then the id so the order
+  cannot shuffle between renders. `ChapterSection` is untouched, which keeps this clear
+  of item 49.
+
+  **Not done:** a card still shows its last-edited time. Under the `Written` basis a card
+  in Earlier can read "2 hours ago", which is honest about the card and confusing about
+  the chapter. Making the card's timestamp follow the basis means passing the choice
+  through `ChapterSection` into `NoteCard`, and item 49 is changing the card's age fade
+  in the same files. It should be picked up once item 49 has landed.
