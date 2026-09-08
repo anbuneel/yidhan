@@ -1,10 +1,29 @@
 import { test, expect } from './fixtures';
 import { goToLibrary, createTag, filterByTag, clearTagFilters } from './fixtures';
 
+const MAX_E2E_TAG_NAME_LENGTH = 18;
+
+// Tag names are capped at 20 characters (MAX_TAG_NAME_LENGTH in
+// src/utils/exportImport.ts) and TagModal rejects anything longer, leaving the
+// dialog open. A full Date.now() is 13 digits, so build the suffix from the
+// last six plus two random characters and throw if a prefix ever grows past
+// the headroom.
+function uniqueTagName(prefix: string): string {
+  const stamp = String(Date.now()).slice(-6);
+  const random = Math.random().toString(36).slice(2, 4).padEnd(2, 'x');
+  const name = `${prefix}${stamp}${random}`;
+  if (name.length > MAX_E2E_TAG_NAME_LENGTH) {
+    throw new Error(
+      `Tag name "${name}" is ${name.length} characters; this spec allows ${MAX_E2E_TAG_NAME_LENGTH}.`
+    );
+  }
+  return name;
+}
+
 test.describe('Tags', () => {
   test.describe('Tag Creation', () => {
     test('creates a new tag', async ({ authenticatedPage: page }) => {
-      const tagName = `Tag${Date.now()}`;
+      const tagName = uniqueTagName('Tag');
 
       await createTag(page, tagName);
 
@@ -13,7 +32,7 @@ test.describe('Tags', () => {
     });
 
     test('creates tag with custom color', async ({ authenticatedPage: page }) => {
-      const tagName = `ColorTag${Date.now()}`;
+      const tagName = uniqueTagName('ColorTag');
 
       // Click add tag button
       await page.getByRole('button', { name: /add tag/i }).click();
@@ -42,7 +61,7 @@ test.describe('Tags', () => {
     });
 
     test('shows error for duplicate tag name', async ({ authenticatedPage: page }) => {
-      const tagName = `Duplicate${Date.now()}`;
+      const tagName = uniqueTagName('Duplicate');
 
       // Create first tag
       await createTag(page, tagName);
@@ -59,8 +78,8 @@ test.describe('Tags', () => {
 
   test.describe('Tag Editing', () => {
     test('edits tag name', async ({ authenticatedPage: page }) => {
-      const originalName = `EditTag${Date.now()}`;
-      const newName = `UpdatedTag${Date.now()}`;
+      const originalName = uniqueTagName('EditTag');
+      const newName = uniqueTagName('UpdatedTag');
 
       await createTag(page, originalName);
 
@@ -80,7 +99,7 @@ test.describe('Tags', () => {
     });
 
     test('changes tag color', async ({ authenticatedPage: page }) => {
-      const tagName = `ColorChange${Date.now()}`;
+      const tagName = uniqueTagName('ColorChg');
 
       await createTag(page, tagName);
 
@@ -100,7 +119,7 @@ test.describe('Tags', () => {
 
   test.describe('Tag Deletion', () => {
     test('deletes tag', async ({ authenticatedPage: page }) => {
-      const tagName = `DeleteTag${Date.now()}`;
+      const tagName = uniqueTagName('DeleteTag');
 
       await createTag(page, tagName);
 
@@ -125,7 +144,7 @@ test.describe('Tags', () => {
 
   test.describe('Tag Filtering', () => {
     test('filters notes by tag', async ({ authenticatedPage: page }) => {
-      const tagName = `FilterTag${Date.now()}`;
+      const tagName = uniqueTagName('FilterTag');
       const noteTitle = `Tagged Note ${Date.now()}`;
 
       // Create tag
@@ -149,7 +168,7 @@ test.describe('Tags', () => {
     });
 
     test('clears tag filter', async ({ authenticatedPage: page }) => {
-      const tagName = `ClearFilter${Date.now()}`;
+      const tagName = uniqueTagName('ClrFilter');
 
       await createTag(page, tagName);
       await filterByTag(page, tagName);
@@ -161,7 +180,7 @@ test.describe('Tags', () => {
 
     test('filters clear search when activated', async ({ authenticatedPage: page }) => {
       // Create a tag to guarantee a filter button exists
-      const tagName = `FilterClear${Date.now()}`;
+      const tagName = uniqueTagName('FilterClr');
       await createTag(page, tagName);
 
       // Search for something
@@ -177,7 +196,7 @@ test.describe('Tags', () => {
 
   test.describe('Tag Assignment', () => {
     test('assigns tag to note in editor', async ({ authenticatedPage: page }) => {
-      const tagName = `AssignTag${Date.now()}`;
+      const tagName = uniqueTagName('AssignTag');
       const noteTitle = `Note With Tag ${Date.now()}`;
 
       await createTag(page, tagName);
@@ -197,7 +216,7 @@ test.describe('Tags', () => {
     });
 
     test('removes tag from note', async ({ authenticatedPage: page }) => {
-      const tagName = `RemoveTag${Date.now()}`;
+      const tagName = uniqueTagName('RemoveTag');
       const noteTitle = `Note Remove Tag ${Date.now()}`;
 
       await createTag(page, tagName);
