@@ -39,7 +39,8 @@ nul
 !public/licenses/fonts/*.txt
 
 # Claude Code local settings
-.claude/
+.claude/*
+!.claude/rules/
 tmpclaude-*
 
 # Jules AI bot files

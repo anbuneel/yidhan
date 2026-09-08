@@ -283,3 +283,9 @@ deploying.
 
 **New Tiptap extension** — install and configure in `RichTextEditor.tsx`; editor
 styles live under `.rich-text-editor` in `src/index.css`.
+
+## Writing style
+
+Write in plain, direct language. Lead with what happened and what I need to do. No literary phrasing, no build-up, no flourishes. Keep sentences short.
+
+This applies to everything you write: chat replies, docs, code comments, commit messages, and PR descriptions.
