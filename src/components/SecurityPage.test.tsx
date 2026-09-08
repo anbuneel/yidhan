@@ -97,7 +97,7 @@ describe('SecurityPage', () => {
 describe('PrivacyPage links to the threat model', () => {
   it('offers a way through to the security page', async () => {
     const onSecurityClick = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PrivacyPage {...nav} onSecurityClick={onSecurityClick} />);
 
     await user.click(screen.getByRole('button', { name: /security page/i }));

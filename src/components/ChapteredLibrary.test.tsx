@@ -127,7 +127,7 @@ describe('ChapteredLibrary', () => {
     });
 
     it('calls onNewNote when create button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onNewNote = vi.fn();
       render(<ChapteredLibrary {...defaultProps} onNewNote={onNewNote} />);
 
@@ -223,7 +223,7 @@ describe('ChapteredLibrary', () => {
     });
 
     it('calls onNoteClick when note is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onNoteClick = vi.fn();
       render(
         <ChapteredLibrary {...defaultProps} notes={mockNotes} onNoteClick={onNoteClick} />
@@ -235,7 +235,7 @@ describe('ChapteredLibrary', () => {
     });
 
     it('calls onNoteDelete when note delete is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onNoteDelete = vi.fn();
       render(
         <ChapteredLibrary {...defaultProps} notes={mockNotes} onNoteDelete={onNoteDelete} />
@@ -247,7 +247,7 @@ describe('ChapteredLibrary', () => {
     });
 
     it('calls onTogglePin when note pin is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onTogglePin = vi.fn();
       render(
         <ChapteredLibrary {...defaultProps} notes={mockNotes} onTogglePin={onTogglePin} />
@@ -259,7 +259,7 @@ describe('ChapteredLibrary', () => {
     });
 
     it('scrolls to chapter when nav is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const scrollIntoViewMock = vi.fn();
 
       render(<ChapteredLibrary {...defaultProps} notes={mockNotes} />);
@@ -277,7 +277,7 @@ describe('ChapteredLibrary', () => {
     });
 
     it('scrolls to chapter when time ribbon is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const scrollIntoViewMock = vi.fn();
 
       render(<ChapteredLibrary {...defaultProps} notes={mockNotes} />);

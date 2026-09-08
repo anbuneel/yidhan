@@ -64,7 +64,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('calls window.location.reload when refresh button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const reloadMock = vi.fn();
 
     render(

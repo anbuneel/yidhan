@@ -31,7 +31,7 @@ describe('BackupPassphraseModal — creating a backup', () => {
 
   it('enforces the passphrase policy', async () => {
     const onSubmit = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BackupPassphraseModal {...base} mode="create" onSubmit={onSubmit} />);
 
     await user.type(screen.getByLabelText(/^backup passphrase$/i), 'short');
@@ -43,7 +43,7 @@ describe('BackupPassphraseModal — creating a backup', () => {
 
   it('requires the confirmation to match', async () => {
     const onSubmit = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BackupPassphraseModal {...base} mode="create" onSubmit={onSubmit} />);
 
     await user.type(screen.getByLabelText(/^backup passphrase$/i), 'Correct-Horse-99');
@@ -56,7 +56,7 @@ describe('BackupPassphraseModal — creating a backup', () => {
 
   it('submits a passphrase that passes both checks', async () => {
     const onSubmit = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BackupPassphraseModal {...base} mode="create" onSubmit={onSubmit} />);
 
     await user.type(screen.getByLabelText(/^backup passphrase$/i), 'Correct-Horse-99');
@@ -77,7 +77,7 @@ describe('BackupPassphraseModal — opening a backup', () => {
 
   it('refuses an empty passphrase without calling back', async () => {
     const onSubmit = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BackupPassphraseModal {...base} mode="open" onSubmit={onSubmit} />);
 
     await user.click(screen.getByRole('button', { name: /open backup/i }));
@@ -101,7 +101,7 @@ describe('BackupPassphraseModal — opening a backup', () => {
     // The file was sealed with whatever the reader chose; refusing to try a short one
     // would lock them out of their own backup.
     const onSubmit = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BackupPassphraseModal {...base} mode="open" onSubmit={onSubmit} />);
 
     await user.type(screen.getByLabelText(/^backup passphrase$/i), 'short');
@@ -119,7 +119,7 @@ describe('BackupPassphraseModal — opening a backup', () => {
 
   it('cancels', async () => {
     const onCancel = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<BackupPassphraseModal {...base} mode="open" onCancel={onCancel} />);
 
     await user.click(screen.getByRole('button', { name: /^cancel$/i }));

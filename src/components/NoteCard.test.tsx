@@ -22,7 +22,7 @@ function renderCard(onDelete: (id: string) => boolean | void | Promise<boolean |
 describe('NoteCard deletion', () => {
   it('still deletes exactly once when search unmounts the card mid-animation', async () => {
     const onDelete = vi.fn().mockResolvedValue(true);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { unmount } = renderCard(onDelete);
 
     await user.click(screen.getByRole('button', { name: 'Delete note' }));
@@ -34,7 +34,7 @@ describe('NoteCard deletion', () => {
 
   it('does not repeat deletion when animation completion is followed by unmount', async () => {
     const onDelete = vi.fn().mockResolvedValue(true);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { card, unmount } = renderCard(onDelete);
 
     await user.click(screen.getByRole('button', { name: 'Delete note' }));
@@ -48,7 +48,7 @@ describe('NoteCard deletion', () => {
 
   it('restores the card and explains a rejected delete', async () => {
     const onDelete = vi.fn().mockRejectedValue(new Error('IndexedDB write failed'));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { card } = renderCard(onDelete);
 
     await user.click(screen.getByRole('button', { name: 'Delete note' }));
