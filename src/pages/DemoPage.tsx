@@ -26,7 +26,7 @@ import { Footer } from '../components/Footer';
 import { HeaderShell } from '../components/HeaderShell';
 import { LoadingFallback } from '../components/LoadingFallback';
 import { Logo } from '../components/Logo';
-import { DEMO_SEARCH_INPUT_ID } from '../utils/searchFocus';
+import { DEMO_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { getLoadedEditorComponent, loadEditorComponent } from '../utils/editorLoader';
 
@@ -325,11 +325,16 @@ export function DemoPage({
     onDelete: handleNoteDelete,
   });
 
+  // `searchFocusToken` is DemoPage state but `lastHandledDemoSearchFocusToken` is
+  // module scope, so the token survives a DemoPage unmount while the state resets to
+  // 0. Routing Cmd/Ctrl+K through the token therefore went dead after leaving and
+  // returning to /demo. Focus the input directly, as App.tsx does; the token stays for
+  // the editor-to-library request, which is what it was built for.
   useAppShortcuts({
-    enabled: true,
+    enabled: !showTagModal && !showShortcutsModal && !shouldShowPrompt,
     view,
     onNewNote: () => { void handleNewNote(); },
-    onFocusSearch: () => setSearchFocusToken((token) => token + 1),
+    onFocusSearch: () => scheduleSearchFocus(DEMO_SEARCH_INPUT_ID),
     onRequestLibrarySearch: handleRequestSearch,
     onShowShortcuts: () => setShowShortcutsModal(true),
     onLibraryCardKeyDown: handleLibraryCardKeyDown,
