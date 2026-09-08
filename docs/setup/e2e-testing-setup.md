@@ -4,6 +4,9 @@
 
 Yidhan uses Playwright for end-to-end testing. E2E tests require a dedicated test user account in Supabase.
 
+The suite runs in CI as the `e2e` job (`docs/setup/ci-workflow.md`), so it does not need to
+be run by hand before pushing. Run one spec locally when you change the flow it covers.
+
 ## Prerequisites
 
 1. A Supabase project with authentication enabled
@@ -24,21 +27,24 @@ E2E_TEST_PASSWORD=your-secure-password
 
 ### CI/CD (GitHub Actions)
 
-Add these as repository secrets in GitHub:
+The `e2e` job already exists in `.github/workflows/ci.yml` and already passes all four
+secrets. Nothing in the workflow needs editing — only the secrets need adding, under
+**Settings → Secrets and variables → Actions**.
 
-1. Go to **Settings → Secrets and variables → Actions**
-2. Add `E2E_TEST_EMAIL` secret
-3. Add `E2E_TEST_PASSWORD` secret
+Two tiers, because they fail differently:
 
-Then update `.github/workflows/ci.yml` to pass them to the E2E test step:
+| Secret | Without it |
+|---|---|
+| `VITE_SUPABASE_URL` | **The job does nothing.** `src/lib/supabase.ts` throws without it, so the app never boots and every test would fail. The job's heavy steps are gated on this secret being present: it prints a notice and passes in a few seconds. |
+| `VITE_SUPABASE_ANON_KEY` | Same — set it alongside the URL. |
+| `E2E_TEST_EMAIL` | The 60 tests using the `authenticatedPage` fixture skip. The other 26 still run. |
+| `E2E_TEST_PASSWORD` | Same as above. |
 
-```yaml
-- name: Run E2E tests
-  run: npm run e2e
-  env:
-    E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
-    E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
-```
+So adding just the two Supabase secrets turns the job on and gets 26 tests; adding all four
+gets all 86.
+
+Point the Supabase secrets at a project you are willing to have test data written to. The
+suite creates and deletes notes and tags as the test user.
 
 ## Running E2E Tests
 
