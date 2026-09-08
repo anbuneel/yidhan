@@ -50,6 +50,8 @@ function KeyboardLibrary({
   return (
     <>
       <input aria-label="Search notes" />
+      <button type="button">Outside control</button>
+      <dialog open><button type="button">Close modal</button></dialog>
       <ChapteredLibrary
         notes={notes}
         onNoteClick={onOpen}
@@ -125,7 +127,36 @@ describe('library keyboard navigation', () => {
     await user.keyboard('{ArrowDown}{Enter}p{Delete}');
 
     expect(onOpen).toHaveBeenCalledWith('pinned');
-    expect(onTogglePin).toHaveBeenCalledWith('pinned', true);
+    expect(onTogglePin).toHaveBeenCalledWith('pinned', false);
     expect(onDelete).toHaveBeenCalledWith('pinned');
+  });
+
+  it('leaves a tabbed control and modal action to its native keyboard behavior', async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    const onTogglePin = vi.fn();
+    const onDelete = vi.fn();
+    render(
+      <KeyboardLibrary
+        notes={notes}
+        onOpen={onOpen}
+        onTogglePin={onTogglePin}
+        onDelete={onDelete}
+      />
+    );
+
+    await user.keyboard('{ArrowDown}');
+    const outsideControl = screen.getByRole('button', { name: 'Outside control' });
+    outsideControl.focus();
+    await user.keyboard('j');
+
+    const modalClose = screen.getByRole('button', { name: 'Close modal' });
+    modalClose.focus();
+    await user.keyboard('{Enter}p{Delete}');
+
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(onTogglePin).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(card('Pinned thought')).toHaveAttribute('tabindex', '0');
   });
 });

@@ -72,6 +72,7 @@ export const NoteCard = memo(function NoteCard({
 
   useEffect(() => {
     if (isFocused) {
+      cardRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
       cardRef.current?.focus({ preventScroll: true });
     }
   }, [isFocused]);
@@ -122,6 +123,7 @@ export const NoteCard = memo(function NoteCard({
     <div
       ref={cardRef}
       role={isDecorative ? undefined : 'group'}
+      data-library-card-id={isDecorative ? undefined : note.id}
       tabIndex={isDecorative ? undefined : isFocused ? 0 : -1}
       aria-label={isDecorative ? undefined : `Note: ${note.title || 'Untitled'}`}
       className={`

@@ -10,6 +10,7 @@
  */
 
 import { useNoteSearch } from '../hooks/useNoteSearch';
+import toast from 'react-hot-toast';
 import { useAppShortcuts } from '../hooks/useAppShortcuts';
 import { useLibraryCardNavigation } from '../hooks/useLibraryCardNavigation';
 import { useState, useCallback, useEffect, useMemo, Suspense, useRef } from 'react';
@@ -86,6 +87,7 @@ export function DemoPage({
     createNote,
     updateNote,
     deleteNote,
+    restoreNote,
     createTag,
     updateTag,
     deleteTag,
@@ -272,13 +274,41 @@ export function DemoPage({
 
   const handleNoteDelete = useCallback(
     (id: string) => {
-      deleteNote(id);
+      const deletedNote = notes.find((note) => note.id === id);
+      if (!deletedNote || !deleteNote(id)) return;
+
       if (selectedNoteId === id) {
         setView('library');
         setSelectedNoteId(null);
       }
+
+      toast(
+        (t) => (
+          <div className="flex items-center gap-3">
+            <span>Note removed from Practice Space</span>
+            <button type="button"
+              onClick={() => {
+                toast.dismiss(t.id);
+                if (restoreNote(deletedNote)) {
+                  toast.success('Note restored');
+                } else {
+                  toast.error('Could not restore note');
+                }
+              }}
+              className="px-2 py-1 text-sm font-medium rounded transition-colors"
+              style={{
+                background: 'var(--color-cta-bg)',
+                color: 'var(--color-cta-text)',
+              }}
+            >
+              Undo
+            </button>
+          </div>
+        ),
+        { duration: 5000 }
+      );
     },
-    [deleteNote, selectedNoteId]
+    [deleteNote, notes, restoreNote, selectedNoteId]
   );
 
   const handleTogglePin = useCallback(
