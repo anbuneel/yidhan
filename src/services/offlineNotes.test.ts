@@ -170,6 +170,25 @@ describe('offlineNotes', () => {
     });
   });
 
+  describe('removeFadedNotesAfterServerEmpty', () => {
+    it('removes local faded records without queueing duplicate server deletes', async () => {
+      const { softDeleteNoteOffline, removeFadedNotesAfterServerEmpty } = await import('./offlineNotes');
+      const active = await seedOfflineNote(TEST_USER_ID, 'Keep', '<p>Active</p>');
+      const faded = await seedOfflineNote(TEST_USER_ID, 'Release', '<p>Faded</p>');
+      await softDeleteNoteOffline(TEST_USER_ID, faded.id);
+
+      const db = getOfflineDb(TEST_USER_ID);
+      await db.noteTags.add({ noteId: faded.id, tagId: 'tag-1', syncStatus: 'pending', lastSyncedAt: null });
+
+      await removeFadedNotesAfterServerEmpty(TEST_USER_ID);
+
+      expect(await db.notes.get(active.id)).toBeDefined();
+      expect(await db.notes.get(faded.id)).toBeUndefined();
+      expect(await db.noteTags.where('noteId').equals(faded.id).count()).toBe(0);
+      expect(await db.syncQueue.where('entityId').equals(faded.id).count()).toBe(0);
+    });
+  });
+
   // ──────────────────────────────────────────────────
   // toggleNotePinOffline
   // ──────────────────────────────────────────────────

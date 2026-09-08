@@ -619,6 +619,32 @@ export async function permanentDeleteNoteOffline(
 }
 
 /**
+ * Remove faded records locally after the server has already released them all.
+ *
+ * This deliberately does not queue delete operations: `emptyFadedNotes()` has
+ * completed the authoritative server mutation. Leaving the records behind would
+ * make a data-derived badge stale until realtime happened to arrive.
+ */
+export async function removeFadedNotesAfterServerEmpty(userId: string): Promise<void> {
+  const db = getOfflineDb(userId);
+  const fadedIds = (await db.notes.filter((note) => note.deletedAt !== null).toArray())
+    .map((note) => note.id);
+
+  if (fadedIds.length === 0) return;
+
+  await db.transaction('rw', [db.notes, db.noteTags, db.syncQueue], async () => {
+    for (const noteId of fadedIds) {
+      await db.notes.delete(noteId);
+      await db.noteTags.where('noteId').equals(noteId).delete();
+      await db.syncQueue.filter((entry) =>
+        entry.entityId === noteId ||
+        (entry.entityType === 'noteTag' && entry.entityId.startsWith(`${noteId}:`))
+      ).delete();
+    }
+  });
+}
+
+/**
  * Toggle pin status offline
  */
 export async function toggleNotePinOffline(

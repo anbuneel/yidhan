@@ -15,6 +15,7 @@ import { fetchDecryptedFadedNotes } from '../services/encryptedNotes';
 import {
   restoreNoteOffline,
   permanentDeleteNoteOffline,
+  removeFadedNotesAfterServerEmpty,
 } from '../services/offlineNotes';
 
 export interface UseFadedNotesOptions {
@@ -87,8 +88,11 @@ export function useFadedNotes({
 
   // Empty all faded notes
   const handleEmptyFadedNotes = async () => {
+    if (!userId) return;
+
     try {
       await emptyFadedNotes();
+      await removeFadedNotesAfterServerEmpty(userId);
       setFadedNotes([]);
       await refreshFadedNotesCount();
       toast.success('All faded notes deleted');
