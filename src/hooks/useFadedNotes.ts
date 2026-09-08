@@ -15,6 +15,7 @@ import { fetchDecryptedFadedNotes } from '../services/encryptedNotes';
 import {
   restoreNoteOffline,
   permanentDeleteNoteOffline,
+  removeFadedNotesAfterServerEmpty,
 } from '../services/offlineNotes';
 
 export interface UseFadedNotesOptions {
@@ -23,7 +24,7 @@ export interface UseFadedNotesOptions {
   /** True while the faded route is showing, which is what triggers the load. */
   isViewingFaded: boolean;
   setNotes: Dispatch<SetStateAction<Note[]>>;
-  setFadedNotesCount: Dispatch<SetStateAction<number>>;
+  refreshFadedNotesCount: () => Promise<void>;
 }
 
 export interface FadedNotes {
@@ -39,7 +40,7 @@ export function useFadedNotes({
   keys,
   isViewingFaded,
   setNotes,
-  setFadedNotesCount,
+  refreshFadedNotesCount,
 }: UseFadedNotesOptions): FadedNotes {
   const [fadedNotes, setFadedNotes] = useState<Note[]>([]);
   const [fadedNotesLoading, setFadedNotesLoading] = useState(false);
@@ -62,7 +63,7 @@ export function useFadedNotes({
         setFadedNotes((prev) => prev.filter((n) => n.id !== id));
         setNotes((prev) => [{ ...restoredNote, deletedAt: null }, ...prev]);
       }
-      setFadedNotesCount((prev) => Math.max(0, prev - 1));
+      await refreshFadedNotesCount();
       toast.success('Note restored');
     } catch (error) {
       console.error('Failed to restore note:', error);
@@ -77,7 +78,7 @@ export function useFadedNotes({
     try {
       await permanentDeleteNoteOffline(userId, id);
       setFadedNotes((prev) => prev.filter((n) => n.id !== id));
-      setFadedNotesCount((prev) => Math.max(0, prev - 1));
+      await refreshFadedNotesCount();
       toast.success('Note permanently deleted');
     } catch (error) {
       console.error('Failed to permanently delete note:', error);
@@ -87,10 +88,13 @@ export function useFadedNotes({
 
   // Empty all faded notes
   const handleEmptyFadedNotes = async () => {
+    if (!userId) return;
+
     try {
       await emptyFadedNotes();
+      await removeFadedNotesAfterServerEmpty(userId);
       setFadedNotes([]);
-      setFadedNotesCount(0);
+      await refreshFadedNotesCount();
       toast.success('All faded notes deleted');
     } catch (error) {
       console.error('Failed to empty faded notes:', error);

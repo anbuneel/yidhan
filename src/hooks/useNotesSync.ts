@@ -77,7 +77,8 @@ export interface NotesSync {
   selectedTagIds: string[];
   setSelectedTagIds: Dispatch<SetStateAction<string[]>>;
   fadedNotesCount: number;
-  setFadedNotesCount: Dispatch<SetStateAction<number>>;
+  /** Recount faded notes from IndexedDB after a local membership mutation. */
+  refreshFadedNotesCount: () => Promise<void>;
   conflicts: ReturnType<typeof useSyncEngine>['conflicts'];
   removeConflict: ReturnType<typeof useSyncEngine>['removeConflict'];
   triggerSync: ReturnType<typeof useSyncEngine>['triggerSync'];
@@ -124,6 +125,35 @@ export function useNotesSync({
   const [fadedNotesCount, setFadedNotesCount] = useState(0);
   const [hydrationBypassed, setHydrationBypassed] = useState(false);
 
+  // IndexedDB is the source of truth for the badge. Keep only the latest read so a
+  // slower count cannot overwrite one requested after a later mutation.
+  const fadedCountRefreshIdRef = useRef(0);
+  const refreshFadedNotesCount = useCallback(async () => {
+    const refreshId = ++fadedCountRefreshIdRef.current;
+    if (!userId) {
+      setFadedNotesCount(0);
+      return;
+    }
+
+    try {
+      const count = await countFadedNotesOffline(userId);
+      if (refreshId === fadedCountRefreshIdRef.current) {
+        setFadedNotesCount(count);
+      }
+    } catch (error) {
+      console.error('Failed to recount faded notes:', error);
+    }
+  }, [userId]);
+
+  const fadedCountRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleFadedNotesCountRefresh = useCallback(() => {
+    if (fadedCountRefreshTimerRef.current) clearTimeout(fadedCountRefreshTimerRef.current);
+    fadedCountRefreshTimerRef.current = setTimeout(() => {
+      fadedCountRefreshTimerRef.current = null;
+      void refreshFadedNotesCount();
+    }, SYNC_REFRESH_COALESCE_MS);
+  }, [refreshFadedNotesCount]);
+
   // Read the latest keys inside realtime handlers without resubscribing the Supabase
   // channel every time the vault locks or unlocks.
   const keysRef = useRef(keys);
@@ -160,9 +190,13 @@ export function useNotesSync({
 
   useEffect(() => () => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    if (fadedCountRefreshTimerRef.current) clearTimeout(fadedCountRefreshTimerRef.current);
   }, []);
 
-  const { conflicts, removeConflict, triggerSync } = useSyncEngine(refreshFromSync);
+  const { conflicts, removeConflict, triggerSync } = useSyncEngine(
+    refreshFromSync,
+    scheduleFadedNotesCountRefresh
+  );
 
   // Ask the browser not to evict the offline database. An unsynced note lives only
   // there, and best-effort storage can be cleared silently under disk pressure —
@@ -329,6 +363,8 @@ export function useNotesSync({
             return;
           }
 
+          scheduleFadedNotesCountRefresh();
+
           maybeDecrypt(newNote)
             .then((decrypted) => {
               setNotes((prev) => {
@@ -353,10 +389,11 @@ export function useNotesSync({
             return;
           }
 
+          scheduleFadedNotesCountRefresh();
+
           // A soft delete arrives as an update carrying deletedAt.
           if (updatedNote.deletedAt) {
             setNotes((prev) => prev.filter((n) => n.id !== updatedNote.id));
-            setFadedNotesCount((prev) => prev + 1);
             if (openNoteIdRef.current === updatedNote.id) {
               onOpenNoteRemovedRef.current();
             }
@@ -375,7 +412,6 @@ export function useNotesSync({
                   );
                 }
                 // Not in the active list: restored from faded on another device.
-                setFadedNotesCount((count) => Math.max(0, count - 1));
                 return [{ ...decrypted, syncStatus: 'synced' as const }, ...prev];
               });
             })
@@ -388,6 +424,7 @@ export function useNotesSync({
       (deletedId) => {
         deleteNoteFromServer(userId, deletedId)
           .then((result) => {
+            scheduleFadedNotesCountRefresh();
             if (!result.deleted) {
               setNotes((prev) =>
                 prev.map((note) =>
@@ -425,6 +462,7 @@ export function useNotesSync({
     openNoteIdRef,
     reportRealtimeDisplayFailure,
     reportRealtimePersistenceFailure,
+    scheduleFadedNotesCountRefresh,
   ]);
 
   // --- Tags: fetch and realtime ---------------------------------------------
@@ -483,13 +521,19 @@ export function useNotesSync({
     );
 
     return () => unsubscribeTags();
-  }, [userId, isHydrating, reportRealtimePersistenceFailure, scheduleSyncRefresh]);
+  }, [
+    userId,
+    isHydrating,
+    reportRealtimePersistenceFailure,
+    scheduleSyncRefresh,
+    scheduleFadedNotesCountRefresh,
+  ]);
 
   // --- Faded count ----------------------------------------------------------
 
   useEffect(() => {
     if (!userId) {
-      setFadedNotesCount(0);
+      void refreshFadedNotesCount();
       return;
     }
 
@@ -497,10 +541,9 @@ export function useNotesSync({
 
     // Clear expired notes first, so nobody sees a note past its 30-day window.
     cleanupExpiredFadedNotes()
-      .then(() => countFadedNotesOffline(userId))
-      .then(setFadedNotesCount)
+      .then(refreshFadedNotesCount)
       .catch(console.error);
-  }, [userId, isHydrating]);
+  }, [userId, isHydrating, refreshFadedNotesCount]);
 
   return {
     notes,
@@ -511,7 +554,7 @@ export function useNotesSync({
     selectedTagIds,
     setSelectedTagIds,
     fadedNotesCount,
-    setFadedNotesCount,
+    refreshFadedNotesCount,
     conflicts,
     removeConflict,
     triggerSync,

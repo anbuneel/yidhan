@@ -232,3 +232,6 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   "done when" — no skipped authenticated tests — is not met. Item 153 stays blocked on
   it. #210 exists because a previous entry claimed verification that had not happened;
   this entry does not repeat that.
+- **2026-09-08** — Faded Notes badge count is reconciled from IndexedDB after
+  local changes, realtime events, sync pulls, and expiry cleanup instead of
+  being incremented optimistically — ledger item 73. (#227)
