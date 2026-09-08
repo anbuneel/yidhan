@@ -38,7 +38,7 @@ that must land first.
 
 ## Next
 
-Three lanes, 9 items. Lanes A and D run in parallel on separate branches and own the files named in the handoff. Lanes B and C are complete and their items have moved to `docs/progress.md`; Lane C shipped in PR #213 and item 11, which items 50 and 51 needed, shipped in PR #203 — so Lane E is unblocked and can be picked up whenever someone has the room. Merge order when A and D are both ready: D, A. Item 87 is the maintainer's own task, not a code lane.
+Three lanes, 8 items. Lanes A and D run in parallel on separate branches and own the files named in the handoff. Lanes B and C are complete and their items have moved to `docs/progress.md`; Lane C shipped in PR #213 and item 11, which items 50 and 51 needed, shipped in PR #203 — so Lane E is unblocked. Item 73 shipped from it in PR #227; the rest can be picked up whenever someone has the room. Merge order when A and D are both ready: D, A. Item 87 is the maintainer's own task, not a code lane.
 
 ### Lane A · Editor fluency · `fix/editor-fluency` · runs in parallel
 
@@ -57,7 +57,7 @@ Three lanes, 9 items. Lanes A and D run in parallel on separate branches and own
 |---|------|------|--------|--------------------|-----------|
 | 153 | Testing | Verify the "done when" tests for items 6, 8, and 18 (killed-tab recovery, cross-device latency, authenticated backup restore); closes #210 | days | Item 37 shipped the fixture and the CI job. Still needs the maintainer to provision the test account and add the five repository secrets, or the authenticated tests skip. | Each of the three tests runs in CI and passes; a later `docs/progress.md` entry corrects the #201, #202, #204 entries · CI log |
 
-### Lane E · Library and search · `feat/library-search` · unblocked, not started
+### Lane E · Library and search · `feat/library-search` · unblocked, in progress
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
@@ -67,7 +67,6 @@ Three lanes, 9 items. Lanes A and D run in parallel on separate branches and own
 | 49 | Library | Card preview mask only when text overflows; cap age fade at 0.9 | days |  | Short previews fully legible; contrast on the Archive chapter passes AA · visual regression and axe |
 | 50 | Search | Query semantics: multi-term AND, quoted phrases, `tag:`, `is:pinned`, `before:`, `after:`; all matches highlighted | days | Needs #11 | `tag:journal before:2026-03 "exact phrase"` returns only notes matching all three · unit test per operator; operators listed in the `?` modal |
 | 51 | Search | In-memory index (MiniSearch or FlexSearch) with ranking and fuzziness, incremental rebuild; moved to a worker if the main thread shows it | days | Needs #11 | Title matches rank first; p95 under 200 ms at 10k notes · #80 fixture |
-| 73 | Sync | `fadedNotesCount` derived from data, not incremented optimistically | days |  | Count equals the faded list length after any sequence of local and realtime deletes · unit test |
 
 ### Maintainer
 
