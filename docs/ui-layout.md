@@ -185,6 +185,24 @@ Row 2: [Note Title]
 | Changelog | - (default logo) | - | - | - |
 | Roadmap | - (default logo) | - | - | - |
 
+## Editor Chrome
+
+- **Toolbar** — `EditorToolbar.tsx`, with `variant: 'inline' | 'bottom'`.
+- **Vertical sidebar** — `EditorSidebar.tsx`, shown at 1100px and wider. It supplements
+  the toolbar rather than replacing it; every command stays reachable from the toolbar at
+  every width.
+- **Focus mode** — `focus-mode-active` on the scroll container fades descendant
+  `.focus-mode-target` elements.
+
+## Saving
+
+- Autosave debounces at 800ms.
+- A local checkpoint runs every 10 seconds, independently of the debounce, so a tab that
+  dies mid-sentence loses at most that interval.
+- "Saved here" means the local write landed. "Synced" is only shown once the server
+  confirms a matching content hash.
+- A failed save keeps the draft on screen with Retry and Copy, rather than discarding it.
+
 ## Keyboard Shortcuts
 
 | Shortcut | Action | Context |

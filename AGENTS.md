@@ -248,14 +248,12 @@ flagged; an API that *throws* counts as denied, because only a grant makes stora
 
 ## Area notes
 
-**Editor** — content is Tiptap `getHTML()`, encrypted before storage. Toolbar lives in
-`EditorToolbar.tsx` (`variant: 'inline' | 'bottom'`); the ≥1100px vertical sidebar in
-`EditorSidebar.tsx` supplements rather than replaces it. Focus mode uses a parent-class
-strategy: `focus-mode-active` on the scroll container fades descendant
-`.focus-mode-target` elements. Autosave debounces 800ms with a 10-second checkpoint;
-"Synced" requires the server-confirmed content hash to match. Save failures retain the
-draft with persistent Retry/Copy controls. The manuscript glow is positioned by a
-ref-based `requestAnimationFrame` scroll handler — zero re-renders; keep it that way.
+**Editor** — content is Tiptap `getHTML()`, encrypted before storage. Focus mode fades
+descendants through a parent class, not per-element state. A failed save keeps the draft
+on screen with Retry and Copy; **never** discard words to reach a clean state. "Synced"
+requires a server-confirmed content hash — do not show it optimistically. The manuscript
+glow is positioned by a ref-based `requestAnimationFrame` scroll handler — zero
+re-renders; keep it that way. Layout and timings: `docs/ui-layout.md`.
 
 **Library** — search parses the query into metadata filters and a free-text remainder;
 `src/utils/searchQuery.ts` owns the grammar, `docs/ui-layout.md` lists the operators.
