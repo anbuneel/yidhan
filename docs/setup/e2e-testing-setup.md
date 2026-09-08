@@ -80,6 +80,34 @@ npm run e2e:ui
 npm run e2e:report
 ```
 
+## Account Cleanup
+
+The suite writes to a shared account and used to leave everything behind. Eleven tests
+in `tags.spec.ts` call `createTag` and one deletes, and most of `notes.spec.ts` leaves
+its notes, so a credentialed run added a couple of dozen rows per project and removed
+almost none.
+
+`e2e/globalSetup.ts` stamps `E2E_RUN_STARTED_AT`. `e2e/globalTeardown.ts` signs in
+afterwards and deletes the account's notes and tags whose `created_at` is at or after
+that instant. `note_tags` and `note_shares` cascade from the notes.
+
+**It cannot touch anything created before the run started.** That is the safety
+property, and it holds no matter which account the credentials name. Deleting by
+timestamp rather than by name is deliberate: the specs build names from 29 different
+prefixes with no shared marker, so a name filter would both miss rows and risk matching
+someone's real notes.
+
+The teardown is a no-op unless a real Supabase URL and `E2E_TEST_EMAIL` /
+`E2E_TEST_PASSWORD` are all set, so placeholder CI runs skip it — they write nothing.
+It never fails the run; a cleanup that cannot reach the network warns on stdout and
+leaves the data alone, because failing a green suite over its own tidying would be
+worse than the mess. Watch for `[e2e cleanup]` warnings, though — silent cleanup
+failure is how the accumulation comes back.
+
+**Rows from before this existed are still there.** The teardown only covers runs from
+now on; clear the historical backlog by hand once, from the app or the Supabase
+dashboard.
+
 ## Test Behavior Without Credentials
 
 If any of `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD` or `E2E_TEST_PASSPHRASE` is not set:

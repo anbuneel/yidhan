@@ -28,6 +28,13 @@ export default defineConfig({
   // Look for test files in the e2e directory
   testDir: './e2e',
 
+  // The suite writes to a shared account and, before this, never cleaned up: eleven
+  // tests create a tag and one deletes one. Setup stamps the run's start time;
+  // teardown deletes only what was created at or after it, so nothing that existed
+  // beforehand can be touched. Both are no-ops without real credentials.
+  globalSetup: './e2e/globalSetup.ts',
+  globalTeardown: './e2e/globalTeardown.ts',
+
   // Run tests in files in parallel
   fullyParallel: true,
 
