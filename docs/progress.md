@@ -189,3 +189,24 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   superseded text so any edit at all leaves the reader's words alone. That also fixes a
   second-order bug: an untouched old starter compared unequal to the current copy, so it
   read as edited — which carried the false claim into the account on migration.
+
+- **2026-09-07** — Instruction layer and CI hardening. `npm run typecheck` was
+  `tsc --noEmit` against a root `tsconfig.json` holding `"files": []`, so it compiled
+  zero files and always passed; the only real typecheck was the `tsc -b` inside
+  `npm run build`, and CI's Type check step had the same no-op. It is now `tsc -b`.
+  The 86-test Playwright suite was written for CI (`forbidOnly`, `retries: 2`,
+  `workers: 1`) but never had a job, so it gated nothing; it now runs as an `e2e` job
+  whose heavy steps are gated on `VITE_SUPABASE_URL` being present, because
+  `src/lib/supabase.ts` throws without it and an unconfigured repo would go red.
+  `PassphraseUnlock.test.tsx` was intermittently failing two tests under parallel
+  load: the lockout case types 80 characters, user-event's per-keystroke delay pushed
+  it past the 5s timeout, and the keystrokes still in flight landed in the next test's
+  input — so an unrelated test failed with an interleaved passphrase. Typing delay is
+  now disabled in that file. `syncEngine.test.ts` (2,386 lines, ~22k tokens) is four
+  files by concern, with module mocks in `src/test/syncEngineMocks.ts` and builders in
+  `src/test/syncEngineTestKit.ts`; the mocks file must not reach `syncEngine`, since
+  the `vi.mock` factories import it while the mocked modules are resolving. Test count
+  is unchanged at 1,253. `CLAUDE.md` drops derivable sections and gains a session
+  economy section; the `D:\anbs-dev` parent `CLAUDE.md` is deleted and the Roughdraft
+  instructions moved to a skill, taking the always-loaded layer from ~5,800 to ~4,100
+  tokens.
