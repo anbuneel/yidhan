@@ -30,7 +30,7 @@ describe('DatabaseUpdatePending', () => {
 
   it('offers a retry', async () => {
     const onRetry = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<DatabaseUpdatePending {...props} onRetry={onRetry} />);
 
     await user.click(screen.getByRole('button', { name: /check again/i }));
@@ -39,7 +39,7 @@ describe('DatabaseUpdatePending', () => {
 
   it('disables the retry while a check is running', async () => {
     const onRetry = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<DatabaseUpdatePending {...props} onRetry={onRetry} isRetrying />);
 
     const button = screen.getByRole('button', { name: /checking/i });

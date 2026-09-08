@@ -30,7 +30,7 @@ describe('LockedNoteCard', () => {
 
   it('offers a retry', async () => {
     const onRetry = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<LockedNoteCard note={lockedNote} onRetry={onRetry} />);
 
     await user.click(screen.getByRole('button', { name: /try again/i }));

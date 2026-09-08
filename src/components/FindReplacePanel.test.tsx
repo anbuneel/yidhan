@@ -37,7 +37,7 @@ describe('FindReplacePanel', () => {
   it('still closes on Escape pressed inside the panel', async () => {
     const editor = editorWith('<p>alpha</p>');
     const onClose = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<FindReplacePanel editor={editor as unknown as ReactEditor} onClose={onClose} />);
 
     await user.type(screen.getByPlaceholderText('Find'), 'alph');

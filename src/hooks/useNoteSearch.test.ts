@@ -22,7 +22,11 @@ it('parses 2,000 notes once, then searches without any parser work; changed hash
   expect(result.current).toHaveLength(2000);
   rerender({ items: notes, query: ' ' });
   expect(result.current).toBe(notes);
-}, 20000);
+  // 60s, not 20s. Every assertion here is a call count, never an elapsed time, so a
+  // longer budget weakens nothing — but parsing 2,000 notes is heavy enough that the
+  // 20s budget expired under full-suite parallel load, failing a test that was not
+  // measuring speed in the first place.
+}, 60000);
 
 it('finds edited text even when the caller left the content hash behind', () => {
   const note = createMockNote({ id: '1', title: 'Groceries', content: '<p>milk, eggs</p>', contentHash: 'stale' });

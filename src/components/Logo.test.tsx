@@ -16,7 +16,7 @@ describe('Logo', () => {
   });
 
   it('renders as a button named by alt when onClick is provided', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClick = vi.fn();
     render(<Logo onClick={onClick} alt="Back to library" />);
 

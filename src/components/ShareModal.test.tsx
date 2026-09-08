@@ -111,7 +111,7 @@ describe('ShareModal', () => {
     });
 
     it('creates share with selected expiration', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const newShare = createMockNoteShare({ shareToken: 'new-token' });
       const mockShareKey = new Uint8Array(32);
       vi.mocked(notesService.createNoteShare).mockResolvedValue({
@@ -140,7 +140,7 @@ describe('ShareModal', () => {
     });
 
     it('shows encrypted share link after creation', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const newShare = createMockNoteShare({ shareToken: 'new-token' });
       const mockShareKey = new Uint8Array(32);
       vi.mocked(notesService.createNoteShare).mockResolvedValue({
@@ -165,7 +165,7 @@ describe('ShareModal', () => {
     });
 
     it('shows loading state while creating', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let resolveCreate: (result: { share: ReturnType<typeof createMockNoteShare>; shareKey: Uint8Array }) => void;
       const createPromise = new Promise<{ share: ReturnType<typeof createMockNoteShare>; shareKey: Uint8Array }>((resolve) => {
         resolveCreate = resolve;
@@ -191,7 +191,7 @@ describe('ShareModal', () => {
     });
 
     it('shows error toast on creation failure', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(notesService.createNoteShare).mockRejectedValue(new Error('Failed'));
 
       render(<ShareModal {...defaultProps} />);
@@ -218,7 +218,7 @@ describe('ShareModal', () => {
 
   describe('revoking share', () => {
     it('revokes existing share from key-not-recoverable view', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       const existingShare = createMockNoteShare({ noteId: mockNote.id, shareToken: 'to-revoke' });
       vi.mocked(notesService.getNoteShare).mockResolvedValue(existingShare);
@@ -240,7 +240,7 @@ describe('ShareModal', () => {
     });
 
     it('revokes share from just-created view', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       const newShare = createMockNoteShare({ shareToken: 'just-created' });
       vi.mocked(notesService.createNoteShare).mockResolvedValue({
@@ -271,7 +271,7 @@ describe('ShareModal', () => {
     });
 
     it('shows error toast on revoke failure', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const existingShare = createMockNoteShare({ noteId: mockNote.id, shareToken: 'to-revoke' });
       vi.mocked(notesService.getNoteShare).mockResolvedValue(existingShare);
       vi.mocked(notesService.revokeNoteShare).mockRejectedValue(
@@ -294,7 +294,7 @@ describe('ShareModal', () => {
 
   describe('modal interactions', () => {
     it('closes when close button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
 
       render(<ShareModal {...defaultProps} onClose={onClose} />);
@@ -324,7 +324,7 @@ describe('ShareModal', () => {
     });
 
     it('does not close modal content when clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
 
       render(<ShareModal {...defaultProps} onClose={onClose} />);
@@ -340,7 +340,7 @@ describe('ShareModal', () => {
     });
 
     it('disables close during processing', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       // Make getNoteShare hang to keep in loading state
       vi.mocked(notesService.getNoteShare).mockImplementation(

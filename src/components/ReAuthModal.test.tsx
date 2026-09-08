@@ -56,7 +56,7 @@ describe('ReAuthModal', () => {
   });
 
   it('mints an account deletion confirmation token for password users', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onSuccess = vi.fn();
 
     render(
@@ -81,7 +81,7 @@ describe('ReAuthModal', () => {
   });
 
   it('uses email OTP for OAuth account deletion instead of accepting typed email as proof', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onSuccess = vi.fn();
     mockUserState.value = {
       id: 'user-123',

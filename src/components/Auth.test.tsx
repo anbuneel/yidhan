@@ -93,7 +93,7 @@ describe('Auth', () => {
 
   describe('mode switching', () => {
     it('switches from login to signup', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} />);
 
       await user.click(screen.getByText('Sign Up'));
@@ -102,7 +102,7 @@ describe('Auth', () => {
     });
 
     it('switches from signup to login', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} initialMode="signup" />);
 
       await user.click(screen.getByText('Sign In'));
@@ -111,7 +111,7 @@ describe('Auth', () => {
     });
 
     it('switches from login to forgot password', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} />);
 
       await user.click(screen.getByText('Forgot password?'));
@@ -120,7 +120,7 @@ describe('Auth', () => {
     });
 
     it('switches from forgot to login', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} initialMode="forgot" />);
 
       await user.click(screen.getByText('Sign In'));
@@ -129,7 +129,7 @@ describe('Auth', () => {
     });
 
     it('clears form when switching modes', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} />);
 
       const emailInput = screen.getByRole('textbox');
@@ -151,7 +151,7 @@ describe('Auth', () => {
 
   describe('login flow', () => {
     it('submits login form', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} />);
 
       await user.type(screen.getByRole('textbox'), 'test@example.com');
@@ -167,7 +167,7 @@ describe('Auth', () => {
     });
 
     it('shows loading state during login', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockAuthContext.signIn.mockImplementation(() => new Promise(() => {})); // Never resolves
 
       render(<Auth {...defaultProps} />);
@@ -180,7 +180,7 @@ describe('Auth', () => {
     });
 
     it('shows error on login failure', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockAuthContext.signIn.mockResolvedValue({
         error: { message: 'Invalid login credentials' }
       });
@@ -199,7 +199,7 @@ describe('Auth', () => {
 
   describe('signup flow', () => {
     it('submits signup form', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} initialMode="signup" />);
 
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
@@ -215,7 +215,7 @@ describe('Auth', () => {
     });
 
     it('shows confirmation state after signup', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} initialMode="signup" />);
 
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
@@ -230,7 +230,7 @@ describe('Auth', () => {
     });
 
     it('shows option to change email in confirmation state', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} initialMode="signup" />);
 
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
@@ -249,7 +249,7 @@ describe('Auth', () => {
 
   describe('forgot password flow', () => {
     it('submits forgot password form', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} initialMode="forgot" />);
 
       await user.type(screen.getByRole('textbox'), 'test@example.com');
@@ -261,7 +261,7 @@ describe('Auth', () => {
     });
 
     it('shows success message after reset link sent', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} initialMode="forgot" />);
 
       await user.type(screen.getByRole('textbox'), 'test@example.com');
@@ -284,7 +284,7 @@ describe('Auth', () => {
 
   describe('password reset flow', () => {
     it('validates password length', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} initialMode="reset" />);
 
       const { newPassword, confirmPassword } = getPasswordInputs();
@@ -299,7 +299,7 @@ describe('Auth', () => {
     });
 
     it('validates password match', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} initialMode="reset" />);
 
       const { newPassword, confirmPassword } = getPasswordInputs();
@@ -314,7 +314,7 @@ describe('Auth', () => {
     });
 
     it('submits password reset form when valid', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} initialMode="reset" />);
 
       const { newPassword, confirmPassword } = getPasswordInputs();
@@ -328,7 +328,7 @@ describe('Auth', () => {
     });
 
     it('calls onPasswordResetComplete callback on success', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onPasswordResetComplete = vi.fn();
       render(
         <Auth
@@ -377,7 +377,7 @@ describe('Auth', () => {
     });
 
     it('calls signInWithGoogle when Google button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} />);
 
       await user.click(screen.getByText('Google'));
@@ -386,7 +386,7 @@ describe('Auth', () => {
     });
 
     it('calls signInWithGitHub when GitHub button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} />);
 
       await user.click(screen.getByText('GitHub'));
@@ -395,7 +395,7 @@ describe('Auth', () => {
     });
 
     it('shows redirecting state for OAuth', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockAuthContext.signInWithGoogle.mockImplementation(() => new Promise(() => {}));
 
       render(<Auth {...defaultProps} />);
@@ -426,7 +426,7 @@ describe('Auth', () => {
 
   describe('theme toggle', () => {
     it('calls onThemeToggle when clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onThemeToggle = vi.fn();
       render(<Auth {...defaultProps} onThemeToggle={onThemeToggle} />);
 
@@ -450,7 +450,7 @@ describe('Auth', () => {
     });
 
     it('calls onClose when close button clicked (no dirty form)', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       render(<Auth {...defaultProps} isModal onClose={onClose} />);
 
@@ -460,7 +460,7 @@ describe('Auth', () => {
     });
 
     it('shows confirmation when closing with dirty form', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       render(<Auth {...defaultProps} isModal onClose={onClose} />);
 
@@ -473,7 +473,7 @@ describe('Auth', () => {
     });
 
     it('closes modal when Discard clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       render(<Auth {...defaultProps} isModal onClose={onClose} />);
 
@@ -485,7 +485,7 @@ describe('Auth', () => {
     });
 
     it('keeps editing when Keep Editing clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       render(<Auth {...defaultProps} isModal onClose={onClose} />);
 
@@ -509,7 +509,7 @@ describe('Auth', () => {
 
   describe('error sanitization', () => {
     it('sanitizes rate limit errors', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockAuthContext.signIn.mockResolvedValue({
         error: { message: 'Rate limit exceeded for this endpoint' }
       });
@@ -526,7 +526,7 @@ describe('Auth', () => {
     });
 
     it('sanitizes network errors', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockAuthContext.signIn.mockResolvedValue({
         error: { message: 'Network request failed' }
       });
@@ -543,7 +543,7 @@ describe('Auth', () => {
     });
 
     it('sanitizes user exists errors', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockAuthContext.signUp.mockResolvedValue({
         error: { message: 'User already registered' }
       });

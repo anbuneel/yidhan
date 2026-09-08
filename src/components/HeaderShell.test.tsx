@@ -60,7 +60,7 @@ describe('HeaderShell', () => {
     });
 
     it('renders clickable logo when onLogoClick is provided', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onLogoClick = vi.fn();
       render(<HeaderShell {...defaultProps} onLogoClick={onLogoClick} />);
 
@@ -117,7 +117,7 @@ describe('HeaderShell', () => {
     });
 
     it('calls onThemeToggle when clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onThemeToggle = vi.fn();
       render(<HeaderShell {...defaultProps} onThemeToggle={onThemeToggle} />);
 
@@ -135,7 +135,7 @@ describe('HeaderShell', () => {
     });
 
     it('calls onSignIn when Sign In clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onSignIn = vi.fn();
       render(<HeaderShell {...defaultProps} onSignIn={onSignIn} />);
 
@@ -216,7 +216,7 @@ describe('HeaderShell', () => {
     });
 
     it('opens profile menu when avatar clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<HeaderShell {...defaultProps} />);
 
       await user.click(screen.getByLabelText('Profile menu'));
@@ -227,7 +227,7 @@ describe('HeaderShell', () => {
     });
 
     it('closes profile menu when clicking outside', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<HeaderShell {...defaultProps} />);
 
       await user.click(screen.getByLabelText('Profile menu'));
@@ -240,7 +240,7 @@ describe('HeaderShell', () => {
     });
 
     it('calls signOut when Sign out clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<HeaderShell {...defaultProps} />);
 
       await user.click(screen.getByLabelText('Profile menu'));
@@ -250,7 +250,7 @@ describe('HeaderShell', () => {
     });
 
     it('shows Settings when onSettingsClick provided', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onSettingsClick = vi.fn();
       render(<HeaderShell {...defaultProps} onSettingsClick={onSettingsClick} />);
 
@@ -262,7 +262,7 @@ describe('HeaderShell', () => {
     });
 
     it('renders custom menu sections', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const menuItem = {
         label: 'Export Notes',
         icon: <span data-testid="export-icon">📤</span>,
@@ -285,7 +285,7 @@ describe('HeaderShell', () => {
     });
 
     it('renders menu item badges', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const menuItem = {
         label: 'Notifications',
         icon: <span>🔔</span>,

@@ -56,7 +56,7 @@ describe('TagModal', () => {
 
   describe('form validation', () => {
     it('shows error for empty tag name', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<TagModal {...defaultProps} />);
 
       await user.click(getSubmitButton());
@@ -66,7 +66,7 @@ describe('TagModal', () => {
     });
 
     it('shows error for whitespace-only tag name', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<TagModal {...defaultProps} />);
 
       await user.type(screen.getByPlaceholderText(/Work, Personal/), '   ');
@@ -76,7 +76,7 @@ describe('TagModal', () => {
     });
 
     it('shows error for tag name exceeding 20 characters', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<TagModal {...defaultProps} />);
 
       // Input has maxLength=20, so we can't type more than 20 chars via UI
@@ -91,7 +91,7 @@ describe('TagModal', () => {
     });
 
     it('shows error for duplicate tag name (case-insensitive)', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const existingTags = [createMockTag({ name: 'Work' })];
       render(<TagModal {...defaultProps} existingTags={existingTags} />);
 
@@ -102,7 +102,7 @@ describe('TagModal', () => {
     });
 
     it('allows same name when editing the same tag', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const tag = createMockTag({ id: '123', name: 'Work' });
       const existingTags = [tag];
       const onSave = vi.fn().mockResolvedValue(undefined);
@@ -125,7 +125,7 @@ describe('TagModal', () => {
     });
 
     it('clears error when typing in the input', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<TagModal {...defaultProps} />);
 
       // Trigger error
@@ -147,7 +147,7 @@ describe('TagModal', () => {
     });
 
     it('changes color when clicking color button', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onSave = vi.fn().mockResolvedValue(undefined);
       render(<TagModal {...defaultProps} onSave={onSave} />);
 
@@ -171,7 +171,7 @@ describe('TagModal', () => {
 
   describe('save functionality', () => {
     it('calls onSave with trimmed name and selected color', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onSave = vi.fn().mockResolvedValue(undefined);
       render(<TagModal {...defaultProps} onSave={onSave} />);
 
@@ -185,7 +185,7 @@ describe('TagModal', () => {
     });
 
     it('closes modal after successful save', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       const onSave = vi.fn().mockResolvedValue(undefined);
       render(<TagModal {...defaultProps} onClose={onClose} onSave={onSave} />);
@@ -199,7 +199,7 @@ describe('TagModal', () => {
     });
 
     it('shows loading state while saving', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let resolvePromise: () => void;
       const savePromise = new Promise<void>(resolve => {
         resolvePromise = resolve;
@@ -222,7 +222,7 @@ describe('TagModal', () => {
     });
 
     it('shows error message when save fails', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onSave = vi.fn().mockRejectedValue(new Error('Network error'));
       render(<TagModal {...defaultProps} onSave={onSave} />);
 
@@ -237,7 +237,7 @@ describe('TagModal', () => {
 
   describe('delete functionality', () => {
     it('calls onDelete when delete button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const tag = createMockTag();
       const onDelete = vi.fn().mockResolvedValue(undefined);
 
@@ -251,7 +251,7 @@ describe('TagModal', () => {
     });
 
     it('shows loading state while deleting', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const tag = createMockTag();
       let resolvePromise: () => void;
       const deletePromise = new Promise<void>(resolve => {
@@ -272,7 +272,7 @@ describe('TagModal', () => {
     });
 
     it('shows error message when delete fails', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const tag = createMockTag();
       const onDelete = vi.fn().mockRejectedValue(new Error('Delete failed'));
 
@@ -286,7 +286,7 @@ describe('TagModal', () => {
     });
 
     it('closes modal after successful delete', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const tag = createMockTag();
       const onClose = vi.fn();
       const onDelete = vi.fn().mockResolvedValue(undefined);
@@ -303,7 +303,7 @@ describe('TagModal', () => {
 
   describe('modal interactions', () => {
     it('closes when cancel button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       render(<TagModal {...defaultProps} onClose={onClose} />);
 
@@ -313,7 +313,7 @@ describe('TagModal', () => {
     });
 
     it('closes when clicking backdrop', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       render(<TagModal {...defaultProps} onClose={onClose} />);
 
@@ -323,7 +323,7 @@ describe('TagModal', () => {
     });
 
     it('does not close when clicking modal content', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       render(<TagModal {...defaultProps} onClose={onClose} />);
 
@@ -334,7 +334,7 @@ describe('TagModal', () => {
     });
 
     it('disables buttons during loading', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let resolvePromise: () => void;
       const savePromise = new Promise<void>(resolve => {
         resolvePromise = resolve;
@@ -357,7 +357,7 @@ describe('TagModal', () => {
     });
 
     it('resets form when reopening modal', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
 
       const { rerender } = render(<TagModal {...defaultProps} onClose={onClose} />);
