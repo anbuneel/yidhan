@@ -45,9 +45,10 @@ Status: PROPOSAL | ACTIVE | COMPLETE | SUPERSEDED
 Last verified: YYYY-MM-DD
 ```
 
-**At most two plans are ACTIVE**, enforced by `.githooks/pre-commit`. The cap is one by
-default; it is two today by deliberate exception (`DECISIONS.md`, 2026-09-07). Do not
-add a third — close one, or record why in `DECISIONS.md` and raise `MAX_ACTIVE_PLANS`.
+**One plan is ACTIVE**, enforced by `.githooks/pre-commit`. It was two while the
+documentation overhaul ran alongside the product ledger; that shipped, so the cap is
+back to one (`DECISIONS.md`, 2026-09-08). To open a second, close the first, or record
+why in `DECISIONS.md` and raise `MAX_ACTIVE_PLANS`.
 Intent shifts → the old plan flips to SUPERSEDED in the same commit that creates its
 replacement. Work ships → it flips to COMPLETE and moves to `docs/archive/`. A
 blocker's detail belongs in its GitHub issue; the plan links it and records only the
@@ -100,6 +101,10 @@ read the file whole.
 `npx vitest run src/services/<name>.test.ts`. Run `npm run check` once, before pushing,
 not after every edit.
 
+**A docs-only change needs `node scripts/sync-agents.mjs --check`, not `npm run check`.**
+That is the only gate it can fail. CI agrees: the `full-tests` job skips a push to `main`
+that does not touch `src/`.
+
 **Playwright is not in `npm run check`, but the suite does run in CI** — the `e2e` job
 runs `npm run e2e` on every PR, so a red spec blocks the merge. Still do not run
 `npm run e2e` by default; it is minutes. If you changed a flow it covers, run that spec
@@ -127,7 +132,8 @@ behaviour.
 ## Git workflow
 
 Feature work goes through a branch and a PR. Small, low-risk changes (typos, doc
-touch-ups) may go direct to main after `npm run check`.
+touch-ups) may go direct to main — after `npm run check`, or the sync check alone if
+the change is docs-only.
 
 `AGENTS.md` is generated from `CLAUDE.md` — never edit it directly. The pre-commit hook
 regenerates and stages it from the staged blob. Arm hooks once with
