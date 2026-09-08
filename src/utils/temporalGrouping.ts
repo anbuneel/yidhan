@@ -3,6 +3,49 @@ import type { Note } from '../types';
 // Chapter keys including pinned (which is handled separately from temporal)
 export type ChapterKey = 'pinned' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'earlier' | 'archive';
 
+/**
+ * Which timestamp decides the chapter a note falls into.
+ *
+ * `'updated'` is what the library has always done. `'created'` means an edit does not
+ * move a note: something written in March stays in the chapter its writing date earned,
+ * however often it is revised afterwards.
+ */
+export type ChapterBasis = 'updated' | 'created';
+
+/** How notes are ordered inside a chapter. */
+export type NoteSortKey = 'updated' | 'created' | 'title';
+
+export interface ChapterArrangement {
+  basis: ChapterBasis;
+  sort: NoteSortKey;
+}
+
+export const CHAPTER_BASIS_VALUES: readonly ChapterBasis[] = ['updated', 'created'];
+export const NOTE_SORT_VALUES: readonly NoteSortKey[] = ['updated', 'created', 'title'];
+
+/** The library's long-standing behaviour: chapters by last edited, newest edit first. */
+export const DEFAULT_ARRANGEMENT: ChapterArrangement = { basis: 'updated', sort: 'updated' };
+
+/** "Written" reads warmer than "Created" and means the same timestamp. */
+export const CHAPTER_BASIS_LABELS: Record<ChapterBasis, string> = {
+  updated: 'Edited',
+  created: 'Written',
+};
+
+export const NOTE_SORT_LABELS: Record<NoteSortKey, string> = {
+  updated: 'Edited',
+  created: 'Written',
+  title: 'Title',
+};
+
+export function isChapterBasis(value: unknown): value is ChapterBasis {
+  return CHAPTER_BASIS_VALUES.includes(value as ChapterBasis);
+}
+
+export function isNoteSortKey(value: unknown): value is NoteSortKey {
+  return NOTE_SORT_VALUES.includes(value as NoteSortKey);
+}
+
 // Chapter-aware waterline text (displayed below the last visible card row)
 export const WATERLINE_TEXT: Record<ChapterKey, (count: number) => string> = {
   pinned: (n) => `${n} more pinned...`,
@@ -89,12 +132,76 @@ export function getChapterForDate(date: Date, referenceTime?: number): Exclude<C
   return 'archive';
 }
 
+function isUsableDate(date: Date | null | undefined): date is Date {
+  return date instanceof Date && !Number.isNaN(date.getTime());
+}
+
+function timeOf(date: Date | null | undefined): number {
+  return isUsableDate(date) ? date.getTime() : 0;
+}
+
 /**
- * Group notes by their temporal chapter based on updatedAt timestamp
- * Pinned notes are extracted into a separate "Pinned" chapter that appears first
- * Returns only chapters that have notes (honest presence)
+ * The timestamp the chapter is decided by. A note whose basis date is missing or
+ * unparseable falls back to the other timestamp: an invalid date sorts as the epoch,
+ * so without the fallback choosing a basis would drop such a note into Archive.
  */
-export function groupNotesByChapter(notes: Note[]): ChapterGroup[] {
+function chapterDate(note: Note, basis: ChapterBasis): Date {
+  const preferred = basis === 'created' ? note.createdAt : note.updatedAt;
+  if (isUsableDate(preferred)) return preferred;
+
+  const fallback = basis === 'created' ? note.updatedAt : note.createdAt;
+  return isUsableDate(fallback) ? fallback : new Date(0);
+}
+
+/**
+ * Titles order A to Z, ignoring case and accents, with digits read as numbers so
+ * "Chapter 2" precedes "Chapter 10". An untitled note has no title to order by, so it
+ * goes last rather than heading the chapter.
+ */
+function compareTitles(a: Note, b: Note): number {
+  const left = (a.title ?? '').trim();
+  const right = (b.title ?? '').trim();
+  if (!left || !right) return left ? -1 : right ? 1 : 0;
+  return left.localeCompare(right, undefined, { sensitivity: 'base', numeric: true });
+}
+
+/**
+ * Order two notes by the reader's chosen key. Ties fall through to the newest edit and
+ * then the id, so duplicate titles and identical timestamps hold one stable order
+ * instead of shuffling between renders.
+ */
+export function compareNotes(a: Note, b: Note, sort: NoteSortKey): number {
+  const primary = sort === 'title'
+    ? compareTitles(a, b)
+    : timeOf(sort === 'created' ? b.createdAt : b.updatedAt)
+      - timeOf(sort === 'created' ? a.createdAt : a.updatedAt);
+  if (primary !== 0) return primary;
+
+  const byEdit = timeOf(b.updatedAt) - timeOf(a.updatedAt);
+  return byEdit !== 0 ? byEdit : a.id.localeCompare(b.id);
+}
+
+/**
+ * Group notes into temporal chapters, ordered inside each chapter by the reader's
+ * chosen key.
+ *
+ * `basis` picks the timestamp a chapter is decided by; `sort` picks the order within
+ * one. Pinned notes are extracted into a separate "Pinned" chapter that appears first
+ * and the basis never applies to them — a pinned note is pinned whichever timestamp is
+ * being read. The order within Pinned does follow `sort`, since Pinned is a chapter.
+ *
+ * Grouping only reorders: every note in, exactly once out, under any arrangement. It
+ * never filters, so a search result stays a search result whatever the reader chose.
+ *
+ * Returns only chapters that have notes (honest presence).
+ */
+export function groupNotesByChapter(
+  notes: Note[],
+  arrangement: Partial<ChapterArrangement> = {}
+): ChapterGroup[] {
+  const basis = arrangement.basis ?? DEFAULT_ARRANGEMENT.basis;
+  const sort = arrangement.sort ?? DEFAULT_ARRANGEMENT.sort;
+  const byChosenKey = (a: Note, b: Note) => compareNotes(a, b, sort);
   // Pre-calculate start of today to avoid doing it for every note
   const now = new Date();
   const startOfTodayTime = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -110,7 +217,7 @@ export function groupNotesByChapter(notes: Note[]): ChapterGroup[] {
     if (note.pinned) {
       pinnedNotes.push(note);
     } else {
-      const chapterKey = getChapterForDate(note.updatedAt, startOfTodayTime);
+      const chapterKey = getChapterForDate(chapterDate(note, basis), startOfTodayTime);
       chapterMap.get(chapterKey)?.push(note);
     }
   }
@@ -123,7 +230,7 @@ export function groupNotesByChapter(notes: Note[]): ChapterGroup[] {
     chapters.push({
       key: 'pinned',
       label: CHAPTER_LABELS.pinned,
-      notes: pinnedNotes,
+      notes: pinnedNotes.sort(byChosenKey),
       isPinned: true,
     });
   }
@@ -135,7 +242,7 @@ export function groupNotesByChapter(notes: Note[]): ChapterGroup[] {
       chapters.push({
         key,
         label: CHAPTER_LABELS[key],
-        notes: chapterNotes,
+        notes: chapterNotes.sort(byChosenKey),
       });
     }
   });

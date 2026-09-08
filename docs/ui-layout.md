@@ -236,6 +236,24 @@ Row 2: [Note Title]
 - Desktop shows 2 rows by default with expand/collapse if more tags exist
 - Edit button appears on hover (desktop only)
 
+## Arrange Row (above the chapters)
+
+Right-aligned inside the scrolling library, above the first chapter. It scrolls away
+with the notes rather than following the reader down the page.
+
+```
+                          Chapters by [Edited] [Written]   Notes by [Edited] [Written] [Title]
+```
+
+- **Chapters by** — which timestamp decides a note's chapter. `Edited` is the default;
+  `Written` means an edit does not move a note out of the chapter its writing date
+  earned.
+- **Notes by** — the order within a chapter.
+- Pinned notes are unaffected by the basis; they stay in Pinned under either choice.
+- Both choices are remembered per user, per device.
+- Hidden on the empty library, on a search that found nothing, and while the library is
+  still loading — there is nothing to arrange.
+
 ## Note Card
 
 ```

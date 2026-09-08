@@ -2,6 +2,7 @@ import type { RefObject } from 'react';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import type { Note } from '../types';
 import { ChapterSection } from './ChapterSection';
+import { LibraryArrangeBar } from './LibraryArrangeBar';
 import { ChapterNav } from './ChapterNav';
 import { TimeRibbon } from './TimeRibbon';
 import { PullToRefresh } from './PullToRefresh';
@@ -9,7 +10,11 @@ import { useTouchCapable, useMobileDetect } from '../hooks/useMobileDetect';
 import {
   groupNotesByChapter,
   getDefaultExpansionState,
+  DEFAULT_ARRANGEMENT,
+  type ChapterArrangement,
+  type ChapterBasis,
   type ChapterKey,
+  type NoteSortKey,
 } from '../utils/temporalGrouping';
 import { scrollRegionProps } from '../routing';
 
@@ -33,6 +38,11 @@ interface ChapteredLibraryProps {
   isSearching?: boolean;
   isLoading?: boolean;
   focusedNoteId?: string | null;
+  /** How chapters are grouped and ordered. Defaults to the long-standing behaviour. */
+  arrangement?: ChapterArrangement;
+  /** Supply both handlers to offer the reader the arrangement controls. */
+  onBasisChange?: (basis: ChapterBasis) => void;
+  onSortChange?: (sort: NoteSortKey) => void;
 }
 
 export function ChapteredLibrary({
@@ -48,6 +58,9 @@ export function ChapteredLibrary({
   isSearching = false,
   isLoading = false,
   focusedNoteId,
+  arrangement = DEFAULT_ARRANGEMENT,
+  onBasisChange,
+  onSortChange,
 }: ChapteredLibraryProps) {
   // Auto-detect compact mode based on viewport width (mobile = compact)
   const [isCompact, setIsCompact] = useState(() => {
@@ -71,11 +84,11 @@ export function ChapteredLibrary({
   // Detect mobile for gesture hint
   const isMobile = useMobileDetect();
 
-  // Group notes by chapter (pinned notes get their own chapter first)
-  // Assumes notes are already sorted by date (handled in App.tsx)
+  // Group notes by chapter (pinned notes get their own chapter first).
+  // Grouping owns the within-chapter order too, so keyboard order and card order agree.
   const chapters = useMemo(() => {
-    return groupNotesByChapter(notes);
-  }, [notes]);
+    return groupNotesByChapter(notes, arrangement);
+  }, [notes, arrangement]);
 
   // Get default expansion state based on total note count
   const defaultExpansion = useMemo(() => {
@@ -285,6 +298,14 @@ export function ChapteredLibrary({
       data-testid="library-view"
       {...scrollRegionProps}
     >
+      {onBasisChange && onSortChange && (
+        <LibraryArrangeBar
+          arrangement={arrangement}
+          onBasisChange={onBasisChange}
+          onSortChange={onSortChange}
+        />
+      )}
+
       {/* Render each non-empty chapter */}
       {chapters.map((chapter, chapterIndex) => (
         <ChapterSection

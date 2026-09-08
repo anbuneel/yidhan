@@ -34,7 +34,7 @@ that must land first.
 
 ## Next
 
-Three lanes, 8 items. Lanes A and D run in parallel on separate branches and own the files named in the handoff. Lanes B and C are complete and their items have moved to `docs/progress.md`; Lane C shipped in PR #213 and item 11, which items 50 and 51 needed, shipped in PR #203 — so Lane E is unblocked. Item 73 shipped from it in PR #227; the rest can be picked up whenever someone has the room. Merge order when A and D are both ready: D, A. Item 87 is the maintainer's own task, not a code lane.
+Three lanes, 7 items. Lanes A and D run in parallel on separate branches and own the files named in the handoff. Lanes B and C are complete and their items have moved to `docs/progress.md`; Lane C shipped in PR #213 and item 11, which items 50 and 51 needed, shipped in PR #203 — so Lane E is unblocked. Items 73 and 48 shipped from it; the rest can be picked up whenever someone has the room. Merge order when A and D are both ready: D, A. Item 87 is the maintainer's own task, not a code lane.
 
 ### Lane A · Editor fluency · `fix/editor-fluency` · runs in parallel
 
@@ -58,7 +58,6 @@ Three lanes, 8 items. Lanes A and D run in parallel on separate branches and own
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
 | 30 | Library | List view: one line per note, toggle in header, remembered per device | weeks |  | Toggle works; cards remain the default; 2,000 notes render without jank · E2E and the #80 fixture |
-| 48 | Library | Sort and chapter basis: last edited or created; within chapter by edited, created, title | days |  | Editing an old note can stay in its chapter when "created" is chosen · unit test on grouping |
 | 49 | Library | Card preview mask only when text overflows; cap age fade at 0.9 | days |  | Short previews fully legible; contrast on the Archive chapter passes AA · visual regression and axe |
 | 50 | Search | Query semantics: multi-term AND, quoted phrases, `tag:`, `is:pinned`, `before:`, `after:`; all matches highlighted | days | Needs #11 | `tag:journal before:2026-03 "exact phrase"` returns only notes matching all three · unit test per operator; operators listed in the `?` modal |
 | 51 | Search | In-memory index (MiniSearch or FlexSearch) with ranking and fuzziness, incremental rebuild; moved to a worker if the main thread shows it | days | Needs #11 | Title matches rank first; p95 under 200 ms at 10k notes · #80 fixture |

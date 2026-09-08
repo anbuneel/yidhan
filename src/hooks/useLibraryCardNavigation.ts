@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Note } from '../types';
-import { groupNotesByChapter } from '../utils/temporalGrouping';
+import { groupNotesByChapter, type ChapterArrangement } from '../utils/temporalGrouping';
 
 function isLibraryCardTarget(target: EventTarget | null, noteId: string | null): boolean {
   return target instanceof HTMLElement && target.dataset.libraryCardId === noteId;
@@ -12,6 +12,11 @@ function isLibraryBackgroundTarget(target: EventTarget | null): boolean {
 
 interface UseLibraryCardNavigationOptions {
   notes: Note[];
+  /**
+   * The library's arrangement. It has to be the same one the cards are rendered with,
+   * or the keyboard walks the notes in an order the reader cannot see.
+   */
+  arrangement?: ChapterArrangement;
   onOpen: (id: string) => void;
   onTogglePin: (id: string, pinned: boolean) => void;
   onDelete: (id: string) => void;
@@ -20,6 +25,7 @@ interface UseLibraryCardNavigationOptions {
 /** Keeps keyboard selection in the same chapter order readers see on screen. */
 export function useLibraryCardNavigation({
   notes,
+  arrangement,
   onOpen,
   onTogglePin,
   onDelete,
@@ -27,10 +33,10 @@ export function useLibraryCardNavigation({
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
 
   const navigableNotes = useMemo(
-    () => groupNotesByChapter(notes)
+    () => groupNotesByChapter(notes, arrangement)
       .flatMap((chapter) => chapter.notes)
       .filter((note) => !note.decryptionFailed),
-    [notes]
+    [notes, arrangement]
   );
 
   useEffect(() => {

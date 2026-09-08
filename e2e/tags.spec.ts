@@ -88,7 +88,7 @@ test.describe('Tags', () => {
       await tagPill.hover();
 
       // Click edit
-      await page.getByRole('button', { name: /edit/i }).first().click();
+      await page.getByRole('button', { name: 'Edit tag' }).first().click();
 
       // Update name
       await page.getByPlaceholder(/tag name/i).fill(newName);
@@ -106,7 +106,7 @@ test.describe('Tags', () => {
       // Edit tag
       const tagPill = page.getByRole('button', { name: new RegExp(tagName, 'i') });
       await tagPill.hover();
-      await page.getByRole('button', { name: /edit/i }).first().click();
+      await page.getByRole('button', { name: 'Edit tag' }).first().click();
 
       // Change color
       await page.getByRole('button', { name: /forest/i }).click();
@@ -126,7 +126,7 @@ test.describe('Tags', () => {
       // Edit tag
       const tagPill = page.getByRole('button', { name: new RegExp(tagName, 'i') });
       await tagPill.hover();
-      await page.getByRole('button', { name: /edit/i }).first().click();
+      await page.getByRole('button', { name: 'Edit tag' }).first().click();
 
       // Delete
       await page.getByRole('button', { name: /delete/i }).click();
