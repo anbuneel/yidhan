@@ -19,6 +19,57 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-08 — The in-memory search index stays on the main thread
+
+**Status:** Active
+
+**Why:** Item 51 says to add a Worker only after measurement shows the main thread is
+a problem. A local 10,000-note generator now lives beside the search tests; it does not
+pretend to be item 80's fixture, which has not been built. On this machine, 40 mixed
+queries measured 42.13 ms at p95 and 79.91 ms at the maximum. Building the index took
+306.98 ms, and reconciling one edited note and running its query took 11.13 ms. The
+benchmark excludes HTML-to-text sanitization because item 11 already owns and caches
+that cost; it measures the index work item 51 adds.
+
+Those numbers leave the 200 ms query budget clear and show that the incremental path is
+short. The hook therefore keeps synchronous query results and a component-owned index.
+The index contains plaintext title and content only in process memory. It is never
+exported or connected to localStorage, IndexedDB, or a network API. Persisting an
+encrypted index remains item 142.
+
+**Rejected:** A Worker now — it would add asynchronous lifecycle, message ordering, and
+plaintext copies across the thread boundary without fixing a measured latency problem.
+Move the same index behind a Worker only if browser measurements on real libraries show
+long main-thread tasks or the 200 ms p95 budget fails.
+
+---
+
+## 2026-09-08 — MiniSearch earns the search dependency
+
+**Status:** Active
+
+**Why:** Item 51 needs ranked title and content fields, controlled fuzziness, and exact
+incremental add, replace, and removal. MiniSearch supplies those primitives directly.
+It has no runtime dependencies, supports a per-field boost and edit-distance cutoff,
+and lets the hook remove the exact old document before adding its replacement. The app
+still places every title match ahead of content-only matches explicitly, then uses the
+library score within those tiers.
+
+The feature increases the production entry chunk by 19,638 bytes raw and 6,787 bytes
+gzip against the same `origin/main` build. That is a real runtime cost, but it replaces
+a linear scan with the ranking, prefix search, fuzziness, and mutable index this item
+requires. Fuzzy matching starts at four characters, is weighted below exact and prefix
+matches, and is capped at two edits. Quoted phrases stay exact.
+
+**Rejected:** FlexSearch — its strongest advantages are raw throughput, configurable
+tokenizers and encoders, and built-in Worker variants. The measured workload does not
+need a Worker, and its tokenizer/encoder approach would require more policy around
+field-result merging and typo tolerance than this search contract needs. A hand-built
+index was also rejected: it would save a small bundle addition by taking ownership of
+ranking and fuzzy-search correctness indefinitely.
+
+---
+
 ## 2026-09-08 — Chapter grouping owns the within-chapter order
 
 **Status:** Active

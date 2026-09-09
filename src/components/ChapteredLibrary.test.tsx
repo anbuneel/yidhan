@@ -366,6 +366,48 @@ describe('ChapteredLibrary', () => {
         { basis: 'updated', sort: 'updated' }
       );
     });
+
+    it('keeps search results in the relevance order supplied by the index', () => {
+      const titleMatch = createMockNote({ id: 'title-match', title: 'Harvest' });
+      const contentMatch = createMockNote({ id: 'content-match', content: '<p>Harvest</p>' });
+
+      render(
+        <ChapteredLibrary
+          {...defaultProps}
+          notes={[titleMatch, contentMatch]}
+          isSearching
+          isRankedSearch
+          searchQuery="harvest"
+          arrangement={{ basis: 'updated', sort: 'title' }}
+        />
+      );
+
+      expect(temporalGrouping.groupNotesByChapter).not.toHaveBeenCalled();
+      const resultSection = screen.getByTestId('chapter-search');
+      expect([...resultSection.querySelectorAll('[data-testid^="note-"]')]
+        .map((element) => element.getAttribute('data-testid')))
+        .toEqual(['note-title-match', 'note-content-match']);
+    });
+
+    it('keeps operator-only results in the existing chapter arrangement', () => {
+      const filteredNote = createMockNote({ id: 'pinned-filter', pinned: true });
+      vi.mocked(temporalGrouping.groupNotesByChapter).mockReturnValue([
+        { key: 'pinned', label: 'Pinned', notes: [filteredNote], isPinned: true },
+      ]);
+
+      render(
+        <ChapteredLibrary
+          {...defaultProps}
+          notes={[filteredNote]}
+          isSearching
+          searchQuery="is:pinned"
+        />
+      );
+
+      expect(temporalGrouping.groupNotesByChapter).toHaveBeenCalled();
+      expect(screen.getByTestId('chapter-pinned')).toBeInTheDocument();
+      expect(screen.queryByTestId('chapter-search')).not.toBeInTheDocument();
+    });
   });
 
   describe('arrange controls', () => {

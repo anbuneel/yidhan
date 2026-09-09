@@ -14,6 +14,7 @@ import {
   type ChapterArrangement,
   type ChapterBasis,
   type ChapterKey,
+  type LibrarySectionKey,
   type NoteSortKey,
 } from '../utils/temporalGrouping';
 import { scrollRegionProps } from '../routing';
@@ -36,6 +37,8 @@ interface ChapteredLibraryProps {
   onRefresh?: () => Promise<void>;
   searchQuery?: string;
   isSearching?: boolean;
+  isRankedSearch?: boolean;
+  searchMatchTerms?: ReadonlyMap<string, readonly string[]>;
   isLoading?: boolean;
   focusedNoteId?: string | null;
   /** How chapters are grouped and ordered. Defaults to the long-standing behaviour. */
@@ -56,6 +59,8 @@ export function ChapteredLibrary({
   onRefresh,
   searchQuery,
   isSearching = false,
+  isRankedSearch = false,
+  searchMatchTerms,
   isLoading = false,
   focusedNoteId,
   arrangement = DEFAULT_ARRANGEMENT,
@@ -84,11 +89,14 @@ export function ChapteredLibrary({
   // Detect mobile for gesture hint
   const isMobile = useMobileDetect();
 
-  // Group notes by chapter (pinned notes get their own chapter first).
-  // Grouping owns the within-chapter order too, so keyboard order and card order agree.
+  // Search ranking is global, so search results stay in one section. Chronological
+  // chapters would otherwise reorder a high-ranking older result below a newer one.
   const chapters = useMemo(() => {
+    if (isRankedSearch) {
+      return [{ key: 'search' as const, label: 'Search results', notes }];
+    }
     return groupNotesByChapter(notes, arrangement);
-  }, [notes, arrangement]);
+  }, [notes, arrangement, isRankedSearch]);
 
   // Get default expansion state based on total note count
   const defaultExpansion = useMemo(() => {
@@ -96,8 +104,8 @@ export function ChapteredLibrary({
   }, [notes.length]);
 
   // Track current chapter for navigation
-  const [currentChapter, setCurrentChapter] = useState<ChapterKey | null>(
-    chapters.length > 0 ? (chapters[0].key as ChapterKey) : null
+  const [currentChapter, setCurrentChapter] = useState<LibrarySectionKey | null>(
+    chapters.length > 0 ? chapters[0].key : null
   );
 
   // Intersection Observer for scroll detection
@@ -113,7 +121,7 @@ export function ChapteredLibrary({
             // Extract chapter key from element ID (format: "chapter-{key}")
             const chapterKey = entry.target.id.replace('chapter-', '');
             if (chapterKey) {
-              setCurrentChapter(chapterKey as ChapterKey);
+              setCurrentChapter(chapterKey as LibrarySectionKey);
             }
           }
         });
@@ -146,8 +154,9 @@ export function ChapteredLibrary({
 
   // Navigation chapters (for ChapterNav and TimeRibbon)
   const navChapters = useMemo(() => {
+    if (isRankedSearch) return [];
     return chapters.map((c) => ({ key: c.key as ChapterKey, label: c.label }));
-  }, [chapters]);
+  }, [chapters, isRankedSearch]);
 
   if (isLoading && notes.length === 0) {
     return (
@@ -311,17 +320,18 @@ export function ChapteredLibrary({
         <ChapterSection
           showGestureHint={isMobile && chapterIndex === 0}
           key={chapter.key}
-          chapterKey={chapter.key as ChapterKey}
+          chapterKey={chapter.key}
           label={chapter.label}
           notes={chapter.notes}
-          defaultExpanded={defaultExpansion[chapter.key as ChapterKey]}
-          isPinned={chapter.isPinned}
+          defaultExpanded={chapter.key === 'search' ? true : defaultExpansion[chapter.key]}
+          isPinned={chapter.key === 'search' ? false : chapter.isPinned}
           onNoteClick={onNoteClick}
           onRetryLockedNote={onRetryLockedNote ?? noop}
           onNoteDelete={onNoteDelete}
           onTogglePin={onTogglePin}
           isCompact={isCompact}
           searchQuery={searchQuery}
+          searchMatchTerms={searchMatchTerms}
           isSearching={isSearching}
           focusedNoteId={focusedNoteId}
         />
@@ -343,7 +353,7 @@ export function ChapteredLibrary({
       {/* Chapter Navigation - Desktop (right sidebar) */}
       <ChapterNav
         chapters={navChapters}
-        currentChapter={currentChapter}
+        currentChapter={currentChapter === 'search' ? null : currentChapter}
         onChapterClick={scrollToChapter}
       />
 
@@ -352,7 +362,7 @@ export function ChapteredLibrary({
         footerRef={footerRef}
         noteCount={notes.length}
         chapters={navChapters}
-        currentChapter={currentChapter}
+        currentChapter={currentChapter === 'search' ? null : currentChapter}
         onChapterClick={scrollToChapter}
       />
     </>

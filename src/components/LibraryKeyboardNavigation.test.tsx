@@ -28,6 +28,7 @@ function KeyboardLibrary({
   onOpen = vi.fn(),
   onTogglePin = vi.fn(),
   onDelete = vi.fn(),
+  isRankedSearch = false,
 }: {
   notes: Note[];
   arrangement?: ChapterArrangement;
@@ -36,10 +37,12 @@ function KeyboardLibrary({
   onOpen?: (id: string) => void;
   onTogglePin?: (id: string, pinned: boolean) => void;
   onDelete?: (id: string) => void;
+  isRankedSearch?: boolean;
 }) {
   const { focusedNoteId, handleLibraryCardKeyDown } = useLibraryCardNavigation({
     notes,
     arrangement,
+    isRankedSearch,
     onOpen,
     onTogglePin,
     onDelete,
@@ -67,6 +70,7 @@ function KeyboardLibrary({
         onTogglePin={onTogglePin}
         focusedNoteId={focusedNoteId}
         arrangement={arrangement}
+        isRankedSearch={isRankedSearch}
         onBasisChange={onBasisChange}
         onSortChange={onSortChange}
       />
@@ -132,6 +136,28 @@ describe('library keyboard navigation', () => {
 
     await user.keyboard('j');
     await waitFor(() => expect(card('Zebra thought')).toHaveAttribute('tabindex', '0'));
+  });
+
+  it('walks search results in relevance order instead of the library arrangement', async () => {
+    const user = userEvent.setup();
+    const rankedResults = [
+      createNote('zebra', 'Zebra title match'),
+      createNote('apple', 'Apple content match'),
+    ];
+
+    render(
+      <KeyboardLibrary
+        notes={rankedResults}
+        arrangement={{ basis: 'updated', sort: 'title' }}
+        isRankedSearch
+      />
+    );
+
+    await user.keyboard('{ArrowDown}');
+    await waitFor(() => expect(card('Zebra title match')).toHaveAttribute('tabindex', '0'));
+
+    await user.keyboard('j');
+    await waitFor(() => expect(card('Apple content match')).toHaveAttribute('tabindex', '0'));
   });
 
   it('leaves the arrange controls to their own keyboard behavior', async () => {

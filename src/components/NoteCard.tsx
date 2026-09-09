@@ -14,6 +14,7 @@ interface NoteCardProps {
   isCompact?: boolean;
   isDecorative?: boolean;
   searchQuery?: string;
+  searchMatchTerms?: readonly string[];
   isFocused?: boolean;
 }
 
@@ -25,6 +26,7 @@ export const NoteCard = memo(function NoteCard({
   isCompact = false,
   isDecorative = false,
   searchQuery,
+  searchMatchTerms,
   isFocused = false,
 }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -44,10 +46,13 @@ export const NoteCard = memo(function NoteCard({
   const compactPreview = plainText.slice(0, 80) + (plainText.length > 80 ? '...' : '');
   // Sanitized HTML preview preserves task list checkboxes, formatting structure
   const htmlPreview = useMemo(() => sanitizeHtml(note.content), [note.content]);
-  const searchTerms = useMemo(
-    () => searchQuery ? parseSearchQuery(searchQuery).textTerms : [],
+  const parsedSearchTerms = useMemo(
+    () => searchQuery
+      ? parseSearchQuery(searchQuery).textTerms.map(({ normalized }) => normalized)
+      : [],
     [searchQuery]
   );
+  const searchTerms = searchMatchTerms ?? parsedSearchTerms;
   const highlightedTitle = useMemo(() => {
     if (searchTerms.length === 0) return sanitizeText(note.title);
     return highlightSearchText(htmlToPlainText(note.title), searchTerms);
@@ -267,7 +272,7 @@ export const NoteCard = memo(function NoteCard({
       {/* Search results use the match snippets; ordinary cards keep their rich preview. */}
       {searchSnippet ? (
         <p
-          className="text-sm overflow-hidden"
+          className="search-snippet text-sm overflow-hidden"
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-secondary)',

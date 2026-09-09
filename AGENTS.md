@@ -257,10 +257,13 @@ re-renders; keep it that way. Layout and timings: `docs/ui-layout.md`.
 
 **Library** — search parses the query into metadata filters and a free-text remainder;
 `src/utils/searchQuery.ts` owns the grammar, `docs/ui-layout.md` lists the operators.
-**The plaintext cache is in memory only and is never persisted** — a persisted index is
-roadmap item 142, not an optimisation to add in passing. Progressive rendering suspends
-during search so all matches render at once; chapters force-expand. Search-empty ("No
-thoughts found") is deliberately distinct from library-empty ("Your notes await").
+Free text uses a component-owned MiniSearch index, reconciled synchronously when notes
+are created, edited, deleted, or become locked; title matches rank ahead of content.
+**The plaintext index is in memory only and is never persisted or exported** — a
+persisted encrypted index is roadmap item 142, not an optimisation to add in passing.
+Progressive rendering suspends during search so all matches render at once; chapters
+force-expand. Search-empty ("No thoughts found") is deliberately distinct from
+library-empty ("Your notes await").
 
 **Lazy chunks** — mid-session service worker activation can invalidate lazy chunk URLs.
 `lazyWithRetry` plus the `unhandledrejection` handler in `main.tsx` recover with one
