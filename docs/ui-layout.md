@@ -295,6 +295,15 @@ other and with free text.
 
 The `?` modal lists these under Library.
 
+### Results
+
+- A free-text search replaces the temporal chapters with **one ranked section**. Title
+  matches rank above content-only matches; relevance orders each tier.
+- An operator-only query — `is:pinned`, `tag:journal` with no words — keeps the normal
+  chapter arrangement. There is nothing to rank by.
+- Keyboard navigation follows the order the cards are in, so ranked results and arrow
+  keys agree.
+
 ## Note Card
 
 ```

@@ -257,8 +257,8 @@ re-renders; keep it that way. Layout and timings: `docs/ui-layout.md`.
 
 **Library** — search parses the query into metadata filters and a free-text remainder;
 `src/utils/searchQuery.ts` owns the grammar, `docs/ui-layout.md` lists the operators.
-Free text uses a component-owned MiniSearch index, reconciled synchronously when notes
-are created, edited, deleted, or become locked; title matches rank ahead of content.
+Free text uses a component-owned MiniSearch index, reconciled synchronously on create,
+edit, delete and lock — an index that lags the library returns notes it no longer holds.
 **The plaintext index is in memory only and is never persisted or exported** — a
 persisted encrypted index is roadmap item 142, not an optimisation to add in passing.
 Progressive rendering suspends during search so all matches render at once; chapters
