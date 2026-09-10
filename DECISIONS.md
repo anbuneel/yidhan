@@ -19,6 +19,41 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-10 — The landing page shows the product beside the promise
+
+**Status:** Active
+
+**Why:** Four landing pages have shipped since January and none turned a visitor's
+attention into a sentence about what Yidhan is. The archive blamed the first three on
+their arrangement — a headline beside a product card, the shape of every SaaS hero. The
+fourth removed the product entirely and led with mood, and it failed the same way. The
+common factor was never the layout. In every version the copy pitched a feeling and never
+said "notes", the card showed fiction, and the encryption promise arrived last and hedged.
+The fourth also revealed a plain textarea as its signature moment while the real editor
+sat one route away.
+
+This version names the product in the headline, carries both messages in the
+sub-headline — nothing to set up, locked on the device before it syncs — and renders the
+real editor beside them as a static picture under an overlay button, so the page shows the
+editor rather than imitating one. Every "Try writing" opens the Practice Space draft at
+every width; the account is asked for from inside the Practice Space, or from one link
+under the preview. Proof is one line of facts and the promise is stated once. The Practice
+Space starters became four short personal notes so the landing samples and the Practice
+Space agree about what a first note looks like.
+
+**Rejected:** A single centred column with the editor below the headline — it cannot hold
+a headline, a sub-headline, a button, a legible editor and a proof line in one 1440×900
+viewport without shrinking the editor, which is the one thing that must not shrink. A live
+editor in the hero — a textarea demonstrates nothing the real editor does not, and on a
+phone the keyboard fights any in-place transition; the one-tap route from item 45 stands.
+A full-bleed dark trust band, a proof rail with dividers and a "Why Yidhan" nav item — the
+elements that make a page read as a product site; the calm is in the chrome, not the
+columns. Deferring the privacy message below the fold — it is the answer to "why not the
+notes app already on the phone", and the unencrypted trial is disclosed once in the
+preview footer rather than by hedging the promise three times.
+
+---
+
 ## 2026-09-08 — Chapter grouping owns the within-chapter order
 
 **Status:** Active

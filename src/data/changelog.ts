@@ -7,6 +7,11 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.24', date: '2026-09-10', changes: [
+    { type: 'improvement', text: 'The landing page now says what Yidhan is in its first line, shows the real editor beside it, and states the privacy promise once. Try writing opens a Practice Space draft at every screen size instead of an in-page text box' },
+    { type: 'improvement', text: 'The Practice Space starter notes are now four short personal notes rather than a reading list, a recipe and a to-do list, and the landing page shows the same notes so what you see is what you open' },
+    { type: 'improvement', text: 'An empty note now begins with “Begin where you are.” as its first placeholder' },
+  ] },
   { version: '3.19.23', date: '2026-09-08', changes: [
     { type: 'feature', text: 'Library search now supports required words, exact phrases, tags, pinned notes, and inclusive before or after dates, with every text match highlighted' },
   ] },

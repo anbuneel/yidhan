@@ -137,7 +137,7 @@ base.describe('Addresses without an account', () => {
     async ({ page }) => {
       await page.goto('/faded');
 
-      await expect(page.getByRole('button', { name: /start writing/i }).first()).toBeVisible();
+      await expect(page.getByRole('button', { name: /^try writing$/i }).first()).toBeVisible();
     });
 
   /**

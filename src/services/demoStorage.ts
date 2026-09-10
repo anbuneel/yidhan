@@ -51,6 +51,12 @@ export const DEMO_STORAGE_KEY = 'yidhan-demo-state';
 export const DEMO_CONTENT_STORAGE_KEY = 'yidhan-demo-content';
 export const DEMO_STORAGE_VERSION = 1;
 
+/**
+ * The note shown in the landing page hero. It is a starter too, so the page and the
+ * Practice Space agree about what the first note looks like.
+ */
+export const HERO_STARTER_NOTE_ID = 'starter-saturday';
+
 const STARTER_NOTES: DemoNote[] = [
   {
     localId: 'starter-welcome',
@@ -63,40 +69,41 @@ const STARTER_NOTES: DemoNote[] = [
     updatedAt: Date.now(),
   },
   {
-    localId: 'starter-books',
-    title: 'Book Recommendations',
-    content: `<p>Books people keep telling me to read:</p>
-<ul>
-<li>Atomic Habits</li>
-<li>The Almanack of Naval Ravikant</li>
-<li>Four Thousand Weeks</li>
-</ul>
-<p>Started Four Thousand Weeks last night. The bit about how we'll never "get on top of everything" was oddly freeing.</p>`,
+    localId: HERO_STARTER_NOTE_ID,
+    title: 'An idea for Saturday',
+    content: `<p>Leave the morning unplanned.</p>
+<p>Walk to the market. Pick up something for lunch. Take the longer way home.</p>
+<p>Maybe that is enough.</p>`,
     pinned: false,
-    tagIds: ['tag-ideas'],
+    tagIds: [],
     createdAt: Date.now(),
     updatedAt: Date.now(),
   },
   {
-    localId: 'starter-recipe',
-    title: 'Recipe — Overnight Oats',
-    content: `<p>Equal parts oats and milk. Spoon of yogurt, pinch of salt, honey to taste. Mix, fridge overnight. Top with whatever fruit is around.</p>
-<p>The trick is the salt — makes everything else pop.</p>`,
-    pinned: false,
-    tagIds: ['tag-recipes'],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
-  {
-    localId: 'starter-weekend',
-    title: 'Weekend Plans',
-    content: `<ul>
-<li>Farmers market Saturday morning</li>
-<li>Fix the kitchen shelf (finally)</li>
-<li>Try that new coffee place on 5th</li>
-</ul>`,
+    localId: 'starter-say',
+    title: 'What I wanted to say',
+    content: `<p>I do not need an answer yet. I just need to put this into words before it turns into something else.</p>`,
     pinned: false,
     tagIds: ['tag-journal'],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    localId: 'starter-passage',
+    title: 'A passage worth keeping',
+    content: `<p>“Attention is the rarest and purest form of generosity.” — Simone Weil</p>
+<p>Something to come back to when the week gets loud.</p>`,
+    pinned: false,
+    tagIds: ['tag-reading'],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    localId: 'starter-train',
+    title: 'Tuesday, on the train',
+    content: `<p>Three things I keep circling: the flat, October, whether to say yes to the Sunday thing. Not deciding today.</p>`,
+    pinned: false,
+    tagIds: [],
     createdAt: Date.now(),
     updatedAt: Date.now(),
   },
@@ -153,7 +160,7 @@ function refreshSupersededStarterCopy(state: DemoState): boolean {
 const DEFAULT_TAGS: DemoTag[] = [
   { localId: 'tag-journal', name: 'Journal', color: 'terracotta', createdAt: Date.now() },
   { localId: 'tag-ideas', name: 'Ideas', color: 'gold', createdAt: Date.now() },
-  { localId: 'tag-recipes', name: 'Recipes', color: 'sage', createdAt: Date.now() },
+  { localId: 'tag-reading', name: 'Reading', color: 'sage', createdAt: Date.now() },
 ];
 
 function createDefaultState(): DemoState {

@@ -11,32 +11,20 @@ test.describe('Authentication', () => {
 
   test.describe('Landing Page', () => {
     test('shows landing page for unauthenticated users', async ({ page }) => {
-      await expect(page.getByRole('heading', { name: /begin where you are/i })).toBeVisible();
-      await expect(page.getByRole('button', { name: /start writing/i }).first()).toBeVisible();
+      await expect(page.getByRole('heading', { name: /a quiet home for your personal notes/i })).toBeVisible();
+      await expect(page.getByRole('button', { name: /^try writing$/i }).first()).toBeVisible();
       await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
     });
 
-    test('starts writing from the landing page', async ({ page }) => {
-      await page.getByRole('button', { name: /start writing/i }).first().click();
+    test('trying to write from the landing page reaches the Practice Space draft', async ({ page }) => {
+      await page.getByRole('button', { name: /^try writing$/i }).first().click();
 
-      const isMobileViewport = (page.viewportSize()?.width ?? 0) <= 768;
-      if (isMobileViewport) {
-        // Item 45 changed where this lands. It used to reach the Practice Space
-        // *library* — a button that says start writing, answered with a list of notes.
-        // It now opens a draft with the caret already in it, and the address drops back
-        // to `/demo` once that note exists. `e2e/practice-space.spec.ts` owns the
-        // detail; this asserts only that the landing CTA still arrives somewhere you
-        // can write.
-        await expect(page).toHaveURL(/\/demo/);
-        await expect(page.getByTestId('note-editor')).toBeVisible();
-        return;
-      }
-
-      const landingEditor = page.getByRole('textbox', { name: /your writing/i });
-      await expect(landingEditor).toBeVisible();
-      await landingEditor.fill('Testing the landing editor');
-      await expect(page.locator('.landing-seal')).toBeVisible();
-      await expect(page.getByRole('button', { name: /continue in yidhan/i })).toBeVisible();
+      // The same at every width: the page shows the editor, it no longer imitates one.
+      // A draft opens with the caret in it and the address drops back to `/demo` once
+      // that note exists. `e2e/practice-space.spec.ts` owns the detail; this asserts
+      // only that the landing CTA arrives somewhere you can write.
+      await expect(page).toHaveURL(/\/demo/);
+      await expect(page.getByTestId('note-editor')).toBeVisible();
     });
   });
 
@@ -94,7 +82,7 @@ test.describe('Authentication', () => {
   test.describe('Signup Flow', () => {
     test('switches to signup mode', async ({ page }) => {
       await page.getByRole('button', { name: /sign in/i }).click();
-      await page.getByRole('button', { name: /create.*account|sign up/i }).click();
+      await page.getByRole('dialog').getByRole('button', { name: /create.*account|sign up/i }).click();
 
       await expect(page.getByRole('heading', { name: /create.*account|sign up/i })).toBeVisible();
       await expect(page.getByLabel(/^email$/i)).toBeVisible();
@@ -103,7 +91,7 @@ test.describe('Authentication', () => {
 
     test('shows password requirements', async ({ page }) => {
       await page.getByRole('button', { name: /sign in/i }).click();
-      await page.getByRole('button', { name: /create.*account|sign up/i }).click();
+      await page.getByRole('dialog').getByRole('button', { name: /create.*account|sign up/i }).click();
 
       // Password hint should be visible (shows "8+ characters")
       await expect(page.getByText(/8\+?\s*characters/i)).toBeVisible();
@@ -111,11 +99,11 @@ test.describe('Authentication', () => {
 
     test('validates password length', async ({ page }) => {
       await page.getByRole('button', { name: /sign in/i }).click();
-      await page.getByRole('button', { name: /create.*account|sign up/i }).click();
+      await page.getByRole('dialog').getByRole('button', { name: /create.*account|sign up/i }).click();
 
       await page.getByLabel(/^email$/i).fill('newuser@example.com');
       await page.getByLabel(/^password$/i).fill('short');
-      await page.getByRole('button', { name: /sign up|create/i }).click();
+      await page.getByRole('dialog').getByRole('button', { name: /sign up|create/i }).click();
 
       // Password hint shows "8+ characters"
       await expect(page.getByText(/8\+?\s*characters/i)).toBeVisible();
@@ -149,7 +137,7 @@ test.describe('Authentication', () => {
       await logoutUser(page);
 
       // Should be back on landing page
-      await expect(page.getByRole('button', { name: /start writing/i })).toBeVisible();
+      await expect(page.getByRole('button', { name: /^try writing$/i })).toBeVisible();
     });
   });
 

@@ -282,3 +282,13 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   visible free-text match is highlighted; locked notes remain in an unfiltered
   library but cannot match text they could not decrypt. The plaintext cache
   remains memory-only and is never written to localStorage or IndexedDB.
+- **2026-09-10** — Landing page rebuilt around a two-column first screen: the
+  headline names the product, the sub-headline carries both the no-setup and the
+  encrypted-before-sync messages, and a static rendering of the real editor sits
+  beside them with a starter note in it. Every "Try writing" opens the Practice
+  Space draft at every width; the in-page textarea, the scroll cue, the gallery,
+  the lock illustration and the scroll-reveal observer are gone. Proof is one line
+  of four facts; trust is a plain section with a maker line. Practice Space
+  starters replaced by four short personal notes, one of which is the hero note,
+  so the landing samples and the Practice Space agree. Closes the roadmap's
+  unnumbered landing redesign item.

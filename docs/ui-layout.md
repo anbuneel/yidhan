@@ -2,88 +2,73 @@
 
 Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detailed layout work.
 
-## Landing Page (Hero Becomes Editor)
+## Landing Page (Product Beside the Promise)
 
-**Desktop (>=768px), initial hero:**
+**Desktop (>=1024px), first screen:**
 ```
 +--------------------------------------------------------------------------+
 | Yidhan                                               [theme] [Sign In]   |
 +--------------------------------------------------------------------------+
+|                                  | +-----------------------------------+ |
+|  A quiet home                    | | An idea for Saturday              | |
+|  for your                        | | + Add tag                Just now | |
+|  personal notes.                 | | [B I </> H1 List ... Quote Code ] | |
+|                                  | |                                   | |
+|  Capture an idea ... Nothing to  | | Leave the morning unplanned.      | |
+|  set up.                         | |                                   | |
+|  Each note is locked on your     | | Walk to the market. ...           | |
+|  device before it syncs ...      | |                                   | |
+|  Not even us.                    | | Maybe that is enough.|            | |
+|                                  | |-----------------------------------| |
+|  [ Try writing ]  Explore sample | | (Saved here)  A practice draft... | |
+|                   notes ->       | |        [Create an account to keep] | |
+|  Free to use. No account needed. | +-----------------------------------+ |
 |                                                                          |
-|                         Begin where you are.                             |
-|                                                                          |
-|   A quiet space for the half-formed thought. No folders. No organizing.  |
-|      Nothing to learn -- just room to think.                              |
-|                                                                          |
-|                         [ Start writing ]                                |
-|                         No account needed to start.                      |
-|                         Explore the Practice Space ->                    |
-|                                                                          |
-|                         Or see how it feels                               |
-|                                  v                                       |
+|   Encrypted before it syncs . Works offline . Free and open source .     |
+|   Export any time                                                        |
 +--------------------------------------------------------------------------+
 ```
 
-**Desktop, after Start writing:**
+**Below the first screen:**
 ```
 +--------------------------------------------------------------------------+
-| Yidhan                                               [theme] [Sign In]   |
-+--------------------------------------------------------------------------+
+| Small thoughts, worth keeping.          Write a little. Come back when   |
+|                                         you want. Open any of these ...  |
+| [What I wanted to say] [A passage worth keeping] [Tuesday, on the train] |
 |                                                                          |
-|               +--------------------------------------------------+       |
-|               |                                                  |       |
-|               |  Begin where you are...                          |       |
-|               |                                                  |       |
-|               |                                                  |       |
-|               |  Locked before it leaves your hands.             |       |
-|               |                         [Continue in Yidhan ->]  |       |
-|               +--------------------------------------------------+       |
+| Your words stay yours.        | Notes are encrypted on your device ...   |
+|                               | How the locking works ->                 |
+|                               | ------------------------------------     |
+|                               | Yidhan is built and looked after by one  |
+|                               | person. It will never carry ads ...      |
 |                                                                          |
+|                  Start with one note.  [ Try writing ]                   |
+|                                                                          |
+|        Changelog . Roadmap . GitHub . Privacy . Terms . Support          |
 +--------------------------------------------------------------------------+
 ```
 
-**Gallery second act:**
-```
-+--------------------------------------------------------------------------+
-| What accumulates                                                         |
-| Your thoughts, finding their own shape.                                  |
-|                    [real starter note card masonry]                       |
-|                                                                          |
-| What stays yours                                                         |
-| Locked before it leaves your hands.                 [vault mark]          |
-| [Start writing]                                                          |
-| Changelog . Roadmap . GitHub . Privacy . Terms . Support                 |
-+--------------------------------------------------------------------------+
-```
+**Mobile (<1024px):** the same blocks stacked. The intro comes first, the
+manuscript preview peeks under the fold, the proof facts wrap, and the sample
+cards stack in one column. Below 768px the primary button spans the width.
 
-**Mobile (<768px):**
-```
-+---------------------------------+
-| Yidhan          [theme] [Sign In]|
-+---------------------------------+
-|                                 |
-|       Begin where you are.      |
-|                                 |
-|   A quiet space for the         |
-|   half-formed thought.          |
-|                                 |
-|       [ Start writing ]         |  -> routes to /demo
-|       No account needed         |
-|       Explore Practice Space -> |
-|                                 |
-|   (gallery follows below)       |
-|                                 |
-+---------------------------------+
-```
-
-- Desktop primary CTA reveals a lightweight `contentEditable` manuscript in place.
-- The first typed draft is saved to `yidhan-demo-content` before signup and migrated by `App.tsx` into an encrypted "My first note" after auth/unlock.
-- Hidden hero controls and scroll cue leave the tab order after the editor reveal.
-- Mobile primary CTA routes directly to `/demo` to avoid soft-keyboard viewport shifts.
-- Gallery uses two museum-spaced proof pieces: the starter-note grid followed by the encryption/offline/open-source promise and closing CTA.
-- Gallery starter notes mirror the Practice Space seed notes.
-- Chapters with one or two visible notes cap their masonry columns and center the group; full note cards size to their preview content.
-- Auth opens as modal overlay from `Continue in Yidhan`.
+- The manuscript is a static rendering of the real editor (title, tag row, toolbar
+  labels, body, saved chip) with the `starter-saturday` note in it. An invisible
+  overlay button covers it; clicking anywhere on the page opens the Practice Space
+  draft. It is a picture of the editor, not an imitation of one: there is no
+  in-page textarea and nothing is written to `yidhan-demo-content` from here.
+- Every "Try writing" (hero, preview overlay, closing line) routes to `/demo/new` at
+  every width. The account comes from inside the Practice Space ("Keep these notes")
+  or from the preview's "Create an account to keep and sync", which opens sign-up.
+- "Explore sample notes" is a real link to `/demo`; a plain click is routed in-app,
+  a modified click is left to the browser.
+- The sample cards are the Practice Space starters minus the pinned welcome and the
+  hero note, rendered with the real `NoteCard` in decorative mode. Each has an
+  overlay button that opens the Practice Space.
+- Proof facts: "Encrypted before it syncs" and "How the locking works" open the
+  security page; "Free and open source" opens GitHub; the other two are plain text.
+- No scroll cue, no scroll-reveal observer, no lock illustration. The hero has one
+  entrance fade and the caret blinks; both stop under `prefers-reduced-motion`.
 
 ## Auth Modal (OAuth-First Layout)
 

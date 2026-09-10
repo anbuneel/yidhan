@@ -26,7 +26,7 @@ const CURSOR_SAVE_THROTTLE_MS = 2000; // Save cursor position at most every 2 se
 
 // Animated placeholder messages (rotate every 30 seconds when empty)
 const PLACEHOLDER_MESSAGES = [
-  'Start writing...',
+  'Begin where you are.',
   'What\'s on your mind?',
   'Type / for commands',
 ];
