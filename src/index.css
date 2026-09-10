@@ -1366,13 +1366,16 @@ body::before {
   margin-top: 0.25rem;
   margin-bottom: 0.5rem;
   min-height: 1.5rem;
-  /* The row is a stacking context: `.focus-mode-target` sets `will-change: opacity`.
-     So the tag picker and the writing-details popover inside it cannot out-rank
-     the row's siblings with their own z-index — they were drawn behind the sticky
-     toolbar (10) and behind the positioned note body. Lift the row above both and
-     keep it under the sticky header (20). */
-  position: relative;
-  z-index: 12;
+}
+
+/* `.focus-mode-target` sets `will-change: opacity`, which makes the row a stacking
+   context and traps the tag picker (z 50) and the writing-details popover (z 25)
+   inside it: they painted behind the sticky toolbar (10), the positioned note body
+   and, on phones, the fixed bottom toolbar (30). The row's fade does not need the
+   hint — the browser promotes an opacity transition on its own — so drop it here
+   and let the popovers' z-index count in the editor's own stacking context. */
+.editor-metadata-row.focus-mode-target {
+  will-change: auto;
 }
 
 .editor-metadata-row .editor-timestamps {
