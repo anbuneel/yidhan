@@ -19,6 +19,42 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-10 — The editor's header title waits for the scroll, and its width floor moves into JS
+
+**Status:** Active
+
+**Why:** The note title rendered twice (ledger item 83). The header copy was hidden by
+`hidden sm:inline`, so a phone in portrait was fine and everything from 640px up was
+not: a phone in landscape, a small tablet, and every desktop sitting at the top of a
+note showed the title twice.
+
+The cheaper fix was to hide the header copy on mobile through `useMobileDetect()`
+instead of the CSS breakpoint. It was rejected. It swaps one width test for another and
+leaves the desktop duplication in place, which is the same defect at a width nobody
+called mobile.
+
+The header copy is a scroll-to-top button. It has nothing to say while the title it
+scrolls to is on screen, so it now appears only once the editable title has passed under
+the header. Its `display` is written straight to the node from a rAF-throttled scroll
+handler, the same pattern as the manuscript glow, because scrolling the editor must not
+re-render it. Focus mode is checked in the same expression: it strips the chrome, and a
+fix for a doubled title must not put chrome back.
+
+The 640px floor survives, but as a term in that expression rather than a `sm:` class.
+Below it the header is already logo, save status, delete, theme and avatar, which leaves
+far less than the 200px the breadcrumb reserves — it would overflow the row, and
+WhisperBack already offers scrolling back at every width. Leaving the floor in CSS would have meant two owners of one
+question, which is how the original defect read: a class that answered "is there room?"
+being used to answer "is this a duplicate?".
+
+Scroll is not the only thing that moves a title. A rotation into landscape crosses the
+width floor without scrolling, and the resume chip and the remote-update banner are in
+flow above the writing area, so showing one carries the title back under the reader's
+eye at an unchanged scroll position. The handler therefore listens for resize and
+watches the scroll container's own children, not just scroll.
+
+---
+
 ## 2026-09-10 — List view goes back to the roadmap unbuilt
 
 **Status:** Active

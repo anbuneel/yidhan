@@ -291,3 +291,23 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   noise. The plaintext index is component-owned memory and makes no storage or
   network writes. A generated 10,000-note test measured 42.13 ms p95 across 40
   mixed queries, with no claim that the unbuilt item 80 fixture exists.
+- **2026-09-10** — The note title stops rendering twice in the editor — ledger item 83.
+  The header breadcrumb copy is a scroll-to-top button, so it now appears only once the
+  editable title has scrolled under the header. It used to be gated only by a
+  `hidden sm:inline` breakpoint, which left both titles on screen from 640px up: a phone
+  in landscape, a small tablet, and every desktop sitting at the top of a note. The
+  640px floor stays — a phone header has no room for a breadcrumb, and WhisperBack
+  already scrolls back — but it moved into the same expression as the scroll test, so
+  one place decides whether the header title shows. Visibility is written straight to
+  the node from a rAF-throttled scroll handler, like the manuscript glow, so scrolling
+  still causes no re-renders; the handler also listens for resize, because rotating a
+  phone into landscape crosses the floor without scrolling, and watches the scroll
+  container's children, because the resume chip and the remote-update banner sit above
+  the writing area in flow and move the title without either event. Focus mode never brings it
+  back, and an untitled note shows one "Untitled", not two. The item's other half,
+  `h-screen` to `100dvh`, already shipped with #219 and is asserted in `Editor.test.tsx`.
+
+  **Not done:** the item's "done when" asks for a real-device check that iOS Safari's
+  bars no longer clip the toolbar. That check belongs to item 81, the cross-browser
+  matrix, which is unbuilt and still on `docs/roadmap.md`. There is no matrix to run, so
+  the device check is outstanding, not passed.
