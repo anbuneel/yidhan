@@ -7,6 +7,10 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.25', date: '2026-09-10', changes: [
+    { type: 'improvement', text: 'The landing page’s first screen now appears before the app has finished loading, in your theme, so a shared link opens to words rather than a blank page' },
+    { type: 'improvement', text: 'Links to Yidhan now unfurl with the new tagline and card' },
+  ] },
   { version: '3.19.24', date: '2026-09-10', changes: [
     { type: 'improvement', text: 'The landing page now says what Yidhan is in its first line, shows the real editor beside it, and states the privacy promise once. Try writing opens a Practice Space draft at every screen size instead of an in-page text box' },
     { type: 'improvement', text: 'The Practice Space starter notes are now four short personal notes rather than a reading list, a recipe and a to-do list, and the landing page shows the same notes so what you see is what you open' },

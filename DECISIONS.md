@@ -19,6 +19,32 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-10 — A static first screen in the shell, not a prerender
+
+**Status:** Active
+
+**Why:** The app mounts into an empty root, so a share link opened to a blank page until
+the whole bundle had arrived and run. Roadmap item 60's answer is to prerender the public
+routes and hydrate, and it is a weeks-long item because hydration has to agree with two
+things that live only in the browser: the theme, and whether the visitor is signed in.
+Launch needed the first second fixed now. So `index.html` carries a static copy of the
+landing's first screen, styled by an inline block that mirrors the landing CSS and both
+themes, and a tiny same-origin script runs before paint to set the theme the way
+`useAppTheme` would and to hide the shell on any path but `/` or when a Supabase
+session key exists. React's root render replaces the shell's children, so there is no
+hydration and nothing to keep in sync at runtime; the only coupling is copy and CSS
+values, which the shell's comment says to keep in step. The script is a file rather than
+inline because the Content Security Policy allows only same-origin scripts, and a hash
+would have to change with every edit.
+
+**Rejected:** Prerendering with hydration now — the mismatch risk on theme and session is
+the whole of item 60's cost, and it is not worth carrying before launch. A loading
+spinner in the shell — it fixes the blank page by showing a different nothing. Showing the
+shell on every route without JavaScript — it does, and that is accepted: a visitor with
+scripts off cannot use the app anyway, and the shell at least says what Yidhan is.
+
+---
+
 ## 2026-09-10 — The landing page shows the product beside the promise
 
 **Status:** Active

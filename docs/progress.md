@@ -292,3 +292,10 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   starters replaced by four short personal notes, one of which is the hero note,
   so the landing samples and the Practice Space agree. Closes the roadmap's
   unnumbered landing redesign item.
+- **2026-09-10** — Launch hygiene for the landing page. The title tag, description
+  and share tags carry one message, the share image is regenerated with the new
+  tagline and its address is versioned so cached cards refresh. A static copy of
+  the first screen now lives in `index.html`, painted before the bundle and
+  replaced by React on mount; `public/boot.js` sets the theme first and hides the
+  shell off the home path or when a session exists. Roadmap item 60's full
+  prerender and JavaScript budget remain open.

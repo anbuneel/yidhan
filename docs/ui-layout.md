@@ -64,6 +64,11 @@ cards stack in one column. Below 768px the primary button spans the width.
   overlay button that opens the Practice Space.
 - Proof facts: "Encrypted before it syncs" and "How the locking works" open the
   security page; "Free and open source" opens GitHub; the other two are plain text.
+- Before the bundle arrives, `index.html` carries a static copy of the first screen
+  (the intro column, a plain manuscript and the proof line) styled by an inline
+  block that mirrors the landing CSS and both themes. `public/boot.js` runs first: it
+  sets `data-theme` the way `useAppTheme` would, and hides the shell on any path but
+  `/` or when a Supabase session key exists. React replaces the shell on mount.
 - No scroll cue, no scroll-reveal observer, no lock illustration. The hero has one
   entrance fade and the caret blinks; both stop under `prefers-reduced-motion`.
 
