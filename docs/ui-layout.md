@@ -38,9 +38,6 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 |                                                                          |
 | Your words stay yours.        | Notes are encrypted on your device ...   |
 |                               | How the locking works ->                 |
-|                               | ------------------------------------     |
-|                               | Yidhan is built and looked after by one  |
-|                               | person. It will never carry ads ...      |
 |                                                                          |
 |                  Start with one note.  [ Try writing ]                   |
 |                                                                          |

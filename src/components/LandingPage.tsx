@@ -241,11 +241,6 @@ export function LandingPage({
           <button type="button" onClick={onSecurityClick} className="landing-link focus-ring">
             How the locking works →
           </button>
-          <div className="landing-hairline" aria-hidden="true" />
-          <p className="landing-section-body landing-maker">
-            Yidhan is built and looked after by one person. It will never carry ads, tracking,
-            streaks or notifications.
-          </p>
         </div>
       </section>
 
@@ -583,8 +578,6 @@ export function LandingPage({
           text-decoration: none;
         }
         .landing-link:hover { text-decoration: underline; }
-        .landing-hairline { width: 100%; height: 1px; background: color-mix(in srgb, var(--glass-border) 60%, transparent); }
-        .landing-maker { font-size: 0.98rem; }
 
         .landing-close {
           display: flex; flex-wrap: wrap; align-items: center; justify-content: center;

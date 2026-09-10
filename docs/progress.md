@@ -288,7 +288,7 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   beside them with a starter note in it. Every "Try writing" opens the Practice
   Space draft at every width; the in-page textarea, the scroll cue, the gallery,
   the lock illustration and the scroll-reveal observer are gone. Proof is one line
-  of four facts; trust is a plain section with a maker line. Practice Space
+  of four facts; trust is a plain section. Practice Space
   starters replaced by four short personal notes, one of which is the hero note,
   so the landing samples and the Practice Space agree. Closes the roadmap's
   unnumbered landing redesign item.
