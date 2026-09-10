@@ -19,6 +19,38 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-10 — List view goes back to the roadmap unbuilt
+
+**Status:** Active
+
+**Why:** Item 30 — a one-line-per-note list view with a header toggle — was the last
+item in Lane E and the only one left that was not blocked on the maintainer. It was
+deferred rather than started, on the grounds that it makes the app more complicated.
+
+A second layout is not one feature. Every library feature now has to work in both:
+temporal chapters, keyboard navigation, the preview mask and age fade, ranked search
+results, and the arrange controls — five things that shipped in the last two days
+alone. The plan itself expected the cost: item 99 exists to virtualize the list once
+someone measures 2,000 notes, which reads as an admission that item 30 ships something
+slow and fixes it later.
+
+Nothing in the product said a list view was wanted. `PRODUCT.md` describes a calm
+surface, and the cards are that surface. Item 87 — the validation cohort of 8 to 12
+writers — is the mechanism for finding out what readers actually want, and it is now
+unblocked. Building a second layout before asking would be answering a question nobody
+had put.
+
+So it returns to `docs/roadmap.md` with a start condition rather than a number: when the
+cohort asks for one. Items 98 and 99 keep depending on it and stay deferred behind it.
+
+**Rejected:** Building it now because it was already in the plan — being in the plan is
+not evidence, and the plan's own rules say order changes when a real writer or a
+measurement says so. Refusing it permanently in `PRODUCT.md` — this is a "not now", not a
+principle; a writer with two thousand notes may well want a denser view, and that is
+exactly what the cohort would surface.
+
+---
+
 ## 2026-09-08 — The in-memory search index stays on the main thread
 
 **Status:** Active

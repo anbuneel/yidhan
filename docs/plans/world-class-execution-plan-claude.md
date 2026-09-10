@@ -34,15 +34,14 @@ that must land first.
 
 ## Next
 
-Three items across three code lanes, plus item 87, which is the maintainer's own task.
+Two items across two code lanes, plus item 87, which is the maintainer's own task.
+Both remaining items are blocked on the maintainer, not on code.
 
-Lanes group related work. They are not branches: each item gets its own branch off `main`,
-which is what items 43, 48 and 49 did. Anything in a lane can be picked up whenever
-someone has the room.
+Lanes group related work. They are not branches: each item gets its own branch off `main`.
 
-Lanes B and C are complete and their items have moved to `docs/progress.md`. Lane C
-shipped in PR #213, and item 11 — which items 50 and 51 needed — shipped in PR #203, so
-Lane E is unblocked; items 48, 49, 50, 51 and 73 have already shipped from it.
+Lanes B, C and E are closed. B and C shipped. E shipped items 48, 49, 50, 51 and 73; its
+last item — 30, list view — went back to `docs/roadmap.md` rather than being built
+(`DECISIONS.md`, 2026-09-10).
 
 ### Lane A · Editor fluency
 
@@ -55,12 +54,6 @@ Lane E is unblocked; items 48, 49, 50, 51 and 73 have already shipped from it.
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
 | 153 | Testing | Verify the "done when" tests for items 6, 8, and 18 (killed-tab recovery, cross-device latency, authenticated backup restore); closes #210 | days | Item 37 shipped the fixture and the CI job. Still needs the maintainer to provision the test account and add the five repository secrets, or the authenticated tests skip. | Each of the three tests runs in CI and passes; a later `docs/progress.md` entry corrects the #201, #202, #204 entries · CI log |
-
-### Lane E · Library and search
-
-| # | Area | Item | Effort | Needs / start when | Done when |
-|---|------|------|--------|--------------------|-----------|
-| 30 | Library | List view: one line per note, toggle in header, remembered per device | weeks |  | Toggle works; cards remain the default; 2,000 notes render without jank · E2E and the #80 fixture |
 
 ### Maintainer
 
