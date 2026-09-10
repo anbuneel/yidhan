@@ -44,16 +44,16 @@ async function seedStaleStarter(page: Page) {
   }, OLD_WELCOME_CONTENT);
 }
 
-/** The landing hero routes to the Practice Space below 768px; above it, it reveals
- *  the in-place editor instead. Only the viewport decides, so only the viewport is
- *  overridden here — a device preset would force a new worker. */
-test.describe('Start writing on a phone', () => {
+/** "Try writing" opens the Practice Space draft at every width. A phone viewport is
+ *  still used here because the soft keyboard is what the one-tap path exists for.
+ *  Only the viewport is overridden — a device preset would force a new worker. */
+test.describe('Try writing on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test('one tap reaches an editable draft with the caret in it', async ({ page }) => {
     await page.goto('/');
 
-    await page.getByRole('button', { name: /start writing/i }).first().click();
+    await page.getByRole('button', { name: /^try writing$/i }).first().click();
 
     // The Practice Space, already in a note — not its library.
     await expect(page.getByTestId('note-editor')).toBeVisible();
@@ -64,7 +64,7 @@ test.describe('Start writing on a phone', () => {
   test('the arrival intent is consumed, so a refresh does not open a second draft',
     async ({ page }) => {
       await page.goto('/');
-      await page.getByRole('button', { name: /start writing/i }).first().click();
+      await page.getByRole('button', { name: /^try writing$/i }).first().click();
       await expect(page.getByTestId('note-editor')).toBeVisible();
 
       // The address drops back to /demo once the note exists.
@@ -87,7 +87,7 @@ test.describe('Start writing on a phone', () => {
 
   test('typing in the arrival draft keeps the words', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /start writing/i }).first().click();
+    await page.getByRole('button', { name: /^try writing$/i }).first().click();
     await expect(page.getByTestId('note-editor')).toBeVisible();
 
     await page.getByPlaceholder(/untitled/i).fill('On the train');

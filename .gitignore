@@ -94,3 +94,7 @@ start-yidhan.bat
 
 # Tool scratch output (impeccable critiques)
 .impeccable/
+
+# The *.txt rule above must not swallow published content: security.txt (RFC 9116).
+!public/.well-known/
+!public/.well-known/security.txt

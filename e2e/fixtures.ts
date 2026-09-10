@@ -133,7 +133,7 @@ export async function logoutUser(page: Page): Promise<void> {
   await page.getByRole('menuitem', { name: /sign out/i }).click();
 
   // Wait for landing page
-  await expect(page.getByRole('button', { name: /start writing/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^try writing$/i }).first()).toBeVisible();
 }
 
 /**

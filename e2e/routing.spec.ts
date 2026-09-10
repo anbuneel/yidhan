@@ -137,7 +137,7 @@ base.describe('Addresses without an account', () => {
     async ({ page }) => {
       await page.goto('/faded');
 
-      await expect(page.getByRole('button', { name: /start writing/i }).first()).toBeVisible();
+      await expect(page.getByRole('button', { name: /^try writing$/i }).first()).toBeVisible();
     });
 
   /**
@@ -146,6 +146,23 @@ base.describe('Addresses without an account', () => {
    * port that fails silently — the page still builds, the link still renders, and the
    * address simply 404s. This is the test that would have caught that.
    */
+  /**
+   * The security page says the contact address is published at
+   * `/.well-known/security.txt`. For a while that was a claim without a file: the
+   * SPA rewrite answered with the app and the visitor met the 404 page. The file is
+   * a real static asset; this asserts it is served as one.
+   */
+  base('security.txt is a real file, not the app shell', async ({ page }) => {
+    const response = await page.request.get('/.well-known/security.txt');
+
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-type']).toMatch(/text\/plain/);
+    const body = await response.text();
+    expect(body).toMatch(/^Contact: mailto:/m);
+    expect(body).toMatch(/^Expires: \d{4}-\d{2}-\d{2}T/m);
+    expect(body).not.toContain('<html');
+  });
+
   base('the threat model has an address, reached from /privacy', async ({ page }) => {
     await page.goto('/privacy');
     await page.getByRole('button', { name: /security page/i }).click();

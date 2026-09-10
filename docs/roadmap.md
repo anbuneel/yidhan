@@ -179,7 +179,6 @@ must satisfy; the "done when" below is the summary, that document is the detail.
 | 109 | Reading settings: text size (three steps), line length, body typeface; expose Washi and Mori | days |  | Settings persist per device and survive a refresh · E2E |
 | 110 | In-product hints: one per first three notes; empty search suggests an operator; no tour | days |  | Hints dismiss forever and never reappear after sign-in elsewhere · E2E |
 | 124 | Task tests for long titles, dense tags, RTL, Tamil and CJK input, zoom, real virtual keyboards | days |  | Each fixture renders without clipping or overlap · visual regression |
-| — | Landing page redesign: remove the inline demo, surface the Practice Space CTA, add trust signals | days |  |
 | — | App icon and OG image as shippable branding assets | days |  |
 
 ### Onboarding

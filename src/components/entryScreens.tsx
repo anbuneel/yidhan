@@ -177,6 +177,7 @@ export function renderEntryScreen({
           onThemeToggle={onThemeToggle}
           onDemoClick={onDemoClick}
           onDemoDraftClick={onDemoDraftClick}
+          onSecurityClick={nav.onSecurityClick}
           onChangelogClick={nav.onChangelogClick}
           onRoadmapClick={nav.onRoadmapClick}
           onPrivacyClick={nav.onPrivacyClick}

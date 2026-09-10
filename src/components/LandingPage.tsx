@@ -1,22 +1,26 @@
-import { useState, useRef, useEffect, useCallback, useMemo, type MouseEvent } from 'react';
+import { useMemo, type MouseEvent } from 'react';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { HeaderShell } from './HeaderShell';
-import { createDemoStarterPreviewState, DEMO_CONTENT_STORAGE_KEY } from '../services/demoStorage';
+import { createDemoStarterPreviewState, HERO_STARTER_NOTE_ID } from '../services/demoStorage';
 import { NoteCard } from './NoteCard';
 import type { Note, Tag, Theme } from '../types';
 
 interface LandingPageProps {
+  /** Opens sign-up. Reached from the preview's "keep and sync" link; the primary
+   *  action goes to the Practice Space instead, and the account comes from there. */
   onStartWriting: () => void;
   onSignIn: () => void;
   theme: Theme;
   onThemeToggle: () => void;
+  /** The Practice Space library, where the sample notes live. */
   onDemoClick: () => void;
   /**
-   * The Practice Space, opened straight into an empty note. On a phone the in-place
-   * hero reveal fights the keyboard (viewport shift), so "Start writing" routes here
-   * instead — one tap to a blinking caret rather than one tap to a library (item 45).
+   * The Practice Space opened straight into an empty note with the caret in it
+   * (item 45). Every "Try writing" on the page goes here, at every width: the page
+   * shows the editor, it no longer imitates one.
    */
   onDemoDraftClick: () => void;
+  onSecurityClick: () => void;
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
   onPrivacyClick: () => void;
@@ -24,13 +28,23 @@ interface LandingPageProps {
   onSupportClick: () => void;
 }
 
-const isMobileViewport = () =>
-  typeof window !== 'undefined' &&
-  window.matchMedia?.('(max-width: 768px)').matches === true;
+const GITHUB_URL = 'https://github.com/anbuneel/yidhan';
 
-const prefersReducedMotion = () =>
-  typeof window !== 'undefined' &&
-  window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+/** Only a plain left-click is routed in-app; modified clicks keep the link's own behaviour. */
+const isPlainClick = (event: MouseEvent<HTMLAnchorElement>) =>
+  !event.defaultPrevented &&
+  event.button === 0 &&
+  !event.metaKey &&
+  !event.altKey &&
+  !event.ctrlKey &&
+  !event.shiftKey;
+
+/** Labels of the real editor toolbar, in its order. Decorative: the preview is a picture. */
+const TOOLBAR_LABELS = [
+  'B', 'I', '</>', 'H1', 'List', 'Undo', 'Redo', 'Link', 'U', 'S', 'Mark', 'H2', 'H3',
+  '1.List', 'Task', 'Quote', 'Code', '···',
+] as const;
+const TOOLBAR_DIMMED = new Set(['Undo', 'Redo']);
 
 export function LandingPage({
   onStartWriting,
@@ -39,6 +53,7 @@ export function LandingPage({
   onThemeToggle,
   onDemoClick,
   onDemoDraftClick,
+  onSecurityClick,
   onChangelogClick,
   onRoadmapClick,
   onPrivacyClick,
@@ -46,335 +61,196 @@ export function LandingPage({
   onSupportClick,
 }: LandingPageProps) {
   const { isInstallable, isInstalled, triggerInstall } = useInstallPrompt();
-  const previewNotes = useMemo<Note[]>(() => {
+
+  // The sample cards are the Practice Space's own starters, so "open" shows the same
+  // note there. The pinned welcome and the note already in the hero are left out.
+  const sampleNotes = useMemo<Note[]>(() => {
     const demoState = createDemoStarterPreviewState();
     const tagsById = new Map<string, Tag>(
       demoState.tags.map((tag) => [
         tag.localId,
-        {
-          id: tag.localId,
-          name: tag.name,
-          color: tag.color,
-          createdAt: new Date(tag.createdAt),
-        },
+        { id: tag.localId, name: tag.name, color: tag.color, createdAt: new Date(tag.createdAt) },
       ])
     );
 
-    return demoState.notes.map((note) => ({
-      id: note.localId,
-      title: note.title,
-      content: note.content,
-      createdAt: new Date(note.createdAt),
-      updatedAt: new Date(note.updatedAt),
-      tags: note.tagIds
-        .map((tagId) => tagsById.get(tagId))
-        .filter((tag): tag is Tag => Boolean(tag)),
-      pinned: note.pinned,
-      deletedAt: null,
-      syncStatus: 'synced',
-    }));
+    return demoState.notes
+      .filter((note) => !note.pinned && note.localId !== HERO_STARTER_NOTE_ID)
+      .map((note) => ({
+        id: note.localId,
+        title: note.title,
+        content: note.content,
+        createdAt: new Date(note.createdAt),
+        updatedAt: new Date(note.updatedAt),
+        tags: note.tagIds
+          .map((tagId) => tagsById.get(tagId))
+          .filter((tag): tag is Tag => Boolean(tag)),
+        pinned: note.pinned,
+        deletedAt: null,
+        syncStatus: 'synced',
+      }));
   }, []);
 
-  // The hero quietly becomes a real writing surface on desktop. On phones we
-  // route to the Practice Space instead — the in-place reveal fights the mobile
-  // keyboard (viewport shift), so we reserve the signature moment for desktop.
-  const [isWriting, setIsWriting] = useState(false);
-  const [hasWritten, setHasWritten] = useState(false);
-  const [draftSaveError, setDraftSaveError] = useState(false);
-  const landingRootRef = useRef<HTMLDivElement>(null);
-  const editableRef = useRef<HTMLTextAreaElement>(null);
-  const hasEditedDraftRef = useRef(false);
-  const focusTimeoutRef = useRef<number | null>(null);
-  const closeStartTimeoutRef = useRef<number | null>(null);
-
-  const enterWriting = useCallback(() => {
-    const activeElement = document.activeElement;
-    if (
-      activeElement instanceof HTMLElement &&
-      landingRootRef.current?.contains(activeElement)
-    ) {
-      activeElement.blur();
-    }
-
-    setIsWriting(true);
-    if (focusTimeoutRef.current !== null) {
-      window.clearTimeout(focusTimeoutRef.current);
-    }
-    const focusDelay = prefersReducedMotion() ? 0 : 360;
-    focusTimeoutRef.current = window.setTimeout(() => {
-      editableRef.current?.focus();
-      focusTimeoutRef.current = null;
-    }, focusDelay);
-  }, []);
-
-  const handleStartWriting = () => {
-    if (isMobileViewport()) {
-      onDemoDraftClick();
-      return;
-    }
-    enterWriting();
-  };
-
-  const handleCloseStart = () => {
-    if (isMobileViewport()) {
-      onDemoDraftClick();
-      return;
-    }
-    const reducedMotion = prefersReducedMotion();
-    window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
-    if (closeStartTimeoutRef.current !== null) {
-      window.clearTimeout(closeStartTimeoutRef.current);
-    }
-    const revealDelay = reducedMotion ? 0 : 520;
-    closeStartTimeoutRef.current = window.setTimeout(() => {
-      enterWriting();
-      closeStartTimeoutRef.current = null;
-    }, revealDelay);
-  };
-
-  const getDraftText = () => {
-    const el = editableRef.current;
-    return (el?.value || '').trim();
-  };
-
-  const handleInput = () => {
-    const text = getDraftText();
-    hasEditedDraftRef.current = true;
-    setHasWritten(text.length > 0);
-    setDraftSaveError(false);
-  };
-
-  const saveDraftBeforeAuth = () => {
-    const text = getDraftText();
-
-    try {
-      if (!text) {
-        if (hasEditedDraftRef.current) {
-          localStorage.removeItem(DEMO_CONTENT_STORAGE_KEY);
-        }
-        setDraftSaveError(false);
-        return true;
-      }
-
-      localStorage.setItem(DEMO_CONTENT_STORAGE_KEY, text);
-      setDraftSaveError(false);
-      return true;
-    } catch (error) {
-      console.warn('Failed to save landing draft before signup:', error);
-      setDraftSaveError(true);
-      return false;
-    }
-  };
-
-  const handleContinue = () => {
-    if (saveDraftBeforeAuth()) {
-      onStartWriting();
-    }
-  };
-
-  const handleSignIn = () => {
-    setDraftSaveError(false);
-    onSignIn();
-  };
-
-  const handleDemoClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (
-      event.defaultPrevented ||
-      event.button !== 0 ||
-      event.metaKey ||
-      event.altKey ||
-      event.ctrlKey ||
-      event.shiftKey
-    ) {
-      return;
-    }
+  const handleDemoLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!isPlainClick(event)) return;
     event.preventDefault();
     onDemoClick();
   };
 
-  // Scroll-reveal for the gallery "second act".
-  useEffect(() => {
-    const root = landingRootRef.current;
-    if (!root) return;
-
-    const els = Array.from(root.querySelectorAll<HTMLElement>('.landing-reveal'));
-    if (!('IntersectionObserver' in window)) {
-      els.forEach((el) => el.classList.add('in'));
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('in');
-            io.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.18 }
-    );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (focusTimeoutRef.current !== null) {
-        window.clearTimeout(focusTimeoutRef.current);
-      }
-      if (closeStartTimeoutRef.current !== null) {
-        window.clearTimeout(closeStartTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const hiddenHeroTabIndex = isWriting ? -1 : undefined;
-
   return (
-    <div ref={landingRootRef} className="landing-canvas">
-      <HeaderShell theme={theme} onThemeToggle={onThemeToggle} onSignIn={handleSignIn} />
+    <div className="landing-canvas">
+      <HeaderShell theme={theme} onThemeToggle={onThemeToggle} onSignIn={onSignIn} />
 
-      {/* ─── Hero fold — quiet, and it becomes the editor ─── */}
-      <section className={`landing-hero${isWriting ? ' writing' : ''}`}>
-        <div className="landing-stack">
-          {/* Marketing prose */}
-          <div className="landing-prose" aria-hidden={isWriting}>
-            <h1 className="landing-headline">
-              Begin where you <em>are.</em>
-            </h1>
-            <p className="landing-sub">
-              A quiet space for the half-formed thought.<br />
-              No folders. No organizing. Nothing to learn — just room to think.
-            </p>
-            <button
-              type="button"
-              onClick={handleStartWriting}
-              className="landing-cta focus-ring"
-              tabIndex={hiddenHeroTabIndex}
-            >
-              Start writing
+      {/* ─── First screen: the product named, the promise stated, the editor shown ─── */}
+      <section className="landing-hero">
+        <div className="landing-intro">
+          <h1 className="landing-headline">A quiet home for your personal notes.</h1>
+          <p className="landing-sub">
+            Capture an idea, think something through, or keep a passage worth returning to.
+            Nothing to set up.
+          </p>
+          <p className="landing-sub">
+            Each note is locked on your device before it syncs, so nobody else can read it.
+            Not even us.
+          </p>
+          <div className="landing-actions">
+            <button type="button" onClick={onDemoDraftClick} className="landing-cta focus-ring">
+              Try writing
             </button>
-            <p className="landing-micro">No account needed to start.</p>
-            <a
-              href="/demo"
-              onClick={handleDemoClick}
-              className="landing-demo-link focus-ring"
-              tabIndex={hiddenHeroTabIndex}
-            >
-              Explore the Practice Space
+            <a href="/demo" onClick={handleDemoLinkClick} className="landing-demo-link focus-ring">
+              Explore sample notes
               <span className="landing-demo-arrow" aria-hidden="true">→</span>
             </a>
           </div>
-
-          {/* The real writing surface, revealed in the hero's place (desktop) */}
-          <div className="landing-hero-editor-wrap" aria-hidden={!isWriting}>
-            <div className="landing-hero-editor">
-              <div className="landing-hero-glow" aria-hidden="true" />
-              <textarea
-                ref={editableRef}
-                className="landing-hero-doc"
-                aria-multiline="true"
-                aria-label="Your writing"
-                placeholder="Begin where you are..."
-                spellCheck={isWriting}
-                data-empty={!hasWritten}
-                onInput={handleInput}
-                readOnly={!isWriting}
-              />
-              <div className="landing-hero-foot">
-                <span className={`landing-seal${hasWritten ? ' show' : ''}`}>
-                  <span className="landing-seal-dot" aria-hidden="true" />
-                  Saved here, not encrypted. Sign up to encrypt your notes.
-                </span>
-                {hasWritten && (
-                  <button
-                    type="button"
-                    onClick={handleContinue}
-                    className="landing-continue focus-ring show"
-                  >
-                    Continue in Yidhan →
-                  </button>
-                )}
-              </div>
-              {draftSaveError && (
-                <p className="landing-draft-error" role="alert">
-                  This browser blocked local saving. Copy your words before continuing.
-                </p>
-              )}
-            </div>
-          </div>
+          <p className="landing-micro">Free to use. No account needed to try.</p>
         </div>
 
-        {!isWriting && (
-          <a
-            className="landing-scrollcue focus-ring"
-            href="#landing-library"
-          >
-            <span>Or see how it feels</span>
-            <span className="landing-scrollcue-arrow" aria-hidden="true">↓</span>
-          </a>
-        )}
-      </section>
-
-      {/* ─── Gallery — the honest "second act": the real product ─── */}
-      <div className="landing-gallery">
-        {/* What accumulates — the real product, first beat below the fold */}
-        <section className="landing-piece-wide" id="landing-library">
-          <div className="landing-wide-inner landing-reveal">
-            <div className="landing-caption">
-              <p className="landing-kicker">What accumulates</p>
-              <h2 className="landing-piece-title">Your thoughts, gathered like pages.</h2>
-              <p className="landing-piece-body">
-                Notes settle into a quiet, asymmetric arrangement — no rigid grid, no pressure
-                to organize. Tag them, or don&rsquo;t. They wait for you, exactly as you left
-                them.
-              </p>
+        {/* The manuscript as the Practice Space renders it. A picture of the editor, not
+            an imitation of one: clicking anywhere on it opens the real thing. */}
+        <div className="landing-manuscript">
+          <div className="landing-manuscript-glow" aria-hidden="true" />
+          <button
+            type="button"
+            onClick={onDemoDraftClick}
+            className="landing-manuscript-open focus-ring"
+            aria-label="Try writing in the Practice Space"
+          />
+          <div className="landing-manuscript-page">
+            <p className="landing-manuscript-title">An idea for Saturday</p>
+            <div className="landing-manuscript-meta" aria-hidden="true">
+              <span className="landing-manuscript-tag">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Add tag
+              </span>
+              <span>Just now</span>
             </div>
-            <div className="landing-grid" aria-hidden="true">
-              {previewNotes.map((note) => (
-                <div key={note.id} className="landing-note-card-wrap">
-                  <NoteCard
-                    note={note}
-                    onClick={() => undefined}
-                    onDelete={() => undefined}
-                    onTogglePin={() => undefined}
-                    isDecorative
-                  />
-                </div>
+            <div className="landing-manuscript-divider" aria-hidden="true" />
+            <div className="landing-manuscript-toolbar" aria-hidden="true">
+              {TOOLBAR_LABELS.map((label) => (
+                <span
+                  key={label}
+                  className={`landing-tb${TOOLBAR_DIMMED.has(label) ? ' dim' : ''}`}
+                  data-label={label}
+                >
+                  {label}
+                </span>
               ))}
             </div>
-          </div>
-        </section>
-
-        {/* What stays yours */}
-        <section className="landing-piece landing-reveal">
-          <div className="landing-caption">
-            <p className="landing-kicker">What stays yours</p>
-            <h2 className="landing-piece-title">Locked before it leaves your hands.</h2>
-            <p className="landing-piece-body">
-              After signup and vault setup, every word is encrypted on your device before it syncs — so it reaches your
-              other screens, but never ours in a form we can read. It works offline, and the
-              code is open for anyone to check.
-            </p>
-            <div className="landing-piece-cta">
-              <button type="button" onClick={handleCloseStart} className="landing-cta focus-ring">
-                Start writing
-              </button>
-              <p className="landing-micro">
-                No account needed to try it. Practice drafts stay here without encryption.
+            <div className="landing-manuscript-text">
+              <p>Leave the morning unplanned.</p>
+              <p>Walk to the market. Pick up something for lunch. Take the longer way home.</p>
+              <p>
+                Maybe that is enough.
+                <span className="landing-caret" aria-hidden="true" />
               </p>
             </div>
           </div>
-          <div className="landing-vault" aria-hidden="true">
-            <span className="landing-vault-ring" />
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-              <rect x="5" y="11" width="14" height="9" rx="2.2" />
-              <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-              <circle cx="12" cy="15.5" r="1.4" fill="currentColor" stroke="none" />
-            </svg>
+          <div className="landing-manuscript-foot">
+            <span className="landing-saved">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12l5 5L20 7" />
+              </svg>
+              Saved here
+            </span>
+            <span className="landing-manuscript-note">
+              A practice draft. It stays on this device and is not encrypted.
+            </span>
+            <button type="button" onClick={onStartWriting} className="landing-keep focus-ring">
+              Create an account to keep and sync →
+            </button>
           </div>
-        </section>
+        </div>
+      </section>
+
+      {/* ─── Proof: one line, stated once ─── */}
+      <div className="landing-proof">
+        <button type="button" onClick={onSecurityClick} className="landing-fact focus-ring">
+          Encrypted before it syncs
+        </button>
+        <span className="landing-proof-dot" aria-hidden="true">·</span>
+        <span className="landing-fact-plain">Works offline</span>
+        <span className="landing-proof-dot" aria-hidden="true">·</span>
+        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="landing-fact focus-ring">
+          Free and open source
+        </a>
+        <span className="landing-proof-dot" aria-hidden="true">·</span>
+        <span className="landing-fact-plain">Export any time</span>
       </div>
+
+      {/* ─── Sample notes: three uses, each opens in the Practice Space ─── */}
+      <section className="landing-section" aria-labelledby="landing-samples-title">
+        <div className="landing-section-head">
+          <h2 id="landing-samples-title" className="landing-h2">Small thoughts, worth keeping.</h2>
+          <p className="landing-section-body">
+            Write a little. Come back when you want.
+            <br />
+            Open any of these in the editor and change it.
+          </p>
+        </div>
+        <div className="landing-samples">
+          {sampleNotes.map((note) => (
+            <div key={note.id} className="landing-sample">
+              <NoteCard
+                note={note}
+                onClick={() => undefined}
+                onDelete={() => undefined}
+                onTogglePin={() => undefined}
+                isDecorative
+              />
+              <button
+                type="button"
+                onClick={onDemoClick}
+                className="landing-sample-open focus-ring"
+                aria-label={`Open “${note.title}” in the Practice Space`}
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── Trust: the promise once, then the exits ─── */}
+      <section className="landing-section landing-trust" aria-labelledby="landing-trust-title">
+        <h2 id="landing-trust-title" className="landing-h2">Your words stay yours.</h2>
+        <div className="landing-trust-body">
+          <p className="landing-section-body">
+            Notes are encrypted on your device before they sync. The server keeps ciphertext it
+            cannot read, and neither can we. Export your notes any time. Read the source. Leave
+            whenever you want.
+          </p>
+          <button type="button" onClick={onSecurityClick} className="landing-link focus-ring">
+            How the locking works →
+          </button>
+        </div>
+      </section>
+
+      {/* ─── Closing action ─── */}
+      <section className="landing-close">
+        <p className="landing-close-line">Start with one note.</p>
+        <button type="button" onClick={onDemoDraftClick} className="landing-cta focus-ring">
+          Try writing
+        </button>
+      </section>
 
       {/* ─── Footer nav ─── */}
       <nav className="landing-footer">
@@ -386,12 +262,7 @@ export function LandingPage({
           Roadmap
         </button>
         <span aria-hidden="true">·</span>
-        <a
-          href="https://github.com/anbuneel/yidhan"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="landing-nav-link focus-ring"
-        >
+        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="landing-nav-link focus-ring">
           GitHub
         </a>
         <span aria-hidden="true">·</span>
@@ -439,51 +310,48 @@ export function LandingPage({
           overflow-x: hidden;
         }
 
-        /* ─── Hero ─── */
+        /* ─── First screen ─── */
         .landing-hero {
-          position: relative;
-          min-height: calc(100vh - 4.5rem);
-          min-height: calc(100dvh - 4.5rem);
           display: grid;
-          place-items: center;
-          text-align: center;
-          padding: 2rem clamp(1.4rem, 5vw, 3rem) 4rem;
-          background: radial-gradient(
-            ellipse 70% 60% at 50% 44%,
-            color-mix(in srgb, var(--color-accent) 7%, var(--color-bg-primary) 93%) 0%,
-            var(--color-bg-primary) 62%
-          );
-        }
-        .landing-stack {
-          display: grid;
-          width: min(680px, 100%);
-        }
-        .landing-stack > * { grid-area: 1 / 1; }
-
-        /* Marketing prose */
-        .landing-prose {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 2.5rem;
+          align-items: center;
+          width: 100%;
+          max-width: 1440px;
+          margin: 0 auto;
+          padding: 2rem clamp(1.25rem, 3.5vw, 3rem) 0;
           animation: landing-fade-up 0.7s var(--ease-out-quint, ease-out) backwards;
-          transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1), filter 0.7s ease;
         }
+        @media (min-width: 1024px) {
+          .landing-hero {
+            grid-template-columns: minmax(0, 30rem) minmax(0, 1fr);
+            gap: clamp(3rem, 5vw, 4.5rem);
+            padding-top: 3.5rem;
+          }
+        }
+        .landing-intro { display: flex; flex-direction: column; align-items: flex-start; }
         .landing-headline {
           font-family: var(--font-display);
           font-weight: 300;
-          font-size: 4.75rem;
-          line-height: 1.03;
+          font-size: clamp(2.75rem, 4.6vw, 4rem);
+          line-height: 1.05;
           letter-spacing: 0;
-          margin: 0 0 1.6rem;
+          margin: 0 0 1.5rem;
           text-wrap: balance;
           color: var(--color-text-primary);
         }
-        .landing-headline em { font-style: italic; color: var(--color-accent); font-weight: 400; }
         .landing-sub {
           font-family: var(--font-body);
           font-weight: 300;
-          font-size: 1.1rem;
-          line-height: 1.7;
+          font-size: clamp(1.05rem, 1.2vw, 1.15rem);
+          line-height: 1.65;
           color: var(--color-text-secondary);
-          max-width: 38rem;
-          margin: 0 auto 2.4rem;
+          max-width: 30rem;
+          margin: 0 0 0.85rem;
+        }
+        .landing-actions {
+          display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem;
+          margin-top: 1.4rem;
         }
         .landing-cta {
           font-family: var(--font-body);
@@ -506,14 +374,11 @@ export function LandingPage({
         .landing-micro {
           margin: 1.1rem 0 0;
           font-family: var(--font-body);
-          font-size: 0.76rem;
+          font-size: 0.8rem;
           color: var(--color-text-tertiary);
         }
         .landing-demo-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.3rem;
-          margin-top: 1.6rem;
+          display: inline-flex; align-items: center; gap: 0.3rem;
           font-family: var(--font-body);
           font-size: 0.92rem;
           color: var(--color-text-tertiary);
@@ -525,76 +390,109 @@ export function LandingPage({
         .landing-demo-arrow { display: inline-block; transition: transform 0.2s ease; }
         .landing-demo-link:hover .landing-demo-arrow { transform: translateX(4px); }
 
-        /* Hero editor (revealed) — matches the real manuscript surface */
-        .landing-hero-editor-wrap {
-          opacity: 0;
-          transform: translateY(10px);
-          pointer-events: none;
-          transition: opacity 0.8s ease 0.12s, transform 0.8s cubic-bezier(0.22,1,0.36,1) 0.12s;
-        }
-        .landing-hero-editor {
+        /* ─── The manuscript preview ─── */
+        .landing-manuscript {
           position: relative;
-          text-align: left;
-          background: var(--color-bg-primary);
+          padding: clamp(1.5rem, 3vw, 2.25rem) clamp(1.25rem, 3vw, 2.75rem) clamp(1.25rem, 2.5vw, 1.9rem);
+          background: var(--color-manuscript-bg);
           border: 1px solid var(--glass-border);
           border-radius: var(--radius-card);
           box-shadow: var(--shadow-manuscript);
-          padding: clamp(2.2rem, 4.5vw, 3.4rem) clamp(1.8rem, 4.5vw, 3.8rem);
-          min-height: 300px;
           overflow: hidden;
           transition: border-color 0.25s ease, box-shadow 0.25s ease;
         }
-        .landing-hero-editor:focus-within {
+        .landing-manuscript:has(.landing-manuscript-open:hover) {
           border-color: var(--color-accent-muted);
-          box-shadow:
-            var(--shadow-manuscript),
-            0 0 0 2px color-mix(in srgb, var(--color-accent) 26%, transparent);
         }
-        .landing-hero-glow {
+        .landing-manuscript-glow {
           position: absolute; inset: 0; pointer-events: none;
-          background: radial-gradient(ellipse 80% 50% at 50% 36%, var(--color-accent-glow) 0%, transparent 70%);
+          background: radial-gradient(ellipse 80% 50% at 50% 42%, color-mix(in srgb, var(--color-accent) 12%, transparent) 0%, transparent 70%);
         }
-        .landing-hero-doc {
-          position: relative; z-index: 1;
-          display: block;
-          width: 100%;
-          font-family: var(--font-body);
-          font-weight: 400;
-          font-size: 1.2rem;
-          line-height: 1.75;
-          background: transparent;
-          border: 0;
+        .landing-manuscript-open {
+          position: absolute; inset: 0; z-index: 2;
+          background: transparent; border: 0; padding: 0; margin: 0;
+          border-radius: inherit;
+          cursor: text;
+        }
+        .landing-manuscript-page { position: relative; z-index: 1; pointer-events: none; }
+        .landing-manuscript-title {
+          font-family: var(--font-display);
+          font-weight: 600;
+          font-size: clamp(1.75rem, 2.4vw, 2.25rem);
+          line-height: 1.15;
+          letter-spacing: -0.02em;
           color: var(--color-text-primary);
-          outline: none;
-          caret-color: var(--color-accent);
-          min-height: 5.5em;
-          resize: none;
-          white-space: pre-wrap;
-          overflow-wrap: anywhere;
-          word-break: break-word;
+          margin: 0;
         }
-        .landing-hero-doc::placeholder {
-          color: var(--color-text-tertiary);
-          font-style: italic;
-          font-weight: 400;
-          opacity: 1;
-        }
-        .landing-hero-foot {
-          position: relative; z-index: 1;
-          display: flex; align-items: center; justify-content: space-between;
-          gap: 1rem; margin-top: 1.6rem;
-        }
-        .landing-seal {
+        .landing-manuscript-meta {
+          display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+          margin: 0.35rem 0 0.5rem; min-height: 1.5rem;
           font-family: var(--font-body);
-          font-size: 0.82rem; letter-spacing: 0.04em;
+          font-size: 0.75rem;
           color: var(--color-text-tertiary);
-          display: inline-flex; align-items: center; gap: 0.5rem;
-          opacity: 0; transform: translateY(4px);
-          transition: opacity 0.6s ease, transform 0.6s ease;
         }
-        .landing-seal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent); }
-        .landing-seal.show { opacity: 1; transform: none; }
-        .landing-continue {
+        .landing-manuscript-tag { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; }
+        .landing-manuscript-divider {
+          height: 1px; margin-top: 0.85rem; opacity: 0.6;
+          background: linear-gradient(to right, transparent 0%, color-mix(in srgb, var(--color-accent) 25%, transparent) 30%, color-mix(in srgb, var(--color-accent) 25%, transparent) 70%, transparent 100%);
+        }
+        .landing-manuscript-toolbar {
+          display: flex; align-items: center; gap: 2px;
+          min-height: 44px; padding: 6px 8px; margin: 0.85rem 0 1.25rem;
+          border: 1px solid var(--glass-border);
+          border-radius: 2px 12px 4px 12px;
+          background: var(--color-bg-secondary);
+          box-shadow: var(--shadow-sm);
+          overflow: hidden;
+        }
+        .landing-tb {
+          width: 32px; height: 32px; flex: 0 0 32px;
+          display: inline-flex; align-items: center; justify-content: center;
+          border-radius: 6px;
+          color: var(--color-text-secondary);
+          font-family: var(--font-body);
+          font-size: 0.72rem; font-weight: 600; white-space: nowrap;
+        }
+        .landing-tb.dim { opacity: 0.4; }
+        .landing-tb[data-label="I"] { font-family: var(--font-display); font-style: italic; font-size: 0.95rem; }
+        .landing-tb[data-label="</>"] { font-family: var(--font-mono); font-weight: 400; }
+        .landing-tb[data-label="U"] { text-decoration: underline; font-size: 0.85rem; }
+        .landing-tb[data-label="S"] { text-decoration: line-through; font-size: 0.85rem; }
+        .landing-tb[data-label="B"] { font-size: 0.85rem; }
+        .landing-manuscript-text {
+          font-family: var(--font-body);
+          font-weight: 400;
+          font-size: clamp(1.05rem, 1.25vw, 1.2rem);
+          line-height: 1.75;
+          color: var(--color-text-primary);
+          min-height: 6.5em;
+        }
+        .landing-manuscript-text p { margin: 0; }
+        .landing-manuscript-text p + p { margin-top: 1.75em; }
+        .landing-caret {
+          display: inline-block; width: 2px; height: 1.15em;
+          margin-left: 2px; vertical-align: -0.2em;
+          background: var(--color-accent);
+          animation: landing-blink 1.1s steps(2, start) infinite;
+        }
+        .landing-manuscript-foot {
+          position: relative; z-index: 3;
+          display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 0.75rem;
+          margin-top: 1.5rem; padding-top: 1rem;
+          border-top: 1px solid color-mix(in srgb, var(--glass-border) 60%, transparent);
+        }
+        .landing-saved {
+          display: inline-flex; align-items: center; gap: 0.35rem;
+          padding: 0.25rem 0.6rem; border-radius: 999px;
+          background: var(--color-success-glow); color: var(--color-success);
+          font-family: var(--font-body); font-size: 0.78rem; font-weight: 500; white-space: nowrap;
+        }
+        .landing-manuscript-note {
+          flex: 1 1 14rem;
+          font-family: var(--font-body); font-size: 0.8rem; line-height: 1.4;
+          color: var(--color-text-tertiary);
+        }
+        .landing-keep {
           font-family: var(--font-body);
           font-size: 0.8rem;
           color: var(--color-text-secondary);
@@ -603,109 +501,95 @@ export function LandingPage({
           border-radius: 2px 12px 4px 12px;
           padding: 0.45rem 1rem;
           cursor: pointer;
-          opacity: 0; transform: translateY(4px);
-          pointer-events: none;
-          transition: opacity 0.6s ease, transform 0.6s ease, color 0.25s ease, border-color 0.25s ease;
+          white-space: nowrap;
+          transition: color 0.25s ease, border-color 0.25s ease;
         }
-        .landing-continue.show { opacity: 1; transform: none; pointer-events: auto; }
-        .landing-continue:hover { color: var(--color-accent); border-color: var(--color-accent); }
-        .landing-draft-error {
-          position: relative;
-          z-index: 1;
-          margin: 1rem 0 0;
-          font-family: var(--font-body);
-          font-size: 0.78rem;
-          line-height: 1.5;
-          color: var(--color-destructive);
-        }
+        .landing-keep:hover { color: var(--color-accent); border-color: var(--color-accent); }
 
-        /* writing state cross-fade */
-        .landing-hero.writing .landing-prose { opacity: 0; transform: translateY(-8px); filter: blur(2px); pointer-events: none; }
-        .landing-hero.writing .landing-hero-editor-wrap { opacity: 1; transform: none; pointer-events: auto; }
-        .landing-hero.writing .landing-scrollcue { opacity: 0; pointer-events: none; }
-
-        .landing-scrollcue {
-          position: absolute; left: 0; right: 0; bottom: 2.2rem;
-          margin-inline: auto; width: max-content;
-          display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
-          font-family: var(--font-body);
-          font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.18em;
-          color: var(--color-text-tertiary); text-decoration: none;
-          transition: opacity 0.5s ease;
-        }
-        .landing-scrollcue:hover { color: var(--color-accent); }
-        .landing-scrollcue-arrow { font-size: 1rem; animation: landing-float 3.4s ease-in-out infinite; }
-
-        /* ─── Gallery ─── */
-        .landing-gallery {
-          width: 100%;
-          max-width: 1080px;
-          margin: 0 auto;
-          padding: clamp(3rem, 10vw, 9rem) clamp(1.4rem, 6vw, 4rem);
-        }
-        .landing-piece {
-          display: grid;
-          gap: clamp(2rem, 5vw, 4.5rem);
-          align-items: center;
-          margin-bottom: clamp(6rem, 16vw, 13rem);
-        }
-        .landing-piece:last-child { margin-bottom: 0; }
-        @media (min-width: 860px) {
-          .landing-piece { grid-template-columns: 1fr 1fr; }
-          .landing-piece.flip .landing-caption { order: 2; }
-        }
-        .landing-kicker {
-          font-family: var(--font-body);
-          font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.18em;
-          color: var(--color-accent); margin: 0 0 1rem;
-        }
-        .landing-piece-title {
-          font-family: var(--font-display); font-weight: 300;
-          font-size: 2.65rem; line-height: 1.1; letter-spacing: 0;
-          margin: 0 0 1rem; color: var(--color-text-primary);
-        }
-        .landing-piece-body {
-          font-family: var(--font-body);
-          font-size: 1.02rem; line-height: 1.75;
-          color: var(--color-text-secondary); max-width: 42ch; margin: 0;
-        }
-
-        /* Note grid - rendered with the real NoteCard in decorative mode */
-        /* "What accumulates" steps out of the editorial 2-col split: a centered
-           caption above a centered 2-up masonry. Cards render at app-true width
-           (~410px, same as the real library) and the staggered heights give the
-           "asymmetric, no rigid grid" arrangement the copy promises. */
-        .landing-piece-wide { margin-bottom: clamp(6rem, 16vw, 13rem); }
-        .landing-piece-wide .landing-caption {
+        /* ─── Proof line ─── */
+        .landing-proof {
+          display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+          gap: 0.5rem 0.9rem;
+          padding: 2.25rem clamp(1.25rem, 3.5vw, 3rem) 0;
           text-align: center;
-          max-width: 48rem;
-          margin: 0 auto clamp(2.5rem, 5vw, 3.5rem);
         }
-        .landing-piece-wide .landing-piece-body { max-width: 34rem; margin-left: auto; margin-right: auto; }
-        .landing-grid {
-          columns: 2;
-          column-gap: 1.5rem;
-          max-width: 846px;
-          margin: 0 auto;
+        .landing-fact, .landing-fact-plain {
+          font-family: var(--font-body);
+          font-size: 0.95rem;
+          color: var(--color-text-secondary);
+          background: none; border: 0; padding: 0 0 1px; cursor: pointer;
+          text-decoration: none;
         }
-        @media (max-width: 700px) { .landing-grid { columns: 1; max-width: 420px; } }
-        .landing-note-card-wrap { break-inside: avoid; margin-bottom: 1.5rem; display: block; }
-        /* Vault */
-        .landing-vault {
-          position: relative; display: grid; place-items: center;
-          aspect-ratio: 1 / 1; max-width: 360px; width: 100%; margin: 0 auto;
-          border-radius: var(--radius-card);
-          background: radial-gradient(circle at 50% 42%, var(--color-accent-glow), transparent 60%), var(--color-bg-secondary);
-          border: 1px solid var(--glass-border);
-        }
-        .landing-vault svg { width: 38%; height: 38%; color: var(--color-accent); }
-        .landing-vault-ring {
-          position: absolute; inset: 14%; border-radius: 50%;
-          border: 1px dashed color-mix(in srgb, var(--color-accent) 40%, transparent);
-        }
+        .landing-fact { border-bottom: 1px dotted var(--color-text-tertiary); transition: color 0.2s ease, border-bottom-color 0.2s ease; }
+        .landing-fact:hover { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+        .landing-fact-plain { cursor: default; }
+        .landing-proof-dot { color: var(--color-text-tertiary); }
 
-        /* Inline CTA closing the encryption piece (replaces the old standalone close beat) */
-        .landing-piece-cta { margin-top: 2.2rem; }
+        /* ─── Sections ─── */
+        .landing-section {
+          width: 100%;
+          max-width: 1440px;
+          margin: 0 auto;
+          padding: clamp(4.5rem, 8vw, 7.5rem) clamp(1.25rem, 3.5vw, 3rem) 0;
+        }
+        .landing-h2 {
+          font-family: var(--font-display); font-weight: 300;
+          font-size: clamp(2.1rem, 2.8vw, 2.65rem); line-height: 1.1; letter-spacing: 0;
+          margin: 0; color: var(--color-text-primary);
+        }
+        .landing-section-body {
+          font-family: var(--font-body);
+          font-size: 1.02rem; line-height: 1.7;
+          color: var(--color-text-secondary); margin: 0;
+        }
+        .landing-section-head {
+          display: flex; flex-direction: column; gap: 0.75rem;
+          margin-bottom: 1.75rem;
+        }
+        @media (min-width: 1024px) {
+          .landing-section-head { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 3rem; margin-bottom: 2.25rem; }
+          .landing-section-head .landing-h2 { max-width: 24rem; }
+          .landing-section-head .landing-section-body { max-width: 26rem; text-align: right; padding-bottom: 0.35rem; }
+        }
+        .landing-samples {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+          gap: 1.5rem;
+          align-items: start;
+        }
+        .landing-sample { position: relative; }
+        .landing-sample-open {
+          position: absolute; inset: 0; z-index: 2;
+          background: transparent; border: 0; padding: 0; margin: 0;
+          border-radius: var(--radius-card);
+          cursor: pointer;
+        }
+        .landing-sample:has(.landing-sample-open:hover) .note-card { box-shadow: var(--shadow-lg); }
+
+        .landing-trust { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+        @media (min-width: 1024px) {
+          .landing-trust { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(3rem, 5vw, 4.5rem); }
+        }
+        .landing-trust-body { display: flex; flex-direction: column; align-items: flex-start; gap: 1.25rem; max-width: 34rem; }
+        .landing-trust-body .landing-section-body { font-size: 1.08rem; line-height: 1.75; }
+        .landing-link {
+          font-family: var(--font-body); font-size: 0.95rem;
+          color: var(--color-accent); background: none; border: 0; padding: 0; cursor: pointer;
+          text-decoration: none;
+        }
+        .landing-link:hover { text-decoration: underline; }
+
+        .landing-close {
+          display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+          gap: 1.1rem 1.75rem;
+          padding: clamp(4rem, 7vw, 6.5rem) clamp(1.25rem, 3.5vw, 3rem) 0;
+          text-align: center;
+        }
+        .landing-close-line {
+          font-family: var(--font-display); font-weight: 300;
+          font-size: clamp(1.85rem, 2.2vw, 2rem);
+          color: var(--color-text-primary); margin: 0;
+        }
 
         /* ─── Footer ─── */
         .landing-footer {
@@ -723,36 +607,19 @@ export function LandingPage({
         }
         .landing-nav-link:hover { color: var(--color-accent); }
 
-        /* ─── Reveal ─── */
-        .landing-reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.22,1,0.36,1); }
-        .landing-reveal.in { opacity: 1; transform: none; }
+        @media (max-width: 767px) {
+          .landing-cta { width: 100%; }
+          .landing-actions { width: 100%; }
+          .landing-manuscript-foot .landing-keep { white-space: normal; text-align: left; }
+        }
 
-        @keyframes landing-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
         @keyframes landing-fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-
-        @media (max-width: 768px) {
-          .landing-hero { min-height: calc(100vh - 4.5rem); }
-          .landing-hero { min-height: calc(100svh - 4.5rem); }
-          .landing-scrollcue { display: none; }
-          .landing-headline { font-size: 3.2rem; }
-          .landing-sub { font-size: 1rem; }
-          .landing-piece-title { font-size: 2.2rem; }
-        }
-
-        @media (max-width: 420px) {
-          .landing-headline { font-size: 2.75rem; }
-          .landing-piece-title { font-size: 2rem; }
-        }
+        @keyframes landing-blink { to { visibility: hidden; } }
 
         @media (prefers-reduced-motion: reduce) {
-          .landing-prose,
-          .landing-hero-editor-wrap,
-          .landing-scrollcue,
-          .landing-scrollcue-arrow,
-          .landing-seal,
-          .landing-continue,
-          .landing-reveal { animation: none !important; transition: none !important; }
-          .landing-reveal { opacity: 1; transform: none; }
+          .landing-hero { animation: none !important; }
+          .landing-caret { animation: none !important; }
+          .landing-cta, .landing-demo-arrow { transition: none !important; }
         }
       `}</style>
     </div>

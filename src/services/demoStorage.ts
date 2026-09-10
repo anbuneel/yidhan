@@ -51,6 +51,12 @@ export const DEMO_STORAGE_KEY = 'yidhan-demo-state';
 export const DEMO_CONTENT_STORAGE_KEY = 'yidhan-demo-content';
 export const DEMO_STORAGE_VERSION = 1;
 
+/**
+ * The note shown in the landing page hero. It is a starter too, so the page and the
+ * Practice Space agree about what the first note looks like.
+ */
+export const HERO_STARTER_NOTE_ID = 'starter-saturday';
+
 const STARTER_NOTES: DemoNote[] = [
   {
     localId: 'starter-welcome',
@@ -63,6 +69,54 @@ const STARTER_NOTES: DemoNote[] = [
     updatedAt: Date.now(),
   },
   {
+    localId: HERO_STARTER_NOTE_ID,
+    title: 'An idea for Saturday',
+    content: `<p>Leave the morning unplanned.</p>
+<p>Walk to the market. Pick up something for lunch. Take the longer way home.</p>
+<p>Maybe that is enough.</p>`,
+    pinned: false,
+    tagIds: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    localId: 'starter-say',
+    title: 'What I wanted to say',
+    content: `<p>I do not need an answer yet. I just need to put this into words before it turns into something else.</p>`,
+    pinned: false,
+    tagIds: ['tag-journal'],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    localId: 'starter-passage',
+    title: 'A passage worth keeping',
+    content: `<p>“Attention is the rarest and purest form of generosity.” — Simone Weil</p>
+<p>Something to come back to when the week gets loud.</p>`,
+    pinned: false,
+    tagIds: ['tag-reading'],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    localId: 'starter-train',
+    title: 'Tuesday, on the train',
+    content: `<p>Three things I keep circling: the flat, October, whether to say yes to the Sunday thing. Not deciding today.</p>`,
+    pinned: false,
+    tagIds: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+];
+
+/**
+ * Starters that shipped before 2026-09-10 and are no longer offered. A browser that
+ * already holds them keeps recognising them as starters: an untouched one is not the
+ * reader's work and must never migrate into an account, and an edited one is theirs
+ * and is kept exactly as they left it. Content is byte-for-byte what shipped.
+ */
+const LEGACY_STARTER_NOTES: readonly Pick<DemoNote, 'localId' | 'title' | 'content' | 'pinned'>[] = [
+  {
     localId: 'starter-books',
     title: 'Book Recommendations',
     content: `<p>Books people keep telling me to read:</p>
@@ -73,9 +127,6 @@ const STARTER_NOTES: DemoNote[] = [
 </ul>
 <p>Started Four Thousand Weeks last night. The bit about how we'll never "get on top of everything" was oddly freeing.</p>`,
     pinned: false,
-    tagIds: ['tag-ideas'],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
   },
   {
     localId: 'starter-recipe',
@@ -83,9 +134,6 @@ const STARTER_NOTES: DemoNote[] = [
     content: `<p>Equal parts oats and milk. Spoon of yogurt, pinch of salt, honey to taste. Mix, fridge overnight. Top with whatever fruit is around.</p>
 <p>The trick is the salt — makes everything else pop.</p>`,
     pinned: false,
-    tagIds: ['tag-recipes'],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
   },
   {
     localId: 'starter-weekend',
@@ -96,14 +144,21 @@ const STARTER_NOTES: DemoNote[] = [
 <li>Try that new coffee place on 5th</li>
 </ul>`,
     pinned: false,
-    tagIds: ['tag-journal'],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
   },
 ];
 
-// IDs of all starter notes for detection
-const STARTER_NOTE_IDS = new Set(STARTER_NOTES.map((n) => n.localId));
+// IDs of all starter notes for detection, current and legacy
+const STARTER_NOTE_IDS = new Set(
+  [...STARTER_NOTES, ...LEGACY_STARTER_NOTES].map((n) => n.localId)
+);
+
+/** The starter a stored note was copied from, current or legacy; undefined for the reader's own notes. */
+function findStarterOriginal(localId: string) {
+  return (
+    STARTER_NOTES.find((s) => s.localId === localId) ??
+    LEGACY_STARTER_NOTES.find((s) => s.localId === localId)
+  );
+}
 
 /**
  * Starter copy that shipped in an earlier release and is no longer true.
@@ -150,10 +205,34 @@ function refreshSupersededStarterCopy(state: DemoState): boolean {
   return changed;
 }
 
+/**
+ * Replace a legacy starter set with the current one, in place. Only a space with no
+ * practice work at all is touched — every note an untouched starter, current or legacy —
+ * because that is exactly what a first-time visitor gets. A space holding anything the
+ * reader wrote or edited is left alone; its untouched legacy starters stay recognised
+ * as starters and never migrate. Returns true when anything changed.
+ */
+function refreshLegacyStarterSet(state: DemoState): boolean {
+  const hasLegacy = state.notes.some((n) => LEGACY_STARTER_NOTES.some((l) => l.localId === n.localId));
+  if (!hasLegacy) return false;
+  const pristine = state.notes.every(
+    (n) => STARTER_NOTE_IDS.has(n.localId) && !hasStarterNoteBeenEdited(n)
+  );
+  if (!pristine) return false;
+
+  const fresh = createDefaultState();
+  state.notes = fresh.notes;
+  const known = new Set(state.tags.map((t) => t.localId));
+  for (const tag of fresh.tags) {
+    if (!known.has(tag.localId)) state.tags.push(tag);
+  }
+  return true;
+}
+
 const DEFAULT_TAGS: DemoTag[] = [
   { localId: 'tag-journal', name: 'Journal', color: 'terracotta', createdAt: Date.now() },
   { localId: 'tag-ideas', name: 'Ideas', color: 'gold', createdAt: Date.now() },
-  { localId: 'tag-recipes', name: 'Recipes', color: 'sage', createdAt: Date.now() },
+  { localId: 'tag-reading', name: 'Reading', color: 'sage', createdAt: Date.now() },
 ];
 
 function createDefaultState(): DemoState {
@@ -196,6 +275,7 @@ export function getDemoState(): DemoState {
       // Correct any starter note still carrying superseded copy. The state is written
       // back on every read anyway, for lastVisit, so this costs nothing extra.
       refreshSupersededStarterCopy(parsed);
+      refreshLegacyStarterSet(parsed);
       // Update last visit timestamp
       parsed.metadata.lastVisit = Date.now();
       saveDemoState(parsed);
@@ -230,7 +310,7 @@ export function saveDemoState(state: DemoState): void {
  * Check if a starter note has been edited from its default state
  */
 function hasStarterNoteBeenEdited(note: DemoNote): boolean {
-  const original = STARTER_NOTES.find((s) => s.localId === note.localId);
+  const original = findStarterOriginal(note.localId);
   if (!original) return false;
   return (
     note.title !== original.title ||

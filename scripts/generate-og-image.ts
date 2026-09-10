@@ -33,7 +33,7 @@ const LOCKUP_PATH = path.join(__dirname, '../images/yidhan-logo-lockup-tight-120
 const OUTPUT_PATH = path.join(__dirname, '../public/og-image.png');
 
 // ── Text content ────────────────────────────────────────────────
-const TAGLINE = 'A quiet space for your mind';
+const TAGLINE = 'A quiet home for your personal notes';
 
 /**
  * Build an SVG buffer for the tagline text below the lockup.

@@ -311,3 +311,27 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   bars no longer clip the toolbar. That check belongs to item 81, the cross-browser
   matrix, which is unbuilt and still on `docs/roadmap.md`. There is no matrix to run, so
   the device check is outstanding, not passed.
+- **2026-09-10** — Landing page rebuilt around a two-column first screen: the
+  headline names the product, the sub-headline carries both the no-setup and the
+  encrypted-before-sync messages, and a static rendering of the real editor sits
+  beside them with a starter note in it. Every "Try writing" opens the Practice
+  Space draft at every width; the in-page textarea, the scroll cue, the gallery,
+  the lock illustration and the scroll-reveal observer are gone. Proof is one line
+  of four facts; trust is a plain section. Practice Space
+  starters replaced by four short personal notes, one of which is the hero note,
+  so the landing samples and the Practice Space agree. Closes the roadmap's
+  unnumbered landing redesign item.
+- **2026-09-10** — Launch hygiene for the landing page. The title tag, description
+  and share tags carry one message, the share image is regenerated with the new
+  tagline and its address is versioned so cached cards refresh. A static copy of
+  the first screen now lives in `index.html`, painted before the bundle and
+  replaced by React on mount; `public/boot.js` sets the theme first and hides the
+  shell off the home path or when a session exists. Roadmap item 60's full
+  prerender and JavaScript budget remain open.
+- **2026-09-10** — `/.well-known/security.txt` now exists. The 2026-05 entry above
+  says the security page published the contact address there; the page linked to
+  it, but the file was never added, so the SPA rewrite answered with the app and
+  the link landed on the 404 page. The file follows RFC 9116 (Contact, Expires
+  under a year out, Canonical, Policy). The service worker's navigation fallback
+  now excludes `/.well-known/`, so an installed app reaches the file rather than
+  the shell. A routing spec asserts the file is served as text.

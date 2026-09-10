@@ -190,6 +190,12 @@ Upstream licences in `public/licenses/fonts/` must travel with the fonts.
 on UPDATE to defeat client clock skew; INSERT deliberately preserves client-supplied
 timestamps so imports keep their original chronology.
 
+**The landing shell in `index.html` is deliberate, not duplication.** It paints the
+first screen before the bundle arrives; React replaces it on mount. `public/boot.js` must
+run before it, from a file (the CSP allows only same-origin scripts), and must keep
+choosing the theme exactly as `useAppTheme` does. Copy and CSS values there mirror
+`LandingPage.tsx`; change both together (`DECISIONS.md`, 2026-09-10).
+
 **Self-echo suppression.** A `pendingMutations` set stops realtime from re-applying the
 client's own changes. Removing it causes write loops.
 
