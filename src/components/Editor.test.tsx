@@ -1360,6 +1360,48 @@ describe('Editor', () => {
       expect(headerTitle()).toBeVisible();
     });
 
+    // Chrome that sits above the writing area in flow moves the editable title
+    // without a scroll or a resize. Miss that and the header copy is left showing
+    // beside a title that is back on screen — the defect, from the other side.
+    it('re-measures when the remote-update banner pushes the title back into view', async () => {
+      setViewport(DESKTOP);
+      const onUpdate = vi.fn().mockResolvedValue(undefined);
+      const { rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+      const container = stubLayout();
+
+      scrollTo(container, 100); // Title bottom at 128, header 56 — just past it
+      expect(headerTitle()).toBeVisible();
+
+      // Dirty the editor so the incoming change banners rather than applying.
+      fireEvent.change(screen.getByLabelText('Note title'), { target: { value: 'My Local Edit' } });
+      // The banner is 80px of new chrome above the writing area, which carries the
+      // title back under the reader's eye without moving the scroll position.
+      define(container.querySelector('.editor-writing-area')!, 'offsetTop', HEADER_HEIGHT + 80);
+      const remote = createMockNote({ id: 'note-123', title: 'Remote Title', content: '<p>Remote</p>' });
+      await act(async () => {
+        rerender(<Editor {...defaultProps} note={remote} onUpdate={onUpdate} />);
+      });
+
+      expect(screen.getByText('Updated on another device')).toBeInTheDocument();
+      expect(headerTitle()).not.toBeVisible();
+      expect(titleButtons('My Local Edit')).toHaveLength(0);
+    });
+
+    it('leaves the header title alone when a rerender changes nothing in flow', async () => {
+      setViewport(DESKTOP);
+      const { rerender } = render(<Editor {...defaultProps} />);
+      const container = stubLayout();
+
+      scrollTo(container, SCROLLED_PAST);
+      expect(headerTitle()).toBeVisible();
+
+      await act(async () => {
+        rerender(<Editor {...defaultProps} theme="light" />);
+      });
+
+      expect(headerTitle()).toBeVisible();
+    });
+
     it('hides the header title again when a different note opens at the top', () => {
       setViewport(DESKTOP);
       const { rerender } = render(<Editor {...defaultProps} />);

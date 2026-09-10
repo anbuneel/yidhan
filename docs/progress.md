@@ -301,7 +301,9 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   one place decides whether the header title shows. Visibility is written straight to
   the node from a rAF-throttled scroll handler, like the manuscript glow, so scrolling
   still causes no re-renders; the handler also listens for resize, because rotating a
-  phone into landscape crosses the floor without scrolling. Focus mode never brings it
+  phone into landscape crosses the floor without scrolling, and watches the scroll
+  container's children, because the resume chip and the remote-update banner sit above
+  the writing area in flow and move the title without either event. Focus mode never brings it
   back, and an untitled note shows one "Untitled", not two. The item's other half,
   `h-screen` to `100dvh`, already shipped with #219 and is asserted in `Editor.test.tsx`.
 

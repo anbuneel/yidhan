@@ -45,8 +45,13 @@ Below it the header is already logo, save status, delete, theme and avatar, whic
 far less than the 200px the breadcrumb reserves — it would overflow the row, and
 WhisperBack already offers scrolling back at every width. Leaving the floor in CSS would have meant two owners of one
 question, which is how the original defect read: a class that answered "is there room?"
-being used to answer "is this a duplicate?". A rotation into landscape crosses the floor
-without scrolling, so the handler listens for resize as well as scroll.
+being used to answer "is this a duplicate?".
+
+Scroll is not the only thing that moves a title. A rotation into landscape crosses the
+width floor without scrolling, and the resume chip and the remote-update banner are in
+flow above the writing area, so showing one carries the title back under the reader's
+eye at an unchanged scroll position. The handler therefore listens for resize and
+watches the scroll container's own children, not just scroll.
 
 ---
 

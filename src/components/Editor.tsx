@@ -414,11 +414,19 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     scrollEl.addEventListener('scroll', handleTitleScroll, { passive: true });
     // Rotating a phone into landscape crosses the width test without scrolling.
     window.addEventListener('resize', handleTitleScroll);
+    // The resume chip and the remote-update banner are in flow above the writing
+    // area, so showing one moves the editable title down without a scroll or a
+    // resize. Left unmeasured, that puts the title back on screen beside a header
+    // copy that is still showing — the doubled title again. Watching the scroll
+    // container's own children catches both, and anything in flow added later.
+    const chromeObserver = new MutationObserver(handleTitleScroll);
+    chromeObserver.observe(scrollEl, { childList: true });
     applyVisibility(); // Initial state, and on note switch or focus-mode toggle
 
     return () => {
       scrollEl.removeEventListener('scroll', handleTitleScroll);
       window.removeEventListener('resize', handleTitleScroll);
+      chromeObserver.disconnect();
     };
   }, [isFocusMode, note.id]);
 
