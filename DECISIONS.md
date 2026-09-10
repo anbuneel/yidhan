@@ -19,6 +19,28 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-10 — One toolbar per width in the editor
+
+**Status:** Active
+
+**Why:** PR #219 kept the inline toolbar on every desktop width and added the vertical
+sidebar beside it from 1100px, so that every command stayed mouse-reachable from one
+surface. On a wide screen that put two toolbars on one note: a strip under the title and
+a rail in the margin, both offering Bold, Italic and the rest. Two surfaces for one job
+is the opposite of the quiet page the product promises, and the sidebar's overflow menu
+already lists every command, so the sidebar can carry the wide layout alone. From
+1100px the inline toolbar is hidden again wherever the sidebar renders, as it was before
+#219. 768px to 1099px keeps the inline toolbar; phones keep the bottom one. Touch
+tablets never render the sidebar, so they keep the inline toolbar at every width —
+before #219 they had no toolbar at all above 1100px, which is the one thing #219's
+layout fixed and this keeps. The Playwright reachability check now also asserts that
+exactly one surface is visible at each width.
+
+**Rejected:** Keeping both and dimming the inline toolbar — the count is the problem,
+not the contrast. Dropping the sidebar instead — it is the surface that was there first
+and the one the wide layout was designed around. A preference — a setting hands the
+decision back to the writer.
+
 ## 2026-09-10 — A static first screen in the shell, not a prerender
 
 **Status:** Active

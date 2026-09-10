@@ -1366,6 +1366,13 @@ body::before {
   margin-top: 0.25rem;
   margin-bottom: 0.5rem;
   min-height: 1.5rem;
+  /* The row is a stacking context: `.focus-mode-target` sets `will-change: opacity`.
+     So the tag picker and the writing-details popover inside it cannot out-rank
+     the row's siblings with their own z-index — they were drawn behind the sticky
+     toolbar (10) and behind the positioned note body. Lift the row above both and
+     keep it under the sticky header (20). */
+  position: relative;
+  z-index: 12;
 }
 
 .editor-metadata-row .editor-timestamps {
@@ -1471,10 +1478,6 @@ body::before {
 @media (min-width: 1100px) {
   .editor-sidebar {
     display: flex;
-  }
-  /* Hide inline toolbar when sidebar is visible — sidebar takes over */
-  .editor-toolbar-medium-fallback {
-    display: none;
   }
 }
 
@@ -1919,10 +1922,14 @@ textarea:focus,
   }
 }
 
-/* The wide sidebar supplements the inline toolbar; it never replaces it. */
+/* One toolbar at a time: from 1100px the vertical sidebar replaces the inline
+   toolbar wherever the sidebar renders — `data-has-sidebar` is set on pointer
+   devices, where `isMobile` is false. Touch tablets get no sidebar, so they keep
+   the inline toolbar at every width. The sidebar's overflow menu lists every
+   command, so nothing becomes unreachable (DECISIONS.md, 2026-09-10). */
 @media (min-width: 1100px) {
-  .editor-toolbar-medium-fallback {
-    display: block;
+  .editor-toolbar-inline[data-has-sidebar] {
+    display: none;
   }
 }
 

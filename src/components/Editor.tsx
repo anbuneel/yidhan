@@ -1480,8 +1480,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             </div>
           </div>
 
-          {/* Inline toolbar remains available on every desktop width; the sidebar supplements it. */}
-          <div className="editor-toolbar-sticky editor-toolbar-inline focus-mode-target">
+          {/* Inline toolbar — 768px and up. Where the sidebar renders (pointer devices), CSS hides
+              this from 1100px and the sidebar takes over; touch tablets keep it at every width. */}
+          <div
+            className="editor-toolbar-sticky editor-toolbar-inline focus-mode-target"
+            data-has-sidebar={!isMobile || undefined}
+          >
             <EditorToolbar
               editor={editor}
               isFocusMode={isFocusMode}
