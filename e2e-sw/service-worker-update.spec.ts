@@ -45,6 +45,7 @@ const CONTENT_TYPES: Record<string, string> = {
   '.png': 'image/png',
   '.webp': 'image/webp',
   '.webmanifest': 'application/manifest+json',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 /**
@@ -191,6 +192,30 @@ test.describe('service worker updates', () => {
 
     await page.reload({ waitUntil: 'networkidle' });
     await expect(page.locator('#sw-smoke-marker')).toHaveCount(1);
+  });
+
+  /**
+   * The other thing the worker must not do. `navigateFallback` answers every
+   * navigation with index.html so the app opens offline, and `/.well-known/` holds a
+   * real file (security.txt) that a navigation must reach on the network. This is the
+   * denylist's job, and only a real worker can show it doing that job.
+   */
+  test('a navigation to .well-known reaches the file, not the app shell', async ({ page }) => {
+    await page.goto(baseURL, { waitUntil: 'networkidle' });
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.reload({ waitUntil: 'networkidle' });
+    await expect
+      .poll(() => page.evaluate(() => !!navigator.serviceWorker.controller))
+      .toBe(true);
+
+    const response = await page.goto(`${baseURL}/.well-known/security.txt`, {
+      waitUntil: 'load',
+    });
+
+    expect(response?.status()).toBe(200);
+    expect(response?.headers()['content-type']).toMatch(/text\/plain/);
+    await expect(page.locator('#root')).toHaveCount(0);
+    expect(await page.evaluate(() => document.body.innerText)).toMatch(/^Contact: mailto:/m);
   });
 
   test('the built worker activates without being told to', async ({ page }) => {

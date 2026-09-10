@@ -50,7 +50,9 @@ export default defineConfig({
         globIgnores: ['**/yidhan-logo.svg'],
         // Serve index.html for all navigation requests (full offline-first)
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/share\//, /^\/s\//],
+        // `.well-known` holds real files (security.txt); a navigation there must
+        // reach the network, never the app shell.
+        navigateFallbackDenylist: [/^\/api/, /^\/share\//, /^\/s\//, /^\/\.well-known\//],
         // No runtime caching: fonts are self-hosted (src/fonts.css) and land in
         // the precache through the woff2 glob above. The Google Fonts routes
         // this replaced were CacheFirst with `statuses: [0, 200]` and a 1-year

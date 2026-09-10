@@ -328,3 +328,10 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   replaced by React on mount; `public/boot.js` sets the theme first and hides the
   shell off the home path or when a session exists. Roadmap item 60's full
   prerender and JavaScript budget remain open.
+- **2026-09-10** — `/.well-known/security.txt` now exists. The 2026-05 entry above
+  says the security page published the contact address there; the page linked to
+  it, but the file was never added, so the SPA rewrite answered with the app and
+  the link landed on the 404 page. The file follows RFC 9116 (Contact, Expires
+  under a year out, Canonical, Policy). The service worker's navigation fallback
+  now excludes `/.well-known/`, so an installed app reaches the file rather than
+  the shell. A routing spec asserts the file is served as text.

@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.28', date: '2026-09-10', changes: [
+    { type: 'fix', text: 'The security.txt link on the security page now opens the file it promises, with the contact address and an expiry, instead of the not-found page' },
+  ] },
   { version: '3.19.27', date: '2026-09-10', changes: [
     { type: 'improvement', text: 'The landing page’s first screen now appears before the app has finished loading, in your theme, so a shared link opens to words rather than a blank page' },
     { type: 'improvement', text: 'Links to Yidhan now unfurl with the new tagline and card' },
