@@ -394,7 +394,7 @@ export function LandingPage({
         .landing-manuscript {
           position: relative;
           padding: clamp(1.5rem, 3vw, 2.25rem) clamp(1.25rem, 3vw, 2.75rem) clamp(1.25rem, 2.5vw, 1.9rem);
-          background: color-mix(in srgb, var(--color-bg-primary) 92%, white 8%);
+          background: var(--color-manuscript-bg);
           border: 1px solid var(--glass-border);
           border-radius: var(--radius-card);
           box-shadow: var(--shadow-manuscript);
