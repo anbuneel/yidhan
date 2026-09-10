@@ -38,6 +38,7 @@ const RESUME_SCROLL_THRESHOLD_PX = 400; // Show resume chip if scrolled > 400px
 const RESUME_CHIP_MIN_VISIBLE_MS = 2000; // Keep chip visible for at least 2 seconds
 const SCROLL_SAVE_THROTTLE_MS = 1000; // Save scroll position at most every 1 second
 const TRIPLE_TAP_WINDOW_MS = 500; // Time window for triple-tap detection
+const HEADER_TITLE_MIN_WIDTH_PX = 640; // Narrower than this, the header has no room for a title
 
 // E2EE sharing re-enabled: shares are encrypted client-side with per-share random keys.
 // The decryption key lives in the URL fragment and never reaches the server.
@@ -158,6 +159,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
+  const headerTitleRef = useRef<HTMLSpanElement>(null);
+  const stickyZoneRef = useRef<HTMLDivElement>(null);
   const tapCountRef = useRef(0);
   const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -366,6 +369,66 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
     return () => scrollEl.removeEventListener('scroll', handleGlowScroll);
   }, []);
+
+  // Show the header title only once the editable title has scrolled out of view.
+  // The header copy is a scroll-to-top button, so it says nothing while the title it
+  // scrolls to is on screen — that was the doubled title (ledger item 83). Width is
+  // decided here too rather than in a `sm:` class, so there is one answer to "is it
+  // showing?" instead of a CSS half and a JS half that can disagree.
+  // Same ref-based rAF pattern as the manuscript glow: direct DOM writes, no re-renders.
+  useEffect(() => {
+    const scrollEl = scrollContainerRef.current;
+    const headerTitleEl = headerTitleRef.current;
+    if (!scrollEl || !headerTitleEl) return;
+
+    const applyVisibility = () => {
+      const titleEl = titleRef.current;
+      const writingArea = titleEl?.closest('.editor-writing-area') as HTMLElement | null;
+      // Bottom edge of the editable title, in the scroll container's coordinates.
+      const titleBottom =
+        (writingArea?.offsetTop ?? 0) + (titleEl?.offsetTop ?? 0) + (titleEl?.offsetHeight ?? 0);
+      // The sticky header covers the top of the viewport, so the title is gone
+      // once its bottom edge passes under the header, not once it passes zero.
+      const headerHeight = stickyZoneRef.current?.offsetHeight ?? 0;
+      // Before layout every offset reads 0. Treat that as "title still on screen"
+      // so the header copy stays hidden rather than flashing in on first paint.
+      const scrolledPast = titleBottom > 0 && scrollEl.scrollTop + headerHeight >= titleBottom;
+      // A phone header is already logo, save status, delete, theme and avatar. A
+      // breadcrumb there would overflow it, and WhisperBack covers scrolling back.
+      const hasRoom = window.innerWidth >= HEADER_TITLE_MIN_WIDTH_PX;
+      // Focus mode strips the chrome; it must not bring the header title back.
+      const show = scrolledPast && hasRoom && !isFocusMode;
+      headerTitleEl.style.display = show ? 'inline-flex' : 'none';
+    };
+
+    let ticking = false;
+    const handleTitleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        applyVisibility();
+        ticking = false;
+      });
+    };
+
+    scrollEl.addEventListener('scroll', handleTitleScroll, { passive: true });
+    // Rotating a phone into landscape crosses the width test without scrolling.
+    window.addEventListener('resize', handleTitleScroll);
+    // The resume chip and the remote-update banner are in flow above the writing
+    // area, so showing one moves the editable title down without a scroll or a
+    // resize. Left unmeasured, that puts the title back on screen beside a header
+    // copy that is still showing — the doubled title again. Watching the scroll
+    // container's own children catches both, and anything in flow added later.
+    const chromeObserver = new MutationObserver(handleTitleScroll);
+    chromeObserver.observe(scrollEl, { childList: true });
+    applyVisibility(); // Initial state, and on note switch or focus-mode toggle
+
+    return () => {
+      scrollEl.removeEventListener('scroll', handleTitleScroll);
+      window.removeEventListener('resize', handleTitleScroll);
+      chromeObserver.disconnect();
+    };
+  }, [isFocusMode, note.id]);
 
   // Handle resume button click
   const handleResumeScroll = useCallback(() => {
@@ -895,32 +958,40 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {/* Clickable Logo */}
       <Logo onClick={handleLogoClick} className="shrink-0" />
 
-      {/* Separator - visible on desktop */}
+      {/* Separator + note title. The effect above owns `display` — no breakpoint
+          class here, or the two would have to agree about when this shows. */}
       <span
-        className="hidden sm:inline mx-2 md:mx-3 text-xl"
-        style={{ color: 'var(--color-text-tertiary)' }}
+        ref={headerTitleRef}
+        data-testid="header-note-title"
+        className="items-center min-w-0"
+        style={{ display: 'none' }}
       >
-        /
-      </span>
+        <span
+          className="mx-2 md:mx-3 text-xl"
+          style={{ color: 'var(--color-text-tertiary)' }}
+        >
+          /
+        </span>
 
-      {/* Note Title - visible on desktop, clicks to scroll to top */}
-      <button type="button"
-        onClick={handleScrollToTop}
-        className="hidden sm:inline truncate text-xl max-w-[200px] md:max-w-[300px] py-1 hover:text-[var(--color-accent)] transition-colors duration-200"
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 400,
-          fontStyle: 'italic',
-          color: 'var(--color-text-primary)',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          textAlign: 'left',
-        }}
-        title="Scroll to top"
-      >
-        {title || 'Untitled'}
-      </button>
+        {/* Clicks to scroll back to the editable title */}
+        <button type="button"
+          onClick={handleScrollToTop}
+          className="truncate text-xl max-w-[200px] md:max-w-[300px] py-1 hover:text-[var(--color-accent)] transition-colors duration-200"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 400,
+            fontStyle: 'italic',
+            color: 'var(--color-text-primary)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+          title="Scroll to top"
+        >
+          {title || 'Untitled'}
+        </button>
+      </span>
     </div>
   );
 
@@ -1201,6 +1272,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       )}
       {/* Sticky Zone: Header only */}
       <div
+        ref={stickyZoneRef}
         className="editor-sticky-zone focus-mode-target"
         style={{ background: 'var(--color-bg-primary)' }}
       >

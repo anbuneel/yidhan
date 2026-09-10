@@ -9,7 +9,7 @@
  * (3+ notes AND 5+ minutes).
  */
 
-import { useNoteSearch } from '../hooks/useNoteSearch';
+import { useNoteSearchResults } from '../hooks/useNoteSearch';
 import toast from 'react-hot-toast';
 import { useAppShortcuts } from '../hooks/useAppShortcuts';
 import { useLibraryCardNavigation } from '../hooks/useLibraryCardNavigation';
@@ -217,7 +217,11 @@ export function DemoPage({
   }, [clearSearchTimeout]);
 
   // Apply debounced search on top of tag-filtered notes
-  const displayNotes = useNoteSearch(tagFilteredNotes, debouncedSearchQuery);
+  const {
+    notes: displayNotes,
+    matchedTermsByNoteId,
+    isRankedSearch,
+  } = useNoteSearchResults(tagFilteredNotes, debouncedSearchQuery);
 
   const isSearching = debouncedSearchQuery.trim().length > 0;
 
@@ -320,6 +324,7 @@ export function DemoPage({
 
   const { focusedNoteId, handleLibraryCardKeyDown } = useLibraryCardNavigation({
     notes: displayNotes,
+    isRankedSearch,
     onOpen: handleNoteClick,
     onTogglePin: handleTogglePin,
     onDelete: handleNoteDelete,
@@ -580,6 +585,8 @@ export function DemoPage({
           onTogglePin={handleTogglePin}
           onNewNote={handleNewNote}
           searchQuery={debouncedSearchQuery}
+          searchMatchTerms={matchedTermsByNoteId}
+          isRankedSearch={isRankedSearch}
           isSearching={isSearching}
           focusedNoteId={focusedNoteId}
         />

@@ -80,6 +80,125 @@ preview footer rather than by hedging the promise three times.
 
 ---
 
+## 2026-09-10 — The editor's header title waits for the scroll, and its width floor moves into JS
+
+**Status:** Active
+
+**Why:** The note title rendered twice (ledger item 83). The header copy was hidden by
+`hidden sm:inline`, so a phone in portrait was fine and everything from 640px up was
+not: a phone in landscape, a small tablet, and every desktop sitting at the top of a
+note showed the title twice.
+
+The cheaper fix was to hide the header copy on mobile through `useMobileDetect()`
+instead of the CSS breakpoint. It was rejected. It swaps one width test for another and
+leaves the desktop duplication in place, which is the same defect at a width nobody
+called mobile.
+
+The header copy is a scroll-to-top button. It has nothing to say while the title it
+scrolls to is on screen, so it now appears only once the editable title has passed under
+the header. Its `display` is written straight to the node from a rAF-throttled scroll
+handler, the same pattern as the manuscript glow, because scrolling the editor must not
+re-render it. Focus mode is checked in the same expression: it strips the chrome, and a
+fix for a doubled title must not put chrome back.
+
+The 640px floor survives, but as a term in that expression rather than a `sm:` class.
+Below it the header is already logo, save status, delete, theme and avatar, which leaves
+far less than the 200px the breadcrumb reserves — it would overflow the row, and
+WhisperBack already offers scrolling back at every width. Leaving the floor in CSS would have meant two owners of one
+question, which is how the original defect read: a class that answered "is there room?"
+being used to answer "is this a duplicate?".
+
+Scroll is not the only thing that moves a title. A rotation into landscape crosses the
+width floor without scrolling, and the resume chip and the remote-update banner are in
+flow above the writing area, so showing one carries the title back under the reader's
+eye at an unchanged scroll position. The handler therefore listens for resize and
+watches the scroll container's own children, not just scroll.
+
+---
+
+## 2026-09-10 — List view goes back to the roadmap unbuilt
+
+**Status:** Active
+
+**Why:** Item 30 — a one-line-per-note list view with a header toggle — was the last
+item in Lane E and the only one left that was not blocked on the maintainer. It was
+deferred rather than started, on the grounds that it makes the app more complicated.
+
+A second layout is not one feature. Every library feature now has to work in both:
+temporal chapters, keyboard navigation, the preview mask and age fade, ranked search
+results, and the arrange controls — five things that shipped in the last two days
+alone. The plan itself expected the cost: item 99 exists to virtualize the list once
+someone measures 2,000 notes, which reads as an admission that item 30 ships something
+slow and fixes it later.
+
+Nothing in the product said a list view was wanted. `PRODUCT.md` describes a calm
+surface, and the cards are that surface. Item 87 — the validation cohort of 8 to 12
+writers — is the mechanism for finding out what readers actually want, and it is now
+unblocked. Building a second layout before asking would be answering a question nobody
+had put.
+
+So it returns to `docs/roadmap.md` with a start condition rather than a number: when the
+cohort asks for one. Items 98 and 99 keep depending on it and stay deferred behind it.
+
+**Rejected:** Building it now because it was already in the plan — being in the plan is
+not evidence, and the plan's own rules say order changes when a real writer or a
+measurement says so. Refusing it permanently in `PRODUCT.md` — this is a "not now", not a
+principle; a writer with two thousand notes may well want a denser view, and that is
+exactly what the cohort would surface.
+
+---
+
+## 2026-09-08 — The in-memory search index stays on the main thread
+
+**Status:** Active
+
+**Why:** Item 51 says to add a Worker only after measurement shows the main thread is
+a problem. A local 10,000-note generator now lives beside the search tests; it does not
+pretend to be item 80's fixture, which has not been built. On this machine, 40 mixed
+queries measured 42.13 ms at p95 and 79.91 ms at the maximum. Building the index took
+306.98 ms, and reconciling one edited note and running its query took 11.13 ms. The
+benchmark excludes HTML-to-text sanitization because item 11 already owns and caches
+that cost; it measures the index work item 51 adds.
+
+Those numbers leave the 200 ms query budget clear and show that the incremental path is
+short. The hook therefore keeps synchronous query results and a component-owned index.
+The index contains plaintext title and content only in process memory. It is never
+exported or connected to localStorage, IndexedDB, or a network API. Persisting an
+encrypted index remains item 142.
+
+**Rejected:** A Worker now — it would add asynchronous lifecycle, message ordering, and
+plaintext copies across the thread boundary without fixing a measured latency problem.
+Move the same index behind a Worker only if browser measurements on real libraries show
+long main-thread tasks or the 200 ms p95 budget fails.
+
+---
+
+## 2026-09-08 — MiniSearch earns the search dependency
+
+**Status:** Active
+
+**Why:** Item 51 needs ranked title and content fields, controlled fuzziness, and exact
+incremental add, replace, and removal. MiniSearch supplies those primitives directly.
+It has no runtime dependencies, supports a per-field boost and edit-distance cutoff,
+and lets the hook remove the exact old document before adding its replacement. The app
+still places every title match ahead of content-only matches explicitly, then uses the
+library score within those tiers.
+
+The feature increases the production entry chunk by 19,638 bytes raw and 6,787 bytes
+gzip against the same `origin/main` build. That is a real runtime cost, but it replaces
+a linear scan with the ranking, prefix search, fuzziness, and mutable index this item
+requires. Fuzzy matching starts at four characters, is weighted below exact and prefix
+matches, and is capped at two edits. Quoted phrases stay exact.
+
+**Rejected:** FlexSearch — its strongest advantages are raw throughput, configurable
+tokenizers and encoders, and built-in Worker variants. The measured workload does not
+need a Worker, and its tokenizer/encoder approach would require more policy around
+field-result merging and typo tolerance than this search contract needs. A hand-built
+index was also rejected: it would save a small bundle addition by taking ownership of
+ranking and fuzzy-search correctness indefinitely.
+
+---
+
 ## 2026-09-08 — Chapter grouping owns the within-chapter order
 
 **Status:** Active

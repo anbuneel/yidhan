@@ -3,6 +3,9 @@ import type { Note } from '../types';
 // Chapter keys including pinned (which is handled separately from temporal)
 export type ChapterKey = 'pinned' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'earlier' | 'archive';
 
+/** Search results use one ranked section instead of chronology-based chapters. */
+export type LibrarySectionKey = ChapterKey | 'search';
+
 /**
  * Which timestamp decides the chapter a note falls into.
  *
@@ -47,7 +50,8 @@ export function isNoteSortKey(value: unknown): value is NoteSortKey {
 }
 
 // Chapter-aware waterline text (displayed below the last visible card row)
-export const WATERLINE_TEXT: Record<ChapterKey, (count: number) => string> = {
+export const WATERLINE_TEXT: Record<LibrarySectionKey, (count: number) => string> = {
+  search: (n) => `${n} more results...`,
   pinned: (n) => `${n} more pinned...`,
   thisWeek: (n) => `${n} more from this week...`,
   lastWeek: (n) => `${n} more from last week...`,

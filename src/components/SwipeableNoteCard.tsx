@@ -12,6 +12,7 @@ interface SwipeableNoteCardProps {
   disabled?: boolean;
   isCompact?: boolean;
   searchQuery?: string;
+  searchMatchTerms?: readonly string[];
   isFocused?: boolean;
 }
 
@@ -35,6 +36,7 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
   disabled = false,
   isCompact = false,
   searchQuery,
+  searchMatchTerms,
   isFocused = false,
 }: SwipeableNoteCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -193,8 +195,9 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
           isFocused={isFocused}
           isCompact={isCompact}
           searchQuery={searchQuery}
+          searchMatchTerms={searchMatchTerms}
         />
       </animated.div>
     </div>
   );
-}, (prev, next) => prev.note === next.note && prev.disabled === next.disabled && prev.isCompact === next.isCompact && prev.searchQuery === next.searchQuery && prev.isFocused === next.isFocused);
+}, (prev, next) => prev.note === next.note && prev.disabled === next.disabled && prev.isCompact === next.isCompact && prev.searchQuery === next.searchQuery && prev.searchMatchTerms === next.searchMatchTerms && prev.isFocused === next.isFocused);

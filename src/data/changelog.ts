@@ -7,14 +7,20 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
-  { version: '3.19.25', date: '2026-09-10', changes: [
+  { version: '3.19.27', date: '2026-09-10', changes: [
     { type: 'improvement', text: 'The landing page’s first screen now appears before the app has finished loading, in your theme, so a shared link opens to words rather than a blank page' },
     { type: 'improvement', text: 'Links to Yidhan now unfurl with the new tagline and card' },
   ] },
-  { version: '3.19.24', date: '2026-09-10', changes: [
+  { version: '3.19.26', date: '2026-09-10', changes: [
     { type: 'improvement', text: 'The landing page now says what Yidhan is in its first line, shows the real editor beside it, and states the privacy promise once. Try writing opens a Practice Space draft at every screen size instead of an in-page text box' },
     { type: 'improvement', text: 'The Practice Space starter notes are now four short personal notes rather than a reading list, a recipe and a to-do list, and the landing page shows the same notes so what you see is what you open' },
     { type: 'improvement', text: 'An empty note now begins with “Begin where you are.” as its first placeholder' },
+  ] },
+  { version: '3.19.25', date: '2026-09-10', changes: [
+    { type: 'fix', text: 'The note title no longer appears twice in the editor. The one in the header now shows up only after you have scrolled past the title you type into, and takes you back to it' },
+  ] },
+  { version: '3.19.24', date: '2026-09-08', changes: [
+    { type: 'improvement', text: 'Library search now ranks title matches first and finds longer words through small typing mistakes, while keeping every search term only in memory' },
   ] },
   { version: '3.19.23', date: '2026-09-08', changes: [
     { type: 'feature', text: 'Library search now supports required words, exact phrases, tags, pinned notes, and inclusive before or after dates, with every text match highlighted' },

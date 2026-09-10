@@ -96,6 +96,7 @@ must satisfy; the "done when" below is the summary, that document is the detail.
 
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
+| 30 | List view: one line per note, toggle in header, remembered per device | weeks | Start when the cohort (#87) asks for one | Toggle works; cards remain the default; 2,000 notes render without jank · E2E and the #80 fixture |
 | 92 | Note links: `[[` opens the switcher and inserts `/n/<id>`; titles resolve client-side; "Mentioned in" list at the bottom | weeks | Needs #28, #42, #31 | Renaming a note updates every link's text; the linked note lists the mention · E2E |
 | 93 | Tag quality of life: search in selector, rename preserves assignments, Tags page with counts, `#tag` autocomplete in the editor | days |  | Typing `#jour` and Enter assigns "journal" without leaving the editor · E2E |
 | — | Keyboard tag assignment from a selected library card | days | Needs item 93's note tag picker | `t` opens the existing per-note picker without adding a second card control · E2E |
