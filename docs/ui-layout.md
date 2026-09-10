@@ -164,10 +164,16 @@ Row 2: [         Search...          ]
 (logo + breadcrumb integrated)          (save status + delete)
 ```
 
+The `/ Note Title` half of the breadcrumb appears only once the editable title has
+scrolled under the header — it is a scroll-to-top button, so it says nothing while the
+title it scrolls to is on screen. Below 640px it never appears: the header is already
+logo, save status, delete, theme and avatar, and WhisperBack covers scrolling back.
+Both conditions — scrolled past, wide enough — are decided in one expression in
+`Editor.tsx` rather than half of it in a `sm:` class.
+
 **Editor Header (Mobile):**
 ```
 Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
-Row 2: [Note Title]
 ```
 
 **Landing/Public Pages:**
@@ -180,7 +186,7 @@ Row 2: [Note Title]
 | Page | Left Content | Center Content | Right Actions | Menu Sections |
 |------|--------------|----------------|---------------|---------------|
 | Library | - (default logo) | Search bar | New Note button | Export, Import, Faded Notes |
-| Editor | Logo + Breadcrumb | Mobile: Note title | Save status + Delete | - |
+| Editor | Logo + Breadcrumb | - | Save status + Delete | - |
 | Landing | - (default logo) | - | - | - |
 | Changelog | - (default logo) | - | - | - |
 | Roadmap | - (default logo) | - | - | - |

@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.25', date: '2026-09-10', changes: [
+    { type: 'fix', text: 'The note title no longer appears twice in the editor. The one in the header now shows up only after you have scrolled past the title you type into, and takes you back to it' },
+  ] },
   { version: '3.19.24', date: '2026-09-08', changes: [
     { type: 'improvement', text: 'Library search now ranks title matches first and finds longer words through small typing mistakes, while keeping every search term only in memory' },
   ] },

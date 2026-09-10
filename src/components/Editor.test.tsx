@@ -203,11 +203,13 @@ describe('Editor', () => {
       expect(screen.getByTestId('note-editor')).toHaveClass('h-[100dvh]');
     });
 
-    it('renders the header with title in breadcrumb', () => {
+    it('renders the header breadcrumb, with the title held back until it scrolls away', () => {
       render(<Editor {...defaultProps} />);
       // The header left content should include the note title
       expect(within(screen.getByTestId('header-left')).getByRole('button', { name: 'Yidhan' })).toBeInTheDocument();
       expect(screen.getByTestId('header-left')).toHaveTextContent('Test Note');
+      // ...but not on screen beside the editable title. See 'header note title'.
+      expect(screen.getByTestId('header-note-title')).not.toBeVisible();
     });
 
     it('renders the editor toolbar', () => {
@@ -1129,6 +1131,249 @@ describe('Editor', () => {
 
       expect(screen.queryByText('Updated on another device')).not.toBeInTheDocument();
       expect(screen.getByDisplayValue('My Local Edit')).toBeInTheDocument();
+    });
+  });
+  // The header title is a scroll-to-top button. It duplicated the editable title
+  // at every width from 640px up (ledger item 83), so the cases that matter are
+  // the ones where it must stay hidden.
+  describe('header note title', () => {
+    type Viewport = { width: number; height: number; touch: boolean };
+
+    const PORTRAIT_PHONE: Viewport = { width: 375, height: 812, touch: true };
+    const LANDSCAPE_PHONE: Viewport = { width: 812, height: 375, touch: true };
+    const TABLET: Viewport = { width: 820, height: 1180, touch: true };
+    const DESKTOP: Viewport = { width: 1440, height: 900, touch: false };
+
+    const VIEWPORTS: [string, Viewport][] = [
+      ['a phone in portrait', PORTRAIT_PHONE],
+      ['a phone in landscape', LANDSCAPE_PHONE],
+      ['a tablet', TABLET],
+      ['a desktop', DESKTOP],
+    ];
+
+    // Wide enough for the header to hold a breadcrumb beside the save status.
+    const ROOMY: [string, Viewport][] = [
+      ['a phone in landscape', LANDSCAPE_PHONE],
+      ['a tablet', TABLET],
+      ['a desktop', DESKTOP],
+    ];
+
+    const originalMatchMedia = window.matchMedia;
+    const originalWidth = window.innerWidth;
+    const originalHeight = window.innerHeight;
+    const originalTouchPoints = navigator.maxTouchPoints;
+
+    const define = (target: object, prop: string, value: unknown) => {
+      Object.defineProperty(target, prop, { value, writable: true, configurable: true });
+    };
+
+    // matchMedia is defined non-configurable in the test setup, so it is assigned
+    // rather than redefined, and put back after each test.
+    const setMatchMedia = (value: typeof window.matchMedia) => {
+      window.matchMedia = value;
+    };
+
+    const setViewport = ({ width, height, touch }: Viewport) => {
+      define(window, 'innerWidth', width);
+      define(window, 'innerHeight', height);
+      define(navigator, 'maxTouchPoints', touch ? 5 : 0);
+      setMatchMedia(vi.fn().mockImplementation((query: string) => ({
+        matches: touch && query.includes('coarse'),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })) as unknown as typeof window.matchMedia);
+    };
+
+    // jsdom does no layout, so every offset the measurement reads is 0. Fake the
+    // three it needs: the title's bottom edge lands at 128px of scroll content,
+    // under a 56px header, so it is out of view from 72px of scroll.
+    const HEADER_HEIGHT = 56;
+    const SCROLLED_PAST = 400;
+
+    const stubLayout = () => {
+      const container = screen.getByTestId('note-editor');
+      define(container.querySelector('.editor-sticky-zone')!, 'offsetHeight', HEADER_HEIGHT);
+      define(container.querySelector('.editor-writing-area')!, 'offsetTop', HEADER_HEIGHT);
+      define(screen.getByLabelText('Note title'), 'offsetTop', 24);
+      define(screen.getByLabelText('Note title'), 'offsetHeight', 48);
+      return container;
+    };
+
+    const scrollTo = (container: HTMLElement, top: number) => {
+      define(container, 'scrollTop', top);
+      act(() => {
+        fireEvent.scroll(container);
+      });
+    };
+
+    const headerTitle = () => screen.getByTestId('header-note-title');
+    const titleButtons = (name: string) => screen.queryAllByRole('button', { name });
+
+    beforeEach(() => {
+      // Run the rAF callbacks inline so a scroll settles within the test.
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 0;
+      });
+    });
+
+    afterEach(() => {
+      setMatchMedia(originalMatchMedia);
+      define(window, 'innerWidth', originalWidth);
+      define(window, 'innerHeight', originalHeight);
+      define(navigator, 'maxTouchPoints', originalTouchPoints);
+    });
+
+    it.each(VIEWPORTS)('shows one title at the top of the note on %s', (_label, viewport) => {
+      setViewport(viewport);
+      render(<Editor {...defaultProps} />);
+      stubLayout();
+
+      expect(headerTitle()).not.toBeVisible();
+      expect(titleButtons('Test Note')).toHaveLength(0);
+      expect(screen.getByLabelText('Note title')).toHaveValue('Test Note');
+    });
+
+    it.each(ROOMY)('shows one title once the editable title has scrolled away on %s', (_label, viewport) => {
+      setViewport(viewport);
+      render(<Editor {...defaultProps} />);
+      const container = stubLayout();
+
+      scrollTo(container, SCROLLED_PAST);
+
+      expect(headerTitle()).toBeVisible();
+      expect(titleButtons('Test Note')).toHaveLength(1);
+
+      // ...and hides again on the way back up, so the two are never both on screen.
+      scrollTo(container, 0);
+      expect(headerTitle()).not.toBeVisible();
+      expect(titleButtons('Test Note')).toHaveLength(0);
+    });
+
+    it('leaves a phone in portrait with no header title however far it scrolls', () => {
+      setViewport(PORTRAIT_PHONE);
+      render(<Editor {...defaultProps} />);
+      const container = stubLayout();
+
+      scrollTo(container, SCROLLED_PAST);
+      expect(headerTitle()).not.toBeVisible();
+
+      scrollTo(container, SCROLLED_PAST * 10);
+      expect(headerTitle()).not.toBeVisible();
+      expect(titleButtons('Test Note')).toHaveLength(0);
+    });
+
+    it('picks the header title up when a scrolled phone is turned into landscape', () => {
+      setViewport(PORTRAIT_PHONE);
+      render(<Editor {...defaultProps} />);
+      const container = stubLayout();
+
+      scrollTo(container, SCROLLED_PAST);
+      expect(headerTitle()).not.toBeVisible();
+
+      // Rotating crosses the width test without a scroll event of its own.
+      setViewport(LANDSCAPE_PHONE);
+      act(() => {
+        fireEvent(window, new Event('resize'));
+      });
+
+      expect(headerTitle()).toBeVisible();
+      expect(titleButtons('Test Note')).toHaveLength(1);
+    });
+
+    it('holds the header title back until the title is under the header, not at the first pixel', () => {
+      setViewport(DESKTOP);
+      render(<Editor {...defaultProps} />);
+      const container = stubLayout();
+
+      scrollTo(container, 71); // Title bottom at 128, header 56 — one pixel short
+      expect(headerTitle()).not.toBeVisible();
+
+      scrollTo(container, 72);
+      expect(headerTitle()).toBeVisible();
+    });
+
+    it('keeps the header title hidden until layout has placed the editable title', () => {
+      setViewport(DESKTOP);
+      render(<Editor {...defaultProps} />);
+      const container = screen.getByTestId('note-editor');
+
+      // No stubbed offsets: every measurement reads 0, as it does before first paint.
+      scrollTo(container, SCROLLED_PAST);
+
+      expect(headerTitle()).not.toBeVisible();
+    });
+
+    it('scrolls a long note back to the title on a desktop', () => {
+      setViewport(DESKTOP);
+      render(<Editor {...defaultProps} />);
+      const container = stubLayout();
+      const scrollToSpy = vi.fn();
+      define(container, 'scrollTo', scrollToSpy);
+
+      scrollTo(container, SCROLLED_PAST);
+      fireEvent.click(screen.getByRole('button', { name: 'Test Note' }));
+
+      expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+    });
+
+    it('shows the Untitled placeholder once, not twice', () => {
+      setViewport(DESKTOP);
+      const untitled = createMockNote({ id: 'note-123', title: '', content: '<p>Test content</p>' });
+      render(<Editor {...defaultProps} note={untitled} />);
+      const container = stubLayout();
+
+      expect(titleButtons('Untitled')).toHaveLength(0);
+      expect(screen.getByLabelText('Note title')).toHaveAttribute('placeholder', 'Untitled');
+
+      scrollTo(container, SCROLLED_PAST);
+      expect(titleButtons('Untitled')).toHaveLength(1);
+    });
+
+    it('does not resurrect the header title in focus mode', () => {
+      setViewport(DESKTOP);
+      render(<Editor {...defaultProps} />);
+      const container = stubLayout();
+
+      scrollTo(container, SCROLLED_PAST);
+      expect(headerTitle()).toBeVisible();
+
+      act(() => {
+        fireEvent.keyDown(window, { key: 'f', ctrlKey: true, shiftKey: true });
+      });
+      expect(screen.getByText('Focus mode on')).toBeInTheDocument();
+      expect(headerTitle()).not.toBeVisible();
+
+      // Scrolling further inside focus mode must not bring it back either.
+      scrollTo(container, SCROLLED_PAST * 2);
+      expect(headerTitle()).not.toBeVisible();
+
+      // Leaving focus mode while still scrolled returns it.
+      act(() => {
+        fireEvent.keyDown(window, { key: 'f', ctrlKey: true, shiftKey: true });
+      });
+      expect(headerTitle()).toBeVisible();
+    });
+
+    it('hides the header title again when a different note opens at the top', () => {
+      setViewport(DESKTOP);
+      const { rerender } = render(<Editor {...defaultProps} />);
+      const container = stubLayout();
+
+      scrollTo(container, SCROLLED_PAST);
+      expect(headerTitle()).toBeVisible();
+
+      const other = createMockNote({ id: 'note-456', title: 'Other Note', content: '<p>Other</p>' });
+      define(container, 'scrollTop', 0);
+      rerender(<Editor {...defaultProps} note={other} />);
+
+      expect(headerTitle()).not.toBeVisible();
+      expect(titleButtons('Other Note')).toHaveLength(0);
     });
   });
 });

@@ -1,7 +1,7 @@
 # Yidhan improvement plan
 
 Status: ACTIVE
-Last verified: 2026-09-08
+Last verified: 2026-09-10
 
 The engineering ledger for product work. It owns **what is committed now** —
 nothing else.
@@ -34,20 +34,14 @@ that must land first.
 
 ## Next
 
-Two items across two code lanes, plus item 87, which is the maintainer's own task.
-Both remaining items are blocked on the maintainer, not on code.
+One item in one code lane, plus item 87, which is the maintainer's own task. The
+remaining item is blocked on the maintainer, not on code.
 
 Lanes group related work. They are not branches: each item gets its own branch off `main`.
 
-Lanes B, C and E are closed. B and C shipped. E shipped items 48, 49, 50, 51 and 73; its
-last item — 30, list view — went back to `docs/roadmap.md` rather than being built
-(`DECISIONS.md`, 2026-09-10).
-
-### Lane A · Editor fluency
-
-| # | Area | Item | Effort | Needs / start when | Done when |
-|---|------|------|--------|--------------------|-----------|
-| 83 | Phone | Remove the doubled title in the mobile editor; `h-screen` to `100dvh` | days |  | iOS Safari bars no longer clip the toolbar · real-device check in #81 |
+Lanes A, B, C and E are closed. A closes with item 83; B and C shipped. E shipped
+items 48, 49, 50, 51 and 73; its last item — 30, list view — went back to
+`docs/roadmap.md` rather than being built (`DECISIONS.md`, 2026-09-10).
 
 ### Lane D · Sync hardening and CI
 
