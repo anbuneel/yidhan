@@ -7,6 +7,10 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.29', date: '2026-09-10', changes: [
+    { type: 'fix', text: 'The tag picker and the writing details (the lines icon before the date) now open in front of the toolbar and the note text instead of behind them' },
+    { type: 'improvement', text: 'Wide screens show one toolbar again: the vertical one beside the page. The toolbar under the title now appears only where the sidebar does not fit' },
+  ] },
   { version: '3.19.28', date: '2026-09-10', changes: [
     { type: 'fix', text: 'The security.txt link on the security page now opens the file it promises, with the contact address and an expiry, instead of the not-found page' },
   ] },

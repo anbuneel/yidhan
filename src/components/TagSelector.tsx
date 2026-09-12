@@ -50,6 +50,7 @@ export function TagSelector({
 
   const dropdownJSX = isOpen ? (
         <div
+          data-testid="tag-selector-menu"
           className="
             absolute left-0 top-full mt-2
             min-w-[200px] max-w-[calc(100vw-2rem)]

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const commandIds = [
   'bold', 'italic', 'underline', 'strike', 'inlineCode', 'link', 'highlight',
@@ -8,7 +8,7 @@ const commandIds = [
   'redo', 'findReplace', 'smartTypography', 'focusMode',
 ] as const;
 
-async function openBlankPracticeNote(page: import('@playwright/test').Page): Promise<void> {
+async function openBlankPracticeNote(page: Page): Promise<void> {
   await page.goto('/demo');
   // Demo hydration seeds its starter notes asynchronously. Waiting for the
   // seed prevents an early new-note click from racing that initial state load.
@@ -18,20 +18,43 @@ async function openBlankPracticeNote(page: import('@playwright/test').Page): Pro
   await expect(page.getByTestId('note-editor')).toBeVisible();
 }
 
+/** Names the editor surface that owns the topmost element at a viewport point. */
+function surfaceAt(page: Page, x: number, y: number): Promise<string> {
+  return page.evaluate(([px, py]) => {
+    const hit = document.elementFromPoint(px, py);
+    if (!hit) return 'nothing';
+    if (hit.closest('[data-testid="tag-selector-menu"]')) return 'tag menu';
+    if (hit.closest('.editor-metrics-detail')) return 'writing details';
+    if (hit.closest('.editor-toolbar-inline')) return 'toolbar';
+    if (hit.closest('.editor-toolbar-bottom')) return 'bottom toolbar';
+    if (hit.closest('.ProseMirror')) return 'note body';
+    return hit.tagName.toLowerCase();
+  }, [x, y]);
+}
+
 test.describe('editor fluency', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => localStorage.clear());
   });
 
-  test('every editor command is mouse-reachable from 320px through 1920px', async ({ page }) => {
+  test('every editor command is mouse-reachable from 320px through 1920px, from one toolbar at a time', async ({ page, isMobile }) => {
     await openBlankPracticeNote(page);
 
-    for (const width of [320, 768, 1100, 1920]) {
+    for (const width of [320, 768, 1024, 1100, 1920]) {
       await page.setViewportSize({ width, height: 900 });
-      const surface = width < 768
-        ? page.locator('.editor-toolbar-bottom')
-        : page.locator('.editor-toolbar-inline');
-      await expect(surface).toBeVisible();
+      const surfaces = {
+        bottom: page.locator('.editor-toolbar-bottom'),
+        inline: page.locator('.editor-toolbar-inline'),
+        sidebar: page.locator('.editor-sidebar'),
+      };
+      // Touch devices never render the sidebar; they keep the inline toolbar from 768px up.
+      const shown: keyof typeof surfaces = width < 768 ? 'bottom' : width < 1100 || isMobile ? 'inline' : 'sidebar';
+      // One toolbar at a time. The other two are hidden by CSS or not rendered at all.
+      for (const [name, locator] of Object.entries(surfaces)) {
+        if (name === shown) await expect(locator).toBeVisible();
+        else await expect(locator).toBeHidden();
+      }
+      const surface = surfaces[shown];
       await surface.getByRole('button', { name: 'More editor commands' }).click();
       const menu = surface.getByRole('menu', { name: 'All editor commands' });
       await expect(menu).toBeVisible();
@@ -107,5 +130,80 @@ test.describe('editor fluency', () => {
     await page.keyboard.press('Backspace');
     await page.keyboard.type('/');
     await expect(page.locator('[data-editor-popover="slash"]')).toBeVisible();
+  });
+
+  test('the tag picker and writing details open in front of the toolbar and the note body', async ({ page, isMobile }) => {
+    // 1024px: the inline toolbar sits directly under the metadata row and the
+    // sidebar is hidden. Both popovers used to paint behind that toolbar, and
+    // behind the note body, because the row's focus-mode class makes it a
+    // stacking context that its children's z-index cannot escape.
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await openBlankPracticeNote(page);
+    const editor = page.getByTestId('rich-text-editor').locator('.ProseMirror');
+    await editor.click();
+    for (let line = 0; line < 8; line += 1) {
+      await page.keyboard.type(`Body line ${line}`);
+      await page.keyboard.press('Enter');
+    }
+
+    await page.getByRole('button', { name: 'Add tag' }).click();
+    const menu = page.getByTestId('tag-selector-menu');
+    await expect(menu).toBeVisible();
+    const menuBox = (await menu.boundingBox())!;
+    // Just inside the top edge, where the sticky toolbar is.
+    expect(await surfaceAt(page, menuBox.x + 24, menuBox.y + 12)).toBe('tag menu');
+    // Just inside the bottom edge, over the first lines of the body.
+    expect(await surfaceAt(page, menuBox.x + 24, menuBox.y + menuBox.height - 8)).toBe('tag menu');
+    // A real click on the top item lands on it, not on the toolbar behind it.
+    await menu.getByRole('button', { name: 'Journal' }).click();
+    // The chip in the metadata row, plus the menu item that is still open.
+    await expect(page.getByRole('button', { name: 'Journal', exact: true })).toHaveCount(2);
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+
+    // Hover reveals the details on a pointer device; on touch a tap toggles them.
+    const detailsTrigger = page.getByRole('button', { name: /^Writing details/ });
+    if (isMobile) await detailsTrigger.click(); else await detailsTrigger.hover();
+    const details = page.locator('.editor-metrics-detail');
+    await expect(details).toBeVisible();
+    await expect(details).toContainText('words');
+    const detailsBox = (await details.boundingBox())!;
+    expect(await surfaceAt(page, detailsBox.x + detailsBox.width / 2, detailsBox.y + detailsBox.height / 2)).toBe('writing details');
+
+    // Where it should not fire: with both closed, the toolbar is on top again.
+    if (isMobile) await detailsTrigger.click(); else await page.mouse.move(8, 8);
+    await expect(details).toBeHidden();
+    const bold = page.locator('.editor-toolbar-inline [data-command-id="bold"]');
+    const boldBox = (await bold.boundingBox())!;
+    expect(await surfaceAt(page, boldBox.x + boldBox.width / 2, boldBox.y + boldBox.height / 2)).toBe('toolbar');
+  });
+
+  test('the tag picker opens in front of the bottom toolbar on a phone', async ({ page }) => {
+    // Measure where the picker's last tag lands on a tall phone, then reopen the
+    // note in a viewport just tall enough that the fixed bottom toolbar (z 30)
+    // covers that spot. The picker hangs from the title, so it does not move.
+    await page.setViewportSize({ width: 390, height: 900 });
+    await openBlankPracticeNote(page);
+    await page.getByRole('button', { name: 'Add tag' }).click();
+    const menu = page.getByTestId('tag-selector-menu');
+    await expect(menu).toBeVisible();
+    const lastTag = menu.getByRole('button', { name: 'Reading' });
+    const lastTagBox = (await lastTag.boundingBox())!;
+    const cx = lastTagBox.x + lastTagBox.width / 2;
+    const cy = lastTagBox.y + lastTagBox.height / 2;
+
+    await page.setViewportSize({ width: 390, height: Math.round(cy + 20) });
+    await openBlankPracticeNote(page);
+    await page.getByRole('button', { name: 'Add tag' }).click();
+    await expect(menu).toBeVisible();
+    const toolbar = page.locator('.editor-toolbar-bottom');
+    await expect(toolbar).toBeVisible();
+    const toolbarBox = (await toolbar.boundingBox())!;
+    // The case only means something if the two overlap.
+    expect(toolbarBox.y).toBeLessThan(cy);
+    expect(await surfaceAt(page, cx, cy)).toBe('tag menu');
+    // A real tap on that tag lands on it, not on the toolbar.
+    await lastTag.click();
+    await expect(page.getByRole('button', { name: 'Reading', exact: true })).toHaveCount(2);
   });
 });

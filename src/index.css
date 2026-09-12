@@ -1368,6 +1368,16 @@ body::before {
   min-height: 1.5rem;
 }
 
+/* `.focus-mode-target` sets `will-change: opacity`, which makes the row a stacking
+   context and traps the tag picker (z 50) and the writing-details popover (z 25)
+   inside it: they painted behind the sticky toolbar (10), the positioned note body
+   and, on phones, the fixed bottom toolbar (30). The row's fade does not need the
+   hint — the browser promotes an opacity transition on its own — so drop it here
+   and let the popovers' z-index count in the editor's own stacking context. */
+.editor-metadata-row.focus-mode-target {
+  will-change: auto;
+}
+
 .editor-metadata-row .editor-timestamps {
   opacity: 0.8;
   white-space: nowrap;
@@ -1471,10 +1481,6 @@ body::before {
 @media (min-width: 1100px) {
   .editor-sidebar {
     display: flex;
-  }
-  /* Hide inline toolbar when sidebar is visible — sidebar takes over */
-  .editor-toolbar-medium-fallback {
-    display: none;
   }
 }
 
@@ -1919,10 +1925,14 @@ textarea:focus,
   }
 }
 
-/* The wide sidebar supplements the inline toolbar; it never replaces it. */
+/* One toolbar at a time: from 1100px the vertical sidebar replaces the inline
+   toolbar wherever the sidebar renders — `data-has-sidebar` is set on pointer
+   devices, where `isMobile` is false. Touch tablets get no sidebar, so they keep
+   the inline toolbar at every width. The sidebar's overflow menu lists every
+   command, so nothing becomes unreachable (DECISIONS.md, 2026-09-10). */
 @media (min-width: 1100px) {
-  .editor-toolbar-medium-fallback {
-    display: block;
+  .editor-toolbar-inline[data-has-sidebar] {
+    display: none;
   }
 }
 

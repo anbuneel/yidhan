@@ -180,10 +180,18 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
 
 ## Editor Chrome
 
-- **Toolbar** — `EditorToolbar.tsx`, with `variant: 'inline' | 'bottom'`.
-- **Vertical sidebar** — `EditorSidebar.tsx`, shown at 1100px and wider. It supplements
-  the toolbar rather than replacing it; every command stays reachable from the toolbar at
-  every width.
+- **Toolbar** — `EditorToolbar.tsx`, with `variant: 'inline' | 'bottom' | 'sidebar'`.
+  Every variant ends in an overflow menu that lists every command, so each surface
+  reaches everything on its own.
+- **One toolbar at a time.** Below 768px the bottom toolbar, in the thumb zone. From
+  768px to 1099px the inline toolbar under the title. From 1100px the vertical sidebar
+  (`EditorSidebar.tsx`) alone, in the left margin; CSS hides the inline toolbar
+  wherever the sidebar renders (`DECISIONS.md`, 2026-09-10). Touch devices
+  (`useMobileDetect`) never render the sidebar and keep the inline toolbar from 768px
+  up.
+- **Writing details** — `EditorMetrics.tsx`, the lines icon before the date in the
+  metadata row. Hover or focus shows words, characters and reading time; on mobile a
+  tap toggles it.
 - **Focus mode** — `focus-mode-active` on the scroll container fades descendant
   `.focus-mode-target` elements.
 
