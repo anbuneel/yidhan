@@ -70,11 +70,16 @@ the header, it needs a shape.
 
 ## Round four
 
-- **Yi** (`yi.svg`). Spring, brightness and the Y without the kolam. A solid
-  calligraphic Y whose arms ease outward like water. A gold sun floats in the
-  cup; in the wordmark it is the tittle of the i and the i goes dotless. The
-  mark spells the first syllable. Sun must float between the arms, never sit
-  on the fork, or the Y reads as a figure holding a ball.
+- **Yi** (`yi.svg`). Spring, brightness and the Y without the kolam. A
+  serifed calligraphic Y, thick left arm and hairline right arm, with a gold
+  sun floating in the cup; in the wordmark it is the tittle of the i and the
+  i goes dotless. The mark spells the first syllable. The first draft used
+  three round-capped strokes and read as a figure with raised arms; serifs
+  are what a body never has, so the letter reading wins.
+- **The sun.** Four treatments compared: rays (rejected: eight extra elements,
+  collides with the arms, the solar-installer glyph), a hand-drawn disc
+  (always), a soft glow on screen (the manuscript glow), and a lit Y where the
+  arm faces nearest the sun take gold (splash, landing, print at size).
 
 ## Pick
 
