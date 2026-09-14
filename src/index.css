@@ -1888,7 +1888,10 @@ textarea:focus,
 }
 
 /* The sidebar renders EditorToolbar's command buttons; everything else they
-   need comes from .editor-command-button. */
+   need comes from .editor-command-button.
+   `cursor: pointer` here and on the menu item below replaces the removed
+   `.editor-sidebar button` rule, which gave it to every button in the sidebar.
+   Neither base class sets a cursor, so both need it named explicitly. */
 .editor-sidebar .editor-command-button {
   width: 32px;
   height: 32px;
@@ -1899,6 +1902,7 @@ textarea:focus,
   width: 100%;
   height: auto;
   display: grid;
+  cursor: pointer;
 }
 
 /* ============================================
