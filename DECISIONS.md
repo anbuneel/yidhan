@@ -19,6 +19,68 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-14 — A leading raw-HTML block ends at the first blank line, not at the end of the file
+
+**Status:** Active
+
+**Why:** `markdownToHtml` short-circuited on its first line: an input opening with a
+block tag was returned as sanitized raw HTML in its entirety. That shortcut exists to
+reverse our own export fallback — `htmlToMarkdown` stores a note as a raw HTML block
+when the regex serializer would mangle it — but `App.tsx` calls the same function on
+arbitrary uploaded `.md` files, where it misfires. A note that merely *opens* with a
+literal tag, say one about HTML starting `<p> tags define paragraphs...`, had its
+entire remainder returned verbatim, so real Markdown below rendered as literal text.
+CommonMark explicitly permits a leading raw-HTML block followed by Markdown, so this
+was valid input we mishandled. Filed as #208.
+
+The import path cannot tell "our own fallback block" from "a Markdown file that starts
+with a tag" by inspection — there is nothing to compare an arbitrary upload against,
+unlike the export path, which guards its fallback with a round-trip check.
+
+**Decision:** Honour CommonMark's own rule. A raw HTML block runs until the first blank
+line; everything after it is parsed as Markdown. Our export fallback is a single block
+with nothing after it — Tiptap's `getHTML()` emits no blank lines — so it still returns
+verbatim and already-exported files keep round-tripping unchanged.
+
+**Rejected:** An explicit marker or fenced wrapper around fallback blocks on export.
+It would make the two cases distinguishable, but it changes the export format and
+breaks every file already exported, to fix input we can handle correctly without it.
+
+**Rejected:** Accepting the limitation and documenting it. The failure is silent and
+looks like corruption to the person importing; no notice makes that acceptable.
+
+**Cost:** The passthrough is now recursive over blank-line-separated blocks. The
+remainder must have its leading blank lines stripped before recursing or a remainder
+that itself opens with a tag matches at offset zero and recurses forever — that bug
+was written and caught by its own test before merge.
+
+---
+
+## 2026-09-14 — Markdown export keeps its round-trip check and yields instead
+
+**Status:** Active
+
+**Why:** `htmlToMarkdown` verifies its own output before returning it, falling back to
+a raw sanitized HTML block when the conversion would be lossy. Because Tiptap always
+emits a top-level block element, essentially every real note takes that path, so every
+note pays sanitize → convert → sanitize → compare on top of the conversion. Measured in
+jsdom: ~9ms for a twenty-paragraph note, and a whole library in one synchronous pass ran
+~0.9s at 100 notes, ~5s at 500, ~19s at 1000 — the import ceiling. A full account backup
+is exactly where a user has the most notes. Filed as #209.
+
+**Decision:** Keep the verification and chunk the loop, yielding to the main thread every
+ten notes in `downloadMarkdownZip`. The work is unchanged; the tab stays responsive.
+
+**Rejected:** Verifying only constructs the serializer is known to struggle with. It
+would cut the cost most, but the check is the thing standing between a lossy regex
+conversion and a silently corrupted note, and the list of constructs it must cover is
+the same list that has no tripwire today.
+
+**Rejected:** Caching by content hash. It helps a repeat export of an unchanged library
+and does nothing for the first one, which is the case that hurts.
+
+---
+
 ## 2026-09-10 — One toolbar per width in the editor
 
 **Status:** Active

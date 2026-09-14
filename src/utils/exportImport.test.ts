@@ -431,6 +431,67 @@ describe('exportImport', () => {
   });
 
   describe('markdownToHtml', () => {
+    describe('a file that opens with a literal block tag', () => {
+      it('parses the Markdown below the leading HTML block', () => {
+        // CommonMark permits this: a raw-HTML block, a blank line, then
+        // Markdown. The whole file used to be returned as raw HTML, so
+        // everything after the first line rendered as literal text.
+        const md = '<p> tags define paragraphs in HTML.</p>\n\n# A real heading\n\nSome **bold** prose.';
+        const html = markdownToHtml(md);
+
+        expect(html).toContain('<h1>A real heading</h1>');
+        expect(html).toContain('<strong>bold</strong>');
+        expect(html).not.toContain('# A real heading');
+      });
+
+      it('keeps the leading block as HTML rather than escaping it', () => {
+        const html = markdownToHtml('<blockquote>quoted</blockquote>\n\nPlain prose.');
+
+        expect(html).toContain('<blockquote>quoted</blockquote>');
+        expect(html).not.toContain('&lt;blockquote&gt;');
+      });
+
+      it('parses Markdown after several stacked HTML blocks', () => {
+        const html = markdownToHtml('<hr>\n\n<p>intro</p>\n\n## Later heading');
+
+        expect(html).toContain('<h2>Later heading</h2>');
+      });
+    });
+
+    describe('does not fire where the passthrough is load-bearing', () => {
+      it('returns our own whole-note fallback block verbatim', () => {
+        // htmlToMarkdown stores a note it cannot convert losslessly as one
+        // raw-HTML block with nothing after it. Tiptap's getHTML() emits no
+        // blank lines, so there is no blank line to split on and the block
+        // must come back unchanged.
+        const fallback = '<p>Text with <strong>markup</strong> the serializer would mangle</p><ul><li>a</li></ul>';
+
+        // Sanitized, not parsed: the block comes back as HTML rather than
+        // being escaped into literal text.
+        expect(markdownToHtml(fallback)).toBe(sanitizeHtml(fallback));
+        expect(markdownToHtml(fallback)).toContain('<strong>markup</strong>');
+      });
+
+      it('survives a round trip through htmlToMarkdown for a fallback note', () => {
+        const original = '<p>Alignment <span style="color: red">and marks</span></p>';
+
+        expect(markdownToHtml(htmlToMarkdown(original))).toBe(sanitizeHtml(original));
+      });
+
+      it('leaves ordinary Markdown alone', () => {
+        const html = markdownToHtml('# Heading\n\nProse with **bold**.');
+
+        expect(html).toContain('<h1>Heading</h1>');
+        expect(html).toContain('<strong>bold</strong>');
+      });
+
+      it('does not treat an inline tag mid-document as a block boundary', () => {
+        const html = markdownToHtml('Prose mentioning <em>emphasis</em> inline.');
+
+        expect(html).toContain('&lt;em&gt;');
+      });
+    });
+
     it('converts headers', () => {
       expect(markdownToHtml('# Title')).toContain('<h1>Title</h1>');
       expect(markdownToHtml('## Subtitle')).toContain('<h2>Subtitle</h2>');
@@ -688,6 +749,36 @@ describe('exportImport', () => {
 
       expect(URL.createObjectURL).toHaveBeenCalled();
       expect(document.createElement).toHaveBeenCalledWith('a');
+    });
+
+    it('keeps every note and separator when the run spans several chunks', async () => {
+      // The conversion loop yields to the main thread every EXPORT_CHUNK_SIZE
+      // notes so a full-library backup does not freeze the tab. 25 notes is
+      // more than two chunk boundaries, so a chunk that dropped or reordered
+      // its slice would show up here.
+      const notes = Array.from({ length: 25 }, (_, i) =>
+        createMockNote({ title: `Note ${i}`, content: `<p>Body ${i}</p>` })
+      );
+      let captured = '';
+      vi.mocked(URL.createObjectURL).mockImplementation((blob: Blob) => {
+        captured = (blob as unknown as { __text?: string }).__text ?? '';
+        return 'blob:x';
+      });
+      const blobText: string[] = [];
+      const RealBlob = globalThis.Blob;
+      vi.stubGlobal('Blob', class extends RealBlob {
+        constructor(parts: BlobPart[], options?: BlobPropertyBag) {
+          super(parts, options);
+          blobText.push(parts.join(''));
+        }
+      });
+
+      await downloadMarkdownZip(notes);
+
+      const content = blobText.join('') || captured;
+      for (let i = 0; i < 25; i++) expect(content).toContain(`# Note ${i}`);
+      expect(content.split('\n\n---\n\n')).toHaveLength(25);
+      vi.unstubAllGlobals();
     });
 
     it('uses date-based filename with timestamp', async () => {

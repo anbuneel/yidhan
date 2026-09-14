@@ -63,3 +63,44 @@ it('retains local queued removals and never deletes links from a failed listing'
   await reconcileNoteTags(clients[0]);
   expect(await db.noteTags.count()).toBe(0);
 });
+it('writes a link once and leaves it alone on later cycles, but still writes one it does not hold', async () => {
+  await seed();
+  const db = getOfflineDb(clients[0]);
+  transport.rows = [{ note_id: 'shared-note', tag_id: 'journal' }, { note_id: 'shared-note', tag_id: 'poetry' }];
+
+  // First cycle: neither link is held locally, so both are written.
+  const firstPass = vi.spyOn(db.noteTags, 'put');
+  expect(await reconcileNoteTags(clients[0])).toBe(2);
+  expect(firstPass).toHaveBeenCalledTimes(2);
+  firstPass.mockRestore();
+
+  // Second cycle over identical server rows: nothing has changed, so the
+  // scan still runs but performs no writes. This is the regression the
+  // gate exists for — it used to rewrite every row, every pull, forever.
+  const secondPass = vi.spyOn(db.noteTags, 'put');
+  expect(await reconcileNoteTags(clients[0])).toBe(0);
+  expect(secondPass).not.toHaveBeenCalled();
+
+  // A genuinely new link on a later cycle is still written, so the gate
+  // suppresses redundant writes rather than all of them.
+  transport.rows.push({ note_id: 'shared-note', tag_id: 'letters' });
+  expect(await reconcileNoteTags(clients[0])).toBe(1);
+  expect(secondPass).toHaveBeenCalledTimes(1);
+  expect(secondPass).toHaveBeenCalledWith(expect.objectContaining({ tagId: 'letters' }));
+  secondPass.mockRestore();
+
+  expect(await db.noteTags.count()).toBe(3);
+});
+it('leaves the stored link untouched when the server repeats a row it already holds', async () => {
+  await seed();
+  const db = getOfflineDb(clients[0]);
+  // A synced link whose lastSyncedAt is deliberately ancient. Nothing reads
+  // the field for noteTags, so a reconcile must neither refresh nor clear it.
+  await db.noteTags.put({ noteId: 'shared-note', tagId: 'journal', syncStatus: 'synced', lastSyncedAt: 1 });
+  transport.rows = [{ note_id: 'shared-note', tag_id: 'journal' }];
+
+  expect(await reconcileNoteTags(clients[0])).toBe(0);
+
+  const stored = await db.noteTags.get(['shared-note', 'journal']);
+  expect(stored).toEqual({ noteId: 'shared-note', tagId: 'journal', syncStatus: 'synced', lastSyncedAt: 1 });
+});
