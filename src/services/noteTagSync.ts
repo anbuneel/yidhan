@@ -35,7 +35,15 @@ export async function reconcileNoteTags(userId: string, noteId?: string): Promis
       : new Set((await db.notes.toArray()).map(note => note.id));
     for (const row of rows) {
       if (!knownNotes.has(row.note_id) || protectedLinks.has(`${row.note_id}:${row.tag_id}`)) continue;
-      if (!localMembership.has(`${row.note_id}:${row.tag_id}`)) changed++;
+      // A link we already hold needs no write. It is necessarily already
+      // 'synced' — every local link that is not was added to protectedLinks
+      // above and skipped on the line before — so the only field a rewrite
+      // would touch is lastSyncedAt, and nothing reads that for noteTags:
+      // latestSyncTime() is only ever called with notes and tags, and both
+      // migration paths reset those two tables alone. Rewriting anyway cost
+      // one sequential IndexedDB write per link on every pull.
+      if (localMembership.has(`${row.note_id}:${row.tag_id}`)) continue;
+      changed++;
       await db.noteTags.put({ noteId: row.note_id, tagId: row.tag_id, syncStatus: 'synced', lastSyncedAt: Date.now() });
     }
     for (const link of local) {

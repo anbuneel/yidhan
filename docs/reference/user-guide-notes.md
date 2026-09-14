@@ -124,6 +124,29 @@ Click a chapter header to collapse/expand it.
 - **Download (.md)**: Save note as Markdown file
 - **Download (.json)**: Save note as JSON file
 
+### What Markdown import accepts
+
+Markdown written elsewhere is parsed as Markdown, including a file that opens
+with a literal block tag — `<p> tags define paragraphs...` — where the Markdown
+below the opening line used to be returned as literal text. The passthrough
+follows CommonMark: a raw HTML block runs until the first blank line, and
+everything after it is parsed normally.
+
+Yidhan's own Markdown export stores a note as one raw HTML block when the
+conversion would otherwise be lossy, so those notes re-import unchanged. That
+fallback is why a leading HTML block is honoured at all.
+
+### How long a Markdown export takes
+
+Every note is verified by converting it back and comparing, which is what stops
+a lossy conversion corrupting a note silently. That check runs on every note, so
+a whole-library export is real work — roughly a second per hundred notes, and
+longer on a slow device. The app is unresponsive while it runs.
+
+That is deliberate. The export has to hand the file to the browser in the same
+breath as the click that asked for it, or the browser may refuse to save it at
+all. Waiting is the price of a backup that actually arrives.
+
 ---
 
 ## Tips

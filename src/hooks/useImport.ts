@@ -105,7 +105,13 @@ export function useImport({
 
   // Export to Markdown
   const handleExportMarkdown = useCallback(() => {
-    downloadMarkdownZip(notes);
+    // downloadMarkdownZip returns a promise, so a throw inside it arrives as a
+    // rejection rather than synchronously. Unhandled, the export would fail
+    // with no sign at all — the one outcome a backup must never have.
+    downloadMarkdownZip(notes).catch((error: unknown) => {
+      console.error('Markdown export failed:', error);
+      toast.error('Could not save the Markdown export');
+    });
     reportOmittedFromExport(notes);
   }, [notes, reportOmittedFromExport]);
 

@@ -458,7 +458,76 @@ export function htmlToMarkdown(html: string): string {
  * Convert Markdown to HTML (basic conversion)
  */
 export function markdownToHtml(md: string): string {
-  if (/^\s*<(?:p|h[1-6]|ul|ol|pre|blockquote|hr)(?:\s|>)/i.test(md)) return sanitizeHtml(md.trim());
+  let pos = skipBlankLines(md, 0);
+  if (!startsRawBlock(md, pos)) return convertMarkdownBody(md);
+
+  // A leading raw-HTML block no longer swallows the file. htmlToMarkdown's
+  // fallback stores a whole note as one such block with nothing after it, so
+  // that still returns verbatim; a hand-authored file that merely opens with a
+  // literal tag keeps the Markdown below it.
+  //
+  // Walked with an index rather than by recursing on the remainder. A valid
+  // import may hold thousands of blank-line-separated blocks, and both
+  // recursing and re-slicing copy what is left on every block, which is
+  // quadratic — a file well under the 10MB import limit could stall the
+  // import outright.
+  // Each block is sanitized on its own, not as one joined string. Sanitizing
+  // the run together lets HTML parsing nest an unclosed tag in one block over
+  // the next — `<blockquote>unclosed` followed by `<p>next</p>` comes back as
+  // `<blockquote>unclosed` alone, silently dropping the second block. Separate
+  // passes also match CommonMark, which treats these as separate blocks.
+  const parts: string[] = [];
+  while (pos < md.length && startsRawBlock(md, pos)) {
+    const end = rawBlockEnd(md, pos);
+    parts.push(sanitizeHtml(md.slice(pos, end).trim()));
+    pos = skipBlankLines(md, end);
+  }
+  if (pos < md.length) parts.push(convertMarkdownBody(md.slice(pos)));
+  return parts.join('');
+}
+
+// The tag list mirrors htmlToMarkdown's fallback check — both describe the
+// top-level nodes RichTextEditor's extensions can emit. Sticky rather than
+// anchored so the scan can test at an offset without slicing.
+const RAW_BLOCK_AT = /[ \t]*<(?:p|h[1-6]|ul|ol|pre|blockquote|hr)(?:\s|>|\/)/iy;
+// Whole blank lines only — indentation on the first line of content is
+// significant in Markdown, so trimming all leading whitespace would be wrong.
+const BLANK_LINE_RUN_AT = /(?:[ \t]*\r?\n)+/y;
+const BLANK_LINE_FROM = /\r?\n[ \t]*\r?\n/g;
+const PRE_OPEN_AT = /[ \t]*<pre\b/iy;
+const PRE_CLOSE_FROM = /<\/pre\s*>/gi;
+
+function startsRawBlock(md: string, pos: number): boolean {
+  RAW_BLOCK_AT.lastIndex = pos;
+  return RAW_BLOCK_AT.test(md);
+}
+
+function skipBlankLines(md: string, pos: number): number {
+  BLANK_LINE_RUN_AT.lastIndex = pos;
+  return BLANK_LINE_RUN_AT.test(md) ? BLANK_LINE_RUN_AT.lastIndex : pos;
+}
+
+// Where the raw-HTML block starting at `pos` ends, per CommonMark's two
+// relevant end conditions. `<pre>` is a type 1 block: it runs to its closing
+// tag, so a blank line inside a code sample does not split it — treating it
+// like the rest would cut the sample in half and escape the tags after the
+// break into visible text. Everything else here is type 6: it ends at the
+// first blank line. Both always advance past `pos`, since a block starts with
+// a tag rather than a newline.
+function rawBlockEnd(md: string, pos: number): number {
+  PRE_OPEN_AT.lastIndex = pos;
+  if (PRE_OPEN_AT.test(md)) {
+    PRE_CLOSE_FROM.lastIndex = pos;
+    const closing = PRE_CLOSE_FROM.exec(md);
+    // An unclosed <pre> runs to the end of the input, as CommonMark specifies.
+    return closing ? closing.index + closing[0].length : md.length;
+  }
+  BLANK_LINE_FROM.lastIndex = pos;
+  const blankLine = BLANK_LINE_FROM.exec(md);
+  return blankLine ? blankLine.index : md.length;
+}
+
+function convertMarkdownBody(md: string): string {
   let html = md;
 
   // Escape HTML
@@ -608,7 +677,20 @@ export function exportAllNotesToMarkdown(notes: Note[]): { filename: string; con
 export async function downloadMarkdownZip(notes: Note[]): Promise<void> {
   const { exportable } = partitionExportableNotes(notes);
 
-  // Each note uses the same format, joined by separator
+  // Each note uses the same format, joined by separator.
+  //
+  // This loop stays synchronous, and that is load-bearing. Converting is not
+  // cheap — every note Tiptap produces starts with a top-level block element,
+  // so every note takes htmlToMarkdown's round-trip verification path, which
+  // measured ~9ms for a 20-paragraph note and ~0.9s / ~5s / ~19s for libraries
+  // of 100 / 500 / 1000 notes. Chunking the loop and awaiting between batches
+  // would keep the tab responsive, but it would also push downloadFile's
+  // anchor click several event-loop turns past the click that started it, and
+  // browsers only honour a programmatic download while the user activation
+  // from that gesture is still live. A slow export the user waits through is a
+  // far better failure than a backup the browser silently declines to save.
+  // Making this responsive needs a progress UI and a second gesture, not a
+  // yield — see the follow-up issue.
   const combined = exportable.map(note => exportNoteToMarkdown(note)).join('\n\n---\n\n');
 
   const now = new Date();
