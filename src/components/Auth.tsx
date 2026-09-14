@@ -1,4 +1,4 @@
-import { useState, useEffect, useEffectEvent } from 'react';
+import { useState, useEffect, useEffectEvent, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { setTrustedDeviceOnLogin } from '../hooks/useSessionSettings';
 import type { Theme } from '../types';
@@ -688,15 +688,33 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
     onClose?.();
   };
 
+  // Move focus into the confirmation when it opens, onto the non-destructive
+  // choice. Without this, focus stays in the now-inert auth dialog behind it,
+  // which is both unreachable and unannounced.
+  const keepEditingRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (showCloseConfirm) keepEditingRef.current?.focus();
+  }, [showCloseConfirm]);
+
   // Modal mode: wrap in overlay
   if (isModal) {
     return (
       <div className="auth-modal-overlay">
-        <ModalBackdropButton label="Close sign in dialog" onClick={handleModalClose} />
+        <ModalBackdropButton
+          label="Close sign in dialog"
+          disabled={showCloseConfirm}
+          onClick={handleModalClose}
+        />
+        {/* While the confirmation is up the auth dialog is inert: it stops
+            being a second simultaneous aria-modal container, and its controls
+            stop taking focus and clicks. Dropping aria-modal alone would fix
+            the announcement but still leave the form reachable behind the
+            confirmation. */}
         <dialog
         open
         className="auth-modal-content"
-        aria-modal="true"
+        inert={showCloseConfirm}
+        aria-modal={showCloseConfirm ? undefined : true}
         aria-labelledby="auth-modal-title"
         style={{ margin: 0 }}
       >
@@ -713,10 +731,9 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           {authCard}
         </dialog>
 
-        {/* Close confirmation modal — rendered as a sibling dialog (not nested) at z-[60].
-            Note: both this and the outer auth dialog carry aria-modal="true" simultaneously,
-            which some AT handle inconsistently. A future improvement would be to portal this
-            dialog to document.body and use showModal() for native focus trapping. */}
+        {/* Close confirmation — a sibling dialog (not nested) at z-[60]. Only one
+            aria-modal container is live at a time: the auth dialog above goes
+            inert while this is open. */}
         {showCloseConfirm && (
           <div
             className="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-backdrop"
@@ -736,6 +753,14 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               }}
               aria-modal="true"
               aria-labelledby="discard-changes-title"
+              onKeyDown={(e) => {
+                // Escape here means "keep editing", never "discard". It must not
+                // reach the auth dialog behind, which would close it and lose the
+                // form the confirmation is asking about.
+                if (e.key !== 'Escape') return;
+                e.stopPropagation();
+                setShowCloseConfirm(false);
+              }}
             >
               <h3
                 id="discard-changes-title"
@@ -754,6 +779,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               </p>
               <div className="flex justify-center gap-3">
                 <button type="button"
+                  ref={keepEditingRef}
                   onClick={() => setShowCloseConfirm(false)}
                   className="auth-btn-ghost px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                 >

@@ -472,6 +472,61 @@ describe('Auth', () => {
       expect(onClose).not.toHaveBeenCalled();
     });
 
+    it('leaves exactly one aria-modal container live while the confirmation is up', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<Auth {...defaultProps} isModal onClose={vi.fn()} />);
+
+      const authDialog = document.querySelector('.auth-modal-content')!;
+      expect(authDialog).toHaveAttribute('aria-modal', 'true');
+
+      await user.type(screen.getByRole('textbox'), 'test@example.com');
+      await user.click(screen.getByLabelText('Close'));
+
+      // Two simultaneous aria-modal dialogs are what some AT handle
+      // inconsistently, announcing both as the active modal container.
+      expect(authDialog).not.toHaveAttribute('aria-modal');
+      expect(screen.getByText('Discard changes?').closest('dialog')).toHaveAttribute('aria-modal', 'true');
+    });
+
+    it('makes the auth dialog inert behind the confirmation, not merely unlabelled', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<Auth {...defaultProps} isModal onClose={vi.fn()} />);
+
+      await user.type(screen.getByRole('textbox'), 'test@example.com');
+      await user.click(screen.getByLabelText('Close'));
+
+      // Dropping aria-modal alone would fix the announcement and still leave
+      // the form reachable behind the confirmation.
+      expect(document.querySelector('.auth-modal-content')).toHaveAttribute('inert');
+    });
+
+    it('moves focus to the non-destructive choice when the confirmation opens', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<Auth {...defaultProps} isModal onClose={vi.fn()} />);
+
+      await user.type(screen.getByRole('textbox'), 'test@example.com');
+      await user.click(screen.getByLabelText('Close'));
+
+      expect(screen.getByText('Keep Editing')).toHaveFocus();
+    });
+
+    it('treats Escape in the confirmation as Keep Editing, and does not close the form behind it', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onClose = vi.fn();
+      render(<Auth {...defaultProps} isModal onClose={onClose} />);
+
+      await user.type(screen.getByRole('textbox'), 'test@example.com');
+      await user.click(screen.getByLabelText('Close'));
+      await user.keyboard('{Escape}');
+
+      expect(screen.queryByText('Discard changes?')).not.toBeInTheDocument();
+      // Escape must not fall through and discard the form the confirmation
+      // was asking about.
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByRole('textbox')).toHaveValue('test@example.com');
+      expect(document.querySelector('.auth-modal-content')).not.toHaveAttribute('inert');
+    });
+
     it('closes modal when Discard clicked', async () => {
       const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
