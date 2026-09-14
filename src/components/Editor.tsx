@@ -132,13 +132,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   }, [editor]);
   const openFindReplace = useCallback(() => setShowFindReplace(true), []);
   useEffect(() => {
-    const requestLink = (event: Event) => {
-      if (event.target === editor?.view?.dom) openLinkPopover();
-    };
-    document.addEventListener('yidhan:edit-link', requestLink);
-    return () => document.removeEventListener('yidhan:edit-link', requestLink);
-  }, [editor, openLinkPopover]);
-  useEffect(() => {
     const requestAction = (event: Event) => {
       if (event.target !== editor?.view?.dom) return;
       const action = (event as CustomEvent<{ action?: string }>).detail?.action;
