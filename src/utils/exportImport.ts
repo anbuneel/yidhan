@@ -486,7 +486,12 @@ export function markdownToHtml(md: string): string {
   return parts.join('');
 }
 
+// The tag list mirrors htmlToMarkdown's fallback check — both describe the
+// top-level nodes RichTextEditor's extensions can emit. Sticky rather than
+// anchored so the scan can test at an offset without slicing.
 const RAW_BLOCK_AT = /[ \t]*<(?:p|h[1-6]|ul|ol|pre|blockquote|hr)(?:\s|>|\/)/iy;
+// Whole blank lines only — indentation on the first line of content is
+// significant in Markdown, so trimming all leading whitespace would be wrong.
 const BLANK_LINE_RUN_AT = /(?:[ \t]*\r?\n)+/y;
 const BLANK_LINE_FROM = /\r?\n[ \t]*\r?\n/g;
 const PRE_OPEN_AT = /[ \t]*<pre\b/iy;
@@ -521,14 +526,6 @@ function rawBlockEnd(md: string, pos: number): number {
   const blankLine = BLANK_LINE_FROM.exec(md);
   return blankLine ? blankLine.index : md.length;
 }
-
-// The tag list mirrors htmlToMarkdown's fallback check — both describe the
-// top-level nodes RichTextEditor's extensions can emit.
-const LEADING_BLOCK_TAG = /^\s*<(?:p|h[1-6]|ul|ol|pre|blockquote|hr)(?:\s|>)/i;
-
-// Whole blank lines only — indentation on the first line of content is
-// significant in Markdown, so trimStart() would be wrong here.
-const BLANK_LINES = /^(?:[ \t]*\r?\n)+/;
 
 function convertMarkdownBody(md: string): string {
   let html = md;
