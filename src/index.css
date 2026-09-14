@@ -1500,55 +1500,6 @@ body::before {
   border: 1px solid var(--glass-border); /* preserve frosted border */
 }
 
-.editor-sidebar-buttons {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.editor-sidebar-bottom {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--glass-border);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* Sidebar button */
-.editor-sidebar button {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  transition: all 200ms ease;
-  color: var(--color-text-secondary);
-}
-
-.editor-sidebar button:hover {
-  background: var(--color-bg-tertiary);
-}
-
-.editor-sidebar button:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-/* Sidebar divider */
-.editor-sidebar-divider {
-  width: 16px;
-  height: 1px;
-  margin: 4px 0;
-  background: var(--glass-border);
-  opacity: 0.5;
-}
-
 /* ============================================
    FOCUS MODE
    Strips editor chrome for distraction-free writing.
@@ -1936,15 +1887,22 @@ textarea:focus,
   }
 }
 
+/* The sidebar renders EditorToolbar's command buttons; everything else they
+   need comes from .editor-command-button.
+   `cursor: pointer` here and on the menu item below replaces the removed
+   `.editor-sidebar button` rule, which gave it to every button in the sidebar.
+   Neither base class sets a cursor, so both need it named explicitly. */
 .editor-sidebar .editor-command-button {
   width: 32px;
   height: 32px;
+  cursor: pointer;
 }
 
 .editor-sidebar .editor-command-menu-item {
   width: 100%;
   height: auto;
   display: grid;
+  cursor: pointer;
 }
 
 /* ============================================
