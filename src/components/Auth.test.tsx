@@ -527,6 +527,57 @@ describe('Auth', () => {
       expect(document.querySelector('.auth-modal-content')).not.toHaveAttribute('inert');
     });
 
+    it('returns focus to whatever opened the confirmation when it is dismissed', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<Auth {...defaultProps} isModal onClose={vi.fn()} />);
+
+      await user.type(screen.getByRole('textbox'), 'test@example.com');
+      const closeButton = screen.getByLabelText('Close');
+      await user.click(closeButton);
+      expect(screen.getByText('Keep Editing')).toHaveFocus();
+
+      await user.click(screen.getByText('Keep Editing'));
+
+      // Moving focus in obliges us to put it back. The button that held focus
+      // has unmounted; without a restore, focus lands on document.body and a
+      // keyboard user loses their place in the form.
+      expect(closeButton).toHaveFocus();
+      expect(document.body).not.toHaveFocus();
+    });
+
+    it('returns focus to the opener when the confirmation is dismissed with Escape', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<Auth {...defaultProps} isModal onClose={vi.fn()} />);
+
+      await user.type(screen.getByRole('textbox'), 'test@example.com');
+      const closeButton = screen.getByLabelText('Close');
+      await user.click(closeButton);
+      await user.keyboard('{Escape}');
+
+      expect(closeButton).toHaveFocus();
+    });
+
+    it('dismisses the confirmation on Escape even when focus has left the dialog', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onClose = vi.fn();
+      render(<Auth {...defaultProps} isModal onClose={onClose} />);
+
+      await user.type(screen.getByRole('textbox'), 'test@example.com');
+      await user.click(screen.getByLabelText('Close'));
+      expect(screen.getByText('Discard changes?')).toBeInTheDocument();
+
+      // The confirmation is `open` but not modal, so nothing traps focus in it:
+      // tabbing past Discard can land outside. Escape from there reaches the
+      // document listener, which must not re-open an already-open confirmation
+      // and leave no keyboard way out of it.
+      (document.activeElement as HTMLElement | null)?.blur();
+      fireEvent.keyDown(document, { key: 'Escape' });
+
+      expect(screen.queryByText('Discard changes?')).not.toBeInTheDocument();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByRole('textbox')).toHaveValue('test@example.com');
+    });
+
     it('closes modal when Discard clicked', async () => {
       const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();

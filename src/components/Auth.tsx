@@ -145,6 +145,16 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   const handleModalEscape = useEffectEvent((e: KeyboardEvent) => {
     if (e.key !== 'Escape') return;
 
+    // The confirmation is the innermost layer, so it answers Escape first, with
+    // "keep editing". Handled here rather than on the dialog because the dialog
+    // is open but not modal: focus can leave it, and an Escape from outside
+    // would otherwise reach the branch below and re-open an already-open
+    // confirmation, leaving no way to dismiss it from the keyboard.
+    if (showCloseConfirm) {
+      setShowCloseConfirm(false);
+      return;
+    }
+
     // Check if form is dirty
     const isDirty = email.length > 0 || password.length > 0;
     if (isDirty && !awaitingConfirmation) {
@@ -684,6 +694,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   };
 
   const handleConfirmClose = () => {
+    confirmOpenerRef.current = null; // Discarding: there is no form to return to.
     setShowCloseConfirm(false);
     onClose?.();
   };
@@ -691,9 +702,23 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   // Move focus into the confirmation when it opens, onto the non-destructive
   // choice. Without this, focus stays in the now-inert auth dialog behind it,
   // which is both unreachable and unannounced.
+  //
+  // Moving focus in obliges us to put it back. On dismissal the button holding
+  // focus unmounts, and without a restore focus falls to document.body and the
+  // keyboard user loses their place in the form. Restored from an effect rather
+  // than the click handler so the auth dialog has already dropped `inert` —
+  // focusing into a still-inert subtree is refused.
   const keepEditingRef = useRef<HTMLButtonElement>(null);
+  const confirmOpenerRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    if (showCloseConfirm) keepEditingRef.current?.focus();
+    if (showCloseConfirm) {
+      confirmOpenerRef.current = document.activeElement as HTMLElement | null;
+      keepEditingRef.current?.focus();
+      return;
+    }
+    const opener = confirmOpenerRef.current;
+    confirmOpenerRef.current = null;
+    if (opener?.isConnected) opener.focus();
   }, [showCloseConfirm]);
 
   // Modal mode: wrap in overlay
@@ -753,14 +778,6 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               }}
               aria-modal="true"
               aria-labelledby="discard-changes-title"
-              onKeyDown={(e) => {
-                // Escape here means "keep editing", never "discard". It must not
-                // reach the auth dialog behind, which would close it and lose the
-                // form the confirmation is asking about.
-                if (e.key !== 'Escape') return;
-                e.stopPropagation();
-                setShowCloseConfirm(false);
-              }}
             >
               <h3
                 id="discard-changes-title"
