@@ -458,24 +458,68 @@ export function htmlToMarkdown(html: string): string {
  * Convert Markdown to HTML (basic conversion)
  */
 export function markdownToHtml(md: string): string {
-  if (LEADING_BLOCK_TAG.test(md)) {
-    // CommonMark ends a raw-HTML block at the first blank line, so that is
-    // where the passthrough ends too. htmlToMarkdown's fallback stores a whole
-    // note as one such block with nothing after it, which still returns
-    // verbatim; a hand-authored file that merely opens with a literal tag
-    // keeps the Markdown below it, which used to be swallowed as raw HTML.
-    //
-    // Both slices drop the blank lines that separate them. Leaving them on
-    // would let a remainder that itself opens with a tag match at offset 0
-    // and recurse on an identical string.
-    const source = md.replace(BLANK_LINES, '');
-    const blankLine = source.search(/\r?\n[ \t]*\r?\n/);
-    if (blankLine === -1) return sanitizeHtml(source.trim());
-    const leading = sanitizeHtml(source.slice(0, blankLine).trim());
-    const rest = source.slice(blankLine).replace(BLANK_LINES, '');
-    return rest ? leading + markdownToHtml(rest) : leading;
+  let pos = skipBlankLines(md, 0);
+  if (!startsRawBlock(md, pos)) return convertMarkdownBody(md);
+
+  // A leading raw-HTML block no longer swallows the file. htmlToMarkdown's
+  // fallback stores a whole note as one such block with nothing after it, so
+  // that still returns verbatim; a hand-authored file that merely opens with a
+  // literal tag keeps the Markdown below it.
+  //
+  // Walked with an index rather than by recursing on the remainder. A valid
+  // import may hold thousands of blank-line-separated blocks, and both
+  // recursing and re-slicing copy what is left on every block, which is
+  // quadratic — a file well under the 10MB import limit could stall the
+  // import outright.
+  // Each block is sanitized on its own, not as one joined string. Sanitizing
+  // the run together lets HTML parsing nest an unclosed tag in one block over
+  // the next — `<blockquote>unclosed` followed by `<p>next</p>` comes back as
+  // `<blockquote>unclosed` alone, silently dropping the second block. Separate
+  // passes also match CommonMark, which treats these as separate blocks.
+  const parts: string[] = [];
+  while (pos < md.length && startsRawBlock(md, pos)) {
+    const end = rawBlockEnd(md, pos);
+    parts.push(sanitizeHtml(md.slice(pos, end).trim()));
+    pos = skipBlankLines(md, end);
   }
-  return convertMarkdownBody(md);
+  if (pos < md.length) parts.push(convertMarkdownBody(md.slice(pos)));
+  return parts.join('');
+}
+
+const RAW_BLOCK_AT = /[ \t]*<(?:p|h[1-6]|ul|ol|pre|blockquote|hr)(?:\s|>|\/)/iy;
+const BLANK_LINE_RUN_AT = /(?:[ \t]*\r?\n)+/y;
+const BLANK_LINE_FROM = /\r?\n[ \t]*\r?\n/g;
+const PRE_OPEN_AT = /[ \t]*<pre\b/iy;
+const PRE_CLOSE_FROM = /<\/pre\s*>/gi;
+
+function startsRawBlock(md: string, pos: number): boolean {
+  RAW_BLOCK_AT.lastIndex = pos;
+  return RAW_BLOCK_AT.test(md);
+}
+
+function skipBlankLines(md: string, pos: number): number {
+  BLANK_LINE_RUN_AT.lastIndex = pos;
+  return BLANK_LINE_RUN_AT.test(md) ? BLANK_LINE_RUN_AT.lastIndex : pos;
+}
+
+// Where the raw-HTML block starting at `pos` ends, per CommonMark's two
+// relevant end conditions. `<pre>` is a type 1 block: it runs to its closing
+// tag, so a blank line inside a code sample does not split it — treating it
+// like the rest would cut the sample in half and escape the tags after the
+// break into visible text. Everything else here is type 6: it ends at the
+// first blank line. Both always advance past `pos`, since a block starts with
+// a tag rather than a newline.
+function rawBlockEnd(md: string, pos: number): number {
+  PRE_OPEN_AT.lastIndex = pos;
+  if (PRE_OPEN_AT.test(md)) {
+    PRE_CLOSE_FROM.lastIndex = pos;
+    const closing = PRE_CLOSE_FROM.exec(md);
+    // An unclosed <pre> runs to the end of the input, as CommonMark specifies.
+    return closing ? closing.index + closing[0].length : md.length;
+  }
+  BLANK_LINE_FROM.lastIndex = pos;
+  const blankLine = BLANK_LINE_FROM.exec(md);
+  return blankLine ? blankLine.index : md.length;
 }
 
 // The tag list mirrors htmlToMarkdown's fallback check — both describe the

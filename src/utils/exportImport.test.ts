@@ -451,6 +451,46 @@ describe('exportImport', () => {
         expect(html).not.toContain('&lt;blockquote&gt;');
       });
 
+      it('keeps a blank line inside a leading <pre> block instead of splitting it', () => {
+        // CommonMark treats <pre> as a type 1 HTML block: it ends at its
+        // closing tag, not at a blank line. Ending it at the blank line cuts
+        // the sample in half and escapes the tags after the break into
+        // visible text — silent corruption of exactly the content a code
+        // block exists to preserve.
+        const html = markdownToHtml('<pre><code>alpha\n\nbeta</code></pre>\n\n# Heading');
+
+        expect(html).toContain('alpha\n\nbeta');
+        expect(html).not.toContain('&lt;/pre&gt;');
+        expect(html).toContain('<h1>Heading</h1>');
+      });
+
+      it('runs an unclosed <pre> to the end of the input', () => {
+        const html = markdownToHtml('<pre><code>alpha\n\nbeta');
+
+        expect(html).toContain('alpha\n\nbeta');
+      });
+
+    it('walks thousands of blank-line separated blocks without recursing on the remainder', () => {
+      // The scan must not recurse or re-slice what is left: either spends a
+      // stack frame per block and copies the remainder each time, so a file
+      // well under the 10MB import limit could overflow the stack or stall.
+      //
+      // There is no wall-clock assertion here on purpose. Cost at this scale
+      // is dominated by DOMPurify, not by the scan — a bare loop of
+      // sanitizeHtml('<hr>') shows the same superlinear curve under jsdom
+      // (0.64 → 4.79 ms/call from 500 to 4000 calls), so a timing bound would
+      // pin the test environment rather than this function. Every block is
+      // sanitized separately because sanitizing the run as one string lets an
+      // unclosed tag swallow the block after it.
+      const md = `${Array.from({ length: 2000 }, (_, i) => `<p>block ${i}</p>`).join('\n\n')}\n\n# End`;
+
+      const html = markdownToHtml(md);
+
+      expect(html).toContain('<p>block 0</p>');
+      expect(html).toContain('<p>block 1999</p>');
+      expect(html).toContain('<h1>End</h1>');
+    }, 60000);
+
       it('parses Markdown after several stacked HTML blocks', () => {
         const html = markdownToHtml('<hr>\n\n<p>intro</p>\n\n## Later heading');
 
