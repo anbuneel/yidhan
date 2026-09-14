@@ -56,7 +56,7 @@ was written and caught by its own test before merge.
 
 ---
 
-## 2026-09-14 — Markdown export keeps its round-trip check and yields instead
+## 2026-09-14 — Markdown export stays synchronous, and its cost is accepted
 
 **Status:** Active
 
@@ -64,12 +64,23 @@ was written and caught by its own test before merge.
 a raw sanitized HTML block when the conversion would be lossy. Because Tiptap always
 emits a top-level block element, essentially every real note takes that path, so every
 note pays sanitize → convert → sanitize → compare on top of the conversion. Measured in
-jsdom: ~9ms for a twenty-paragraph note, and a whole library in one synchronous pass ran
-~0.9s at 100 notes, ~5s at 500, ~19s at 1000 — the import ceiling. A full account backup
-is exactly where a user has the most notes. Filed as #209.
+jsdom: ~9ms for a twenty-paragraph note, and a whole library in one pass ran ~0.9s at
+100 notes, ~5s at 500, ~19s at 1000 — the import ceiling. A full account backup is
+exactly where a user has the most notes. Filed as #209.
 
-**Decision:** Keep the verification and chunk the loop, yielding to the main thread every
-ten notes in `downloadMarkdownZip`. The work is unchanged; the tab stays responsive.
+**Decision:** Keep the verification, keep the loop synchronous, and accept the cost —
+which #209's own acceptance criteria allow, as the alternative to not blocking.
+
+**Rejected:** Chunking the loop and yielding to the main thread between batches. This
+was implemented first and reverted during review of #240. `downloadFile` triggers the
+download by clicking an anchor, and browsers only honour a programmatic download while
+the user activation from the originating gesture is still live. Yielding pushes that
+click past many event-loop turns — on a 500-note library, several seconds and hundreds
+of task boundaries after the click — so the very libraries the change was meant to help
+are the ones whose download a browser may silently decline. A slow export the user
+waits through is a far better failure than a backup that appears to succeed and saves
+nothing. The synchronous call is now pinned by a test that fails if any `await` is
+introduced before `downloadFile`.
 
 **Rejected:** Verifying only constructs the serializer is known to struggle with. It
 would cut the cost most, but the check is the thing standing between a lossy regex
@@ -78,6 +89,10 @@ the same list that has no tripwire today.
 
 **Rejected:** Caching by content hash. It helps a repeat export of an unchanged library
 and does nothing for the first one, which is the case that hurts.
+
+**Left open:** Making a large export responsive needs a progress indicator and a second
+user gesture to save, or the conversion moved to a worker. Both are UI changes rather
+than a yield, and neither belongs in a cleanup PR.
 
 ---
 

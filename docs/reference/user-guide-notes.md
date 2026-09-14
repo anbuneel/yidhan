@@ -141,8 +141,11 @@ fallback is why a leading HTML block is honoured at all.
 Every note is verified by converting it back and comparing, which is what stops
 a lossy conversion corrupting a note silently. That check runs on every note, so
 a whole-library export is real work — roughly a second per hundred notes, and
-longer on a slow device. The export yields between batches, so the app stays
-responsive while it runs rather than freezing until it finishes.
+longer on a slow device. The app is unresponsive while it runs.
+
+That is deliberate. The export has to hand the file to the browser in the same
+breath as the click that asked for it, or the browser may refuse to save it at
+all. Waiting is the price of a backup that actually arrives.
 
 ---
 

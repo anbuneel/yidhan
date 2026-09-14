@@ -751,19 +751,27 @@ describe('exportImport', () => {
       expect(document.createElement).toHaveBeenCalledWith('a');
     });
 
-    it('keeps every note and separator when the run spans several chunks', async () => {
-      // The conversion loop yields to the main thread every EXPORT_CHUNK_SIZE
-      // notes so a full-library backup does not freeze the tab. 25 notes is
-      // more than two chunk boundaries, so a chunk that dropped or reordered
-      // its slice would show up here.
+    it('triggers the download synchronously, before any await can retire the user gesture', async () => {
+      // downloadMarkdownZip is async, but nothing in it may suspend before
+      // downloadFile runs. Browsers only honour a programmatic download while
+      // the user activation from the originating click is still live, so an
+      // await here would silently break exports on the large libraries this
+      // path exists for. Calling without awaiting proves the click already
+      // happened in the caller's own task.
       const notes = Array.from({ length: 25 }, (_, i) =>
         createMockNote({ title: `Note ${i}`, content: `<p>Body ${i}</p>` })
       );
-      let captured = '';
-      vi.mocked(URL.createObjectURL).mockImplementation((blob: Blob) => {
-        captured = (blob as unknown as { __text?: string }).__text ?? '';
-        return 'blob:x';
-      });
+
+      const pending = downloadMarkdownZip(notes);
+
+      expect(document.createElement).toHaveBeenCalledWith('a');
+      await pending;
+    });
+
+    it('keeps every note and its separator in the combined file', async () => {
+      const notes = Array.from({ length: 25 }, (_, i) =>
+        createMockNote({ title: `Note ${i}`, content: `<p>Body ${i}</p>` })
+      );
       const blobText: string[] = [];
       const RealBlob = globalThis.Blob;
       vi.stubGlobal('Blob', class extends RealBlob {
@@ -775,7 +783,7 @@ describe('exportImport', () => {
 
       await downloadMarkdownZip(notes);
 
-      const content = blobText.join('') || captured;
+      const content = blobText.join('');
       for (let i = 0; i < 25; i++) expect(content).toContain(`# Note ${i}`);
       expect(content.split('\n\n---\n\n')).toHaveLength(25);
       vi.unstubAllGlobals();

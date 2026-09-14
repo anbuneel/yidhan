@@ -630,14 +630,6 @@ export function exportAllNotesToMarkdown(notes: Note[]): { filename: string; con
   });
 }
 
-// Small enough that a chunk stays well under a frame on a slow device, large
-// enough that the yields do not dominate a big export.
-const EXPORT_CHUNK_SIZE = 10;
-
-function yieldToMainThread(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0));
-}
-
 /**
  * Create and download a combined markdown file with all notes
  */
@@ -646,23 +638,19 @@ export async function downloadMarkdownZip(notes: Note[]): Promise<void> {
 
   // Each note uses the same format, joined by separator.
   //
-  // Converting is not cheap: every note Tiptap produces starts with a
-  // top-level block element, so every note takes htmlToMarkdown's round-trip
-  // verification path — sanitize, convert back, sanitize again, compare. That
-  // check is what stops a lossy regex conversion corrupting a note silently,
-  // so it stays. Measured in jsdom it costs roughly 9ms for a 20-paragraph
-  // note, and a whole library in one synchronous pass ran ~0.9s at 100 notes,
-  // ~5s at 500 and ~19s at 1000 — the import ceiling. Yielding between chunks
-  // does not make that work smaller, but it keeps the main thread free so the
-  // tab stays responsive while a full account backup runs.
-  const pieces: string[] = [];
-  for (let index = 0; index < exportable.length; index += EXPORT_CHUNK_SIZE) {
-    for (const note of exportable.slice(index, index + EXPORT_CHUNK_SIZE)) {
-      pieces.push(exportNoteToMarkdown(note));
-    }
-    if (index + EXPORT_CHUNK_SIZE < exportable.length) await yieldToMainThread();
-  }
-  const combined = pieces.join('\n\n---\n\n');
+  // This loop stays synchronous, and that is load-bearing. Converting is not
+  // cheap — every note Tiptap produces starts with a top-level block element,
+  // so every note takes htmlToMarkdown's round-trip verification path, which
+  // measured ~9ms for a 20-paragraph note and ~0.9s / ~5s / ~19s for libraries
+  // of 100 / 500 / 1000 notes. Chunking the loop and awaiting between batches
+  // would keep the tab responsive, but it would also push downloadFile's
+  // anchor click several event-loop turns past the click that started it, and
+  // browsers only honour a programmatic download while the user activation
+  // from that gesture is still live. A slow export the user waits through is a
+  // far better failure than a backup the browser silently declines to save.
+  // Making this responsive needs a progress UI and a second gesture, not a
+  // yield — see the follow-up issue.
+  const combined = exportable.map(note => exportNoteToMarkdown(note)).join('\n\n---\n\n');
 
   const now = new Date();
   const date = now.toISOString().split('T')[0];

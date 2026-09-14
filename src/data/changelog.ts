@@ -9,7 +9,7 @@ export interface ChangelogEntry {
 export const changelog: ChangelogEntry[] = [
   { version: '3.19.30', date: '2026-09-14', changes: [
     { type: 'fix', text: 'Importing a Markdown file that starts with an HTML tag now reads the rest of the file as Markdown instead of showing it as plain text' },
-    { type: 'improvement', text: 'Exporting a large library no longer freezes the app while it runs — the export works through your notes in batches and the page stays responsive' },
+    { type: 'fix', text: 'A Markdown export that fails now tells you, instead of finishing quietly with no file saved' },
   ] },
   { version: '3.19.29', date: '2026-09-10', changes: [
     { type: 'fix', text: 'The tag picker and the writing details (the lines icon before the date) now open in front of the toolbar and the note text instead of behind them' },
