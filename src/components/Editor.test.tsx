@@ -185,11 +185,18 @@ describe('Editor', () => {
       seedPositions({ 'note-a': 900, 'note-b': 1500 });
       const noteA = createMockNote({ id: 'note-a', title: 'A', content: '<p>a</p>' });
       const noteB = createMockNote({ id: 'note-b', title: 'B', content: '<p>b</p>' });
-      const scrollTo = vi.fn();
-      Element.prototype.scrollTo = scrollTo as unknown as Element['scrollTo'];
-
       const view = render(<Editor {...defaultProps} note={noteA} />);
       view.rerender(<Editor {...defaultProps} note={noteB} />);
+
+      // Stubbed on the scroll container itself, not Element.prototype. jsdom
+      // leaves scrollTo undefined, so a prototype assignment would persist for
+      // every later test in this file rather than being restorable.
+      const scrollTo = vi.fn();
+      Object.defineProperty(screen.getByTestId('note-editor'), 'scrollTo', {
+        value: scrollTo,
+        writable: true,
+        configurable: true,
+      });
 
       await user.click(screen.getByLabelText('Resume editing at your last position'));
 
