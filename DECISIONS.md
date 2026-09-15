@@ -19,6 +19,32 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-09-14 — Modal focus containment uses `inert`, not a portal with `showModal()`
+
+**Status:** Active
+
+**Why:** The auth close-confirmation renders as a sibling of the auth dialog, and both
+carried `aria-modal="true"` at once — a state some assistive technology, VoiceOver and
+Safari notably, announces as two active modal containers. #189 proposed the textbook
+remedy: portal the confirmation to `document.body` and call `showModal()` for a native
+focus trap.
+
+**Decision:** Mark the dialog behind the confirmation `inert` and drop its `aria-modal`,
+leaving exactly one live container. `inert` also makes the form genuinely unreachable
+rather than merely unlabelled, which is the half that actually traps a keyboard user.
+
+**Rejected:** The portal plus `showModal()` route, for two reasons found by checking
+before following it. jsdom does not implement `showModal` — `typeof dialog.showModal` is
+`undefined` — so the native focus trap that is the whole point of the change could not be
+asserted in any test. And `createPortal` appears nowhere else in this codebase, so one
+call site would introduce a pattern the repo does not otherwise use.
+
+**Revisit when:** several places need real portalled modals. At that point `showModal()`
+is worth taking as a shared component, with whatever test-environment shim it needs, not
+as a one-off here.
+
+---
+
 ## 2026-09-14 — A leading raw-HTML block ends at the first blank line, not at the end of the file
 
 **Status:** Active
