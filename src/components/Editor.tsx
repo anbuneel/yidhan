@@ -17,7 +17,7 @@ import { Logo } from './Logo';
 import { WhisperBack } from './WhisperBack';
 import { ModalBackdropButton } from './ModalBackdropButton';
 import { useMobileDetect } from '../hooks/useMobileDetect';
-import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
+import { useKeyboardHeightCssVariable } from '../hooks/useKeyboardHeight';
 import {
   exportNoteToMarkdown,
   exportNoteToJSON,
@@ -147,7 +147,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [showResumeChip, setShowResumeChip] = useState(false);
   const savedScrollPositionRef = useRef<number | null>(null);
   const isMobile = useMobileDetect();
-  useKeyboardHeight(); // Sets --keyboard-height CSS var for bottom toolbar positioning
+  useKeyboardHeightCssVariable(); // Sets --keyboard-height for bottom toolbar positioning, without re-rendering the editor
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);

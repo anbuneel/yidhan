@@ -1,4 +1,4 @@
-import { useState, useEffect, useEffectEvent } from 'react';
+import { useState, useEffect, useEffectEvent, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { setTrustedDeviceOnLogin } from '../hooks/useSessionSettings';
 import type { Theme } from '../types';
@@ -144,6 +144,16 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   const [githubLoading, setGithubLoading] = useState(false);
   const handleModalEscape = useEffectEvent((e: KeyboardEvent) => {
     if (e.key !== 'Escape') return;
+
+    // The confirmation is the innermost layer, so it answers Escape first, with
+    // "keep editing". Handled here rather than on the dialog because the dialog
+    // is open but not modal: focus can leave it, and an Escape from outside
+    // would otherwise reach the branch below and re-open an already-open
+    // confirmation, leaving no way to dismiss it from the keyboard.
+    if (showCloseConfirm) {
+      setShowCloseConfirm(false);
+      return;
+    }
 
     // Check if form is dirty
     const isDirty = email.length > 0 || password.length > 0;
@@ -684,19 +694,52 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   };
 
   const handleConfirmClose = () => {
+    confirmOpenerRef.current = null; // Discarding: there is no form to return to.
     setShowCloseConfirm(false);
     onClose?.();
   };
+
+  // Move focus into the confirmation when it opens, onto the non-destructive
+  // choice. Without this, focus stays in the now-inert auth dialog behind it,
+  // which is both unreachable and unannounced.
+  //
+  // Moving focus in obliges us to put it back. On dismissal the button holding
+  // focus unmounts, and without a restore focus falls to document.body and the
+  // keyboard user loses their place in the form. Restored from an effect rather
+  // than the click handler so the auth dialog has already dropped `inert` —
+  // focusing into a still-inert subtree is refused.
+  const keepEditingRef = useRef<HTMLButtonElement>(null);
+  const confirmOpenerRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (showCloseConfirm) {
+      confirmOpenerRef.current = document.activeElement as HTMLElement | null;
+      keepEditingRef.current?.focus();
+      return;
+    }
+    const opener = confirmOpenerRef.current;
+    confirmOpenerRef.current = null;
+    if (opener?.isConnected) opener.focus();
+  }, [showCloseConfirm]);
 
   // Modal mode: wrap in overlay
   if (isModal) {
     return (
       <div className="auth-modal-overlay">
-        <ModalBackdropButton label="Close sign in dialog" onClick={handleModalClose} />
+        <ModalBackdropButton
+          label="Close sign in dialog"
+          disabled={showCloseConfirm}
+          onClick={handleModalClose}
+        />
+        {/* While the confirmation is up the auth dialog is inert: it stops
+            being a second simultaneous aria-modal container, and its controls
+            stop taking focus and clicks. Dropping aria-modal alone would fix
+            the announcement but still leave the form reachable behind the
+            confirmation. */}
         <dialog
         open
         className="auth-modal-content"
-        aria-modal="true"
+        inert={showCloseConfirm}
+        aria-modal={showCloseConfirm ? undefined : true}
         aria-labelledby="auth-modal-title"
         style={{ margin: 0 }}
       >
@@ -713,10 +756,9 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           {authCard}
         </dialog>
 
-        {/* Close confirmation modal — rendered as a sibling dialog (not nested) at z-[60].
-            Note: both this and the outer auth dialog carry aria-modal="true" simultaneously,
-            which some AT handle inconsistently. A future improvement would be to portal this
-            dialog to document.body and use showModal() for native focus trapping. */}
+        {/* Close confirmation — a sibling dialog (not nested) at z-[60]. Only one
+            aria-modal container is live at a time: the auth dialog above goes
+            inert while this is open. */}
         {showCloseConfirm && (
           <div
             className="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-backdrop"
@@ -754,6 +796,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               </p>
               <div className="flex justify-center gap-3">
                 <button type="button"
+                  ref={keepEditingRef}
                   onClick={() => setShowCloseConfirm(false)}
                   className="auth-btn-ghost px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                 >
