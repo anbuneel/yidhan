@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useLayoutEffect, useCallback, memo } from 'react';
-import type { Note } from '../types';
+import type { Note, NoteDeleteHandler } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
 import { sanitizeHtml, sanitizeText, htmlToPlainText } from '../utils/sanitize';
@@ -9,7 +9,7 @@ import { buildSearchSnippet, highlightSearchText } from '../utils/searchText';
 interface NoteCardProps {
   note: Note;
   onClick: (id: string) => void;
-  onDelete: (id: string) => boolean | void | Promise<boolean | void>;
+  onDelete: NoteDeleteHandler;
   onTogglePin: (id: string, pinned: boolean) => void;
   isCompact?: boolean;
   isDecorative?: boolean;

@@ -277,9 +277,9 @@ export function DemoPage({
   );
 
   const handleNoteDelete = useCallback(
-    (id: string) => {
+    (id: string): boolean => {
       const deletedNote = notes.find((note) => note.id === id);
-      if (!deletedNote || !deleteNote(id)) return;
+      if (!deletedNote || !deleteNote(id)) return false;
 
       if (selectedNoteId === id) {
         setView('library');
@@ -311,6 +311,7 @@ export function DemoPage({
         ),
         { duration: 5000 }
       );
+      return true;
     },
     [deleteNote, notes, restoreNote, selectedNoteId]
   );

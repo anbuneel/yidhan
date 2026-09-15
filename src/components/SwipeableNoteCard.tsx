@@ -1,13 +1,13 @@
 import { useRef, useState, useCallback, memo } from 'react';
 import { useDrag } from '@use-gesture/react';
 import { useSpring, animated, config } from '@react-spring/web';
-import type { Note } from '../types';
+import type { Note, NoteDeleteHandler } from '../types';
 import { NoteCard } from './NoteCard';
 
 interface SwipeableNoteCardProps {
   note: Note;
   onClick: (id: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: NoteDeleteHandler;
   onTogglePin: (id: string, pinned: boolean) => void;
   disabled?: boolean;
   isCompact?: boolean;

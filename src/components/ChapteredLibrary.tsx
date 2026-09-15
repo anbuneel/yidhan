@@ -1,6 +1,6 @@
 import type { RefObject } from 'react';
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import type { Note } from '../types';
+import type { Note, NoteDeleteHandler } from '../types';
 import { ChapterSection } from './ChapterSection';
 import { LibraryArrangeBar } from './LibraryArrangeBar';
 import { ChapterNav } from './ChapterNav';
@@ -31,7 +31,7 @@ interface ChapteredLibraryProps {
   onNoteClick: (id: string) => void;
   /** Re-read the library so a note that failed to decrypt can be tried again. */
   onRetryLockedNote?: () => void;
-  onNoteDelete: (id: string) => void;
+  onNoteDelete: NoteDeleteHandler;
   onTogglePin: (id: string, pinned: boolean) => void;
   onNewNote?: () => void;
   onRefresh?: () => Promise<void>;

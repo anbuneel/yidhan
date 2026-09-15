@@ -294,13 +294,21 @@ function App() {
     triggerCoalescedSync,
   });
 
+  // NoteCard owns inline recovery for pointer-triggered fades. The editor and
+  // keyboard paths have no inline error surface, so they keep a single toast.
+  const handleNoteDeleteWithToast = useCallback(async (id: string): Promise<boolean> => {
+    const deleted = await handleNoteDelete(id);
+    if (!deleted) toast.error('Failed to delete note');
+    return deleted;
+  }, [handleNoteDelete]);
+
   const { focusedNoteId, handleLibraryCardKeyDown } = useLibraryCardNavigation({
     notes: displayNotes,
     arrangement,
     isRankedSearch,
     onOpen: handleNoteClick,
     onTogglePin: handleTogglePin,
-    onDelete: handleNoteDelete,
+    onDelete: handleNoteDeleteWithToast,
   });
 
   const {
@@ -595,7 +603,7 @@ function App() {
         onBack={handleBack}
         onRequestSearch={requestLibrarySearch}
         onUpdate={handleNoteUpdate}
-        onDelete={handleNoteDelete}
+        onDelete={handleNoteDeleteWithToast}
         onToggleTag={handleNoteTagToggle}
         onCreateTag={handleAddTag}
         onThemeToggle={handleThemeToggle}

@@ -1,7 +1,7 @@
 import { GestureHint } from './GestureHint';
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import Masonry from 'react-masonry-css';
-import type { Note } from '../types';
+import type { Note, NoteDeleteHandler } from '../types';
 import type { LibrarySectionKey } from '../utils/temporalGrouping';
 import { WATERLINE_TEXT } from '../utils/temporalGrouping';
 import { NoteCard } from './NoteCard';
@@ -21,7 +21,7 @@ interface ChapterSectionProps {
   onNoteClick: (id: string) => void;
   /** Re-read the library so a note that failed to decrypt can be tried again. */
   onRetryLockedNote: () => void;
-  onNoteDelete: (id: string) => void;
+  onNoteDelete: NoteDeleteHandler;
   onTogglePin: (id: string, pinned: boolean) => void;
   isCompact?: boolean;
   searchQuery?: string;
