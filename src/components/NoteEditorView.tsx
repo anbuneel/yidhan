@@ -1,5 +1,5 @@
 import { Suspense, type ComponentType, type ReactNode } from 'react';
-import type { Note, Tag, Theme } from '../types';
+import type { Note, NoteDeleteHandler, Tag, Theme } from '../types';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingFallback } from './LoadingFallback';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
@@ -15,7 +15,7 @@ export interface NoteEditorViewProps {
   onBack: () => void;
   onRequestSearch: () => void;
   onUpdate: (note: Note) => Promise<void>;
-  onDelete: (id: string) => void;
+  onDelete: NoteDeleteHandler;
   onToggleTag: (noteId: string, tagId: string) => void;
   onCreateTag: () => void;
   onThemeToggle: () => void;

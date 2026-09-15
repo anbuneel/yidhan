@@ -2,7 +2,7 @@ import { VaultLockedSaveError } from '../utils/saveErrors';
 import { useState, useEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { getSaveLabel } from '../utils/saveStatus';
-import type { Note, Tag, Theme } from '../types';
+import type { Note, NoteDeleteHandler, Tag, Theme } from '../types';
 import { LinkPopover } from './LinkPopover';
 import { RichTextEditor } from './RichTextEditor';
 import { EditorToolbar } from './EditorToolbar';
@@ -51,7 +51,7 @@ interface EditorProps {
   onBack: () => void;
   onRequestSearch: () => void;
   onUpdate: (note: Note) => Promise<void>;
-  onDelete: (id: string) => void;
+  onDelete: NoteDeleteHandler;
   onToggleTag: (noteId: string, tagId: string) => void;
   onCreateTag?: () => void;
   theme: Theme;

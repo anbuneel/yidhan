@@ -214,7 +214,7 @@ export function LandingPage({
               <NoteCard
                 note={note}
                 onClick={() => undefined}
-                onDelete={() => undefined}
+                onDelete={() => false}
                 onTogglePin={() => undefined}
                 isDecorative
               />

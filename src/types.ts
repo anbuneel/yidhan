@@ -35,6 +35,15 @@ export interface Note {
   decryptionFailed?: boolean;
 }
 
+/**
+ * Deletes a note from its current surface. `false` or a rejected promise lets a
+ * card restore itself and offer another attempt. Every successful completion
+ * reports a boolean so a promise-dropping wrapper cannot satisfy the contract.
+ */
+export type NoteDeleteHandler = (
+  id: string
+) => boolean | Promise<boolean>;
+
 export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded' | 'privacy' | 'terms' | 'support' | 'security';
 
 export interface NoteShare {

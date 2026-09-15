@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Note } from '../types';
+import type { Note, NoteDeleteHandler } from '../types';
 import { groupNotesByChapter, type ChapterArrangement } from '../utils/temporalGrouping';
 
 function isLibraryCardTarget(target: EventTarget | null, noteId: string | null): boolean {
@@ -21,7 +21,7 @@ interface UseLibraryCardNavigationOptions {
   isRankedSearch?: boolean;
   onOpen: (id: string) => void;
   onTogglePin: (id: string, pinned: boolean) => void;
-  onDelete: (id: string) => void;
+  onDelete: NoteDeleteHandler;
 }
 
 /** Keeps keyboard selection in the same chapter order readers see on screen. */

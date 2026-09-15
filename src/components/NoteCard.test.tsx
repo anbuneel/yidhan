@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { createMockNote } from '../test/factories';
+import type { NoteDeleteHandler } from '../types';
 import { NoteCard } from './NoteCard';
 
 function setPreviewHeight(preview: HTMLElement, clientHeight: number, scrollHeight: number) {
@@ -41,7 +42,7 @@ function renderPreviewCard(content: string, isCompact = false) {
   return { ...rendered, rerenderCard };
 }
 
-function renderCard(onDelete: (id: string) => boolean | void | Promise<boolean | void>) {
+function renderCard(onDelete: NoteDeleteHandler) {
   const note = createMockNote({ id: 'note-to-fade', title: 'A passing thought' });
   const rendered = render(
     <NoteCard
@@ -98,6 +99,22 @@ describe('NoteCard deletion', () => {
     expect(card).not.toHaveClass('deleting');
     expect(screen.getByRole('button', { name: 'Delete note' })).toBeEnabled();
     expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores the card with one inline message when deletion returns false', async () => {
+    const onDelete = vi.fn().mockResolvedValue(false);
+    const user = userEvent.setup({ delay: null });
+    const { card } = renderCard(onDelete);
+
+    await user.click(screen.getByRole('button', { name: 'Delete note' }));
+    fireEvent.animationEnd(card);
+
+    expect(await screen.findAllByRole('alert')).toHaveLength(1);
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'This note could not be faded. Try again.'
+    );
+    expect(card).not.toHaveClass('deleting');
+    expect(screen.getByRole('button', { name: 'Delete note' })).toBeEnabled();
   });
 });
 

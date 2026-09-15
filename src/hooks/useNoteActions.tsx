@@ -152,7 +152,6 @@ export function useNoteActions({
       return true;
     } catch (error) {
       console.error('Failed to delete note:', error);
-      toast.error('Failed to delete note');
       return false;
     }
   }, [userId, notesRef, setNotes, refreshFadedNotesCount, openNoteIdRef, onOpenNoteClosed]);
