@@ -37,12 +37,12 @@ export interface Note {
 
 /**
  * Deletes a note from its current surface. `false` or a rejected promise lets a
- * card restore itself and offer another attempt. Synchronous handlers return a
- * boolean so an accidental promise-dropping wrapper cannot satisfy the contract.
+ * card restore itself and offer another attempt. Every successful completion
+ * reports a boolean so a promise-dropping wrapper cannot satisfy the contract.
  */
 export type NoteDeleteHandler = (
   id: string
-) => boolean | Promise<boolean | void>;
+) => boolean | Promise<boolean>;
 
 export type ViewMode = 'library' | 'editor' | 'changelog' | 'roadmap' | 'faded' | 'privacy' | 'terms' | 'support' | 'security';
 

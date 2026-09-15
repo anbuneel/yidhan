@@ -27,5 +27,7 @@ describe('NoteDeleteHandler', () => {
       .toEqualTypeOf<NoteDeleteHandler>();
     expectTypeOf<(id: string) => void>()
       .not.toExtend<NoteDeleteHandler>();
+    expectTypeOf<(id: string) => Promise<void>>()
+      .not.toExtend<NoteDeleteHandler>();
   });
 });
