@@ -131,8 +131,99 @@ describe('Editor', () => {
     onSettingsClick: vi.fn(),
   };
 
+  // Resume chip: seeded straight into localStorage, which is what
+  // getEditorPosition reads. Positions above RESUME_SCROLL_THRESHOLD_PX (400)
+  // are the ones that offer to resume.
+  function seedPositions(entries: Record<string, number>) {
+    const now = Date.now();
+    localStorage.setItem(
+      'yidhan-editor-positions',
+      JSON.stringify(
+        Object.fromEntries(
+          Object.entries(entries).map(([id, scroll]) => [id, { scroll, cursor: { from: 0, to: 0 }, updatedAt: now }])
+        )
+      )
+    );
+  }
+
+  describe('resume chip across rapid note switches', () => {
+    it('follows the note being shown rather than the note it was opened for', () => {
+      seedPositions({ 'note-a': 900, 'note-b': 1500, 'note-c': 10 });
+      const noteA = createMockNote({ id: 'note-a', title: 'A', content: '<p>a</p>' });
+      const noteB = createMockNote({ id: 'note-b', title: 'B', content: '<p>b</p>' });
+      const noteC = createMockNote({ id: 'note-c', title: 'C', content: '<p>c</p>' });
+
+      const view = render(<Editor {...defaultProps} note={noteA} />);
+      expect(screen.getByLabelText('Resume editing at your last position')).toBeInTheDocument();
+
+      // Switch before anything settles. The chip state is decided during render
+      // from a ref comparison, so a switch that outruns the effects must still
+      // leave the chip describing the note on screen.
+      view.rerender(<Editor {...defaultProps} note={noteB} />);
+      expect(screen.getByLabelText('Resume editing at your last position')).toBeInTheDocument();
+
+      // note-c is below the threshold: the chip must go, not linger from B.
+      view.rerender(<Editor {...defaultProps} note={noteC} />);
+      expect(screen.queryByLabelText('Resume editing at your last position')).not.toBeInTheDocument();
+    });
+
+    it('dismisses when switching to a note with no stored position at all', () => {
+      seedPositions({ 'note-a': 900 });
+      const noteA = createMockNote({ id: 'note-a', title: 'A', content: '<p>a</p>' });
+      const unseen = createMockNote({ id: 'note-unseen', title: 'U', content: '<p>u</p>' });
+
+      const view = render(<Editor {...defaultProps} note={noteA} />);
+      expect(screen.getByLabelText('Resume editing at your last position')).toBeInTheDocument();
+
+      view.rerender(<Editor {...defaultProps} note={unseen} />);
+
+      expect(screen.queryByLabelText('Resume editing at your last position')).not.toBeInTheDocument();
+    });
+
+    it('scrolls to the position belonging to the note on screen after a switch', async () => {
+      const user = userEvent.setup({ delay: null });
+      seedPositions({ 'note-a': 900, 'note-b': 1500 });
+      const noteA = createMockNote({ id: 'note-a', title: 'A', content: '<p>a</p>' });
+      const noteB = createMockNote({ id: 'note-b', title: 'B', content: '<p>b</p>' });
+      const view = render(<Editor {...defaultProps} note={noteA} />);
+      view.rerender(<Editor {...defaultProps} note={noteB} />);
+
+      // Stubbed on the scroll container itself, not Element.prototype. jsdom
+      // leaves scrollTo undefined, so a prototype assignment would persist for
+      // every later test in this file rather than being restorable.
+      const scrollTo = vi.fn();
+      Object.defineProperty(screen.getByTestId('note-editor'), 'scrollTo', {
+        value: scrollTo,
+        writable: true,
+        configurable: true,
+      });
+
+      await user.click(screen.getByLabelText('Resume editing at your last position'));
+
+      // 1500, not 900 — resuming after a switch must not carry the previous
+      // note's saved position onto the note now open.
+      expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 1500 }));
+    });
+
+    it('comes back when switching to a note that does have a position', () => {
+      seedPositions({ 'note-a': 900, 'note-low': 10 });
+      const noteA = createMockNote({ id: 'note-a', title: 'A', content: '<p>a</p>' });
+      const noteLow = createMockNote({ id: 'note-low', title: 'L', content: '<p>l</p>' });
+
+      const view = render(<Editor {...defaultProps} note={noteLow} />);
+      expect(screen.queryByLabelText('Resume editing at your last position')).not.toBeInTheDocument();
+
+      // Dismissal must not be sticky: the chip is a property of the note shown,
+      // not a one-shot that stays spent for the rest of the session.
+      view.rerender(<Editor {...defaultProps} note={noteA} />);
+
+      expect(screen.getByLabelText('Resume editing at your last position')).toBeInTheDocument();
+    });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     keyboardEditor.isFocused = false;
     keyboardEditor.state.selection = { empty: true, from: 1, to: 1 };
     editorReadyControl.current = true;
