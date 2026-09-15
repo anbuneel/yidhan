@@ -80,6 +80,33 @@ npm run e2e:ui
 npm run e2e:report
 ```
 
+### The dev server on port 5174
+
+Playwright starts its own dev server and owns it:
+
+```
+command: 'npm run dev -- --port 5174 --strictPort'
+url:     'http://localhost:5174'
+```
+
+`--strictPort` means the run fails rather than sliding to another port. That is
+deliberate: a silent move would leave `baseURL` pointing at nothing, and the
+failure that follows looks like a broken app rather than a busy port. If a run
+fails to start, something else is already on 5174 — stop it rather than working
+around it.
+
+By default Playwright will **not** reuse a server already listening there, even
+your own `npm run dev`. Reusing an arbitrary process on a fixed port can quietly
+run the suite against a different checkout or worktree, and the results look
+real. To opt in, when you know the server is yours and current:
+
+```bash
+PLAYWRIGHT_REUSE_SERVER=1 npx playwright test e2e/notes.spec.ts --project=chromium
+```
+
+Worth it for a tight edit-and-rerun loop against one spec, since it skips a
+fresh server start each time. Leave it off otherwise, and never set it in CI.
+
 ## Account Cleanup
 
 The suite writes to a shared account and used to leave everything behind. Eleven tests
