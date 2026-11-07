@@ -1,5 +1,6 @@
 import { test as base, expect } from '@playwright/test';
 import { test, createNote, deleteNoteFromLibrary } from './fixtures';
+import { NAVIGATE_FALLBACK_DENYLIST } from '../src/pwa/navigateFallbackDenylist';
 
 /**
  * Note addresses — items 28 and 29.
@@ -161,6 +162,71 @@ base.describe('Addresses without an account', () => {
     expect(body).toMatch(/^Contact: mailto:/m);
     expect(body).toMatch(/^Expires: \d{4}-\d{2}-\d{2}T/m);
     expect(body).not.toContain('<html');
+  });
+
+  /**
+   * Item 155. Every route used to share index.html's one title, so a tab or a search
+   * result could not say which page it was. Public pages now name themselves; the
+   * signed-in app keeps the default, and a note's title never reaches the tab.
+   */
+  for (const [path, page_] of [
+    ['/security', 'Security'],
+    ['/privacy', 'Privacy'],
+    ['/terms', 'Terms'],
+    ['/support', 'Support'],
+    ['/changelog', 'Changelog'],
+    ['/roadmap', 'Roadmap'],
+    ['/demo', 'Practice Space'],
+    ['/definitely-not-a-route', 'Not found'],
+  ] as const) {
+    base(`${path} has a title that names the page`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page).toHaveTitle(`${page_} · Yidhan`);
+    });
+  }
+
+  base('the title follows in-app navigation and returns home with it', async ({ page }) => {
+    await page.goto('/');
+    await expect(page).toHaveTitle(/^Yidhan — /);
+
+    await page.getByRole('button', { name: /privacy/i }).first().click();
+    await expect(page).toHaveTitle('Privacy · Yidhan');
+
+    await page.goBack();
+    await expect(page).toHaveTitle(/^Yidhan — /);
+  });
+
+  base('sitemap.xml is a real XML file listing the public pages', async ({ page }) => {
+    const response = await page.request.get('/sitemap.xml');
+
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-type']).toMatch(/xml/);
+    const body = await response.text();
+    expect(body).toMatch(/^<\?xml /);
+    expect(body).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
+    expect(body).not.toContain('<html');
+    for (const path of ['/', '/demo', '/security', '/privacy', '/terms', '/support', '/changelog', '/roadmap']) {
+      expect(body).toContain(`<loc>https://yidhan.vercel.app${path}</loc>`);
+    }
+
+    const robots = await (await page.request.get('/robots.txt')).text();
+    expect(robots).toMatch(/^Sitemap: https:\/\/yidhan\.vercel\.app\/sitemap\.xml$/m);
+  });
+
+  /**
+   * The dev server has no service worker, so this checks the list the worker is
+   * built from (`vite.config.ts` imports the same module). `npm run e2e:sw` covers
+   * a real worker doing the job.
+   */
+  base('the service worker navigation fallback leaves sitemap.xml to the network', () => {
+    const denied = (path: string) => NAVIGATE_FALLBACK_DENYLIST.some((rule) => rule.test(path));
+
+    expect(denied('/sitemap.xml')).toBe(true);
+    expect(denied('/.well-known/security.txt')).toBe(true);
+    // Pages themselves must still open offline.
+    for (const path of ['/', '/privacy', '/security', '/demo', '/n/abc']) {
+      expect(denied(path)).toBe(false);
+    }
   });
 
   base('the threat model has an address, reached from /privacy', async ({ page }) => {

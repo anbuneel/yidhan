@@ -8,7 +8,7 @@ import { renderEntryScreen } from './components/entryScreens';
 import { renderAccountGate } from './components/accountGates';
 import { LoadingFallback } from './components/LoadingFallback';
 import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
-import { clearScrollMemory, routeToViewMode, useRouter } from './routing';
+import { clearScrollMemory, routeToDocumentTitle, routeToViewMode, useRouter } from './routing';
 import { useAuth } from './contexts/AuthContext';
 import { useEncryption } from './contexts/EncryptionContext';
 import { createEncryptedNote } from './services/encryptedNotes';
@@ -174,6 +174,12 @@ function App() {
   // Redirect from /demo to library when user logs in.
   // Replaced, not pushed: Back from the library should not return to a demo the
   // user has already left behind.
+  // Public pages name themselves in the tab; everything else keeps the shell's title.
+  const documentTitle = routeToDocumentTitle(route);
+  useEffect(() => {
+    document.title = documentTitle;
+  }, [documentTitle]);
+
   useEffect(() => {
     if (isDemo && user) {
       replaceRoute({ name: 'library' });

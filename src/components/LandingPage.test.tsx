@@ -99,6 +99,15 @@ describe('LandingPage', () => {
     expect(props.onSecurityClick).toHaveBeenCalledTimes(2);
   });
 
+  it('the open-source fact links to the licence, not just the repository', () => {
+    renderLanding();
+
+    expect(screen.getByRole('link', { name: /free and open source/i })).toHaveAttribute(
+      'href',
+      'https://github.com/anbuneel/yidhan/blob/main/LICENSE'
+    );
+  });
+
   it('the header sign-in reaches sign-in, not sign-up', () => {
     const props = renderLanding();
 

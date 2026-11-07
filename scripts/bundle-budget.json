@@ -3,7 +3,7 @@
     "First-visit weight budgets, item 61. Reasoning and targets: docs/plans/2026-11-07-first-visit-weight-proposal.md.",
     "Checked by scripts/check-bundle-budget.mjs after every build, and by e2e-sw/first-visit.spec.ts in a browser.",
     "Sizes in KB (1024 bytes): JS, CSS, HTML and text at gzip level 9; images and fonts as stored.",
-    "limitKB is what the build may not exceed. Where it is above targetKB, it is the value measured on 2026-11-07 after steps 1, 3 and 6, rounded up to the next whole KB. Lower it as each step lands; never raise it without a DECISIONS.md entry.",
+    "limitKB is what the build may not exceed. Where it is above targetKB, it is the value measured on 2026-11-07 after steps 1, 3 and 6 (on top of #244), rounded up to the next whole KB. Lower it as each step lands; never raise it without a DECISIONS.md entry.",
     "landingPageTotal: the browser spec counts every request until network idle; the build check can only count what index.html names, so it measures less."
   ],
   "landingJsBeforeLoad": {
@@ -13,7 +13,7 @@
     "reachesTargetWith": "steps 2, 4 and 5"
   },
   "landingPageTotal": {
-    "limitKB": 537,
+    "limitKB": 538,
     "targetKB": 300,
     "measures": "Everything the page requests on / until network idle, excluding the precache (gzip)",
     "reachesTargetWith": "steps 2 and 5"

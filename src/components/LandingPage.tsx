@@ -29,6 +29,9 @@ interface LandingPageProps {
 }
 
 const GITHUB_URL = 'https://github.com/anbuneel/yidhan';
+// The licence itself, not the repository: "open source" is a claim the file backs.
+// `index.html`'s shell carries the same address.
+const LICENSE_URL = `${GITHUB_URL}/blob/main/LICENSE`;
 
 /** Only a plain left-click is routed in-app; modified clicks keep the link's own behaviour. */
 const isPlainClick = (event: MouseEvent<HTMLAnchorElement>) =>
@@ -191,7 +194,7 @@ export function LandingPage({
         <span className="landing-proof-dot" aria-hidden="true">·</span>
         <span className="landing-fact-plain">Works offline</span>
         <span className="landing-proof-dot" aria-hidden="true">·</span>
-        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="landing-fact focus-ring">
+        <a href={LICENSE_URL} target="_blank" rel="noopener noreferrer" className="landing-fact focus-ring">
           Free and open source
         </a>
         <span className="landing-proof-dot" aria-hidden="true">·</span>

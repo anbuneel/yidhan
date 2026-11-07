@@ -4,6 +4,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { NAVIGATE_FALLBACK_DENYLIST } from './src/pwa/navigateFallbackDenylist'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -59,9 +60,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,webp,woff2}'],
         // Serve index.html for all navigation requests (full offline-first)
         navigateFallback: 'index.html',
-        // `.well-known` holds real files (security.txt); a navigation there must
-        // reach the network, never the app shell.
-        navigateFallbackDenylist: [/^\/api/, /^\/share\//, /^\/s\//, /^\/\.well-known\//],
+        // Real files (security.txt, sitemap.xml) must reach the network, never the
+        // app shell. The list and its reasons live in the imported module.
+        navigateFallbackDenylist: NAVIGATE_FALLBACK_DENYLIST,
         // No runtime caching: fonts are self-hosted (src/fonts.css) and land in
         // the precache through the woff2 glob above. The Google Fonts routes
         // this replaced were CacheFirst with `statuses: [0, 200]` and a 1-year
