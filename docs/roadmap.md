@@ -211,6 +211,7 @@ the "done when" below is the summary, that document is the detail.
 | — | Privacy-respecting usage insights for the writer, computed client-side | weeks |  |
 | — | Quiet Intelligence suite (Daily Whisper, Weekly Digest, Resonance Threads, Seasonal Echo, Quiet Questions, The Convergence, Gentle Grounding, The Unsaid) — each must clear the client-side-only bar in PRODUCT.md before it becomes a candidate | a month or more | Needs #146 |
 | — | Subscription system: paid tier, payments, feature gating | weeks | Needs #126 |
+| 158 | Backend cost review: evaluate PocketBase and self-hosted Supabase against the solo-maintenance constraint in `PRODUCT.md`; the Postgres core, RLS and the fail-closed plaintext constraint are the parts to keep, auth and realtime the parts to compare | days | Start when the Supabase bill passes $50 a month, or when the first real usage numbers exist | Decision recorded with the measured bill and usage · doc, and a `DECISIONS.md` entry |
 
 ---
 
