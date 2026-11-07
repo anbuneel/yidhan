@@ -63,7 +63,8 @@ cards stack in one column. Below 768px the primary button spans the width.
   hero note, rendered with the real `NoteCard` in decorative mode. Each has an
   overlay button that opens the Practice Space.
 - Proof facts: "Encrypted before it syncs" and "How the locking works" open the
-  security page; "Free and open source" opens GitHub; the other two are plain text.
+  security page; "Free and open source" opens the LICENSE file on GitHub
+  (in the `index.html` shell too); the other two are plain text.
 - Before the bundle arrives, `index.html` carries a static copy of the first screen
   (the intro column, a plain manuscript and the proof line) styled by an inline
   block that mirrors the landing CSS and both themes. `public/boot.js` runs first: it

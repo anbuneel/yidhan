@@ -335,3 +335,17 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   under a year out, Canonical, Policy). The service worker's navigation fallback
   now excludes `/.well-known/`, so an installed app reaches the file rather than
   the shell. A routing spec asserts the file is served as text.
+- **2026-11-07** — Items 154 and 155 from the public launch plan. The repository is
+  licensed AGPL-3.0-only: `LICENSE` at the root holds the unmodified licence text
+  under a copyright line for Anbu Neelakandan, 2026, and `package.json` names the
+  same licence. The landing page's "Free and open source" fact now opens the LICENSE
+  file on GitHub, in `LandingPage.tsx` and in the `index.html` shell. The font
+  licences are unchanged. Public pages set their own document title ("Privacy ·
+  Yidhan"; the Practice Space and the not-found page too) from `routeToDocumentTitle`
+  in the route table; the library, the editor, `/faded` and shared letters keep the
+  shell's title, so a note title never reaches the tab. `public/sitemap.xml` lists
+  the public pages and `robots.txt` points to it. The navigation fallback denylist
+  moved to `src/pwa/navigateFallbackDenylist.ts` so `vite.config.ts` and the routing
+  spec read one list, and it now excludes `/sitemap.xml` as it does `/.well-known/`.
+  The routing spec asserts each title, the sitemap as XML, and the denylist entry;
+  the service-worker suite asserts a real worker leaves the sitemap to the network.
