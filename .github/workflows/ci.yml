@@ -85,7 +85,7 @@ jobs:
   # months. This suite drives the production build in a real browser. It only
   # guards anything if it actually runs, hence a job rather than a manual script.
   service-worker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest is 26.04, which Playwright cannot install Chromium on
     needs: fast-checks
     steps:
       - name: Checkout code
@@ -127,7 +127,7 @@ jobs:
   # gating suite. Real secrets, when present, override the placeholders and add
   # the 64 authenticated tests per project on top.
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest is 26.04, which Playwright cannot install Chromium on
     needs: fast-checks
     steps:
       - name: Checkout code
