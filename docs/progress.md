@@ -337,7 +337,7 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   the shell. A routing spec asserts the file is served as text.
 - **2026-11-07** — Items 154 and 155 from the public launch plan. The repository is
   licensed AGPL-3.0-only: `LICENSE` at the root holds the unmodified licence text
-  under a copyright line for Anbu Neelakandan, 2026, and `package.json` names the
+  under a copyright line for Anbu Neelamegam, 2026, and `package.json` names the
   same licence. The landing page's "Free and open source" fact now opens the LICENSE
   file on GitHub, in `LandingPage.tsx` and in the `index.html` shell. The font
   licences are unchanged. Public pages set their own document title ("Privacy ·
