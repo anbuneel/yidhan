@@ -93,37 +93,40 @@ starts at about 345 ms — while the landing is still fetching images and fonts.
 | Everything the page requests on `/` until network idle, excluding the precache (gzip) | 553 KB | **≤ 300 KB** | 90 JS + Sentry after `load` (~45 without Replay) + 15 CSS + 3 HTML + 86 fonts + 48 logo art. Leaves ~15 |
 | JS to render the unlocked library, Editor excluded (gzip) | 402 KB | **≤ 330 KB** | Needs React 57, Supabase 48, Dexie 32, sync/services/hooks ~50, components ~40, Sentry ~45, spring/gesture 23, `hash-wasm` 11, MiniSearch 6, DOMPurify 9 ≈ 320. Replay stays deferred |
 | Largest single JS chunk (gzip) | 264 KB | **≤ 150 KB** | Editor (136) is the largest thing that must load as one unit; no chunk should beat it |
-| Precache transfer | 5,766 KB, 70 entries | **≤ 1,100 KB**, no duplicates | All JS (557) + CSS, HTML, licences, logo (~70) + fonts (315) + two icons (78) ≈ 1,020 after step 1. Route splitting moves bytes between chunks but not out of the precache. 80 KB headroom. ≤ 950 if step 8 is approved |
+| Precache transfer | 5,766 KB, 70 entries | **≤ 1,100 KB**, no duplicates | All JS (557) + CSS, HTML, licences, logo (~70) + fonts (315) + two icons (78) ≈ 1,020 after step 1. Route splitting moves bytes between chunks but not out of the precache. 80 KB headroom |
 | When the precache starts | ~345 ms, during landing load | **After the `load` event** | Precache is for the next visit; it should not compete with this one |
 
 ## Steps, ranked by bytes saved per day
 
-| # | Step | Saves | Effort | KB per day |
-|---|---|---:|---:|---:|
-| 1 | Trim the precache: drop `splash/`, `og-image.png`, icons above 192 px, and the duplicate `includeAssets` entries | 4,745 KB precache | 0.5 d | ~9,490 |
-| 2 | Defer Sentry until after `load`; load Replay with `import()` from our bundle | 85 KB critical path | 1 d | 85 |
-| 3 | Lazy-load `changelog.ts` with the Changelog page | 19 KB everywhere | 0.25 d | 76 |
-| 4 | Fix the React chunk and the six import warnings | 0 (prerequisite for 5) | 1 d | — |
-| 5 | Split public routes from the app shell; load Supabase only when there is a session, an auth callback, or the visitor opens sign-in | ~225 KB from `/` (main ~185, Supabase 48) | 4 d | ~56 |
-| 6 | Register the service worker after `load` | Moves ~1 MB (after step 1) of contention off from first load | 0.5 d | timing |
-| 7 | `hash-wasm` loaded inside `deriveKey` | 11 KB app shell | 0.5 d | 22 |
-| 8 | *Needs a decision:* precache only latin and latin-ext font subsets | 130 KB precache | 0.5 d | 260 |
+Precache bytes and critical-path bytes are counted separately; they are not comparable.
 
-Steps 1, 3 and 6 are hours each and independent. Step 5 is the one that meets the
+| # | Step | Precache KB saved | Critical-path KB saved | Effort |
+|---|---|---:|---:|---:|
+| 1 | Trim the precache: drop `splash/`, `og-image.png`, icons above 192 px, and the duplicate `includeAssets` entries | 4,745 | 0 | 0.5 d |
+| 2 | Defer Sentry until after `load`; load Replay with `import()` from our bundle; a pre-init buffer in `main.tsx` queues errors and unhandled rejections and flushes them after init | 0 | 85 | 1 d |
+| 3 | Lazy-load `changelog.ts` with the Changelog page | 0 | 19 | 0.25 d |
+| 4 | Fix the React chunk and the six import warnings | 0 | 0 (prerequisite for 5) | 1 d |
+| 5 | Split public routes from the app shell; load Supabase only when there is a session, an auth callback, or the visitor opens sign-in | 0 | ~225 on `/` (main ~185, Supabase 48) | 4 d |
+| 6 | Register the service worker after `load` | 0 | 0 (moves ~1 MB of precache traffic after `load`) | 0.5 d |
+| 7 | `hash-wasm` loaded inside `deriveKey` | 0 | 11 (app shell) | 0.5 d |
+
+Order: 1, 3, 6, 4, 2, 5, 7. Steps 1, 3 and 6 are hours each and independent. Step 5 is the one that meets the
 landing budget; 2 and 4 must land before it.
+
+Considered and declined: precaching only latin and latin-ext font subsets. It saves
+130 KB but changes the font precache invariant, which has an incident behind it.
 
 ### What each step risks, and what constrains it
 
 | # | What could break | Invariant in `CLAUDE.md` | CI assertion |
 |---|---|---|---|
 | 1 | Installed PWA icon or iOS splash missing offline. Installed icons are copied by the OS at install time; splash is fetched by Safari, not the page. Keep `favicon.png`, `icon-192`, the logo WebP and the font licences | Service worker; font licences travel with fonts | Build script: precache total ≤ 1,100 KB, no URL twice, no `splash/` or `og-image`, no PNG over 100 KB |
-| 2 | Errors thrown before Sentry loads are lost; scrubbers must still run on every event; Replay must stay off `/s/*` | Sentry scrubber; shared notes never replayed | `e2e-sw` spec: no Sentry chunk requested before `load`; unit test that `beforeSend` and `beforeBreadcrumb` are the scrubbers; unit test that `/s/` never imports Replay |
+| 2 | Errors thrown before Sentry loads would be lost without the pre-init buffer; the buffer must not grow without bound or hold note content; scrubbers must still run on every event; Replay must stay off `/s/*` | Sentry scrubber; shared notes never replayed | `e2e-sw` spec: no Sentry chunk requested before `load`; unit test that `beforeSend` and `beforeBreadcrumb` are the scrubbers; unit test that `/s/` never imports Replay; unit test that an error thrown before init is reported after it |
 | 3 | Changelog page flashes a fallback | Lazy chunks recover via `lazyWithRetry` | Build script: `changelog` not in the entry's static import closure |
 | 4 | Changing `manualChunks` can move `react` into a different shared chunk; making the six dynamic imports static is the honest fix where the module is already eager | Self-echo suppression, sync engine invariants (no behaviour change intended) | Build fails on Rollup's "dynamic import will not move module" warning; build script: `react` and `react-dom` in the same chunk |
 | 5 | Signed-in visitor on `/`; OAuth callback (tokens in URL) must still reach Supabase at once; demo-to-account migration; landing → sign-in without a reload; mid-session SW activation invalidating the new chunks | Landing shell mirrors `LandingPage.tsx` and `boot.js` session check must agree with the new gate; encrypted reads fail closed; lazy chunk recovery | `e2e-sw` spec: JS before `load` on `/` ≤ 90 KB, no `supabase`/`dexie` chunk requested; existing `auth.spec.ts`, `routing.spec.ts`, `practice-space.spec.ts`, `landing-shell.spec.ts` |
 | 6 | First-visit offline readiness arrives a few hundred ms later. `registerType` must stay `'autoUpdate'`; only the call site moves, inside `serviceWorkerUpdates.ts` | Service worker `registerType` and explicit registration | `e2e-sw` spec: first SW request after `load`; existing update tests in `e2e-sw/service-worker-update.spec.ts` |
 | 7 | Unlock slower by one small fetch; offline unlock needs the chunk precached (it will be, via the JS glob) | Key storage: every restore path verifies `encryption_key_check` | Existing `EncryptionContext` tests; build script: `hash-wasm` not in entry closure |
-| 8 | A Cyrillic, Greek or Vietnamese reader offline on first install sees fallback type for those characters | "The service worker precaches them — no runtime font caching." This step changes that rule, so it needs a `DECISIONS.md` entry before it starts | Build script: precache font list matches an allowlist |
 
 ## How the budgets are enforced
 
@@ -141,6 +144,8 @@ landing budget; 2 and 4 must land before it.
   assert the first service-worker request comes after `load`, then go offline and
   check `/`, the library route and `/changelog` render with the self-hosted fonts.
 - **Rollup `onwarn`** in `vite.config.ts` throws on the static-plus-dynamic warning.
+- **Closing evidence, not a CI gate:** item 61 closes with one Lighthouse run against
+  the Vercel preview, recorded in its `docs/progress.md` entry.
 
 ## Not measured
 
@@ -149,6 +154,8 @@ landing budget; 2 and 4 must land before it.
   preview server and are indicative only. No Lighthouse or field data.
 - Whether iOS Safari ever reads splash images through the service worker after
   install. Step 1 assumes not; check on a real iPhone during item 81.
+- The Lighthouse run that closes item 61 resolves the first two: real transfer and a
+  throttled mobile profile against the deployed build.
 - The signed-in library's real request list. It needs the authenticated E2E
   credentials; the app-shell figure above is built from the chunk breakdown.
 
@@ -157,7 +164,5 @@ landing budget; 2 and 4 must land before it.
 1. Accept the six targets in the Targets table, replacing the "done when" on items 60
    and 61 as set out in the problems table.
 2. Approve steps 1–7 as item 61's scope, in the order: 1, 3, 6, 4, 2, 5, 7.
-3. Decide step 8 (non-latin fonts out of the precache) separately; it changes a
-   `CLAUDE.md` invariant.
-4. Leave item 60's prerender and hydration question until 61 has landed; with 61 done,
+3. Leave item 60's prerender and hydration question until 61 has landed; with 61 done,
    `/` meets its budget without prerendering.
