@@ -1,5 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Same override as playwright.config.ts, for machines whose Chromium does not
+// match the pinned Playwright version.
+const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const chromiumLaunchOptions = chromiumExecutablePath
+  ? { launchOptions: { executablePath: chromiumExecutablePath } }
+  : {};
+
 /**
  * Service worker update tests.
  *
@@ -35,7 +42,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], ...chromiumLaunchOptions },
     },
   ],
 

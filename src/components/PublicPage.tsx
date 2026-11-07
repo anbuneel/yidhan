@@ -3,12 +3,20 @@ import type { Theme } from '../types';
 import type { PublicPageName } from '../routing';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingFallback } from './LoadingFallback';
-import { ChangelogPage } from './ChangelogPage';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { RoadmapPage } from './RoadmapPage';
 import { PrivacyPage } from './PrivacyPage';
 import { TermsPage } from './TermsPage';
 import { SupportPage } from './SupportPage';
 import { SecurityPage } from './SecurityPage';
+
+// Lazy so `src/data/changelog.ts` (about 19 KB gzip) leaves the entry chunk: only
+// `/changelog` reads it. The Suspense below covers the fetch, and lazyWithRetry
+// recovers if a mid-session deploy invalidated the chunk URL.
+// scripts/check-bundle-budget.mjs fails the build if it returns to the entry.
+const ChangelogPage = lazyWithRetry(() =>
+  import('./ChangelogPage').then((m) => ({ default: m.ChangelogPage }))
+);
 
 /**
  * The public pages differ only in their body. Each was written out in App with its own

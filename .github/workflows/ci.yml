@@ -41,8 +41,16 @@ jobs:
       - name: Check unused exports
         run: npm run lint:exports
 
+      # The build ends with scripts/check-bundle-budget.mjs. Without a Sentry DSN,
+      # Vite folds `if (sentryDsn)` to false and drops Sentry, so the budgets would
+      # measure a bundle about 78 KB gzip lighter than production and pass by
+      # accident. Production always sets a DSN, so CI builds with a dummy one; the
+      # check fails under GitHub Actions if Sentry is missing. The `.invalid` host
+      # cannot resolve, so nothing is ever sent.
       - name: Build
         run: npm run build
+        env:
+          VITE_SENTRY_DSN: https://00000000000000000000000000000000@placeholder.invalid/0
 
   # Full tests - runs on PRs OR when src/ changes on main (~2min)
   full-tests:

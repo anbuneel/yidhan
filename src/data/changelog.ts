@@ -7,6 +7,10 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.31', date: '2026-11-07', changes: [
+    { type: 'improvement', text: 'The first visit is lighter: the app installs for offline use after the page has finished loading, not during it, and stores about 1 MB for offline use instead of about 5 MB' },
+    { type: 'improvement', text: 'The release notes now load only when you open this page, so every other page starts with less to download' },
+  ] },
   { version: '3.19.30', date: '2026-09-14', changes: [
     { type: 'fix', text: 'Importing a Markdown file that starts with an HTML tag now reads the rest of the file as Markdown instead of showing it as plain text' },
     { type: 'fix', text: 'A Markdown export that fails now tells you, instead of finishing quietly with no file saved' },

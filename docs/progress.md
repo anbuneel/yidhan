@@ -335,3 +335,35 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   under a year out, Canonical, Policy). The service worker's navigation fallback
   now excludes `/.well-known/`, so an installed app reaches the file rather than
   the shell. A routing spec asserts the file is served as text.
+- **2026-11-07** — First-visit weight, item 61 steps 1, 3 and 6, with the budget
+  enforcement that keeps them. The precache drops the iOS splash screens, the share
+  image, icons above 192 px, the apple-touch icons, `robots.txt` and the duplicate
+  `includeAssets` entries; it keeps `favicon.png`, `icon-192`, the logo WebP and the
+  font licences. `src/data/changelog.ts` now loads with the Changelog page instead of
+  the entry chunk. The service worker registers one task after the window `load`
+  event; `registerType` stays `'autoUpdate'` and registration stays explicit in
+  `serviceWorkerUpdates.ts`. `scripts/check-bundle-budget.mjs` runs at the end of
+  `npm run build` against `scripts/bundle-budget.json`; CI builds with a dummy
+  `VITE_SENTRY_DSN`, and the check fails under GitHub Actions if Sentry is missing.
+  `e2e-sw/first-visit.spec.ts` checks the same budgets in a browser, that
+  registration happens after `load`, and that `/`, `/demo` and `/changelog` open
+  offline with the self-hosted fonts.
+
+  | Measure | Before (`dc34a40`) | After | Target |
+  |---|---:|---:|---:|
+  | JS requested on `/` before `load`, gzip | 401.5 KB, 7 scripts | 380.1 KB, 5 scripts | ≤ 90 KB |
+  | Everything requested on `/` until network idle, gzip | 555.4 KB | 536.9 KB | ≤ 300 KB |
+  | App-shell JS, Editor excluded (the entry path today), gzip | 398.7 KB | 380.1 KB | ≤ 330 KB |
+  | Largest JS chunk (`main`), gzip | 263.9 KB | 245.4 KB | ≤ 150 KB |
+  | Precache | 70 entries, 5,165.9 KB, 3 URLs twice | 45 entries, 1,021.9 KB, none twice | ≤ 1,100 KB |
+  | Service worker registers | before `load` (`readyState` `interactive`) | after `load` | after `load` |
+
+  Measured from `dist/` built with a dummy DSN: text at gzip level 9, images and
+  fonts as stored, each precache URL counted once. That is why the precache "before"
+  is 5,166 KB here and 5,766 KB in the proposal, which counted raw text and the
+  duplicates. The browser rows come from the new spec with one preloaded font held
+  back 1.5 s, so `load` is late enough to tell the two registration timings apart;
+  unthrottled, the old code also registered just after `load` and the check could
+  not fail. The four budgets not yet met are set in the JSON to the "after" value,
+  rounded up to the next whole KB, so they can only go down. Item 61 stays open for
+  steps 2, 4, 5 and 7.

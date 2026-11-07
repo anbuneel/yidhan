@@ -65,35 +65,77 @@ function scheduleUpdateChecks(registration: ServiceWorkerRegistration | undefine
 }
 
 /**
- * Register the service worker and start update checks.
+ * Resolve once the window `load` event has fired.
+ *
+ * The precache is for the next visit. Registering earlier made the worker fetch
+ * about 1 MB of precache while the landing page was still loading its own images
+ * and fonts (item 61, step 6).
+ */
+function whenPageLoaded(): Promise<void> {
+  if (typeof document === 'undefined' || document.readyState === 'complete') {
+    return Promise.resolve();
+  }
+  // One task past `load`, so the registration chunk is not fetched from inside the
+  // load handlers and counted against the page.
+  return new Promise((resolve) => {
+    window.addEventListener('load', () => setTimeout(resolve, 0), { once: true });
+  });
+}
+
+let pendingRegistration: Promise<boolean> | null = null;
+
+/**
+ * Register the service worker after the page has loaded, and start update checks.
+ *
+ * Only the timing is deferred. `registerType` stays `'autoUpdate'` and registration
+ * stays explicit here, so a waiting worker still activates itself. `immediate: true`
+ * is kept: by the time it is passed the page has loaded, so it only stops Workbox
+ * from waiting for a second `load` that has already happened.
  *
  * `registrar` is injectable so tests can exercise this without the
  * `virtual:pwa-register` module, which only exists under a Vite build.
  */
-export async function registerServiceWorker(
+export function registerServiceWorker(
   options: { onNeedRefresh?: () => void; registrar?: Registrar } = {}
 ): Promise<boolean> {
-  if (applyUpdate) return true;
+  if (applyUpdate) return Promise.resolve(true);
+  // A second call while the first waits for `load` must not register twice.
+  if (pendingRegistration) return pendingRegistration;
 
-  let registrar = options.registrar;
-
-  if (!registrar) {
-    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return false;
+  pendingRegistration = (async () => {
     try {
-      ({ registerSW: registrar } = await import('virtual:pwa-register'));
-    } catch {
-      // No service worker in this build (dev server, tests) — nothing to do.
-      return false;
+      let registrar = options.registrar;
+
+      if (!registrar) {
+        if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return false;
+      }
+
+      // Waits before the import too, so `workbox-window` stays off the
+      // before-load path.
+      await whenPageLoaded();
+
+      if (!registrar) {
+        try {
+          ({ registerSW: registrar } = await import('virtual:pwa-register'));
+        } catch {
+          // No service worker in this build (dev server, tests) — nothing to do.
+          return false;
+        }
+      }
+
+      applyUpdate = registrar({
+        immediate: true,
+        onNeedRefresh: options.onNeedRefresh,
+        onRegisteredSW: (_swUrl, registration) => scheduleUpdateChecks(registration),
+      });
+
+      return true;
+    } finally {
+      pendingRegistration = null;
     }
-  }
+  })();
 
-  applyUpdate = registrar({
-    immediate: true,
-    onNeedRefresh: options.onNeedRefresh,
-    onRegisteredSW: (_swUrl, registration) => scheduleUpdateChecks(registration),
-  });
-
-  return true;
+  return pendingRegistration;
 }
 
 /**
@@ -138,6 +180,7 @@ export async function removeLegacyRuntimeCaches(): Promise<string[]> {
 /** Test seam — drops the registration so each test starts clean. */
 export function resetServiceWorkerRegistrationForTests(): void {
   applyUpdate = null;
+  pendingRegistration = null;
   if (updateIntervalId !== null) {
     clearInterval(updateIntervalId);
     updateIntervalId = null;
