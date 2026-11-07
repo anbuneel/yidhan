@@ -31,7 +31,8 @@ window.addEventListener('unhandledrejection', (event) => {
 
 // Register the service worker explicitly. vite-plugin-pwa's injected script
 // only registers; it never surfaces an update, which is how clients ended up
-// stranded on an old shell.
+// stranded on an old shell. The call returns at once; registration itself
+// waits for the window `load` event (see serviceWorkerUpdates.ts).
 void registerServiceWorker()
 // Fonts used to be runtime-cached from Google; clear those caches on devices
 // that still carry them.

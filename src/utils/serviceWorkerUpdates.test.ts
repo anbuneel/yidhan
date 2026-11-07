@@ -12,7 +12,7 @@ describe('serviceWorkerUpdates', () => {
     vi.clearAllMocks();
   });
 
-  it('registers immediately so a waiting worker is picked up on load', async () => {
+  it('registers at once when the page has already loaded', async () => {
     const applyUpdate = vi.fn().mockResolvedValue(undefined);
     const registrar = vi.fn().mockReturnValue(applyUpdate);
 
@@ -67,6 +67,73 @@ describe('serviceWorkerUpdates', () => {
     await registerServiceWorker({ registrar: vi.fn().mockReturnValue(applyUpdate) });
 
     await expect(activateWaitingUpdate()).resolves.toBe(false);
+  });
+
+  describe('waiting for the load event', () => {
+    let readyState: DocumentReadyState;
+
+    beforeEach(() => {
+      readyState = 'loading';
+      vi.spyOn(document, 'readyState', 'get').mockImplementation(() => readyState);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    function fireLoad() {
+      readyState = 'complete';
+      window.dispatchEvent(new Event('load'));
+    }
+
+    it('does not register before the page has loaded', async () => {
+      const registrar = vi.fn().mockReturnValue(vi.fn());
+
+      const pending = registerServiceWorker({ registrar });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(registrar).not.toHaveBeenCalled();
+
+      fireLoad();
+      await expect(pending).resolves.toBe(true);
+      expect(registrar).toHaveBeenCalledTimes(1);
+      expect(registrar.mock.calls[0][0]).toMatchObject({ immediate: true });
+    });
+
+    it('registers once when called again while waiting for load', async () => {
+      const registrar = vi.fn().mockReturnValue(vi.fn());
+
+      const first = registerServiceWorker({ registrar });
+      const second = registerServiceWorker({ registrar });
+      fireLoad();
+
+      await expect(Promise.all([first, second])).resolves.toEqual([true, true]);
+      expect(registrar).toHaveBeenCalledTimes(1);
+    });
+
+    it('has no update to hand over until registration has happened', async () => {
+      const applyUpdate = vi.fn().mockResolvedValue(undefined);
+      const pending = registerServiceWorker({ registrar: vi.fn().mockReturnValue(applyUpdate) });
+
+      await expect(activateWaitingUpdate()).resolves.toBe(false);
+
+      fireLoad();
+      await pending;
+      await expect(activateWaitingUpdate()).resolves.toBe(true);
+    });
+
+    it('ignores load events after the first registration', async () => {
+      const registrar = vi.fn().mockReturnValue(vi.fn());
+      const pending = registerServiceWorker({ registrar });
+      fireLoad();
+      await pending;
+
+      window.dispatchEvent(new Event('load'));
+      await registerServiceWorker({ registrar });
+
+      expect(registrar).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('removeLegacyRuntimeCaches', () => {

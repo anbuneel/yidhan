@@ -19,15 +19,11 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { execFileSync } from 'node:child_process';
-import { createServer, type Server } from 'node:http';
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import type { Server } from 'node:http';
 import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+import { buildForProduction, repoRoot, startStaticServer } from './productionBuild';
 
 /**
  * The precache revision v2's index.html is stamped with. Both the patch below and the
@@ -35,56 +31,6 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
  * exactly "is this revision the one being served?".
  */
 const V2_REVISION = 'f'.repeat(32);
-
-const CONTENT_TYPES: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.webp': 'image/webp',
-  '.webmanifest': 'application/manifest+json',
-  '.txt': 'text/plain; charset=utf-8',
-  '.xml': 'application/xml; charset=utf-8',
-};
-
-/**
- * Serve whatever `dirRef.current` points at, so the fixture can swap the
- * deployed build under a running browser the way a real deploy does.
- */
-function startStaticServer(dirRef: { current: string }): Promise<{ server: Server; port: number }> {
-  const server = createServer((req, res) => {
-    const requested = decodeURIComponent((req.url ?? '/').split('?')[0]);
-    const relative = requested === '/' ? 'index.html' : requested.replace(/^\/+/, '');
-    const filePath = path.join(dirRef.current, relative);
-
-    // path.relative rather than startsWith: a prefix test lets a sibling
-    // directory through when it shares the prefix (…/v1 vs …/v10).
-    const escapesRoot = path.relative(dirRef.current, filePath).startsWith('..');
-
-    if (escapesRoot || !existsSync(filePath) || !statSync(filePath).isFile()) {
-      res.writeHead(404).end('not found');
-      return;
-    }
-
-    res.writeHead(200, {
-      'Content-Type': CONTENT_TYPES[path.extname(filePath)] ?? 'application/octet-stream',
-      // A service worker script must never be served stale, or the update
-      // check this test depends on cannot see the new version.
-      'Cache-Control': 'no-cache',
-    });
-    createReadStream(filePath).pipe(res);
-  });
-
-  return new Promise((resolve) => {
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      const port = typeof address === 'object' && address ? address.port : 0;
-      resolve({ server, port });
-    });
-  });
-}
 
 test.describe('service worker updates', () => {
   test.describe.configure({ mode: 'serial' });
@@ -97,15 +43,7 @@ test.describe('service worker updates', () => {
   test.beforeAll(async () => {
     workspace = await mkdtemp(path.join(tmpdir(), 'yidhan-sw-'));
 
-    execFileSync('npm', ['run', 'build'], {
-      cwd: repoRoot,
-      stdio: 'pipe',
-      env: {
-        ...process.env,
-        VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL ?? 'https://placeholder.supabase.co',
-        VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY ?? 'placeholder-anon-key',
-      },
-    });
+    buildForProduction();
 
     const v1 = path.join(workspace, 'v1');
     const v2 = path.join(workspace, 'v2');

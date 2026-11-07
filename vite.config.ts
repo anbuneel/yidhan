@@ -43,12 +43,21 @@ export default defineConfig({
       // Registration is explicit in src/utils/serviceWorkerUpdates.ts so the
       // update path is testable instead of relying on an injected script.
       injectRegister: null,
-      // Keep the font licenses available offline alongside the precached fonts.
-      includeAssets: ['favicon.png', 'robots.txt', 'licenses/fonts/*.txt'],
+      // The precache is what an offline visit reads, nothing more (item 61, step 1).
+      // Kept: the two icons the shell links (favicon, icon-192) and the font
+      // licences, which travel with the precached fonts. Left out: the iOS splash
+      // screens (Safari fetches them when adding to the home screen, not through the
+      // worker), og-image.png (read by crawlers), icons above 192 px and the
+      // apple-touch icons (the OS copies installed icons at install time), and
+      // robots.txt. scripts/check-bundle-budget.mjs fails the build if any return.
+      includeAssets: ['favicon.png', 'icons/icon-192.png', 'licenses/fonts/*.txt'],
+      // The manifest still lists icon-512 for installability; it is fetched from
+      // the network at install. Adding manifest icons here also listed favicon and
+      // icon-192 a second time.
+      includeManifestIcons: false,
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-        // Exclude the legacy oversized SVG from precache.
-        globIgnores: ['**/yidhan-logo.svg'],
+        // No png/svg/ico glob: the PNGs worth precaching are named in includeAssets.
+        globPatterns: ['**/*.{js,css,html,webp,woff2}'],
         // Serve index.html for all navigation requests (full offline-first)
         navigateFallback: 'index.html',
         // Real files (security.txt, sitemap.xml) must reach the network, never the

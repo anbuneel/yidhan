@@ -7,6 +7,10 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.32', date: '2026-11-07', changes: [
+    { type: 'improvement', text: 'The first visit is lighter: the app installs for offline use after the page has finished loading, not during it, and stores about 1 MB for offline use instead of about 5 MB' },
+    { type: 'improvement', text: 'The release notes now load only when you open this page, so every other page starts with less to download' },
+  ] },
   { version: '3.19.31', date: '2026-11-07', changes: [
     { type: 'improvement', text: 'Yidhan is now licensed under the GNU AGPL v3. “Free and open source” on the landing page opens the licence' },
     { type: 'improvement', text: 'Each public page now names itself in the browser tab, such as “Privacy · Yidhan”. Your notes and the signed-in app keep the usual title, so a note’s title never shows in the tab' },
