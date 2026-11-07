@@ -35,16 +35,15 @@ To start work on an item, move it into the ACTIVE plan and delete it from here.
 
 ### Keys and privacy
 
-Items 24, 25, 26 and 103 are designed in
-`docs/plans/2026-09-07-key-migration-and-rotation-design.md` (item 23). It names the
-flow each key change belongs to and carries the test list each of those four items
-must satisfy; the "done when" below is the summary, that document is the detail.
+Items 25 and 103 are designed in
+`docs/plans/2026-09-07-key-migration-and-rotation-design.md` (item 23), alongside
+items 24 and 26, which moved to the launch plan on 2026-11-07. The design names the
+flow each key change belongs to and carries the test list each item must satisfy;
+the "done when" below is the summary, that document is the detail.
 
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
-| 24 | Wrapped master key: keep the derived key pair as `K`; derive a KEK from the passphrase with a fresh salt; store `wrap(KEK, K)` in `user_metadata` with a version flag; migrate on next unlock | weeks | Needs #23, #36 | Existing users migrate without re-encrypting a note; killing the app mid-migration and reopening completes it; the key-check still verifies `K` · unit tests for interrupted migration and for both keys surviving the wrap |
 | 25 | Passphrase change by re-wrapping `K` | days | Needs #24, **#136** | The new wrap is written and confirmed by the server before the old wrap is invalidated; the key-check version bumps; every other device requires re-unlock on next use; a concurrent change from a second device fails cleanly with a re-prompt · two-device integration test; offline attempt is queued and reported as pending, never as complete |
-| 26 | Recovery kit: random 256-bit key, `wrap(RK, K)`, shown once as grouped base32 with print and copy, confirmation required; unlock via recovery key then set a new passphrase | weeks | Needs #24 | A user who forgets the passphrase enters the recovery key, sees their notes, and sets a new passphrase; the old wrap is then invalidated as in #25 · E2E through the whole path |
 | 47 | Private capture: POST `share_target` with `multipart/form-data` intercepted by the service worker; content stored locally in IndexedDB and encrypted immediately when the vault is unlocked; when locked, held locally in a "waiting for unlock" state and encrypted on unlock; never sent to any server unencrypted; failure and fallback paths defined | weeks | Needs #28, service-worker test harness | A share from another app creates a note without any network request carrying the text, with the vault locked or unlocked · service-worker E2E asserting the request log; locked-vault case covered |
 | 101 | Encrypt tag names (and future collection and attachment names) with AAD `tagId:userId`; append-only migration | weeks | Needs #24, #36 | The server holds no plaintext tag names; filtering and autocomplete still work offline · migration test and a database assertion |
 | 102 | Key exposure at rest, stated honestly: on the web the unlocked key is held in a dedicated Worker so page scripts cannot read it directly (execution isolation, which limits but does not remove XSS reach); persistent protection comes only from a platform keystore (native, #106) or a passkey-wrapped blob (#135); "Remember this browser" copy states the device and XSS exposure plainly | weeks |  | Raw key bytes are no longer readable from `localStorage` or page scope; the setting's copy passes review · unit test on the Worker boundary |
@@ -104,7 +103,6 @@ must satisfy; the "done when" below is the summary, that document is the detail.
 | 95 | Saved searches in the palette | days | Needs #42, #50 | A saved search reopens with its operators and result set · E2E |
 | 98 | Multi-select and bulk actions in list view only: tag, pin, fade, export | weeks | Needs #30 | Shift-click ranges; bulk fade is undoable in one step · E2E |
 | 99 | Virtualize the list view once measured at 2,000 notes | weeks | Needs #30 | 10k-note fixture scrolls at 60 fps with search open · #80 fixture |
-| 111 | Pinned chapter as a compact row when it holds fewer than three notes | days |  | No lone card in a wide band at 1440 px · visual regression |
 | 139 | "Set aside" true archive action | days | Start when #30 shipped and the cohort asks for an archive | Set-aside notes leave the chapters and return on request · E2E |
 | 140 | Lightweight named collections | weeks | Start when #95 shipped and the cohort still asks for collections | A collection is a saved query with a name, not a container; deleting it deletes no notes · E2E |
 
@@ -160,7 +158,6 @@ must satisfy; the "done when" below is the summary, that document is the detail.
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
 | 84 | iOS keyboard feasibility spike (one week, needs a Mac): Capacitor shell with the current editor; measure keyboard height tracking, selection, and focus mode in WKWebView; decide go or no-go for #105 | days |  | A written result with measurements and the decision · doc in `docs/plans/` |
-| 85 | Real-device testing checklist per release (keyboards, installed PWA, gestures) | days |  | A release cannot merge without a recorded device pass · checklist in repo, referenced from the release PR template |
 | 105 | iOS Capacitor project: haptics, status bar, keyboard, share sheet, secure storage; App Store privacy labels; TestFlight | weeks | Start when items 1 to 22 and the recovery key (#23 to #27) have shipped, a real-device browser pass (#81) is recorded, and the keyboard spike (#84) says go | TestFlight build passes the #81 device checklist and the failure scenarios · checklist and CI |
 | 107 | Touch targets under 44 px on narrow layouts fixed; metadata and navigation legibility on phones | days |  | Axe target-size rule passes at 390 px · axe |
 | 137 | Home-screen widget (quick capture, today's page), share extension, Siri Shortcuts | a month or more | Start when #105 in the App Store | A widget tap opens a new note in under 1 s; the share extension creates an encrypted note · device test |
@@ -185,16 +182,12 @@ must satisfy; the "done when" below is the summary, that document is the detail.
 
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
-| 27 | Passphrase setup rewritten as three steps: passphrase, recovery key, done | days | Needs #26 | New users cannot finish setup without confirming the recovery key · E2E |
-| 86 | Custom SMTP for auth email; magic-link sign-in | weeks |  | OTP and magic-link emails arrive within one minute in production for 50 consecutive sends · manual verification log |
 | — | Additional OAuth providers, Apple Sign-In first | days |  |
 
 ### Speed and code
 
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
-| 60 | Prerender `/`, `/privacy`, `/terms`, `/support`, `/changelog`, `/roadmap`; hydrate only theme toggle and CTA | weeks |  | Landing JavaScript under 50 KB gzip; content visible with JavaScript disabled · size budget test in CI |
-| 61 | Defer Supabase to first auth, `hash-wasm` to `deriveKey`, Sentry replay via `lazyLoadIntegration`; split the demo page; fix the React chunk; resolve the five static-plus-dynamic import warnings; keep offline assets and font licences precached | days |  | `main` under 300 KB; zero import warnings; offline shell still complete · build assertion and the service-worker E2E |
 | 62 | Input-path work: stop lifting `getHTML()` into `Editor` state on every keystroke; stop re-attaching visibility listeners per character; measure KDF and library decryption | weeks |  | Typing p95 under 100 ms on the long-note fixture · #80 |
 | 120 | Fix set-state-during-render (`ChapterSection`, `TimeRibbon`); retire react-doctor suppressions progressively | days |  | Suppressions under 5 with no behaviour change · lint |
 | 121 | Migration ordering and drift verification automated in CI against a staging database, plus the release-time check against production from #36 | weeks | Needs #36 | CI fails when the app is ahead of the staging schema; the release PR records the production check · CI |
@@ -205,7 +198,6 @@ must satisfy; the "done when" below is the summary, that document is the detail.
 |---|------|--------|-------|-----------|
 | 79 | Journeys, first half: continuous typing, interrupt, reload, recover; two tabs with one offline; network flaps, expired auth, rejected writes, quota pressure, denied persistence, blocked mutations | weeks | Needs #37 | Each scenario asserts the acknowledged revision survives and the UI shows the true state; none is skipped in CI · CI log |
 | 80 | Acceptance targets measured nightly on a defined device and dataset: warm launch to editable p95 under 1 s; typing p95 under 100 ms; search p95 under 200 ms at 10k notes; cross-device visibility p95 under 5 s; zero lost acknowledged edits in fault injection; backup restores in a fresh profile | weeks | Needs #37 | The nightly job fails when any target regresses and publishes the numbers in its summary · CI |
-| 81 | Cross-browser matrix: Chrome, Edge, Firefox, Safari; real iPhone, iPad, Android; installed PWA | days |  | Matrix documented; the release checklist records a pass per release · checklist |
 | 82 | Editor fixture tests: selection preserved, native undo, IME composition, paste fidelity, mobile keyboard | days |  | Each fixture asserts the document after the interaction · unit tests |
 | 125 | Journeys, second half: PWA upgrade with dirty work and lazy chunks; import, export, restore with nested formatting, Unicode, attachments, links; lock, sign out, rotate, recover, older offline device; account deletion gates | weeks | Needs #79, #24, #103 | Each scenario asserts the acknowledged revision survives and the resulting state is the documented one; none is skipped · CI |
 

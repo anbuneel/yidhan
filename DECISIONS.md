@@ -19,6 +19,47 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-07 — The execution plan is superseded by a public launch plan
+
+**Status:** Active
+
+**Why:** The improvement plan had emptied its **Now** list; what remained was one
+testing item blocked on the maintainer and the validation cohort. A fresh review
+of the app against the landing page found that three promises on that page run
+ahead of the product: "nothing to set up" leads to a passphrase that cannot be
+recovered; "free and open source" has no licence file behind it; "not even us" has
+no outside review behind it. Two more things fail under load rather than at rest:
+the built-in Supabase auth email, and a first visit that pulls 270 KB of script and
+a 6 MB precache. None of these is a feature. A plan organised around lanes of
+product work had no place to say "these come before anyone is invited".
+
+**Decision:** Open `docs/plans/2026-11-07-public-launch-plan.md` as the one ACTIVE
+plan and flip the execution plan to SUPERSEDED. **Now** holds only launch blockers,
+moved out of the roadmap with their "done when" intact (items 24, 26, 27, 60, 61,
+81, 85, 86, 111) plus four new ones (154 licence, 155 page titles and sitemap, 156
+honest hero, 157 domain and plan). **Next** lists the features to build after
+launch, in order, but does not promote them: they stay on the roadmap, which owns
+their acceptance tests, until each enters **Now**. Open bugs #205 and #207 gate the
+launch from the issue tracker, not from the plan.
+
+**Rejected:** Promoting the feature list into the plan as well. Twenty-five items in
+one ACTIVE plan is a roadmap with a different heading, and it would have moved every
+"done when" out of the file that owns it before anyone had decided to build them.
+
+**Rejected:** Promoting item 104 (independent security review) as a launch blocker.
+It needs item 101 (encrypted tag names), which is weeks of work, and an unmet need
+cannot be promoted. Item 156 is the fallback: the hero claims only what the security
+page can already back, and links to it.
+
+**Rejected:** Leaving the old plan ACTIVE with a new "Launch" lane. Its lanes were
+closed or shipped and its lookup table is history; a launch is a change of intent,
+and the working agreement says a change of intent is a new plan.
+
+**Revisit when:** the launch has happened. The plan then flips to COMPLETE and the
+next plan starts from **Next**, reordered by whatever the first real writers say.
+
+---
+
 ## 2026-09-14 — Modal focus containment uses `inert`, not a portal with `showModal()`
 
 **Status:** Active

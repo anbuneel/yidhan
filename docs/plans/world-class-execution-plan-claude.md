@@ -1,7 +1,10 @@
 # Yidhan improvement plan
 
-Status: ACTIVE
-Last verified: 2026-09-10
+Status: SUPERSEDED
+Last verified: 2026-11-07
+
+Superseded by `2026-11-07-public-launch-plan.md`. Items 153 and 87 carried over
+unchanged. The lookup table below stays here for cross-references.
 
 The engineering ledger for product work. It owns **what is committed now** —
 nothing else.
