@@ -83,6 +83,7 @@
       .boot-manuscript p { font-size: clamp(1.05rem, 1.25vw, 1.2rem); line-height: 1.75; margin: 0; }
       .boot-manuscript p + p { margin-top: 1.75em; }
       .boot-foot { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--b-border); font-size: 0.8rem; color: var(--b-text3); }
+      .boot-proof a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--b-text3); }
       .boot-proof { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 0.9rem; padding: 2.25rem clamp(1.25rem, 3.5vw, 3rem) 0; font-size: 0.95rem; color: var(--b-text2); text-align: center; }
       @media (min-width: 768px) { .boot-header { padding: 0 3rem; } }
       @media (min-width: 1024px) { .boot-hero { grid-template-columns: minmax(0, 30rem) minmax(0, 1fr); gap: clamp(3rem, 5vw, 4.5rem); padding-top: 3.5rem; } }
@@ -116,7 +117,7 @@
             <div class="boot-foot">A practice draft. It stays on this device and is not encrypted.</div>
           </div>
         </section>
-        <p class="boot-proof"><span>Encrypted before it syncs</span><span>·</span><span>Works offline</span><span>·</span><span>Free and open source</span><span>·</span><span>Export any time</span></p>
+        <p class="boot-proof"><span>Encrypted before it syncs</span><span>·</span><span>Works offline</span><span>·</span><a href="https://github.com/anbuneel/yidhan/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Free and open source</a><span>·</span><span>Export any time</span></p>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>

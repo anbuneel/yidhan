@@ -137,6 +137,30 @@ export function routeToPath(route: Route): string {
   }
 }
 
+/**
+ * The title `index.html` ships with. The signed-in app, the editor and a shared
+ * letter all keep it: a tab title is visible metadata, so a note's title never goes
+ * there.
+ */
+export const DEFAULT_DOCUMENT_TITLE = 'Yidhan — A quiet home for your personal notes';
+
+const PAGE_TITLES: Record<PublicPageName | 'demo' | 'notFound', string> = {
+  security: 'Security',
+  privacy: 'Privacy',
+  terms: 'Terms',
+  support: 'Support',
+  changelog: 'Changelog',
+  roadmap: 'Roadmap',
+  demo: 'Practice Space',
+  notFound: 'Not found',
+};
+
+/** The document title for a route: "Page · Yidhan" on public pages, else the default. */
+export function routeToDocumentTitle(route: Route): string {
+  const page = (PAGE_TITLES as Partial<Record<Route['name'], string>>)[route.name];
+  return page ? `${page} · Yidhan` : DEFAULT_DOCUMENT_TITLE;
+}
+
 export function isSameRoute(a: Route, b: Route): boolean {
   if (a.name !== b.name) return false;
   if (a.name === 'note' && b.name === 'note') return a.noteId === b.noteId;

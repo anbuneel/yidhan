@@ -1,10 +1,14 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
+  DEFAULT_DOCUMENT_TITLE,
   isPublicPageRoute,
   isSameRoute,
   isScrollRestoringRoute,
   normalizePath,
   parseRoute,
+  routeToDocumentTitle,
   routeToPath,
   routeToViewMode,
   type Route,
@@ -137,6 +141,35 @@ describe('routeToPath', () => {
       if (route.name === 'notFound') continue;
       expect(parseRoute(routeToPath(route), { allowPlayground: true })).toEqual(route);
     }
+  });
+});
+
+describe('routeToDocumentTitle', () => {
+  it.each([
+    ['/security', 'Security · Yidhan'],
+    ['/privacy', 'Privacy · Yidhan'],
+    ['/terms', 'Terms · Yidhan'],
+    ['/support', 'Support · Yidhan'],
+    ['/changelog', 'Changelog · Yidhan'],
+    ['/roadmap', 'Roadmap · Yidhan'],
+    ['/demo', 'Practice Space · Yidhan'],
+    ['/demo/new', 'Practice Space · Yidhan'],
+    ['/nowhere', 'Not found · Yidhan'],
+  ])('names the page at %s', (path, title) => {
+    expect(routeToDocumentTitle(parseRoute(path))).toBe(title);
+  });
+
+  // The title is visible metadata: a note's title must never reach the tab.
+  it.each(['/', '/faded', '/n/abc123', '/s/abcdefghijklmnopqrstuv'])(
+    'keeps the default title at %s',
+    (path) => {
+      expect(routeToDocumentTitle(parseRoute(path))).toBe(DEFAULT_DOCUMENT_TITLE);
+    }
+  );
+
+  it('the default is the title index.html ships with', () => {
+    const html = readFileSync(resolve(__dirname, '../../index.html'), 'utf8');
+    expect(html).toContain(`<title>${DEFAULT_DOCUMENT_TITLE}</title>`);
   });
 });
 

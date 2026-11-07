@@ -7,6 +7,10 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.31', date: '2026-11-07', changes: [
+    { type: 'improvement', text: 'Yidhan is now licensed under the GNU AGPL v3. “Free and open source” on the landing page opens the licence' },
+    { type: 'improvement', text: 'Each public page now names itself in the browser tab, such as “Privacy · Yidhan”. Your notes and the signed-in app keep the usual title, so a note’s title never shows in the tab' },
+  ] },
   { version: '3.19.30', date: '2026-09-14', changes: [
     { type: 'fix', text: 'Importing a Markdown file that starts with an HTML tag now reads the rest of the file as Markdown instead of showing it as plain text' },
     { type: 'fix', text: 'A Markdown export that fails now tells you, instead of finishing quietly with no file saved' },
