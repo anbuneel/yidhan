@@ -474,6 +474,12 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             </div>
           )}
 
+          {mode === 'forgot' && (
+            <p className="auth-text-secondary text-sm mb-4 md:mb-5">
+              A new password signs you in. It doesn&rsquo;t open your encrypted notes; your passphrase or recovery key does that.
+            </p>
+          )}
+
           {/* Password - shown for login, signup, reset */}
           {mode !== 'forgot' && (
             <div className="mb-4 md:mb-5">

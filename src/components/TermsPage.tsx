@@ -148,7 +148,7 @@ export function TermsPage({
               </h2>
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
-                  Your passphrase is the key to your notes. We don't store it, we can't recover it, and we can't reset it. If you lose your passphrase, your encrypted notes are permanently inaccessible. We recommend keeping a backup of your passphrase in a secure location.
+                  Your passphrase is the key to your notes. We don't store it, we can't recover it, and we can't reset it. If you forget your passphrase, the recovery key you keep can restore access to your encrypted notes. If you lose both your passphrase and your recovery key, your encrypted notes cannot be recovered by anyone, including Yidhan. We recommend keeping a backup of your passphrase in a secure location.
                 </p>
               </div>
             </section>

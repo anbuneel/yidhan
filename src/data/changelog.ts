@@ -10,6 +10,11 @@ export const changelog: ChangelogEntry[] = [
   { version: '3.19.38', date: '2026-11-08', changes: [
     { type: 'fix', text: 'If two of your devices save the same note at almost the same moment, the second save now shows the conflict screen with both versions instead of replacing the first without a word. Before, a save that landed in that moment could be lost' },
   ] },
+  { version: '3.19.37', date: '2026-11-08', changes: [
+    { type: 'improvement', text: 'Setting up a new account is now three short steps: choose a passphrase, save your recovery key, done. Yidhan suggests a passphrase made on your device, six random words you can copy in one tap, or you can type your own. The recovery key opens your notes if you ever forget your passphrase, and setup finishes once you have typed it back' },
+    { type: 'improvement', text: 'Setup and the password reset form now say plainly that your account password and your passphrase are two different things: a new password signs you in, and only your passphrase or recovery key opens your notes' },
+    { type: 'fix', text: 'The privacy, security and terms pages no longer say a forgotten passphrase means lost notes. Your recovery key opens them; without both, no one can, Yidhan included' },
+  ] },
   { version: '3.19.36', date: '2026-11-08', changes: [
     { type: 'feature', text: 'You can now make a recovery key. If you forget your passphrase, it opens your notes, and you then choose a new passphrase. Yidhan offers one the next time you unlock with your passphrase, and you can make or replace one in Settings, under Security. You see the key once, with Copy and Print, and it starts working after you type it back. It never leaves your device' },
   ] },

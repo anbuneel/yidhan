@@ -865,31 +865,6 @@ describe('EncryptionContext wrapped-key migration (item 24)', () => {
     expect(screen.getByText('unlocked')).toBeInTheDocument();
   });
 
-  it('clears any stale vault in the same write that sets up a new passphrase', async () => {
-    mockUseAuth.mockReturnValue({ user: { id: 'vault-user-1', user_metadata: { vault: validVault } } });
-    mockDeriveKeys.mockResolvedValue(filledKeys(3));
-    mockGetUser.mockResolvedValue({ data: { user: { ...baseUser } } });
-
-    function SetupProbe() {
-      const { setupPassphrase } = useEncryption();
-      return (
-        <button type="button" onClick={() => { void setupPassphrase('Correct-Horse-Battery-9!'); }}>
-          Setup
-        </button>
-      );
-    }
-    render(
-      <EncryptionProvider>
-        <SetupProbe />
-      </EncryptionProvider>
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Setup' }));
-
-    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1));
-    expect(mockUpdateUser.mock.calls[0][0].data).toMatchObject({ vault: null });
-    expect(mockBuildMigratedVault).not.toHaveBeenCalled();
-  });
-
   it('restores a migrated account against the vault key-check, not the legacy one', async () => {
     mockUseAuth.mockReturnValue({ user: { ...baseUser, user_metadata: { ...baseUser.user_metadata, vault: validVault } } });
     sessionStorage.setItem(

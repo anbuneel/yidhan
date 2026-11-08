@@ -168,10 +168,11 @@ export function SecurityPage({
                 it on.
               </p>
               <p>
-                <Term>A forgotten passphrase.</Term> There is no recovery, because there is
-                nothing to recover with. We do not hold anything that could decrypt your
-                notes. A recovery kit you keep yourself is planned; until then, if the
-                passphrase is gone, so are the notes.
+                <Term>A forgotten passphrase.</Term> Your recovery key opens your notes, and
+                you then choose a new passphrase. You make it when you set up, or in
+                Settings, and only you keep it. We hold nothing that could decrypt your
+                notes, so without both the passphrase and the recovery key, no one can
+                open them, Yidhan included.
               </p>
               <p>
                 <Term>Practice drafts.</Term> Anything written in the Practice Space before

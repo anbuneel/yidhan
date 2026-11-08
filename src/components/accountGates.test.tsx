@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { renderAccountGate } from './accountGates';
 import type { AccountGateOptions } from './accountGates';
 import { PassphraseUnlock } from './PassphraseUnlock';
+import { DatabaseUpdatePending } from './DatabaseUpdatePending';
 
 const base: AccountGateOptions = {
   schemaCompatibility: { status: 'ok', appliedVersion: 1 },
@@ -14,6 +15,7 @@ const base: AccountGateOptions = {
   isEncryptionSetup: true,
   isUnlocked: true,
   recoveryScreen: null,
+  setupScreen: false,
 };
 
 /** The lazy screen inside the Suspense boundary, and which of the two it is. */
@@ -44,5 +46,41 @@ describe('renderAccountGate', () => {
     const reset = renderAccountGate({ ...base, isUnlocked: false, recoveryScreen: 'reset' });
     expect(lazyChild(offer)).toEqual({ reset: false });
     expect(lazyChild(reset)).toEqual({ reset: true });
+  });
+
+  describe('the three-step setup (item 27)', () => {
+    /** The lazy setup screen has no props; the recovery screen always has `reset`. */
+    function isSetup(element: ReturnType<typeof renderAccountGate>) {
+      return element !== null && element.type !== PassphraseUnlock && lazyChild(element) !== undefined
+        && !('reset' in (lazyChild(element) ?? {}));
+    }
+
+    it('shows the setup to an account with no vault', () => {
+      expect(isSetup(renderAccountGate({ ...base, isEncryptionSetup: false, isUnlocked: false }))).toBe(true);
+    });
+
+    it('never shows the setup to an existing account, locked or unlocked', () => {
+      expect(renderAccountGate({ ...base, isUnlocked: false })?.type).toBe(PassphraseUnlock);
+      expect(renderAccountGate(base)).toBeNull();
+      expect(isSetup(renderAccountGate({ ...base, recoveryScreen: 'offer' }))).toBe(false);
+      expect(isSetup(renderAccountGate({ ...base, isUnlocked: false, recoveryScreen: 'reset' }))).toBe(false);
+    });
+
+    it('keeps the setup up after its write lands, until the writer leaves step 3', () => {
+      // Set up and unlocked, but this tab's setup has not finished: step 3, not the library.
+      expect(isSetup(renderAccountGate({ ...base, setupScreen: true }))).toBe(true);
+      // Not set up as far as the auth context knows yet, still the same screen.
+      expect(isSetup(renderAccountGate({ ...base, isEncryptionSetup: false, setupScreen: true }))).toBe(true);
+    });
+
+    it('still puts the deployment guard first', () => {
+      const gate = renderAccountGate({
+        ...base,
+        isEncryptionSetup: false,
+        setupScreen: true,
+        schemaCompatibility: { status: 'database-behind', appliedVersion: 1, requiredVersion: 2 },
+      });
+      expect(gate?.type).toBe(DatabaseUpdatePending);
+    });
   });
 });

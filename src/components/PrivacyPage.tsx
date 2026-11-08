@@ -88,7 +88,7 @@ export function PrivacyPage({
                   Yidhan uses end-to-end encryption (AES-256-GCM) to protect your notes. Your passphrase never leaves your device; it is used locally to derive encryption keys via Argon2id. Note titles and content are encrypted before they reach our servers.
                 </p>
                 <p>
-                  We cannot read your notes. No one at Yidhan, Supabase, or anywhere else can decrypt them without your passphrase. If you forget your passphrase, your notes cannot be recovered; this is the tradeoff of real encryption.
+                  We cannot read your notes. No one at Yidhan, Supabase, or anywhere else can decrypt them without your passphrase. If you forget your passphrase, your recovery key opens your notes. Without both, no one can open them, Yidhan included; this is the tradeoff of real encryption.
                 </p>
               </div>
             </section>
