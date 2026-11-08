@@ -532,6 +532,56 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   column and cannot replace words. No database change. No conflict E2E exists, so the
   evidence is unit tests in `syncEngine.conflicts` and `syncEngine.queue`. Review
   findings rejected or left out of scope: `docs/reviews/2026-11-08-item-159-conditional-note-writes.md`.
+- **2026-11-08** — First-visit weight, item 61 step 5. The public routes are split
+  from the app shell. `src/appGate.ts` decides at startup: a visitor with no stored
+  Supabase session, no auth callback in the URL (`access_token`, `refresh_token` or
+  `error_description` in the fragment; `code`, `error_description` or `reset=true` in
+  the query), no share-target content and a public route (`/` or one of the six public
+  pages) gets `src/shells/PublicShell.tsx`: the landing page and public pages with
+  React, the router, the theme, the header, the hero's note card and DOMPurify, and no
+  provider. Everything else, `/demo` and `/s/...` included, gets
+  `src/shells/AppShell.tsx` (`AuthProvider`, `EncryptionProvider`, `App`, the
+  toaster), a `lazyWithRetry` chunk. Sign in, Create an account, or any route the
+  public shell does not render hands over to the app shell in a transition, so the
+  page stays on screen while the chunk loads; the app opens the auth modal the visitor
+  asked for and skips its boot loader. No reload. `public/boot.js` now hides the
+  landing shell on `/` exactly when the gate starts the app shell (before, only for a
+  stored session, so an OAuth return showed the landing first), and
+  `src/appGate.test.ts` runs `boot.js` to check they agree. To get the landing path down to the list: the
+  header reads auth through `useOptionalAuth` from `src/contexts/authState.ts` (no
+  provider means signed out); the five other public pages are lazy like the
+  changelog; the base64 helpers moved to `src/lib/base64.ts`, so `shareRoute`, and
+  through it `lazyWithRetry` and the error boundary, no longer pull in `hash-wasm`;
+  the starter notes moved to `src/services/demoStarters.ts`. Dexie has its own
+  `vendor-dexie` chunk, so the app shell is no longer the largest chunk. Session
+  Replay now waits for the app shell as well as for Sentry
+  (`src/shells/appShellStarted.ts`): the proposal's 300 KB page total counts Sentry
+  without Replay, and with Replay on the anonymous landing the page total was 329 KB.
+  Replay is still never loaded on `/s/*`, now checked again when Replay would load.
+  App also closes the auth modal on sign-in; before, the flag stayed set and kept the
+  keyboard shortcuts off. Review findings rejected or accepted in part:
+  `docs/reviews/2026-11-08-item-61-step-5-public-shell.md`; the two new choices are in
+  `DECISIONS.md`, 2026-11-08. The budget check now also fails if
+  Supabase, Dexie, the app shell, MiniSearch, react-spring, `hash-wasm` or Tiptap
+  enter the entry closure, and counts the app-shell chunk in the app-shell figure.
+  The first-visit spec asserts no Supabase, Dexie or app-shell chunk on an anonymous
+  `/`, before or after `load`, and no Replay there; that sign-in loads the app shell
+  and Supabase in the same document; and that a stored session and an OAuth callback
+  on `/` load the app shell at once.
+
+  | Measure | Before (`6c3828b`) | After | Target |
+  |---|---:|---:|---:|
+  | JS requested on `/` before `load`, gzip | 297.4 KB, 4 scripts | 89.9 KB, 3 scripts | ≤ 90 KB |
+  | Everything requested on `/` until network idle, gzip | 537.4 KB, 19 requests | 290.9 KB, 15 requests | ≤ 300 KB |
+  | App-shell JS, Editor excluded, gzip | 341.7 KB | 337.2 KB | ≤ 330 KB |
+  | Largest JS chunk, gzip | 189.4 KB (`main`) | 136.4 KB (`Editor`) | ≤ 150 KB |
+  | Precache | 59 entries, 1,046.5 KB | 69 entries, 1,053.6 KB | ≤ 1,100 KB |
+
+  Build figures from `dist/` with CI's environment (dummy DSN, no Supabase values);
+  browser figures from `e2e-sw/first-visit.spec.ts`. Limits in
+  `scripts/bundle-budget.json`: 90, 292, 339 and 138 KB. A budget that meets its
+  target is capped at the target, so the landing-JS limit is 90 KB, not 91. Item 61
+  stays open for step 7 and the closing Lighthouse run.
 - **2026-11-08** — Item 111: compact pinned row. When the Pinned chapter holds one or
   two notes, they render as compact cards in a left-aligned row sized to content
   (`.pinned-row` in `index.css`), so the Practice Space's welcome note no longer sits

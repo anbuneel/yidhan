@@ -77,12 +77,20 @@ if (sentryBuiltIn) {
     );
   check('landing page total, static part (gzip)', staticPage, budget.landingPageTotal);
 
-  // The unlocked library renders from the entry closure, plus Sentry, which loads
-  // after `load` since step 2 (src/utils/sentryClient.ts and what it imports).
-  // Replay stays out: it is deferred further. When step 5 splits the app shell out,
-  // add its chunks here.
+  // The unlocked library renders from the entry closure, the app shell
+  // (src/shells/AppShell.tsx, lazy since step 5) and what it imports, plus Sentry,
+  // which loads after `load` since step 2 (src/utils/sentryClient.ts and what it
+  // imports). Replay stays out: it is deferred further. The Editor is a lazy chunk of
+  // its own and is not counted.
   const sentryClient = allJs.filter((file) => /^assets\/sentryClient-/.test(file));
-  const appShell = new Set([...entry.classicScripts, ...entry.closure, ...staticClosure(distDir, sentryClient)]);
+  const appShellChunk = allJs.filter((file) => /^assets\/AppShell-/.test(file));
+  assert.equal(appShellChunk.length, 1, `Expected one AppShell chunk, found ${appShellChunk.join(', ') || 'none'}`);
+  const appShell = new Set([
+    ...entry.classicScripts,
+    ...entry.closure,
+    ...staticClosure(distDir, appShellChunk),
+    ...staticClosure(distDir, sentryClient),
+  ]);
   const appShellJs = [...appShell].reduce((sum, file) => sum + gzipBytes(distDir, file), 0);
   check('app-shell JS, Editor excluded (gzip)', appShellJs, budget.appShellJs);
 
@@ -114,6 +122,29 @@ if (sentryBuiltIn) {
     'Sentry not in the entry closure',
     sentryInEntry.length === 0,
     `Sentry is in the entry path (${sentryInEntry.join(', ')}); report through src/utils/monitoring.ts, not @sentry/react`
+  );
+}
+
+// Step 5: the landing page's static import closure is the public shell
+// (src/shells/PublicShell.tsx): React, the router, the theme, the landing page, the
+// header, the hero's note card and DOMPurify. The app shell loads lazily, and Supabase
+// with it. Supabase and Dexie are named chunks (manualChunks in vite.config.ts); the
+// rest are recognised by strings that survive minification.
+const landingMustNotHold = [
+  { name: 'Supabase', test: (file) => /^assets\/vendor-supabase-/.test(file) },
+  { name: 'Dexie', test: (file) => /^assets\/vendor-dexie-/.test(file) },
+  { name: 'the app shell', test: (file) => /^assets\/AppShell-/.test(file) },
+  { name: 'MiniSearch', test: (file) => read(file).includes('MiniSearch') },
+  { name: 'react-spring', test: (file) => read(file).includes('SpringValue') },
+  { name: 'hash-wasm', test: (file) => read(file).includes('argon2') },
+  { name: 'Tiptap', test: (file) => read(file).includes('tiptap') },
+];
+for (const { name, test } of landingMustNotHold) {
+  const found = entry.closure.filter(test);
+  requireThat(
+    `${name} not in the entry closure`,
+    found.length === 0,
+    `${name} is in the landing page's path (${found.join(', ')}); import it from the app shell, not the public shell`
   );
 }
 

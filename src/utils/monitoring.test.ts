@@ -165,6 +165,38 @@ describe('startMonitoring', () => {
     );
   });
 
+  it('holds Replay until replayAfter settles, and Sentry does not wait for it', async () => {
+    fakeSentry.addIntegration.mockClear();
+    let release: () => void = () => {};
+    const replayAfter = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const started = startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test', pathname: '/', replayAfter });
+    await vi.waitFor(() => expect(fakeSentry.startSentry).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fakeSentry.addIntegration).not.toHaveBeenCalled();
+
+    release();
+    await started;
+    expect(fakeSentry.addIntegration).toHaveBeenCalledWith({ name: 'Replay' });
+  });
+
+  it('does not add Replay if the app shell starts on a shared-note route', async () => {
+    fakeSentry.addIntegration.mockClear();
+    let release: () => void = () => {};
+    const replayAfter = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const started = startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test', pathname: '/', replayAfter });
+    await vi.waitFor(() => expect(fakeSentry.startSentry).toHaveBeenCalled());
+    // Back from the landing to a letter: that navigation is what starts the app shell.
+    window.history.pushState(null, '', '/s/abcdefghijklmnopqrstuv');
+    release();
+    await started;
+    expect(fakeSentry.addIntegration).not.toHaveBeenCalled();
+    window.history.replaceState(null, '', '/');
+  });
+
   it('waits for the load event before loading Sentry', async () => {
     const readyState = vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
     const started = startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test', pathname: '/' });

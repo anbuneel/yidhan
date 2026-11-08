@@ -1,4 +1,4 @@
-import { fromBase64Url } from '../lib/encryption';
+import { fromBase64Url } from '../lib/base64';
 
 const EMPTY_SHARE_KEY = new Uint8Array(0);
 
