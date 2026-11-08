@@ -1,4 +1,4 @@
-import * as Sentry from '@sentry/react';
+import { addBreadcrumb, captureException, captureMessage } from './monitoring';
 
 type ReliabilityLevel = 'info' | 'warning' | 'error';
 
@@ -15,7 +15,7 @@ export function addReliabilityBreadcrumb({
   data,
   level = 'info',
 }: ReliabilityEventOptions): void {
-  Sentry.addBreadcrumb({
+  addBreadcrumb({
     category: `reliability.${category}`,
     message,
     level,
@@ -39,9 +39,9 @@ export function reportReliabilityIssue(
   };
 
   if (error instanceof Error) {
-    Sentry.captureException(error, context);
+    captureException(error, context);
     return;
   }
 
-  Sentry.captureMessage(options.message, context);
+  captureMessage(options.message, context);
 }

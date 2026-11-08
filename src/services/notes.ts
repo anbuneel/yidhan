@@ -1,4 +1,4 @@
-import * as Sentry from '@sentry/react';
+import { captureException } from '../utils/monitoring';
 import { supabase } from '../lib/supabase';
 import type { Note, Tag, NoteShare } from '../types';
 import type { DbNote, DbNoteShare } from '../types/database';
@@ -58,9 +58,9 @@ export async function cleanupExpiredFadedNotes(): Promise<number> {
 
   if (error) {
     console.error('Error cleaning up expired faded notes:', error);
-    // Report to Sentry for visibility in production monitoring
+    // Report to Sentry (via utils/monitoring) for visibility in production monitoring
     // Don't throw - cleanup is non-critical, app should continue
-    Sentry.captureException(error, {
+    captureException(error, {
       tags: { operation: 'cleanupExpiredFadedNotes' },
       extra: { cutoffDate: cutoffDate.toISOString() },
     });

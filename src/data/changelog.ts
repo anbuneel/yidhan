@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.33', date: '2026-11-08', changes: [
+    { type: 'improvement', text: 'Pages start sooner: error reporting now loads after the page has finished loading instead of before it, so the first visit downloads about 80 KB less before you can use it. Errors that happen in the meantime are still reported, with your note content removed as before' },
+  ] },
   { version: '3.19.32', date: '2026-11-07', changes: [
     { type: 'improvement', text: 'The first visit is lighter: the app installs for offline use after the page has finished loading, not during it, and stores about 1 MB for offline use instead of about 5 MB' },
     { type: 'improvement', text: 'The release notes now load only when you open this page, so every other page starts with less to download' },

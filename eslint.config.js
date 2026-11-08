@@ -43,4 +43,19 @@ export default defineConfig([
       'no-restricted-exports': ['error', { restrictedNamedExports: ['searchNotesOffline', 'searchDecryptedNotes'] }],
     },
   },
+  // Sentry loads after `load` (item 61, step 2). A static import of @sentry/react in the
+  // entry path brings all 85 KB of it back; report through src/utils/monitoring.ts.
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/utils/sentryClient.ts', 'src/utils/sentryReplay.ts', 'src/**/*.test.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': ['error', {
+        paths: [{
+          name: '@sentry/react',
+          message: 'Report through src/utils/monitoring.ts; Sentry is loaded after the load event.',
+          allowTypeImports: true,
+        }],
+      }],
+    },
+  },
 ])

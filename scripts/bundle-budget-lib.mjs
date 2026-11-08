@@ -35,6 +35,22 @@ function staticImportsOf(source) {
   return found;
 }
 
+/** The given chunks and everything they import statically, as paths relative to dist. */
+export function staticClosure(distDir, files) {
+  const closure = new Set();
+  const queue = [...files];
+  while (queue.length) {
+    const file = queue.shift();
+    if (closure.has(file)) continue;
+    closure.add(file);
+    const source = readFileSync(path.join(distDir, file), 'utf8');
+    for (const specifier of staticImportsOf(source)) {
+      queue.push(path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier)));
+    }
+  }
+  return [...closure];
+}
+
 /**
  * What `dist/index.html` makes the browser fetch before `load`: the entry module,
  * everything it imports statically, and every modulepreload. Paths are relative to dist.
@@ -65,19 +81,8 @@ export function readEntry(distDir) {
     }
   }
 
-  const closure = new Set();
-  const queue = [...entries, ...modulepreloads];
-  while (queue.length) {
-    const file = queue.shift();
-    if (closure.has(file)) continue;
-    closure.add(file);
-    const source = readFileSync(path.join(distDir, file), 'utf8');
-    for (const specifier of staticImportsOf(source)) {
-      queue.push(path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier)));
-    }
-  }
-
-  return { entries, modulepreloads, stylesheets, preloads, classicScripts, closure: [...closure] };
+  const closure = staticClosure(distDir, [...entries, ...modulepreloads]);
+  return { entries, modulepreloads, stylesheets, preloads, classicScripts, closure };
 }
 
 /** Every URL in the generated worker's precache manifest, in order, duplicates kept. */
