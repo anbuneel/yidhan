@@ -1,44 +1,20 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, type RefObject } from 'react';
 import type { Note } from '../types';
 
 // Issue #205: a delete from another device used to unmount the editor and take an
 // unsaved draft with it. The decision to drop words belongs to the person who wrote
 // them, so a draft the editor still holds keeps the editor open until they choose.
 
-/** What the open editor reports about its own words. */
+/** What the open editor reports about its own words, written by the editor into a ref. */
 export interface OpenDraftState {
   noteId: string;
   /** True while the screen holds words the note on disk does not: dirty, saving, or a failed save. */
   unsaved: boolean;
 }
 
-export interface DraftReport {
-  draft: OpenDraftState | null;
-  /** The editor calls this whenever its unsaved state changes, and with null on unmount. */
-  reportDraft: (state: OpenDraftState | null) => void;
-  /** Read by the realtime handlers: true when the open editor holds unsaved words for this note. */
-  holdsUnsavedDraft: (noteId: string) => boolean;
-}
-
-export function useDraftReport(): DraftReport {
-  // State, so the render that loses the note can see the draft and keep the editor.
-  const [draft, setDraft] = useState<OpenDraftState | null>(null);
-  // Ref, so realtime handlers read the latest report without waiting for a render.
-  const draftRef = useRef<OpenDraftState | null>(null);
-
-  const reportDraft = useCallback((state: OpenDraftState | null) => {
-    draftRef.current = state;
-    setDraft((prev) =>
-      prev?.noteId === state?.noteId && prev?.unsaved === state?.unsaved ? prev : state
-    );
-  }, []);
-
-  const holdsUnsavedDraft = useCallback(
-    (noteId: string) => draftRef.current?.noteId === noteId && draftRef.current.unsaved,
-    []
-  );
-
-  return { draft, reportDraft, holdsUnsavedDraft };
+/** True when the open editor has reported unsaved words for this note. */
+export function holdsUnsavedDraft(draftRef: RefObject<OpenDraftState | null>, noteId: string | null): boolean {
+  return draftRef.current?.noteId === noteId && draftRef.current.unsaved;
 }
 
 /**
@@ -46,12 +22,15 @@ export function useDraftReport(): DraftReport {
  * while the editor holds unsaved words, this returns the last committed copy and
  * `released: true`, so the editor stays mounted and the words stay on screen.
  *
+ * The draft is a ref, not state: the note leaving the library is itself a render, and
+ * that render reads the latest report. The editor writes it after each commit.
+ *
  * Once released, it stays released until the note comes back or the address changes,
  * even if the draft later compares clean: a save that lands after the release, or an
  * edit undone back to the original, must not snatch the editor away mid-thought.
  */
 export function useReleasedOpenNote(
-  draft: OpenDraftState | null,
+  draftRef: RefObject<OpenDraftState | null>,
   selectedNoteId: string | null,
   selectedNoteRecord: Note | undefined
 ): { note: Note | undefined; released: boolean } {
@@ -61,16 +40,12 @@ export function useReleasedOpenNote(
   const releasedIdRef = useRef<string | null>(null);
 
   const lastOpenNote = lastOpenNoteRef.current;
-  let released = false;
-  if (
+  const released =
     !selectedNoteRecord &&
-    selectedNoteId &&
-    lastOpenNote?.id === selectedNoteId &&
-    !lastOpenNote.decryptionFailed
-  ) {
-    const keepsDraft = draft?.noteId === selectedNoteId && draft.unsaved;
-    released = keepsDraft || releasedIdRef.current === selectedNoteId;
-  }
+    lastOpenNote !== null &&
+    lastOpenNote.id === selectedNoteId &&
+    !lastOpenNote.decryptionFailed &&
+    (holdsUnsavedDraft(draftRef, selectedNoteId) || releasedIdRef.current === selectedNoteId);
 
   useLayoutEffect(() => {
     if (selectedNoteRecord) lastOpenNoteRef.current = selectedNoteRecord;
@@ -78,8 +53,5 @@ export function useReleasedOpenNote(
     releasedIdRef.current = released ? selectedNoteId : null;
   });
 
-  return {
-    note: selectedNoteRecord ?? (released ? lastOpenNote ?? undefined : undefined),
-    released,
-  };
+  return { note: selectedNoteRecord ?? (released ? lastOpenNote : undefined), released };
 }

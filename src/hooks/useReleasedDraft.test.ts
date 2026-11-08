@@ -1,42 +1,37 @@
-import { act, renderHook } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { createMockNote } from '../test/factories';
 import type { Note } from '../types';
-import { useDraftReport, useReleasedOpenNote, type OpenDraftState } from './useReleasedDraft';
+import { holdsUnsavedDraft, useReleasedOpenNote, type OpenDraftState } from './useReleasedDraft';
 
-// Issue #205. App resolves the open note through these hooks on every render; these
+// Issue #205. App resolves the open note through this hook on every render; these
 // cases are the renders around a note leaving the library.
 const note = createMockNote({ id: 'open', title: 'Open note' });
 
 interface Props { draft: OpenDraftState | null; selectedNoteId: string | null; record: Note | undefined }
 
+// The editor writes the ref after commit; each rerender here stands for one App render.
 function setup(initial: Props) {
-  return renderHook(
-    ({ draft, selectedNoteId, record }: Props) => useReleasedOpenNote(draft, selectedNoteId, record),
+  const draftRef: { current: OpenDraftState | null } = { current: initial.draft };
+  const hook = renderHook(
+    ({ draft, selectedNoteId, record }: Props) => {
+      draftRef.current = draft;
+      return useReleasedOpenNote(draftRef, selectedNoteId, record);
+    },
     { initialProps: initial }
   );
+  return { ...hook, draftRef };
 }
 
 const dirty = { noteId: 'open', unsaved: true };
 const clean = { noteId: 'open', unsaved: false };
 
-describe('useDraftReport', () => {
-  it('lets a realtime handler read the latest report before any render', () => {
-    const { result } = renderHook(() => useDraftReport());
-    const { holdsUnsavedDraft, reportDraft } = result.current;
-    reportDraft(dirty);
-    expect(holdsUnsavedDraft('open')).toBe(true);
-    expect(holdsUnsavedDraft('other')).toBe(false);
-    reportDraft(null);
-    expect(holdsUnsavedDraft('open')).toBe(false);
-  });
-
-  it('keeps the same state object for a repeated report', () => {
-    const { result } = renderHook(() => useDraftReport());
-    act(() => result.current.reportDraft(dirty));
-    const first = result.current.draft;
-    act(() => result.current.reportDraft({ ...dirty }));
-    expect(result.current.draft).toBe(first);
+describe('holdsUnsavedDraft', () => {
+  it('is true only for an unsaved draft of the named note', () => {
+    expect(holdsUnsavedDraft({ current: dirty }, 'open')).toBe(true);
+    expect(holdsUnsavedDraft({ current: dirty }, 'other')).toBe(false);
+    expect(holdsUnsavedDraft({ current: clean }, 'open')).toBe(false);
+    expect(holdsUnsavedDraft({ current: null }, 'open')).toBe(false);
   });
 });
 
@@ -66,8 +61,9 @@ describe('useReleasedOpenNote', () => {
   });
 
   it('does not hold for a draft that belongs to another note', () => {
-    const { result, rerender } = setup({ draft: { noteId: 'other', unsaved: true }, selectedNoteId: 'open', record: note });
-    rerender({ draft: { noteId: 'other', unsaved: true }, selectedNoteId: 'open', record: undefined });
+    const other = { noteId: 'other', unsaved: true };
+    const { result, rerender } = setup({ draft: other, selectedNoteId: 'open', record: note });
+    rerender({ draft: other, selectedNoteId: 'open', record: undefined });
     expect(result.current.released).toBe(false);
   });
 
@@ -82,7 +78,6 @@ describe('useReleasedOpenNote', () => {
     rerender({ draft: dirty, selectedNoteId: 'open', record: undefined });
     rerender({ draft: null, selectedNoteId: null, record: undefined });
     expect(result.current.released).toBe(false);
-    // Back to the old address: the copy is forgotten, so it is simply missing.
     rerender({ draft: null, selectedNoteId: 'open', record: undefined });
     expect(result.current).toEqual({ note: undefined, released: false });
   });
@@ -93,7 +88,6 @@ describe('useReleasedOpenNote', () => {
     const restored = { ...note, title: 'Restored elsewhere' };
     rerender({ draft: dirty, selectedNoteId: 'open', record: restored });
     expect(result.current).toEqual({ note: restored, released: false });
-    // And a later clean removal closes normally.
     rerender({ draft: clean, selectedNoteId: 'open', record: undefined });
     expect(result.current.released).toBe(false);
   });

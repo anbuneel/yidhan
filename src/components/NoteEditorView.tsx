@@ -1,6 +1,7 @@
 import { Suspense, type ComponentType, type ReactNode } from 'react';
 import type { Note, NoteDeleteHandler, Tag, Theme } from '../types';
 import type { OpenDraftState } from '../hooks/useReleasedDraft';
+import type { DerivedKeys } from '../lib/encryption';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingFallback } from './LoadingFallback';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
@@ -23,8 +24,10 @@ export interface NoteEditorViewProps {
   onSettingsClick: () => void;
   /** The note was released on another device while this screen held unsaved words. */
   releasedElsewhere?: boolean;
-  /** Keep the words of a released note as a new note. */
-  onKeepReleasedDraft?: (title: string, content: string) => Promise<void>;
+  /** The released draft was kept as this new note. */
+  onKeptReleasedDraft?: (note: Note) => void;
+  /** Vault keys, for writing a released draft into a new note. */
+  vaultKeys?: DerivedKeys | null;
   /** The writer chose to let the words of a released note go. */
   onLetGoReleasedDraft?: () => void;
   /** Reports whether the editor holds words the stored note does not. */

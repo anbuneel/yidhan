@@ -1,5 +1,7 @@
 import { VaultLockedSaveError } from '../utils/saveErrors';
 import type { OpenDraftState } from '../hooks/useReleasedDraft';
+import type { DerivedKeys } from '../lib/encryption';
+import { keepReleasedDraft } from '../utils/keepReleasedDraft';
 import { useState, useEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { getSaveLabel } from '../utils/saveStatus';
@@ -65,8 +67,10 @@ interface EditorProps {
    * (issue #205). Saving stops; the writer chooses to keep, copy, or let go.
    */
   releasedElsewhere?: boolean;
-  /** Keep the words of a released note as a new note. Rejects if that fails. */
-  onKeepReleasedDraft?: (title: string, content: string) => Promise<void>;
+  /** The released draft was kept as this new note; the app adds it and opens it. */
+  onKeptReleasedDraft?: (note: Note) => void;
+  /** Vault keys, for writing a released draft into a new note. */
+  vaultKeys?: DerivedKeys | null;
   /** The writer chose to let the words of a released note go. Defaults to onBack. */
   onLetGoReleasedDraft?: () => void;
   /** Reports whether this screen holds words the stored note does not. */
@@ -119,7 +123,7 @@ function getSaveStatusStyle(status: SaveStatus): { color: string; background: st
   }
 }
 
-export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus, releasedElsewhere = false, onKeepReleasedDraft, onLetGoReleasedDraft, onDraftStateChange }: EditorProps) {
+export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus, releasedElsewhere = false, onKeptReleasedDraft, vaultKeys = null, onLetGoReleasedDraft, onDraftStateChange }: EditorProps) {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -129,9 +133,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [keepFailed, setKeepFailed] = useState(false);
   const [isKeeping, setIsKeeping] = useState(false);
-  // True from the moment Keep as new note starts until it settles. The note switch
-  // it causes must not reset the words: anything typed during the write stays.
-  const keepingReleasedDraftRef = useRef(false);
+  // The id of the released note being kept as a new note, from the click until the
+  // switch to the new note renders. That switch must not reset the words: anything
+  // typed during the write stays. Cleared by the switch itself, not when the promise
+  // settles: the parent switches notes inside the callback and React may render the
+  // switch after the promise has resolved.
+  const keepingFromNoteIdRef = useRef<string | null>(null);
   // Each release starts a fresh episode, without the last one's warnings or an
   // open delete dialog for a note that is no longer there.
   const [prevReleased, setPrevReleased] = useState(releasedElsewhere);
@@ -221,10 +228,13 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // Flush any pending scroll save for the previous note before switching
     throttledScrollSaveRef.current?.flush();
 
-    currentNoteIdRef.current = note.id;
     // A released draft just kept as a new note: these are the writer's own words,
     // and any typed while the note was written are newer than the stored copy.
-    if (!keepingReleasedDraftRef.current) {
+    const switchIsKeep = keepingFromNoteIdRef.current !== null &&
+      keepingFromNoteIdRef.current === currentNoteIdRef.current;
+    keepingFromNoteIdRef.current = null;
+    currentNoteIdRef.current = note.id;
+    if (!switchIsKeep) {
       setTitle(note.title);
       setContent(note.content);
     }
@@ -585,17 +595,20 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   useEffect(() => () => onDraftStateChangeRef.current?.(null), []);
 
   const handleKeepReleasedDraft = async () => {
-    if (!onKeepReleasedDraft || keepingReleasedDraftRef.current) return;
-    keepingReleasedDraftRef.current = true;
+    if (!onKeptReleasedDraft || keepingFromNoteIdRef.current !== null) return;
+    keepingFromNoteIdRef.current = note.id;
     setIsKeeping(true);
     setKeepFailed(false);
     try {
-      await onKeepReleasedDraft(title, content);
+      // `note` is the released copy, so the new note carries its pin and tags;
+      // `tags` is the live list, so a tag deleted meanwhile is not resurrected.
+      onKeptReleasedDraft(await keepReleasedDraft(userId, vaultKeys, title, content, note, tags));
     } catch (error) {
       console.error('Failed to keep released draft as a new note:', error);
+      // No switch is coming, so the next one must reset as usual.
+      if (keepingFromNoteIdRef.current === note.id) keepingFromNoteIdRef.current = null;
       setKeepFailed(true);
     } finally {
-      keepingReleasedDraftRef.current = false;
       setIsKeeping(false);
     }
   };

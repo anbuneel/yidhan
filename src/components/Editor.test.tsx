@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import type { DerivedKeys } from '../lib/encryption';
 import { VaultLockedSaveError } from '../utils/saveErrors';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
@@ -16,6 +18,8 @@ const keyboardEditor = vi.hoisted(() => ({
   })),
 }));
 const editorReadyControl = vi.hoisted(() => ({ current: true }));
+const keepMock = vi.hoisted(() => ({ keepReleasedDraft: vi.fn() }));
+vi.mock('../utils/keepReleasedDraft', () => keepMock);
 
 // Mock dependencies
 vi.mock('../contexts/AuthContext', () => ({
@@ -1582,20 +1586,27 @@ describe('Editor', () => {
     });
 
     it('keeps the draft as a new note, and says so if that fails', async () => {
-      const keep = vi.fn().mockRejectedValueOnce(new Error('vault locked')).mockResolvedValue(undefined);
-      render(<Editor {...defaultProps} releasedElsewhere onKeepReleasedDraft={keep} />);
+      const kept = createMockNote({ id: 'kept', title: 'Keep me' });
+      keepMock.keepReleasedDraft.mockReset()
+        .mockRejectedValueOnce(new Error('vault locked'))
+        .mockResolvedValue(kept);
+      const onKept = vi.fn();
+      const keys = {} as DerivedKeys;
+      render(<Editor {...defaultProps} releasedElsewhere vaultKeys={keys} onKeptReleasedDraft={onKept} />);
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Keep me' } });
       const keepButton = () => screen.getByRole('button', { name: 'Keep as new note' });
 
       fireEvent.click(keepButton());
       await act(async () => { await Promise.resolve(); });
-      expect(keep).toHaveBeenCalledWith('Keep me', '<p>Test content</p>');
+      // The released copy and the live tags, so the new note keeps its pin and tags.
+      expect(keepMock.keepReleasedDraft).toHaveBeenCalledWith('user-123', keys, 'Keep me', '<p>Test content</p>', mockNote, mockTags);
+      expect(onKept).not.toHaveBeenCalled();
       expect(screen.getByRole('alert')).toHaveTextContent('Could not keep them as a new note');
       expect(screen.getByDisplayValue('Keep me')).toBeInTheDocument();
 
       fireEvent.click(keepButton());
       await act(async () => { await Promise.resolve(); });
-      expect(keep).toHaveBeenCalledTimes(2);
+      expect(onKept).toHaveBeenCalledWith(kept);
       expect(screen.getByRole('alert')).not.toHaveTextContent('Could not keep');
     });
 
@@ -1642,18 +1653,23 @@ describe('Editor', () => {
       expect(screen.getByRole('alert')).not.toHaveTextContent('Could not copy');
     });
 
-    it('keeps words typed while Keep as new note was writing', async () => {
-      let finishKeep: () => void = () => {};
-      const keep = vi.fn(() => new Promise<void>((resolve) => { finishKeep = resolve; }));
-      const { rerender } = render(<Editor {...defaultProps} releasedElsewhere onKeepReleasedDraft={keep} />);
+    it('keeps words typed during Keep when the parent switches notes inside the callback', async () => {
+      let finishWrite: () => void = () => {};
+      const kept = createMockNote({ id: 'kept', title: 'First words', content: '<p>Test content</p>' });
+      keepMock.keepReleasedDraft.mockReset().mockImplementation(
+        () => new Promise((resolve) => { finishWrite = () => resolve(kept); })
+      );
+      function Parent() {
+        const [current, setCurrent] = useState<{ note: typeof mockNote; released: boolean }>({ note: mockNote, released: true });
+        // As App does: the switch to the new note is scheduled inside the callback.
+        return <Editor {...defaultProps} note={current.note} releasedElsewhere={current.released}
+          onKeptReleasedDraft={(note) => setCurrent({ note, released: false })} />;
+      }
+      render(<Parent />);
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'First words' } });
       fireEvent.click(screen.getByRole('button', { name: 'Keep as new note' }));
       fireEvent.change(screen.getByDisplayValue('First words'), { target: { value: 'First words, and more' } });
-
-      // App switches to the new note before the keep promise settles.
-      const kept = createMockNote({ id: 'kept', title: 'First words', content: '<p>Test content</p>' });
-      rerender(<Editor {...defaultProps} note={kept} onKeepReleasedDraft={keep} />);
-      await act(async () => { finishKeep(); await Promise.resolve(); });
+      await act(async () => { finishWrite(); await Promise.resolve(); await Promise.resolve(); });
       expect(screen.getByDisplayValue('First words, and more')).toBeInTheDocument();
     });
 
