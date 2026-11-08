@@ -7,6 +7,10 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.40', date: '2026-11-08', changes: [
+    { type: 'improvement', text: 'The landing page now says exactly what encryption protects: your notes are encrypted on your device before they sync, and dates, sizes and tag names stay visible. It links to the security page for the rest. It also says that trying Yidhan needs nothing set up, while an account asks for a passphrase and a recovery key' },
+    { type: 'improvement', text: 'The support page now says who runs Yidhan: one person, with no company behind it. It says where to write, how soon to expect a reply, and what cannot be promised' },
+  ] },
   { version: '3.19.38', date: '2026-11-08', changes: [
     { type: 'fix', text: 'If two of your devices save the same note at almost the same moment, the second save now shows the conflict screen with both versions instead of replacing the first without a word. Before, a save that landed in that moment could be lost' },
   ] },

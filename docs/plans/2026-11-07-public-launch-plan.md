@@ -48,12 +48,9 @@ issue tracker, not here, but neither may be open on launch day:
 
 ### Lane 1 · Keep the promises
 
-The landing page says "nothing to set up", "free and open source" and "not even us".
-Each of these is ahead of the product. This lane closes the gap.
-
-| # | Area | Item | Effort | Needs / start when | Done when |
-|---|------|------|--------|--------------------|-----------|
-| 156 | Landing | The hero states only what the security page can back. Until item 104 (independent review) has a report, the hero's privacy line uses the security page's own wording and links to it. "Nothing to set up" is qualified so it reads as applying to trying the app, since an account needs a passphrase. In the same pass, the hero's editor picture shows five toolbar labels, not sixteen, and never greyed-out Undo and Redo; and `/support` gains one plain paragraph on how a free service run by one person is maintained and what support to expect | days |  | `index.html` shell and `LandingPage.tsx` carry the same copy (both change together); the picture's toolbar lists at most five labels · `LandingPage.test.tsx` and the shell copy check |
+Closed. Its one item, 156, shipped on 2026-11-08: the hero claims only what the
+security page backs, "nothing set up" applies to trying the app, and `/support` says
+who runs Yidhan (`docs/progress.md`).
 
 ### Lane 2 · Survive launch day
 

@@ -532,3 +532,18 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   column and cannot replace words. No database change. No conflict E2E exists, so the
   evidence is unit tests in `syncEngine.conflicts` and `syncEngine.queue`. Review
   findings rejected or left out of scope: `docs/reviews/2026-11-08-item-159-conditional-note-writes.md`.
+- **2026-11-08** — Item 156: honest hero, qualified claims, support paragraph. The
+  hero's privacy line no longer says "nobody else can read it. Not even us." It now
+  says notes are encrypted on the device before they sync, that the servers hold the
+  writing only as ciphertext, and that dates, sizes and tag names stay visible, and it
+  links to `/security` ("What is protected, and what is not"). "Nothing to set up"
+  became "Trying it needs nothing set up. An account asks for a passphrase and a
+  recovery key." The page meta descriptions say "Nothing to set up to try it." The
+  editor picture shows the first five real toolbar labels (B, I, </>, H1, List); Undo
+  and Redo, greyed out, are gone. `/support` gains one paragraph: one maintainer, no
+  company, where to write, a reply usually within a few days with no guarantee, and
+  the code is public. The `index.html` shell carries the same copy and the same link.
+  The security page is unchanged. Tests: `LandingPage.test.tsx` (new lines, the label
+  count, shell and page copy compared line by line, the proof-line links in both, and
+  the security page still naming what the hero says is visible),
+  `SupportPage.test.tsx` (new), and `e2e/landing-shell.spec.ts`.

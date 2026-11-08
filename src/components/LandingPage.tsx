@@ -42,12 +42,12 @@ const isPlainClick = (event: MouseEvent<HTMLAnchorElement>) =>
   !event.ctrlKey &&
   !event.shiftKey;
 
-/** Labels of the real editor toolbar, in its order. Decorative: the preview is a picture. */
-const TOOLBAR_LABELS = [
-  'B', 'I', '</>', 'H1', 'List', 'Undo', 'Redo', 'Link', 'U', 'S', 'Mark', 'H2', 'H3',
-  '1.List', 'Task', 'Quote', 'Code', '···',
-] as const;
-const TOOLBAR_DIMMED = new Set(['Undo', 'Redo']);
+/**
+ * The first five labels of the real editor toolbar, in its order (`PRIMARY_COMMANDS` in
+ * `EditorToolbar.tsx`). Decorative: the preview is a picture. At most five, and never
+ * Undo and Redo, which a fresh note shows greyed out.
+ */
+const TOOLBAR_LABELS = ['B', 'I', '</>', 'H1', 'List'] as const;
 
 export function LandingPage({
   onStartWriting,
@@ -99,6 +99,12 @@ export function LandingPage({
     onDemoClick();
   };
 
+  const handleSecurityLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!isPlainClick(event)) return;
+    event.preventDefault();
+    onSecurityClick();
+  };
+
   return (
     <div className="landing-canvas">
       <HeaderShell theme={theme} onThemeToggle={onThemeToggle} onSignIn={onSignIn} />
@@ -109,11 +115,14 @@ export function LandingPage({
           <h1 className="landing-headline">A quiet home for your personal notes.</h1>
           <p className="landing-sub">
             Capture an idea, think something through, or keep a passage worth returning to.
-            Nothing to set up.
+            Trying it needs nothing set up. An account asks for a passphrase and a recovery key.
           </p>
           <p className="landing-sub">
-            Each note is locked on your device before it syncs, so nobody else can read it.
-            Not even us.
+            Each note is encrypted on your device before it syncs, so our servers hold your
+            writing only as ciphertext. Dates, sizes and tag names stay visible to us.{' '}
+            <a href="/security" onClick={handleSecurityLinkClick} className="landing-sub-link focus-ring">
+              What is protected, and what is not
+            </a>
           </p>
           <div className="landing-actions">
             <button type="button" onClick={onDemoDraftClick} className="landing-cta focus-ring">
@@ -151,11 +160,7 @@ export function LandingPage({
             <div className="landing-manuscript-divider" aria-hidden="true" />
             <div className="landing-manuscript-toolbar" aria-hidden="true">
               {TOOLBAR_LABELS.map((label) => (
-                <span
-                  key={label}
-                  className={`landing-tb${TOOLBAR_DIMMED.has(label) ? ' dim' : ''}`}
-                  data-label={label}
-                >
+                <span key={label} className="landing-tb" data-label={label}>
                   {label}
                 </span>
               ))}
@@ -352,6 +357,12 @@ export function LandingPage({
           max-width: 30rem;
           margin: 0 0 0.85rem;
         }
+        .landing-sub-link {
+          color: inherit; text-decoration: none;
+          border-bottom: 1px dotted var(--color-text-tertiary);
+          transition: color 0.2s ease, border-bottom-color 0.2s ease;
+        }
+        .landing-sub-link:hover { color: var(--color-accent); border-bottom-color: var(--color-accent); }
         .landing-actions {
           display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem;
           margin-top: 1.4rem;
@@ -456,11 +467,8 @@ export function LandingPage({
           font-family: var(--font-body);
           font-size: 0.72rem; font-weight: 600; white-space: nowrap;
         }
-        .landing-tb.dim { opacity: 0.4; }
         .landing-tb[data-label="I"] { font-family: var(--font-display); font-style: italic; font-size: 0.95rem; }
         .landing-tb[data-label="</>"] { font-family: var(--font-mono); font-weight: 400; }
-        .landing-tb[data-label="U"] { text-decoration: underline; font-size: 0.85rem; }
-        .landing-tb[data-label="S"] { text-decoration: line-through; font-size: 0.85rem; }
         .landing-tb[data-label="B"] { font-size: 0.85rem; }
         .landing-manuscript-text {
           font-family: var(--font-body);

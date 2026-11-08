@@ -93,6 +93,20 @@ export function SupportPage({
                   </a>
                   . It's public, searchable, and lets us track everything in one place.
                 </p>
+                <p>
+                  Yidhan is free and open source, maintained by one person, with no company
+                  behind it. Write through GitHub Issues, or to{' '}
+                  <a
+                    href="mailto:anbs.dev@gmail.com"
+                    style={{ color: 'var(--color-accent)', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                  >
+                    anbs.dev@gmail.com
+                  </a>
+                  {' '}for anything private. Most messages get a reply within a few days, but
+                  there is no support team and no guaranteed response time, and no one can
+                  open notes without your passphrase or recovery key. The code is public, so
+                  anyone can read how Yidhan works.
+                </p>
               </div>
             </section>
 
