@@ -19,13 +19,29 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
       },
+      // Item 61, step 4: a module both imported statically and with import() stays in
+      // the static importer's chunk, so the dynamic import splits nothing and only
+      // hides where the module really loads. Fail the build instead of warning.
+      onwarn(warning, defaultHandler) {
+        if (/dynamic import will not move module into another chunk/.test(warning.message)) {
+          throw new Error(`Static-plus-dynamic import: ${warning.message}`)
+        }
+        defaultHandler(warning)
+      },
       output: {
-        manualChunks: {
-          // Split heavy vendor dependencies into separate chunks
-          // These cache independently and don't block initial render
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-sentry': ['@sentry/react'],
-          'vendor-react': ['react', 'react-dom'],
+        // A function, not the object form: the object form claims only the module a
+        // name resolves to, so `react-dom` took its index stub while react-dom/client
+        // and its code stayed in main, and `react` itself landed in vendor-sentry.
+        // scripts/check-bundle-budget.mjs asserts react and react-dom share a chunk.
+        manualChunks(id) {
+          if (!id.includes('/node_modules/')) return undefined
+          if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react'
+          if (id.includes('/node_modules/@supabase/')) return 'vendor-supabase'
+          // Replay apart from the rest of Sentry: it is imported later, on its own
+          // (src/utils/sentryReplay.ts), and never on shared-note routes.
+          if (/\/node_modules\/@sentry-internal\/replay(-canvas)?\//.test(id)) return 'vendor-sentry-replay'
+          if (/\/node_modules\/@sentry(-internal)?\//.test(id)) return 'vendor-sentry'
+          return undefined
         },
       },
     },

@@ -20,7 +20,7 @@ Exactly three destinations, and nothing else:
 | Destination | Configured by | Reached from |
 |---|---|---|
 | The Supabase project (Postgres, Auth, Realtime) | `VITE_SUPABASE_URL` | `src/lib/supabase.ts` |
-| Sentry | `VITE_SENTRY_DSN` — optional; empty disables it entirely | `src/main.tsx` |
+| Sentry | `VITE_SENTRY_DSN` — optional; empty disables it entirely | `src/utils/sentryClient.ts`, loaded by `src/utils/monitoring.ts` |
 | The origin the app is served from | — | Static assets and the service worker precache |
 
 Fonts are **self-hosted**: `font-src 'self'` in `vercel.json`, subsets in
@@ -118,7 +118,12 @@ encrypted payloads and plaintext tag names.
 Only when `VITE_SENTRY_DSN` is set. An empty value disables the SDK entirely, and no
 request is made.
 
-`beforeSend` in `src/main.tsx` scrubs, in this order:
+Sentry loads after the page's `load` event. Reports made before then, including
+uncaught errors and unhandled rejections, wait in a queue of at most 50 in
+`src/utils/monitoring.ts`, with `extra`, `contexts` and breadcrumb data already passed
+through `scrubSensitiveData`, and go out through the same hooks once Sentry starts.
+
+`beforeSend` (`scrubEvent` in `src/utils/sentryClient.ts`) scrubs, in this order:
 
 | Part of the event | What happens |
 |---|---|
@@ -129,6 +134,9 @@ request is made.
 | Stack frame `filename` and `abs_path` | `scrubShareSecrets` |
 | `event.breadcrumbs[].message` | `scrubShareSecrets` |
 | `event.breadcrumbs[].data` | `scrubSensitiveData` |
+
+`beforeBreadcrumb` (`scrubBreadcrumb`) applies the same two breadcrumb rules as each
+breadcrumb is recorded.
 
 The redacted key pattern is `passphrase|password|token|secret|key|salt|title|content|
 encrypted_payload|encryptedPayload|encryptionKey|hmacKey|noteTitle|noteContent`,
@@ -145,7 +153,8 @@ Two entries are worth explaining:
 
 Session replay is masked (`maskAllText`, `maskAllInputs`) and blocks
 `.rich-text-editor`, `.ProseMirror`, `[data-sensitive]` and `.note-card`. On a `/s/`
-route the replay integration is **not loaded at all** and both sample rates are 0,
+route the replay integration (`src/utils/sentryReplay.ts`, its own chunk from our
+bundle, never Sentry's CDN) is **not loaded at all** and both sample rates are 0,
 because a shared letter is decrypted in the page and a replay would film it.
 
 **What Sentry can still receive:** the shape of an error, a stack trace, the route

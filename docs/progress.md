@@ -382,6 +382,40 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   rounded up to the next whole KB, so they can only go down. The page-total limit is
   538 KB, not 537: #244 (items 154 and 155) merged first and added 0.3 KB to `/`.
   Item 61 stays open for steps 2, 4, 5 and 7.
+- **2026-11-08** — First-visit weight, item 61 steps 4 and 2. Step 4: `manualChunks`
+  in `vite.config.ts` is now a function, so `react`, `react-dom` and `scheduler` share
+  `vendor-react` (the object form left `react-dom/client` in `main` and put `react` in
+  `vendor-sentry`). The six static-plus-dynamic imports are now static: every one of
+  them (`supabase`, `offlineDb`, `offlineNotes`, `encryption`, `encryptedNotes`,
+  `@capacitor/network`) was already in the entry chunk, so the `import()` split
+  nothing. Step 5 needs `AuthContext`'s import of Supabase made lazy, not these. A
+  Rollup `onwarn` now fails the build on that warning. Step 2: Sentry loads after the
+  window `load` event from `src/utils/monitoring.ts`, which every caller now reports
+  through; `src/utils/sentryClient.ts` holds the init and the scrubbers, now also set
+  as `beforeBreadcrumb`. Replay is imported from our bundle
+  (`src/utils/sentryReplay.ts`, its own `vendor-sentry-replay` chunk) after init, and
+  never on `/s/*`. Errors, unhandled rejections and reports made before init are held
+  in a queue of at most 50, with context scrubbed on the way in, and sent after
+  init; without a DSN nothing is queued. ESLint rejects a value import of
+  `@sentry/react` outside those two files. The budget check now also asserts react and
+  react-dom share a chunk and no Sentry chunk is in the entry path; the first-visit
+  spec asserts no Sentry chunk before `load`, Sentry and Replay after it, and no
+  Replay on a shared note.
+
+  | Measure | Before (`d90d1d6`) | After | Target |
+  |---|---:|---:|---:|
+  | JS requested on `/` before `load`, gzip | 380.3 KB, 5 scripts | 296.7 KB, 4 scripts | ≤ 90 KB |
+  | Everything requested on `/` until network idle, gzip | 537.2 KB | 536.7 KB | ≤ 300 KB |
+  | App-shell JS, Editor excluded, gzip | 380.3 KB | 340.9 KB, Sentry included | ≤ 330 KB |
+  | Largest JS chunk (`main`), gzip | 245.6 KB | 188.7 KB | ≤ 150 KB |
+  | Precache | 45 entries, 1,022.4 KB | 48 entries, 1,021.8 KB | ≤ 1,100 KB |
+
+  Same method as the entry above. The page total barely moves: Sentry (about 45 KB)
+  and Replay (about 39 KB) still arrive before network idle, only after `load` now.
+  The app-shell figure now counts the entry path plus Sentry without Replay, as the
+  proposal's 330 KB target does; on the old definition it is 296.6 KB. The limits in
+  `scripts/bundle-budget.json` are the "after" values rounded up: 297, 537, 341 and
+  189 KB. Item 61 stays open for steps 5 and 7.
 - **2026-11-08** — Item 24 from the public launch plan: the wrapped master key, as
   §3 of `2026-09-07-key-migration-and-rotation-design.md` describes it. `K` is the
   64 bytes the legacy derivation already produces. On a passphrase unlock of an

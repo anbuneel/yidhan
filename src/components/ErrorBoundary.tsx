@@ -1,6 +1,6 @@
 import { Component } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
-import * as Sentry from '@sentry/react';
+import { captureException } from '../utils/monitoring';
 import { reloadWithPreservedShareContext } from '../utils/shareRoute';
 import { isChunkLoadError, reloadForUpdatedApp } from '../utils/updateRecovery';
 
@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return;
     }
 
-    Sentry.captureException(error, {
+    captureException(error, {
       extra: {
         componentStack: errorInfo.componentStack,
       },
