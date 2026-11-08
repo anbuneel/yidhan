@@ -5,7 +5,8 @@
     "Sizes in KB (1024 bytes): JS, CSS, HTML and text at gzip level 9; images and fonts as stored.",
     "limitKB is what the build may not exceed. Where it is above targetKB, it is the value measured in CI after the last landed step, rounded up to the next whole KB, plus 1 KB of headroom (DECISIONS.md, 2026-11-08): a feature that has to live in the entry path may grow it by a few hundred bytes without a budget decision. Lower it to the new measurement plus 1 KB as each step lands; never raise it otherwise without a DECISIONS.md entry.",
     "Once a budget meets its target, limitKB is the lower of the target and the measurement plus 1 KB: the target is the promise, so CI never lets a build pass above it. landingJsBeforeLoad is at its 90 KB target with 0.1 KB to spare; appShellJs met its 330 KB target with step 7.",
-    "landingPageTotal: the browser spec counts every request until network idle; the build check can only count what index.html names, so it measures less."
+    "landingPageTotal: the browser spec counts every request until network idle; the build check can only count what index.html names, so it measures less.",
+    "precache.forbidden also keeps every HTML file but index.html out: the JavaScript-off documents for the public pages (item 60) serve only visitors who cannot run the worker."
   ],
   "landingJsBeforeLoad": {
     "limitKB": 90,
@@ -38,7 +39,8 @@
     "maxPngKB": 100,
     "forbidden": [
       "^splash/",
-      "og-image"
+      "og-image",
+      "^(?!index\\.html$)[^/]+\\.html$"
     ],
     "required": [
       "^favicon\\.png$",

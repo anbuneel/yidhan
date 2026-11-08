@@ -79,6 +79,12 @@ cards stack in one column. Below 768px the primary button spans the width.
   block that mirrors the landing CSS and both themes. `public/boot.js` runs first: it
   sets `data-theme` the way `useAppTheme` would, and hides the shell on any path but
   `/` or when a Supabase session key exists. React replaces the shell on mount.
+- The six public pages (`/privacy`, `/terms`, `/support`, `/security`, `/changelog`,
+  `/roadmap`) each have their own document, `dist/<page>.html`, built from the page
+  component, with the page where the landing shell would be. Without JavaScript it
+  shows in the OS theme, with plain links in the footer and no theme toggle or Sign
+  in. With JavaScript, boot.js hides it and the app renders the page as usual. Every
+  other path serves `index.html`.
 - No scroll cue, no scroll-reveal observer, no lock illustration. The hero has one
   entrance fade and the caret blinks; both stop under `prefers-reduced-motion`.
 

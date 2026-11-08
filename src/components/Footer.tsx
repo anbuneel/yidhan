@@ -3,8 +3,13 @@ import './Footer.css';
 
 interface FooterProps {
   ref?: Ref<HTMLElement>;
-  onChangelogClick: () => void;
-  onRoadmapClick: () => void;
+  /**
+   * Each link is a button when its handler is given and a plain link when it is not.
+   * The app always passes handlers; the static documents for JavaScript-off visitors
+   * pass none (src/prerender/publicPageDocument.tsx, item 60).
+   */
+  onChangelogClick?: () => void;
+  onRoadmapClick?: () => void;
   onShortcutsClick?: () => void;
   onPrivacyClick?: () => void;
   onTermsClick?: () => void;
@@ -60,21 +65,13 @@ export function Footer({
           color: 'var(--color-text-tertiary)',
         }}
       >
-        <button
-          type="button"
-          onClick={onChangelogClick}
-          className="footer-link hover:underline transition-colors duration-200"
-        >
+        <FooterItem href="/changelog" onClick={onChangelogClick}>
           Changelog
-        </button>
+        </FooterItem>
         <span aria-hidden="true">·</span>
-        <button
-          type="button"
-          onClick={onRoadmapClick}
-          className="footer-link hover:underline transition-colors duration-200"
-        >
+        <FooterItem href="/roadmap" onClick={onRoadmapClick}>
           Roadmap
-        </button>
+        </FooterItem>
         {onShortcutsClick && (
           <>
             <span aria-hidden="true">·</span>

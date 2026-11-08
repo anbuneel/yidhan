@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { NAVIGATE_FALLBACK_DENYLIST } from './src/pwa/navigateFallbackDenylist'
+import { publicPageDocumentsPlugin } from './scripts/public-page-documents.mjs'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -60,6 +61,9 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    // The JavaScript-off documents for the six public pages, served by the dev server.
+    // A production build writes them after `vite build` instead (item 60).
+    publicPageDocumentsPlugin(),
     VitePWA({
       // Must stay 'autoUpdate'. Under 'prompt' a new worker parks in `waiting`
       // until the page sends SKIP_WAITING — and a client running stale code

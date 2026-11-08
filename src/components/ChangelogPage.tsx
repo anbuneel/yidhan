@@ -8,8 +8,8 @@ interface ChangelogPageProps {
   theme: Theme;
   onThemeToggle: () => void;
   onSignIn: () => void;
-  onLogoClick: () => void;
-  onRoadmapClick: () => void;
+  onLogoClick?: () => void;
+  onRoadmapClick?: () => void;
   onPrivacyClick?: () => void;
   onTermsClick?: () => void;
   onSupportClick?: () => void;

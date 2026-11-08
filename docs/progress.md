@@ -738,3 +738,21 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   reported the landing caret and ribbon pulse as running. The spec now asserts the
   media query matches. react-spring motion on touch devices ignores reduced motion
   and is not visible to `getAnimations()`: #258, not verified in a browser.
+- **2026-11-08** — Item 60: public pages readable without JavaScript. `/privacy`,
+  `/terms`, `/support`, `/security`, `/changelog` and `/roadmap` each get a static
+  document, `dist/<page>.html`, written after `vite build` by
+  `scripts/public-page-documents.mjs` from `src/prerender/publicPageDocument.tsx`: the
+  page component rendered with `renderToStaticMarkup` into a copy of the built
+  `index.html`, with its own title and canonical URL. The changelog and roadmap render
+  from `src/data/` at every build. Vercel serves them through six rewrites ahead of the
+  catch-all; the dev server renders them on request. With JavaScript on, boot.js's
+  `boot-hidden` hides the static copy and the public shell renders the page as before;
+  nothing is hydrated (`DECISIONS.md`, 2026-11-08). The footer's Changelog and Roadmap,
+  and the in-text links on `/privacy` and `/terms`, render as plain links when no
+  handler is passed. The documents are not precached; the budget check now forbids any
+  HTML but `index.html` in the precache. Budgets unchanged: landing JS 89.9 KB, app
+  shell 325.4 KB, largest chunk 136.4 KB, precache 1054.4 KB. The static documents
+  weigh 5.7 to 6.9 KB gzip, and 29.3 KB for `/changelog`. `e2e/public-pages-no-js.spec.ts`
+  covers each page with JavaScript off and on, `/` keeping the landing shell, `/demo`,
+  `/s/abc`, an unknown path and `/privacy/extra` getting no static document, and a
+  stored session on `/privacy` still starting the app shell.

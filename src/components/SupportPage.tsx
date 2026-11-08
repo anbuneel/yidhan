@@ -6,9 +6,9 @@ interface SupportPageProps {
   theme: Theme;
   onThemeToggle: () => void;
   onSignIn: () => void;
-  onLogoClick: () => void;
-  onChangelogClick: () => void;
-  onRoadmapClick: () => void;
+  onLogoClick?: () => void;
+  onChangelogClick?: () => void;
+  onRoadmapClick?: () => void;
   onPrivacyClick?: () => void;
   onTermsClick?: () => void;
   onSupportClick?: () => void;
