@@ -382,3 +382,19 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   rounded up to the next whole KB, so they can only go down. The page-total limit is
   538 KB, not 537: #244 (items 154 and 155) merged first and added 0.3 KB to `/`.
   Item 61 stays open for steps 2, 4, 5 and 7.
+
+- **2026-11-07** — Issue #205, a launch gate. A note released or deleted on another
+  device no longer closes the editor while it holds unsaved words (a failed save, a
+  draft mid-debounce, or a save in flight). The editor reports its unsaved state to
+  `useReleasedDraft`, which App uses for both ways a note can leave: the realtime
+  handlers in `useNotesSync`, and a sync pull that rehydrates the library without
+  it. When the editor holds words, App keeps the last copy of the note on screen
+  and the editor stops saving. A banner offers Keep as new note, Copy and Let go.
+  Retry on a released note means Keep as new note: the words go into a new note, so
+  the other device's choice stands (the note stays in its Faded Notes, or stays
+  gone) and nothing is written into a note that no longer exists. The new note
+  keeps the pin and any tags that still exist. Once shown, the banner stays until
+  the writer chooses or the note comes back, so a late save or an undone edit cannot
+  close the editor mid-thought. Delete and tagging are off on a released note, and
+  the writer's own delete of a failed draft still closes it. A clean note still
+  returns to the library. Not reproduced against two live devices.

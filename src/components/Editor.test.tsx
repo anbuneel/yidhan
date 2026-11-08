@@ -1509,4 +1509,198 @@ describe('Editor', () => {
       expect(titleButtons('Other Note')).toHaveLength(0);
     });
   });
+
+  // Issue #205: a note released on another device while this screen holds words.
+  describe('released elsewhere', () => {
+    it('reports a clean note as holding nothing unsaved', () => {
+      const report = vi.fn();
+      render(<Editor {...defaultProps} onDraftStateChange={report} />);
+      expect(report).toHaveBeenLastCalledWith({ noteId: 'note-123', unsaved: false });
+    });
+
+    it('reports a dirty draft mid-debounce, and clean again once it saves', async () => {
+      const report = vi.fn();
+      const { rerender } = render(<Editor {...defaultProps} onDraftStateChange={report} />);
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Half a thought' } });
+      expect(report).toHaveBeenLastCalledWith({ noteId: 'note-123', unsaved: true });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      // App applies the saved note back onto the prop.
+      rerender(<Editor {...defaultProps} note={{ ...mockNote, title: 'Half a thought' }} onDraftStateChange={report} />);
+      expect(report).toHaveBeenLastCalledWith({ noteId: 'note-123', unsaved: false });
+    });
+
+    it('reports a failed save as unsaved, and null on unmount', async () => {
+      const report = vi.fn();
+      const update = vi.fn().mockRejectedValue(new Error('offline'));
+      const { unmount } = render(<Editor {...defaultProps} onUpdate={update} onDraftStateChange={report} />);
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Words on a train' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(screen.getByRole('alert')).toHaveTextContent('Not saved');
+      expect(report).toHaveBeenLastCalledWith({ noteId: 'note-123', unsaved: true });
+      unmount();
+      expect(report).toHaveBeenLastCalledWith(null);
+    });
+
+    it('shows no released banner on an ordinary note', () => {
+      render(<Editor {...defaultProps} />);
+      expect(screen.queryByTestId('released-draft-banner')).not.toBeInTheDocument();
+    });
+
+    it('keeps the draft on screen, replaces Not saved, and stops writing when released', async () => {
+      const update = vi.fn().mockRejectedValue(new Error('offline'));
+      const props = { ...defaultProps, onUpdate: update };
+      const { rerender } = render(<Editor {...props} />);
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Words on a train' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(update).toHaveBeenCalledTimes(1);
+
+      rerender(<Editor {...props} releasedElsewhere />);
+      const banner = screen.getByRole('alert');
+      expect(banner).toHaveTextContent('released on another device');
+      expect(banner).not.toHaveTextContent('Not saved');
+      expect(screen.getByDisplayValue('Words on a train')).toBeInTheDocument();
+
+      // Neither more typing, the checkpoint, Escape, nor hiding the page writes.
+      fireEvent.change(screen.getByDisplayValue('Words on a train'), { target: { value: 'Words on a late train' } });
+      await act(async () => { vi.advanceTimersByTime(12_000); });
+      fireEvent.keyDown(window, { key: 'Escape' });
+      window.dispatchEvent(new Event('pagehide'));
+      await act(async () => { await Promise.resolve(); });
+      expect(update).toHaveBeenCalledTimes(1);
+      expect(defaultProps.onBack).not.toHaveBeenCalled();
+      expect(screen.getByDisplayValue('Words on a late train')).toBeInTheDocument();
+    });
+
+    it('copies the draft without leaving', async () => {
+      render(<Editor {...defaultProps} note={mockNote} releasedElsewhere />);
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Copy me' } });
+      fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Copy' }));
+      await act(async () => { await Promise.resolve(); });
+      expect(exportImport.copyNoteToClipboard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Copy me' }));
+      expect(defaultProps.onBack).not.toHaveBeenCalled();
+      expect(screen.getByTestId('released-draft-banner')).toBeInTheDocument();
+    });
+
+    it('keeps the draft as a new note, and says so if that fails', async () => {
+      const keep = vi.fn().mockRejectedValueOnce(new Error('vault locked')).mockResolvedValue(undefined);
+      render(<Editor {...defaultProps} releasedElsewhere onKeepReleasedDraft={keep} />);
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Keep me' } });
+      const keepButton = () => screen.getByRole('button', { name: 'Keep as new note' });
+
+      fireEvent.click(keepButton());
+      await act(async () => { await Promise.resolve(); });
+      expect(keep).toHaveBeenCalledWith('Keep me', '<p>Test content</p>');
+      expect(screen.getByRole('alert')).toHaveTextContent('Could not keep them as a new note');
+      expect(screen.getByDisplayValue('Keep me')).toBeInTheDocument();
+
+      fireEvent.click(keepButton());
+      await act(async () => { await Promise.resolve(); });
+      expect(keep).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('alert')).not.toHaveTextContent('Could not keep');
+    });
+
+    it('lets go only when the writer asks', () => {
+      render(<Editor {...defaultProps} releasedElsewhere />);
+      expect(defaultProps.onBack).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Let go' }));
+      expect(defaultProps.onBack).toHaveBeenCalledTimes(1);
+    });
+
+    it('lets go through the dedicated handler when one is given', () => {
+      const letGo = vi.fn();
+      render(<Editor {...defaultProps} releasedElsewhere onLetGoReleasedDraft={letGo} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Let go' }));
+      expect(letGo).toHaveBeenCalledTimes(1);
+      expect(defaultProps.onBack).not.toHaveBeenCalled();
+    });
+
+    it('offers no delete or tagging on a released note', () => {
+      render(<Editor {...defaultProps} releasedElsewhere />);
+      expect(screen.getByLabelText('Delete note')).toBeDisabled();
+      expect(screen.queryByTestId('tag-selector')).not.toBeInTheDocument();
+    });
+
+    it('closes an open delete dialog when the note is released', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const { rerender } = render(<Editor {...defaultProps} />);
+      await user.click(screen.getByLabelText('Delete note'));
+      expect(screen.getByText('Let this note fade?')).toBeInTheDocument();
+      rerender(<Editor {...defaultProps} releasedElsewhere />);
+      expect(screen.queryByText('Let this note fade?')).not.toBeInTheDocument();
+    });
+
+    it('starts the released banner without an earlier copy failure', async () => {
+      vi.mocked(exportImport.copyNoteToClipboard).mockRejectedValueOnce(new Error('denied'));
+      const update = vi.fn().mockRejectedValue(new Error('offline'));
+      const { rerender } = render(<Editor {...defaultProps} onUpdate={update} />);
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Words' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Copy' }));
+      await act(async () => { await Promise.resolve(); });
+      expect(screen.getByRole('alert')).toHaveTextContent('Could not copy');
+      rerender(<Editor {...defaultProps} onUpdate={update} releasedElsewhere />);
+      expect(screen.getByRole('alert')).not.toHaveTextContent('Could not copy');
+    });
+
+    it('keeps words typed while Keep as new note was writing', async () => {
+      let finishKeep: () => void = () => {};
+      const keep = vi.fn(() => new Promise<void>((resolve) => { finishKeep = resolve; }));
+      const { rerender } = render(<Editor {...defaultProps} releasedElsewhere onKeepReleasedDraft={keep} />);
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'First words' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Keep as new note' }));
+      fireEvent.change(screen.getByDisplayValue('First words'), { target: { value: 'First words, and more' } });
+
+      // App switches to the new note before the keep promise settles.
+      const kept = createMockNote({ id: 'kept', title: 'First words', content: '<p>Test content</p>' });
+      rerender(<Editor {...defaultProps} note={kept} onKeepReleasedDraft={keep} />);
+      await act(async () => { finishKeep(); await Promise.resolve(); });
+      expect(screen.getByDisplayValue('First words, and more')).toBeInTheDocument();
+    });
+
+    it('does not hold the editor open for the writer\'s own delete of a failed draft', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const report = vi.fn();
+      const update = vi.fn().mockRejectedValue(new Error('offline'));
+      const onDelete = vi.fn().mockResolvedValue(true);
+      render(<Editor {...defaultProps} onUpdate={update} onDelete={onDelete} onDraftStateChange={report} />);
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Unsaved' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(report).toHaveBeenLastCalledWith({ noteId: 'note-123', unsaved: true });
+
+      await user.click(screen.getByLabelText('Delete note'));
+      await user.click(screen.getByRole('button', { name: 'Let it fade' }));
+      // Reported clean before the delete runs, so App closes the note as asked.
+      const cleanCall = report.mock.calls.findIndex(([state]) => state?.unsaved === false);
+      expect(cleanCall).toBeGreaterThan(-1);
+      expect(report.mock.invocationCallOrder[cleanCall]).toBeLessThan(onDelete.mock.invocationCallOrder[0]);
+      expect(report).toHaveBeenLastCalledWith({ noteId: 'note-123', unsaved: false });
+    });
+
+    it('reports the draft unsaved again if the writer\'s own delete fails', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const report = vi.fn();
+      const update = vi.fn().mockRejectedValue(new Error('offline'));
+      const onDelete = vi.fn().mockResolvedValue(false);
+      render(<Editor {...defaultProps} onUpdate={update} onDelete={onDelete} onDraftStateChange={report} />);
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Unsaved' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      await user.click(screen.getByLabelText('Delete note'));
+      await user.click(screen.getByRole('button', { name: 'Let it fade' }));
+      await act(async () => { await Promise.resolve(); });
+      expect(report).toHaveBeenLastCalledWith({ noteId: 'note-123', unsaved: true });
+    });
+
+    it('resumes saving when the note comes back', async () => {
+      const update = vi.fn().mockResolvedValue(undefined);
+      const { rerender } = render(<Editor {...defaultProps} onUpdate={update} releasedElsewhere />);
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Back again' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(update).not.toHaveBeenCalled();
+
+      rerender(<Editor {...defaultProps} onUpdate={update} />);
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(update).toHaveBeenCalledWith(expect.objectContaining({ title: 'Back again' }));
+      expect(screen.queryByTestId('released-draft-banner')).not.toBeInTheDocument();
+    });
+  });
 });

@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.33', date: '2026-11-07', changes: [
+    { type: 'fix', text: 'If a note you are writing in is released on another device before your words are saved, the note now stays open and says so. You can keep the words as a new note, copy them, or let them go. Before, the note closed and the unsaved words were lost' },
+  ] },
   { version: '3.19.32', date: '2026-11-07', changes: [
     { type: 'improvement', text: 'The first visit is lighter: the app installs for offline use after the page has finished loading, not during it, and stores about 1 MB for offline use instead of about 5 MB' },
     { type: 'improvement', text: 'The release notes now load only when you open this page, so every other page starts with less to download' },

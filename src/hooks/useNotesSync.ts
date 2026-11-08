@@ -62,8 +62,11 @@ export interface UseNotesSyncOptions {
   isHydrating: boolean;
   /** The note currently open, so a remote delete can close it. Read through a ref. */
   openNoteIdRef: React.RefObject<string | null>;
-  /** Called when the open note is removed underneath the reader. */
-  onOpenNoteRemoved: () => void;
+  /**
+   * Called when the open note is removed underneath the reader. The caller decides
+   * whether to close it: an editor holding unsaved words stays open (issue #205).
+   */
+  onOpenNoteRemoved: (noteId: string) => void;
   /** Called when the user signs out, after the per-user state has been cleared. */
   onSignedOut?: () => void;
 }
@@ -395,7 +398,7 @@ export function useNotesSync({
           if (updatedNote.deletedAt) {
             setNotes((prev) => prev.filter((n) => n.id !== updatedNote.id));
             if (openNoteIdRef.current === updatedNote.id) {
-              onOpenNoteRemovedRef.current();
+              onOpenNoteRemovedRef.current(updatedNote.id);
             }
             return;
           }
@@ -443,7 +446,7 @@ export function useNotesSync({
 
             setNotes((prev) => prev.filter((n) => n.id !== deletedId));
             if (openNoteIdRef.current === deletedId) {
-              onOpenNoteRemovedRef.current();
+              onOpenNoteRemovedRef.current(deletedId);
             }
           })
           .catch((error) => {

@@ -30,6 +30,8 @@ import { useImport } from './hooks/useImport';
 import { useDemoMigration } from './hooks/useDemoMigration';
 import { useShareTargetNote } from './hooks/useShareTargetNote';
 import { useNoteActions } from './hooks/useNoteActions';
+import { useDraftReport, useReleasedOpenNote } from './hooks/useReleasedDraft';
+import { VaultLockedSaveError } from './utils/saveErrors';
 import { useLockedNotes } from './hooks/useLockedNotes';
 import { useFadedNotes } from './hooks/useFadedNotes';
 import { useSyncActions } from './hooks/useSyncActions';
@@ -82,6 +84,10 @@ function App() {
   // Supabase channel is not re-subscribed every time a note is opened or closed.
   const selectedNoteIdRef = useRef<string | null>(null);
 
+  // Issue #205: an open note deleted elsewhere closes only if the editor holds no
+  // unsaved words. Otherwise the editor stays, and the writer decides.
+  const { draft: openDraft, reportDraft, holdsUnsavedDraft } = useDraftReport();
+
   const {
     notes, setNotes, loading,
     tags, setTags,
@@ -93,7 +99,9 @@ function App() {
     keys,
     isHydrating,
     openNoteIdRef: selectedNoteIdRef,
-    onOpenNoteRemoved: () => replaceRoute({ name: 'library' }),
+    onOpenNoteRemoved: (noteId) => {
+      if (!holdsUnsavedDraft(noteId)) replaceRoute({ name: 'library' });
+    },
     // Sign-out drops the scroll offsets remembered for this session's history entries.
     onSignedOut: clearScrollMemory,
   });
@@ -236,7 +244,11 @@ function App() {
   const { arrangement, setBasis, setSort } = useLibraryArrangement(user?.id ?? null);
 
   const selectedNoteRecord = notes.find((n) => n.id === selectedNoteId);
-  const selectedNote = selectedNoteRecord?.decryptionFailed ? undefined : selectedNoteRecord;
+  // A note released on another device while the editor holds unsaved words resolves to
+  // the last copy the editor saw, so the words stay on screen (issue #205).
+  const { note: openNoteRecord, released: openNoteReleased } =
+    useReleasedOpenNote(openDraft, selectedNoteId, selectedNoteRecord);
+  const selectedNote = openNoteRecord?.decryptionFailed ? undefined : openNoteRecord;
   // `replaceRoute`, not a push: the reader arrived at `/n/<locked>`, and pushing `/`
   // would leave that address one Back away.
   const { retryLockedNotes } = useLockedNotes({
@@ -287,6 +299,30 @@ function App() {
       console.error('Failed to create note:', error);
     }
   }, [user, keys, navigate, setNotes, startTransition, trackNoteCreated, warmEditorRoute]);
+
+  // Retry on a note released elsewhere: the words go into a new note rather than back
+  // into the released one. That leaves the other device's choice standing (the note
+  // stays in its Faded Notes, or stays gone) and still keeps every word. `replaceRoute`,
+  // so Back does not return to an address that no longer resolves. Throws on failure so
+  // the editor keeps the draft and says so.
+  // The new note carries the released note's pin and its tags that still exist.
+  const releasedNoteForKeep = openNoteReleased ? openNoteRecord : undefined;
+  const handleKeepReleasedDraft = useCallback(async (title: string, content: string) => {
+    if (!user) throw new Error('Cannot save without a signed-in user');
+    if (!keys) throw new VaultLockedSaveError();
+    const { keepReleasedDraft } = await import('./utils/keepReleasedDraft');
+    const { note: newNote, tagsDropped } =
+      await keepReleasedDraft(user.id, keys, title, content, releasedNoteForKeep, tags);
+    setNotes((prev) => [newNote, ...prev]);
+    replaceRoute({ name: 'note', noteId: newNote.id });
+    triggerCoalescedSync();
+    toast(tagsDropped ? 'Kept as a new note. Some of its tags are gone.' : 'Kept as a new note.');
+  }, [user, keys, releasedNoteForKeep, tags, setNotes, replaceRoute, triggerCoalescedSync]);
+
+  // Let go: `replaceRoute`, for the same reason as Keep.
+  const handleLetGoReleasedDraft = useCallback(() => {
+    replaceRoute({ name: 'library' });
+  }, [replaceRoute]);
 
   const { handleNoteUpdate, handleNoteDelete, handleTogglePin } = useNoteActions({
     userId: user?.id,
@@ -413,7 +449,7 @@ function App() {
   // fire this alongside the locked-note redirect above and tell the reader their note
   // is gone when it is sitting on the server, readable elsewhere.
   const missingNoteId =
-    route.name === 'note' && user && isUnlocked && !loading && !selectedNoteRecord
+    route.name === 'note' && user && isUnlocked && !loading && !openNoteRecord
       ? route.noteId
       : null;
 
@@ -609,8 +645,14 @@ function App() {
         onBack={handleBack}
         onRequestSearch={requestLibrarySearch}
         onUpdate={handleNoteUpdate}
-        onDelete={handleNoteDeleteWithToast}
-        onToggleTag={handleNoteTagToggle}
+        // A released note has no row left to delete or tag; those writes would only
+        // queue sync entries for a note that no longer exists.
+        onDelete={openNoteReleased ? () => false : handleNoteDeleteWithToast}
+        onToggleTag={openNoteReleased ? () => {} : handleNoteTagToggle}
+        releasedElsewhere={openNoteReleased}
+        onKeepReleasedDraft={handleKeepReleasedDraft}
+        onLetGoReleasedDraft={handleLetGoReleasedDraft}
+        onDraftStateChange={reportDraft}
         onCreateTag={handleAddTag}
         onThemeToggle={handleThemeToggle}
         onSettingsClick={() => setShowSettingsModal(true)}

@@ -1,5 +1,6 @@
 import { Suspense, type ComponentType, type ReactNode } from 'react';
 import type { Note, NoteDeleteHandler, Tag, Theme } from '../types';
+import type { OpenDraftState } from '../hooks/useReleasedDraft';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingFallback } from './LoadingFallback';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
@@ -20,6 +21,14 @@ export interface NoteEditorViewProps {
   onCreateTag: () => void;
   onThemeToggle: () => void;
   onSettingsClick: () => void;
+  /** The note was released on another device while this screen held unsaved words. */
+  releasedElsewhere?: boolean;
+  /** Keep the words of a released note as a new note. */
+  onKeepReleasedDraft?: (title: string, content: string) => Promise<void>;
+  /** The writer chose to let the words of a released note go. */
+  onLetGoReleasedDraft?: () => void;
+  /** Reports whether the editor holds words the stored note does not. */
+  onDraftStateChange?: (state: OpenDraftState | null) => void;
   /**
    * The already-resolved editor chunk, when there is one. Rendering it directly skips
    * the Suspense boundary, so opening a warmed note shows no loading screen.
