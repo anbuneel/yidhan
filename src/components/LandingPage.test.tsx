@@ -4,11 +4,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { LandingPage } from './LandingPage';
 import { SecurityPage } from './SecurityPage';
-import { useAuth } from '../contexts/AuthContext';
 
-vi.mock('../contexts/AuthContext', () => ({
-  useAuth: vi.fn(),
-}));
+// No AuthContext mock: the public shell renders this page with no AuthProvider.
 
 vi.mock('../hooks/useInstallPrompt', () => ({
   useInstallPrompt: () => ({ isInstallable: false, isInstalled: false, triggerInstall: vi.fn() }),
@@ -36,7 +33,6 @@ function renderLanding() {
 describe('LandingPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useAuth).mockReturnValue({ user: null, signOut: vi.fn() } as unknown as ReturnType<typeof useAuth>);
   });
 
   it('names the product and states the promise in the first screen', () => {

@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react';
+// Owned by the startup gate, which must see waiting content before the app loads.
+import { SHARE_STORAGE_KEY } from '../appGate';
 
 /**
  * Hook to handle Share Target API data.
@@ -15,8 +17,6 @@ export interface SharedData {
   text: string | null;
   url: string | null;
 }
-
-const SHARE_STORAGE_KEY = 'yidhan-shared-content';
 
 /**
  * Format shared data into note content

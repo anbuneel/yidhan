@@ -38,13 +38,20 @@ import { useTagActions } from './hooks/useTagActions';
 import { useViewTransition } from './hooks/useViewTransition';
 import { useInstallPrompt } from './hooks/useInstallPrompt';
 import { useShareTarget } from './hooks/useShareTarget';
-import { migrateLocalStorageKeys } from './utils/legacyStorageKeys';
 import './App.css';
 
-// Run before React renders, so a returning user's preferences survive the rebrand.
-migrateLocalStorageKeys();
+interface AppProps {
+  /**
+   * The visitor came from the public shell (src/shells/PublicShell.tsx), which only
+   * renders for a visitor with no session. The page they were on is already showing,
+   * so the boot loader would only blank it for a moment before showing it again.
+   */
+  fromPublicShell?: boolean;
+  /** Opened by Sign in or Start writing on the public shell, which cannot open it itself. */
+  initialAuthModal?: 'login' | 'signup';
+}
 
-function App() {
+function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
   const libraryFooterRef = useRef<HTMLElement>(null);
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
   const { keys, isEncryptionSetup, isUnlocked, lockVault, persistToLocal, recoveryScreen, setupScreen } = useEncryption();
@@ -134,7 +141,7 @@ function App() {
     signOut,
   });
 
-  const showAppLoader = useAppLoader(authLoading || loading);
+  const showAppLoader = useAppLoader(!fromPublicShell && (authLoading || loading));
 
   const { LoadedEditor, preloadEditorRoute, warmEditorRoute } = useEditorChunk();
 
@@ -170,8 +177,8 @@ function App() {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   // Auth modal state (for landing page)
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('signup');
+  const [showAuthModal, setShowAuthModal] = useState(initialAuthModal !== undefined);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>(initialAuthModal ?? 'signup');
 
   const { shareRoute, dismissShareRoute } = useShareRoute();
 
@@ -206,6 +213,14 @@ function App() {
       setShowWelcomeBack(true);
     }
   }, [user, isDeparting]);
+
+  // A sign-in closes the auth modal. Auth never calls onClose on success, so before
+  // this the flag stayed set: it kept the keyboard shortcuts off for the session and
+  // would reopen the modal over a public page. Item 61, step 5 made it the common
+  // path, since sign-in from the public shell mounts App with the modal open.
+  useEffect(() => {
+    if (user) setShowAuthModal(false);
+  }, [user]);
 
   // Show auth modal for unauthenticated users with shared content
   useEffect(() => {

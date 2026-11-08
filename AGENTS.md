@@ -193,7 +193,10 @@ timestamps so imports keep their original chronology.
 **The landing shell in `index.html` is deliberate, not duplication.** It paints the
 first screen before the bundle arrives; React replaces it on mount. `public/boot.js` must
 run before it, from a file (the CSP allows only same-origin scripts), and must keep
-choosing the theme exactly as `useAppTheme` does. Copy and CSS values there mirror
+choosing the theme exactly as `useAppTheme` does, and hiding the shell exactly when
+`src/appGate.ts` starts the app shell. That gate starts signed-out visitors on public routes in the
+public shell, without Supabase; keep Supabase, Dexie and the sync engine out of
+`src/shells/PublicShell.tsx`'s imports (the budget check fails the build otherwise). Copy and CSS values there mirror
 `LandingPage.tsx`; change both together (`DECISIONS.md`, 2026-09-10).
 
 **Self-echo suppression.** A `pendingMutations` set stops realtime from re-applying the

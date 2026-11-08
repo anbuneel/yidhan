@@ -1,4 +1,4 @@
-import { createContext, use, useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { hydrateFromServer, clearOfflineData, needsHydration } from '../services/offlineNotes';
@@ -13,51 +13,9 @@ import {
   startAccountDeletionEmailOtp,
 } from '../services/accountDeletion';
 import type { DbAccountDeletionRequest } from '../types/database';
+import { AuthContext, type AuthContextType } from './authState';
 
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
-  isPasswordRecovery: boolean;
-  clearPasswordRecovery: () => void;
-  signIn: (email: string, password: string) => Promise<{ data: { user: User | null; session: Session | null } | null; error: Error | null }>;
-  signInWithGoogle: () => Promise<{ error: Error | null }>;
-  signInWithGitHub: () => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error: Error | null }>;
-  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
-  updateProfile: (fullName: string) => Promise<{ error: Error | null }>;
-  // Offboarding ("Letting Go")
-  initiateOffboarding: (confirmationToken: string) => Promise<{ error: Error | null }>;
-  cancelOffboarding: () => Promise<{ error: Error | null }>;
-  accountDeletionRequest: DbAccountDeletionRequest | null;
-  isDeparting: boolean;
-  daysUntilRelease: number | null;
-  // Offline support
-  isHydrating: boolean;
-  hydrateOfflineDb: () => Promise<void>;
-  // Re-authentication for sensitive actions
-  verifyPassword: (password: string) => Promise<{ success: boolean; error?: string }>;
-  confirmAccountDeletion: (password: string) => Promise<{
-    success: boolean;
-    confirmationToken?: string;
-    error?: string;
-  }>;
-  startAccountDeletionOtp: () => Promise<{ success: boolean; error?: string }>;
-  confirmAccountDeletionOtp: (otp: string) => Promise<{
-    success: boolean;
-    confirmationToken?: string;
-    error?: string;
-  }>;
-  /** Mark re-auth timestamp (for OAuth users who verify via email) */
-  markReauth: () => void;
-  lastReauthAt: number | null;
-  /** Check if user recently re-authenticated (within grace window) */
-  isRecentlyReauthed: () => boolean;
-}
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Grace window: 10 minutes after re-auth, skip re-auth prompts
 // Defined at module level to avoid recreating on each render
@@ -468,11 +426,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Re-exported so callers keep one import. Code on the landing path imports
+// './authState' instead: this module imports Supabase (item 61, step 5).
 // eslint-disable-next-line react-refresh/only-export-components
-export function useAuth() {
-  const context = use(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
+export { useAuth } from './authState';

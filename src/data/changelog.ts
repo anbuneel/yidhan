@@ -11,6 +11,9 @@ export const changelog: ChangelogEntry[] = [
     { type: 'improvement', text: 'The landing page now says exactly what encryption protects: your notes are encrypted on your device before they sync, and dates, sizes and tag names stay visible. It links to the security page for the rest. It also says that trying Yidhan needs nothing set up, while an account asks for a passphrase and a recovery key' },
     { type: 'improvement', text: 'The support page now says who runs Yidhan: one person, with no company behind it. It says where to write, how soon to expect a reply, and what cannot be promised' },
   ] },
+  { version: '3.19.39', date: '2026-11-08', changes: [
+    { type: 'improvement', text: 'The home page and the other public pages start much sooner: a first visit now downloads about 90 KB of script before the page is ready, down from about 300 KB. The rest of the app loads only when you sign in, start writing or open the Practice Space, and you stay on the page while it does' },
+  ] },
   { version: '3.19.38', date: '2026-11-08', changes: [
     { type: 'fix', text: 'If two of your devices save the same note at almost the same moment, the second save now shows the conflict screen with both versions instead of replacing the first without a word. Before, a save that landed in that moment could be lost' },
   ] },

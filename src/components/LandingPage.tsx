@@ -1,7 +1,7 @@
 import { useMemo, type MouseEvent } from 'react';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { HeaderShell } from './HeaderShell';
-import { createDemoStarterPreviewState, HERO_STARTER_NOTE_ID } from '../services/demoStorage';
+import { createDemoStarterPreviewState, HERO_STARTER_NOTE_ID } from '../services/demoStarters';
 import { NoteCard } from './NoteCard';
 import type { Note, Tag, Theme } from '../types';
 
@@ -623,6 +623,10 @@ export function LandingPage({
           .landing-actions { width: 100%; }
           .landing-manuscript-foot .landing-keep { white-space: normal; text-align: left; }
         }
+
+        /* The app shell remounts this page when the visitor opens sign-in from the
+           public shell (src/shells/Root.tsx). The hero has already entered once. */
+        .landing-handoff .landing-hero { animation: none; }
 
         @keyframes landing-fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes landing-blink { to { visibility: hidden; } }

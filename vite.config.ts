@@ -37,6 +37,10 @@ export default defineConfig({
           if (!id.includes('/node_modules/')) return undefined
           if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react'
           if (id.includes('/node_modules/@supabase/')) return 'vendor-supabase'
+          // Its own chunk, so the app shell stays under the largest-chunk budget and the
+          // first-visit spec can see by name that the landing never requests it (item
+          // 61, step 5).
+          if (id.includes('/node_modules/dexie/')) return 'vendor-dexie'
           // Replay apart from the rest of Sentry: it is imported later, on its own
           // (src/utils/sentryReplay.ts), and never on shared-note routes.
           if (/\/node_modules\/@sentry-internal\/replay(-canvas)?\//.test(id)) return 'vendor-sentry-replay'

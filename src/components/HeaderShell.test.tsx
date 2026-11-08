@@ -2,11 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HeaderShell } from './HeaderShell';
-import { useAuth } from '../contexts/AuthContext';
+// HeaderShell reads the optional form: the public shell renders it with no provider.
+import { useOptionalAuth as useAuth } from '../contexts/authState';
 
 // Mock the auth context
-vi.mock('../contexts/AuthContext', () => ({
-  useAuth: vi.fn(),
+vi.mock('../contexts/authState', () => ({
+  useOptionalAuth: vi.fn(),
 }));
 
 describe('HeaderShell', () => {
@@ -51,6 +52,13 @@ describe('HeaderShell', () => {
     expect(event.defaultPrevented).toBe(true);
     expect(screen.queryByRole('menu')).toBeNull();
     expect(trigger).toHaveFocus();
+  });
+
+  it('renders signed out with no auth provider, as the public shell does', () => {
+    vi.mocked(useAuth).mockReturnValue(null);
+    render(<HeaderShell {...defaultProps} onSignIn={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Profile menu' })).toBeNull();
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
   describe('rendering', () => {
