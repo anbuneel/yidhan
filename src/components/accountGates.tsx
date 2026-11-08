@@ -1,8 +1,18 @@
-import type { ReactElement } from 'react';
+import { Suspense, type ReactElement } from 'react';
 import { DatabaseUpdatePending } from './DatabaseUpdatePending';
-import { PassphraseSetup } from './PassphraseSetup';
+import { LoadingFallback } from './LoadingFallback';
 import { PassphraseUnlock } from './PassphraseUnlock';
 import { blocksWrites, type SchemaCompatibility } from '../services/schemaVersion';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
+
+// Item 26. Out of the entry chunk: most unlocks never show either screen. One
+// lazy component for both keeps the entry cost to a single loader.
+const RecoveryScreen = lazyWithRetry(() => import('./RecoveryScreen'));
+// Shown once per account, so it does not belong in the entry chunk either. Moving
+// it out is what makes room for the recovery screens under the bundle budget.
+const PassphraseSetup = lazyWithRetry(() =>
+  import('./PassphraseSetup').then((m) => ({ default: m.PassphraseSetup }))
+);
 
 /**
  * What stands between a signed-in reader and their library, in the order it stands.
@@ -18,6 +28,8 @@ export interface AccountGateOptions {
   onRecheckSchema: () => void;
   isEncryptionSetup: boolean;
   isUnlocked: boolean;
+  /** Item 26: the recovery screen the vault context asks for, if any. */
+  recoveryScreen: 'reset' | 'offer' | null;
 }
 
 export function renderAccountGate({
@@ -26,6 +38,7 @@ export function renderAccountGate({
   onRecheckSchema,
   isEncryptionSetup,
   isUnlocked,
+  recoveryScreen,
 }: AccountGateOptions): ReactElement | null {
   // Item 36. Migrations are applied by hand, and a client shipped ahead of its
   // migration fails only on writes — silently — while reads keep working. Rather than
@@ -44,7 +57,23 @@ export function renderAccountGate({
   }
 
   // The E2EE passphrase gate.
-  if (!isEncryptionSetup) return <PassphraseSetup />;
+  if (!isEncryptionSetup) {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <PassphraseSetup />
+      </Suspense>
+    );
+  }
+  // A recovery key opened the vault: a new passphrase comes before anything else.
+  // The offer is shown before the library has rendered, so it never unmounts a draft.
+  // The context offers only while unlocked.
+  if (recoveryScreen) {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <RecoveryScreen reset={recoveryScreen === 'reset'} />
+      </Suspense>
+    );
+  }
   if (!isUnlocked) return <PassphraseUnlock />;
 
   return null;

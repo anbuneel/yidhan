@@ -47,7 +47,7 @@ migrateLocalStorageKeys();
 function App() {
   const libraryFooterRef = useRef<HTMLElement>(null);
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
-  const { keys, isEncryptionSetup, isUnlocked, lockVault, persistToLocal } = useEncryption();
+  const { keys, isEncryptionSetup, isUnlocked, lockVault, persistToLocal, recoveryScreen } = useEncryption();
   // Ref for encryption keys — used in realtime handlers to avoid stale closures
   // when the vault is locked/unlocked (avoids resubscribing Supabase channels)
   const keysRef = useRef(keys);
@@ -484,6 +484,7 @@ function App() {
     onRecheckSchema: recheckSchema,
     isEncryptionSetup,
     isUnlocked,
+    recoveryScreen,
   });
   if (accountGate) return accountGate;
 

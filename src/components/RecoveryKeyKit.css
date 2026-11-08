@@ -1,0 +1,35 @@
+/* Item 26: print only the recovery key sheet, never the app behind it. */
+.recovery-kit-sheet {
+  display: none;
+}
+
+@media print {
+  body.printing-recovery-key * {
+    visibility: hidden;
+  }
+
+  body.printing-recovery-key .recovery-kit-sheet,
+  body.printing-recovery-key .recovery-kit-sheet * {
+    visibility: visible;
+  }
+
+  body.printing-recovery-key .recovery-kit-sheet {
+    display: block;
+    position: fixed;
+    inset: 0;
+    padding: 48px;
+    /* System colours, not theme tokens: a dark theme must still print dark on white. */
+    background: Canvas;
+    color: CanvasText;
+    font-family: var(--font-body);
+  }
+
+  body.printing-recovery-key .recovery-kit-sheet-key {
+    font-family: ui-monospace, monospace;
+    font-size: 18px;
+    letter-spacing: 0.08em;
+    line-height: 1.8;
+    margin: 24px 0;
+    word-break: break-word;
+  }
+}

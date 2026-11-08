@@ -22,17 +22,42 @@ const mockUnlockWithPassphrase = vi.fn();
 const mockLockVault = vi.fn();
 const mockSignOut = vi.fn();
 const mockSetRememberBrowser = vi.fn();
+const mockUnlockWithRecoveryKey = vi.fn();
+const authState = vi.hoisted(() => ({
+  user: { id: 'user-unlock-1' } as { id: string; user_metadata?: Record<string, unknown> },
+}));
+
+const b64 = (length: number) => btoa(String.fromCharCode(...new Uint8Array(length).fill(1)));
+const VALID_VAULT = {
+  version: 1,
+  wrapVersion: 1,
+  kekSalt: b64(16),
+  wrappedKey: b64(80),
+  wrapIv: b64(12),
+  keyCheck: b64(40),
+  keyCheckIv: b64(12),
+  keyCheckVersion: 1,
+  migratedAt: '2026-11-08T00:00:00.000Z',
+};
+const RECOVERY_WRAP = {
+  version: 1,
+  recoveryVersion: 1,
+  wrappedKey: b64(80),
+  wrapIv: b64(12),
+  createdAt: '2026-11-08T00:00:00.000Z',
+};
 
 vi.mock('../contexts/EncryptionContext', () => ({
   useEncryption: () => ({
     unlockWithPassphrase: mockUnlockWithPassphrase,
+    unlockWithRecoveryKey: mockUnlockWithRecoveryKey,
     lockVault: mockLockVault,
   }),
 }));
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({
-    user: { id: 'user-unlock-1' },
+    user: authState.user,
     signOut: mockSignOut,
   }),
 }));
@@ -48,6 +73,7 @@ vi.mock('../hooks/useVaultSettings', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  authState.user = { id: 'user-unlock-1' };
 });
 
 describe('PassphraseUnlock', () => {
@@ -266,5 +292,51 @@ describe('PassphraseUnlock', () => {
 
     await user.click(screen.getByRole('checkbox'));
     expect(mockSetRememberBrowser).toHaveBeenCalledWith(true);
+  });
+
+  describe('recovery key (item 26)', () => {
+    it('still offers the recovery key when this tab knows of none: it may have been made on another device', async () => {
+      authState.user = { id: 'user-unlock-1', user_metadata: { vault: VALID_VAULT } };
+      mockUnlockWithRecoveryKey.mockResolvedValueOnce('unavailable');
+      render(<PassphraseUnlock />);
+      expect(screen.getByText(/Without a recovery key, a forgotten passphrase cannot be recovered/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Use your recovery key' }));
+      fireEvent.change(await screen.findByLabelText('Recovery key'), { target: { value: 'ABCD' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('doesn’t have a recovery key yet');
+    });
+
+    it('switches to the recovery key form and back', async () => {
+      authState.user = { id: 'user-unlock-1', user_metadata: { vault: { ...VALID_VAULT, recoveryWrap: RECOVERY_WRAP } } };
+      render(<PassphraseUnlock />);
+      expect(screen.getByText(/or your recovery key if you’ve forgotten it/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Use your recovery key' }));
+
+      expect(await screen.findByLabelText('Recovery key')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Passphrase')).toBeNull();
+      expect(screen.getByText(/choose a new passphrase next/)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Use your passphrase instead' }));
+      expect(screen.getByLabelText('Passphrase')).toBeInTheDocument();
+    });
+
+    it('says plainly when a recovery key does not open the notes, and never echoes it', async () => {
+      authState.user = { id: 'user-unlock-1', user_metadata: { vault: { ...VALID_VAULT, recoveryWrap: RECOVERY_WRAP } } };
+      mockUnlockWithRecoveryKey.mockResolvedValueOnce('wrong').mockResolvedValueOnce('invalid');
+      render(<PassphraseUnlock />);
+      fireEvent.click(screen.getByRole('button', { name: 'Use your recovery key' }));
+      const input = await screen.findByLabelText('Recovery key');
+
+      fireEvent.change(input, { target: { value: 'ABCD-EFGH' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('doesn’t open these notes');
+      expect(mockUnlockWithRecoveryKey).toHaveBeenCalledWith('ABCD-EFGH');
+      // A wrong key does not count toward the passphrase lockout.
+      expect(localStorage.getItem('yidhan-user-unlock-1-vault-unlock-lockout')).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('52 letters and digits'));
+      expect(screen.getByRole('alert').textContent).not.toContain('ABCD-EFGH');
+    });
   });
 });

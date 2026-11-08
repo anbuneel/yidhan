@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.36', date: '2026-11-08', changes: [
+    { type: 'feature', text: 'You can now make a recovery key. If you forget your passphrase, it opens your notes, and you then choose a new passphrase. Yidhan offers one the next time you unlock with your passphrase, and you can make or replace one in Settings, under Security. You see the key once, with Copy and Print, and it starts working after you type it back. It never leaves your device' },
+  ] },
   { version: '3.19.35', date: '2026-11-08', changes: [
     { type: 'improvement', text: 'Your notes are now locked with a key of their own, kept safe by your passphrase. The next time you unlock with your passphrase, Yidhan makes the switch on its own. Nothing about your notes changes, and your passphrase stays the same. This is the groundwork for changing your passphrase and for a recovery key' },
   ] },

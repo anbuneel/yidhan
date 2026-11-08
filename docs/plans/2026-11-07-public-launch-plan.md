@@ -1,5 +1,5 @@
 Status: ACTIVE
-Last verified: 2026-11-07
+Last verified: 2026-11-08
 
 # Public launch plan
 
@@ -53,7 +53,6 @@ Each of these is ahead of the product. This lane closes the gap.
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
-| 26 | Keys | Recovery kit: random 256-bit key, `wrap(RK, K)`, shown once as grouped base32 with print and copy, confirmation required; unlock via recovery key then set a new passphrase | weeks | Needs #24 | A user who forgets the passphrase enters the recovery key, sees their notes, and sets a new passphrase; the old wrap is then invalidated as in #25 · E2E through the whole path |
 | 27 | Onboarding | Passphrase setup rewritten as three steps: passphrase, recovery key, done. Offer a generated passphrase with one-tap copy as the default suggestion | days | Needs #26 | New users cannot finish setup without confirming the recovery key; the generated passphrase passes the strength policy · E2E |
 | 156 | Landing | The hero states only what the security page can back. Until item 104 (independent review) has a report, the hero's privacy line uses the security page's own wording and links to it. In the same pass, the hero's editor picture shows five toolbar labels, not sixteen, and never greyed-out Undo and Redo | days |  | `index.html` shell and `LandingPage.tsx` carry the same copy (both change together); the picture's toolbar lists at most five labels · `LandingPage.test.tsx` and the shell copy check |
 

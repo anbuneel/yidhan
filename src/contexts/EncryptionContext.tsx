@@ -26,6 +26,17 @@ function loadVaultUnlock() {
   return import('../services/vaultUnlock');
 }
 
+function loadRecoveryKit() {
+  return import('../services/recoveryKit');
+}
+
+// Types only: erased at build time, so they cost the entry chunk nothing.
+import type { PreparedRecoveryKit, RecoveryReset, RecoveryUnlockResult } from '../services/recoveryKit';
+export type { PreparedRecoveryKit };
+
+/** What a recovery-key unlock found. `ok` means a new passphrase is now required. */
+export type RecoveryUnlockStatus = RecoveryUnlockResult['status'];
+
 /**
  * The key-check a restore path verifies against: `vault.keyCheck` on a migrated
  * account (design §1.2), the legacy one otherwise. Takes the metadata as JSON so
@@ -53,6 +64,27 @@ interface EncryptionContextType {
   lockVault: (reason?: LockReason) => void;
   /** Persist current in-memory keys to localStorage (when enabling remember-browser while unlocked) */
   persistToLocal: () => boolean;
+  /**
+   * Item 26. Open the vault with a recovery key. On `ok` the keys are verified
+   * but held back: the vault stays locked until `setPassphraseAfterRecovery`.
+   */
+  unlockWithRecoveryKey: (recoveryKey: string) => Promise<RecoveryUnlockStatus>;
+  /**
+   * Which recovery screen the account gate shows, if any. `reset`: a recovery key
+   * opened the vault and a new passphrase is required. `offer`: this passphrase
+   * unlock is followed by the recovery-key offer.
+   */
+  recoveryScreen: 'reset' | 'offer' | null;
+  /** Save a new passphrase after a recovery-key unlock, then unlock. Throws `RecoveryKitError`. */
+  setPassphraseAfterRecovery: (passphrase: string) => Promise<void>;
+  /** Leave a recovery without setting a passphrase. Nothing on the server changed. */
+  cancelRecovery: (reason?: LockReason) => void;
+  dismissRecoveryKeyOffer: () => void;
+  /**
+   * Make a recovery key for the unlocked vault. The caller must `discard` it.
+   * Refuses with `exists` when one is stored, unless `replace` is set.
+   */
+  prepareRecoveryKit: (options?: { replace?: boolean }) => Promise<PreparedRecoveryKit>;
 }
 
 const EncryptionContext = createContext<EncryptionContextType | undefined>(undefined);
@@ -86,6 +118,22 @@ function clearKeyMaterial(keys: DerivedKeys | null): void {
   if (!keys) return;
   keys.rawEncryptionKey.fill(0);
   keys.rawHashKey.fill(0);
+}
+
+/** Keys opened by a recovery key, held back until a new passphrase is saved. */
+interface PendingRecovery {
+  userId: string;
+  keys: DerivedKeys;
+  reset: RecoveryReset;
+  /** Set when a lock, sign-out or cancel dropped it, so a late save does not unlock. */
+  dropped: boolean;
+}
+
+function dropRecovery(recovery: PendingRecovery | null): void {
+  if (!recovery) return;
+  recovery.dropped = true;
+  recovery.reset.discard();
+  clearKeyMaterial(recovery.keys);
 }
 
 /** Try to restore keys from sessionStorage */
@@ -280,6 +328,8 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
   const sessionRestoreAttemptedRef = useRef<string | null>(null);
   /** When true, vault was auto-locked — activity gate must fire before restore */
   const autoLockedRef = useRef(false);
+  const [recovery, setRecovery] = useState<PendingRecovery | null>(null);
+  const [recoveryOfferUserId, setRecoveryOfferUserId] = useState<string | null>(null);
 
   // Determine if encryption is set up by checking user_metadata
   const encryptionSalt = user?.user_metadata?.encryption_salt as string | undefined;
@@ -308,6 +358,10 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     if (keyState.keys !== null) {
       clearKeyMaterial(keyState.keys);
       setKeyState({ keys: null, userId: null });
+    }
+    if (recovery !== null) {
+      dropRecovery(recovery);
+      setRecovery(null);
     }
   }
 
@@ -607,11 +661,75 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     if (result.migration) {
       // Item 24: migrate on unlock, in the background. The unlock has already
       // succeeded; a failed or interrupted migration retries next time.
-      startMigration({ ...result.migration, userId, passphrase, legacySalt: salt });
+      // A recovery key made now waits for it (`services/recoveryKit.ts`).
+      void startMigration({ ...result.migration, userId, passphrase, legacySalt: salt });
     }
+    // Item 26: offer a recovery key. Only after a passphrase unlock, never after
+    // a restore, and only when the account has none.
+    setRecoveryOfferUserId(result.offerRecoveryKey ? userId : null);
 
     return true;
   }, [user, encryptionSalt]);
+
+  const unlockWithRecoveryKey = useCallback(async (recoveryKey: string): Promise<RecoveryUnlockStatus> => {
+    if (!user || !encryptionSalt) return 'unavailable';
+    const userId = user.id;
+    const { recoveryUnlock } = await loadRecoveryKit();
+    const result = await recoveryUnlock({
+      recoveryKey,
+      userId,
+      salt: fromBase64(encryptionSalt),
+      metadata: user.user_metadata,
+    });
+    if (result.status !== 'ok') return result.status;
+    // Verified against the vault key-check, but not committed: no note is
+    // decrypted and nothing is stored until a new passphrase is saved.
+    setRecovery((prev) => {
+      dropRecovery(prev);
+      return { userId, keys: result.keys, reset: result.reset, dropped: false };
+    });
+    // No offer to clear: one is only ever set while unlocked, and a lock clears it.
+    return 'ok';
+  }, [user, encryptionSalt]);
+
+  const setPassphraseAfterRecovery = useCallback(async (passphrase: string): Promise<void> => {
+    const pending = recovery;
+    const policyError = validatePassphrasePolicy(passphrase);
+    if (!pending || pending.userId !== currentUserId || policyError) {
+      throw new Error(policyError ?? 'Unlock your notes first.');
+    }
+    // Throws `RecoveryKitError`. The recovery stays pending, so the screen can
+    // say what happened; on `changed` the writer leaves it with Cancel.
+    await pending.reset.setPassphrase(passphrase);
+
+    if (pending.dropped) {
+      // Locked or signed out while the write was in flight. The new passphrase
+      // is saved; the keys are already zeroed, so do not unlock with them.
+      throw new Error('Your new passphrase is saved. Unlock with it.');
+    }
+
+    // The server holds the new wrap. Now unlock.
+    pending.reset.discard();
+    setRecovery(null);
+    setKeyState({ keys: pending.keys, userId: pending.userId });
+    persistSession(pending.userId, pending.keys);
+    // A failed write here only means the next restart asks for the passphrase.
+    if (isRememberBrowserEnabled(pending.userId)) persistLocal(pending.userId, pending.keys);
+    sessionRestoreAttemptedRef.current = pending.userId;
+  }, [recovery, currentUserId]);
+
+  const prepareRecoveryKit = useCallback(async (options?: { replace?: boolean }): Promise<PreparedRecoveryKit> => {
+    const current = keyState;
+    if (current.keys === null || current.userId !== currentUserId) {
+      throw new Error('Unlock your notes first.');
+    }
+    // Copied before the await: a lock zeroes the originals in place.
+    const { prepareRecoveryKit: prepare } = await loadRecoveryKit();
+    // `prepare` copies K before its own first await. A lock during the import
+    // above zeroes the keys first; `prepare` then refuses, because zeroed bytes
+    // fail the vault key-check, and no key is ever shown.
+    return prepare({ keys: current.keys, userId: current.userId, replace: options?.replace });
+  }, [keyState, currentUserId]);
 
   /**
    * Lock the vault — clear keys from memory.
@@ -629,6 +747,11 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     // authenticated user's ID — ensuring sign-out from locked state clears localStorage.
     const effectiveUserId = currentUserId ?? keyState.userId;
     clearSession(effectiveUserId);
+    setRecovery((prev) => {
+      dropRecovery(prev);
+      return null;
+    });
+    setRecoveryOfferUserId(null);
     if (reason === 'auto-lock') {
       // Preserve localStorage — activity gate will restore on user return
       autoLockedRef.current = true;
@@ -651,6 +774,11 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     return false;
   }, [keyState.keys, keyState.userId]);
 
+  // Unlocked implies a current user, so a stale offer for another user never matches.
+  const recoveryScreen = recovery !== null && recovery.userId === currentUserId
+    ? 'reset'
+    : isUnlocked && recoveryOfferUserId === currentUserId ? 'offer' : null;
+
   const contextValue = useMemo<EncryptionContextType>(() => ({
       keys,
       isUnlocked,
@@ -659,6 +787,13 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       unlockWithPassphrase,
       lockVault,
       persistToLocal,
+      unlockWithRecoveryKey,
+      recoveryScreen,
+      setPassphraseAfterRecovery,
+      // Leaving a recovery is a manual lock: it drops the held keys too.
+      cancelRecovery: lockVault,
+      dismissRecoveryKeyOffer: () => setRecoveryOfferUserId(null),
+      prepareRecoveryKit,
   }), [
     keys,
     isUnlocked,
@@ -667,6 +802,10 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     unlockWithPassphrase,
     lockVault,
     persistToLocal,
+    unlockWithRecoveryKey,
+    recoveryScreen,
+    setPassphraseAfterRecovery,
+    prepareRecoveryKit,
   ]);
 
   return (

@@ -456,3 +456,32 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   `services/vaultUnlock.ts`) loads with `import()` on unlock and restore. The
   legacy key-check upgrade and `parseKeyCheckVersion` moved into that chunk too,
   so the entry chunk grows by about 10 bytes gzip and stays inside the budget.
+- **2026-11-08** — Item 26 from the public launch plan: the recovery kit, §2.4 of
+  `2026-09-07-key-migration-and-rotation-design.md`. A recovery key is 32 random
+  bytes, shown once as 52 base32 characters in groups of four, with Copy and Print.
+  It is saved only after the writer types it back, as `vault.recoveryWrap`:
+  AES-GCM of `K` under the key itself, AAD `vault-recovery:<userId>:<recoveryVersion>`,
+  with its own schema version. The key is never stored or sent; only the wrap is.
+  The offer appears after a passphrase unlock on an account with none, before the
+  library opens, and "Not now" brings it back next time; Settings → Security makes
+  or replaces one at any time. An account that has not migrated migrates first and
+  the save waits for it. "Use your recovery key" on the unlock screen unwraps `K`
+  and verifies the vault key-check, then holds the keys back until a new
+  passphrase is saved: §2.1 in one `updateUser` call, with a fresh KEK salt, both
+  versions advanced, the old passphrase wrap overwritten, the recovery wrap carried
+  over, and the legacy key-check replaced by one no passphrase verifies
+  (`DECISIONS.md`). A failed or interrupted write leaves the old passphrase and the
+  recovery key both working; a landed write reported as an error is recognised on
+  retry; a vault changed on another device is not overwritten. `user_metadata` has
+  no compare-and-set, so each write is a fresh read, the write and a read-back;
+  item 136 closes that. Tests 26-T1, 26-T3 and 26-T4 are unit and integration
+  tests (`recoveryKey.test.ts`, `EncryptionContext.recovery.test.tsx`,
+  `RecoveryKeyKit.test.tsx`); 26-T2 is `e2e/recovery-kit.spec.ts`, which needs the
+  E2E credentials and has not been run. The recovery code and screens load with
+  `import()`, and so does `PassphraseSetup`, which shows once per account: that is
+  what keeps the app shell inside its budget (340.9 KB, from 341.1). A key is never
+  shown when it could not be saved (no vault yet, a failed migration, or one already
+  made on another device unless Settings asks to replace it). Review findings
+  rejected or taken in part: `docs/reviews/2026-11-08-item-26-recovery-kit.md`.
+  Remembered devices are not re-prompted after the new passphrase;
+  that is item 25's `keyCheckVersion` check (25-T7).
