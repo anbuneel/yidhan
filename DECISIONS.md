@@ -29,7 +29,7 @@ network idle against the 300 KB target, and 39 KB of it was Session Replay, whic
 loads right after Sentry on every route but `/s/*`. The proposal's 300 KB arithmetic
 counts "Sentry after `load` (~45 without Replay)", so the target assumed Replay was not
 on the landing, but step 2 did not do that and nothing said so. Separately, the landing
-JS measured 89.5 KB against its 90 KB target. The headroom rule (2026-11-08, "Ratcheted
+JS measured 89.8 KB against its 90 KB target. The headroom rule (2026-11-08, "Ratcheted
 bundle budgets carry 1 KB of headroom") would set its limit to 91 KB, which lets CI pass a
 build that misses the target.
 
