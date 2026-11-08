@@ -15,7 +15,10 @@ test.describe('Landing shell', () => {
       await expect(
         page.getByRole('heading', { name: /a quiet home for your personal notes/i })
       ).toBeVisible();
-      await expect(page.getByText(/not even us/i)).toBeVisible();
+      await expect(page.getByText(/encrypted on your device before it syncs/i)).toBeVisible();
+      await expect(
+        page.getByRole('link', { name: /what is protected, and what is not/i })
+      ).toHaveAttribute('href', '/security');
       await expect(page.getByRole('link', { name: /^try writing$/i })).toHaveAttribute(
         'href',
         '/demo/new'

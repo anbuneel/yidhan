@@ -582,3 +582,18 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   `scripts/bundle-budget.json`: 90, 292, 339 and 138 KB. A budget that meets its
   target is capped at the target, so the landing-JS limit is 90 KB, not 91. Item 61
   stays open for step 7 and the closing Lighthouse run.
+- **2026-11-08** — Item 156: honest hero, qualified claims, support paragraph. The
+  hero's privacy line no longer says "nobody else can read it. Not even us." It now
+  says notes are encrypted on the device before they sync, that the servers hold the
+  writing only as ciphertext, and that dates, sizes and tag names stay visible, and it
+  links to `/security` ("What is protected, and what is not"). "Nothing to set up"
+  became "Trying it needs nothing set up. An account asks for a passphrase and a
+  recovery key." The page meta descriptions say "Nothing to set up to try it." The
+  editor picture shows the first five real toolbar labels (B, I, </>, H1, List); Undo
+  and Redo, greyed out, are gone. `/support` gains one paragraph: one maintainer, no
+  company, where to write, a reply usually within a few days with no guarantee, and
+  the code is public. The `index.html` shell carries the same copy and the same link.
+  The security page is unchanged. Tests: `LandingPage.test.tsx` (new lines, the label
+  count, shell and page copy compared line by line, the proof-line links in both, and
+  the security page still naming what the hero says is visible),
+  `SupportPage.test.tsx` (new), and `e2e/landing-shell.spec.ts`.
