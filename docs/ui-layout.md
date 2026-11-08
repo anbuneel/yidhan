@@ -12,13 +12,16 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 |                                  | +-----------------------------------+ |
 |  A quiet home                    | | An idea for Saturday              | |
 |  for your                        | | + Add tag                Just now | |
-|  personal notes.                 | | [B I </> H1 List ... Quote Code ] | |
+|  personal notes.                 | | [B  I  </>  H1  List            ] | |
 |                                  | |                                   | |
-|  Capture an idea ... Nothing to  | | Leave the morning unplanned.      | |
-|  set up.                         | |                                   | |
-|  Each note is locked on your     | | Walk to the market. ...           | |
-|  device before it syncs ...      | |                                   | |
-|  Not even us.                    | | Maybe that is enough.|            | |
+|  Capture an idea ... Trying it   | | Leave the morning unplanned.      | |
+|  needs nothing set up. An account| |                                   | |
+|  asks for a passphrase ...       | | Walk to the market. ...           | |
+|  Each note is encrypted on your  | |                                   | |
+|  device before it syncs ... Dates| | Maybe that is enough.|            | |
+|  ... stay visible to us.         | |                                   | |
+|  What is protected, and what is  | |                                   | |
+|  not ->                          | |                                   | |
 |                                  | |-----------------------------------| |
 |  [ Try writing ]  Explore sample | | (Saved here)  A practice draft... | |
 |                   notes ->       | |        [Create an account to keep] | |
@@ -49,8 +52,14 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 manuscript preview peeks under the fold, the proof facts wrap, and the sample
 cards stack in one column. Below 768px the primary button spans the width.
 
-- The manuscript is a static rendering of the real editor (title, tag row, toolbar
-  labels, body, saved chip) with the `starter-saturday` note in it. An invisible
+- The hero's privacy line claims only what `/security` backs: encrypted on the
+  device before it syncs, ciphertext on the server, dates, sizes and tag names
+  visible. It links to `/security` (a plain click routes in-app). No absolute claim
+  ("nobody", "not even us") and no audit claim until item 104 has a report.
+- "Nothing set up" applies to trying the app; the same line says an account asks for
+  a passphrase and a recovery key.
+- The manuscript is a static rendering of the real editor (title, tag row, the first
+  five toolbar labels — B, I, </>, H1, List — body, saved chip) with the `starter-saturday` note in it. An invisible
   overlay button covers it; clicking anywhere on the page opens the Practice Space
   draft. It is a picture of the editor, not an imitation of one: there is no
   in-page textarea and nothing is written to `yidhan-demo-content` from here.
@@ -63,7 +72,7 @@ cards stack in one column. Below 768px the primary button spans the width.
   hero note, rendered with the real `NoteCard` in decorative mode. Each has an
   overlay button that opens the Practice Space.
 - Proof facts: "Encrypted before it syncs" and "How the locking works" open the
-  security page; "Free and open source" opens the LICENSE file on GitHub
+  security page, as does the hero's "What is protected, and what is not"; "Free and open source" opens the LICENSE file on GitHub
   (in the `index.html` shell too); the other two are plain text.
 - Before the bundle arrives, `index.html` carries a static copy of the first screen
   (the intro column, a plain manuscript and the proof line) styled by an inline
