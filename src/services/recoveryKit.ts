@@ -28,6 +28,7 @@ import { readRecoveryWrap, readVaultMetadata } from '../lib/vaultMetadata';
 import type { VaultMetadata } from '../lib/vaultMetadata';
 import { addReliabilityBreadcrumb, reportReliabilityIssue } from '../utils/reliabilityTelemetry';
 import { migrationInFlight } from './vaultUnlock';
+import { KdfLoadError } from '../lib/argon2';
 
 /**
  * Why a recovery-kit step did not finish. The UI turns the code into copy.
@@ -229,14 +230,17 @@ export async function prepareRecoveryKit({
 
 /** Report a failure without the error's own text when it is ours, and return a `RecoveryKitError`. */
 function reportKitError(message: string, source: string, err: unknown): RecoveryKitError {
-  const code = err instanceof RecoveryKitError ? err.code : 'failed';
+  // A key-derivation chunk that did not load while offline is the offline case.
+  const code = err instanceof RecoveryKitError
+    ? err.code
+    : err instanceof KdfLoadError && isOffline() ? 'offline' : 'failed';
   reportReliabilityIssue({
     category: 'vault',
     message,
     level: 'warning',
     data: { source, code },
   }, err instanceof RecoveryKitError ? undefined : err);
-  return err instanceof RecoveryKitError ? err : new RecoveryKitError('failed', message);
+  return err instanceof RecoveryKitError ? err : new RecoveryKitError(code, message);
 }
 
 // ============================================================================

@@ -217,6 +217,35 @@ describe('PassphraseUnlock', () => {
     consoleSpy.mockRestore();
   });
 
+  it('shows a retryable error and records no failed attempt when the encryption module does not load', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { KdfLoadError } = await import('../lib/argon2');
+    mockUnlockWithPassphrase.mockRejectedValueOnce(new KdfLoadError(new TypeError('Failed to fetch')));
+    mockUnlockWithPassphrase.mockResolvedValueOnce(true);
+    const user = userEvent.setup({ delay: null });
+
+    render(<PassphraseUnlock />);
+
+    await user.type(screen.getByLabelText('Passphrase'), 'correct-passphrase');
+    await user.click(screen.getByRole('button', { name: 'Unlock' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'Unlock failed: Could not load the encryption module. Check your connection, then reload the page and try again.'
+        )
+      ).toBeInTheDocument();
+    });
+    expect(localStorage.getItem('yidhan-user-unlock-1-vault-unlock-lockout')).toBeNull();
+    // The passphrase stays in the field, so the retry is one click.
+    expect(screen.getByLabelText('Passphrase')).toHaveValue('correct-passphrase');
+
+    await user.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(mockUnlockWithPassphrase).toHaveBeenCalledTimes(2));
+    expect(mockUnlockWithPassphrase).toHaveBeenLastCalledWith('correct-passphrase');
+    consoleSpy.mockRestore();
+  });
+
   it('does not record a failed attempt when unlock fails due to vault metadata', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockUnlockWithPassphrase.mockRejectedValue(

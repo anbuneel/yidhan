@@ -16,7 +16,7 @@
  * entry chunk carries only `vaultMetadata.ts`.
  */
 
-import { argon2id } from 'hash-wasm';
+import { argon2id } from './argon2';
 import {
   ARGON2_PARAMS,
   KEY_CHECK_VERSION,

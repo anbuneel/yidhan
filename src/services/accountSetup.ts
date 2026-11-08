@@ -31,6 +31,7 @@ import { readVaultMetadata } from '../lib/vaultMetadata';
 import type { RecoveryWrapMetadata } from '../lib/vaultMetadata';
 import { addReliabilityBreadcrumb, reportReliabilityIssue } from '../utils/reliabilityTelemetry';
 import { RecoveryKitError } from './recoveryKit';
+import { KdfLoadError } from '../lib/argon2';
 import type { PreparedRecoveryKit } from './recoveryKit';
 
 /** The first recovery key an account has. */
@@ -92,14 +93,17 @@ function holdsSetup(
 
 /** Report without the error's own text when it is ours, and return a `RecoveryKitError`. */
 function reportSetupError(message: string, err: unknown): RecoveryKitError {
-  const code = err instanceof RecoveryKitError ? err.code : 'failed';
+  // A key-derivation chunk that did not load while offline is the offline case.
+  const code = err instanceof RecoveryKitError
+    ? err.code
+    : err instanceof KdfLoadError && isOffline() ? 'offline' : 'failed';
   reportReliabilityIssue({
     category: 'vault',
     message,
     level: 'warning',
     data: { source: 'account_setup', code },
   }, err instanceof RecoveryKitError ? undefined : err);
-  return err instanceof RecoveryKitError ? err : new RecoveryKitError('failed', message);
+  return err instanceof RecoveryKitError ? err : new RecoveryKitError(code, message);
 }
 
 /**

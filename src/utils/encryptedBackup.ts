@@ -13,7 +13,7 @@
  * `docs/plans/2026-09-07-key-migration-and-rotation-design.md` §4.3.
  */
 
-import { argon2id } from 'hash-wasm';
+import { argon2id } from '../lib/argon2';
 import { toBase64, fromBase64 } from '../lib/encryption';
 
 export const BACKUP_FORMAT = 'yidhan-backup';
