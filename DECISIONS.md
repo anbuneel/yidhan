@@ -19,6 +19,48 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-08 — A client-side conditional write is a launch gate; the server write contract is not
+
+**Status:** Active
+
+**Why:** An outside launch review found what the sync engine's own comments imply: the
+note update reads the server row, compares timestamps, then updates filtered only by
+id. A write from another device that lands between the read and the update is
+overwritten with no conflict shown. The window is one round trip, so it is rare, but the
+failure is a lost paragraph, and the plan's own rule says anything that can lose words
+jumps the queue. The full fix, roadmap item 35, is a database RPC with an expected
+version, a `client_mutation_id` and replay safety: a migration applied by hand, verified
+against production, and a new failure mode (a lost response) to handle. That is weeks,
+and it is not what the window needs.
+
+**Decision:** Item 159 enters the launch plan: the same update also filters on the
+`updated_at` the pre-write read returned, and a zero-row result re-reads the row to tell
+stale from missing. Stale raises the existing conflict path with both versions
+preserved; missing keeps the current reinsert. Item 35 stays on the roadmap as the
+post-launch contract. Item 160, a one-time accessibility pass on the rendered app, also
+enters the plan: WCAG AA is a hard constraint in `PRODUCT.md` and nothing has verified
+it in a browser.
+
+**Rejected:** Promoting item 35 whole. The RPC's replay safety protects against a lost
+response after a successful write, which the current code already tolerates by
+re-reading; the migration risk and the hand-applied step are not worth taking in the
+week before launch for a window that a filter closes.
+
+**Rejected:** Leaving the race for the writer cohort to find. A silent overwrite is the
+one failure a writer cannot report, because nothing tells them it happened.
+
+**Taken from the same review as copy, not items:** the account password and the vault
+passphrase named as two different things in setup; "resetting your login does not
+unlock your notes" where the reset is requested; what happens on other devices after a
+recovery (into item 27); "Nothing to set up" qualified, and a support-page paragraph on
+how a one-person free service is maintained (into item 156). **Recorded as roadmap
+candidates:** Return to a thought (161), Make a book (162), Share just this passage
+(163). **Declined:** moving import earlier than the launch story's eighth slot; Markdown
+and JSON import already work, and the preview the review asks for needs the real parser
+first.
+
+---
+
 ## 2026-11-08 — A passphrase set after recovery retires the legacy key-check
 
 **Status:** Active
