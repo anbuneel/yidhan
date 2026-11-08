@@ -19,6 +19,41 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-08 — Ratcheted bundle budgets carry 1 KB of headroom
+
+**Status:** Active
+
+**Why:** The first-visit budgets (item 61) ratchet: each landed step lowers the limit to
+what it measured. PR #246 set three limits at the exact measurement, rounded up to the
+next KB, which left between 0 and 300 bytes of room. The next two PRs failed the build
+for growth they could not avoid: #248 adds about 190 bytes to the app shell because the
+decision to keep a released note's editor mounted has to run in `App`, and #247 adds
+about 200 bytes for the vault unlock. Each would have needed its own budget decision for
+a change smaller than a comment, and the second would have failed after the first landed.
+The same tight limits also failed every Vercel preview, because Vercel inlines the
+production Supabase key, which does not compress, and measures a few hundred bytes more
+than CI's placeholder build.
+
+**Decision:** A ratcheted limit is the CI measurement after the last landed step, rounded
+up to the next whole KB, plus 1 KB. Limits still only move down, each time a step lands,
+to the new measurement plus 1 KB. The targets in the proposal are unchanged. CI is the
+only gate: on Vercel the script prints the same report as a warning and the deploy
+proceeds (`e769d27`).
+
+**Rejected:** Zero headroom, with a `DECISIONS.md` entry per PR that grows the entry path.
+It turns every feature into a budget negotiation over bytes that a comment would outweigh,
+and it blocks a lose-words fix behind a process step.
+
+**Rejected:** Percentage headroom. One per cent of the app shell is 3.4 KB, enough for
+the creep the ratchet exists to stop. One KB bounds creep between steps to less than the
+smallest step saves.
+
+**Rejected:** Moving #248's hook out of the entry path to fit. The hook decides whether the
+editor stays mounted, which is `App`'s decision, and the review fixes it carries are the
+point of the change.
+
+---
+
 ## 2026-11-07 — The execution plan is superseded by a public launch plan
 
 **Status:** Active
