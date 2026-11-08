@@ -48,12 +48,20 @@ vi.mock('../utils/reliabilityTelemetry', () => ({
   reportReliabilityIssue: mockReportReliabilityIssue,
 }));
 
+// The real lazy Argon2id, wrapped so a test can make one call fail the way a
+// missing hash-wasm chunk does (item 61, step 7).
+vi.mock('../lib/argon2', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/argon2')>();
+  return { ...actual, argon2id: vi.fn(actual.argon2id) };
+});
+
 import { EncryptionProvider, useEncryption } from './EncryptionContext';
 import type { PreparedRecoveryKit } from './EncryptionContext';
 import { createKeyCheck, decryptNote, deriveKeys, encryptNote, toBase64, verifyKeyCheck } from '../lib/encryption';
 import type { DerivedKeys, EncryptedNote } from '../lib/encryption';
 import { buildMigratedVault, copyMasterKey } from '../lib/vaultKey';
 import { readVaultMetadata } from '../lib/vaultMetadata';
+import { argon2id, KdfLoadError } from '../lib/argon2';
 import type { VaultMetadata } from '../lib/vaultMetadata';
 
 const PASSPHRASE = 'correct horse battery staple 42';
@@ -627,4 +635,73 @@ describe('recovery kit (item 26)', () => {
       expect(h.ctx.isUnlocked).toBe(false);
     }, 30_000);
   });
+});
+
+describe('when the hash-wasm chunk does not load (item 61, step 7)', () => {
+  const chunkFailure = () => new KdfLoadError(new TypeError('Failed to fetch dynamically imported module'));
+
+  it('a passphrase unlock throws a retryable error, not a wrong passphrase, and the retry unlocks', async () => {
+    const app = openApp();
+    vi.mocked(argon2id).mockRejectedValueOnce(chunkFailure());
+    let failure: unknown;
+    await act(async () => {
+      await h.ctx.unlockWithPassphrase(PASSPHRASE).then(
+        () => { failure = 'resolved'; },
+        (err: unknown) => { failure = err; }
+      );
+    });
+    expect(failure).toBeInstanceOf(KdfLoadError);
+    expect(h.ctx.isUnlocked).toBe(false);
+
+    let ok = false;
+    await act(async () => { ok = await h.ctx.unlockWithPassphrase(PASSPHRASE); });
+    expect(ok).toBe(true);
+    expect(h.ctx.isUnlocked).toBe(true);
+    app.unmount();
+  }, 30_000);
+
+  it('saving a new passphrase after a recovery unlock throws, writes nothing, and the retry saves', async () => {
+    const app = openApp();
+    await act(async () => { await h.ctx.unlockWithPassphrase(PASSPHRASE); });
+    const recoveryKey = await makeKit();
+    act(() => h.ctx.lockVault('manual'));
+    refreshAuth(app);
+    let status = '';
+    await act(async () => { status = await h.ctx.unlockWithRecoveryKey(recoveryKey); });
+    expect(status).toBe('ok');
+    const writesBefore = mockUpdateUser.mock.calls.length;
+
+    vi.mocked(argon2id).mockRejectedValueOnce(chunkFailure());
+    let failure: unknown;
+    await act(async () => {
+      await h.ctx.setPassphraseAfterRecovery(NEW_PASSPHRASE).then(
+        () => { failure = 'resolved'; },
+        (err: unknown) => { failure = err; }
+      );
+    });
+    // The reset path reports every failure as 'failed', which the reset screen
+    // shows as "Try again" (RecoveryPassphraseReset.tsx).
+    expect(failure).toMatchObject({ name: 'RecoveryKitError', code: 'failed' });
+    expect(mockUpdateUser.mock.calls.length).toBe(writesBefore);
+    expect(h.ctx.recoveryScreen).toBe('reset');
+    expect(h.ctx.isUnlocked).toBe(false);
+
+    // Offline, the same failure is the offline case, which says nothing changed.
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    vi.mocked(argon2id).mockRejectedValueOnce(chunkFailure());
+    await act(async () => {
+      await h.ctx.setPassphraseAfterRecovery(NEW_PASSPHRASE).then(
+        () => { failure = 'resolved'; },
+        (err: unknown) => { failure = err; }
+      );
+    });
+    onLine.mockRestore();
+    expect(failure).toMatchObject({ name: 'RecoveryKitError', code: 'offline' });
+    expect(mockUpdateUser.mock.calls.length).toBe(writesBefore);
+
+    await act(async () => { await h.ctx.setPassphraseAfterRecovery(NEW_PASSPHRASE); });
+    expect(h.ctx.isUnlocked).toBe(true);
+    await expectKeysOpenNote(h.ctx.keys);
+    app.unmount();
+  }, 60_000);
 });

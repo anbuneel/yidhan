@@ -613,6 +613,71 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   at 1440 px that the welcome card is left-aligned, under a third of the band's width
   and far from its centre, and at 390 px that it fills the column with no horizontal
   scroll. The 1440 px check fails against the old layout.
+- **2026-11-08** — First-visit weight, item 61 step 7, and the closing Lighthouse run.
+  Argon2id now goes through `src/lib/argon2.ts`, which loads `hash-wasm` with
+  `import()` on the first key derivation. The three call sites (`deriveKeys` in
+  `src/lib/encryption.ts`, `deriveKekBytes` in `src/lib/vaultKey.ts`, and both
+  derivations in `src/utils/encryptedBackup.ts`) import it from there; nothing else
+  imports `hash-wasm`. The import targets `src/lib/argon2Wasm.ts`, a one-line
+  re-export, so the chunk holds Argon2id alone: importing `hash-wasm` itself gave a
+  216 KB chunk with every algorithm. `manualChunks` puts the re-export and
+  `hash-wasm` into `vendor-hash-wasm` (11.4 KB gzip); left to Rollup, a shared footer
+  component was merged into the small chunk and the app shell imported `hash-wasm`
+  statically again. The chunk is in the precache, and `EncryptionProvider` warms it
+  on idle once a user is signed in (`preloadArgon2`), so a tab holds it before any
+  lock screen needs it: an offline unlock does not depend on the service worker, and
+  an unlock after a deploy does not depend on the old chunk URL. A failed load throws
+  `KdfLoadError` ("Could not load the encryption module. Check your connection, then
+  reload the page and try again."; a browser may keep the failed fetch, so a reload
+  is the sure retry), is not cached by the loader, and propagates. The unlock screen
+  shows it as "Unlock failed: …", keeps the passphrase, and does not count it toward
+  the lockout. The post-recovery passphrase save and account setup report it as
+  `offline` when the browser is offline and `failed` otherwise, and write nothing.
+  Opening a `.yidhan` backup shows the message instead of "That backup could not be
+  opened." The vault modules from items 24,
+  26 and 27 already loaded lazily and reached `hash-wasm` only through
+  `vaultKey.ts` and `encryption.ts`. The budget check gains "hash-wasm not in the
+  app-shell closure", by chunk name, and runs it with or without Sentry in the build;
+  "hash-wasm not in the entry closure" still holds. Tests:
+  `src/lib/__tests__/argon2.test.ts` (same output as `hash-wasm`, one load, a failed
+  load retries, the warm-up, `deriveKeys` and `deriveKek` reject with
+  `KdfLoadError`), two cases in `EncryptionContext.recovery.test.tsx` (unlock and the
+  post-recovery save fail, online and offline, then succeed on retry), and one in
+  `PassphraseUnlock.test.tsx`. The setup, recovery, migration and backup suites run
+  the real lazy import.
+
+  | Measure | Before (`16f9547`) | After | Target |
+  |---|---:|---:|---:|
+  | JS requested on `/` before `load`, gzip | 89.9 KB, 3 scripts | 89.9 KB, 3 scripts | ≤ 90 KB |
+  | Everything requested on `/` until network idle, gzip | 291.2 KB, 15 requests | 291.2 KB, 15 requests | ≤ 300 KB |
+  | App-shell JS, Editor excluded, gzip | 337.3 KB | 325.4 KB | ≤ 330 KB |
+  | Largest JS chunk, gzip | 136.4 KB (`Editor`) | 136.4 KB (`Editor`) | ≤ 150 KB |
+  | Precache | 69 entries, 1,054.4 KB | 70 entries, 1,053.7 KB | ≤ 1,100 KB |
+
+  All six targets hold; the first precache request still comes after `load`. Build
+  figures from `dist/` with a dummy DSN; browser figures from
+  `e2e-sw/first-visit.spec.ts`, both measured on `16f9547` and on this branch. The
+  app-shell limit in `scripts/bundle-budget.json` drops from 339 to 327 KB; the
+  others are unchanged.
+
+  Lighthouse 12.8.2 (`npx`, not a dependency), mobile preset, simulated throttling
+  (150 ms RTT, 1.6 Mbps, 4× CPU), performance only, against `/` of a **local**
+  production build (`npm run
+  build`, placeholder Supabase values, dummy DSN) served statically over HTTP/1.1
+  with gzip level 9 on text, from headless Chromium on the agent machine:
+
+  | Performance | FCP | LCP | TBT | CLS | Transfer |
+  |---:|---:|---:|---:|---:|---:|
+  | 92 | 1.7 s | 3.3 s | 60 ms | 0 | 370 KiB, 18 requests |
+
+  The LCP element is the hero sub-line (`.landing-sub`), which waits on the display
+  font. The transfer is the spec's 291 KB plus the 75 KB manifest icon and the
+  favicon, which Chrome fetches and the spec does not count. **This is not the run
+  the plan asks for:** the agent environment's proxy refused
+  `https://yidhan.vercel.app` (403), so the run against the deployed site, with
+  Vercel's Brotli and HTTP/2, is still owed by the maintainer. Item 61 stays in the
+  plan for that run alone.
+
 - **2026-11-08** — Item 160: accessibility pass. `e2e/accessibility.spec.ts` (tagged
   `@a11y`, skipped unless `A11Y_AUDIT=1`, not in CI; roadmap item 67 is the CI
   version) runs axe-core 4.14 (`@axe-core/playwright`, WCAG 2.0 to 2.2 A and AA) on

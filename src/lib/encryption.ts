@@ -4,7 +4,7 @@
  * Pure crypto functions for E2EE. No UI, no React — fully testable in isolation.
  *
  * Encryption model:
- * - Argon2id key derivation (via hash-wasm WASM)
+ * - Argon2id key derivation (hash-wasm WASM, loaded on first use: ./argon2)
  * - 64-byte output split: first 32 → AES-256-GCM key, last 32 → HMAC-SHA-256 key
  * - AES-GCM with AAD = `${noteId}:${userId}` (prevents note-swapping attacks)
  * - 12-byte random IV per encryption (no nonce reuse)
@@ -20,11 +20,11 @@
  * All binary data is stored/transmitted as base64 strings.
  */
 
-import { argon2id } from 'hash-wasm';
+import { argon2id } from './argon2';
 import { fromBase64, fromBase64Url, toBase64, toBase64Url } from './base64';
 
 // Re-exported so existing callers keep one import. Code on the landing path imports
-// './base64' directly: this module pulls in hash-wasm (item 61, step 5).
+// './base64' directly: this module is the app shell's crypto (item 61, step 5).
 export { fromBase64, fromBase64Url, toBase64, toBase64Url };
 
 // ============================================================================

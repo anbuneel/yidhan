@@ -100,6 +100,24 @@ if (sentryBuiltIn) {
   check(`largest JS chunk (gzip, ${largest.file})`, largest.bytes, budget.largestChunk);
 }
 
+// Step 7: hash-wasm loads inside key derivation (src/lib/argon2.ts), not with the
+// app shell. Every hash-wasm module goes to one named chunk (manualChunks in
+// vite.config.ts), so a static import anywhere in the app shell's path shows up
+// here by file name. Structural, so it runs with or without Sentry in the build.
+{
+  const appShellChunk = allJs.filter((file) => /^assets\/AppShell-/.test(file));
+  const appShellPath = new Set([...entry.closure, ...staticClosure(distDir, appShellChunk)]);
+  const hashWasmChunks = allJs.filter((file) => /^assets\/vendor-hash-wasm-/.test(file));
+  const hashWasmInAppShell = [...appShellPath].filter((file) => hashWasmChunks.includes(file));
+  requireThat(
+    'hash-wasm not in the app-shell closure',
+    hashWasmChunks.length === 1 && hashWasmInAppShell.length === 0,
+    hashWasmChunks.length !== 1
+      ? `Expected one vendor-hash-wasm chunk, found ${hashWasmChunks.join(', ') || 'none'}`
+      : `hash-wasm is in the app shell's static path (${hashWasmInAppShell.join(', ')}); call Argon2id through src/lib/argon2.ts`
+  );
+}
+
 // Step 4: react and react-dom in one chunk. Before, the object form of manualChunks
 // left react-dom/client in main and put react itself in vendor-sentry. The markers are
 // production strings unique to each package: Component#setState's error (react) and

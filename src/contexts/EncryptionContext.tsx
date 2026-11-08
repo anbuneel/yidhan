@@ -13,6 +13,7 @@ import {
   reportReliabilityIssue,
 } from '../utils/reliabilityTelemetry';
 import { validatePassphrasePolicy } from '../utils/passphrasePolicy';
+import { preloadArgon2 } from '../lib/argon2';
 // The vault code (metadata reader, crypto, unlock and migration) is loaded with
 // import() on the paths that need it, so it stays out of the entry chunk. The
 // chunks are precached, so offline unlock still works. Never import those
@@ -422,6 +423,19 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     // A recovery lookup for the previous account must not install its keys.
     recoveryAttemptRef.current++;
     setupEpochRef.current++;
+  }, [currentUserId]);
+
+  // Warm the Argon2id chunk once the signed-in app is idle (item 61, step 7). It
+  // stays off the render path, but is in memory before a lock screen needs it, so
+  // an offline unlock or one after a deploy does not depend on fetching it then.
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (typeof window.requestIdleCallback === 'function') {
+      const handle = window.requestIdleCallback(preloadArgon2, { timeout: 5000 });
+      return () => window.cancelIdleCallback(handle);
+    }
+    const handle = window.setTimeout(preloadArgon2, 2000);
+    return () => window.clearTimeout(handle);
   }, [currentUserId]);
 
   // Attempt to restore keys from sessionStorage (then localStorage) on mount/user change
