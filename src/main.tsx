@@ -1,11 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Toaster } from 'react-hot-toast'
 import './index.css'
-import App from './App'
-import { AuthProvider } from './contexts/AuthContext'
-import { EncryptionProvider } from './contexts/EncryptionContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { Root } from './shells/Root'
+import { appShellStarted } from './shells/appShellStarted'
 import { isChunkLoadError, reloadForUpdatedApp } from './utils/updateRecovery'
 import {
   activateWaitingUpdate,
@@ -13,6 +11,7 @@ import {
   removeLegacyRuntimeCaches,
 } from './utils/serviceWorkerUpdates'
 import { bufferUncaughtErrors, disableReporting, startMonitoring } from './utils/monitoring'
+import { migrateLocalStorageKeys } from './utils/legacyStorageKeys'
 
 // Sentry loads after `load` (item 61, step 2). Errors and unhandled rejections
 // thrown before it initialises are queued here and sent once it has, through the
@@ -48,49 +47,34 @@ void registerServiceWorker()
 void removeLegacyRuntimeCaches()
 
 // Error monitoring, only with a DSN configured. Waits for `load`; Replay follows in
-// its own chunk and is never loaded on shared-note routes (/s/*).
+// its own chunk once the app shell has started, and is never loaded on shared-note
+// routes (/s/*).
 if (sentryDsn) {
   void startMonitoring({
     dsn: sentryDsn,
     environment: import.meta.env.MODE,
     pathname: window.location.pathname,
+    replayAfter: appShellStarted,
   })
 }
 
+// Before React renders, so a returning user's preferences survive the rebrand. It ran
+// from App.tsx until App moved into the lazily loaded app shell (item 61, step 5).
+// Guarded: where storage throws (site data blocked), the public shell must still
+// render, and there is nothing to migrate.
+try {
+  migrateLocalStorageKeys()
+} catch (error) {
+  console.warn('Could not migrate stored preferences:', error)
+}
+
+// The landing page and the public pages render from a small public shell; the app
+// shell, with Supabase and everything signed-in, loads only when this visit needs it
+// (src/appGate.ts, item 61, step 5).
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <AuthProvider>
-        <EncryptionProvider>
-        <App />
-        <Toaster
-          position="bottom-center"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: 'var(--color-bg-secondary)',
-              color: 'var(--color-text-primary)',
-              border: '1px solid var(--glass-border)',
-              fontFamily: 'var(--font-body)',
-              borderRadius: '8px',
-            },
-            success: {
-              iconTheme: {
-                primary: 'var(--color-accent)',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              iconTheme: {
-                primary: 'var(--color-destructive)',
-                secondary: '#fff',
-              },
-              duration: 5000,
-            },
-          }}
-        />
-      </EncryptionProvider>
-      </AuthProvider>
+      <Root />
     </ErrorBoundary>
   </StrictMode>,
 )

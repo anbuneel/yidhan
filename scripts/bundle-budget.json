@@ -4,31 +4,32 @@
     "Checked by scripts/check-bundle-budget.mjs after every build, and by e2e-sw/first-visit.spec.ts in a browser.",
     "Sizes in KB (1024 bytes): JS, CSS, HTML and text at gzip level 9; images and fonts as stored.",
     "limitKB is what the build may not exceed. Where it is above targetKB, it is the value measured in CI after the last landed step, rounded up to the next whole KB, plus 1 KB of headroom (DECISIONS.md, 2026-11-08): a feature that has to live in the entry path may grow it by a few hundred bytes without a budget decision. Lower it to the new measurement plus 1 KB as each step lands; never raise it otherwise without a DECISIONS.md entry.",
+    "Once a budget meets its target, limitKB is the lower of the target and the measurement plus 1 KB: the target is the promise, so CI never lets a build pass above it. landingJsBeforeLoad is at its 90 KB target with 0.5 KB to spare.",
     "landingPageTotal: the browser spec counts every request until network idle; the build check can only count what index.html names, so it measures less."
   ],
   "landingJsBeforeLoad": {
-    "limitKB": 298,
+    "limitKB": 90,
     "targetKB": 90,
     "measures": "JS the page requests on / before load (gzip)",
-    "reachesTargetWith": "step 5"
+    "reachesTargetWith": "step 5 (reached: 89.5 KB)"
   },
   "landingPageTotal": {
-    "limitKB": 537,
+    "limitKB": 292,
     "targetKB": 300,
     "measures": "Everything the page requests on / until network idle, excluding the precache (gzip)",
-    "reachesTargetWith": "step 5"
+    "reachesTargetWith": "step 5 (reached: 290.5 KB in the browser)"
   },
   "appShellJs": {
-    "limitKB": 342,
+    "limitKB": 338,
     "targetKB": 330,
-    "measures": "JS to render the unlocked library, Editor excluded (gzip). Today this is the entry path plus Sentry, which loads after load since step 2; Replay is not counted",
+    "measures": "JS to render the unlocked library, Editor excluded (gzip): the entry path, the app shell (lazy since step 5) and what it imports, and Sentry, which loads after load since step 2; Replay is not counted",
     "reachesTargetWith": "step 7"
   },
   "largestChunk": {
-    "limitKB": 190,
+    "limitKB": 138,
     "targetKB": 150,
-    "measures": "Largest single JS chunk (gzip)",
-    "reachesTargetWith": "step 5"
+    "measures": "Largest single JS chunk (gzip). Since step 5 this is the Editor, which loads as one unit",
+    "reachesTargetWith": "step 5 (reached: 136.4 KB)"
   },
   "precache": {
     "limitKB": 1100,

@@ -19,6 +19,37 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-08 — Session Replay waits for the app shell; a budget at its target is capped there
+
+**Status:** Active
+
+**Why:** Item 61 step 5 split the landing page and the public pages into a public shell
+that loads no Supabase. With that done, the landing still requested 329 KB before
+network idle against the 300 KB target, and 39 KB of it was Session Replay, which step 2
+loads right after Sentry on every route but `/s/*`. The proposal's 300 KB arithmetic
+counts "Sentry after `load` (~45 without Replay)", so the target assumed Replay was not
+on the landing, but step 2 did not do that and nothing said so. Separately, the landing
+JS measured 89.5 KB against its 90 KB target. The headroom rule (2026-11-08, "Ratcheted
+bundle budgets carry 1 KB of headroom") would set its limit to 91 KB, which lets CI pass a
+build that misses the target.
+
+**Decision:** Replay loads once the app shell starts: at startup when the visitor has a
+session, an auth callback or a non-public route, or at the handoff when they open
+sign-in or leave the public routes. Sentry itself still loads after `load` on every
+route, so errors on the public pages are still reported. Replay is still never loaded on
+`/s/*`, and that is now checked again at the moment Replay would load, not only at page
+start. A budget whose measurement meets its target has its limit capped at the target:
+the lower of the target and the measurement plus 1 KB. The landing JS limit is 90 KB.
+
+**Rejected:** Keeping Replay on the landing and leaving the page total over target.
+Replays of a static, signed-out page show little, and the target is the item's "done
+when".
+
+**Rejected:** A 91 KB limit, following the headroom rule literally. The headroom exists so
+small features in the entry path do not each need a budget decision. Since step 5, the
+signed-in app is no longer in the landing's path, so features rarely touch it; growth
+there past the target should need a decision.
+
 ## 2026-11-08 — A client-side conditional write is a launch gate; the server write contract is not
 
 **Status:** Active

@@ -4,11 +4,6 @@ import type { PublicPageName } from '../routing';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingFallback } from './LoadingFallback';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
-import { RoadmapPage } from './RoadmapPage';
-import { PrivacyPage } from './PrivacyPage';
-import { TermsPage } from './TermsPage';
-import { SupportPage } from './SupportPage';
-import { SecurityPage } from './SecurityPage';
 
 // Lazy so `src/data/changelog.ts` (about 19 KB gzip) leaves the entry chunk: only
 // `/changelog` reads it. The Suspense below covers the fetch, and lazyWithRetry
@@ -17,6 +12,15 @@ import { SecurityPage } from './SecurityPage';
 const ChangelogPage = lazyWithRetry(() =>
   import('./ChangelogPage').then((m) => ({ default: m.ChangelogPage }))
 );
+
+// The other five are lazy too (item 61, step 5): this module is on the landing page's
+// critical path, and the landing reads none of them. Each is precached, so they open
+// offline, and the Suspense below covers the fetch.
+const RoadmapPage = lazyWithRetry(() => import('./RoadmapPage').then((m) => ({ default: m.RoadmapPage })));
+const PrivacyPage = lazyWithRetry(() => import('./PrivacyPage').then((m) => ({ default: m.PrivacyPage })));
+const TermsPage = lazyWithRetry(() => import('./TermsPage').then((m) => ({ default: m.TermsPage })));
+const SupportPage = lazyWithRetry(() => import('./SupportPage').then((m) => ({ default: m.SupportPage })));
+const SecurityPage = lazyWithRetry(() => import('./SecurityPage').then((m) => ({ default: m.SecurityPage })));
 
 /**
  * The public pages differ only in their body. Each was written out in App with its own
