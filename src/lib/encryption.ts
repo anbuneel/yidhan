@@ -455,6 +455,20 @@ export async function verifyKeyCheck(
   }
 }
 
+/** Parse `encryption_key_check_version`. Absent means the v1 format; unknown is null. */
+export function parseKeyCheckVersion(version: unknown): KeyCheckVersion | null {
+  if (version == null) {
+    return 1;
+  }
+  if (version === 1 || version === '1') {
+    return 1;
+  }
+  if (version === KEY_CHECK_VERSION || version === String(KEY_CHECK_VERSION)) {
+    return KEY_CHECK_VERSION;
+  }
+  return null;
+}
+
 // ============================================================================
 // URL-safe Base64 (for share links)
 // ============================================================================

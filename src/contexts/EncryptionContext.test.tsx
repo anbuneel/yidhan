@@ -44,7 +44,8 @@ vi.mock('../lib/supabase', () => ({
   },
 }));
 
-vi.mock('../lib/encryption', () => ({
+vi.mock('../lib/encryption', async (importOriginal) => ({
+  parseKeyCheckVersion: (await importOriginal<typeof import('../lib/encryption')>()).parseKeyCheckVersion,
   deriveKeys: mockDeriveKeys,
   createKeyCheck: mockCreateKeyCheck,
   verifyKeyCheck: mockVerifyKeyCheck,

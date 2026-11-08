@@ -56,7 +56,7 @@ import {
   toBase64,
 } from '../lib/encryption';
 import type { DerivedKeys, EncryptedNote } from '../lib/encryption';
-import { readVaultMetadata } from '../lib/vaultKey';
+import { readVaultMetadata } from '../lib/vaultMetadata';
 
 const PASSPHRASE = 'correct horse battery staple 42';
 const USER_ID = '660e8400-e29b-41d4-a716-446655440001';
@@ -68,6 +68,8 @@ let legacyKeys: DerivedKeys;
 let legacyMetadata: Record<string, unknown>;
 let noteRow: EncryptedNote;
 let latestKeys: DerivedKeys | null = null;
+/** Bumped per test, so a migration still running from an earlier test cannot write. */
+let generation = 0;
 
 function serverUser() {
   return { id: USER_ID, user_metadata: { ...server } };
@@ -93,6 +95,7 @@ function Harness() {
 
 /** Open the app as a fresh process would: auth hands over the server's current user. */
 function openApp() {
+  latestKeys = null;
   mockUseAuth.mockReturnValue({ user: serverUser() });
   return render(
     <EncryptionProvider>
@@ -114,8 +117,10 @@ function vaultWrites() {
   return mockUpdateUser.mock.calls.filter(([arg]) => 'vault' in (arg?.data ?? {}));
 }
 
-async function expectNoteOpens(keys: DerivedKeys | null) {
-  expect(keys).not.toBeNull();
+async function expectNoteOpens() {
+  // latestKeys is set in an effect, which can flush just after the DOM shows "unlocked".
+  await waitFor(() => expect(latestKeys).not.toBeNull());
+  const keys = latestKeys;
   expect(await decryptNote(NOTE_ID, USER_ID, noteRow, keys!.encryptionKey)).toEqual({
     title: 'Before',
     content: '<p>migration</p>',
@@ -145,7 +150,11 @@ beforeEach(() => {
   mockUpdateUser.mockReset();
   mockGetUser.mockReset();
   mockReportReliabilityIssue.mockReset();
+  const current = ++generation;
   mockUpdateUser.mockImplementation(async (arg: { data: Record<string, unknown> }) => {
+    if (current !== generation) {
+      return { data: { user: null }, error: { message: 'write from an earlier test' } };
+    }
     applyUpdate(arg);
     return { data: { user: serverUser() }, error: null };
   });
@@ -157,7 +166,7 @@ describe('wrapped master key migration (item 24)', () => {
     const rowBefore = JSON.stringify(noteRow);
     openApp();
     await unlock();
-    await expectNoteOpens(latestKeys);
+    await expectNoteOpens();
 
     await waitFor(() => expect(vaultStatus()).toBe('valid'), { timeout: 15_000 });
 
@@ -176,15 +185,17 @@ describe('wrapped master key migration (item 24)', () => {
     mockUpdateUser.mockImplementationOnce(() => new Promise(() => {}));
     const first = openApp();
     await unlock();
-    await expectNoteOpens(latestKeys);
+    await expectNoteOpens();
     await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1), { timeout: 15_000 });
     first.unmount();
+    // Killing the app closes the tab, which clears sessionStorage.
+    sessionStorage.clear();
     expect(vaultStatus()).toBe('absent');
 
     // Reopen: legacy unlock still works, and this time the migration lands.
     openApp();
     await unlock();
-    await expectNoteOpens(latestKeys);
+    await expectNoteOpens();
     await waitFor(() => expect(vaultStatus()).toBe('valid'), { timeout: 15_000 });
   }, 60_000);
 
@@ -192,7 +203,7 @@ describe('wrapped master key migration (item 24)', () => {
     mockUpdateUser.mockImplementationOnce(async () => ({ data: { user: null }, error: { message: 'offline' } }));
     const first = openApp();
     await unlock();
-    await expectNoteOpens(latestKeys);
+    await expectNoteOpens();
     await waitFor(() => expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'Vault migration to wrapped master key failed' }),
       expect.anything()
@@ -200,11 +211,12 @@ describe('wrapped master key migration (item 24)', () => {
     expect(vaultStatus()).toBe('absent');
     expect(screen.getByText('unlocked')).toBeInTheDocument();
     first.unmount();
+    sessionStorage.clear();
 
     openApp();
     await unlock();
     await waitFor(() => expect(vaultStatus()).toBe('valid'), { timeout: 15_000 });
-    await expectNoteOpens(latestKeys);
+    await expectNoteOpens();
   }, 60_000);
 
   it('24-T4: a write that landed but reported an error is not repeated, and the next unlock unwraps', async () => {
@@ -217,6 +229,8 @@ describe('wrapped master key migration (item 24)', () => {
     await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1), { timeout: 15_000 });
     expect(vaultStatus()).toBe('valid');
     first.unmount();
+    // A fresh tab: no session restore, so "unlocked" below can only come from the passphrase.
+    sessionStorage.clear();
 
     // Break the legacy key-check on the "server": only the vault can open it now.
     // This proves the second unlock used the unwrap path.
@@ -227,7 +241,7 @@ describe('wrapped master key migration (item 24)', () => {
 
     openApp();
     await unlock();
-    await expectNoteOpens(latestKeys);
+    await expectNoteOpens();
     // Give a stray migration time to run; there must not be one.
     await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
     expect(vaultWrites()).toHaveLength(1);
@@ -242,7 +256,7 @@ describe('wrapped master key migration (item 24)', () => {
     // Refresh: sessionStorage holds K. It verifies against the vault key-check.
     openApp();
     await waitFor(() => expect(screen.getByText('unlocked')).toBeInTheDocument(), { timeout: 15_000 });
-    await expectNoteOpens(latestKeys);
+    await expectNoteOpens();
   }, 60_000);
 
   it('a refresh on a migrated account does not unlock with a key the vault key-check rejects', async () => {

@@ -32,20 +32,18 @@ import type { DerivedKeys } from '../encryption';
 import {
   INITIAL_WRAP_VERSION,
   KEK_ARGON2_PARAMS,
-  VAULT_VERSION,
   buildMigratedVault,
   copyMasterKey,
   deriveKek,
   deriveKekBytes,
   importKek,
   importMasterKey,
-  readVaultMetadata,
-  selectKeyCheck,
   unlockVault,
   unwrapMasterKey,
   wrapMasterKey,
 } from '../vaultKey';
-import type { VaultMetadata } from '../vaultKey';
+import { VAULT_VERSION, readVaultMetadata, selectKeyCheck } from '../vaultMetadata';
+import type { VaultMetadata } from '../vaultMetadata';
 
 const PASSPHRASE = 'correct horse battery staple 42';
 const USER_ID = '660e8400-e29b-41d4-a716-446655440001';

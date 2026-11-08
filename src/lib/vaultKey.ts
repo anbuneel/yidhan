@@ -12,7 +12,8 @@
  * - The vault key-check is encrypted under `K`, not the KEK, because the restore
  *   paths never run an unwrap. §1.2.
  *
- * Everything here is pure: no React, no Supabase.
+ * Everything here is pure: no React, no Supabase. Loaded with `import()` so the
+ * entry chunk carries only `vaultMetadata.ts`.
  */
 
 import { argon2id } from 'hash-wasm';
@@ -27,25 +28,23 @@ import {
   verifyKeyCheck,
 } from './encryption';
 import type { DerivedKeys, KeyCheckVersion } from './encryption';
+import {
+  KEK_SALT_LENGTH_BYTES,
+  MASTER_KEY_LENGTH_BYTES,
+  VAULT_VERSION,
+  WRAP_IV_LENGTH_BYTES,
+} from './vaultMetadata';
+import type { VaultMetadata } from './vaultMetadata';
 
 // ============================================================================
 // Constants
 // ============================================================================
-
-/** Wrap schema version (`vault.version`). */
-export const VAULT_VERSION = 1;
 
 /** `wrapVersion` a migrated vault starts at. Every later key change increments it. */
 export const INITIAL_WRAP_VERSION = 1;
 
 /** `keyCheckVersion` a migrated vault starts at. Bumped on every key change (§2.2). */
 const INITIAL_VAULT_KEY_CHECK_VERSION = 1;
-
-const MASTER_KEY_LENGTH_BYTES = 64;
-const KEK_SALT_LENGTH_BYTES = 16;
-const WRAP_IV_LENGTH_BYTES = 12;
-/** AES-GCM ciphertext of the 64-byte `K` plus the 16-byte tag. */
-const WRAPPED_KEY_LENGTH_BYTES = MASTER_KEY_LENGTH_BYTES + 16;
 
 /**
  * KEK derivation parameters: the legacy cost, but 32 bytes of output. The legacy
@@ -59,145 +58,11 @@ export const KEK_ARGON2_PARAMS = {
   hashLength: 32,
 } as const;
 
-// ============================================================================
-// Types
-// ============================================================================
-
-/** The `user_metadata.vault` object (§1.1). */
-export interface VaultMetadata {
-  version: typeof VAULT_VERSION;
-  wrapVersion: number;
-  kekSalt: string;      // base64, 16 bytes
-  wrappedKey: string;   // base64, AES-GCM(KEK, K)
-  wrapIv: string;       // base64, 12 bytes
-  keyCheck: string;     // base64, key-check under K
-  keyCheckIv: string;   // base64
-  keyCheckVersion: number;
-  migratedAt: string;   // ISO timestamp
-}
-
-/**
- * What a client finds in `user_metadata.vault`.
- *
- * - `absent`: never migrated. Legacy unlock, then migrate.
- * - `valid`: unwrap path.
- * - `unsupported`: a vault version this client does not know. Behave like an old
- *   client (§3.3): use the legacy fields, never overwrite the vault.
- * - `malformed`: a version-1 vault that is not complete. §3.2 says this is not
- *   reachable by the migration, so it is corruption: use the legacy fields and
- *   leave it alone rather than overwrite something we cannot read.
- */
-export type VaultReadResult =
-  | { status: 'absent' }
-  | { status: 'valid'; vault: VaultMetadata }
-  | { status: 'unsupported'; version: unknown }
-  | { status: 'malformed' };
-
 class VaultUnwrapError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'VaultUnwrapError';
   }
-}
-
-// ============================================================================
-// Reading the metadata
-// ============================================================================
-
-/** Decoded byte length of a base64 string, or -1 if it is not base64. */
-function base64ByteLength(value: unknown): number {
-  if (typeof value !== 'string' || value.length === 0) return -1;
-  try {
-    return atob(value).length;
-  } catch {
-    return -1;
-  }
-}
-
-function isBase64OfLength(value: unknown, length: number): value is string {
-  return base64ByteLength(value) === length;
-}
-
-function isNonEmptyBase64(value: unknown): value is string {
-  return base64ByteLength(value) > 0;
-}
-
-function isPositiveInteger(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 1;
-}
-
-/** Classify `user_metadata.vault`. Never throws. */
-export function readVaultMetadata(raw: unknown): VaultReadResult {
-  if (raw == null) {
-    return { status: 'absent' };
-  }
-  if (typeof raw !== 'object' || Array.isArray(raw)) {
-    return { status: 'malformed' };
-  }
-
-  const candidate = raw as Record<string, unknown>;
-  if (candidate.version !== VAULT_VERSION) {
-    return { status: 'unsupported', version: candidate.version };
-  }
-
-  if (
-    !isPositiveInteger(candidate.wrapVersion)
-    || !isBase64OfLength(candidate.kekSalt, KEK_SALT_LENGTH_BYTES)
-    || !isBase64OfLength(candidate.wrappedKey, WRAPPED_KEY_LENGTH_BYTES)
-    || !isBase64OfLength(candidate.wrapIv, WRAP_IV_LENGTH_BYTES)
-    || !isNonEmptyBase64(candidate.keyCheck)
-    || !isBase64OfLength(candidate.keyCheckIv, WRAP_IV_LENGTH_BYTES)
-    || !isPositiveInteger(candidate.keyCheckVersion)
-    || typeof candidate.migratedAt !== 'string'
-    || candidate.migratedAt.length === 0
-  ) {
-    return { status: 'malformed' };
-  }
-
-  return {
-    status: 'valid',
-    vault: {
-      version: VAULT_VERSION,
-      wrapVersion: candidate.wrapVersion,
-      kekSalt: candidate.kekSalt,
-      wrappedKey: candidate.wrappedKey,
-      wrapIv: candidate.wrapIv,
-      keyCheck: candidate.keyCheck,
-      keyCheckIv: candidate.keyCheckIv,
-      keyCheckVersion: candidate.keyCheckVersion,
-      migratedAt: candidate.migratedAt,
-    },
-  };
-}
-
-/**
- * The key-check a restore path must verify against (§1.2, §2.2). A migrated
- * account verifies `K` against the vault's key-check; anything else uses the
- * legacy one.
- */
-export function selectKeyCheck(metadata: Record<string, unknown> | undefined): {
-  source: 'vault' | 'legacy';
-  keyCheck: string | undefined;
-  keyCheckIv: string | undefined;
-  keyCheckVersion: unknown;
-} {
-  const vault = readVaultMetadata(metadata?.vault);
-  if (vault.status === 'valid') {
-    return {
-      source: 'vault',
-      keyCheck: vault.vault.keyCheck,
-      keyCheckIv: vault.vault.keyCheckIv,
-      // The vault key-check is always written in the current key-check format.
-      // `vault.keyCheckVersion` is a generation counter, not the format.
-      keyCheckVersion: KEY_CHECK_VERSION,
-    };
-  }
-  return {
-    source: 'legacy',
-    keyCheck: metadata?.encryption_key_check as string | undefined,
-    keyCheckIv: metadata?.encryption_key_check_iv as string | undefined,
-    keyCheckVersion: metadata?.encryption_key_check_version,
-  };
 }
 
 // ============================================================================
