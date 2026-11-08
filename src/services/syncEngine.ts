@@ -520,6 +520,46 @@ async function fetchServerNoteUpdatedAt(noteId: string): Promise<Date | null> {
 }
 
 /**
+ * Read the full server row for a note, failing closed on plaintext.
+ */
+async function fetchServerNoteForWrite(
+  noteId: string
+): Promise<Database['public']['Tables']['notes']['Row'] | null> {
+  const { data, error } = await supabase
+    .from('notes')
+    .select('*')
+    .eq('id', noteId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (data && !isEncryptedServerNote(data)) {
+    throw createPlaintextServerNoteError(noteId);
+  }
+  return data;
+}
+
+/**
+ * Hand both versions to the conflict handler and stop this entry.
+ *
+ * The handler saves the unchosen version as a copy before resolving, so
+ * nothing is overwritten here.
+ */
+async function raiseNoteConflict(
+  userId: string,
+  localNote: LocalNote,
+  serverNote: Database['public']['Tables']['notes']['Row']
+): Promise<never> {
+  reportConflict({
+    entityType: 'note',
+    entityId: localNote.id,
+    localVersion: localNote,
+    serverVersion: serverNote,
+  });
+  await getOfflineDb(userId).notes.update(localNote.id, { syncStatus: 'conflict' });
+  throw new SyncConflictError(localNote.id);
+}
+
+/**
  * Process note operations
  */
 async function processNoteOperation(
@@ -597,17 +637,11 @@ async function processNoteOperation(
 
       const encryptedPayload = requireEncryptedQueuePayload(data, noteId, 'update');
 
-      const { data: serverNote } = await supabase
-        .from('notes')
-        .select('*')
-        .eq('id', noteId)
-        .maybeSingle();
+      // A failed read must not fall through to an unconditional write, so
+      // this throws on error and fails closed on a plaintext row.
+      const serverNote = await fetchServerNoteForWrite(noteId);
 
       if (serverNote && localNote.lastSyncedAt) {
-        if (!isEncryptedServerNote(serverNote)) {
-          throw createPlaintextServerNoteError(noteId);
-        }
-
         const serverUpdatedAt = new Date(serverNote.updated_at).getTime();
         // Conflict: server was updated after our last sync
         if (serverUpdatedAt > localNote.lastSyncedAt) {
@@ -624,15 +658,7 @@ async function processNoteOperation(
             // Continue with the update (will just bump server timestamp)
           } else if (onConflictDetected) {
             // Real conflict: content differs
-            reportConflict({
-              entityType: 'note',
-              entityId: noteId,
-              localVersion: localNote,
-              serverVersion: serverNote,
-            });
-            // Mark as conflict in local DB
-            await db.notes.update(noteId, { syncStatus: 'conflict' });
-            throw new SyncConflictError(noteId);
+            await raiseNoteConflict(userId, localNote, serverNote);
           }
         }
       }
@@ -654,14 +680,68 @@ async function processNoteOperation(
         updatePayload.display_updated_at = data.display_updated_at;
       }
 
-      const { data: updated, error } = await supabase
-        .from('notes')
-        .update(updatePayload)
-        .eq('id', noteId)
-        .select()
-        .maybeSingle();
+      // Write only over the version the check above looked at. Filtering on
+      // id alone lets a write from another device that lands between the read
+      // and this update be overwritten with no conflict shown. The filter uses
+      // the exact string the server sent: a round trip through Date drops
+      // Postgres microseconds and would never match. A first-ever sync (no
+      // lastSyncedAt) skips the conflict check, so it skips the filter too.
+      let base = serverNote && localNote.lastSyncedAt ? serverNote : null;
+      let writePayload = updatePayload;
+      let updated: Database['public']['Tables']['notes']['Row'] | null = null;
 
-      if (error) throw error;
+      for (let attempt = 0; ; attempt++) {
+        let query = supabase
+          .from('notes')
+          .update(writePayload)
+          .eq('id', noteId);
+        if (base) {
+          query = query.eq('updated_at', base.updated_at);
+        }
+        const { data, error } = await query.select().maybeSingle();
+
+        if (error) throw error;
+        updated = data;
+        if (updated || !base) break;
+
+        // Zero rows under the version filter: stale, missing, or a write that
+        // landed with its RETURNING row filtered. Re-read to tell them apart.
+        // Never reinsert while the row exists — that would turn a stale write
+        // into an overwrite.
+        const current = await fetchServerNoteForWrite(noteId);
+        if (!current) break; // Genuinely missing: rebuild below.
+
+        if (current.updated_at === base.updated_at) {
+          throw new RetryableSyncError(
+            `Note ${noteId} was unchanged on the server but the write matched no row`
+          );
+        }
+
+        // The newer row holds words this write would replace: words that are
+        // neither ours nor the version we based the write on. Raise the
+        // conflict whether or not a handler is registered yet — a retry would
+        // base itself on the newer row and overwrite it.
+        const contentUnaffected =
+          current.content_hash === encryptedPayload.content_hash ||
+          current.content_hash === base.content_hash;
+        if (!contentUnaffected) {
+          await raiseNoteConflict(userId, localNote, current);
+        }
+
+        // Only metadata moved (our own write landed with its row filtered, or
+        // another device pinned, trashed or wrote the same words). Write once
+        // more over the newer version, keeping any metadata it changed.
+        if (attempt > 0) {
+          throw new RetryableSyncError(
+            `Note ${noteId} kept changing on the server during the write`
+          );
+        }
+        writePayload = { ...writePayload };
+        for (const field of ['pinned', 'deleted_at', 'display_updated_at'] as const) {
+          if (current[field] !== base[field]) delete writePayload[field];
+        }
+        base = current;
+      }
 
       const updatedAt = updated
         ? new Date(updated.updated_at)

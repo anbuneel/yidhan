@@ -22,7 +22,7 @@ import type { ConflictInfo } from './syncEngine';
 import { getOfflineDb } from '../lib/offlineDb';
 import type { SyncQueueEntry } from '../lib/offlineDb';
 import { mockFrom, mockGetPendingSyncQueue, mockRemoveSyncQueueEntry, mockMarkNoteSynced, mockUpdateSyncQueueEntry, mockMarkSyncQueueEntryBlocked, mockQueueSyncOperation, mockClearQueuedNoteCreates } from '../test/syncEngineMocks';
-import { TEST_USER_ID, resetSyncTestState, clearTestDb, buildChain, buildEntry, encryptedServerFields } from '../test/syncEngineTestKit';
+import { TEST_USER_ID, resetSyncTestState, clearTestDb, buildChain, buildEntry, encryptedServerFields, buildSyncedLocalNote, buildServerNoteRow } from '../test/syncEngineTestKit';
 
 describe('conflict detection via processQueue', () => {
   beforeEach(async () => {
@@ -626,4 +626,250 @@ afterAll(async () => {
   const db = getOfflineDb(TEST_USER_ID);
   db.close();
   await Dexie.delete(db.name);
+});
+
+/**
+ * Item 159: the update only overwrites the version the pre-write check read.
+ *
+ * Every write here is answered in order: the pre-write read, the update, then
+ * whatever the zero-row path reads next. Version n is the row both clients
+ * read; version n+1 is the other client's write landing in between.
+ */
+describe('conditional note writes — stale writes', () => {
+  const VERSION_N = '2026-11-01T00:00:00.123456+00:00';
+  const VERSION_N1 = '2026-11-01T00:00:05.654321+00:00';
+
+  beforeEach(async () => {
+    resetSyncTestState();
+    await clearTestDb('notes', 'syncQueue');
+  });
+
+  afterEach(async () => {
+    clearSyncState();
+    await clearTestDb('notes', 'syncQueue');
+  });
+
+  async function queueUpdate(noteId: string, contentHash: string) {
+    const db = getOfflineDb(TEST_USER_ID);
+    await db.notes.put(buildSyncedLocalNote(noteId, {
+      // Synced at version n, then edited locally.
+      lastSyncedAt: Date.parse(VERSION_N),
+      encryptedPayload: 'ciphertext-local',
+      encryptionIv: 'iv-local',
+      contentHash,
+    }));
+    const entry = buildEntry({
+      id: 1590,
+      clientMutationId: `mut-${noteId}`,
+      operation: 'update',
+      entityType: 'note',
+      entityId: noteId,
+      payload: {
+        title: '',
+        content: '',
+        encrypted_payload: 'ciphertext-local',
+        encryption_iv: 'iv-local',
+        encryption_version: 1,
+        content_hash: contentHash,
+      },
+    });
+    await db.syncQueue.put(entry);
+    mockGetPendingSyncQueue.mockResolvedValue([entry]);
+    mockRemoveSyncQueueEntry.mockResolvedValue(undefined);
+    mockMarkNoteSynced.mockResolvedValue(undefined);
+    return entry;
+  }
+
+  it('refuses the second of two writes over version n and shows both versions', async () => {
+    const noteId = 'note-two-clients';
+    await queueUpdate(noteId, 'hash-local');
+
+    const versionN = buildServerNoteRow(noteId, { updated_at: VERSION_N });
+    const versionN1 = buildServerNoteRow(noteId, {
+      updated_at: VERSION_N1,
+      encrypted_payload: 'ciphertext-other-device',
+      content_hash: 'hash-other-device',
+    });
+    const preRead = buildChain({ data: versionN });
+    const staleWrite = buildChain({ data: null });
+    const reRead = buildChain({ data: versionN1 });
+    mockFrom
+      .mockReturnValueOnce(preRead)
+      .mockReturnValueOnce(staleWrite)
+      .mockReturnValueOnce(reRead);
+
+    const conflicts: ConflictInfo[] = [];
+    setConflictHandler((c) => conflicts.push(c));
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(staleWrite.eq).toHaveBeenCalledWith('id', noteId);
+    expect(staleWrite.eq).toHaveBeenCalledWith('updated_at', VERSION_N);
+    expect(result.conflicts).toBe(1);
+    expect(result.processed).toBe(0);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].localVersion).toMatchObject({ contentHash: 'hash-local' });
+    expect(conflicts[0].serverVersion).toMatchObject({ content_hash: 'hash-other-device' });
+    expect((await getOfflineDb(TEST_USER_ID).notes.get(noteId))?.syncStatus).toBe('conflict');
+    // Never a reinsert, never a second write: the newer row stays as it is.
+    expect(mockFrom).toHaveBeenCalledTimes(3);
+    expect(staleWrite.insert).not.toHaveBeenCalled();
+    expect(mockMarkNoteSynced).not.toHaveBeenCalled();
+  });
+
+  it('writes again over the newer version when it holds the same content', async () => {
+    const noteId = 'note-stale-identical';
+    await queueUpdate(noteId, 'hash-same');
+
+    const preRead = buildChain({ data: buildServerNoteRow(noteId, { updated_at: VERSION_N }) });
+    const staleWrite = buildChain({ data: null });
+    const reRead = buildChain({
+      data: buildServerNoteRow(noteId, { updated_at: VERSION_N1, content_hash: 'hash-same' }),
+    });
+    const retryWrite = buildChain({
+      data: buildServerNoteRow(noteId, {
+        updated_at: '2026-11-01T00:00:06.000000+00:00',
+        content_hash: 'hash-same',
+      }),
+    });
+    mockFrom
+      .mockReturnValueOnce(preRead)
+      .mockReturnValueOnce(staleWrite)
+      .mockReturnValueOnce(reRead)
+      .mockReturnValueOnce(retryWrite);
+
+    const conflicts: ConflictInfo[] = [];
+    setConflictHandler((c) => conflicts.push(c));
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(conflicts).toHaveLength(0);
+    expect(result.processed).toBe(1);
+    expect(retryWrite.eq).toHaveBeenCalledWith('updated_at', VERSION_N1);
+    expect(retryWrite.insert).not.toHaveBeenCalled();
+    expect(mockMarkNoteSynced).toHaveBeenCalledWith(
+      TEST_USER_ID,
+      noteId,
+      new Date('2026-11-01T00:00:06.000Z'),
+      'hash-same'
+    );
+  });
+
+  it('retries without a reinsert when the version is unchanged but nothing matched', async () => {
+    const noteId = 'note-unchanged-zero-rows';
+    await queueUpdate(noteId, 'hash-local');
+
+    const row = buildServerNoteRow(noteId, { updated_at: VERSION_N });
+    mockFrom
+      .mockReturnValueOnce(buildChain({ data: row }))
+      .mockReturnValueOnce(buildChain({ data: null }))
+      .mockReturnValueOnce(buildChain({ data: row }));
+
+    const conflicts: ConflictInfo[] = [];
+    setConflictHandler((c) => conflicts.push(c));
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(conflicts).toHaveLength(0);
+    expect(result.blocked).toBe(0);
+    expect(mockFrom).toHaveBeenCalledTimes(3);
+    const persisted = await getOfflineDb(TEST_USER_ID).syncQueue.get(1590);
+    expect(persisted?.status).toBe('pending');
+    expect(persisted?.lastError).toContain('matched no row');
+  });
+
+  it('marks the conflict rather than retrying when no conflict handler is registered', async () => {
+    // A retry would base itself on the newer row and overwrite it.
+    const noteId = 'note-stale-no-handler';
+    await queueUpdate(noteId, 'hash-local');
+    // resetSyncTestState leaves no handler registered, as before App mounts.
+
+    mockFrom
+      .mockReturnValueOnce(buildChain({ data: buildServerNoteRow(noteId, { updated_at: VERSION_N }) }))
+      .mockReturnValueOnce(buildChain({ data: null }))
+      .mockReturnValueOnce(buildChain({
+        data: buildServerNoteRow(noteId, { updated_at: VERSION_N1, content_hash: 'hash-other-device' }),
+      }));
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.conflicts).toBe(1);
+    expect(result.processed).toBe(0);
+    expect(mockFrom).toHaveBeenCalledTimes(3);
+    expect((await getOfflineDb(TEST_USER_ID).notes.get(noteId))?.syncStatus).toBe('conflict');
+  });
+
+  it('does not raise a conflict when the other device changed only metadata, and keeps its change', async () => {
+    const noteId = 'note-stale-metadata-only';
+    const db = getOfflineDb(TEST_USER_ID);
+    await db.notes.put(buildSyncedLocalNote(noteId, {
+      lastSyncedAt: Date.parse(VERSION_N),
+      contentHash: 'hash-local',
+    }));
+    // A staged conflict-resolution write carries pinned and deleted_at.
+    const entry = buildEntry({
+      id: 1592,
+      operation: 'update',
+      entityType: 'note',
+      entityId: noteId,
+      payload: {
+        title: '',
+        content: '',
+        pinned: false,
+        deleted_at: null,
+        encrypted_payload: 'ciphertext-local',
+        encryption_iv: 'iv-local',
+        encryption_version: 1,
+        content_hash: 'hash-local',
+      },
+    });
+    await db.syncQueue.put(entry);
+    mockGetPendingSyncQueue.mockResolvedValue([entry]);
+    mockRemoveSyncQueueEntry.mockResolvedValue(undefined);
+    mockMarkNoteSynced.mockResolvedValue(undefined);
+
+    const versionN = buildServerNoteRow(noteId, { updated_at: VERSION_N, content_hash: 'hash-base' });
+    // The other device trashed the note: same words, newer version.
+    const trashed = buildServerNoteRow(noteId, {
+      updated_at: VERSION_N1,
+      content_hash: 'hash-base',
+      deleted_at: '2026-11-01T00:00:05.000Z',
+    });
+    const retryWrite = buildChain({
+      data: buildServerNoteRow(noteId, { updated_at: '2026-11-01T00:00:06.000000+00:00', content_hash: 'hash-local' }),
+    });
+    mockFrom
+      .mockReturnValueOnce(buildChain({ data: versionN }))
+      .mockReturnValueOnce(buildChain({ data: null }))
+      .mockReturnValueOnce(buildChain({ data: trashed }))
+      .mockReturnValueOnce(retryWrite);
+
+    const conflicts: ConflictInfo[] = [];
+    setConflictHandler((c) => conflicts.push(c));
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(conflicts).toHaveLength(0);
+    expect(result.processed).toBe(1);
+    expect(retryWrite.eq).toHaveBeenCalledWith('updated_at', VERSION_N1);
+    const sent = retryWrite.update.mock.calls[0][0] as Record<string, unknown>;
+    expect(sent).toMatchObject({ content_hash: 'hash-local', pinned: false });
+    // The other device's trash survives the rewrite.
+    expect(sent).not.toHaveProperty('deleted_at');
+  });
+
+  it('does not write at all when the pre-write read fails', async () => {
+    const noteId = 'note-read-failed';
+    await queueUpdate(noteId, 'hash-local');
+
+    const failedRead = buildChain({ error: { message: 'upstream timeout', code: '57014' } });
+    const write = buildChain({ data: buildServerNoteRow(noteId) });
+    mockFrom.mockReturnValueOnce(failedRead).mockReturnValueOnce(write);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.processed).toBe(0);
+    expect(mockFrom).toHaveBeenCalledTimes(1);
+    expect(write.update).not.toHaveBeenCalled();
+  });
 });

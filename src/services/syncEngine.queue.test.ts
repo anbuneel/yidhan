@@ -22,7 +22,7 @@ import { resolveConflict } from '../hooks/useSyncEngine';
 import { getOfflineDb } from '../lib/offlineDb';
 import type { LocalNote } from '../lib/offlineDb';
 import { mockFrom, mockGetPendingSyncQueue, mockRemoveSyncQueueEntry, mockMarkNoteSynced, mockMarkTagSynced, mockUpdateSyncQueueEntry, mockMarkSyncQueueEntryBlocked } from '../test/syncEngineMocks';
-import { TEST_USER_ID, TEST_KEYS, resetSyncTestState, clearTestDb, buildChain, createDeferred, buildEntry, encryptedServerFields } from '../test/syncEngineTestKit';
+import { TEST_USER_ID, TEST_KEYS, resetSyncTestState, clearTestDb, buildChain, createDeferred, buildEntry, encryptedServerFields, buildSyncedLocalNote, buildServerNoteRow } from '../test/syncEngineTestKit';
 
 describe('processQueue behavior', () => {
   beforeEach(() => resetSyncTestState());
@@ -790,6 +790,127 @@ describe('processQueue behavior', () => {
     });
 
     await clearTestDb('notes', 'noteTags', 'syncQueue');
+  });
+});
+
+/**
+ * Item 159: the conditional write must not change the paths where nothing
+ * raced. Stale outcomes are in syncEngine.conflicts.test.ts.
+ */
+describe('conditional note writes — when nothing raced', () => {
+  const VERSION_N = '2026-11-01T00:00:00.123456+00:00';
+
+  beforeEach(async () => {
+    resetSyncTestState();
+    await clearTestDb('notes', 'syncQueue');
+  });
+
+  afterEach(async () => {
+    clearSyncState();
+    await clearTestDb('notes', 'syncQueue');
+  });
+
+  async function queueUpdate(noteId: string, localOverrides: Partial<LocalNote> = {}) {
+    const db = getOfflineDb(TEST_USER_ID);
+    await db.notes.put(buildSyncedLocalNote(noteId, {
+      lastSyncedAt: Date.parse(VERSION_N),
+      ...localOverrides,
+    }));
+    const entry = buildEntry({
+      id: 1591,
+      clientMutationId: `mut-${noteId}`,
+      operation: 'update',
+      entityType: 'note',
+      entityId: noteId,
+      payload: { title: '', content: '', ...encryptedServerFields(noteId) },
+    });
+    await db.syncQueue.put(entry);
+    mockGetPendingSyncQueue.mockResolvedValue([entry]);
+    mockRemoveSyncQueueEntry.mockResolvedValue(undefined);
+    mockMarkNoteSynced.mockResolvedValue(undefined);
+    return entry;
+  }
+
+  it('filters on the exact updated_at string the read returned and succeeds', async () => {
+    const noteId = 'note-happy-update';
+    const entry = await queueUpdate(noteId);
+
+    const preRead = buildChain({
+      data: buildServerNoteRow(noteId, { updated_at: VERSION_N, ...encryptedServerFields(noteId) }),
+    });
+    const write = buildChain({
+      data: buildServerNoteRow(noteId, {
+        updated_at: '2026-11-01T00:00:09.000000+00:00',
+        ...encryptedServerFields(noteId),
+      }),
+    });
+    mockFrom.mockReturnValueOnce(preRead).mockReturnValueOnce(write);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.processed).toBe(1);
+    expect(result.conflicts).toBe(0);
+    // Microseconds intact: a Date round trip would send ...00.123Z and miss.
+    expect(write.eq).toHaveBeenCalledWith('updated_at', VERSION_N);
+    expect(mockFrom).toHaveBeenCalledTimes(2);
+    expect(mockMarkNoteSynced).toHaveBeenCalledWith(
+      TEST_USER_ID,
+      noteId,
+      new Date('2026-11-01T00:00:09.000Z'),
+      `hash-${noteId}`
+    );
+    // The realtime echo of this write is still suppressed.
+    expect(isPendingMutation(entry.clientMutationId)).toBe(true);
+  });
+
+  it('leaves a first-ever sync with no lastSyncedAt unfiltered', async () => {
+    const noteId = 'note-first-sync';
+    await queueUpdate(noteId, { lastSyncedAt: null, serverUpdatedAt: null });
+
+    const preRead = buildChain({ data: buildServerNoteRow(noteId, { updated_at: VERSION_N }) });
+    const write = buildChain({
+      data: buildServerNoteRow(noteId, { updated_at: '2026-11-01T00:00:09.000000+00:00' }),
+    });
+    mockFrom.mockReturnValueOnce(preRead).mockReturnValueOnce(write);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.processed).toBe(1);
+    expect(write.eq).toHaveBeenCalledTimes(1);
+    expect(write.eq).toHaveBeenCalledWith('id', noteId);
+  });
+
+  it('still rebuilds a row that is genuinely missing after a filtered write', async () => {
+    const noteId = 'note-missing-after-filter';
+    await queueUpdate(noteId);
+
+    const preRead = buildChain({ data: buildServerNoteRow(noteId, { updated_at: VERSION_N }) });
+    const write = buildChain({ data: null });
+    const reRead = buildChain({ data: null }); // the row is gone
+    const confirmGone = buildChain({ data: null }); // reinsert's own check
+    const insert = buildChain({ data: { updated_at: '2026-11-01T00:00:10.000000+00:00' } });
+    mockFrom
+      .mockReturnValueOnce(preRead)
+      .mockReturnValueOnce(write)
+      .mockReturnValueOnce(reRead)
+      .mockReturnValueOnce(confirmGone)
+      .mockReturnValueOnce(insert);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.processed).toBe(1);
+    expect(result.conflicts).toBe(0);
+    expect(write.eq).toHaveBeenCalledWith('updated_at', VERSION_N);
+    expect(insert.insert).toHaveBeenCalledWith(expect.objectContaining({
+      id: noteId,
+      content_hash: `hash-${noteId}`,
+    }));
+    expect(mockMarkNoteSynced).toHaveBeenCalledWith(
+      TEST_USER_ID,
+      noteId,
+      new Date('2026-11-01T00:00:10.000Z'),
+      `hash-${noteId}`
+    );
   });
 });
 

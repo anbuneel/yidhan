@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.38', date: '2026-11-08', changes: [
+    { type: 'fix', text: 'If two of your devices save the same note at almost the same moment, the second save now shows the conflict screen with both versions instead of replacing the first without a word. Before, a save that landed in that moment could be lost' },
+  ] },
   { version: '3.19.36', date: '2026-11-08', changes: [
     { type: 'feature', text: 'You can now make a recovery key. If you forget your passphrase, it opens your notes, and you then choose a new passphrase. Yidhan offers one the next time you unlock with your passphrase, and you can make or replace one in Settings, under Security. You see the key once, with Copy and Print, and it starts working after you type it back. It never leaves your device' },
   ] },

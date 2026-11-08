@@ -12,7 +12,8 @@
  */
 import { vi } from 'vitest';
 import { clearSyncState, type FullSyncResult, type PullError } from '../services/syncEngine';
-import { getOfflineDb, type SyncQueueEntry } from '../lib/offlineDb';
+import { getOfflineDb, type LocalNote, type SyncQueueEntry } from '../lib/offlineDb';
+import type { Database } from '../types/database';
 import type { DerivedKeys } from '../lib/encryption';
 import {
   mockReconcileNoteTags,
@@ -183,4 +184,52 @@ export function dataError(entity: 'notes' | 'tags', msg = 'fetch failed'): PullE
 
 export function membershipError(entity: 'notes' | 'tags', msg = 'membership failed'): PullError {
   return { entity, operation: 'membership', error: new Error(msg) };
+}
+
+/**
+ * A local note that has synced before, so the pre-write conflict check and
+ * the conditional write both apply. Pass `lastSyncedAt: null` for a note that
+ * has never synced.
+ */
+export function buildSyncedLocalNote(noteId: string, overrides: Partial<LocalNote> = {}): LocalNote {
+  const syncedAt = Date.parse('2026-11-01T00:00:00.000Z');
+  return {
+    id: noteId,
+    userId: TEST_USER_ID,
+    title: '',
+    content: '',
+    pinned: false,
+    deletedAt: null,
+    createdAt: syncedAt,
+    updatedAt: syncedAt,
+    syncStatus: 'pending',
+    lastSyncedAt: syncedAt,
+    serverUpdatedAt: syncedAt,
+    localUpdatedAt: syncedAt,
+    encryptedPayload: `ciphertext-${noteId}`,
+    encryptionIv: `iv-${noteId}`,
+    encryptionVersion: 1,
+    contentHash: `hash-${noteId}`,
+    ...overrides,
+  };
+}
+
+/** A full encrypted server row for a note, as `select('*')` returns it. */
+export function buildServerNoteRow(
+  noteId: string,
+  overrides: Partial<Database['public']['Tables']['notes']['Row']> = {}
+): Database['public']['Tables']['notes']['Row'] {
+  return {
+    id: noteId,
+    user_id: TEST_USER_ID,
+    title: '',
+    content: '',
+    pinned: false,
+    deleted_at: null,
+    created_at: '2026-11-01T00:00:00.000Z',
+    display_updated_at: '2026-11-01T00:00:00.000Z',
+    updated_at: '2026-11-01T00:00:00.000000+00:00',
+    ...encryptedServerFields(`server-${noteId}`),
+    ...overrides,
+  };
 }

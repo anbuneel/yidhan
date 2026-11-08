@@ -485,3 +485,17 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   rejected or taken in part: `docs/reviews/2026-11-08-item-26-recovery-kit.md`.
   Remembered devices are not re-prompted after the new passphrase;
   that is item 25's `keyCheckVersion` check (25-T7).
+- **2026-11-08** — Item 159: conditional note writes. The queued note `update` now
+  filters on the exact `updated_at` string the pre-write read returned, so a write
+  from another device that lands between the read and the update matches zero rows
+  instead of being overwritten. A zero-row result re-reads the row: missing still
+  rebuilds from the local record; newer with different words raises the existing
+  conflict path (both versions, local note marked `conflict`), with or without a
+  registered handler; newer with only metadata changed writes once more over the
+  newer version and keeps the metadata the other device changed; unchanged retries.
+  A failed pre-write read now fails the entry instead of falling through to an
+  unconditional write. First-ever syncs (no `lastSyncedAt`) are unfiltered, as the
+  conflict check is. `soft_delete`, `restore` and `pin` are unchanged: each writes one
+  column and cannot replace words. No database change. No conflict E2E exists, so the
+  evidence is unit tests in `syncEngine.conflicts` and `syncEngine.queue`. Review
+  findings rejected or left out of scope: `docs/reviews/2026-11-08-item-159-conditional-note-writes.md`.
