@@ -73,7 +73,7 @@ export const LockedNoteCard = memo(function LockedNoteCard({
             type="button"
             onClick={onRetry}
             className="focus-ring bg-transparent border-none p-0 text-sm cursor-pointer underline underline-offset-4"
-            style={{ fontFamily: 'var(--font-body)', color: 'var(--color-accent)' }}
+            style={{ fontFamily: 'var(--font-body)', color: 'var(--color-accent-text)' }}
           >
             Try again
           </button>

@@ -35,7 +35,7 @@ export function NotFoundPage({ onGoHome }: NotFoundPageProps) {
         className="focus-ring bg-transparent border-none text-base cursor-pointer underline underline-offset-4"
         style={{
           fontFamily: 'var(--font-body)',
-          color: 'var(--color-accent)',
+          color: 'var(--color-accent-text)',
         }}
       >
         Return home

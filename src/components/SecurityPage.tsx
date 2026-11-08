@@ -225,7 +225,7 @@ export function SecurityPage({
                 <a
                   href="mailto:anbs.dev@gmail.com"
                   className="underline underline-offset-4"
-                  style={{ color: 'var(--color-accent)' }}
+                  style={{ color: 'var(--color-accent-text)' }}
                 >
                   anbs.dev@gmail.com
                 </a>
@@ -233,7 +233,7 @@ export function SecurityPage({
                 <a
                   href="/.well-known/security.txt"
                   className="underline underline-offset-4"
-                  style={{ color: 'var(--color-accent)' }}
+                  style={{ color: 'var(--color-accent-text)' }}
                 >
                   /.well-known/security.txt
                 </a>

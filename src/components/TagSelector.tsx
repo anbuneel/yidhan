@@ -150,7 +150,7 @@ export function TagSelector({
                 "
                 style={{
                   fontFamily: 'var(--font-body)',
-                  color: 'var(--color-accent)',
+                  color: 'var(--color-accent-text)',
                 }}
               >
                 <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

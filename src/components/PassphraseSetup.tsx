@@ -272,7 +272,7 @@ export function PassphraseSetup() {
           type="button"
           onClick={handleBack}
           disabled={isSavingKey || writeSent}
-          className="w-full py-2 mt-2 text-xs transition-opacity hover:opacity-80"
+          className="w-full py-2 mt-2 text-xs hover:underline"
           style={vaultQuietButtonStyle}
         >
           Back
@@ -364,7 +364,7 @@ export function PassphraseSetup() {
               type="button"
               onClick={() => { setMode('own'); setError(''); }}
               disabled={isPreparing}
-              className="w-full py-2 mt-2 text-xs transition-opacity hover:opacity-80"
+              className="w-full py-2 mt-2 text-xs hover:underline"
               style={vaultQuietButtonStyle}
             >
               Type my own instead
@@ -390,7 +390,7 @@ export function PassphraseSetup() {
               />
               {ownStrength && (
                 <div className="mt-2 space-y-1">
-                  <div className="text-xs" style={{ color: STRENGTH_COLORS[ownStrength.label], fontFamily: 'var(--font-body)' }}>
+                  <div className="text-xs" style={{ color: ownStrength.label === 'Fair' ? 'var(--color-accent-text)' : STRENGTH_COLORS[ownStrength.label], fontFamily: 'var(--font-body)' }}>
                     Strength: {ownStrength.label}
                   </div>
                   <div aria-hidden="true" className="grid grid-cols-4 gap-1">
@@ -434,7 +434,7 @@ export function PassphraseSetup() {
               type="button"
               onClick={() => { setMode('suggested'); setError(''); }}
               disabled={isPreparing}
-              className="w-full py-2 text-xs transition-opacity hover:opacity-80"
+              className="w-full py-2 text-xs hover:underline"
               style={vaultQuietButtonStyle}
             >
               Use a passphrase made for me

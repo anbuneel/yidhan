@@ -385,7 +385,7 @@ export function SharedNoteView({
                     style={{
                       fontFamily: 'var(--font-body)',
                       background: `color-mix(in srgb, var(--tag-${safeColor}, var(--color-accent)) 15%, transparent)`,
-                      color: `var(--tag-${safeColor}, var(--color-accent))`,
+                      color: `var(--tag-${safeColor}, var(--color-accent-text))`,
                       border: `1px solid color-mix(in srgb, var(--tag-${safeColor}, var(--color-accent)) 30%, transparent)`,
                     }}
                   >
@@ -454,7 +454,7 @@ export function SharedNoteView({
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = 'var(--color-accent)';
-                e.currentTarget.style.color = 'var(--color-accent)';
+                e.currentTarget.style.color = 'var(--color-accent-text)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = 'var(--glass-border)';

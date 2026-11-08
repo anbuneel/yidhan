@@ -248,7 +248,7 @@ export function PrivacyPage({
                     type="button"
                     onClick={onSecurityClick}
                     className="focus-ring bg-transparent border-none p-0 cursor-pointer underline underline-offset-4"
-                    style={{ color: 'var(--color-accent)', font: 'inherit' }}
+                    style={{ color: 'var(--color-accent-text)', font: 'inherit' }}
                   >
                     security page
                   </button>

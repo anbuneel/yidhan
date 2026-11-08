@@ -45,7 +45,7 @@ cold blue. Dark themes use deep forest green rather than pure black.
 
 ## Button and accent taxonomy
 
-Three semantic categories. **Never mix them** — this is the rule most often broken
+Four semantic categories. **Never mix them** — this is the rule most often broken
 by well-meaning edits.
 
 | Category | Tokens | Use for |
@@ -53,6 +53,7 @@ by well-meaning edits.
 | **CTA** | `--color-cta-bg` / `--color-cta-text` | Positive primary actions (Save, Submit, Create, Stay) |
 | **Destructive** | `--color-destructive` / `--color-destructive-text` | Irreversible danger (Delete, Let go) |
 | **On-accent** | `--color-accent` / `--color-on-accent` | Toggle and active indicators (toolbar bold/italic/H1) |
+| **Accent as text** | `--color-accent-text` | Links and selected labels; the only accent allowed as running text |
 
 Primary buttons must use the CTA tokens — **not** `--color-accent` with `#fff`.
 

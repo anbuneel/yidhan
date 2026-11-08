@@ -113,7 +113,7 @@ export function SessionTimeoutModal({
             }}
           >
             You've been away for a while. For your security, you'll be signed out in{' '}
-            <span style={{ color: 'var(--color-accent)' }}>{timeText}</span>.
+            <span style={{ color: 'var(--color-accent-text)' }}>{timeText}</span>.
           </p>
 
           {/* Action buttons */}

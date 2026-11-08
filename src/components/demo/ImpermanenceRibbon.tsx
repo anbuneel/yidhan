@@ -76,7 +76,7 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
               onClick={onSignUp}
               className="transition-colors duration-200"
               style={{
-                color: 'var(--color-accent)',
+                color: 'var(--color-accent-text)',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
@@ -100,7 +100,7 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
           className="sm:hidden text-xs transition-colors duration-200"
           style={{
             fontFamily: 'var(--font-body)',
-            color: 'var(--color-accent)',
+            color: 'var(--color-accent-text)',
             background: 'none',
             border: 'none',
             cursor: 'pointer',

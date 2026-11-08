@@ -50,7 +50,7 @@ function AtRiskCaption({ installable, iosHint, onInstall }: AtRiskCaptionProps) 
         · on this device only
       </span>
       {!installable && iosHint && (
-        <span className="text-[11px] font-medium" style={{ ...captionStyle, color: 'var(--color-accent)' }}>
+        <span className="text-[11px] font-medium" style={{ ...captionStyle, color: 'var(--color-accent-text)' }}>
           Add to Home Screen to protect
         </span>
       )}
@@ -60,7 +60,7 @@ function AtRiskCaption({ installable, iosHint, onInstall }: AtRiskCaptionProps) 
           onClick={onInstall}
           className="text-[11px] font-medium"
           style={{
-            color: 'var(--color-accent)',
+            color: 'var(--color-accent-text)',
             fontFamily: 'var(--font-body)',
             background: 'transparent',
             border: 'none',
@@ -168,7 +168,7 @@ export function SyncIndicator({
             disabled={isRetrying}
             className="text-xs font-medium transition-opacity"
             style={{
-              color: 'var(--color-accent)',
+              color: 'var(--color-accent-text)',
               fontFamily: 'var(--font-body)',
               background: 'transparent',
               border: 'none',

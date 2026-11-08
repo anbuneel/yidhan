@@ -159,7 +159,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
           "
           style={{
             fontFamily: 'var(--font-body)',
-            color: activeTab === 'profile' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+            color: activeTab === 'profile' ? 'var(--color-accent-text)' : 'var(--color-text-secondary)',
             background: activeTab === 'profile' ? 'var(--color-accent-glow)' : 'transparent',
           }}
         >
@@ -177,7 +177,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
             "
             style={{
               fontFamily: 'var(--font-body)',
-              color: activeTab === 'password' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+              color: activeTab === 'password' ? 'var(--color-accent-text)' : 'var(--color-text-secondary)',
               background: activeTab === 'password' ? 'var(--color-accent-glow)' : 'transparent',
             }}
           >
@@ -195,7 +195,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
           "
           style={{
             fontFamily: 'var(--font-body)',
-            color: activeTab === 'security' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+            color: activeTab === 'security' ? 'var(--color-accent-text)' : 'var(--color-text-secondary)',
             background: activeTab === 'security' ? 'var(--color-accent-glow)' : 'transparent',
           }}
         >
@@ -331,7 +331,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                     className="text-xs px-2 py-1 rounded"
                     style={{
                       background: 'var(--color-accent-glow)',
-                      color: 'var(--color-accent)',
+                      color: 'var(--color-accent-text)',
                     }}
                   >
                     Click to switch
@@ -344,7 +344,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 <p
                   className="mb-4 text-sm text-center"
                   style={{
-                    color: profileMessage.type === 'success' ? 'var(--color-accent)' : 'var(--color-destructive)',
+                    color: profileMessage.type === 'success' ? 'var(--color-accent-text)' : 'var(--color-destructive)',
                   }}
                 >
                   {profileMessage.text}
@@ -564,7 +564,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 <p
                   className="mb-4 text-sm text-center"
                   style={{
-                    color: passwordMessage.type === 'success' ? 'var(--color-accent)' : 'var(--color-destructive)',
+                    color: passwordMessage.type === 'success' ? 'var(--color-accent-text)' : 'var(--color-destructive)',
                   }}
                 >
                   {passwordMessage.text}

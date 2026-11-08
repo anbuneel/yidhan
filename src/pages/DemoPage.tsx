@@ -680,9 +680,8 @@ function DemoHeader({
             className="hidden sm:inline text-base italic"
             style={{
               fontFamily: 'var(--font-display)',
-              color: 'var(--color-accent)',
+              color: 'var(--color-accent-text)',
               letterSpacing: '0.02em',
-              opacity: 0.75,
             }}
           >
             Practice Space
@@ -760,7 +759,7 @@ function DemoHeader({
                   className="hidden sm:inline text-xs px-1.5 py-0.5 rounded shrink-0"
                   style={{
                     background: 'var(--color-bg-tertiary)',
-                    color: 'var(--color-text-tertiary)',
+                    color: 'var(--color-text-secondary)',
                     fontFamily: 'var(--font-body)',
                   }}
                 >
@@ -824,7 +823,7 @@ function DemoHeader({
             showKeepCta
               ? {
                   background: 'transparent',
-                  color: 'var(--color-accent)',
+                  color: 'var(--color-accent-text)',
                   border: '1px solid var(--glass-border)',
                   fontFamily: 'var(--font-body)',
                 }

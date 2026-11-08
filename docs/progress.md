@@ -678,3 +678,63 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   Vercel's Brotli and HTTP/2, is still owed by the maintainer. Item 61 stays in the
   plan for that run alone.
 
+- **2026-11-08** — Item 160: accessibility pass. `e2e/accessibility.spec.ts` (tagged
+  `@a11y`, skipped unless `A11Y_AUDIT=1`, not in CI; roadmap item 67 is the CI
+  version) runs axe-core 4.14 (`@axe-core/playwright`, WCAG 2.0 to 2.2 A and AA) on
+  the six screens in Kintsugi and Midnight, at 100% and 200% zoom, with reduced
+  motion on. 200% zoom is a 640×360 viewport at deviceScaleFactor 2, which is what
+  Chrome does at 200% on a 1280×720 window: media queries respond. CSS `zoom` on
+  the root would keep the desktop breakpoints. Library and editor are the Practice
+  Space. Setup, unlock and Settings use a placeholder session, with every Supabase
+  request answered in the browser and none forwarded; the setup runs for real and
+  gives unlock and Settings a real vault. Setup counts steps 1, 2 (shown and
+  confirm) and 3; Settings counts its three tabs. axe also scans the library behind
+  the Settings dialog, so the library's faults are counted again there.
+
+  Violating nodes, before → after:
+
+  | Screen | Kintsugi 100% | Kintsugi 200% | Midnight 100% | Midnight 200% |
+  |---|---|---|---|---|
+  | Landing | 10 → 0 | 10 → 0 | 0 → 0 | 0 → 0 |
+  | Library | 13 → 0 | 12 → 0 | 0 → 0 | 0 → 0 |
+  | Editor | 6 → 0 | 5 → 0 | 6 → 0 | 3 → 0 |
+  | Unlock | 6 → 0 | 6 → 0 | 0 → 0 | 0 → 0 |
+  | Setup | 20 → 0 | 20 → 0 | 0 → 0 | 0 → 0 |
+  | Settings | 66 → 0 | 59 → 0 | 0 → 0 | 0 → 0 |
+
+  Every node but one was `color-contrast`. The exception was
+  `label-content-name-mismatch` on the toolbar's H1 button. Fixes:
+  - In Kintsugi, text-secondary `#6B6862` → `#55524C` and text-tertiary `#7D7974` →
+    `#65625C`. Both are still needed: the old secondary fails at 4.29:1 on setup and
+    unlock, and the old tertiary fails on all six screens.
+  - A new token, `--color-accent-text`, for accent read as text: links and
+    selected labels. It is `#8F3C21` in Kintsugi (4.79:1 on the accent glow) and
+    equals the accent in Midnight, Washi and Mori, which already pass. It is
+    applied at 58 lines: 51 in components and pages, 6 rules in `index.css`, and
+    the passphrase strength label. PlaygroundPage, which is dev-only, is left out.
+    Fills, borders and indicators keep `--color-accent`. DESIGN.md's taxonomy
+    gains a row for it.
+  - The Kintsugi accent moves from `#C25634` to `#BF5432` (R −3, G −2, B −2), so
+    white on the accent fill reaches 4.64:1, up from 4.49:1. That covers the
+    toolbar's active state and the selected options. The `index.html` shell's
+    `--b-accent` matches, though nothing reads it.
+  - The `index.html` shell mirrors the new text values. It never reads the accent,
+    so it needs no new token.
+  - The editor sidebar rests at 0.9 opacity, not 0.65.
+  - Faded text that read under 4.5:1 now uses a token at full opacity: the Esc
+    hint, the Practice Space label and the Ctrl+K chip.
+  - The quiet vault buttons underline on hover instead of fading.
+  - The H1 button is named "Heading 1, H1".
+
+  By hand: tab order and Escape on each screen. Escape closes the editor, the
+  avatar menu and Settings. Tab left the open Settings dialog for the library
+  behind it. `BottomSheet` now moves focus in, wraps Tab and returns focus on
+  close; the spec checks it. The other 13 modals have the same fault: #257. The
+  save status was not announced, because the only live region in the editor was
+  the focus-mode one; it now sits in a `role="status"` region that is mounted while
+  idle. No CSS animation or transition longer than 1 ms runs under reduced motion
+  on any of the six screens, before or after. An earlier draft of the spec passed
+  `reducedMotion` as a top-level `test.use` option, which Playwright ignores, and
+  reported the landing caret and ribbon pulse as running. The spec now asserts the
+  media query matches. react-spring motion on touch devices ignores reduced motion
+  and is not visible to `getAnimations()`: #258, not verified in a browser.

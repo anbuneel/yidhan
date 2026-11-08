@@ -908,6 +908,29 @@ describe('Editor', () => {
       expect(screen.getByText('Saved here')).toBeInTheDocument();
     });
 
+    // Item 160: a live region only announces changes made after it mounts, so the
+    // status region must already be there, empty, before the first save.
+    it('announces the save status through a status region that is mounted while idle', async () => {
+      render(<Editor {...defaultProps} />);
+
+      const region = () =>
+        screen.getAllByRole('status').find((el) => !el.textContent?.includes('Focus mode'));
+      expect(region()).toBeDefined();
+      expect(region()).toHaveTextContent('');
+      const mounted = region();
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Changed' } });
+      await act(async () => {
+        vi.advanceTimersByTime(1500);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(region()).toBe(mounted);
+      expect(mounted).toHaveTextContent('Saved here');
+    });
+
     it('shows error indicator when save fails', async () => {
       const onUpdate = vi.fn().mockRejectedValue(new Error('Save failed'));
 

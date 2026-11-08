@@ -23,7 +23,7 @@ const changeTypeIcons: Record<ChangeType, { icon: string; label: string }> = {
 };
 
 const changeTypeColors: Record<ChangeType, string> = {
-  feature: 'var(--color-accent)',
+  feature: 'var(--color-accent-text)',
   improvement: 'var(--color-change-improvement)',
   fix: 'var(--color-change-fix)',
 };

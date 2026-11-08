@@ -339,7 +339,7 @@ export function HeaderShell({
               className="h-9 px-3 md:px-4 inline-flex items-center rounded-lg text-sm font-medium transition-all duration-200"
               style={{
                 fontFamily: 'var(--font-body)',
-                color: 'var(--color-accent)',
+                color: 'var(--color-accent-text)',
                 background: 'var(--color-bg-secondary)',
                 border: '1px solid var(--color-accent-muted)',
               }}
@@ -349,7 +349,7 @@ export function HeaderShell({
                 e.currentTarget.style.borderColor = 'var(--color-cta-bg)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--color-accent)';
+                e.currentTarget.style.color = 'var(--color-accent-text)';
                 e.currentTarget.style.background = 'var(--color-bg-secondary)';
                 e.currentTarget.style.borderColor = 'var(--color-accent-muted)';
               }}

@@ -65,7 +65,7 @@ export function DatabaseUpdatePending({
         className="focus-ring bg-transparent border-none text-base cursor-pointer underline underline-offset-4 disabled:cursor-default"
         style={{
           fontFamily: 'var(--font-body)',
-          color: 'var(--color-accent)',
+          color: 'var(--color-accent-text)',
           opacity: isRetrying ? 0.5 : 1,
         }}
       >

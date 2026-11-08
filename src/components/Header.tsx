@@ -104,7 +104,7 @@ export function Header({
               className="min-w-[20px] h-5 px-1.5 rounded-full text-xs font-medium flex items-center justify-center"
               style={{
                 background: 'var(--color-accent-glow)',
-                color: 'var(--color-accent)',
+                color: 'var(--color-accent-text)',
               }}
             >
               {fadedNotesCount > 99 ? '99+' : fadedNotesCount}
@@ -188,7 +188,7 @@ export function Header({
               className="hidden sm:inline text-xs px-1.5 py-0.5 rounded shrink-0"
               style={{
                 background: 'var(--color-bg-tertiary)',
-                color: 'var(--color-text-tertiary)',
+                color: 'var(--color-text-secondary)',
                 fontFamily: 'var(--font-body)',
               }}
             >

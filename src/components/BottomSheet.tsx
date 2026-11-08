@@ -1,9 +1,12 @@
-import { useEffect, useEffectEvent, useState, type ReactNode } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react';
 import { useDrag } from '@use-gesture/react';
 import { useSpring, animated, config } from '@react-spring/web';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { ModalBackdropButton } from './ModalBackdropButton';
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -104,18 +107,50 @@ export function BottomSheet({
     }
   }, [isOpen, api, backdropApi]);
 
-  // Handle escape key
+  // Item 160: focus moves into the sheet on open, Tab stays inside it, and focus
+  // returns to whatever opened it on close. Without this, Tab walked the library
+  // behind the open Settings dialog.
+  const sheetRef = useRef<HTMLElement | null>(null);
+  const isRendered = shouldRender && isOpen;
+  useEffect(() => {
+    if (!isRendered) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const sheet = sheetRef.current;
+    if (sheet && !sheet.contains(document.activeElement)) {
+      (sheet.querySelector<HTMLElement>(FOCUSABLE) ?? sheet).focus();
+    }
+    return () => {
+      if (opener?.isConnected) opener.focus();
+    };
+  }, [isRendered]);
+
+  // Escape closes; Tab wraps within the sheet.
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         closeFromEscape();
+        return;
+      }
+      const sheet = sheetRef.current;
+      if (e.key !== 'Tab' || !sheet) return;
+      const focusable = Array.from(sheet.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !sheet.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !sheet.contains(active))) {
+        e.preventDefault();
+        first.focus();
       }
     };
 
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
   // Drag to dismiss gesture - bound to handle area only
@@ -177,6 +212,8 @@ export function BottomSheet({
         <ModalBackdropButton label="Close sheet" onClick={onClose} />
         <dialog
           open
+          ref={(el) => { sheetRef.current = el; }}
+          tabIndex={-1}
           className={`
             relative z-10 w-full max-w-md mx-4 max-h-[85vh] overflow-hidden
             rounded-2xl shadow-2xl
@@ -238,6 +275,11 @@ export function BottomSheet({
 
       {/* Sheet */}
       <animated.div
+        ref={(el: HTMLDivElement | null) => { sheetRef.current = el; }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? 'bottom-sheet-title' : undefined}
+        tabIndex={-1}
         className={`
           fixed left-0 right-0 bottom-0 z-50
           rounded-t-3xl shadow-2xl overflow-hidden
@@ -274,6 +316,7 @@ export function BottomSheet({
           <div className="w-8" />
           {title && (
             <h2
+              id="bottom-sheet-title"
               {...bind()}
               className="text-lg font-medium text-center flex-1 cursor-grab active:cursor-grabbing touch-none"
               style={{
