@@ -7,6 +7,7 @@
  */
 
 import { KEY_CHECK_VERSION } from './encryption';
+import type { KeyCheckVersion } from './encryption';
 
 /** Wrap schema version (`vault.version`). */
 export const VAULT_VERSION = 1;
@@ -130,7 +131,8 @@ export function selectKeyCheck(metadata: Record<string, unknown> | undefined): {
   source: 'vault' | 'legacy';
   keyCheck: string | undefined;
   keyCheckIv: string | undefined;
-  keyCheckVersion: unknown;
+  /** The key-check format; null when this client does not know it. */
+  keyCheckVersion: KeyCheckVersion | null;
 } {
   const vault = readVaultMetadata(metadata?.vault);
   if (vault.status === 'valid') {
@@ -147,6 +149,20 @@ export function selectKeyCheck(metadata: Record<string, unknown> | undefined): {
     source: 'legacy',
     keyCheck: metadata?.encryption_key_check as string | undefined,
     keyCheckIv: metadata?.encryption_key_check_iv as string | undefined,
-    keyCheckVersion: metadata?.encryption_key_check_version,
+    keyCheckVersion: parseKeyCheckVersion(metadata?.encryption_key_check_version),
   };
+}
+
+/** Parse `encryption_key_check_version`. Absent means the v1 format; unknown is null. */
+export function parseKeyCheckVersion(version: unknown): KeyCheckVersion | null {
+  if (version == null) {
+    return 1;
+  }
+  if (version === 1 || version === '1') {
+    return 1;
+  }
+  if (version === KEY_CHECK_VERSION || version === String(KEY_CHECK_VERSION)) {
+    return KEY_CHECK_VERSION;
+  }
+  return null;
 }

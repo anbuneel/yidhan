@@ -438,5 +438,6 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   `EncryptionContext.migration.test.tsx`, the second with real Argon2id against a
   fake server, including a write killed mid-flight and a write that landed but
   reported an error. The vault code (`vaultKey.ts`, `vaultMetadata.ts`,
-  `services/vaultUnlock.ts`) loads with `import()` on unlock and restore, so the
-  entry chunk grows by 0.2 KB gzip and stays inside the bundle budget.
+  `services/vaultUnlock.ts`) loads with `import()` on unlock and restore. The
+  legacy key-check upgrade and `parseKeyCheckVersion` moved into that chunk too,
+  so the entry chunk grows by about 10 bytes gzip and stays inside the budget.

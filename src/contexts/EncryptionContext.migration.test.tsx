@@ -93,6 +93,16 @@ function Harness() {
   );
 }
 
+/**
+ * Kill the app: unmount it and drop module state, as a new process would. The
+ * provider loads the vault modules with import(), so the next open gets fresh
+ * copies, including an empty in-flight migration set.
+ */
+function killApp(app: { unmount: () => void }) {
+  app.unmount();
+  vi.resetModules();
+}
+
 /** Open the app as a fresh process would: auth hands over the server's current user. */
 function openApp() {
   latestKeys = null;
@@ -187,7 +197,7 @@ describe('wrapped master key migration (item 24)', () => {
     await unlock();
     await expectNoteOpens();
     await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1), { timeout: 15_000 });
-    first.unmount();
+    killApp(first);
     // Killing the app closes the tab, which clears sessionStorage.
     sessionStorage.clear();
     expect(vaultStatus()).toBe('absent');
@@ -210,7 +220,7 @@ describe('wrapped master key migration (item 24)', () => {
     ), { timeout: 15_000 });
     expect(vaultStatus()).toBe('absent');
     expect(screen.getByText('unlocked')).toBeInTheDocument();
-    first.unmount();
+    killApp(first);
     sessionStorage.clear();
 
     openApp();
@@ -228,7 +238,7 @@ describe('wrapped master key migration (item 24)', () => {
     await unlock();
     await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1), { timeout: 15_000 });
     expect(vaultStatus()).toBe('valid');
-    first.unmount();
+    killApp(first);
     // A fresh tab: no session restore, so "unlocked" below can only come from the passphrase.
     sessionStorage.clear();
 
@@ -251,7 +261,7 @@ describe('wrapped master key migration (item 24)', () => {
     const first = openApp();
     await unlock();
     await waitFor(() => expect(vaultStatus()).toBe('valid'), { timeout: 15_000 });
-    first.unmount();
+    killApp(first);
 
     // Refresh: sessionStorage holds K. It verifies against the vault key-check.
     openApp();
@@ -263,7 +273,7 @@ describe('wrapped master key migration (item 24)', () => {
     const first = openApp();
     await unlock();
     await waitFor(() => expect(vaultStatus()).toBe('valid'), { timeout: 15_000 });
-    first.unmount();
+    killApp(first);
 
     // Replace the vault key-check with one under a different key. The legacy
     // key-check still matches the stored session key, but a migrated account
@@ -287,7 +297,7 @@ describe('wrapped master key migration (item 24)', () => {
     mockUpdateUser.mockImplementationOnce(async () => ({ data: { user: null }, error: { message: 'offline' } }));
     await unlock();
     await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1), { timeout: 15_000 });
-    first.unmount();
+    killApp(first);
     mockUpdateUser.mockClear();
 
     openApp();

@@ -7,10 +7,10 @@
  */
 
 import { supabase } from '../lib/supabase';
-import { KEY_CHECK_VERSION, deriveKeys, parseKeyCheckVersion, verifyKeyCheck } from '../lib/encryption';
+import { KEY_CHECK_VERSION, createKeyCheck, deriveKeys, verifyKeyCheck } from '../lib/encryption';
 import type { DerivedKeys, KeyCheckVersion } from '../lib/encryption';
 import { buildMigratedVault, copyMasterKey, unlockVault } from '../lib/vaultKey';
-import { readVaultMetadata } from '../lib/vaultMetadata';
+import { parseKeyCheckVersion, readVaultMetadata } from '../lib/vaultMetadata';
 
 export { selectKeyCheck } from '../lib/vaultMetadata';
 import {
@@ -46,7 +46,7 @@ export interface MigrationOptions {
  * point leaves either no vault (retried on the next passphrase unlock) or a
  * complete one (§3.2). The legacy fields are not touched.
  */
-export async function migrateToWrappedKey({
+async function migrateToWrappedKey({
   userId,
   passphrase,
   master,
@@ -121,10 +121,38 @@ export async function migrateToWrappedKey({
   }
 }
 
+/** Rewrite a v1-format legacy key-check in the current format. Reports, never throws. */
+export async function upgradeLegacyKeyCheck(
+  userId: string,
+  encryptionKey: CryptoKey,
+  source: string
+): Promise<void> {
+  try {
+    const { keyCheck, keyCheckIv, keyCheckVersion } = await createKeyCheck(encryptionKey, userId);
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        encryption_key_check: keyCheck,
+        encryption_key_check_iv: keyCheckIv,
+        encryption_key_check_version: keyCheckVersion,
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  } catch (err) {
+    reportReliabilityIssue({
+      category: 'vault',
+      message: 'Failed to upgrade legacy key-check metadata',
+      level: 'warning',
+      data: { source, userId },
+    }, err);
+  }
+}
+
 interface LegacyUnlockResult {
   keys: DerivedKeys;
   keyCheck: { keyCheck: string; keyCheckIv: string; keyCheckVersion: KeyCheckVersion };
-  upgradeKeyCheck: boolean;
 }
 
 /**
@@ -141,6 +169,7 @@ async function unlockWithLegacyKeys(
   salt: Uint8Array,
   userId: string,
   metadata: Record<string, unknown> | undefined,
+  keyCheckVersion: KeyCheckVersion | null,
   throwOnBadMetadata: boolean
 ): Promise<LegacyUnlockResult | null> {
   const keyCheck = metadata?.encryption_key_check as string | undefined;
@@ -157,7 +186,6 @@ async function unlockWithLegacyKeys(
     throw new Error('Vault metadata is incomplete. Please sign out and sign back in.');
   }
 
-  const keyCheckVersion = parseKeyCheckVersion(metadata?.encryption_key_check_version);
   if (keyCheckVersion === null) {
     if (!throwOnBadMetadata) return null;
     reportReliabilityIssue({
@@ -177,17 +205,15 @@ async function unlockWithLegacyKeys(
     return null;
   }
 
-  return {
-    keys,
-    keyCheck: { keyCheck, keyCheckIv, keyCheckVersion },
-    upgradeKeyCheck: keyCheckVersion !== KEY_CHECK_VERSION,
-  };
+  if (keyCheckVersion !== KEY_CHECK_VERSION) {
+    void upgradeLegacyKeyCheck(userId, keys.encryptionKey, 'unlock_passphrase');
+  }
+
+  return { keys, keyCheck: { keyCheck, keyCheckIv, keyCheckVersion } };
 }
 
 export interface PassphraseUnlockResult {
   keys: DerivedKeys;
-  /** The legacy key-check is in the v1 format and should be rewritten. */
-  upgradeKeyCheck: boolean;
   /** Set when the account has no vault: what the migration needs besides the passphrase. */
   migration: Pick<MigrationOptions, 'master' | 'legacyKeyCheck'> | null;
 }
@@ -209,17 +235,18 @@ export async function passphraseUnlock({
   userId: string;
   metadata: Record<string, unknown> | undefined;
 }): Promise<PassphraseUnlockResult | null> {
+  const legacyKeyCheckVersion = parseKeyCheckVersion(metadata?.encryption_key_check_version);
   const vaultRead = readVaultMetadata(metadata?.vault);
   if (vaultRead.status === 'valid') {
     const vaultKeys = await unlockVault(passphrase, vaultRead.vault, userId, salt);
     if (vaultKeys) {
-      return { keys: vaultKeys, upgradeKeyCheck: false, migration: null };
+      return { keys: vaultKeys, migration: null };
     }
     // Either a wrong passphrase or a vault that does not open. The legacy
     // fields still describe the same K, so try them before reporting a wrong
     // passphrase: a broken vault must not lock the user out (DECISIONS.md,
     // 2026-11-08). The vault is never overwritten here.
-    const legacy = await unlockWithLegacyKeys(passphrase, salt, userId, metadata, false);
+    const legacy = await unlockWithLegacyKeys(passphrase, salt, userId, metadata, legacyKeyCheckVersion, false);
     if (!legacy) return null;
     reportReliabilityIssue({
       category: 'vault',
@@ -227,7 +254,7 @@ export async function passphraseUnlock({
       level: 'warning',
       data: { source: 'unlock_passphrase', userId },
     });
-    return { keys: legacy.keys, upgradeKeyCheck: legacy.upgradeKeyCheck, migration: null };
+    return { keys: legacy.keys, migration: null };
   }
 
   if (vaultRead.status !== 'absent') {
@@ -241,16 +268,36 @@ export async function passphraseUnlock({
     });
   }
 
-  const legacy = await unlockWithLegacyKeys(passphrase, salt, userId, metadata, true);
+  const legacy = await unlockWithLegacyKeys(passphrase, salt, userId, metadata, legacyKeyCheckVersion, true);
   if (!legacy) return null;
 
   return {
     keys: legacy.keys,
-    upgradeKeyCheck: legacy.upgradeKeyCheck,
     // Copy K now: a lock zeroes the key bytes in place, and the migration runs
     // after the unlock has committed.
     migration: vaultRead.status === 'absent'
       ? { master: copyMasterKey(legacy.keys), legacyKeyCheck: legacy.keyCheck }
       : null,
   };
+}
+
+/**
+ * User ids whose migration is running in this page, so two unlocks do not race
+ * it. A reload starts empty, which is when a hung write gets retried.
+ */
+const migrationsInFlight = new Set<string>();
+
+/**
+ * Start the migration without waiting for it. A second call for the same user
+ * while one is running is dropped, and its copy of `K` is zeroed.
+ */
+export function startMigration(options: MigrationOptions): void {
+  if (migrationsInFlight.has(options.userId)) {
+    options.master.fill(0);
+    return;
+  }
+  migrationsInFlight.add(options.userId);
+  void migrateToWrappedKey(options).finally(() => {
+    migrationsInFlight.delete(options.userId);
+  });
 }

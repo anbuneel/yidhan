@@ -1,7 +1,7 @@
 import { createContext, use, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
-import type { DerivedKeys, SessionKeyBlob } from '../lib/encryption';
+import type { DerivedKeys, KeyCheckVersion, SessionKeyBlob } from '../lib/encryption';
 import {
   KEY_CHECK_VERSION,
   createKeyCheck,
@@ -9,7 +9,6 @@ import {
   exportSessionKeys,
   fromBase64,
   importSessionKeys,
-  parseKeyCheckVersion,
   toBase64,
   verifyKeyCheck,
 } from '../lib/encryption';
@@ -169,40 +168,13 @@ interface RestoreVerificationOptions {
   restored: DerivedKeys | null;
   keyCheck?: string;
   keyCheckIv?: string;
-  keyCheckVersion?: unknown;
+  /** Parsed by `selectKeyCheck`; null for a format this client does not know. */
+  keyCheckVersion: KeyCheckVersion | null;
   source: 'sessionStorage_restore' | 'localStorage_restore' | 'activity_gate';
   invalidMessage: string;
   missingMetadataMessage: string;
   cleanup: () => void;
   cleanupLabel: string;
-}
-
-async function upgradeLegacyKeyCheck(
-  userId: string,
-  encryptionKey: CryptoKey,
-  source: RestoreVerificationOptions['source'] | 'unlock_passphrase'
-): Promise<void> {
-  try {
-    const { keyCheck, keyCheckIv, keyCheckVersion } = await createKeyCheck(encryptionKey, userId);
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        encryption_key_check: keyCheck,
-        encryption_key_check_iv: keyCheckIv,
-        encryption_key_check_version: keyCheckVersion,
-      },
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-  } catch (err) {
-    reportReliabilityIssue({
-      category: 'vault',
-      message: 'Failed to upgrade legacy key-check metadata',
-      level: 'warning',
-      data: { source, userId },
-    }, err);
-  }
 }
 
 async function verifyRestoredKeys({
@@ -233,8 +205,7 @@ async function verifyRestoredKeys({
     return null;
   }
 
-  const parsedKeyCheckVersion = parseKeyCheckVersion(keyCheckVersion);
-  if (parsedKeyCheckVersion === null) {
+  if (keyCheckVersion === null) {
     reportReliabilityIssue({
       category: 'vault',
       message: 'Vault restore has unsupported key-check metadata version',
@@ -251,7 +222,7 @@ async function verifyRestoredKeys({
     keyCheck,
     keyCheckIv,
     userId,
-    parsedKeyCheckVersion
+    keyCheckVersion
   );
   if (!isValid) {
     reportReliabilityIssue({
@@ -265,8 +236,12 @@ async function verifyRestoredKeys({
     return null;
   }
 
-  if (parsedKeyCheckVersion !== KEY_CHECK_VERSION) {
-    void upgradeLegacyKeyCheck(userId, restored.encryptionKey, source);
+  if (keyCheckVersion !== KEY_CHECK_VERSION) {
+    // Not a security step (the v1 key-check still verifies), so a failed chunk
+    // load only means the rewrite waits for the next unlock.
+    void loadVaultUnlock()
+      .then(({ upgradeLegacyKeyCheck }) => upgradeLegacyKeyCheck(userId, restored.encryptionKey, source))
+      .catch(() => undefined);
   }
 
   return restored;
@@ -305,8 +280,6 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
   const sessionRestoreAttemptedRef = useRef<string | null>(null);
   /** When true, vault was auto-locked — activity gate must fire before restore */
   const autoLockedRef = useRef(false);
-  /** User id whose wrapped-key migration is running, so two unlocks do not race it */
-  const migrationInFlightRef = useRef<string | null>(null);
 
   // Determine if encryption is set up by checking user_metadata
   const encryptionSalt = user?.user_metadata?.encryption_salt as string | undefined;
@@ -316,12 +289,9 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
   // What the restore key-check is chosen from, as a string so a token refresh
   // that hands over an equal user object does not re-run (and abort) a restore.
-  const keyCheckMetadataJson = JSON.stringify({
-    encryption_key_check: user?.user_metadata?.encryption_key_check,
-    encryption_key_check_iv: user?.user_metadata?.encryption_key_check_iv,
-    encryption_key_check_version: user?.user_metadata?.encryption_key_check_version,
-    vault: user?.user_metadata?.vault,
-  });
+  // The whole metadata object, not just the key-check fields: it changes only on
+  // an explicit write, and the shorter form keeps the entry chunk in its budget.
+  const keyCheckMetadataJson = JSON.stringify(user?.user_metadata ?? {});
 
   // Clear keyState when user signs out or switches accounts.
   // Uses React's "adjusting state during render" pattern (not an effect).
@@ -612,13 +582,14 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     const userId = user.id;
     // A small chunk, fetched while Argon2id is about to run anyway. It is
     // precached, so offline unlock still works.
-    const { passphraseUnlock, migrateToWrappedKey } = await loadVaultUnlock();
-    const result = await passphraseUnlock({ passphrase, salt, userId, metadata: user.user_metadata });
+    const { passphraseUnlock, startMigration } = await loadVaultUnlock();
+    const result = await passphraseUnlock({
+      passphrase,
+      salt,
+      userId,
+      metadata: user.user_metadata,
+    });
     if (!result) return false;
-
-    if (result.upgradeKeyCheck) {
-      void upgradeLegacyKeyCheck(userId, result.keys.encryptionKey, 'unlock_passphrase');
-    }
 
     setKeyState({ keys: result.keys, userId });
     persistSession(userId, result.keys);
@@ -633,20 +604,10 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     // Mark restore as attempted so auto-lock doesn't trigger immediate re-restore
     sessionRestoreAttemptedRef.current = userId;
 
-    const { migration } = result;
-    if (migration) {
-      if (migrationInFlightRef.current === userId) {
-        migration.master.fill(0);
-      } else {
-        // Item 24: migrate on unlock. Never awaited — the unlock has already
-        // succeeded, and a failed or interrupted migration retries next time.
-        migrationInFlightRef.current = userId;
-        void migrateToWrappedKey({ ...migration, userId, passphrase, legacySalt: salt }).finally(() => {
-          if (migrationInFlightRef.current === userId) {
-            migrationInFlightRef.current = null;
-          }
-        });
-      }
+    if (result.migration) {
+      // Item 24: migrate on unlock, in the background. The unlock has already
+      // succeeded; a failed or interrupted migration retries next time.
+      startMigration({ ...result.migration, userId, passphrase, legacySalt: salt });
     }
 
     return true;
