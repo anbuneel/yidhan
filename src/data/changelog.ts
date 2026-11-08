@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.41', date: '2026-11-08', changes: [
+    { type: 'improvement', text: 'One or two pinned notes now sit as small cards at the left of the Pinned row, instead of one large card alone in the middle of a wide band. Pin a third and the row goes back to full cards' },
+  ] },
   { version: '3.19.38', date: '2026-11-08', changes: [
     { type: 'fix', text: 'If two of your devices save the same note at almost the same moment, the second save now shows the conflict screen with both versions instead of replacing the first without a word. Before, a save that landed in that moment could be lost' },
   ] },

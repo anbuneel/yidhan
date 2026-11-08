@@ -95,6 +95,11 @@ describe('library keyboard navigation', () => {
     const user = userEvent.setup();
     render(<KeyboardLibrary notes={notes} />);
 
+    // A lone pinned note is a compact card in the pinned row (item 111); selection
+    // must reach it the same way it reaches a full card.
+    expect(card('Pinned thought')).toHaveClass('note-card-compact');
+    expect(card('Recent thought')).not.toHaveClass('note-card-compact');
+
     await user.keyboard('{ArrowDown}');
     await waitFor(() => expect(card('Pinned thought')).toHaveAttribute('tabindex', '0'));
     expect(card('Pinned thought')).toHaveFocus();

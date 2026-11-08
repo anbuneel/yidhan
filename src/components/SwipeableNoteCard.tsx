@@ -11,6 +11,7 @@ interface SwipeableNoteCardProps {
   onTogglePin: (id: string, pinned: boolean) => void;
   disabled?: boolean;
   isCompact?: boolean;
+  keepPin?: boolean;
   searchQuery?: string;
   searchMatchTerms?: readonly string[];
   isFocused?: boolean;
@@ -35,6 +36,7 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
   onTogglePin,
   disabled = false,
   isCompact = false,
+  keepPin,
   searchQuery,
   searchMatchTerms,
   isFocused = false,
@@ -194,10 +196,11 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
           onTogglePin={onTogglePin}
           isFocused={isFocused}
           isCompact={isCompact}
+          keepPin={keepPin}
           searchQuery={searchQuery}
           searchMatchTerms={searchMatchTerms}
         />
       </animated.div>
     </div>
   );
-}, (prev, next) => prev.note === next.note && prev.disabled === next.disabled && prev.isCompact === next.isCompact && prev.searchQuery === next.searchQuery && prev.searchMatchTerms === next.searchMatchTerms && prev.isFocused === next.isFocused);
+}, (prev, next) => prev.note === next.note && prev.disabled === next.disabled && prev.isCompact === next.isCompact && prev.keepPin === next.keepPin && prev.searchQuery === next.searchQuery && prev.searchMatchTerms === next.searchMatchTerms && prev.isFocused === next.isFocused);
