@@ -499,7 +499,11 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   written, so the library's first load includes them. Step 1 suggests six words
   from a 1,831-word list (BIP-0039 English less 217 words that do not suit the
   app), about 65 bits, with one-tap copy; the list lives in the lazy setup chunk.
-  The old acknowledgement checkbox and its copy are gone. Existing accounts keep
+  The old acknowledgement checkbox and its copy are gone. From an outside launch
+  review, three lines of copy: setup tells the account password and the passphrase
+  apart, the password-reset form says a new password does not open encrypted notes,
+  and step 3 says devices already open keep working after a recovery and take the
+  new passphrase when next asked. Existing accounts keep
   the legacy unlock and migration and never see the new setup. Tests: generator and
   policy (`passphraseGenerator.test.ts`), each step and the places it must not fire
   (`PassphraseSetup.test.tsx`, `accountGates.test.tsx`), the whole flow against the

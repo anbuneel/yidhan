@@ -25,7 +25,9 @@ Since v3.19.37 (item 27). Three steps on one full-screen card that blocks the
 library: passphrase, recovery key, done. Each step is labelled "Step N of 3".
 
 1. **Sign up** via email/password or Google OAuth.
-2. **Step 1, "Choose a passphrase".**
+2. **Step 1, "Choose a passphrase".** The copy separates the two secrets: the account
+   password signs the writer in; the passphrase is a different secret that encrypts the
+   notes on the device and that Yidhan never sees.
    - Default: a passphrase made on the device — six words from a 1,831-word list,
      joined by hyphens, about 65 bits of entropy. **Copy** puts it on the clipboard;
      **Another one** makes a new one.
@@ -42,7 +44,11 @@ library: passphrase, recovery key, done. Each step is labelled "Step N of 3".
    `vault` with its key-check and `recoveryWrap`. The vault key `K` is 64 random
    bytes, never derived from the passphrase. Neither the passphrase nor the
    recovery key is sent, stored or logged.
-5. **Step 3, "Your notes are ready".** The starter notes are written locally.
+5. **Step 3, "Your notes are ready".** It says what the recovery key is for, and what
+   a recovery means for other devices: those already open keep working, and the next
+   time one asks for the passphrase, the new one is entered. (A remembered browser can
+   reopen without asking until item 25 adds the key-check version check.) The starter
+   notes are written locally.
    **Open my notes** installs the keys and opens the library.
 
 ### Interruptions
@@ -185,6 +191,7 @@ Keys are securely zeroed out (overwritten with 0s) when the vault locks.
 
 ### Password reset vs. passphrase
 - Resetting the **login password** (via Supabase auth recovery) does NOT help with a forgotten E2EE passphrase
+- The "Reset your password" form says so: a new password signs you in, and only the passphrase or the recovery key opens the notes
 - These are separate credentials with separate purposes
 
 ### Cross-tab behavior

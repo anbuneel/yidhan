@@ -193,7 +193,12 @@ describe('PassphraseSetup — step 1, passphrase', () => {
     render(<PassphraseSetup />);
     expect(screen.queryByRole('checkbox')).toBeNull();
     expect(document.body.textContent).not.toMatch(/cannot be recovered|no recovery|warning/i);
-    expect(screen.getByText(/recovery key in case you ever forget it/)).toBeInTheDocument();
+    expect(screen.getByText(/recovery key\s+in case you ever forget it/)).toBeInTheDocument();
+  });
+
+  it('tells the account password and the passphrase apart', () => {
+    render(<PassphraseSetup />);
+    expect(screen.getByText(/Your password signs you in\. Your passphrase is a separate secret/)).toBeInTheDocument();
   });
 
   it('shows the context’s refusal and stays on step 1', async () => {
@@ -331,6 +336,7 @@ describe('PassphraseSetup — step 3, done', () => {
 
     expect(await screen.findByRole('heading', { name: 'Your notes are ready' })).toBeInTheDocument();
     expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
+    expect(screen.getByText(/Devices already open\s+keep working; the next time one asks for your passphrase, enter the new one/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
     await waitFor(() => expect(mockCreateEncryptedNote).toHaveBeenCalledTimes(4));
     expect(mockCreateTagOffline).toHaveBeenCalledWith('user-setup-1', 'Recipes', 'sage');

@@ -288,7 +288,9 @@ export function PassphraseSetup() {
         <h1 className="text-2xl mb-2" style={titleStyle}>Your notes are ready</h1>
         <p className="mb-6 text-sm" style={bodyStyle}>
           Your passphrase opens your notes on any device. If you ever forget it, your
-          recovery key opens them instead. A few starter notes are waiting for you.
+          recovery key opens them instead, and you choose a new passphrase. Devices already open
+          keep working; the next time one asks for your passphrase, enter the new one. A few
+          starter notes are waiting for you.
         </p>
         <button
           type="button"
@@ -309,9 +311,9 @@ export function PassphraseSetup() {
       <StepLabel step={1} />
       <h1 className="text-2xl mb-2" style={titleStyle}>Choose a passphrase</h1>
       <p className="mb-6 text-sm" style={bodyStyle}>
-        Your notes are encrypted on this device with a passphrase only you know. You&rsquo;ll
-        use it to open them on any device. Next, you&rsquo;ll get a recovery key in case you
-        ever forget it.
+        Your password signs you in. Your passphrase is a separate secret: it encrypts your
+        notes on this device, and Yidhan never sees it. Next, you&rsquo;ll get a recovery key
+        in case you ever forget it.
       </p>
 
       <form onSubmit={(e) => { void handleContinue(e); }} className="space-y-4">
