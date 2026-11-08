@@ -318,7 +318,20 @@ async function openVaultWithKek(
     if (err instanceof VaultUnwrapError) return null;
     throw err;
   }
+  return openUnwrappedVault(master, vault, userId, legacySalt);
+}
 
+/**
+ * Import 64 unwrapped bytes and verify them against the vault key-check (§1.2).
+ * Every unlock path ends here, the recovery key included: nothing is returned,
+ * so nothing is decrypted, until the key-check verifies. Zeroes `master`.
+ */
+export async function openUnwrappedVault(
+  master: Uint8Array,
+  vault: Pick<VaultMetadata, 'keyCheck' | 'keyCheckIv'>,
+  userId: string,
+  legacySalt: Uint8Array
+): Promise<DerivedKeys | null> {
   try {
     const keys = await importMasterKey(master, legacySalt);
     const ok = await verifyKeyCheck(keys.encryptionKey, vault.keyCheck, vault.keyCheckIv, userId, KEY_CHECK_VERSION);
@@ -330,4 +343,130 @@ async function openVaultWithKek(
   } finally {
     master.fill(0);
   }
+}
+
+/** Whether 64 bytes of `K` verify the vault key-check. Does not modify `master`. */
+export async function masterVerifiesVault(
+  master: Uint8Array,
+  vault: Pick<VaultMetadata, 'keyCheck' | 'keyCheckIv'>,
+  userId: string
+): Promise<boolean> {
+  const keys = await openUnwrappedVault(master.slice(), vault, userId, new Uint8Array(0));
+  if (!keys) return false;
+  zeroKeys(keys);
+  return true;
+}
+
+// ============================================================================
+// Re-wrap under a new passphrase (§2.1)
+// ============================================================================
+
+export interface RewrapVaultOptions {
+  passphrase: string;
+  /** 64 bytes of `K`. Not modified. */
+  master: Uint8Array;
+  /** The vault as the server holds it now. */
+  vault: VaultMetadata;
+  /** The legacy `encryption_salt`, decoded. */
+  legacySalt: Uint8Array;
+  userId: string;
+}
+
+/** The legacy key-check fields, as written to `user_metadata`. */
+interface LegacyKeyCheckFields {
+  encryption_key_check: string;
+  encryption_key_check_iv: string;
+  encryption_key_check_version: KeyCheckVersion;
+}
+
+export interface RewrapVaultResult {
+  /** The new vault without `recoveryWrap`: the caller carries the stored one over. */
+  vault: Omit<VaultMetadata, 'recoveryWrap'>;
+  /** A legacy key-check that no passphrase verifies (§3.3; DECISIONS.md, 2026-11-08). */
+  retiredLegacyKeyCheck: LegacyKeyCheckFields;
+}
+
+/**
+ * A key-check under a random key that is thrown away. Written over
+ * `encryption_key_check` when the passphrase changes, so the legacy derivation
+ * stops verifying for every passphrase, the retired one included: an old client
+ * and the legacy fallback both answer "wrong passphrase" instead of opening.
+ *
+ * Re-encrypting it so the *new* passphrase verifies on the legacy path is not
+ * possible: that path uses whatever Argon2id derives as the note key, and that
+ * can never be `K` for a new passphrase. It would unlock with the wrong key.
+ */
+async function createRetiredLegacyKeyCheck(userId: string): Promise<LegacyKeyCheckFields> {
+  const raw = crypto.getRandomValues(new Uint8Array(32));
+  try {
+    const throwaway = await importAesKey(raw);
+    const { keyCheck, keyCheckIv, keyCheckVersion } = await createKeyCheck(throwaway, userId);
+    return {
+      encryption_key_check: keyCheck,
+      encryption_key_check_iv: keyCheckIv,
+      encryption_key_check_version: keyCheckVersion,
+    };
+  } finally {
+    raw.fill(0);
+  }
+}
+
+/**
+ * Build the vault for a new passphrase (§2.1 steps 2–5). `K` does not change, so
+ * no note is touched. `wrapVersion` and `keyCheckVersion` each advance by one.
+ *
+ * Refuses unless `master` verifies the current vault key-check, and self-checks
+ * that the new vault reopens with the new passphrase's KEK before returning it.
+ */
+export async function rewrapVault({
+  passphrase,
+  master,
+  vault,
+  legacySalt,
+  userId,
+}: RewrapVaultOptions): Promise<RewrapVaultResult> {
+  if (!(await masterVerifiesVault(master, vault, userId))) {
+    throw new Error('Master key does not verify the vault key-check; refusing to re-wrap it');
+  }
+
+  const currentSalt = fromBase64(vault.kekSalt);
+  let kekSalt: Uint8Array;
+  do {
+    kekSalt = generateKekSalt(legacySalt);
+  } while (toBase64(kekSalt) === toBase64(currentSalt));
+
+  const kek = await deriveKek(passphrase, kekSalt);
+  const wrapVersion = vault.wrapVersion + 1;
+  const { wrappedKey, wrapIv } = await wrapMasterKey(kek, master, userId, wrapVersion);
+  const keys = await importMasterKey(master, legacySalt);
+  let keyCheck: string;
+  let keyCheckIv: string;
+  try {
+    ({ keyCheck, keyCheckIv } = await createKeyCheck(keys.encryptionKey, userId));
+  } finally {
+    zeroKeys(keys);
+  }
+
+  const next: VaultMetadata = {
+    version: VAULT_VERSION,
+    wrapVersion,
+    kekSalt: toBase64(kekSalt),
+    wrappedKey,
+    wrapIv,
+    keyCheck,
+    keyCheckIv,
+    keyCheckVersion: vault.keyCheckVersion + 1,
+    migratedAt: vault.migratedAt,
+  };
+
+  const reopened = await openVaultWithKek(kek, next, userId, legacySalt);
+  try {
+    if (!reopened || !keysMatchMaster(reopened, master)) {
+      throw new Error('Re-wrapped vault did not reopen to the same master key');
+    }
+  } finally {
+    if (reopened) zeroKeys(reopened);
+  }
+
+  return { vault: next, retiredLegacyKeyCheck: await createRetiredLegacyKeyCheck(userId) };
 }

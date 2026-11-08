@@ -299,8 +299,10 @@ describe('ShareModal', () => {
 
       render(<ShareModal {...defaultProps} onClose={onClose} />);
 
+      // The close button is disabled while the share loads. Waiting only for it
+      // to exist let the click land on a disabled button under CI load.
       await waitFor(() => {
-        expect(screen.getByLabelText('Close')).toBeInTheDocument();
+        expect(screen.getByLabelText('Close')).toBeEnabled();
       });
 
       await user.click(screen.getByLabelText('Close'));

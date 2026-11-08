@@ -1,9 +1,18 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useEncryption } from '../contexts/EncryptionContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useVaultSettings } from '../hooks/useVaultSettings';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
+import { vaultQuietButtonStyle } from './vaultScreenStyles';
+
+// Item 26. Loaded only when the writer asks for it, to keep the entry chunk small.
+const RecoveryKeyUnlockForm = lazyWithRetry(() =>
+  import('./RecoveryKeyUnlockForm').then((m) => ({ default: m.RecoveryKeyUnlockForm }))
+);
 
 const MAX_FAILED_UNLOCK_ATTEMPTS = 5;
+
+
 const UNLOCK_LOCKOUT_MS = 60 * 1000;
 
 interface UnlockLockoutState {
@@ -94,6 +103,12 @@ export function PassphraseUnlock() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lockoutState, setLockoutState] = useState<UnlockLockoutState>(() => readLockoutState(userId));
   const [lockoutNow, setLockoutNow] = useState(() => Date.now());
+  const [useRecoveryKey, setUseRecoveryKey] = useState(false);
+  // Only for the wording. The recovery-key option is always offered: this tab's
+  // metadata can predate a key made on another device, and the form reads the
+  // server's vault and says so when there is none.
+  const canUseRecoveryKey = (user?.user_metadata?.vault as { recoveryWrap?: unknown } | undefined)
+    ?.recoveryWrap != null;
   const isLockedOut = lockoutState.lockedUntil !== null && lockoutState.lockedUntil > lockoutNow;
   const remainingLockoutSeconds = isLockedOut
     ? Math.max(1, Math.ceil((lockoutState.lockedUntil! - lockoutNow) / 1000))
@@ -193,10 +208,18 @@ export function PassphraseUnlock() {
           className="mb-6 text-sm"
           style={{ color: 'var(--color-text-secondary)' }}
         >
-          Enter your passphrase to decrypt and access your notes.
-          Forgotten passphrases cannot be reset or recovered.
+          {useRecoveryKey
+            ? 'Enter your recovery key. You\u2019ll choose a new passphrase next.'
+            : canUseRecoveryKey
+              ? 'Enter your passphrase, or your recovery key if you\u2019ve forgotten it.'
+              : 'Enter your passphrase to decrypt and access your notes. Without a recovery key, a forgotten passphrase cannot be recovered.'}
         </p>
 
+        {useRecoveryKey ? (
+          <Suspense fallback={null}>
+            <RecoveryKeyUnlockForm onUsePassphrase={() => setUseRecoveryKey(false)} />
+          </Suspense>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label
@@ -278,19 +301,23 @@ export function PassphraseUnlock() {
 
           <button
             type="button"
+            onClick={() => { setError(''); setUseRecoveryKey(true); }}
+            className="w-full py-2 text-xs transition-opacity hover:opacity-80"
+            style={{ ...vaultQuietButtonStyle, color: 'var(--color-text-secondary)' }}
+          >
+            Use your recovery key
+          </button>
+
+          <button
+            type="button"
             onClick={() => { lockVault('sign-out'); signOut(); }}
             className="w-full py-2 text-xs transition-opacity hover:opacity-80"
-            style={{
-              background: 'transparent',
-              color: 'var(--color-text-tertiary)',
-              border: 'none',
-              cursor: 'pointer',
-              fontFamily: 'var(--font-body)',
-            }}
+            style={vaultQuietButtonStyle}
           >
             Sign out
           </button>
         </form>
+        )}
       </div>
     </div>
   );

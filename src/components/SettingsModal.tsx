@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomSheet } from './BottomSheet';
+import { RecoveryKeySettings } from './RecoveryKeySettings';
 import { ACCOUNT_OFFBOARDING_ENABLED } from '../config/featureFlags';
 import type { UseSessionSettingsResult } from '../hooks/useSessionSettings';
 import type { UseVaultSettingsResult } from '../hooks/useVaultSettings';
@@ -681,6 +682,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       </button>
                     )}
                   </div>
+
+                  {/* Recovery key (item 26) */}
+                  {isVaultUnlocked && <RecoveryKeySettings />}
 
                   {/* Vault Auto-Lock */}
                   <div>

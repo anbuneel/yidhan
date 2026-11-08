@@ -10,7 +10,7 @@ import { supabase } from '../lib/supabase';
 import { KEY_CHECK_VERSION, createKeyCheck, deriveKeys, verifyKeyCheck } from '../lib/encryption';
 import type { DerivedKeys, KeyCheckVersion } from '../lib/encryption';
 import { buildMigratedVault, copyMasterKey, unlockVault } from '../lib/vaultKey';
-import { parseKeyCheckVersion, readVaultMetadata } from '../lib/vaultMetadata';
+import { parseKeyCheckVersion, readRecoveryWrap, readVaultMetadata } from '../lib/vaultMetadata';
 
 export { selectKeyCheck } from '../lib/vaultMetadata';
 import {
@@ -52,7 +52,7 @@ async function migrateToWrappedKey({
   master,
   legacySalt,
   legacyKeyCheck,
-}: MigrationOptions): Promise<void> {
+}: MigrationOptions): Promise<boolean> {
   try {
     // The KEK derivation is a full Argon2id run on the main thread. Let the
     // unlocked library paint first.
@@ -73,7 +73,7 @@ async function migrateToWrappedKey({
         level: 'info',
         data: { source: 'vault_migration' },
       });
-      return;
+      return false;
     }
     // Another device may have migrated meanwhile. This is a read, not a
     // conditional write: two devices can both pass it and the later write wins.
@@ -86,7 +86,7 @@ async function migrateToWrappedKey({
         level: 'info',
         data: { source: 'vault_migration' },
       });
-      return;
+      return true;
     }
 
     const { error } = await supabase.auth.updateUser({ data: { vault } });
@@ -109,6 +109,7 @@ async function migrateToWrappedKey({
       level: 'info',
       data: { source: 'vault_migration' },
     });
+    return true;
   } catch (err) {
     reportReliabilityIssue({
       category: 'vault',
@@ -116,6 +117,7 @@ async function migrateToWrappedKey({
       level: 'warning',
       data: { source: 'vault_migration' },
     }, err);
+    return false;
   } finally {
     master.fill(0);
   }
@@ -216,6 +218,12 @@ export interface PassphraseUnlockResult {
   keys: DerivedKeys;
   /** Set when the account has no vault: what the migration needs besides the passphrase. */
   migration: Pick<MigrationOptions, 'master' | 'legacyKeyCheck'> | null;
+  /**
+   * Item 26: offer a recovery key after this unlock. True when the vault opened
+   * and holds no recovery wrap, or when the account is about to migrate. Never
+   * when a recovery wrap exists in any form, or when the vault did not open.
+   */
+  offerRecoveryKey: boolean;
 }
 
 /**
@@ -240,7 +248,8 @@ export async function passphraseUnlock({
   if (vaultRead.status === 'valid') {
     const vaultKeys = await unlockVault(passphrase, vaultRead.vault, userId, salt);
     if (vaultKeys) {
-      return { keys: vaultKeys, migration: null };
+      const recovery = readRecoveryWrap((metadata?.vault as Record<string, unknown>).recoveryWrap);
+      return { keys: vaultKeys, migration: null, offerRecoveryKey: recovery.status === 'absent' };
     }
     // Either a wrong passphrase or a vault that does not open. The legacy
     // fields still describe the same K, so try them before reporting a wrong
@@ -254,7 +263,7 @@ export async function passphraseUnlock({
       level: 'warning',
       data: { source: 'unlock_passphrase', userId },
     });
-    return { keys: legacy.keys, migration: null };
+    return { keys: legacy.keys, migration: null, offerRecoveryKey: false };
   }
 
   if (vaultRead.status !== 'absent') {
@@ -278,26 +287,36 @@ export async function passphraseUnlock({
     migration: vaultRead.status === 'absent'
       ? { master: copyMasterKey(legacy.keys), legacyKeyCheck: legacy.keyCheck }
       : null,
+    // Migrate first, then offer: the kit's save waits for the migration.
+    offerRecoveryKey: vaultRead.status === 'absent',
   };
 }
 
 /**
- * User ids whose migration is running in this page, so two unlocks do not race
- * it. A reload starts empty, which is when a hung write gets retried.
+ * Migrations running in this page, by user id, so two unlocks do not race one.
+ * A reload starts empty, which is when a hung write gets retried.
  */
-const migrationsInFlight = new Set<string>();
+const migrationsInFlight = new Map<string, Promise<boolean>>();
 
 /**
  * Start the migration without waiting for it. A second call for the same user
- * while one is running is dropped, and its copy of `K` is zeroed.
+ * while one is running is dropped, and its copy of `K` is zeroed. Resolves true
+ * once a complete vault is on the server, false otherwise; never rejects.
  */
-export function startMigration(options: MigrationOptions): void {
-  if (migrationsInFlight.has(options.userId)) {
+export function startMigration(options: MigrationOptions): Promise<boolean> {
+  const running = migrationsInFlight.get(options.userId);
+  if (running) {
     options.master.fill(0);
-    return;
+    return running;
   }
-  migrationsInFlight.add(options.userId);
-  void migrateToWrappedKey(options).finally(() => {
+  const done = migrateToWrappedKey(options).finally(() => {
     migrationsInFlight.delete(options.userId);
   });
+  migrationsInFlight.set(options.userId, done);
+  return done;
+}
+
+/** The migration running for this user in this page, if any. Never rejects. */
+export function migrationInFlight(userId: string): Promise<boolean> | undefined {
+  return migrationsInFlight.get(userId);
 }

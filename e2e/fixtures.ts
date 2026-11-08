@@ -117,6 +117,14 @@ async function unlockVault(page: Page, passphrase: string): Promise<void> {
     // Argon2id at 64 MB and 3 iterations is seconds of work in wasm, and a wrong
     // passphrase surfaces as the unlock form simply staying put.
     await expect(unlockGate).toBeHidden({ timeout: 20000 });
+
+    // Item 26: an account without a recovery key is offered one after every
+    // passphrase unlock. The suite declines it; `recovery-kit.spec.ts` makes one.
+    const recoveryOffer = page.getByRole('heading', { name: 'Make a recovery key', exact: true });
+    await expect(library.or(recoveryOffer).first()).toBeVisible({ timeout: 15000 });
+    if (await recoveryOffer.isVisible()) {
+      await page.getByRole('button', { name: 'Not now', exact: true }).click();
+    }
   }
 
   await expect(library).toBeVisible({ timeout: 15000 });

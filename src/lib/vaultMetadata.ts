@@ -17,6 +17,8 @@ export const KEK_SALT_LENGTH_BYTES = 16;
 export const WRAP_IV_LENGTH_BYTES = 12;
 /** AES-GCM ciphertext of the 64-byte `K` plus the 16-byte tag. */
 const WRAPPED_KEY_LENGTH_BYTES = MASTER_KEY_LENGTH_BYTES + 16;
+/** Recovery wrap schema version (`vault.recoveryWrap.version`, item 26). */
+export const RECOVERY_WRAP_VERSION = 1;
 
 // ============================================================================
 // Types
@@ -33,7 +35,32 @@ export interface VaultMetadata {
   keyCheckIv: string;   // base64
   keyCheckVersion: number;
   migratedAt: string;   // ISO timestamp
+  /** `wrap(RK, K)`, item 26. Present only when a valid one is stored. */
+  recoveryWrap?: RecoveryWrapMetadata;
 }
+
+/**
+ * `vault.recoveryWrap` (§1.1, §2.4). Its own schema version and its own counter:
+ * `recoveryVersion` is bound into the AAD and bumped each time a new recovery key
+ * replaces the old one, so a replaced wrap cannot be presented as the current one.
+ */
+export interface RecoveryWrapMetadata {
+  version: typeof RECOVERY_WRAP_VERSION;
+  recoveryVersion: number;
+  wrappedKey: string;   // base64, AES-GCM(RK, K)
+  wrapIv: string;       // base64, 12 bytes
+  createdAt: string;    // ISO timestamp
+}
+
+/**
+ * What a client finds in `vault.recoveryWrap`. `unsupported` is a newer format:
+ * never offer to replace it, never overwrite it. `malformed` cannot open anything.
+ */
+export type RecoveryWrapReadResult =
+  | { status: 'absent' }
+  | { status: 'valid'; recoveryWrap: RecoveryWrapMetadata }
+  | { status: 'unsupported' }
+  | { status: 'malformed' };
 
 /**
  * What a client finds in `user_metadata.vault`.
@@ -106,9 +133,11 @@ export function readVaultMetadata(raw: unknown): VaultReadResult {
     return { status: 'malformed' };
   }
 
+  const recovery = readRecoveryWrap(candidate.recoveryWrap);
   return {
     status: 'valid',
     vault: {
+      ...(recovery.status === 'valid' ? { recoveryWrap: recovery.recoveryWrap } : {}),
       version: VAULT_VERSION,
       wrapVersion: candidate.wrapVersion,
       kekSalt: candidate.kekSalt,
@@ -118,6 +147,32 @@ export function readVaultMetadata(raw: unknown): VaultReadResult {
       keyCheckIv: candidate.keyCheckIv,
       keyCheckVersion: candidate.keyCheckVersion,
       migratedAt: candidate.migratedAt,
+    },
+  };
+}
+
+/** Classify `vault.recoveryWrap`. Never throws. */
+export function readRecoveryWrap(raw: unknown): RecoveryWrapReadResult {
+  if (raw == null) return { status: 'absent' };
+  if (typeof raw !== 'object' || Array.isArray(raw)) return { status: 'malformed' };
+  const candidate = raw as Record<string, unknown>;
+  if (candidate.version !== RECOVERY_WRAP_VERSION) return { status: 'unsupported' };
+  if (
+    !isPositiveInteger(candidate.recoveryVersion)
+    || !isBase64OfLength(candidate.wrappedKey, WRAPPED_KEY_LENGTH_BYTES)
+    || !isBase64OfLength(candidate.wrapIv, WRAP_IV_LENGTH_BYTES)
+    || typeof candidate.createdAt !== 'string'
+  ) {
+    return { status: 'malformed' };
+  }
+  return {
+    status: 'valid',
+    recoveryWrap: {
+      version: RECOVERY_WRAP_VERSION,
+      recoveryVersion: candidate.recoveryVersion,
+      wrappedKey: candidate.wrappedKey,
+      wrapIv: candidate.wrapIv,
+      createdAt: candidate.createdAt,
     },
   };
 }

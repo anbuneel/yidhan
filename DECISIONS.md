@@ -19,6 +19,44 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-08 — A passphrase set after recovery retires the legacy key-check
+
+**Status:** Active
+
+**Why:** Item 26 runs §2.1 of the key design after a recovery-key unlock. §2.1 step 5
+and §3.3 say to re-encrypt the legacy `encryption_key_check` so that an old client
+opens with the *new* passphrase and not the old one. That cannot be built. The legacy
+path uses whatever Argon2id derives from the passphrase and `encryption_salt` as the
+note key. For a new passphrase that is never `K`, so a legacy key-check that the new
+passphrase verifies would unlock with the wrong key: notes would not open, and new
+notes would be written under a key no other device holds. The same holds for the
+legacy fallback in this client (2026-11-08, the vault fallback entry).
+
+**Decision:** The write that sets the new passphrase replaces the legacy key-check with
+one made under a random key that is thrown away. No passphrase verifies it. An old
+client, and the legacy fallback, answer "wrong passphrase" for both the old and the
+new one, and fail closed. `encryption_salt` is left as it is. Item 25 should reuse
+this. Two smaller choices made with it: the recovery key keeps working after it is
+used, so the printed kit stays valid; and the keys a recovery key opens are held back
+until the new passphrase is saved, so a refresh in between asks for the recovery key
+again rather than skipping the new passphrase.
+
+**Rejected:**
+- *Re-encrypt the legacy key-check for the new passphrase, as §2.1 step 5 reads.* It
+  unlocks old clients with the wrong key.
+- *Leave the legacy key-check alone.* The old passphrase would keep opening the vault
+  on an old client and on the legacy fallback, which is the revocation that did not
+  happen that §3.3 warns about.
+- *Retire the recovery key once used, and show a new one.* Safer if the key was seen
+  while typed, but it adds a second kit to the moment the writer is already locked
+  out, and replacing it is one step in Settings.
+
+**Revisit:** Item 136, when the vault moves to a table with a conditional write. Item
+25 and item 26's writes are then compare-and-set; today they are a fresh read, the
+write and a read-back.
+
+---
+
 ## 2026-11-08 — Ratcheted bundle budgets carry 1 KB of headroom
 
 **Status:** Active

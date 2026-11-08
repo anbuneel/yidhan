@@ -209,7 +209,10 @@ client's own changes. Removing it causes write loops.
   half) is wrapped by a KEK that Argon2id (`hash-wasm`) derives from the passphrase and
   its own salt, stored as `user_metadata.vault`; accounts not yet migrated derive `K`
   directly from the passphrase (`src/lib/vaultKey.ts`, design in
-  `docs/plans/2026-09-07-key-migration-and-rotation-design.md`). **Tags and metadata stay plaintext** — an accepted, documented
+  `docs/plans/2026-09-07-key-migration-and-rotation-design.md`). A recovery key
+  (`src/lib/recoveryKey.ts`) is a second wrap of the same `K`, `vault.recoveryWrap`;
+  the key itself is never stored, sent or logged, and a recovery-key unlock holds the
+  keys back until a new passphrase is saved. **Tags and metadata stay plaintext** — an accepted, documented
   trade (`DECISIONS.md`), not an oversight to fix casually.
 - **Key storage:** React state plus sessionStorage; optional localStorage via opt-in
   "Remember this browser" (default off). Every restore path — including refresh-time
