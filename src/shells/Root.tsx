@@ -11,7 +11,7 @@
  */
 
 import { Suspense, startTransition, useCallback, useEffect, useState } from 'react';
-import { readGateInput, shouldStartApp } from '../appGate';
+import { isSupabaseSessionKey, readGateInput, shouldStartApp } from '../appGate';
 import { LoadingFallback } from '../components/LoadingFallback';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { markAppShellStarted } from './appShellStarted';
@@ -40,6 +40,20 @@ export function Root() {
       setStart((current) => current ?? next);
     });
   }, []);
+
+  // A sign-in in another tab writes the session to localStorage, which fires `storage`
+  // here. Before the split, the always-mounted AuthProvider picked that up; the public
+  // shell has no AuthProvider, so it hands over itself and the app reaches the library.
+  useEffect(() => {
+    if (started) return;
+    const onStorage = (event: StorageEvent) => {
+      if (event.newValue !== null && isSupabaseSessionKey(event.key)) {
+        startApp({ fromPublicShell: true });
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [started, startApp]);
 
   return (
     <Suspense fallback={<LoadingFallback message="Preparing your space..." />}>

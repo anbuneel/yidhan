@@ -571,9 +571,9 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
 
   | Measure | Before (`6c3828b`) | After | Target |
   |---|---:|---:|---:|
-  | JS requested on `/` before `load`, gzip | 297.4 KB, 4 scripts | 89.8 KB, 3 scripts | ≤ 90 KB |
+  | JS requested on `/` before `load`, gzip | 297.4 KB, 4 scripts | 89.9 KB, 3 scripts | ≤ 90 KB |
   | Everything requested on `/` until network idle, gzip | 537.4 KB, 19 requests | 290.9 KB, 15 requests | ≤ 300 KB |
-  | App-shell JS, Editor excluded, gzip | 341.7 KB | 337.1 KB | ≤ 330 KB |
+  | App-shell JS, Editor excluded, gzip | 341.7 KB | 337.2 KB | ≤ 330 KB |
   | Largest JS chunk, gzip | 189.4 KB (`main`) | 136.4 KB (`Editor`) | ≤ 150 KB |
   | Precache | 59 entries, 1,046.5 KB | 69 entries, 1,053.6 KB | ≤ 1,100 KB |
 

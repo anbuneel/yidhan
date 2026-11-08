@@ -109,6 +109,22 @@ describe('Root', () => {
     expect(await screen.findByTestId('app-shell')).toBeInTheDocument();
   });
 
+  it('hands over when another tab signs in, and ignores other storage changes', async () => {
+    visit('/');
+    await screen.findAllByRole('button', { name: /^try writing$/i });
+    await act(async () => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'yidhan-theme', newValue: 'light' }));
+      // A sign-out elsewhere removes the key; nothing to hand over for.
+      window.dispatchEvent(new StorageEvent('storage', { key: SESSION_KEY, newValue: null }));
+    });
+    expect(appShellRender).not.toHaveBeenCalled();
+
+    await act(async () => {
+      window.dispatchEvent(new StorageEvent('storage', { key: SESSION_KEY, newValue: '{}' }));
+    });
+    expect(await screen.findByTestId('app-shell')).toHaveTextContent('from-public:none');
+  });
+
   it('stays in the public shell while moving between public pages', async () => {
     const user = userEvent.setup();
     visit('/');
