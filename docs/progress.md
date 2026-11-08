@@ -503,7 +503,11 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   review, three lines of copy: setup tells the account password and the passphrase
   apart, the password-reset form says a new password does not open encrypted notes,
   and step 3 says devices already open keep working after a recovery and take the
-  new passphrase when next asked. Existing accounts keep
+  new passphrase when next asked. The privacy and security pages stop saying a
+  forgotten passphrase cannot be recovered, which has been false since item 26. A
+  setup put away while its write was in flight (the writer left for a public page)
+  no longer leaves a dead step 1 once the write lands: putting it away before the
+  write is confirmed ends the setup screen, and the gate goes by the metadata. Existing accounts keep
   the legacy unlock and migration and never see the new setup. Tests: generator and
   policy (`passphraseGenerator.test.ts`), each step and the places it must not fire
   (`PassphraseSetup.test.tsx`, `accountGates.test.tsx`), the whole flow against the

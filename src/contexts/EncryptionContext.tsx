@@ -673,7 +673,16 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       },
       committedKeys: () => (prepared.committed && !dropped ? prepared.keys : null),
       writeAttempted: () => prepared.writeAttempted,
-      discard: prepared.discard,
+      discard: () => {
+        prepared.discard();
+        // Put away before its write was confirmed: the screen was left, or Back
+        // was used. End the setup screen, so the gate goes by the metadata again:
+        // step 1 if nothing landed, the unlock screen if a write in flight did.
+        // A setup whose write was confirmed keeps step 3 for a remount.
+        if (!prepared.committed || dropped) {
+          setSetupFlow((prev) => (prev?.userId === userId && prev.keys === null ? null : prev));
+        }
+      },
     };
   }, [user, isEncryptionSetup]);
 

@@ -508,6 +508,90 @@ describe('three-step setup (item 27)', () => {
     app.unmount();
   }, 60_000);
 
+  describe('leaving the setup screen and coming back (the account gate, simplified)', () => {
+    /** What the gate shows: the setup while it is open or the account is unset, else the unlock screen. */
+    function Gate({ show }: { show: boolean }) {
+      const { isEncryptionSetup, setupScreen } = useEncryption();
+      if (!show) return <p>public page</p>;
+      return !isEncryptionSetup || setupScreen ? <PassphraseSetup /> : <p>unlock screen</p>;
+    }
+    function gateTree(show: boolean) {
+      return (
+        <EncryptionProvider>
+          <Harness />
+          <Gate show={show} />
+        </EncryptionProvider>
+      );
+    }
+    function renderGate(show: boolean, app?: ReturnType<typeof render>) {
+      mockUseAuth.mockReturnValue({ user: serverUser() });
+      if (app) {
+        app.rerender(gateTree(show));
+        return app;
+      }
+      return render(gateTree(show));
+    }
+
+    async function reachSave() {
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      const key = (await screen.findByTestId('recovery-key', {}, { timeout: 20_000 })).textContent!;
+      fireEvent.click(screen.getByRole('button', { name: /saved it/ }));
+      fireEvent.change(screen.getByLabelText('Recovery key'), { target: { value: key } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save recovery key' }));
+    }
+
+    it('a write that lands after the screen was left leads to the unlock screen, not a dead step 1', async () => {
+      const app = renderGate(true);
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => { release = resolve; });
+      mockUpdateUser.mockImplementationOnce(async (arg: { data: Record<string, unknown> }) => {
+        await held;
+        applyUpdate(arg);
+        return { data: { user: serverUser() }, error: null };
+      });
+      await reachSave();
+      await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1));
+
+      // The writer goes to a public page while the write is in flight.
+      renderGate(false, app);
+      await act(async () => { release(); await Promise.resolve(); });
+      await waitFor(() => expect(serverVault().recoveryWrap).toBeDefined());
+      await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+      // Back to the app, with the metadata the auth context now holds.
+      renderGate(true, app);
+      expect(await screen.findByText('unlock screen')).toBeInTheDocument();
+      expect(screen.queryByText('Step 1 of 3')).toBeNull();
+      app.unmount();
+    }, 60_000);
+
+    it('a remount after the write landed still comes back to step 3', async () => {
+      const app = renderGate(true);
+      await reachSave();
+      expect(await screen.findByText('Step 3 of 3', {}, { timeout: 20_000 })).toBeInTheDocument();
+      renderGate(false, app);
+      renderGate(true, app);
+      expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Open my notes' }));
+      await waitFor(() => expect(h.ctx.isUnlocked).toBe(true));
+      expect(screen.getByText('unlock screen')).toBeInTheDocument();
+      app.unmount();
+    }, 60_000);
+
+    it('leaving before Save, then coming back, starts again at step 1 and can finish', async () => {
+      const app = renderGate(true);
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      await screen.findByTestId('recovery-key', {}, { timeout: 20_000 });
+      renderGate(false, app);
+      renderGate(true, app);
+      expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+      await reachSave();
+      expect(await screen.findByText('Step 3 of 3', {}, { timeout: 20_000 })).toBeInTheDocument();
+      app.unmount();
+    }, 60_000);
+  });
+
   it('the screen: suggested passphrase, Back, a new key, the key typed back, done, and the starter notes', async () => {
     const app = openApp(true);
     const suggested = screen.getByTestId('suggested-passphrase').textContent!;
