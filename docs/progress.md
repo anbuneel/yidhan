@@ -382,3 +382,25 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   rounded up to the next whole KB, so they can only go down. The page-total limit is
   538 KB, not 537: #244 (items 154 and 155) merged first and added 0.3 KB to `/`.
   Item 61 stays open for steps 2, 4, 5 and 7.
+- **2026-11-08** — Item 24 from the public launch plan: the wrapped master key, as
+  §3 of `2026-09-07-key-migration-and-rotation-design.md` describes it. `K` is the
+  64 bytes the legacy derivation already produces. On a passphrase unlock of an
+  account with no `vault`, `src/lib/vaultKey.ts` derives a 32-byte KEK with Argon2id
+  over a fresh 16-byte salt, wraps `K` with AES-GCM under AAD
+  `vault:<userId>:<wrapVersion>`, and makes a key-check under `K`. One `updateUser`
+  call writes the whole `user_metadata.vault` object, `migratedAt` included, and a
+  read-back confirms it. The legacy fields are not touched and no note is
+  re-encrypted. The migration runs after the unlock commits and never blocks it:
+  a failed or killed write leaves no vault and retries on the next passphrase
+  unlock. Before writing it checks that `K` still verifies the legacy key-check,
+  that the new wrap reopens to the same bytes, that the session is still the same
+  user, and that no other device has written a vault. A migrated account unlocks by
+  unwrapping; the restore paths verify `K` against the vault key-check. If the vault
+  does not open but the legacy key-check does, the unlock goes through the legacy
+  path and the vault is left alone (`DECISIONS.md`). Restores cannot migrate,
+  because they have no passphrase. New accounts are still set up on the legacy path
+  and migrate on their first passphrase unlock; item 27 rewrites setup. No database
+  change. Tests 24-T1 to 24-T8 are in `vaultKey.test.ts` and
+  `EncryptionContext.migration.test.tsx`, the second with real Argon2id against a
+  fake server, including a write killed mid-flight and a write that landed but
+  reported an error.

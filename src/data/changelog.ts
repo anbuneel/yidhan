@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.33', date: '2026-11-08', changes: [
+    { type: 'improvement', text: 'Your notes are now locked with a key of their own, kept safe by your passphrase. The next time you unlock with your passphrase, Yidhan makes the switch on its own. Nothing about your notes changes, and your passphrase stays the same. This is the groundwork for changing your passphrase and for a recovery key' },
+  ] },
   { version: '3.19.32', date: '2026-11-07', changes: [
     { type: 'improvement', text: 'The first visit is lighter: the app installs for offline use after the page has finished loading, not during it, and stores about 1 MB for offline use instead of about 5 MB' },
     { type: 'improvement', text: 'The release notes now load only when you open this page, so every other page starts with less to download' },

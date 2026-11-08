@@ -19,6 +19,42 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-08 — A vault that does not open falls back to the legacy key path
+
+**Status:** Active
+
+**Why:** Item 24 adds the wrapped master key. The design says to read
+`vault.wrappedKey` first and fall back to the legacy derivation only when the vault
+is absent. It does not say what happens when the vault is present and does not
+open. Read strictly, that is a wrong passphrase, and a corrupted or mis-written
+vault would lock the user out on every new client, even though the legacy fields
+still describe the same `K` and an old client still opens the account. Item 24's
+rule is that a failed migration never leaves a user locked out.
+
+**Decision:** When the vault is readable but does not unwrap, or unwraps and fails
+its key-check, the unlock tries the legacy derivation with the same passphrase. If
+the legacy key-check verifies, the vault unlocks with those keys and the event is
+reported. The vault is never overwritten in that case. A vault with a version this
+client does not know, or a malformed one, is treated the same way: legacy path, no
+overwrite. A wrong passphrase on a migrated account now costs two Argon2id
+derivations instead of one.
+
+**Rejected:**
+- *Fail closed on a vault that does not open.* Safe for secrecy, but it turns any
+  bad vault write into a lockout on the current client, with no recovery short of
+  an old client.
+- *Rewrite the vault when the legacy path succeeds.* It would repair corruption,
+  but it would also overwrite state this client does not understand. After item 25
+  or 103 a mismatch can mean the vault is newer than the legacy fields, and
+  overwriting it would undo a key change.
+
+**Revisit:** Item 25. Once a passphrase change re-encrypts the legacy key-check
+(design §3.3), the legacy path stops opening with a retired passphrase, so the
+fallback cannot reopen one. Item 25 should confirm that and keep a test for it.
+When a later release removes the legacy fields, the fallback goes with them.
+
+---
+
 ## 2026-11-07 — The execution plan is superseded by a public launch plan
 
 **Status:** Active

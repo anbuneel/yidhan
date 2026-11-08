@@ -205,13 +205,17 @@ client's own changes. Removing it causes write loops.
   user. Public share access goes through the ciphertext-only `fetch_shared_note` RPC —
   **not** a public table SELECT policy.
 - **E2EE:** title + content encrypted together as a JSON blob, AES-256-GCM with AAD
-  (`noteId:userId`) to prevent note-swapping. Keys derived from the passphrase via
-  Argon2id (`hash-wasm`). **Tags and metadata stay plaintext** — an accepted, documented
+  (`noteId:userId`) to prevent note-swapping. The 64-byte key pair `K` (AES half, HMAC
+  half) is wrapped by a KEK that Argon2id (`hash-wasm`) derives from the passphrase and
+  its own salt, stored as `user_metadata.vault`; accounts not yet migrated derive `K`
+  directly from the passphrase (`src/lib/vaultKey.ts`, design in
+  `docs/plans/2026-09-07-key-migration-and-rotation-design.md`). **Tags and metadata stay plaintext** — an accepted, documented
   trade (`DECISIONS.md`), not an oversight to fix casually.
 - **Key storage:** React state plus sessionStorage; optional localStorage via opt-in
   "Remember this browser" (default off). Every restore path — including refresh-time
-  sessionStorage — must verify `encryption_key_check` before unlocking, so a stale key
-  after a passphrase change is caught. The blob checksum is FNV-1a for corruption
+  sessionStorage — must verify the key-check before unlocking, so a stale key after a
+  passphrase change is caught: `vault.keyCheck` on a migrated account,
+  `encryption_key_check` otherwise. The blob checksum is FNV-1a for corruption
   detection only; `verifyKeyCheck()` is the security gate. **Fails closed:** if
   localStorage is unavailable, the preference is not enabled.
 - **Lock reason changes behaviour:** `auto-lock` preserves localStorage for silent
