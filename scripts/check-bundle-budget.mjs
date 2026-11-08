@@ -157,8 +157,17 @@ requireThat(
 
 console.log(rows.join('\n'));
 if (failures.length) {
-  console.error(`\nBundle budget failed:\n- ${failures.join('\n- ')}`);
-  console.error('Budgets: scripts/bundle-budget.json. Reasoning: docs/plans/2026-11-07-first-visit-weight-proposal.md');
-  process.exit(1);
+  const report = `Bundle budget failed:\n- ${failures.join('\n- ')}\nBudgets: scripts/bundle-budget.json. Reasoning: docs/plans/2026-11-07-first-visit-weight-proposal.md`;
+  // CI is the gate, not the deploy. Vercel inlines the production Supabase key, which is
+  // incompressible, so its build measures a few hundred bytes more than CI's placeholder
+  // build; with limits ratcheted to within 1 KB of the last measurement that difference
+  // alone failed every preview deploy. Vercel reports and deploys; GitHub Actions fails.
+  if (process.env.VERCEL) {
+    console.warn(`\n${report}\nNot enforced on Vercel: the GitHub Actions build is the gate.`);
+  } else {
+    console.error(`\n${report}`);
+    process.exit(1);
+  }
+} else {
+  console.log('Bundle budget assertions passed');
 }
-console.log('Bundle budget assertions passed');
