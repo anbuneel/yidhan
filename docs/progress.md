@@ -597,3 +597,19 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   count, shell and page copy compared line by line, the proof-line links in both, and
   the security page still naming what the hero says is visible),
   `SupportPage.test.tsx` (new), and `e2e/landing-shell.spec.ts`.
+- **2026-11-08** — Item 111: compact pinned row. When the Pinned chapter holds one or
+  two notes, they render as compact cards in a left-aligned row sized to content
+  (`.pinned-row` in `index.css`), so the Practice Space's welcome note no longer sits
+  alone in the middle of a wide band. Three or more pinned notes, search results and
+  every other chapter keep the masonry grid. The row is the same Masonry tree with a
+  class, so a third pin or an unpin switches without remounting. The compact card
+  normally drops the pin button, which is the only mouse way to unpin, so the row
+  keeps it (`keepPin` on `NoteCard` and `SwipeableNoteCard`). The plan asked for a
+  visual regression; there is no screenshot-diff harness, so the evidence is
+  `ChapterSection.test.tsx` (row for one and two pinned notes; grid for three, for
+  search and for every other chapter; keyboard selection and mouse unpin on the
+  compact card; switching at three without remounting), a compact-card assertion in
+  `LibraryKeyboardNavigation.test.tsx`, and `e2e/practice-space.spec.ts`, which checks
+  at 1440 px that the welcome card is left-aligned, under a third of the band's width
+  and far from its centre, and at 390 px that it fills the column with no horizontal
+  scroll. The 1440 px check fails against the old layout.

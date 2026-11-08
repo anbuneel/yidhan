@@ -12,6 +12,8 @@ interface NoteCardProps {
   onDelete: NoteDeleteHandler;
   onTogglePin: (id: string, pinned: boolean) => void;
   isCompact?: boolean;
+  /** Keep the pin button on a compact card: the pinned row's only mouse unpin. */
+  keepPin?: boolean;
   isDecorative?: boolean;
   searchQuery?: string;
   searchMatchTerms?: readonly string[];
@@ -24,6 +26,7 @@ export const NoteCard = memo(function NoteCard({
   onDelete,
   onTogglePin,
   isCompact = false,
+  keepPin = false,
   isDecorative = false,
   searchQuery,
   searchMatchTerms,
@@ -200,8 +203,8 @@ export const NoteCard = memo(function NoteCard({
         />
       )}
 
-      {/* Pin button - top-right corner (only in full mode) */}
-      {!isCompact && !isDecorative && (
+      {/* Pin button - top-right corner (full mode, or the compact pinned row) */}
+      {(!isCompact || keepPin) && !isDecorative && (
         <button type="button"
           onClick={handlePinClick}
           className={`
@@ -242,9 +245,9 @@ export const NoteCard = memo(function NoteCard({
       )}
 
       {/* Title row - with inline pin in compact mode */}
-      <div className={`flex items-center gap-2 ${isCompact ? 'mb-1' : 'mb-3'} shrink-0`}>
-        {/* Inline pin icon (compact mode only) */}
-        {isCompact && note.pinned && (
+      <div className={`flex items-center gap-2 ${isCompact ? 'mb-1' : 'mb-3'} ${keepPin ? 'pr-9' : ''} shrink-0`}>
+        {/* Inline pin icon (compact mode only, unless the pin button is kept) */}
+        {isCompact && !keepPin && note.pinned && (
           <svg
             className="size-3.5 shrink-0"
             fill="currentColor"
@@ -386,6 +389,7 @@ export const NoteCard = memo(function NoteCard({
 }, (prev, next) =>
   prev.note === next.note &&
   prev.isCompact === next.isCompact &&
+  prev.keepPin === next.keepPin &&
   prev.isDecorative === next.isDecorative &&
   prev.searchQuery === next.searchQuery &&
   prev.isFocused === next.isFocused

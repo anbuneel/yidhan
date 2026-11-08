@@ -169,3 +169,58 @@ test.describe('Starter copy', () => {
     await expect(page.getByRole('button', { name: /keep these notes/i })).toBeHidden();
   });
 });
+
+/** Item 111: a lone pinned card sits at the left of the Pinned band as a compact card,
+ *  not centred in it. The welcome note is the Practice Space's only pinned note. */
+test.describe('Pinned row', () => {
+  async function welcomeAndBand(page: Page) {
+    await page.goto('/demo');
+    const band = page.locator('#chapter-pinned');
+    const card = band.locator('.note-card').first();
+    await expect(card).toBeVisible();
+    // Wait out the entrance animation so the box is final.
+    await page.waitForTimeout(600);
+    const bandBox = await band.boundingBox();
+    const cardBox = await card.boundingBox();
+    if (!bandBox || !cardBox) throw new Error('pinned band or welcome card has no box');
+    return { band, card, bandBox, cardBox };
+  }
+
+  test.describe('at 1440 px', () => {
+    test.use({ viewport: { width: 1440, height: 900 } });
+
+    test('the welcome card is left-aligned and compact, not centred in a wide band', async ({
+      page,
+    }) => {
+      const { card, bandBox, cardBox } = await welcomeAndBand(page);
+
+      await expect(page.locator('#chapter-pinned .note-card')).toHaveCount(1);
+      await expect(card).toHaveClass(/note-card-compact/);
+      // Much narrower than the band it sits in.
+      expect(cardBox.width).toBeLessThan(bandBox.width / 3);
+      // Starts at the band's content edge (px-12 plus the masonry gutter), and its
+      // centre is nowhere near the band's centre.
+      expect(cardBox.x - bandBox.x).toBeLessThan(80);
+      const cardCentre = cardBox.x + cardBox.width / 2;
+      const bandCentre = bandBox.x + bandBox.width / 2;
+      expect(Math.abs(cardCentre - bandCentre)).toBeGreaterThan(bandBox.width / 4);
+    });
+  });
+
+  test.describe('at 390 px', () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+
+    test('the row stacks to the column and adds no horizontal scroll', async ({ page }) => {
+      const { bandBox, cardBox } = await welcomeAndBand(page);
+
+      expect(cardBox.x).toBeGreaterThanOrEqual(0);
+      expect(cardBox.x + cardBox.width).toBeLessThanOrEqual(390);
+      // Fills the column, as every other phone card does.
+      expect(cardBox.width).toBeGreaterThan(bandBox.width - 80);
+      const scrolls = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      expect(scrolls).toBe(false);
+    });
+  });
+});

@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.41', date: '2026-11-08', changes: [
+    { type: 'improvement', text: 'One or two pinned notes now sit as small cards at the left of the Pinned row, instead of one large card alone in the middle of a wide band. Pin a third and the row goes back to full cards' },
+  ] },
   { version: '3.19.40', date: '2026-11-08', changes: [
     { type: 'improvement', text: 'The landing page now says exactly what encryption protects: your notes are encrypted on your device before they sync, and dates, sizes and tag names stay visible. It links to the security page for the rest. It also says that trying Yidhan needs nothing set up, while an account asks for a passphrase and a recovery key' },
     { type: 'improvement', text: 'The support page now says who runs Yidhan: one person, with no company behind it. It says where to write, how soon to expect a reply, and what cannot be promised' },

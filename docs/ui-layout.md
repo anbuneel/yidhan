@@ -359,6 +359,14 @@ Pinned notes:
 - Empty chapters are not rendered ("Honest Presence" pattern)
 - Collapsed state shows first 3 note titles as preview
 - Each chapter has its own masonry grid
+- Pinned with one or two notes is a compact row instead: compact cards, left-aligned
+  and sized to content (at most 22rem each), with the pin button kept so a mouse can
+  unpin. Three or more pinned notes use the masonry grid. Search results always use
+  the grid. Under 700 px the row stacks to one full-width column, like every chapter.
+  The row is the same masonry tree with a `pinned-row` class, so crossing three does
+  not remount the chapter
+- Other chapters with one or two cards cap their columns to the card count and centre
+  the group
 
 ## Faded Notes View
 

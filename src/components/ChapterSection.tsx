@@ -127,8 +127,13 @@ export const ChapterSection = memo(function ChapterSection({
   // full-width 3/2/1 grid is preserved. Widths track the app-true card width
   // (~440px) plus the 20px masonry gutter.
   const cardCount = displayNotes.length;
-  const lowCountMaxWidth =
-    cardCount === 1 ? '480px' : cardCount === 2 ? '960px' : undefined;
+  // Item 111: one or two pinned notes sit as a left-aligned row of compact cards
+  // sized to content (`.pinned-row` in index.css). Search keeps the grid. The row
+  // is the same Masonry tree with a class, so a third pin does not remount it.
+  const isPinnedRow = isPinned && !isSearching && cardCount < 3;
+  const lowCountMaxWidth = isPinnedRow
+    ? undefined
+    : cardCount === 1 ? '480px' : cardCount === 2 ? '960px' : undefined;
   const masonryBreakpoints = {
     default: Math.min(3, cardCount) || 1,
     1100: Math.min(2, cardCount) || 1,
@@ -329,7 +334,7 @@ export const ChapterSection = memo(function ChapterSection({
             >
               <Masonry
                 breakpointCols={masonryBreakpoints}
-                className="masonry-grid"
+                className={isPinnedRow ? 'masonry-grid pinned-row' : 'masonry-grid'}
                 columnClassName="masonry-grid-column"
               >
                 {displayNotes.map((note, index) => (
@@ -347,7 +352,7 @@ export const ChapterSection = memo(function ChapterSection({
                       <LockedNoteCard
                         note={note}
                         onRetry={onRetryLockedNote}
-                        isCompact={isCompact}
+                        isCompact={isCompact || isPinnedRow}
                       />
                     ) : isTouchDevice ? (
                       <SwipeableNoteCard
@@ -355,7 +360,8 @@ export const ChapterSection = memo(function ChapterSection({
                         onClick={onNoteClick}
                         onDelete={onNoteDelete}
                         onTogglePin={onTogglePin}
-                        isCompact={isCompact}
+                        isCompact={isCompact || isPinnedRow}
+                        keepPin={isPinnedRow}
                         searchQuery={isSearching ? searchQuery : undefined}
                         searchMatchTerms={searchMatchTerms?.get(note.id)}
                         isFocused={note.id === focusedNoteId}
@@ -366,7 +372,8 @@ export const ChapterSection = memo(function ChapterSection({
                         onClick={onNoteClick}
                         onDelete={onNoteDelete}
                         onTogglePin={onTogglePin}
-                        isCompact={isCompact}
+                        isCompact={isCompact || isPinnedRow}
+                        keepPin={isPinnedRow}
                         searchQuery={isSearching ? searchQuery : undefined}
                         searchMatchTerms={searchMatchTerms?.get(note.id)}
                         isFocused={note.id === focusedNoteId}

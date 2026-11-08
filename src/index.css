@@ -1297,6 +1297,22 @@ body::before {
   margin-bottom: 10px; /* vertical gap between cards - compact but breathable */
 }
 
+/* Item 111: one or two pinned notes as a left-aligned row of compact cards sized
+   to content. !important beats react-masonry-css's inline column width. */
+.pinned-row .masonry-grid-column {
+  flex: 0 1 auto;
+  width: auto !important;
+  min-width: min(14rem, 100%);
+  max-width: 22rem;
+}
+
+@media (max-width: 700px) {
+  .pinned-row .masonry-grid-column {
+    flex-basis: 100%;
+    max-width: none;
+  }
+}
+
 /* Hide scrollbar for tag filter bar (webkit) */
 .overflow-x-auto::-webkit-scrollbar {
   display: none;
