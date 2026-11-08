@@ -326,6 +326,11 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
   const { user } = useAuth();
   const [keyState, setKeyState] = useState<KeyState>({ keys: null, userId: null });
   const sessionRestoreAttemptedRef = useRef<string | null>(null);
+  /**
+   * Bumped by every lock and every passphrase unlock. A recovery-key lookup still
+   * in flight from before is stale: its keys are zeroed, never installed.
+   */
+  const recoveryAttemptRef = useRef(0);
   /** When true, vault was auto-locked — activity gate must fire before restore */
   const autoLockedRef = useRef(false);
   const [recovery, setRecovery] = useState<PendingRecovery | null>(null);
@@ -368,6 +373,8 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
   // Reset auto-lock state when user changes (refs must not be mutated during render)
   useEffect(() => {
     autoLockedRef.current = false;
+    // A recovery lookup for the previous account must not install its keys.
+    recoveryAttemptRef.current++;
   }, [currentUserId]);
 
   // Attempt to restore keys from sessionStorage (then localStorage) on mount/user change
@@ -645,6 +652,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     });
     if (!result) return false;
 
+    recoveryAttemptRef.current++;
     setKeyState({ keys: result.keys, userId });
     persistSession(userId, result.keys);
     if (isRememberBrowserEnabled(userId) && !persistLocal(userId, result.keys)) {
@@ -673,6 +681,8 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
   const unlockWithRecoveryKey = useCallback(async (recoveryKey: string): Promise<RecoveryUnlockStatus> => {
     if (!user || !encryptionSalt) return 'unavailable';
+    // Taken before any await, so a lock during the chunk load also counts.
+    const attempt = ++recoveryAttemptRef.current;
     const userId = user.id;
     const { recoveryUnlock } = await loadRecoveryKit();
     const result = await recoveryUnlock({
@@ -682,6 +692,12 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       metadata: user.user_metadata,
     });
     if (result.status !== 'ok') return result.status;
+    if (attempt !== recoveryAttemptRef.current) {
+      // Locked, or unlocked with the passphrase, while this ran. Drop it.
+      result.reset.discard();
+      clearKeyMaterial(result.keys);
+      throw new Error('This recovery attempt was replaced.');
+    }
     // Verified against the vault key-check, but not committed: no note is
     // decrypted and nothing is stored until a new passphrase is saved.
     setRecovery((prev) => {
@@ -745,6 +761,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     // Use currentUserId (from auth) instead of keyState.userId for storage cleanup.
     // After auto-lock, keyState.userId is null but currentUserId still holds the
     // authenticated user's ID — ensuring sign-out from locked state clears localStorage.
+    recoveryAttemptRef.current++;
     const effectiveUserId = currentUserId ?? keyState.userId;
     clearSession(effectiveUserId);
     setRecovery((prev) => {

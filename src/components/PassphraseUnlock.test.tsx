@@ -338,5 +338,17 @@ describe('PassphraseUnlock', () => {
       await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('52 letters and digits'));
       expect(screen.getByRole('alert').textContent).not.toContain('ABCD-EFGH');
     });
+
+    it('cannot go back to the passphrase form while a recovery lookup is running', async () => {
+      let finish!: (status: string) => void;
+      mockUnlockWithRecoveryKey.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+      render(<PassphraseUnlock />);
+      fireEvent.click(screen.getByRole('button', { name: 'Use your recovery key' }));
+      fireEvent.change(await screen.findByLabelText('Recovery key'), { target: { value: 'ABCD' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(screen.getByRole('button', { name: 'Use your passphrase instead' })).toBeDisabled();
+      finish('wrong');
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Use your passphrase instead' })).toBeEnabled());
+    });
   });
 });

@@ -80,6 +80,8 @@ export function RecoveryKeyUnlockForm({ onUsePassphrase }: { onUsePassphrase: ()
       <button
         type="button"
         onClick={onUsePassphrase}
+        // Not while a lookup runs: its result would land on the passphrase form.
+        disabled={isSubmitting}
         className="w-full py-2 text-xs transition-opacity hover:opacity-80"
         style={vaultQuietButtonStyle}
       >

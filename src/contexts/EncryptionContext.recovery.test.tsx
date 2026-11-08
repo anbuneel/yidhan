@@ -577,5 +577,54 @@ describe('recovery kit (item 26)', () => {
       // Not written twice: the retry saw its own wrap.
       expect(serverVault().recoveryWrap).toEqual(stored);
     }, 30_000);
+  
+    /** Hold the next getUser until released: a slow recovery lookup. */
+    function slowNextLookup() {
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      mockGetUser.mockImplementationOnce(async () => {
+        await gate;
+        return { data: { user: serverUser() }, error: null };
+      });
+      return () => release();
+    }
+
+    it('a recovery lookup that finishes after a passphrase unlock does not take over the library', async () => {
+      const app = openApp();
+      await act(async () => { await h.ctx.unlockWithPassphrase(PASSPHRASE); });
+      const recoveryKey = await makeKit();
+      act(() => h.ctx.lockVault('manual'));
+      refreshAuth(app);
+
+      const release = slowNextLookup();
+      let late!: Promise<string>;
+      act(() => { late = h.ctx.unlockWithRecoveryKey(recoveryKey); });
+      // The writer gives up on the recovery key and unlocks with the passphrase.
+      await act(async () => { await h.ctx.unlockWithPassphrase(PASSPHRASE); });
+      expect(h.ctx.isUnlocked).toBe(true);
+
+      release();
+      await act(async () => { await expect(late).rejects.toThrow(); });
+      expect(h.ctx.isUnlocked).toBe(true);
+      expect(h.ctx.recoveryScreen).not.toBe('reset');
+    }, 30_000);
+
+    it('a recovery lookup that finishes after a manual lock installs no held keys', async () => {
+      const app = openApp();
+      await act(async () => { await h.ctx.unlockWithPassphrase(PASSPHRASE); });
+      const recoveryKey = await makeKit();
+      act(() => h.ctx.lockVault('manual'));
+      refreshAuth(app);
+
+      const release = slowNextLookup();
+      let late!: Promise<string>;
+      act(() => { late = h.ctx.unlockWithRecoveryKey(recoveryKey); });
+      act(() => h.ctx.lockVault('manual'));
+
+      release();
+      await act(async () => { await expect(late).rejects.toThrow(); });
+      expect(h.ctx.recoveryScreen).toBeNull();
+      expect(h.ctx.isUnlocked).toBe(false);
+    }, 30_000);
   });
 });
