@@ -836,7 +836,11 @@ describe('conditional note writes — stale writes', () => {
       deleted_at: '2026-11-01T00:00:05.000Z',
     });
     const retryWrite = buildChain({
-      data: buildServerNoteRow(noteId, { updated_at: '2026-11-01T00:00:06.000000+00:00', content_hash: 'hash-local' }),
+      data: buildServerNoteRow(noteId, {
+        updated_at: '2026-11-01T00:00:06.000000+00:00',
+        content_hash: 'hash-local',
+        deleted_at: '2026-11-01T00:00:05.000Z',
+      }),
     });
     mockFrom
       .mockReturnValueOnce(buildChain({ data: versionN }))
@@ -856,6 +860,91 @@ describe('conditional note writes — stale writes', () => {
     expect(sent).toMatchObject({ content_hash: 'hash-local', pinned: false });
     // The other device's trash survives the rewrite.
     expect(sent).not.toHaveProperty('deleted_at');
+    // And reaches this device with no realtime event: the note is trashed here
+    // too, so a pull that passes this version by cannot leave it showing.
+    const local = await db.notes.get(noteId);
+    expect(local?.deletedAt).toBe(Date.parse('2026-11-01T00:00:05.000Z'));
+    expect(local?.pinned).toBe(false);
+  });
+
+  it('leaves local metadata alone when a newer local write for the note is queued', async () => {
+    const noteId = 'note-stale-metadata-newer-local';
+    const entry = await queueUpdate(noteId, 'hash-local');
+    const db = getOfflineDb(TEST_USER_ID);
+    // The user pinned the note here after this update was queued.
+    await db.notes.update(noteId, { pinned: true });
+    await db.syncQueue.put(buildEntry({
+      id: 1593,
+      operation: 'pin',
+      entityType: 'note',
+      entityId: noteId,
+      payload: { pinned: true },
+    }));
+    mockGetPendingSyncQueue.mockResolvedValue([entry]);
+
+    const versionN = buildServerNoteRow(noteId, { updated_at: VERSION_N, content_hash: 'hash-base' });
+    const unpinnedElsewhere = buildServerNoteRow(noteId, {
+      updated_at: VERSION_N1,
+      content_hash: 'hash-base',
+      pinned: false,
+      display_updated_at: '2026-11-01T00:00:05.000Z',
+    });
+    mockFrom
+      .mockReturnValueOnce(buildChain({ data: versionN }))
+      .mockReturnValueOnce(buildChain({ data: null }))
+      .mockReturnValueOnce(buildChain({ data: unpinnedElsewhere }))
+      .mockReturnValueOnce(buildChain({
+        data: { ...unpinnedElsewhere, updated_at: '2026-11-01T00:00:06.000000+00:00', content_hash: 'hash-local' },
+      }));
+    setConflictHandler(() => {});
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.processed).toBe(1);
+    const local = await db.notes.get(noteId);
+    expect(local?.pinned).toBe(true);
+    expect(local?.updatedAt).toBe(Date.parse('2026-11-01T00:00:00.000Z'));
+  });
+
+  it('fails closed rather than comparing null hashes on the newer row', async () => {
+    // Two null hashes would compare equal and hide different words. A row
+    // without a hash is not an encrypted row, so it never reaches the compare.
+    const noteId = 'note-null-hash';
+    await queueUpdate(noteId, 'hash-local');
+
+    const nullHash = { content_hash: null };
+    const retryWrite = buildChain({ data: buildServerNoteRow(noteId) });
+    mockFrom
+      .mockReturnValueOnce(buildChain({ data: buildServerNoteRow(noteId, { updated_at: VERSION_N }) }))
+      .mockReturnValueOnce(buildChain({ data: null }))
+      .mockReturnValueOnce(buildChain({
+        data: buildServerNoteRow(noteId, { updated_at: VERSION_N1, ...nullHash, encrypted_payload: 'other-words' }),
+      }))
+      .mockReturnValueOnce(retryWrite);
+    const conflicts: ConflictInfo[] = [];
+    setConflictHandler((c) => conflicts.push(c));
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.processed).toBe(0);
+    expect(mockFrom).toHaveBeenCalledTimes(3);
+    expect(retryWrite.update).not.toHaveBeenCalled();
+    expect(mockMarkNoteSynced).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the pre-write read returns a row with a null hash', async () => {
+    const noteId = 'note-null-base-hash';
+    await queueUpdate(noteId, 'hash-local');
+
+    const write = buildChain({ data: buildServerNoteRow(noteId) });
+    mockFrom
+      .mockReturnValueOnce(buildChain({ data: buildServerNoteRow(noteId, { updated_at: VERSION_N, content_hash: null }) }))
+      .mockReturnValueOnce(write);
+
+    const result = await processQueue(TEST_USER_ID);
+
+    expect(result.processed).toBe(0);
+    expect(write.update).not.toHaveBeenCalled();
   });
 
   it('does not write at all when the pre-write read fails', async () => {

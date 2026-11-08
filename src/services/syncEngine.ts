@@ -308,7 +308,7 @@ async function processQueueEntry(
     switch (entityType) {
       case 'note':
         return {
-          outcome: await processNoteOperation(userId, operation, entityId, payload)
+          outcome: await processNoteOperation(userId, operation, entityId, payload, clientMutationId)
             ? 'processed'
             : 'retry',
         };
@@ -559,6 +559,45 @@ async function raiseNoteConflict(
   throw new SyncConflictError(localNote.id);
 }
 
+const NOTE_METADATA_FIELDS = ['pinned', 'deleted_at', 'display_updated_at'] as const;
+type NoteMetadataField = (typeof NOTE_METADATA_FIELDS)[number];
+
+/**
+ * Copy metadata another device changed into the local note.
+ *
+ * Without this the local note keeps the old value (a trashed note stays
+ * visible) until realtime or a pull corrects it, and an incremental pull can
+ * pass that version by for good. Skipped when this device has another write
+ * queued for the note: that write is newer intent and will reach the server.
+ */
+async function adoptServerMetadata(
+  userId: string,
+  noteId: string,
+  clientMutationId: string,
+  row: Database['public']['Tables']['notes']['Row'],
+  fields: ReadonlySet<NoteMetadataField>
+): Promise<void> {
+  const db = getOfflineDb(userId);
+  await db.transaction('rw', db.notes, db.syncQueue, async () => {
+    const newerLocalWrites = await db.syncQueue
+      .where('entityId')
+      .equals(noteId)
+      .filter((entry) => entry.entityType === 'note' && entry.clientMutationId !== clientMutationId)
+      .count();
+    if (newerLocalWrites > 0) return;
+
+    const changes: Partial<LocalNote> = {};
+    if (fields.has('pinned')) changes.pinned = row.pinned;
+    if (fields.has('deleted_at')) {
+      changes.deletedAt = row.deleted_at === null ? null : new Date(row.deleted_at).getTime();
+    }
+    if (fields.has('display_updated_at')) {
+      changes.updatedAt = new Date(getDisplayUpdatedAt(row)).getTime();
+    }
+    await db.notes.update(noteId, changes);
+  });
+}
+
 /**
  * Process note operations
  */
@@ -566,7 +605,8 @@ async function processNoteOperation(
   userId: string,
   operation: string,
   noteId: string,
-  payload: unknown
+  payload: unknown,
+  clientMutationId: string
 ): Promise<boolean> {
   const db = getOfflineDb(userId);
   const data = payload as Record<string, unknown>;
@@ -689,6 +729,9 @@ async function processNoteOperation(
       let base = serverNote && localNote.lastSyncedAt ? serverNote : null;
       let writePayload = updatePayload;
       let updated: Database['public']['Tables']['notes']['Row'] | null = null;
+      // Metadata the newer row changed. The rewrite leaves it alone on the
+      // server, so the local note must take it too once the write lands.
+      const serverOwned = new Set<NoteMetadataField>();
 
       for (let attempt = 0; ; attempt++) {
         let query = supabase
@@ -737,10 +780,17 @@ async function processNoteOperation(
           );
         }
         writePayload = { ...writePayload };
-        for (const field of ['pinned', 'deleted_at', 'display_updated_at'] as const) {
-          if (current[field] !== base[field]) delete writePayload[field];
+        for (const field of NOTE_METADATA_FIELDS) {
+          if (current[field] !== base[field]) {
+            delete writePayload[field];
+            serverOwned.add(field);
+          }
         }
         base = current;
+      }
+
+      if (updated && serverOwned.size > 0) {
+        await adoptServerMetadata(userId, noteId, clientMutationId, updated, serverOwned);
       }
 
       const updatedAt = updated

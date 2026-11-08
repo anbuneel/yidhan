@@ -45,3 +45,23 @@ be replaced when the user chooses. The brief for item 159 limits the change to t
 `processNoteOperation` switch. Both resolution paths also stage a queued `update`, which
 now goes through the conditional write. The direct write itself is left for roadmap
 item 35's write contract or a follow-up item.
+
+## Second round — PR review bots on 6a9e29a
+
+**Accepted: "the metadata the rewrite preserves on the server never reaches the local
+note."** True. `markNoteSynced` writes only hashes, status and sync timestamps, so a
+note trashed on another device stayed visible here until realtime or a pull caught it.
+An incremental pull could pass that version by. Fix: once the rewrite lands, the
+fields the newer row changed (`pinned`, `deleted_at`, `display_updated_at`) are copied
+from the returned row into the local note. This is skipped when another write for the
+note is queued here, because that write is newer intent and will reach the server.
+Tests: a trash elsewhere is trashed here with no realtime event; a newer queued local
+pin keeps its local value.
+
+**Rejected: "null hashes on both sides compare equal and hide different words."** The
+compare cannot see a null. Every hash it reads has passed a fail-closed check that
+requires a non-empty string: the queue payload (`requireEncryptedQueuePayload`), the
+pre-write read and the re-read (`fetchServerNoteForWrite`, through
+`isLaunchEncryptedDbNote`). A null hash fails the entry as a plaintext note, with no
+write. Tests: a null hash on the newer row, and one on the pre-write row, each stop
+before any write.
