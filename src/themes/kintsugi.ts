@@ -26,14 +26,16 @@ const kintsugi: ThemeConfig = {
     textTertiary: '#65625C', // 4.98:1 on bgPrimary, 4.70:1 on bgSecondary (item 160)
 
     // Accent: Terracotta / Lacquer Red
-    accent: '#C25634',
+    // #C25634 nudged to #BF5432 in item 160 (R -3, G -2, B -2) so white on the accent
+    // fill reaches AA: 4.49:1 before, 4.64:1 now. Toolbar active state, selected options.
+    accent: '#BF5432',
     accentHover: '#A84828',
     accentGlow: 'rgba(194, 86, 52, 0.2)',
     accentMuted: 'rgba(194, 86, 52, 0.7)',
-    // Accent as text (item 160). #C25634 is 3.68:1 on bgPrimary, too light for text.
+    // Accent as text (item 160). The accent is 3.7:1 on bgPrimary, too light for text.
     // 6.06:1 on bgPrimary, 5.07:1 on bgTertiary, 6.98:1 on card, 4.79:1 on accentGlow.
     accentText: '#8F3C21',
-    onAccent: '#fff', // 4.49:1 — best achievable on #C25634
+    onAccent: '#fff', // 4.64:1 on #BF5432
 
     // CTA button (darker terracotta for WCAG AA contrast with white text — 5.44:1)
     ctaBg: '#B04A2C',

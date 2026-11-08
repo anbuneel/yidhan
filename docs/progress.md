@@ -705,13 +705,19 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   Every node but one was `color-contrast`. The exception was
   `label-content-name-mismatch` on the toolbar's H1 button. Fixes:
   - In Kintsugi, text-secondary `#6B6862` → `#55524C` and text-tertiary `#7D7974` →
-    `#65625C`. The old secondary still fails, at 4.29:1 on setup and unlock.
+    `#65625C`. Both are still needed: the old secondary fails at 4.29:1 on setup and
+    unlock, and the old tertiary fails on all six screens.
   - A new token, `--color-accent-text`, for accent read as text: links and
     selected labels. It is `#8F3C21` in Kintsugi (4.79:1 on the accent glow) and
     equals the accent in Midnight, Washi and Mori, which already pass. It is
-    applied at 62 lines: 55 in components and pages, 6 rules in `index.css`, and
-    the passphrase strength label. The accent itself stays `#C25634` for fills,
-    borders and indicators. DESIGN.md's taxonomy gains a row for it.
+    applied at 58 lines: 51 in components and pages, 6 rules in `index.css`, and
+    the passphrase strength label. PlaygroundPage, which is dev-only, is left out.
+    Fills, borders and indicators keep `--color-accent`. DESIGN.md's taxonomy
+    gains a row for it.
+  - The Kintsugi accent moves from `#C25634` to `#BF5432` (R −3, G −2, B −2), so
+    white on the accent fill reaches 4.64:1, up from 4.49:1. That covers the
+    toolbar's active state and the selected options. The `index.html` shell's
+    `--b-accent` matches, though nothing reads it.
   - The `index.html` shell mirrors the new text values. It never reads the accent,
     so it needs no new token.
   - The editor sidebar rests at 0.9 opacity, not 0.65.
@@ -719,10 +725,6 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
     hint, the Practice Space label and the Ctrl+K chip.
   - The quiet vault buttons underline on hover instead of fading.
   - The H1 button is named "Heading 1, H1".
-
-  White on the `#C25634` fill is 4.49:1. The spec never scans a toolbar button in
-  its hover, focus or active state, so axe does not see this. It is filed rather
-  than fixed, because fixing it changes the fill: #260.
 
   By hand: tab order and Escape on each screen. Escape closes the editor, the
   avatar menu and Settings. Tab left the open Settings dialog for the library
