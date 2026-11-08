@@ -103,8 +103,9 @@ export function SupportPage({
                     anbs.dev@gmail.com
                   </a>
                   {' '}for anything private. Most messages get a reply within a few days, but
-                  there is no support team and no guaranteed response time, and no one can
-                  open notes without your passphrase or recovery key. The code is public, so
+                  there is no support team and no guaranteed response time. If you lose both
+                  your passphrase and your recovery key, no one can restore your notes for
+                  you. The code is public, so
                   anyone can read how Yidhan works.
                 </p>
               </div>

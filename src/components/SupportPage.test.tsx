@@ -24,6 +24,9 @@ describe('SupportPage', () => {
     expect(paragraph).toHaveTextContent(/reply within a few days/i);
     expect(paragraph).toHaveTextContent(/no support team and no guaranteed response time/i);
     expect(paragraph).toHaveTextContent(/the code is public/i);
+    expect(paragraph).toHaveTextContent(/lose both your passphrase and your recovery key/i);
+    // No absolute claim about who can open notes: tags, dates and sizes stay visible.
+    expect(paragraph).not.toHaveTextContent(/no one can open/i);
     expect(screen.getByRole('link', { name: 'anbs.dev@gmail.com' })).toHaveAttribute(
       'href',
       'mailto:anbs.dev@gmail.com'
