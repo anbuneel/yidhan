@@ -16,6 +16,8 @@
  * single cooldown-guarded reload.
  */
 
+import { whenPageLoaded } from './whenPageLoaded';
+
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
 /**
@@ -62,24 +64,6 @@ function scheduleUpdateChecks(registration: ServiceWorkerRegistration | undefine
       if (document.visibilityState === 'visible') checkForUpdate();
     });
   }
-}
-
-/**
- * Resolve once the window `load` event has fired.
- *
- * The precache is for the next visit. Registering earlier made the worker fetch
- * about 1 MB of precache while the landing page was still loading its own images
- * and fonts (item 61, step 6).
- */
-function whenPageLoaded(): Promise<void> {
-  if (typeof document === 'undefined' || document.readyState === 'complete') {
-    return Promise.resolve();
-  }
-  // One task past `load`, so the registration chunk is not fetched from inside the
-  // load handlers and counted against the page.
-  return new Promise((resolve) => {
-    window.addEventListener('load', () => setTimeout(resolve, 0), { once: true });
-  });
 }
 
 let pendingRegistration: Promise<boolean> | null = null;

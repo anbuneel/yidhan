@@ -12,9 +12,10 @@
  * same way as scripts/check-bundle-budget.mjs, and checked against the same limits
  * in scripts/bundle-budget.json.
  *
+ * Sentry (step 2) loads after `load`: none of its chunks may be requested before it,
+ * and Replay is never requested on a shared-note route.
+ *
  * Not asserted yet, on purpose:
- * - No Sentry chunk before `load`. Sentry is still in the entry path; step 2 of the
- *   proposal defers it and adds that assertion here.
  * - No Supabase or Dexie chunk before `load`. Both are still in the entry path;
  *   step 5 splits the public routes out and adds those assertions here.
  * See docs/plans/2026-11-07-first-visit-weight-proposal.md.
@@ -27,6 +28,10 @@ import { KB, readBudget, transferBytes } from '../scripts/bundle-budget-lib.mjs'
 import { buildForProduction, repoRoot, startStaticServer } from './productionBuild';
 
 const distDir = path.join(repoRoot, 'dist');
+
+/** Sentry's chunks: vendor-sentry, vendor-sentry-replay, and our sentryClient and sentryReplay. */
+const SENTRY_CHUNK = /\/assets\/(vendor-sentry|sentryClient|sentryReplay)[-.]/;
+const REPLAY_CHUNK = /\/assets\/(vendor-sentry-replay|sentryReplay)[-.]/;
 
 interface Budget {
   landingJsBeforeLoad: { limitKB: number };
@@ -124,6 +129,20 @@ test.describe('first visit', () => {
       budget.landingPageTotal.limitKB
     );
 
+    // Step 2: Sentry is deferred, not dropped. None of it before load; all of it after.
+    expect(
+      scriptsBeforeLoad.map((r) => r.url()).filter((url) => SENTRY_CHUNK.test(url)),
+      'Sentry chunks fetched before load'
+    ).toEqual([]);
+    const requestedAfterLoad = () =>
+      untilIdle.filter((r) => !beforeLoad.includes(r)).map((r) => new URL(r.url()).pathname);
+    await expect
+      .poll(() => requestedAfterLoad().filter((url) => SENTRY_CHUNK.test(url)).length, {
+        message: 'Sentry, then Replay, load after the load event',
+      })
+      .toBeGreaterThanOrEqual(4);
+    expect(requestedAfterLoad().some((url) => REPLAY_CHUNK.test(url))).toBe(true);
+
     // Step 6: registration waits for load, and the worker fetched nothing before it.
     await expect
       .poll(() => page.evaluate(() => (window as unknown as { __swRegisteredAt?: string }).__swRegisteredAt))
@@ -133,6 +152,24 @@ test.describe('first visit', () => {
       scriptsBeforeLoad.map((r) => r.url()).filter((url) => /pwa-register|workbox-window/.test(url)),
       'registration code fetched before load'
     ).toEqual([]);
+  });
+
+  test('a shared note loads Sentry but never Replay', async ({ page }) => {
+    const scripts: string[] = [];
+    page.on('request', (request) => {
+      if (request.resourceType() === 'script') scripts.push(new URL(request.url()).pathname);
+    });
+
+    // The share does not exist (the build points at a placeholder Supabase); the page
+    // only has to reach the point where monitoring starts.
+    await page.goto(`${baseURL}/s/abcdefghijklmnopqrstuvwx#k=not-a-real-key`, { waitUntil: 'load' });
+    await expect
+      .poll(() => scripts.filter((url) => /\/assets\/sentryClient-/.test(url)).length, {
+        message: 'Sentry starts on the shared route',
+      })
+      .toBe(1);
+    await page.waitForLoadState('networkidle');
+    expect(scripts.filter((url) => REPLAY_CHUNK.test(url)), 'Replay requested on /s/*').toEqual([]);
   });
 
   test('the landing, the library and the changelog open offline', async ({ page, context }) => {

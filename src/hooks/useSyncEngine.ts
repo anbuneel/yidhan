@@ -22,7 +22,11 @@ import {
   type PullError,
   type NoteConflictServerVersion,
 } from '../services/syncEngine';
-import { getPendingSyncCount } from '../services/offlineNotes';
+import { getPendingSyncCount, queueSyncOperation } from '../services/offlineNotes';
+import { createPendingSyncQueueEntry, getOfflineDb } from '../lib/offlineDb';
+import { supabase } from '../lib/supabase';
+import { decryptNote, encryptNote, type DerivedKeys } from '../lib/encryption';
+import { createEncryptedNote } from '../services/encryptedNotes';
 import {
   hasEmptyPlaintextColumns,
   hasRequiredCamelEncryptionFields,
@@ -351,7 +355,7 @@ export function resolveConflict(
   userId: string,
   conflict: ConflictInfo,
   choice: 'local' | 'server' | 'both',
-  keys?: import('../lib/encryption').DerivedKeys
+  keys?: DerivedKeys
 ): Promise<void> {
   return withCrossTabSyncLock(userId, () =>
     resolveConflictWithQueueOwnership(userId, conflict, choice, keys)
@@ -362,10 +366,8 @@ async function resolveConflictWithQueueOwnership(
   userId: string,
   conflict: ConflictInfo,
   choice: 'local' | 'server' | 'both',
-  keys?: import('../lib/encryption').DerivedKeys
+  keys?: DerivedKeys
 ): Promise<void> {
-  const { createPendingSyncQueueEntry, getOfflineDb } = await import('../lib/offlineDb');
-  const { supabase } = await import('../lib/supabase');
   const db = getOfflineDb(userId);
 
   if (conflict.entityType !== 'note') {
@@ -517,8 +519,6 @@ async function resolveConflictWithQueueOwnership(
   if (!isHardDeletedConflict && choice !== 'both') {
     // Fail closed: choosing a version must never discard an unreadable opposite version.
     if (!keys || !isEncrypted || !serverIsEncrypted) throw new Error('Both encrypted versions must be available');
-    const { decryptNote } = await import('../lib/encryption');
-    const { createEncryptedNote } = await import('../services/encryptedNotes');
     const losing = choice === 'local'
       ? { ciphertext: serverNote.encrypted_payload!, iv: serverNote.encryption_iv! }
       : { ciphertext: localNote.encryptedPayload!, iv: localNote.encryptionIv! };
@@ -690,13 +690,11 @@ async function resolveConflictWithQueueOwnership(
       }
 
       // Keep both: update local with server version, create new note with local content
-      const { queueSyncOperation } = await import('../services/offlineNotes');
       const newNoteId = crypto.randomUUID();
       const now = Date.now();
 
       // Encrypted note: decrypt local content, re-encrypt with new noteId
       // (AAD includes noteId, so a raw copy would fail decryption)
-      const { decryptNote, encryptNote } = await import('../lib/encryption');
       const { title, content } = await decryptNote(
         localNote.id, userId,
         { ciphertext: localNote.encryptedPayload!, iv: localNote.encryptionIv! },
