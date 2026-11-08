@@ -105,6 +105,7 @@ the "done when" below is the summary, that document is the detail.
 | 99 | Virtualize the list view once measured at 2,000 notes | weeks | Needs #30 | 10k-note fixture scrolls at 60 fps with search open · #80 fixture |
 | 139 | "Set aside" true archive action | days | Start when #30 shipped and the cohort asks for an archive | Set-aside notes leave the chapters and return on request · E2E |
 | 140 | Lightweight named collections | weeks | Start when #95 shipped and the cohort still asks for collections | A collection is a saved query with a name, not a container; deleting it deletes no notes · E2E |
+| 161 | Return to a thought: from an older note, "Add a reflection" creates a dated companion note linked to the original and leaves the original untouched; "Related" lists similar notes on request from the in-memory search index. No server, no notification, no streak | weeks | Needs #28 for the link; start when the cohort (#87) is observed revisiting old notes | A reflection sits under its source note and in its own chapter; the source is byte-identical after; related notes come from the device only · E2E and a unit test that nothing leaves the client |
 
 ### Search
 
@@ -132,6 +133,7 @@ the "done when" below is the summary, that document is the detail.
 | 89 | Importers: Markdown folders and zips, Bear and TextBundle, Notion export, Apple Notes export workflows, Obsidian folders with `[[links]]` mapped to #92 | weeks | Needs #78 | Each importer is a pure function with at least five real-world fixtures; counts match the source · unit tests |
 | 90 | Import preview before, counts and reconciliation after, unsupported formatting explained | days | Needs #89 | The preview lists what will and will not carry over; the summary matches the created notes · E2E |
 | 91 | Print stylesheet and readable PDF via print | days |  | A 3,000-word note prints with headings, lists, and code intact and no UI chrome · print snapshot |
+| 162 | Make a book: select notes or a date range, arrange them, and print a clean anthology with a contents page, entirely on the device | weeks | Needs #91 | A twelve-note selection prints with a contents page, one note per section and no UI chrome · print snapshot |
 | 133 | Evernote `.enex` importer with attachments | weeks | Start when #34 shipped | An `.enex` with images imports with counts matching · fixture test |
 | 134 | DOCX export | weeks | Start when #78 shipped and cohort demand | A note exports to a `.docx` that opens in Word with headings and lists intact · fixture comparison |
 
@@ -142,6 +144,7 @@ the "done when" below is the summary, that document is the detail.
 | 122 | Optional passphrase on a letter (second wrap of the share key) | days |  | The link alone shows a passphrase prompt; the wrong phrase reveals nothing · E2E |
 | 123 | "Refresh this letter" re-encrypts under the existing token; opt-in live letters | days |  | The link stays valid after refresh and shows the new text · E2E |
 | 141 | Public Garden as static pre-rendered pages | a month or more | Start when #28 and #34 shipped, and at least a quarter of the cohort asks to publish | A published note is readable with JavaScript disabled and unpublishes within a minute · E2E |
+| 163 | Share just this passage: select paragraphs, preview exactly what the recipient will see, and create an expiring encrypted letter holding only that excerpt | days | Needs #122 | The letter contains only the selected paragraphs; the source note is unchanged · E2E |
 
 ### Pictures and files
 
