@@ -6,6 +6,7 @@ import type { Note } from '../types';
 const mocks = vi.hoisted(() => ({
   fadedIds: new Set<string>(),
   onNoteUpdate: undefined as ((note: Note) => void) | undefined,
+  onNoteDelete: undefined as ((id: string) => void) | undefined,
   onSyncPullComplete: undefined as (() => void) | undefined,
   cleanupExpiredFadedNotes: vi.fn(),
   countFadedNotesOffline: vi.fn(),
@@ -15,8 +16,14 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../services/notes', () => ({
   cleanupExpiredFadedNotes: mocks.cleanupExpiredFadedNotes,
-  subscribeToNotes: (_userId: string, _onInsert: (note: Note) => void, onUpdate: (note: Note) => void) => {
+  subscribeToNotes: (
+    _userId: string,
+    _onInsert: (note: Note) => void,
+    onUpdate: (note: Note) => void,
+    onDelete: (id: string) => void
+  ) => {
     mocks.onNoteUpdate = onUpdate;
+    mocks.onNoteDelete = onDelete;
     return vi.fn();
   },
 }));
@@ -132,5 +139,76 @@ describe('useNotesSync faded count', () => {
     rerender({ isHydrating: false });
     await waitFor(() => expect(result.current.fadedNotesCount).toBe(mocks.fadedIds.size));
     expect(result.current.fadedNotesCount).toBe(2);
+  });
+});
+
+// Issue #205: the hook reports that the open note left; App decides whether to close
+// it. These pin which events report, and that the faded count is unaffected.
+describe('useNotesSync open-note removal', () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+    mocks.fadedIds.clear();
+    mocks.cleanupExpiredFadedNotes.mockResolvedValue(0);
+    mocks.countFadedNotesOffline.mockImplementation(async () => mocks.fadedIds.size);
+    mocks.upsertNoteFromServer.mockImplementation(async (_userId: string, note: Note) => {
+      if (note.deletedAt) mocks.fadedIds.add(note.id);
+      else mocks.fadedIds.delete(note.id);
+    });
+    mocks.deleteNoteFromServer.mockResolvedValue({ deleted: true });
+  });
+
+  function setup(openNoteId: string | null) {
+    const onOpenNoteRemoved = vi.fn();
+    const hook = renderHook(() => useNotesSync({
+      userId: 'faded-count-user', keys: KEYS, isHydrating: false,
+      openNoteIdRef: { current: openNoteId }, onOpenNoteRemoved,
+    }));
+    return { ...hook, onOpenNoteRemoved };
+  }
+
+  it('reports a soft delete of the open note with its id, and keeps the faded count', async () => {
+    const { result, onOpenNoteRemoved } = setup('open');
+    await waitFor(() => expect(mocks.onNoteUpdate).toBeDefined());
+    act(() => { mocks.onNoteUpdate?.(serverNote('open', new Date())); });
+    await waitFor(() => expect(onOpenNoteRemoved).toHaveBeenCalledWith('open'));
+    await settleRealtimeRecount();
+    await waitFor(() => expect(result.current.fadedNotesCount).toBe(1));
+  });
+
+  it('reports a hard delete of the open note with its id', async () => {
+    const { onOpenNoteRemoved } = setup('open');
+    await waitFor(() => expect(mocks.onNoteDelete).toBeDefined());
+    act(() => { mocks.onNoteDelete?.('open'); });
+    await waitFor(() => expect(onOpenNoteRemoved).toHaveBeenCalledWith('open'));
+  });
+
+  it('does not report a delete of a different note', async () => {
+    const { onOpenNoteRemoved } = setup('open');
+    await waitFor(() => expect(mocks.onNoteUpdate).toBeDefined());
+    act(() => { mocks.onNoteUpdate?.(serverNote('other', new Date())); });
+    act(() => { mocks.onNoteDelete?.('other'); });
+    await settleRealtimeRecount();
+    expect(onOpenNoteRemoved).not.toHaveBeenCalled();
+  });
+
+  it('does not report an ordinary update to the open note, such as its own echo', async () => {
+    const { onOpenNoteRemoved } = setup('open');
+    await waitFor(() => expect(mocks.onNoteUpdate).toBeDefined());
+    act(() => { mocks.onNoteUpdate?.(serverNote('open', null)); });
+    await settleRealtimeRecount();
+    expect(onOpenNoteRemoved).not.toHaveBeenCalled();
+  });
+
+  it('does not report a hard delete that conflicts with local work', async () => {
+    mocks.deleteNoteFromServer.mockResolvedValue({ deleted: false, localNote: {
+      id: 'open', userId: 'faded-count-user', title: '', content: '', pinned: false, deletedAt: null,
+      createdAt: 0, updatedAt: 0, syncStatus: 'conflict',
+    } });
+    const { onOpenNoteRemoved } = setup('open');
+    await waitFor(() => expect(mocks.onNoteDelete).toBeDefined());
+    act(() => { mocks.onNoteDelete?.('open'); });
+    await settleRealtimeRecount();
+    expect(onOpenNoteRemoved).not.toHaveBeenCalled();
   });
 });

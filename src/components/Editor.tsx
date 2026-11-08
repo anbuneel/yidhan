@@ -1,4 +1,7 @@
 import { VaultLockedSaveError } from '../utils/saveErrors';
+import type { OpenDraftState } from '../hooks/useReleasedDraft';
+import type { DerivedKeys } from '../lib/encryption';
+import { keepReleasedDraft } from '../utils/keepReleasedDraft';
 import { useState, useEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { getSaveLabel } from '../utils/saveStatus';
@@ -59,6 +62,19 @@ interface EditorProps {
   onSettingsClick: () => void;
   isDemo?: boolean; // Hide share functionality in demo mode
   noteSyncStatus?: 'synced' | 'pending' | 'conflict'; // Note-specific sync status (3A)
+  /**
+   * The note was released on another device while this screen held unsaved words
+   * (issue #205). Saving stops; the writer chooses to keep, copy, or let go.
+   */
+  releasedElsewhere?: boolean;
+  /** The released draft was kept as this new note; the app adds it and opens it. */
+  onKeptReleasedDraft?: (note: Note) => void;
+  /** Vault keys, for writing a released draft into a new note. */
+  vaultKeys?: DerivedKeys | null;
+  /** The writer chose to let the words of a released note go. Defaults to onBack. */
+  onLetGoReleasedDraft?: () => void;
+  /** Reports whether this screen holds words the stored note does not. */
+  onDraftStateChange?: (state: OpenDraftState | null) => void;
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'copied';
@@ -107,7 +123,7 @@ function getSaveStatusStyle(status: SaveStatus): { color: string; background: st
   }
 }
 
-export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus }: EditorProps) {
+export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus, releasedElsewhere = false, onKeptReleasedDraft, vaultKeys = null, onLetGoReleasedDraft, onDraftStateChange }: EditorProps) {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -115,6 +131,23 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [copyFailed, setCopyFailed] = useState(false);
   const [saveErrorDetail, setSaveErrorDetail] = useState('');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [keepFailed, setKeepFailed] = useState(false);
+  const [isKeeping, setIsKeeping] = useState(false);
+  // The id of the released note being kept as a new note, from the click until the
+  // switch to the new note renders. That switch must not reset the words: anything
+  // typed during the write stays. Cleared by the switch itself, not when the promise
+  // settles: the parent switches notes inside the callback and React may render the
+  // switch after the promise has resolved.
+  const keepingFromNoteIdRef = useRef<string | null>(null);
+  // Each release starts a fresh episode, without the last one's warnings or an
+  // open delete dialog for a note that is no longer there.
+  const [prevReleased, setPrevReleased] = useState(releasedElsewhere);
+  if (prevReleased !== releasedElsewhere) {
+    setPrevReleased(releasedElsewhere);
+    setKeepFailed(false);
+    setCopyFailed(false);
+    if (releasedElsewhere) setShowDeleteConfirm(false);
+  }
   const [editor, setEditor] = useState<TiptapEditor | null>(null);
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
@@ -195,9 +228,18 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // Flush any pending scroll save for the previous note before switching
     throttledScrollSaveRef.current?.flush();
 
+    // A released draft just kept as a new note: these are the writer's own words,
+    // and any typed while the note was written are newer than the stored copy.
+    const switchIsKeep = keepingFromNoteIdRef.current !== null &&
+      keepingFromNoteIdRef.current === currentNoteIdRef.current;
+    keepingFromNoteIdRef.current = null;
     currentNoteIdRef.current = note.id;
-    setTitle(note.title);
-    setContent(note.content);
+    if (!switchIsKeep) {
+      setTitle(note.title);
+      setContent(note.content);
+    }
+    setKeepFailed(false);
+    setCopyFailed(false);
     setHasSaveError(false);
     setSaveErrorDetail('');
     committedSnapshotRef.current = buildSnapshot(note.title, note.content, note.tags);
@@ -443,6 +485,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
   // Perform the actual save (async with proper status tracking)
   const performSave = useCallback(async (): Promise<boolean> => {
+    // A released note has nowhere to save to: writing would edit a note another
+    // device let go, or one that no longer exists. Report "not saved" so Back and
+    // Escape keep the writer here; the released banner offers the ways out.
+    if (releasedElsewhere) return false;
+
     const draftSnapshot = buildSnapshot(title, content, note.tags);
 
     // Nothing to write means nothing is unsaved, so any banner left by an
@@ -531,11 +578,45 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
     inFlightSaveRef.current = savePromise;
     return await savePromise;
-  }, [title, content, note, onUpdate]);
+  }, [title, content, note, onUpdate, releasedElsewhere]);
+
+  // Tell the app whether this screen holds words the stored note does not, so a
+  // delete from another device does not close the editor over them (issue #205).
+  // A save in flight counts: its words are not on disk until it resolves.
+  const holdsUnsavedWords =
+    hasSaveError || saveStatus === 'saving' || title !== note.title || content !== note.content;
+  const holdsUnsavedWordsRef = useRef(holdsUnsavedWords);
+  holdsUnsavedWordsRef.current = holdsUnsavedWords;
+  useEffect(() => {
+    onDraftStateChange?.({ noteId: note.id, unsaved: holdsUnsavedWords });
+  }, [onDraftStateChange, note.id, holdsUnsavedWords]);
+  const onDraftStateChangeRef = useRef(onDraftStateChange);
+  onDraftStateChangeRef.current = onDraftStateChange;
+  useEffect(() => () => onDraftStateChangeRef.current?.(null), []);
+
+  const handleKeepReleasedDraft = async () => {
+    if (!onKeptReleasedDraft || keepingFromNoteIdRef.current !== null) return;
+    keepingFromNoteIdRef.current = note.id;
+    setIsKeeping(true);
+    setKeepFailed(false);
+    try {
+      // `note` is the released copy, so the new note carries its pin and tags;
+      // `tags` is the live list, so a tag deleted meanwhile is not resurrected.
+      onKeptReleasedDraft(await keepReleasedDraft(userId, vaultKeys, title, content, note, tags));
+    } catch (error) {
+      console.error('Failed to keep released draft as a new note:', error);
+      // No switch is coming, so the next one must reset as usual.
+      if (keepingFromNoteIdRef.current === note.id) keepingFromNoteIdRef.current = null;
+      setKeepFailed(true);
+    } finally {
+      setIsKeeping(false);
+    }
+  };
 
   // Auto-save when content changes (debounced)
   useEffect(() => {
-    // Don't auto-save if nothing changed
+    // Don't auto-save if nothing changed, or if the note was released elsewhere
+    if (releasedElsewhere) return;
     if (title === note.title && content === note.content) return;
 
     // Clear any existing auto-save timeout
@@ -553,7 +634,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [title, content, note.title, note.content, performSave]);
+  }, [title, content, note.title, note.content, performSave, releasedElsewhere]);
 
   // Bound continuous typing using the same encrypted local-save path as autosave.
   const checkpoint = useEffectEvent(() => { void performSave(); });
@@ -817,7 +898,13 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // words, but a save that fails must never leave the button looking inert:
     // someone releasing a note is not asking to keep its final edit.
     await performSave();
-    onDelete(note.id);
+    // The writer chose to let these words go, so the note leaving the library is
+    // not a release to hold the editor open for (issue #205). If the delete fails,
+    // the words are still here and still unsaved.
+    onDraftStateChange?.({ noteId: note.id, unsaved: false });
+    if (!(await onDelete(note.id))) {
+      onDraftStateChange?.({ noteId: note.id, unsaved: holdsUnsavedWordsRef.current });
+    }
   };
 
   // Handle logo click: save and go back (awaits any in-flight save)
@@ -1209,6 +1296,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {/* Delete button */}
       <button type="button"
         onClick={handleDelete}
+        disabled={releasedElsewhere}
         className="
           size-9
           rounded-full
@@ -1244,7 +1332,29 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       style={{ background: 'var(--color-bg-primary)' }}
       data-testid="note-editor"
     >
-      {hasSaveError && (
+      {releasedElsewhere && (
+        <div role="alert" data-testid="released-draft-banner" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md flex-wrap items-center gap-3 rounded-[2px_12px_4px_12px] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
+          <span className="mr-auto basis-full">This note was released on another device. Your words here are not saved.
+            {keepFailed && <span className="block">Could not keep them as a new note. Copy them instead.</span>}
+            {copyFailed && <span className="block">Could not copy — select the text and copy it by hand.</span>}</span>
+          <button type="button" onClick={() => { void handleKeepReleasedDraft(); }} disabled={isKeeping}
+            className="rounded-[2px_12px_4px_12px] px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}>Keep as new note</button>
+          <button type="button" onClick={async () => {
+            try {
+              await copyNoteToClipboard({ ...note, title, content });
+              setCopyFailed(false);
+              showCopiedIndicator();
+            } catch { setCopyFailed(true); }
+          }}
+            className="rounded-[2px_12px_4px_12px] border px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', background: 'transparent', borderColor: 'var(--glass-border)' }}>Copy</button>
+          <button type="button" onClick={onLetGoReleasedDraft ?? onBack}
+            className="rounded-[2px_12px_4px_12px] px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            style={{ fontFamily: 'var(--font-body)', color: 'var(--color-destructive-text)', background: 'var(--color-destructive)' }}>Let go</button>
+        </div>
+      )}
+      {hasSaveError && !releasedElsewhere && (
         <div role="alert" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-[2px_12px_4px_12px] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
           <span className="mr-auto">Not saved{saveErrorDetail && <span className="block">{saveErrorDetail}</span>}
             {copyFailed && <span className="block">Could not copy — select the text and copy it by hand.</span>}</span>
@@ -1451,13 +1561,16 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
             {/* Metadata row — tags left, timestamp right */}
             <div className="editor-metadata-row focus-mode-target">
-              <TagSelector
-                tags={tags}
-                selectedTagIds={note.tags.map((t) => t.id)}
-                onToggleTag={(tagId) => onToggleTag(note.id, tagId)}
-                onCreateTag={onCreateTag}
-                variant="inline"
-              />
+              {/* A released note has no row left to tag. */}
+              {!releasedElsewhere && (
+                <TagSelector
+                  tags={tags}
+                  selectedTagIds={note.tags.map((t) => t.id)}
+                  onToggleTag={(tagId) => onToggleTag(note.id, tagId)}
+                  onCreateTag={onCreateTag}
+                  variant="inline"
+                />
+              )}
               <span className="editor-title-meta-details">
                 <EditorMetrics editor={editor} isMobile={isMobile} />
                 <span
