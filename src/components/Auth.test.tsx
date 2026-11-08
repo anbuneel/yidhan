@@ -62,6 +62,17 @@ describe('Auth', () => {
       expect(screen.getByText('Send Reset Link')).toBeInTheDocument();
     });
 
+    it('says a new password does not open encrypted notes, only where a reset is requested', () => {
+      const { unmount } = render(<Auth {...defaultProps} initialMode="forgot" />);
+      expect(screen.getByText(/doesn’t open your encrypted notes; your passphrase or recovery key does that/)).toBeInTheDocument();
+      unmount();
+      for (const mode of ['login', 'signup'] as const) {
+        const view = render(<Auth {...defaultProps} initialMode={mode} />);
+        expect(screen.queryByText(/doesn’t open your encrypted notes/)).toBeNull();
+        view.unmount();
+      }
+    });
+
     it('renders reset mode', () => {
       render(<Auth {...defaultProps} initialMode="reset" />);
 

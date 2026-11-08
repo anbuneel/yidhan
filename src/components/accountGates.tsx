@@ -30,6 +30,8 @@ export interface AccountGateOptions {
   isUnlocked: boolean;
   /** Item 26: the recovery screen the vault context asks for, if any. */
   recoveryScreen: 'reset' | 'offer' | null;
+  /** Item 27: a setup is open in this tab and has not reached the library yet. */
+  setupScreen: boolean;
 }
 
 export function renderAccountGate({
@@ -39,6 +41,7 @@ export function renderAccountGate({
   isEncryptionSetup,
   isUnlocked,
   recoveryScreen,
+  setupScreen,
 }: AccountGateOptions): ReactElement | null {
   // Item 36. Migrations are applied by hand, and a client shipped ahead of its
   // migration fails only on writes — silently — while reads keep working. Rather than
@@ -56,8 +59,10 @@ export function renderAccountGate({
     );
   }
 
-  // The E2EE passphrase gate.
-  if (!isEncryptionSetup) {
+  // The E2EE passphrase gate. Item 27: the setup stays up after its write lands,
+  // so its last step shows before the library. Only this tab's own setup sets
+  // `setupScreen`, so an existing account never sees it.
+  if (!isEncryptionSetup || setupScreen) {
     return (
       <Suspense fallback={<LoadingFallback />}>
         <PassphraseSetup />

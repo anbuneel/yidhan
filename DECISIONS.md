@@ -61,6 +61,53 @@ first.
 
 ---
 
+## 2026-11-08 — A new account writes nothing until its recovery key is confirmed
+
+**Status:** Active
+
+**Why:** Item 27 sets new accounts up straight into the wrapped vault with a recovery
+key. The key design covers migrating existing accounts (§3) and making a recovery key
+for a vault that exists (§2.4); it says nothing about creating an account. Two choices
+fell out. First, when to write: the passphrase is chosen in step 1 and the recovery key
+is confirmed in step 2, and a tab can close in between. A vault written at step 1 with
+no recovery key is the state the item forbids, and if the writer did not keep the
+generated passphrase, nothing could open it. Second, what `K` is and what the legacy
+fields say: the design makes `K` random, but a new account still needs
+`encryption_salt`, which is what marks it as set up.
+
+**Decision:** Step 1 only computes: a random 64-byte `K`, its wrap under an Argon2id KEK,
+the vault key-check. Everything stays in memory until the writer has typed the
+recovery key back. Then one `updateUser` call writes `encryption_salt`, a legacy
+key-check made under a random key that is thrown away, and the whole vault including
+`recoveryWrap`. An interruption before that write leaves the account unset, and the
+next sign-in starts setup again at step 1; after it, the account is complete. The
+write is refused when the account gained an `encryption_salt` since the page loaded.
+The legacy key-check is retired from the start, as after a passphrase change: the
+legacy derivation can never produce a random `K`, so an old client and the legacy
+fallback answer "wrong passphrase" for a new account and fail closed. The suggested
+passphrase is six words from the BIP-0039 English list with 217 words removed, about
+65 bits; Argon2id at 64 MB per guess puts that out of reach of an offline search.
+
+**Rejected:**
+- *Write the vault at step 1 and mark the setup pending until the recovery key is
+  saved.* The next sign-in could resume at step 2, but an account abandoned at step 1
+  with an unsaved generated passphrase would hold a vault nothing can open.
+- *Derive `K` from the passphrase, as the legacy setup did, so old clients can open new
+  accounts.* It keeps `K` tied to the first passphrase, which the design moves away
+  from (§1), and an old client could only open the account until the first passphrase
+  change anyway.
+- *Keep the legacy setup and let the first unlock migrate.* That is a second
+  Argon2id run and a window with no vault and no recovery key, which the item rules out.
+- *Seven words, about 76 bits.* Longer to type on a second device, for margin the
+  Argon2id cost already provides.
+
+**Revisit:** Item 136, when the vault moves to a table with a conditional write: the
+"already set up" check becomes part of the write instead of a read before it. Item 86,
+if a new account can write locally before its email is confirmed: setup would then have
+to run before the first note.
+
+---
+
 ## 2026-11-08 — A passphrase set after recovery retires the legacy key-check
 
 **Status:** Active

@@ -485,3 +485,36 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   rejected or taken in part: `docs/reviews/2026-11-08-item-26-recovery-kit.md`.
   Remembered devices are not re-prompted after the new passphrase;
   that is item 25's `keyCheckVersion` check (25-T7).
+- **2026-11-08** — Item 27 from the public launch plan: passphrase setup in three
+  steps, passphrase, recovery key, done. New accounts set up straight into the
+  wrapped vault: `K` is 64 random bytes, wrapped under an Argon2id KEK as for a
+  migrated account, and nothing is written until the writer has typed the recovery
+  key back. Then one `updateUser` call writes `encryption_salt`, a legacy key-check
+  no passphrase verifies, and the whole vault with its key-check and
+  `recoveryWrap`, so no account can hold a vault without a recovery key; an
+  interruption before it leaves the account unset and the next sign-in starts at
+  step 1 (`DECISIONS.md`). An account set up elsewhere meanwhile is never
+  overwritten, and a landed write reported as an error is recognised on retry. The
+  keys are installed when the writer leaves step 3, after the starter notes are
+  written, so the library's first load includes them. Step 1 suggests six words
+  from a 1,831-word list (BIP-0039 English less 217 words that do not suit the
+  app), about 65 bits, with one-tap copy; the list lives in the lazy setup chunk.
+  The old acknowledgement checkbox and its copy are gone. From an outside launch
+  review, three lines of copy: setup tells the account password and the passphrase
+  apart, the password-reset form says a new password does not open encrypted notes,
+  and step 3 says devices already open keep working after a recovery and take the
+  new passphrase when next asked. The privacy, security and terms pages stop saying a
+  forgotten passphrase cannot be recovered, which has been false since item 26. A
+  setup put away while its write was in flight (the writer left for a public page)
+  no longer leaves a dead step 1 once the write lands: putting it away before the
+  write is confirmed ends the setup screen, and the gate goes by the metadata. Existing accounts keep
+  the legacy unlock and migration and never see the new setup. Tests: generator and
+  policy (`passphraseGenerator.test.ts`), each step and the places it must not fire
+  (`PassphraseSetup.test.tsx`, `accountGates.test.tsx`), the whole flow against the
+  fake server with real Argon2id (`EncryptionContext.setup.test.tsx`), and
+  `e2e/passphrase-setup.spec.ts`, which signs in as the shared test account and
+  answers its metadata requests in the browser, because a fresh account needs a
+  confirmed email. It needs the E2E credentials and has not been run with them; a
+  copy with sign-in faked as well passed in Chromium. The entry chunk grows by
+  0.1 KB gzip and stays inside its budget. Review findings rejected or taken in
+  part: `docs/reviews/2026-11-08-item-27-three-step-setup.md`.
