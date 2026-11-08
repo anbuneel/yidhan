@@ -10,6 +10,7 @@ import { useCallback, useState, type Dispatch, type SetStateAction } from 'react
 import toast from 'react-hot-toast';
 import type { Note, Tag, TagColor } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
+import { KdfLoadError } from '../lib/argon2';
 import {
   exportNotesToJSON,
   downloadFile,
@@ -365,7 +366,7 @@ export function useImport({
       // A damaged file and a wrong passphrase are different problems, and only one of
       // them is something the reader can do anything about. Say which.
       const message =
-        error instanceof BackupFormatError || error instanceof BackupPassphraseError
+        error instanceof BackupFormatError || error instanceof BackupPassphraseError || error instanceof KdfLoadError
           ? error.message
           : 'That backup could not be opened.';
       console.error('Failed to open backup:', error);

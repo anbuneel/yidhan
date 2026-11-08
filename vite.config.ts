@@ -34,6 +34,10 @@ export default defineConfig({
         // and its code stayed in main, and `react` itself landed in vendor-sentry.
         // scripts/check-bundle-budget.mjs asserts react and react-dom share a chunk.
         manualChunks(id) {
+          // With hash-wasm, so the chunk src/lib/argon2.ts imports holds Argon2id and
+          // nothing else. Left to Rollup, shared app code was merged into it and the app
+          // shell imported hash-wasm statically again (item 61, step 7).
+          if (id.endsWith('/src/lib/argon2Wasm.ts')) return 'vendor-hash-wasm'
           if (!id.includes('/node_modules/')) return undefined
           if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react'
           if (id.includes('/node_modules/@supabase/')) return 'vendor-supabase'
@@ -41,6 +45,9 @@ export default defineConfig({
           // first-visit spec can see by name that the landing never requests it (item
           // 61, step 5).
           if (id.includes('/node_modules/dexie/')) return 'vendor-dexie'
+          // Loaded with import() by src/lib/argon2.ts on the first key derivation; named
+          // so the budget check can assert the app shell never imports it statically.
+          if (id.includes('/node_modules/hash-wasm/')) return 'vendor-hash-wasm'
           // Replay apart from the rest of Sentry: it is imported later, on its own
           // (src/utils/sentryReplay.ts), and never on shared-note routes.
           if (/\/node_modules\/@sentry-internal\/replay(-canvas)?\//.test(id)) return 'vendor-sentry-replay'

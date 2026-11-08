@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.42', date: '2026-11-08', changes: [
+    { type: 'improvement', text: 'The app opens a little sooner after you sign in: the code that turns your passphrase into a key now loads only when you unlock, set up or recover your notes, not with the rest of the app. Unlocking takes the same time, and still works offline. If that code cannot load, the unlock screen says so and you can try again' },
+  ] },
   { version: '3.19.41', date: '2026-11-08', changes: [
     { type: 'improvement', text: 'One or two pinned notes now sit as small cards at the left of the Pinned row, instead of one large card alone in the middle of a wide band. Pin a third and the row goes back to full cards' },
   ] },
