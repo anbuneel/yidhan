@@ -272,7 +272,7 @@ export function PassphraseSetup() {
           type="button"
           onClick={handleBack}
           disabled={isSavingKey || writeSent}
-          className="w-full py-2 mt-2 text-xs transition-opacity hover:opacity-80"
+          className="w-full py-2 mt-2 text-xs hover:underline"
           style={vaultQuietButtonStyle}
         >
           Back
@@ -364,7 +364,7 @@ export function PassphraseSetup() {
               type="button"
               onClick={() => { setMode('own'); setError(''); }}
               disabled={isPreparing}
-              className="w-full py-2 mt-2 text-xs transition-opacity hover:opacity-80"
+              className="w-full py-2 mt-2 text-xs hover:underline"
               style={vaultQuietButtonStyle}
             >
               Type my own instead
@@ -434,7 +434,7 @@ export function PassphraseSetup() {
               type="button"
               onClick={() => { setMode('suggested'); setError(''); }}
               disabled={isPreparing}
-              className="w-full py-2 text-xs transition-opacity hover:opacity-80"
+              className="w-full py-2 text-xs hover:underline"
               style={vaultQuietButtonStyle}
             >
               Use a passphrase made for me

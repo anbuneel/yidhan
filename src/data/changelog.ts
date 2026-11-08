@@ -7,6 +7,11 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.43', date: '2026-11-08', changes: [
+    { type: 'improvement', text: 'The light theme has stronger contrast: secondary text, hints and the terracotta accent are darker, so all text meets the WCAG AA contrast level. The editor sidebar is also less faded when you are not using it' },
+    { type: 'fix', text: 'With Settings open, pressing Tab now stays inside Settings instead of moving to the notes behind it. Closing Settings returns you to where you were' },
+    { type: 'fix', text: 'Screen readers now announce when a note is saving and when it is saved' },
+  ] },
   { version: '3.19.41', date: '2026-11-08', changes: [
     { type: 'improvement', text: 'One or two pinned notes now sit as small cards at the left of the Pinned row, instead of one large card alone in the middle of a wide band. Pin a third and the row goes back to full cards' },
   ] },

@@ -29,6 +29,9 @@ export interface EditorCommandDefinition {
   searchTerms: string[];
   group: EditorCommandGroup;
   shortcut?: string;
+  /** The toolbar's visible text, when `label` does not already contain it. WCAG 2.5.3:
+   *  a button's accessible name must include what it shows, or voice control misses it. */
+  visibleLabel?: string;
   availableInSlash?: boolean;
   isActive?: (context: EditorCommandContext) => boolean;
   canRun?: (context: EditorCommandContext) => boolean;
@@ -120,6 +123,7 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     id: `heading${level}`,
     label: `Heading ${level}`,
     shortLabel: textLabel(`H${level}`, 'text-[10px] font-semibold'),
+    visibleLabel: `H${level}`,
     description: `${level === 1 ? 'Large' : level === 2 ? 'Medium' : 'Small'} section heading`,
     searchTerms: [...shared.structure, `h${level}`, 'heading'],
     group: 'structure',
@@ -230,5 +234,7 @@ export const EDITOR_COMMANDS_BY_ID = new Map(EDITOR_COMMANDS.map((command) => [c
 export const SLASH_EDITOR_COMMANDS = EDITOR_COMMANDS.filter((command) => command.availableInSlash !== false);
 
 export function editorCommandTitle(command: EditorCommandDefinition): string {
-  return command.shortcut ? `${command.label} (${command.shortcut})` : command.label;
+  // A comma, not brackets: name-matching ignores parentheticals, as axe does.
+  const label = command.visibleLabel ? `${command.label}, ${command.visibleLabel}` : command.label;
+  return command.shortcut ? `${label} (${command.shortcut})` : label;
 }

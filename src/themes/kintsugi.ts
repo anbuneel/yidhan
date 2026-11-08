@@ -22,15 +22,18 @@ const kintsugi: ThemeConfig = {
 
     // Typography: Dark sepia, not harsh black
     textPrimary: '#3E3B36',
-    textSecondary: '#6B6862',
-    textTertiary: '#7D7974',
+    textSecondary: '#55524C', // 6.37:1 on bgPrimary, 5.33:1 on bgTertiary (item 160)
+    textTertiary: '#65625C', // 4.98:1 on bgPrimary, 4.70:1 on bgSecondary (item 160)
 
     // Accent: Terracotta / Lacquer Red
-    accent: '#C25634',
-    accentHover: '#A84828',
-    accentGlow: 'rgba(194, 86, 52, 0.2)',
-    accentMuted: 'rgba(194, 86, 52, 0.7)',
-    onAccent: '#fff', // 4.49:1 — best achievable on #C25634
+    // Darkened from #C25634 (3.68:1 as text) in item 160. Accent is link, label and
+    // selected-pill text, so it must carry 4.5:1 on the paper backgrounds and on its
+    // own glow: 6.06:1 on bgPrimary, 5.07:1 on bgTertiary, 4.84:1 on accentGlow.
+    accent: '#8F3C21',
+    accentHover: '#75311B',
+    accentGlow: 'rgba(143, 60, 33, 0.15)',
+    accentMuted: 'rgba(143, 60, 33, 0.7)',
+    onAccent: '#fff', // 7.40:1 on #8F3C21
 
     // CTA button (darker terracotta for WCAG AA contrast with white text — 5.44:1)
     ctaBg: '#B04A2C',

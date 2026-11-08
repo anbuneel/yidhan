@@ -188,7 +188,7 @@ export function Header({
               className="hidden sm:inline text-xs px-1.5 py-0.5 rounded shrink-0"
               style={{
                 background: 'var(--color-bg-tertiary)',
-                color: 'var(--color-text-tertiary)',
+                color: 'var(--color-text-secondary)',
                 fontFamily: 'var(--font-body)',
               }}
             >

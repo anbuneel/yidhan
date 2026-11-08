@@ -302,7 +302,7 @@ export function PassphraseUnlock() {
           <button
             type="button"
             onClick={() => { setError(''); setUseRecoveryKey(true); }}
-            className="w-full py-2 text-xs transition-opacity hover:opacity-80"
+            className="w-full py-2 text-xs hover:underline"
             style={{ ...vaultQuietButtonStyle, color: 'var(--color-text-secondary)' }}
           >
             Use your recovery key
@@ -311,7 +311,7 @@ export function PassphraseUnlock() {
           <button
             type="button"
             onClick={() => { lockVault('sign-out'); signOut(); }}
-            className="w-full py-2 text-xs transition-opacity hover:opacity-80"
+            className="w-full py-2 text-xs hover:underline"
             style={vaultQuietButtonStyle}
           >
             Sign out

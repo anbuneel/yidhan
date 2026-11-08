@@ -1078,7 +1078,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // Right actions: Save status + Export button + Delete button
   const rightActions = (
     <div className="flex items-center gap-2">
-      {/* Save/Copy Status Indicator */}
+      {/* Save/Copy Status Indicator. The status region is always mounted, so a screen
+          reader hears each change; only its contents come and go. sr-only while idle
+          takes it out of the row's flex gap. */}
+      <span role="status" className={saveStatus === 'idle' ? 'sr-only' : 'shrink-0'}>
       {saveStatus !== 'idle' && (
         <span
           data-save-status={saveStatus}
@@ -1121,6 +1124,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           )}
         </span>
       )}
+      </span>
 
       {/* Export button with dropdown */}
       <div className="relative" ref={exportMenuRef}>
@@ -1665,8 +1669,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
           {/* Keyboard hint - desktop only */}
           <span
-            className="hidden sm:block text-xs opacity-50"
-            style={{ fontFamily: 'var(--font-body)' }}
+            className="hidden sm:block text-xs"
+            style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-tertiary)' }}
           >
             Press <kbd className="px-1.5 py-0.5 rounded text-[10px] bg-[var(--color-bg-secondary)]">Esc</kbd> to save & exit
           </span>

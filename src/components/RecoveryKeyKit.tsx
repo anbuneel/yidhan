@@ -316,7 +316,7 @@ export function RecoveryKeyKit({
         <button
           type="button"
           onClick={handleSkip}
-          className="w-full py-2 mt-2 text-xs transition-opacity hover:opacity-80"
+          className="w-full py-2 mt-2 text-xs hover:underline"
           style={vaultQuietButtonStyle}
         >
           {skipLabel}
