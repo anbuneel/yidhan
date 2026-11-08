@@ -1,15 +1,11 @@
 import { createContext, use, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
-import { supabase } from '../lib/supabase';
 import type { DerivedKeys, KeyCheckVersion, SessionKeyBlob } from '../lib/encryption';
 import {
   KEY_CHECK_VERSION,
-  createKeyCheck,
-  deriveKeys,
   exportSessionKeys,
   fromBase64,
   importSessionKeys,
-  toBase64,
   verifyKeyCheck,
 } from '../lib/encryption';
 import {
@@ -28,6 +24,10 @@ function loadVaultUnlock() {
 
 function loadRecoveryKit() {
   return import('../services/recoveryKit');
+}
+
+function loadAccountSetup() {
+  return import('../services/accountSetup');
 }
 
 // Types only: erased at build time, so they cost the entry chunk nothing.
@@ -56,8 +56,18 @@ interface EncryptionContextType {
   isUnlocked: boolean;
   /** Whether encryption has been set up (salt exists in user_metadata) */
   isEncryptionSetup: boolean;
-  /** Set up passphrase for the first time. Returns derived keys for immediate use. */
-  setupPassphrase: (passphrase: string) => Promise<DerivedKeys>;
+  /**
+   * Item 27, step 1 to step 2: make the vault key and wrap it under `passphrase`.
+   * Nothing is written until the recovery kit it makes is committed; that write
+   * sets the account up. The caller must `discard` the setup.
+   */
+  beginAccountSetup: (passphrase: string) => Promise<AccountSetup>;
+  /** Item 27, step 3: install the keys the setup wrote and leave for the library. */
+  finishAccountSetup: () => void;
+  /** Item 27: the three-step setup is open in this tab, from step 1 until `finishAccountSetup`. */
+  setupScreen: boolean;
+  /** Item 27: the setup's write has landed and step 3 is showing. */
+  setupDone: boolean;
   /** Unlock with existing passphrase */
   unlockWithPassphrase: (passphrase: string) => Promise<boolean>;
   /** Clear keys from memory. Reason controls what storage is cleared. */
@@ -85,6 +95,18 @@ interface EncryptionContextType {
    * Refuses with `exists` when one is stored, unless `replace` is set.
    */
   prepareRecoveryKit: (options?: { replace?: boolean }) => Promise<PreparedRecoveryKit>;
+}
+
+/** A setup in progress (item 27). */
+export interface AccountSetup {
+  /** Make the recovery key for step 2. Its `commit` sets the account up. */
+  prepareRecoveryKit: () => PreparedRecoveryKit;
+  /** The account's keys, once a commit has landed; null before, and after a lock drops them. For the starter notes. */
+  committedKeys: () => DerivedKeys | null;
+  /** True once a commit sent its write. The setup must not be put away for another then. */
+  writeAttempted: () => boolean;
+  /** Put the setup away. Before a commit this zeroes the key; after it, the context keeps the keys. */
+  discard: () => void;
 }
 
 const EncryptionContext = createContext<EncryptionContextType | undefined>(undefined);
@@ -335,12 +357,31 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
   const autoLockedRef = useRef(false);
   const [recovery, setRecovery] = useState<PendingRecovery | null>(null);
   const [recoveryOfferUserId, setRecoveryOfferUserId] = useState<string | null>(null);
-
-  // Determine if encryption is set up by checking user_metadata
-  const encryptionSalt = user?.user_metadata?.encryption_salt as string | undefined;
-  const isEncryptionSetup = Boolean(encryptionSalt);
+  /**
+   * Item 27: the user a setup screen is open for. Once its write has landed it
+   * holds the keys, which are installed only when the writer leaves step 3, so
+   * the library first loads after the starter notes are written.
+   */
+  const [setupFlow, setSetupFlow] = useState<{ userId: string; keys: DerivedKeys | null; epoch: number } | null>(null);
+  /**
+   * Bumped by every lock and user change. A setup write that lands, or a step 3
+   * that finishes, after one has passed installs nothing.
+   */
+  const setupEpochRef = useRef(0);
+  /**
+   * The user whose setup write landed in this tab. Counts as set up until the
+   * auth context hands over the new metadata, which it may not have done by the
+   * time the writer leaves step 3.
+   */
+  const [setupWrittenUserId, setSetupWrittenUserId] = useState<string | null>(null);
 
   const currentUserId = user?.id ?? null;
+  const setupScreen = setupFlow !== null && setupFlow.userId === currentUserId;
+  const setupDone = setupScreen && setupFlow.keys !== null;
+
+  // Determine if encryption is set up by checking user_metadata.
+  const encryptionSalt = user?.user_metadata?.encryption_salt as string | undefined;
+  const isEncryptionSetup = Boolean(encryptionSalt) || (currentUserId !== null && setupWrittenUserId === currentUserId);
 
   // What the restore key-check is chosen from, as a string so a token refresh
   // that hands over an equal user object does not re-run (and abort) a restore.
@@ -368,6 +409,11 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       dropRecovery(recovery);
       setRecovery(null);
     }
+    if (setupFlow !== null) {
+      clearKeyMaterial(setupFlow.keys);
+      setSetupFlow(null);
+    }
+    if (setupWrittenUserId !== null) setSetupWrittenUserId(null);
   }
 
   // Reset auto-lock state when user changes (refs must not be mutated during render)
@@ -375,6 +421,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     autoLockedRef.current = false;
     // A recovery lookup for the previous account must not install its keys.
     recoveryAttemptRef.current++;
+    setupEpochRef.current++;
   }, [currentUserId]);
 
   // Attempt to restore keys from sessionStorage (then localStorage) on mount/user change
@@ -562,69 +609,83 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
   }, [keyState, currentUserId]);
   const isUnlocked = keys !== null;
 
-  /**
-   * Set up encryption for the first time.
-   * Derives keys from passphrase, stores salt + key-check in user_metadata.
-   */
-  const setupPassphrase = useCallback(async (passphrase: string): Promise<DerivedKeys> => {
-    if (!user) throw new Error('Must be logged in to set up encryption');
-
-    const policyError = validatePassphrasePolicy(passphrase);
-    if (policyError) {
-      throw new Error(policyError);
-    }
-
-    // Derive keys with a new random salt
-    const derivedKeys = await deriveKeys(passphrase);
-
-    // Create key-check blob for later passphrase verification
-    const { keyCheck, keyCheckIv, keyCheckVersion } = await createKeyCheck(derivedKeys.encryptionKey, user.id);
-
-    // Base64-encode the salt for storage
-    const saltBase64 = toBase64(derivedKeys.salt);
-
-    // Store in user_metadata — MUST succeed before we hold keys in memory.
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        encryption_salt: saltBase64,
-        encryption_key_check: keyCheck,
-        encryption_key_check_iv: keyCheckIv,
-        encryption_key_check_version: keyCheckVersion,
-        encryption_version: 1,
-        // A vault left behind by an earlier setup wraps a different key. Clear
-        // it in the same write, or the old passphrase would still unwrap it.
-        vault: null,
-      },
-    });
-
-    if (error) {
-      throw new Error(`Failed to save encryption settings: ${error.message}`);
-    }
-
-    // Verify the metadata was actually persisted by re-reading user
-    const { data: { user: refreshedUser } } = await supabase.auth.getUser();
-    if (!refreshedUser?.user_metadata?.encryption_salt) {
-      throw new Error('Encryption settings were not persisted. Please try again.');
-    }
-
-    // Metadata confirmed — safe to hold keys in memory and persist to session
-    setKeyState({ keys: derivedKeys, userId: user.id });
-    persistSession(user.id, derivedKeys);
-    if (isRememberBrowserEnabled(user.id) && !persistLocal(user.id, derivedKeys)) {
+  /** Install keys the server has just confirmed, as every unlock does. */
+  const installKeys = useCallback((userId: string, installed: DerivedKeys, source: string) => {
+    recoveryAttemptRef.current++;
+    setKeyState({ keys: installed, userId });
+    persistSession(userId, installed);
+    if (isRememberBrowserEnabled(userId) && !persistLocal(userId, installed)) {
       reportReliabilityIssue({
         category: 'vault',
-        message: 'Failed to persist remembered vault keys during setup',
+        message: 'Failed to persist remembered vault keys',
         level: 'warning',
-        data: { source: 'setup_passphrase' },
+        data: { source },
       });
     }
-
     // Mark restore as attempted so auto-lock doesn't trigger immediate re-restore
-    // via the restore useEffect (which checks this ref before attempting)
-    sessionRestoreAttemptedRef.current = user.id;
+    sessionRestoreAttemptedRef.current = userId;
+  }, []);
 
-    return derivedKeys;
-  }, [user]);
+  /**
+   * Item 27: set up a new account straight into the wrapped vault. Nothing is
+   * written until the recovery key is confirmed; then one write stores the vault,
+   * its key-check and the recovery wrap together. The keys are held until the
+   * writer leaves step 3, so the library's first load sees the starter notes.
+   */
+  const beginAccountSetup = useCallback(async (passphrase: string): Promise<AccountSetup> => {
+    if (!user) throw new Error('Must be logged in to set up encryption');
+    if (isEncryptionSetup) throw new Error('Encryption is already set up for this account.');
+    const policyError = validatePassphrasePolicy(passphrase);
+    if (policyError) throw new Error(policyError);
+
+    const userId = user.id;
+    // Keep this screen up from here to step 3, whatever the metadata says.
+    setSetupFlow((prev) => (prev?.userId === userId ? prev : { userId, keys: null, epoch: setupEpochRef.current }));
+    const { prepareAccountSetup } = await loadAccountSetup();
+    const prepared = await prepareAccountSetup({ passphrase, userId });
+    /** Set when a lock or user change passed while the write was in flight. */
+    let dropped = false;
+
+    return {
+      prepareRecoveryKit: () => {
+        const kit = prepared.prepareRecoveryKit();
+        return {
+          displayKey: kit.displayKey,
+          discard: kit.discard,
+          commit: async () => {
+            const epoch = setupEpochRef.current;
+            await kit.commit();
+            if (epoch !== setupEpochRef.current || prevUserIdRef.current !== userId) {
+              // Locked or signed out meanwhile. The account is set up on the
+              // server; the next sign-in unlocks it. Hold nothing here.
+              dropped = true;
+              clearKeyMaterial(prepared.keys);
+              return;
+            }
+            // The account is complete: a refresh from here restores into the
+            // library, verified against the vault key-check like any restore.
+            persistSession(userId, prepared.keys);
+            sessionRestoreAttemptedRef.current = userId;
+            setSetupWrittenUserId(userId);
+            setSetupFlow({ userId, keys: prepared.keys, epoch });
+          },
+        };
+      },
+      committedKeys: () => (prepared.committed && !dropped ? prepared.keys : null),
+      writeAttempted: () => prepared.writeAttempted,
+      discard: prepared.discard,
+    };
+  }, [user, isEncryptionSetup]);
+
+  const finishAccountSetup = useCallback(() => {
+    const flow = setupFlow;
+    setSetupFlow(null);
+    // A stale call (a lock passed since this render) installs nothing: the lock
+    // has zeroed these keys.
+    if (flow?.keys && flow.userId === currentUserId && flow.epoch === setupEpochRef.current) {
+      installKeys(flow.userId, flow.keys, 'account_setup');
+    }
+  }, [setupFlow, currentUserId, installKeys]);
 
   /**
    * Unlock the vault with existing passphrase.
@@ -652,19 +713,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     });
     if (!result) return false;
 
-    recoveryAttemptRef.current++;
-    setKeyState({ keys: result.keys, userId });
-    persistSession(userId, result.keys);
-    if (isRememberBrowserEnabled(userId) && !persistLocal(userId, result.keys)) {
-      reportReliabilityIssue({
-        category: 'vault',
-        message: 'Failed to persist remembered vault keys during unlock',
-        level: 'warning',
-        data: { source: 'unlock_passphrase' },
-      });
-    }
-    // Mark restore as attempted so auto-lock doesn't trigger immediate re-restore
-    sessionRestoreAttemptedRef.current = userId;
+    installKeys(userId, result.keys, 'unlock_passphrase');
 
     if (result.migration) {
       // Item 24: migrate on unlock, in the background. The unlock has already
@@ -677,7 +726,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     setRecoveryOfferUserId(result.offerRecoveryKey ? userId : null);
 
     return true;
-  }, [user, encryptionSalt]);
+  }, [user, encryptionSalt, installKeys]);
 
   const unlockWithRecoveryKey = useCallback(async (recoveryKey: string): Promise<RecoveryUnlockStatus> => {
     if (!user || !encryptionSalt) return 'unavailable';
@@ -769,6 +818,13 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       return null;
     });
     setRecoveryOfferUserId(null);
+    // A lock ends a setup screen. Before its write the setup is simply gone; after
+    // it the account is complete and the unlock screen takes over.
+    setupEpochRef.current++;
+    setSetupFlow((prev) => {
+      clearKeyMaterial(prev?.keys ?? null);
+      return null;
+    });
     if (reason === 'auto-lock') {
       // Preserve localStorage — activity gate will restore on user return
       autoLockedRef.current = true;
@@ -800,7 +856,10 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       keys,
       isUnlocked,
       isEncryptionSetup,
-      setupPassphrase,
+      beginAccountSetup,
+      finishAccountSetup,
+      setupScreen,
+      setupDone,
       unlockWithPassphrase,
       lockVault,
       persistToLocal,
@@ -815,7 +874,10 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     keys,
     isUnlocked,
     isEncryptionSetup,
-    setupPassphrase,
+    beginAccountSetup,
+    finishAccountSetup,
+    setupScreen,
+    setupDone,
     unlockWithPassphrase,
     lockVault,
     persistToLocal,

@@ -1,217 +1,382 @@
 /**
- * PassphraseSetup.test.tsx — Phase 3
- *
- * Tests the first-time E2EE passphrase setup screen.
- * Validates form behavior, validation rules, and submission flow.
+ * Item 27: the three-step setup screen — passphrase, recovery key, done — with
+ * the vault context faked. The real crypto and the fake server are in
+ * `contexts/EncryptionContext.setup.test.tsx`.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PassphraseSetup } from './PassphraseSetup';
+import { PASSPHRASE_WORDS } from '../data/passphraseWords';
+import { validatePassphrasePolicy } from '../utils/passphrasePolicy';
 
-// Mock dependencies
-const mockSetupPassphrase = vi.fn();
-const mockCreateEncryptedNote = vi.fn();
-const mockCreateTagOffline = vi.fn();
-const mockAddTagToNoteOffline = vi.fn();
+const KEY = 'ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRSA';
+const OTHER_KEY = 'ZZZZ-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRSA';
+const KEYS = { encryptionKey: 'enc', hashKey: 'hash' };
+
+const encryptionState = { setupDone: false };
+
+const {
+  mockBeginAccountSetup,
+  mockFinishAccountSetup,
+  mockCreateEncryptedNote,
+  mockCreateTagOffline,
+  mockAddTagToNoteOffline,
+} = vi.hoisted(() => ({
+  mockBeginAccountSetup: vi.fn(),
+  mockFinishAccountSetup: vi.fn(),
+  mockCreateEncryptedNote: vi.fn(),
+  mockCreateTagOffline: vi.fn(),
+  mockAddTagToNoteOffline: vi.fn(),
+}));
 
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: { id: 'user-setup-1' },
-  }),
+  useAuth: () => ({ user: { id: 'user-setup-1', email: 'writer@example.com' } }),
 }));
 
 vi.mock('../contexts/EncryptionContext', () => ({
   useEncryption: () => ({
-    setupPassphrase: mockSetupPassphrase,
+    beginAccountSetup: mockBeginAccountSetup,
+    finishAccountSetup: mockFinishAccountSetup,
+    setupDone: encryptionState.setupDone,
   }),
 }));
 
 vi.mock('../services/encryptedNotes', () => ({
   createEncryptedNote: (...args: unknown[]) => mockCreateEncryptedNote(...args),
 }));
-
 vi.mock('../services/offlineTags', () => ({
   createTagOffline: (...args: unknown[]) => mockCreateTagOffline(...args),
 }));
-
 vi.mock('../services/offlineNotes', () => ({
   addTagToNoteOffline: (...args: unknown[]) => mockAddTagToNoteOffline(...args),
 }));
 
+interface FakeSetup {
+  committed: boolean;
+  kits: Array<{ displayKey: string; commit: ReturnType<typeof vi.fn>; discard: ReturnType<typeof vi.fn> }>;
+  prepareRecoveryKit: ReturnType<typeof vi.fn>;
+  committedKeys: () => unknown;
+  writeSent: boolean;
+  writeAttempted: () => boolean;
+  discard: ReturnType<typeof vi.fn>;
+}
+
+let setups: FakeSetup[];
+let nextKeys: string[];
+let commitImpl: () => Promise<void>;
+
+function makeSetup(): FakeSetup {
+  const setup: FakeSetup = {
+    committed: false,
+    kits: [],
+    prepareRecoveryKit: vi.fn(),
+    committedKeys: () => (setup.committed ? KEYS : null),
+    writeSent: false,
+    writeAttempted: () => setup.writeSent,
+    discard: vi.fn(),
+  };
+  setup.prepareRecoveryKit.mockImplementation(() => {
+    const kit = {
+      displayKey: nextKeys.shift() ?? KEY,
+      commit: vi.fn(async () => {
+        setup.writeSent = true;
+        await commitImpl();
+        setup.committed = true;
+      }),
+      discard: vi.fn(),
+    };
+    setup.kits.push(kit);
+    return kit;
+  });
+  setups.push(setup);
+  return setup;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  encryptionState.setupDone = false;
+  setups = [];
+  nextKeys = [KEY, OTHER_KEY];
+  commitImpl = async () => {};
+  mockBeginAccountSetup.mockImplementation(async () => makeSetup());
+  mockCreateTagOffline.mockResolvedValue({ id: 'tag-recipes' });
+  let n = 0;
+  mockCreateEncryptedNote.mockImplementation(async () => ({ id: `note-${++n}` }));
+  mockAddTagToNoteOffline.mockResolvedValue(undefined);
 });
 
-describe('PassphraseSetup', () => {
-  it('should render the setup form', () => {
-    render(<PassphraseSetup />);
+async function continueToKey() {
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+  return screen.findByTestId('recovery-key');
+}
 
-    expect(screen.getByText('Protect Your Notes')).toBeInTheDocument();
-    expect(screen.getByLabelText('Passphrase')).toBeInTheDocument();
-    expect(screen.getByLabelText('Confirm passphrase')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Enable Encryption' })).toBeInTheDocument();
+async function confirmAndSave(key = KEY) {
+  fireEvent.click(screen.getByRole('button', { name: /saved it/ }));
+  fireEvent.change(screen.getByLabelText('Recovery key'), { target: { value: key } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save recovery key' }));
+}
+
+describe('PassphraseSetup — step 1, passphrase', () => {
+  it('offers a generated passphrase by default, and it passes the policy', () => {
+    render(<PassphraseSetup />);
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Choose a passphrase' })).toBeInTheDocument();
+    const suggested = screen.getByTestId('suggested-passphrase').textContent!;
+    const words = suggested.split('-');
+    expect(words).toHaveLength(6);
+    for (const word of words) expect(PASSPHRASE_WORDS).toContain(word);
+    expect(validatePassphrasePolicy(suggested)).toBeNull();
+    expect(screen.getByText(/about 65 bits of entropy/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled();
   });
 
-  it('should disable submit button when form is incomplete', () => {
+  it('copies the suggestion in one tap', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     render(<PassphraseSetup />);
-
-    const button = screen.getByRole('button', { name: 'Enable Encryption' });
-    expect(button).toBeDisabled();
+    const suggested = screen.getByTestId('suggested-passphrase').textContent!;
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy' })); });
+    expect(writeText).toHaveBeenCalledWith(suggested);
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
   });
 
-  it('should enable submit when all fields are valid', async () => {
+  it('makes another suggestion on request', () => {
+    render(<PassphraseSetup />);
+    const first = screen.getByTestId('suggested-passphrase').textContent;
+    fireEvent.click(screen.getByRole('button', { name: 'Another one' }));
+    expect(screen.getByTestId('suggested-passphrase').textContent).not.toBe(first);
+  });
+
+  it('sets up with the suggestion when the writer continues', async () => {
+    render(<PassphraseSetup />);
+    const suggested = screen.getByTestId('suggested-passphrase').textContent;
+    await continueToKey();
+    expect(mockBeginAccountSetup).toHaveBeenCalledWith(suggested);
+  });
+
+  it('lets the writer type their own, and checks it against the policy', async () => {
     const user = userEvent.setup({ delay: null });
     render(<PassphraseSetup />);
-
-    await user.type(screen.getByLabelText('Passphrase'), 'mypassphrase123');
-    await user.type(screen.getByLabelText('Confirm passphrase'), 'mypassphrase123');
-    await user.click(screen.getByRole('checkbox'));
-
-    const button = screen.getByRole('button', { name: 'Enable Encryption' });
-    expect(button).not.toBeDisabled();
-  });
-
-  it('should show mismatch inline hint when confirm differs', async () => {
-    const user = userEvent.setup({ delay: null });
-    render(<PassphraseSetup />);
-
-    await user.type(screen.getByLabelText('Passphrase'), 'mypassphrase123');
-    await user.type(screen.getByLabelText('Confirm passphrase'), 'different');
-
-    expect(screen.getByText('Passphrases do not match')).toBeInTheDocument();
-  });
-
-  it('shows a weak strength hint for short passphrases', async () => {
-    const user = userEvent.setup({ delay: null });
-    render(<PassphraseSetup />);
+    fireEvent.click(screen.getByRole('button', { name: 'Type my own instead' }));
+    expect(screen.queryByTestId('suggested-passphrase')).toBeNull();
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    expect(continueButton).toBeDisabled();
 
     await user.type(screen.getByLabelText('Passphrase'), 'short');
-
     expect(screen.getByText('Strength: Too short')).toBeInTheDocument();
+    expect(continueButton).toBeDisabled();
+
+    await user.clear(screen.getByLabelText('Passphrase'));
+    await user.type(screen.getByLabelText('Passphrase'), 'a quiet harbour 42');
+    await user.type(screen.getByLabelText('Confirm passphrase'), 'a quiet harbour 4');
+    expect(screen.getByText('These don’t match yet.')).toBeInTheDocument();
+    expect(continueButton).toBeDisabled();
+    fireEvent.submit(continueButton.closest('form')!);
+    expect(mockBeginAccountSetup).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText('Confirm passphrase'), '2');
+    expect(continueButton).toBeEnabled();
+    await continueToKey();
+    expect(mockBeginAccountSetup).toHaveBeenCalledWith('a quiet harbour 42');
   });
 
-  it('shows a strong strength hint for long varied passphrases', async () => {
-    const user = userEvent.setup({ delay: null });
+  it('can go back to a suggestion from typing its own', () => {
     render(<PassphraseSetup />);
-
-    await user.type(screen.getByLabelText('Passphrase'), 'Long-Quiet-Passphrase-2026!');
-
-    expect(screen.getByText('Strength: Strong')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Type my own instead' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use a passphrase made for me' }));
+    expect(screen.getByTestId('suggested-passphrase')).toBeInTheDocument();
   });
 
-  it('should call setupPassphrase and onComplete on successful submit', async () => {
-    const mockKeys = { encryptionKey: {}, hashKey: {}, salt: new Uint8Array(16) };
-    mockSetupPassphrase.mockResolvedValue(mockKeys);
-    mockCreateTagOffline.mockResolvedValue({ id: 'tag-id', name: 'Recipes', color: 'sage' });
-    mockCreateEncryptedNote.mockResolvedValue({ id: 'note-id' });
-    mockAddTagToNoteOffline.mockResolvedValue(undefined);
-    const onComplete = vi.fn();
-    const user = userEvent.setup({ delay: null });
-
-    render(<PassphraseSetup onComplete={onComplete} />);
-
-    await user.type(screen.getByLabelText('Passphrase'), 'mypassphrase123');
-    await user.type(screen.getByLabelText('Confirm passphrase'), 'mypassphrase123');
-    await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByRole('button', { name: 'Enable Encryption' }));
-
-    await waitFor(() => {
-      expect(mockSetupPassphrase).toHaveBeenCalledWith('mypassphrase123');
-      expect(onComplete).toHaveBeenCalled();
-    });
-  });
-
-  it('should create starter notes and tag after setup', async () => {
-    const mockKeys = { encryptionKey: {}, hashKey: {}, salt: new Uint8Array(16) };
-    mockSetupPassphrase.mockResolvedValue(mockKeys);
-    mockCreateTagOffline.mockResolvedValue({ id: 'tag-recipes-id', name: 'Recipes', color: 'sage' });
-    mockCreateEncryptedNote.mockResolvedValue({ id: 'note-id' });
-    mockAddTagToNoteOffline.mockResolvedValue(undefined);
-    const user = userEvent.setup({ delay: null });
-
+  it('has no "cannot be recovered" checkbox or alarm copy any more', () => {
     render(<PassphraseSetup />);
-
-    await user.type(screen.getByLabelText('Passphrase'), 'mypassphrase123');
-    await user.type(screen.getByLabelText('Confirm passphrase'), 'mypassphrase123');
-    await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByRole('button', { name: 'Enable Encryption' }));
-
-    await waitFor(() => {
-      // Should create the Recipes tag
-      expect(mockCreateTagOffline).toHaveBeenCalledWith('user-setup-1', 'Recipes', 'sage');
-      // Should create 4 starter notes
-      expect(mockCreateEncryptedNote).toHaveBeenCalledTimes(4);
-      // First note should be pinned welcome
-      expect(mockCreateEncryptedNote).toHaveBeenCalledWith(
-        'user-setup-1',
-        'Welcome to Yidhan',
-        expect.stringContaining('calm space for your thoughts'),
-        mockKeys,
-        true
-      );
-    });
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(document.body.textContent).not.toMatch(/cannot be recovered|no recovery|warning/i);
+    expect(screen.getByText(/recovery key in case you ever forget it/)).toBeInTheDocument();
   });
 
-  it('should still complete if starter note creation fails', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const mockKeys = { encryptionKey: {}, hashKey: {}, salt: new Uint8Array(16) };
-    mockSetupPassphrase.mockResolvedValue(mockKeys);
-    mockCreateTagOffline.mockRejectedValue(new Error('DB error'));
-    const onComplete = vi.fn();
-    const user = userEvent.setup({ delay: null });
-
-    render(<PassphraseSetup onComplete={onComplete} />);
-
-    await user.type(screen.getByLabelText('Passphrase'), 'mypassphrase123');
-    await user.type(screen.getByLabelText('Confirm passphrase'), 'mypassphrase123');
-    await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByRole('button', { name: 'Enable Encryption' }));
-
-    await waitFor(() => {
-      expect(onComplete).toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to create starter notes');
-    });
-    consoleSpy.mockRestore();
-  });
-
-  it('should show error if setupPassphrase fails', async () => {
-    mockSetupPassphrase.mockRejectedValue(new Error('Key derivation failed'));
-    const user = userEvent.setup({ delay: null });
-
+  it('shows the context’s refusal and stays on step 1', async () => {
+    mockBeginAccountSetup.mockRejectedValueOnce(new Error('Encryption is already set up for this account.'));
     render(<PassphraseSetup />);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('already set up');
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+  });
+});
 
-    await user.type(screen.getByLabelText('Passphrase'), 'mypassphrase123');
-    await user.type(screen.getByLabelText('Confirm passphrase'), 'mypassphrase123');
-    await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByRole('button', { name: 'Enable Encryption' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Key derivation failed')).toBeInTheDocument();
-    });
+describe('PassphraseSetup — step 2, recovery key', () => {
+  it('shows the key with no way to skip it', async () => {
+    render(<PassphraseSetup />);
+    expect(await continueToKey()).toHaveTextContent(KEY);
+    expect(screen.getByText('Step 2 of 3')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /not now|skip|later/i })).toBeNull();
   });
 
-  it('should show submitting state during setup', async () => {
-    // Make setupPassphrase hang
-    mockSetupPassphrase.mockReturnValue(new Promise(() => {}));
-    const user = userEvent.setup({ delay: null });
-
+  it('cannot reach step 3 without the key typed back', async () => {
     render(<PassphraseSetup />);
-
-    await user.type(screen.getByLabelText('Passphrase'), 'mypassphrase123');
-    await user.type(screen.getByLabelText('Confirm passphrase'), 'mypassphrase123');
-    await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByRole('button', { name: 'Enable Encryption' }));
-
-    expect(screen.getByText('Setting up encryption...')).toBeInTheDocument();
+    await continueToKey();
+    fireEvent.click(screen.getByRole('button', { name: /saved it/ }));
+    const save = screen.getByRole('button', { name: 'Save recovery key' });
+    expect(save).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Recovery key'), { target: { value: OTHER_KEY } });
+    expect(save).toBeDisabled();
+    fireEvent.submit(save.closest('form')!);
+    expect(setups[0].kits[0].commit).not.toHaveBeenCalled();
+    expect(screen.queryByText('Step 3 of 3')).toBeNull();
   });
 
-  it('should display the no-recovery warning checkbox', () => {
+  it('Back returns to step 1, puts the key away, and Continue makes a new one', async () => {
     render(<PassphraseSetup />);
+    const suggested = screen.getByTestId('suggested-passphrase').textContent;
+    await continueToKey();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
 
-    expect(
-      screen.getByText(/if I forget this passphrase, my notes cannot be recovered/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+    expect(screen.getByTestId('suggested-passphrase').textContent).toBe(suggested);
+    expect(setups[0].discard).toHaveBeenCalled();
+    expect(setups[0].kits[0].discard).toHaveBeenCalled();
+
+    expect(await continueToKey()).toHaveTextContent(OTHER_KEY);
+    expect(mockBeginAccountSetup).toHaveBeenCalledTimes(2);
+    // The first key cannot be saved now: it belongs to a setup that is gone.
+    await confirmAndSave(KEY);
+    expect(screen.getByRole('button', { name: 'Save recovery key' })).toBeDisabled();
+    expect(setups[1].kits[0].commit).not.toHaveBeenCalled();
+  });
+
+  it('Back from the confirm step also goes to step 1, never forward', async () => {
+    render(<PassphraseSetup />);
+    await continueToKey();
+    fireEvent.click(screen.getByRole('button', { name: /saved it/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+    expect(screen.queryByText('Step 3 of 3')).toBeNull();
+    expect(mockFinishAccountSetup).not.toHaveBeenCalled();
+  });
+
+  it('cannot go Back while the key is saving', async () => {
+    let release!: () => void;
+    commitImpl = () => new Promise<void>((resolve) => { release = resolve; });
+    render(<PassphraseSetup />);
+    await continueToKey();
+    await confirmAndSave();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled());
+    await act(async () => { release(); });
+    expect(await screen.findByText('Step 3 of 3')).toBeInTheDocument();
+  });
+
+  it('says plainly when the account was set up elsewhere, and stays on the key', async () => {
+    commitImpl = async () => {
+      throw Object.assign(new Error('x'), { code: 'changed' });
+    };
+    render(<PassphraseSetup />);
+    await continueToKey();
+    await confirmAndSave();
+    expect(await screen.findByRole('alert')).toHaveTextContent('set up in another tab or on another device');
+    expect(screen.queryByText('Step 3 of 3')).toBeNull();
+  });
+
+  it('cannot go Back after a save that sent its write, even when it reported a failure', async () => {
+    // The write may have landed with only its answer lost. Going back would
+    // start a second setup the server would refuse, and abandon the first.
+    commitImpl = async () => {
+      throw Object.assign(new Error('x'), { code: 'failed' });
+    };
+    render(<PassphraseSetup />);
+    await continueToKey();
+    await confirmAndSave();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Setup didn’t finish');
+    expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
+    // Retrying the same key stays possible.
+    commitImpl = async () => {};
+    fireEvent.click(screen.getByRole('button', { name: 'Save recovery key' }));
+    expect(await screen.findByText('Step 3 of 3')).toBeInTheDocument();
+    expect(setups).toHaveLength(1);
+  });
+
+  it('says plainly when offline', async () => {
+    commitImpl = async () => {
+      throw Object.assign(new Error('x'), { code: 'offline' });
+    };
+    render(<PassphraseSetup />);
+    await continueToKey();
+    await confirmAndSave();
+    expect(await screen.findByRole('alert')).toHaveTextContent('You’re offline');
+  });
+
+  it('puts the setup away when the screen goes before the write', async () => {
+    const { unmount } = render(<PassphraseSetup />);
+    await continueToKey();
+    unmount();
+    expect(setups[0].discard).toHaveBeenCalled();
+    expect(setups[0].kits[0].discard).toHaveBeenCalled();
+  });
+});
+
+describe('PassphraseSetup — step 3, done', () => {
+  it('comes back to step 3, not step 1, when remounted after the write landed', () => {
+    encryptionState.setupDone = true;
+    render(<PassphraseSetup />);
+    expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
+    expect(screen.queryByTestId('suggested-passphrase')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Open my notes' }));
+    return waitFor(() => expect(mockFinishAccountSetup).toHaveBeenCalledTimes(1));
+  });
+
+  it('confirms calmly, creates the starter notes with the new keys, and opens the library', async () => {
+    render(<PassphraseSetup />);
+    await continueToKey();
+    await confirmAndSave();
+
+    expect(await screen.findByRole('heading', { name: 'Your notes are ready' })).toBeInTheDocument();
+    expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    await waitFor(() => expect(mockCreateEncryptedNote).toHaveBeenCalledTimes(4));
+    expect(mockCreateTagOffline).toHaveBeenCalledWith('user-setup-1', 'Recipes', 'sage');
+    expect(mockCreateEncryptedNote).toHaveBeenCalledWith('user-setup-1', 'Welcome to Yidhan', expect.any(String), KEYS, true);
+    expect(mockAddTagToNoteOffline).toHaveBeenCalledWith('user-setup-1', 'note-3', 'tag-recipes');
+
+    expect(mockFinishAccountSetup).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Open my notes' }));
+    await waitFor(() => expect(mockFinishAccountSetup).toHaveBeenCalledTimes(1));
+  });
+
+  it('opens the library only after the starter notes are written', async () => {
+    let release!: () => void;
+    mockAddTagToNoteOffline.mockImplementation(() => new Promise<void>((resolve) => { release = resolve; }));
+    render(<PassphraseSetup />);
+    await continueToKey();
+    await confirmAndSave();
+    await screen.findByRole('heading', { name: 'Your notes are ready' });
+    await waitFor(() => expect(mockAddTagToNoteOffline).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: 'Open my notes' }));
+    expect(screen.getByRole('button', { name: 'Open my notes' })).toBeDisabled();
+    expect(mockFinishAccountSetup).not.toHaveBeenCalled();
+    await act(async () => { release(); });
+    await waitFor(() => expect(mockFinishAccountSetup).toHaveBeenCalledTimes(1));
+  });
+
+  it('still reaches step 3 when the starter notes fail', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockCreateTagOffline.mockRejectedValue(new Error('IndexedDB unavailable'));
+    render(<PassphraseSetup />);
+    await continueToKey();
+    await confirmAndSave();
+    expect(await screen.findByRole('heading', { name: 'Your notes are ready' })).toBeInTheDocument();
+    await waitFor(() => expect(consoleError).toHaveBeenCalledWith('Failed to create starter notes'));
+    consoleError.mockRestore();
+  });
+
+  it('creates no starter notes when the save fails', async () => {
+    commitImpl = async () => {
+      throw Object.assign(new Error('x'), { code: 'failed' });
+    };
+    render(<PassphraseSetup />);
+    await continueToKey();
+    await confirmAndSave();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Setup didn’t finish');
+    expect(mockCreateEncryptedNote).not.toHaveBeenCalled();
+    expect(mockFinishAccountSetup).not.toHaveBeenCalled();
   });
 });

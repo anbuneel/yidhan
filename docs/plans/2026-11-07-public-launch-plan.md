@@ -53,7 +53,6 @@ Each of these is ahead of the product. This lane closes the gap.
 
 | # | Area | Item | Effort | Needs / start when | Done when |
 |---|------|------|--------|--------------------|-----------|
-| 27 | Onboarding | Passphrase setup rewritten as three steps: passphrase, recovery key, done. Offer a generated passphrase with one-tap copy as the default suggestion | days | Needs #26 | New users cannot finish setup without confirming the recovery key; the generated passphrase passes the strength policy · E2E |
 | 156 | Landing | The hero states only what the security page can back. Until item 104 (independent review) has a report, the hero's privacy line uses the security page's own wording and links to it. In the same pass, the hero's editor picture shows five toolbar labels, not sixteen, and never greyed-out Undo and Redo | days |  | `index.html` shell and `LandingPage.tsx` carry the same copy (both change together); the picture's toolbar lists at most five labels · `LandingPage.test.tsx` and the shell copy check |
 
 ### Lane 2 · Survive launch day

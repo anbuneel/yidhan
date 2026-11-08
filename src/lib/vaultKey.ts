@@ -251,40 +251,64 @@ export async function buildMigratedVault({
     if (!legacyOk) {
       throw new Error('Master key does not verify the legacy key-check; refusing to wrap it');
     }
-
-    const kekSalt = generateKekSalt(legacySalt);
-    const kek = await deriveKek(passphrase, kekSalt);
-    const wrapVersion = INITIAL_WRAP_VERSION;
-    const { wrappedKey, wrapIv } = await wrapMasterKey(kek, master, userId, wrapVersion);
-    const { keyCheck, keyCheckIv } = await createKeyCheck(keys.encryptionKey, userId);
-
-    const vault: VaultMetadata = {
-      version: VAULT_VERSION,
-      wrapVersion,
-      kekSalt: toBase64(kekSalt),
-      wrappedKey,
-      wrapIv,
-      keyCheck,
-      keyCheckIv,
-      keyCheckVersion: INITIAL_VAULT_KEY_CHECK_VERSION,
-      migratedAt: now.toISOString(),
-    };
-
-    // Self-check: the vault we are about to write must open with this KEK and
-    // yield exactly these 64 bytes, and its key-check must verify under them.
-    const reopened = await openVaultWithKek(kek, vault, userId, legacySalt);
-    try {
-      if (!reopened || !keysMatchMaster(reopened, master)) {
-        throw new Error('Built vault did not reopen to the same master key');
-      }
-    } finally {
-      if (reopened) zeroKeys(reopened);
-    }
-
-    return vault;
+    return await sealVault({ passphrase, master, keys, legacySalt, userId, now });
   } finally {
     zeroKeys(keys);
   }
+}
+
+/**
+ * Wrap `K` under a KEK from `passphrase` and a fresh `kekSalt`, with a key-check
+ * under `K`, at the first wrap version. Shared by the migration and a new account,
+ * so the two always write the same vault.
+ *
+ * Self-check before returning: the vault must reopen with this KEK to exactly
+ * these 64 bytes, and its key-check must verify under them. A vault that fails is
+ * never returned, so it can never be written.
+ */
+async function sealVault({
+  passphrase,
+  master,
+  keys,
+  legacySalt,
+  userId,
+  now,
+}: {
+  passphrase: string;
+  master: Uint8Array;
+  /** `K` imported; used for the key-check, not modified. */
+  keys: DerivedKeys;
+  legacySalt: Uint8Array;
+  userId: string;
+  now: Date;
+}): Promise<VaultMetadata> {
+  const kekSalt = generateKekSalt(legacySalt);
+  const kek = await deriveKek(passphrase, kekSalt);
+  const wrapVersion = INITIAL_WRAP_VERSION;
+  const { wrappedKey, wrapIv } = await wrapMasterKey(kek, master, userId, wrapVersion);
+  const { keyCheck, keyCheckIv } = await createKeyCheck(keys.encryptionKey, userId);
+
+  const vault: VaultMetadata = {
+    version: VAULT_VERSION,
+    wrapVersion,
+    kekSalt: toBase64(kekSalt),
+    wrappedKey,
+    wrapIv,
+    keyCheck,
+    keyCheckIv,
+    keyCheckVersion: INITIAL_VAULT_KEY_CHECK_VERSION,
+    migratedAt: now.toISOString(),
+  };
+
+  const reopened = await openVaultWithKek(kek, vault, userId, legacySalt);
+  try {
+    if (!reopened || !keysMatchMaster(reopened, master)) {
+      throw new Error('Built vault did not reopen to the same master key');
+    }
+  } finally {
+    if (reopened) zeroKeys(reopened);
+  }
+  return vault;
 }
 
 /**
@@ -355,6 +379,67 @@ export async function masterVerifiesVault(
   if (!keys) return false;
   zeroKeys(keys);
   return true;
+}
+
+// ============================================================================
+// A new account (item 27)
+// ============================================================================
+
+const LEGACY_SALT_LENGTH_BYTES = 16;
+
+export interface NewVault {
+  /** `K` imported, carrying `legacySalt`. The account's keys from here on; the caller zeroes them if it drops them. */
+  keys: DerivedKeys;
+  /** 64 random bytes of `K`. The caller zeroes it. */
+  master: Uint8Array;
+  /** A fresh `encryption_salt`. The legacy derivation never runs for this account. */
+  legacySalt: Uint8Array;
+  /** The vault, without `recoveryWrap`: the caller adds it in the same write. */
+  vault: Omit<VaultMetadata, 'recoveryWrap'>;
+  /** A legacy key-check that no passphrase verifies (DECISIONS.md, 2026-11-08). */
+  retiredLegacyKeyCheck: LegacyKeyCheckFields;
+}
+
+/**
+ * The vault for an account being set up (item 27). `K` is 64 random bytes, never
+ * derived from the passphrase (§1). The KEK is Argon2id over the passphrase and a
+ * fresh `kekSalt`, as for a migrated account (`sealVault`).
+ *
+ * The legacy fields are written too, because `encryption_salt` is what marks an
+ * account as set up and what the keys carry. The legacy key-check is a retired
+ * one, as after a passphrase change: the legacy derivation can never produce a
+ * random `K`, so an old client, and the legacy fallback, answer "wrong
+ * passphrase" and fail closed instead of opening with the wrong key.
+ *
+ * On any failure every copy of `K` made here is zeroed before the error leaves.
+ */
+export async function buildNewVault({
+  passphrase,
+  userId,
+  now = new Date(),
+}: {
+  passphrase: string;
+  userId: string;
+  now?: Date;
+}): Promise<NewVault> {
+  const master = crypto.getRandomValues(new Uint8Array(MASTER_KEY_LENGTH_BYTES));
+  const legacySalt = crypto.getRandomValues(new Uint8Array(LEGACY_SALT_LENGTH_BYTES));
+  let keys: DerivedKeys | null = null;
+  try {
+    keys = await importMasterKey(master, legacySalt);
+    const vault = await sealVault({ passphrase, master, keys, legacySalt, userId, now });
+    return {
+      keys,
+      master,
+      legacySalt,
+      vault,
+      retiredLegacyKeyCheck: await createRetiredLegacyKeyCheck(userId),
+    };
+  } catch (err) {
+    master.fill(0);
+    if (keys) zeroKeys(keys);
+    throw err;
+  }
 }
 
 // ============================================================================

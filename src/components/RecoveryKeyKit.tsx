@@ -37,6 +37,8 @@ export interface RecoveryKeyKitProps {
   titleAs?: 'h1' | 'h2' | 'h3';
   /** Printed on the sheet, so the writer knows which account the key opens. */
   accountEmail?: string;
+  /** Copy for a failure, where the caller's wording differs (item 27's setup). Undefined falls back. */
+  describeError?: (err: unknown) => string | undefined;
 }
 
 function errorMessage(err: unknown): string {
@@ -64,7 +66,12 @@ export function RecoveryKeyKit({
   startWithIntro = false,
   titleAs: Title = 'h2',
   accountEmail,
+  describeError,
 }: RecoveryKeyKitProps) {
+  const messageFor = useCallback(
+    (err: unknown) => describeError?.(err) ?? errorMessage(err),
+    [describeError]
+  );
   const [step, setStep] = useState<Step>(startWithIntro ? 'intro' : 'preparing');
   const [displayKey, setDisplayKey] = useState<string | null>(null);
   const [typed, setTyped] = useState('');
@@ -92,10 +99,10 @@ export function RecoveryKeyKit({
     } catch (err) {
       startedRef.current = false;
       if (!mountedRef.current) return;
-      setError(errorMessage(err));
+      setError(messageFor(err));
       setStep('intro');
     }
-  }, [prepare]);
+  }, [prepare, messageFor]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -143,7 +150,7 @@ export function RecoveryKeyKit({
       await kit.commit();
     } catch (err) {
       if (!mountedRef.current) return;
-      setError(errorMessage(err));
+      setError(messageFor(err));
       setStep('confirm');
       return;
     }

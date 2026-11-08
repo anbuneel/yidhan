@@ -1,7 +1,7 @@
 # E2EE User Experience Reference
 
 **Version:** 1.0
-**Last Updated:** 2026-02-24
+**Last Updated:** 2026-11-08
 **Status:** Living Document
 **Author:** Claude (Opus 4.6)
 
@@ -21,16 +21,44 @@ Yidhan's End-to-End Encryption (E2EE) protects note content with a user-chosen p
 
 ## 1. First-Time Setup (New User)
 
-1. **Sign up** via email/password or Google OAuth
-2. **Passphrase Setup** screen appears fullscreen, blocking the library
-   - Title: "Protect Your Notes"
-   - User creates a passphrase (minimum 8 characters), confirms it
-   - Must acknowledge: "I understand that if I forget this passphrase, my notes cannot be recovered. There are no recovery codes."
-   - **Zero recovery** — intentional, prominently warned
-3. Keys are derived locally via Argon2id (~1-2 seconds), never sent to server
-4. Salt + key-check blob stored in Supabase `user_metadata` (not the key itself)
-5. An encrypted welcome note is auto-created
-6. User lands in the library — all notes encrypted from this point on
+Since v3.19.37 (item 27). Three steps on one full-screen card that blocks the
+library: passphrase, recovery key, done. Each step is labelled "Step N of 3".
+
+1. **Sign up** via email/password or Google OAuth.
+2. **Step 1, "Choose a passphrase".**
+   - Default: a passphrase made on the device — six words from a 1,831-word list,
+     joined by hyphens, about 65 bits of entropy. **Copy** puts it on the clipboard;
+     **Another one** makes a new one.
+   - **Type my own instead** shows Passphrase and Confirm fields with the strength
+     meter. The policy is the same as everywhere: at least 12 characters, two
+     character classes, strength Fair or better. Every generated passphrase passes it.
+   - **Continue** runs Argon2id once (a second or two) and moves to step 2.
+     **Nothing is written to the server yet.**
+3. **Step 2, the recovery key.** The recovery kit from Settings, with no way to
+   skip it: the key is shown once with Copy and Print, then typed back. **Back**
+   returns to step 1 and puts the key away; Continue makes a new one.
+4. **Saving.** When the typed key matches, one `updateUser` write sets the account
+   up: `encryption_salt`, a legacy key-check no passphrase opens, and the whole
+   `vault` with its key-check and `recoveryWrap`. The vault key `K` is 64 random
+   bytes, never derived from the passphrase. Neither the passphrase nor the
+   recovery key is sent, stored or logged.
+5. **Step 3, "Your notes are ready".** The starter notes are written locally.
+   **Open my notes** installs the keys and opens the library.
+
+### Interruptions
+
+| Closed or reloaded during | What the account holds | Next sign-in |
+|---|---|---|
+| Step 1, or step 2 before Save | Nothing: no salt, no vault | Setup again from step 1, with a new suggestion. Typing the earlier passphrase with "Type my own instead" is fine; the earlier recovery key never worked |
+| Step 2, Save in flight | Either nothing, or the complete setup | Nothing: step 1. Complete: the unlock screen |
+| Step 3 | The complete setup with its recovery key | A refresh in the same tab restores into the library. A new tab asks for the passphrase |
+
+An account set up in another tab or on another device while step 2 is open is never
+overwritten: Save says so, and a reload unlocks it with that passphrase.
+
+Accounts set up before item 27 keep the legacy path: they unlock with the passphrase,
+migrate to the vault (item 24), and are offered a recovery key (item 26). They never
+see the three-step setup.
 
 ---
 
@@ -137,7 +165,7 @@ Tags remain plaintext after migration.
 | **Each device/tab** | Independent vault session |
 | **Page refresh** | Stays unlocked (sessionStorage persists) |
 | **Close tab** | Vault locks (sessionStorage cleared) |
-| **Forget passphrase** | Notes are gone forever (no recovery) |
+| **Forget passphrase** | The recovery key opens the notes; without it, they are gone |
 
 ---
 
@@ -198,7 +226,7 @@ Keys are securely zeroed out (overwritten with 0s) when the vault locks.
 
 ## 12. Key UX Principles
 
-1. **Zero Recovery** — No backup codes, no admin reset. Forgotten passphrase = permanent loss.
+1. **Recovery key, nothing else** — No admin reset. A forgotten passphrase is recovered only with the recovery key made at setup or in Settings.
 2. **Per-Device Keys** — Keys never leave the device. Each device is an independent vault.
 3. **Session Persistence** — Keys survive refresh but not tab close. Simple mental model.
 4. **Two Independent Timeouts** — Vault lock (keeps you logged in) vs. session timeout (logs you out).
