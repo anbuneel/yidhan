@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BottomSheet } from './BottomSheet';
 
 /**
@@ -30,7 +30,10 @@ async function openSheet() {
   const opener = screen.getByRole('button', { name: 'Open settings' });
   opener.focus();
   fireEvent.click(opener);
-  await screen.findByRole('dialog');
+  // The dialog can mount before the focus effect runs, so wait for focus itself:
+  // the dialog being present is not proof that focus moved into it.
+  const dialog = await screen.findByRole('dialog');
+  await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
   return opener;
 }
 
