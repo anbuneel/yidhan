@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SecurityPage } from './SecurityPage';
 import { PrivacyPage } from './PrivacyPage';
+import { TermsPage } from './TermsPage';
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: null, signOut: vi.fn() }),
@@ -55,6 +56,12 @@ describe('SecurityPage', () => {
     expect(screen.getByText(/Your recovery key opens your notes, and\s+you then choose a new passphrase/)).toBeInTheDocument();
     expect(screen.getByText(/without both the passphrase and the recovery key, no one can\s+open them, Yidhan included/)).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/no recovery|recovery kit you keep yourself is planned|so are the notes/i);
+  });
+
+  it('the terms say notes are lost only when both the passphrase and the recovery key are', () => {
+    render(<TermsPage {...nav} />);
+    expect(screen.getByText(/the recovery key you keep can restore access to your encrypted notes\. If you lose both your passphrase and your recovery key, your encrypted notes cannot be recovered by anyone, including Yidhan\./)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/permanently inaccessible/i);
   });
 
   it('the privacy page says the same about a forgotten passphrase', () => {
