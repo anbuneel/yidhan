@@ -30,6 +30,7 @@ const midnight: ThemeConfig = {
     accentHover: '#E5C44A',
     accentGlow: 'rgba(212, 175, 55, 0.15)',
     accentMuted: 'rgba(212, 175, 55, 0.6)',
+    accentText: '#D4AF37', // the accent already passes as text: 9.49:1 on bgPrimary
     onAccent: '#16161F', // 8.55:1
 
     // CTA button (bright gold + dark text — 8.55:1, exceeds AAA)

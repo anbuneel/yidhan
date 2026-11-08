@@ -64,7 +64,7 @@ function ArrangeGroup<T extends string>({
               borderRadius: '2px 12px 4px 12px',
               background: isActive ? 'var(--color-accent-glow)' : 'transparent',
               border: isActive ? '1px solid var(--color-accent)' : '1px solid transparent',
-              color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+              color: isActive ? 'var(--color-accent-text)' : 'var(--color-text-tertiary)',
             }}
           >
             {labels[value]}

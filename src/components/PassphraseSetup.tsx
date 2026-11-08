@@ -390,7 +390,7 @@ export function PassphraseSetup() {
               />
               {ownStrength && (
                 <div className="mt-2 space-y-1">
-                  <div className="text-xs" style={{ color: STRENGTH_COLORS[ownStrength.label], fontFamily: 'var(--font-body)' }}>
+                  <div className="text-xs" style={{ color: ownStrength.label === 'Fair' ? 'var(--color-accent-text)' : STRENGTH_COLORS[ownStrength.label], fontFamily: 'var(--font-body)' }}>
                     Strength: {ownStrength.label}
                   </div>
                   <div aria-hidden="true" className="grid grid-cols-4 gap-1">

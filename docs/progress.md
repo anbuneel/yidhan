@@ -703,15 +703,26 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   | Settings | 66 → 0 | 59 → 0 | 0 → 0 | 0 → 0 |
 
   Every node but one was `color-contrast`. The exception was
-  `label-content-name-mismatch` on the toolbar's H1 button. Fixes: in Kintsugi,
-  text-secondary `#6B6862` → `#55524C`, text-tertiary `#7D7974` → `#65625C`, accent
-  `#C25634` → `#8F3C21` (hover `#75311B`; glow at 0.15). Accent is also link text
-  and selected-pill text on its own glow, and 4.5:1 there needs that depth. Midnight
-  is unchanged. The `index.html` landing shell mirrors the new values. The editor
-  sidebar rests at 0.9 opacity, not 0.65. Faded text that read under 4.5:1 now uses
-  a token at full opacity: the Esc hint, the Practice Space label and the Ctrl+K
-  chip. The quiet vault buttons underline on hover instead of fading. The H1 button
-  is named "Heading 1, H1".
+  `label-content-name-mismatch` on the toolbar's H1 button. Fixes:
+  - In Kintsugi, text-secondary `#6B6862` → `#55524C` and text-tertiary `#7D7974` →
+    `#65625C`. The old secondary still fails, at 4.29:1 on setup and unlock.
+  - A new token, `--color-accent-text`, for accent read as text: links and
+    selected labels. It is `#8F3C21` in Kintsugi (4.79:1 on the accent glow) and
+    equals the accent in Midnight, Washi and Mori, which already pass. It is
+    applied at 62 lines: 55 in components and pages, 6 rules in `index.css`, and
+    the passphrase strength label. The accent itself stays `#C25634` for fills,
+    borders and indicators. DESIGN.md's taxonomy gains a row for it.
+  - The `index.html` shell mirrors the new text values. It never reads the accent,
+    so it needs no new token.
+  - The editor sidebar rests at 0.9 opacity, not 0.65.
+  - Faded text that read under 4.5:1 now uses a token at full opacity: the Esc
+    hint, the Practice Space label and the Ctrl+K chip.
+  - The quiet vault buttons underline on hover instead of fading.
+  - The H1 button is named "Heading 1, H1".
+
+  White on the `#C25634` fill is 4.49:1. The spec never scans a toolbar button in
+  its hover, focus or active state, so axe does not see this. It is filed rather
+  than fixed, because fixing it changes the fill: #260.
 
   By hand: tab order and Escape on each screen. Escape closes the editor, the
   avatar menu and Settings. Tab left the open Settings dialog for the library

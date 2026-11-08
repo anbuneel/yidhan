@@ -32,6 +32,7 @@ const mori: ThemeConfig = {
     accentHover: '#D9B972',
     accentGlow: 'rgba(201, 169, 98, 0.2)',
     accentMuted: 'rgba(201, 169, 98, 0.6)',
+    accentText: '#C9A962', // the accent already passes as text: 6.11:1 on bgTertiary, 4.98:1 on glow
     onAccent: '#1C2118', // 7.29:1
 
     // CTA button (bright gold + dark text — 7.29:1, exceeds AAA)

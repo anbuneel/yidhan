@@ -104,7 +104,7 @@ export function Header({
               className="min-w-[20px] h-5 px-1.5 rounded-full text-xs font-medium flex items-center justify-center"
               style={{
                 background: 'var(--color-accent-glow)',
-                color: 'var(--color-accent)',
+                color: 'var(--color-accent-text)',
               }}
             >
               {fadedNotesCount > 99 ? '99+' : fadedNotesCount}

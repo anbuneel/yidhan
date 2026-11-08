@@ -104,7 +104,7 @@ export function CommandList({ items, command, ref }: CommandListProps) {
         >
           <span
             className="mt-0.5 shrink-0 opacity-60"
-            style={{ color: 'var(--color-accent)' }}
+            style={{ color: 'var(--color-accent-text)' }}
           >
             {item.icon}
           </span>

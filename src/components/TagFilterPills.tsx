@@ -28,7 +28,7 @@ export function AllNotesPill({ isActive, onClick }: AllNotesPillProps) {
           : '1px solid var(--glass-border)',
         borderRadius: '2px 12px 4px 12px',
         color: isActive
-          ? 'var(--color-accent)'
+          ? 'var(--color-accent-text)'
           : 'var(--color-text-secondary)',
         boxShadow: isActive
           ? '0 4px 20px var(--color-accent-glow)'

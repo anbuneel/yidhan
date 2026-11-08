@@ -153,7 +153,7 @@ export function TagFilterBar({
               shrink-0
               transition-all duration-200
               hover:border-[var(--color-accent)]
-              hover:text-[var(--color-accent)]
+              hover:text-[var(--color-accent-text)]
             "
             style={{
               fontFamily: 'var(--font-body)',

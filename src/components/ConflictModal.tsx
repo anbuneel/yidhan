@@ -233,7 +233,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               style={{
                 fontFamily: 'var(--font-body)',
                 background: resolvedChoice === 'local' ? 'var(--color-accent)' : 'transparent',
-                color: resolvedChoice === 'local' ? 'var(--color-on-accent)' : 'var(--color-accent)',
+                color: resolvedChoice === 'local' ? 'var(--color-on-accent)' : 'var(--color-accent-text)',
                 border: '1px solid var(--color-accent)',
               }}
               onMouseEnter={(e) => {
@@ -245,7 +245,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               onMouseLeave={(e) => {
                 if (!isResolving && resolvedChoice !== 'local') {
                   e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = 'var(--color-accent)';
+                  e.currentTarget.style.color = 'var(--color-accent-text)';
                 }
               }}
               aria-label={localActionAriaLabel}
@@ -320,7 +320,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               style={{
                 fontFamily: 'var(--font-body)',
                 background: resolvedChoice === 'server' ? 'var(--color-accent)' : 'transparent',
-                color: resolvedChoice === 'server' ? 'var(--color-on-accent)' : 'var(--color-accent)',
+                color: resolvedChoice === 'server' ? 'var(--color-on-accent)' : 'var(--color-accent-text)',
                 border: '1px solid var(--color-accent)',
               }}
               onMouseEnter={(e) => {
@@ -332,7 +332,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               onMouseLeave={(e) => {
                 if (!isResolving && resolvedChoice !== 'server') {
                   e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = 'var(--color-accent)';
+                  e.currentTarget.style.color = 'var(--color-accent-text)';
                 }
               }}
               aria-label={serverActionAriaLabel}

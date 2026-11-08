@@ -19,10 +19,11 @@
   --color-text-primary: #3E3B36;
   --color-text-secondary: #55524C;
   --color-text-tertiary: #65625C;
-  --color-accent: #8F3C21;
-  --color-accent-hover: #75311B;
-  --color-accent-glow: rgba(143, 60, 33, 0.15);
-  --color-accent-muted: rgba(143, 60, 33, 0.7);
+  --color-accent: #C25634;
+  --color-accent-hover: #A84828;
+  --color-accent-glow: rgba(194, 86, 52, 0.2);
+  --color-accent-muted: rgba(194, 86, 52, 0.7);
+  --color-accent-text: #8F3C21;
   --color-on-accent: #fff;
   --color-cta-bg: #B04A2C;
   --color-cta-bg-hover: #963F24;
@@ -59,6 +60,7 @@
   --color-accent-hover: #E5C44A;
   --color-accent-glow: rgba(212, 175, 55, 0.15);
   --color-accent-muted: rgba(212, 175, 55, 0.6);
+  --color-accent-text: #D4AF37;
   --color-on-accent: #16161F;
   --color-cta-bg: #D4AF37;
   --color-cta-bg-hover: #E5C44A;
@@ -800,7 +802,7 @@ body::before {
 
 /* Links */
 .rich-text-editor .ProseMirror a {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
@@ -1008,7 +1010,7 @@ body::before {
 }
 
 .note-card-preview a {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   text-decoration: none;
 }
 
@@ -1207,7 +1209,7 @@ body::before {
 }
 
 .auth-text-accent {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 .auth-text-destructive {
@@ -1271,7 +1273,7 @@ body::before {
 }
 
 .auth-link:hover {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 .auth-card {
@@ -1608,7 +1610,7 @@ body::before {
 
 .focus-mode-indicator:hover {
   opacity: 1;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 .focus-mode-indicator-dot {
@@ -1954,7 +1956,7 @@ textarea:focus,
 .editor-metrics-trigger:hover,
 .editor-metrics-trigger:focus-visible,
 .editor-metrics[data-revealed="true"] .editor-metrics-trigger {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   background: var(--color-accent-glow);
 }
 

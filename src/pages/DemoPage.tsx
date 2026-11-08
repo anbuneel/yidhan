@@ -680,7 +680,7 @@ function DemoHeader({
             className="hidden sm:inline text-base italic"
             style={{
               fontFamily: 'var(--font-display)',
-              color: 'var(--color-accent)',
+              color: 'var(--color-accent-text)',
               letterSpacing: '0.02em',
             }}
           >
@@ -823,7 +823,7 @@ function DemoHeader({
             showKeepCta
               ? {
                   background: 'transparent',
-                  color: 'var(--color-accent)',
+                  color: 'var(--color-accent-text)',
                   border: '1px solid var(--glass-border)',
                   fontFamily: 'var(--font-body)',
                 }

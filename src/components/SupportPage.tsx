@@ -87,7 +87,7 @@ export function SupportPage({
                     href="https://github.com/anbuneel/yidhan/issues"
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: 'var(--color-accent)', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                    style={{ color: 'var(--color-accent-text)', textDecoration: 'underline', textUnderlineOffset: '3px' }}
                   >
                     GitHub Issues
                   </a>
@@ -98,7 +98,7 @@ export function SupportPage({
                   behind it. Write through GitHub Issues, or to{' '}
                   <a
                     href="mailto:anbs.dev@gmail.com"
-                    style={{ color: 'var(--color-accent)', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                    style={{ color: 'var(--color-accent-text)', textDecoration: 'underline', textUnderlineOffset: '3px' }}
                   >
                     anbs.dev@gmail.com
                   </a>
@@ -192,7 +192,7 @@ export function SupportPage({
                     href="https://github.com/anbuneel/yidhan"
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: 'var(--color-accent)', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                    style={{ color: 'var(--color-accent-text)', textDecoration: 'underline', textUnderlineOffset: '3px' }}
                   >
                     GitHub
                   </a>

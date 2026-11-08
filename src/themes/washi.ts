@@ -32,6 +32,7 @@ const washi: ThemeConfig = {
     accentHover: '#A0522D',
     accentGlow: 'rgba(139, 69, 19, 0.2)',
     accentMuted: 'rgba(139, 69, 19, 0.7)',
+    accentText: '#8B4513', // the accent already passes as text: 5.07:1 on bgTertiary, 4.69:1 on glow
     onAccent: '#fff', // 7.10:1
 
     // CTA button (matches accent — good contrast on light bg)

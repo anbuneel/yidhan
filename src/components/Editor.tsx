@@ -1056,7 +1056,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         {/* Clicks to scroll back to the editable title */}
         <button type="button"
           onClick={handleScrollToTop}
-          className="truncate text-xl max-w-[200px] md:max-w-[300px] py-1 hover:text-[var(--color-accent)] transition-colors duration-200"
+          className="truncate text-xl max-w-[200px] md:max-w-[300px] py-1 hover:text-[var(--color-accent-text)] transition-colors duration-200"
           style={{
             fontFamily: 'var(--font-display)',
             fontWeight: 400,
@@ -1417,7 +1417,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             "
             style={{
               fontFamily: 'var(--font-body)',
-              color: 'var(--color-accent)',
+              color: 'var(--color-accent-text)',
               background: 'var(--color-accent-glow)',
               border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)',
             }}
@@ -1643,8 +1643,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               min-h-[44px]
               text-sm
               transition-colors duration-300
-              hover:text-[var(--color-accent)]
-              active:text-[var(--color-accent)]
+              hover:text-[var(--color-accent-text)]
+              active:text-[var(--color-accent-text)]
             "
             style={{
               fontFamily: 'var(--font-body)',

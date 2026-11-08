@@ -66,7 +66,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
           }}
         >
           You've written{' '}
-          <strong style={{ color: 'var(--color-accent)', fontWeight: 500 }}>
+          <strong style={{ color: 'var(--color-accent-text)', fontWeight: 500 }}>
             {noteCount} {noteCount === 1 ? 'thought' : 'thoughts'}
           </strong>{' '}
           here. We'd hate for them to disappear.

@@ -241,7 +241,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           transition: color 200ms ease;
         }
         .page-textlink:hover {
-          color: var(--color-accent);
+          color: var(--color-accent-text);
         }
 
         /* ─── Main composition ─── */
@@ -344,7 +344,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           font-family: var(--font-body);
           font-size: 0.95rem;
           font-weight: 500;
-          color: var(--color-accent);
+          color: var(--color-accent-text);
           background: color-mix(in srgb, var(--color-accent) 6%, transparent);
           border: 1px solid color-mix(in srgb, var(--color-accent) 28%, transparent);
           border-radius: var(--radius-card);
@@ -385,7 +385,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           transition: color 200ms ease, border-color 200ms ease;
         }
         .page-quietlink:hover {
-          color: var(--color-accent);
+          color: var(--color-accent-text);
           border-bottom-color: var(--color-accent);
         }
 
@@ -477,7 +477,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           transition: color 200ms ease;
         }
         .page-quietlink-sm:hover {
-          color: var(--color-accent);
+          color: var(--color-accent-text);
         }
 
         /* ─── Dev: replay button ─── */

@@ -362,7 +362,7 @@ export function LandingPage({
           border-bottom: 1px dotted var(--color-text-tertiary);
           transition: color 0.2s ease, border-bottom-color 0.2s ease;
         }
-        .landing-sub-link:hover { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+        .landing-sub-link:hover { color: var(--color-accent-text); border-bottom-color: var(--color-accent); }
         .landing-actions {
           display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem;
           margin-top: 1.4rem;
@@ -400,7 +400,7 @@ export function LandingPage({
           border-bottom: 1px dotted var(--color-text-tertiary);
           transition: color 0.2s ease, border-bottom-color 0.2s ease;
         }
-        .landing-demo-link:hover { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+        .landing-demo-link:hover { color: var(--color-accent-text); border-bottom-color: var(--color-accent); }
         .landing-demo-arrow { display: inline-block; transition: transform 0.2s ease; }
         .landing-demo-link:hover .landing-demo-arrow { transform: translateX(4px); }
 
@@ -515,7 +515,7 @@ export function LandingPage({
           white-space: nowrap;
           transition: color 0.25s ease, border-color 0.25s ease;
         }
-        .landing-keep:hover { color: var(--color-accent); border-color: var(--color-accent); }
+        .landing-keep:hover { color: var(--color-accent-text); border-color: var(--color-accent); }
 
         /* ─── Proof line ─── */
         .landing-proof {
@@ -532,7 +532,7 @@ export function LandingPage({
           text-decoration: none;
         }
         .landing-fact { border-bottom: 1px dotted var(--color-text-tertiary); transition: color 0.2s ease, border-bottom-color 0.2s ease; }
-        .landing-fact:hover { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+        .landing-fact:hover { color: var(--color-accent-text); border-bottom-color: var(--color-accent); }
         .landing-fact-plain { cursor: default; }
         .landing-proof-dot { color: var(--color-text-tertiary); }
 
@@ -585,7 +585,7 @@ export function LandingPage({
         .landing-trust-body .landing-section-body { font-size: 1.08rem; line-height: 1.75; }
         .landing-link {
           font-family: var(--font-body); font-size: 0.95rem;
-          color: var(--color-accent); background: none; border: 0; padding: 0; cursor: pointer;
+          color: var(--color-accent-text); background: none; border: 0; padding: 0; cursor: pointer;
           text-decoration: none;
         }
         .landing-link:hover { text-decoration: underline; }
@@ -616,7 +616,7 @@ export function LandingPage({
           font-family: inherit; font-size: inherit; padding: 0;
           transition: color 0.2s ease; text-decoration: none;
         }
-        .landing-nav-link:hover { color: var(--color-accent); }
+        .landing-nav-link:hover { color: var(--color-accent-text); }
 
         @media (max-width: 767px) {
           .landing-cta { width: 100%; }

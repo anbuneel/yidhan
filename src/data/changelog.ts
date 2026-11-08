@@ -8,7 +8,7 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   { version: '3.19.43', date: '2026-11-08', changes: [
-    { type: 'improvement', text: 'The light theme has stronger contrast: secondary text, hints and the terracotta accent are darker, so all text meets the WCAG AA contrast level. The editor sidebar is also less faded when you are not using it' },
+    { type: 'improvement', text: 'The light theme has stronger contrast: secondary text, hints, links and selected labels are darker, so all text meets the WCAG AA contrast level. The terracotta of buttons and highlights is unchanged. The editor sidebar is also less faded when you are not using it' },
     { type: 'fix', text: 'With Settings open, pressing Tab now stays inside Settings instead of moving to the notes behind it. Closing Settings returns you to where you were' },
     { type: 'fix', text: 'Screen readers now announce when a note is saving and when it is saved' },
   ] },
