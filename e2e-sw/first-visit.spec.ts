@@ -12,12 +12,14 @@
  * same way as scripts/check-bundle-budget.mjs, and checked against the same limits
  * in scripts/bundle-budget.json.
  *
- * Sentry (step 2) loads after `load`: none of its chunks may be requested before it,
- * and Replay is never requested on a shared-note route.
+ * Sentry (step 2) loads after `load`: none of its chunks may be requested before it.
+ * Replay waits for the app shell (step 5), so an anonymous landing visit never
+ * requests it, and it is never requested on a shared-note route.
  *
- * Not asserted yet, on purpose:
- * - No Supabase or Dexie chunk before `load`. Both are still in the entry path;
- *   step 5 splits the public routes out and adds those assertions here.
+ * The landing page renders from the public shell (step 5): no Supabase, Dexie or
+ * app-shell chunk is requested before `load`, and none at all until the visitor opens
+ * sign-in or leaves the public routes. Sign-in then loads the app shell without a
+ * reload.
  * See docs/plans/2026-11-07-first-visit-weight-proposal.md.
  */
 
@@ -32,6 +34,8 @@ const distDir = path.join(repoRoot, 'dist');
 /** Sentry's chunks: vendor-sentry, vendor-sentry-replay, and our sentryClient and sentryReplay. */
 const SENTRY_CHUNK = /\/assets\/(vendor-sentry|sentryClient|sentryReplay)[-.]/;
 const REPLAY_CHUNK = /\/assets\/(vendor-sentry-replay|sentryReplay)[-.]/;
+/** The app shell and the two vendor chunks only it imports (step 5). */
+const APP_CHUNK = /\/assets\/(AppShell|vendor-supabase|vendor-dexie)-/;
 
 interface Budget {
   landingJsBeforeLoad: { limitKB: number };
@@ -138,10 +142,22 @@ test.describe('first visit', () => {
       untilIdle.filter((r) => !beforeLoad.includes(r)).map((r) => new URL(r.url()).pathname);
     await expect
       .poll(() => requestedAfterLoad().filter((url) => SENTRY_CHUNK.test(url)).length, {
-        message: 'Sentry, then Replay, load after the load event',
+        message: 'Sentry loads after the load event',
       })
-      .toBeGreaterThanOrEqual(4);
-    expect(requestedAfterLoad().some((url) => REPLAY_CHUNK.test(url))).toBe(true);
+      .toBeGreaterThanOrEqual(2);
+    // Step 5: Replay waits for the app shell, which an anonymous landing never starts.
+    expect(requestedAfterLoad().filter((url) => REPLAY_CHUNK.test(url)), 'Replay on the landing').toEqual([]);
+
+    // Step 5: the landing is the public shell. Nothing that needs Supabase or Dexie,
+    // and not the app shell, before load or after it.
+    expect(
+      scriptsBeforeLoad.map((r) => r.url()).filter((url) => APP_CHUNK.test(url)),
+      'Supabase, Dexie or app-shell chunks fetched before load'
+    ).toEqual([]);
+    expect(
+      requestedAfterLoad().filter((url) => APP_CHUNK.test(url)),
+      'Supabase, Dexie or app-shell chunks fetched by an anonymous landing visit'
+    ).toEqual([]);
 
     // Step 6: registration waits for load, and the worker fetched nothing before it.
     await expect
@@ -152,6 +168,58 @@ test.describe('first visit', () => {
       scriptsBeforeLoad.map((r) => r.url()).filter((url) => /pwa-register|workbox-window/.test(url)),
       'registration code fetched before load'
     ).toEqual([]);
+  });
+
+  test('sign-in from the landing loads the app shell without a reload', async ({ page }) => {
+    const scripts: string[] = [];
+    page.on('request', (request) => {
+      if (request.resourceType() === 'script') scripts.push(new URL(request.url()).pathname);
+    });
+    await page.goto(baseURL, { waitUntil: 'networkidle' });
+    expect(scripts.filter((url) => APP_CHUNK.test(url))).toEqual([]);
+    // A marker on the window survives only if the page is not reloaded.
+    await page.evaluate(() => {
+      (window as unknown as { __sameDocument: boolean }).__sameDocument = true;
+    });
+
+    await page.getByRole('button', { name: /^sign in$/i }).first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByLabel(/email/i).first()).toBeVisible();
+    expect(scripts.some((url) => /\/assets\/AppShell-/.test(url))).toBe(true);
+    expect(scripts.some((url) => /\/assets\/vendor-supabase-/.test(url))).toBe(true);
+    expect(
+      await page.evaluate(() => (window as unknown as { __sameDocument?: boolean }).__sameDocument)
+    ).toBe(true);
+    // Replay follows the app shell.
+    await expect.poll(() => scripts.some((url) => REPLAY_CHUNK.test(url))).toBe(true);
+  });
+
+  test('a signed-in visitor on / loads the app shell at once', async ({ page }) => {
+    const scripts: string[] = [];
+    page.on('request', (request) => {
+      if (request.resourceType() === 'script') scripts.push(new URL(request.url()).pathname);
+    });
+    // A stored session, as Supabase writes it. The build points at a placeholder
+    // project, so the session cannot refresh; what matters is that the gate and
+    // boot.js both see it and skip the landing.
+    await page.addInitScript(() => {
+      localStorage.setItem('sb-placeholder-auth-token', JSON.stringify({ access_token: 'x' }));
+    });
+    await page.goto(baseURL, { waitUntil: 'load' });
+    await expect(page.locator('html')).toHaveClass(/boot-hidden/);
+    await expect.poll(() => scripts.some((url) => /\/assets\/AppShell-/.test(url))).toBe(true);
+    expect(scripts.some((url) => /\/assets\/vendor-supabase-/.test(url))).toBe(true);
+  });
+
+  test('an OAuth callback on / loads the app shell at once', async ({ page }) => {
+    const scripts: string[] = [];
+    page.on('request', (request) => {
+      if (request.resourceType() === 'script') scripts.push(new URL(request.url()).pathname);
+    });
+    await page.goto(`${baseURL}/#access_token=not-real&refresh_token=not-real&token_type=bearer`, {
+      waitUntil: 'load',
+    });
+    await expect.poll(() => scripts.some((url) => /\/assets\/vendor-supabase-/.test(url))).toBe(true);
   });
 
   test('a shared note loads Sentry but never Replay', async ({ page }) => {

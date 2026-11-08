@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import type { Theme } from '../types';
-import { useAuth } from '../contexts/AuthContext';
+import { useOptionalAuth } from '../contexts/authState';
 import { Logo } from './Logo';
 
 /**
@@ -65,7 +65,10 @@ export function HeaderShell({
   onSignIn,
   menuSections,
 }: HeaderShellProps) {
-  const { user, signOut } = useAuth();
+  // Optional: the public pages render without an AuthProvider until sign-in (item 61,
+  // step 5). No provider means nobody is signed in, and the profile menu never shows.
+  const auth = useOptionalAuth();
+  const user = auth?.user ?? null;
   const isAuthenticated = !!user;
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -307,7 +310,7 @@ export function HeaderShell({
                   role="menuitem"
                   onClick={() => {
                     setIsProfileMenuOpen(false);
-                    signOut();
+                    void auth?.signOut();
                   }}
                   className="
                     w-full px-4 py-2.5

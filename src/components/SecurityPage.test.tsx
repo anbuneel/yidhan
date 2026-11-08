@@ -5,10 +5,6 @@ import { SecurityPage } from './SecurityPage';
 import { PrivacyPage } from './PrivacyPage';
 import { TermsPage } from './TermsPage';
 
-vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({ user: null, signOut: vi.fn() }),
-}));
-
 const nav = {
   theme: 'dark' as const,
   onThemeToggle: () => undefined,
