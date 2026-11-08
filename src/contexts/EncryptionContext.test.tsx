@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { EncryptionProvider, useEncryption } from './EncryptionContext';
 
 const {
@@ -13,7 +13,13 @@ const {
   mockVerifyKeyCheck,
   mockReportReliabilityIssue,
   mockAddReliabilityBreadcrumb,
+  mockDeriveKeys,
+  mockBuildMigratedVault,
+  mockUnlockVault,
 } = vi.hoisted(() => ({
+  mockDeriveKeys: vi.fn(),
+  mockBuildMigratedVault: vi.fn(),
+  mockUnlockVault: vi.fn(),
   mockUseAuth: vi.fn(),
   mockCreateKeyCheck: vi.fn(),
   mockImportSessionKeys: vi.fn(),
@@ -39,7 +45,7 @@ vi.mock('../lib/supabase', () => ({
 }));
 
 vi.mock('../lib/encryption', () => ({
-  deriveKeys: vi.fn(),
+  deriveKeys: mockDeriveKeys,
   createKeyCheck: mockCreateKeyCheck,
   verifyKeyCheck: mockVerifyKeyCheck,
   exportSessionKeys: mockExportSessionKeys,
@@ -47,6 +53,15 @@ vi.mock('../lib/encryption', () => ({
   toBase64: vi.fn(),
   fromBase64: vi.fn(),
   KEY_CHECK_VERSION: 2,
+  ARGON2_PARAMS: { parallelism: 1, iterations: 3, memorySize: 65536, hashLength: 64 },
+}));
+
+// The metadata reader and copyMasterKey are pure and run for real; the two
+// Argon2id-backed operations are mocked.
+vi.mock('../lib/vaultKey', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/vaultKey')>()),
+  buildMigratedVault: mockBuildMigratedVault,
+  unlockVault: mockUnlockVault,
 }));
 
 vi.mock('../utils/reliabilityTelemetry', () => ({
@@ -106,6 +121,19 @@ function createFakeKeys() {
   };
 }
 
+const b64 = (n: number) => btoa(String.fromCharCode(...new Uint8Array(n).fill(1)));
+const validVault = {
+  version: 1,
+  wrapVersion: 1,
+  kekSalt: b64(16),
+  wrappedKey: b64(80),
+  wrapIv: b64(12),
+  keyCheck: b64(35),
+  keyCheckIv: b64(12),
+  keyCheckVersion: 1,
+  migratedAt: '2026-11-07T00:00:00.000Z',
+};
+
 const baseUser = {
   id: 'vault-user-1',
   user_metadata: {
@@ -128,6 +156,10 @@ beforeEach(() => {
   mockVerifyKeyCheck.mockReset();
   mockReportReliabilityIssue.mockReset();
   mockAddReliabilityBreadcrumb.mockReset();
+  mockDeriveKeys.mockReset();
+  mockBuildMigratedVault.mockReset();
+  mockUnlockVault.mockReset();
+  mockBuildMigratedVault.mockResolvedValue(validVault);
   mockCreateKeyCheck.mockResolvedValue({
     keyCheck: 'key-check-v2',
     keyCheckIv: 'key-check-iv-v2',
@@ -619,5 +651,266 @@ describe('EncryptionContext unlockWithPassphrase', () => {
       })
     );
     expect(mockVerifyKeyCheck).not.toHaveBeenCalled();
+  });
+});
+
+describe('EncryptionContext wrapped-key migration (item 24)', () => {
+  function MigrationProbe() {
+    const { isUnlocked, unlockWithPassphrase, lockVault } = useEncryption();
+    const [result, setResult] = useState('idle');
+    return (
+      <div>
+        <div>{isUnlocked ? 'unlocked' : 'locked'}</div>
+        <div>{result}</div>
+        <button
+          type="button"
+          onClick={async () => {
+            const success = await unlockWithPassphrase('correct-passphrase');
+            setResult(success ? 'success' : 'incorrect');
+          }}
+        >
+          Unlock
+        </button>
+        <button type="button" onClick={() => lockVault('manual')}>Manual lock</button>
+      </div>
+    );
+  }
+
+  function filledKeys(fill: number) {
+    const keys = createFakeKeys();
+    keys.rawEncryptionKey.fill(fill);
+    keys.rawHashKey.fill(fill + 1);
+    return keys;
+  }
+
+  function vaultWrites() {
+    return mockUpdateUser.mock.calls.filter(([arg]) => 'vault' in (arg?.data ?? {}));
+  }
+
+  function renderProbe() {
+    render(
+      <EncryptionProvider>
+        <MigrationProbe />
+      </EncryptionProvider>
+    );
+  }
+
+  async function settle() {
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+  }
+
+  it('unlocks a migrated account through the vault without deriving legacy keys or migrating again', async () => {
+    mockUseAuth.mockReturnValue({ user: { ...baseUser, user_metadata: { ...baseUser.user_metadata, vault: validVault } } });
+    mockUnlockVault.mockResolvedValue(filledKeys(3));
+
+    renderProbe();
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(screen.getByText('unlocked')).toBeInTheDocument());
+    await settle();
+
+    expect(mockUnlockVault).toHaveBeenCalledWith('correct-passphrase', validVault, 'vault-user-1', undefined);
+    expect(mockDeriveKeys).not.toHaveBeenCalled();
+    expect(mockBuildMigratedVault).not.toHaveBeenCalled();
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+  });
+
+  it('reports a wrong passphrase on a migrated account and does not migrate', async () => {
+    mockUseAuth.mockReturnValue({ user: { ...baseUser, user_metadata: { ...baseUser.user_metadata, vault: validVault } } });
+    mockUnlockVault.mockResolvedValue(null);
+    mockDeriveKeys.mockResolvedValue(filledKeys(3));
+    mockVerifyKeyCheck.mockResolvedValue(false);
+
+    renderProbe();
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(screen.getByText('incorrect')).toBeInTheDocument());
+    await settle();
+
+    expect(screen.getByText('locked')).toBeInTheDocument();
+    expect(mockBuildMigratedVault).not.toHaveBeenCalled();
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the legacy path when the vault does not open, and never overwrites the vault', async () => {
+    mockUseAuth.mockReturnValue({ user: { ...baseUser, user_metadata: { ...baseUser.user_metadata, vault: validVault } } });
+    mockUnlockVault.mockResolvedValue(null);
+    mockDeriveKeys.mockResolvedValue(filledKeys(3));
+    mockVerifyKeyCheck.mockResolvedValue(true);
+
+    renderProbe();
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(screen.getByText('unlocked')).toBeInTheDocument());
+    await settle();
+
+    expect(mockReportReliabilityIssue).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Wrapped vault key did not open; unlocked through the legacy key path',
+    }));
+    expect(mockBuildMigratedVault).not.toHaveBeenCalled();
+    expect(vaultWrites()).toHaveLength(0);
+  });
+
+  it('does not migrate over a vault version this client does not understand', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { ...baseUser, user_metadata: { ...baseUser.user_metadata, vault: { ...validVault, version: 2 } } },
+    });
+    mockDeriveKeys.mockResolvedValue(filledKeys(3));
+    mockVerifyKeyCheck.mockResolvedValue(true);
+
+    renderProbe();
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(screen.getByText('unlocked')).toBeInTheDocument());
+    await settle();
+
+    expect(mockUnlockVault).not.toHaveBeenCalled();
+    expect(mockBuildMigratedVault).not.toHaveBeenCalled();
+    expect(vaultWrites()).toHaveLength(0);
+  });
+
+  it('does not migrate after a failed legacy unlock', async () => {
+    mockDeriveKeys.mockResolvedValue(filledKeys(3));
+    mockVerifyKeyCheck.mockResolvedValue(false);
+
+    renderProbe();
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(screen.getByText('incorrect')).toBeInTheDocument());
+    await settle();
+
+    expect(mockBuildMigratedVault).not.toHaveBeenCalled();
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+  });
+
+  it('wraps a copy of K, so locking during the migration cannot make it wrap zeroed bytes', async () => {
+    const keys = filledKeys(7);
+    mockDeriveKeys.mockResolvedValue(keys);
+    mockVerifyKeyCheck.mockResolvedValue(true);
+    let release: () => void = () => {};
+    let masterAtWrapTime: number[] = [];
+    mockBuildMigratedVault.mockImplementation(async ({ master }: { master: Uint8Array }) => {
+      await new Promise<void>((r) => { release = r; });
+      masterAtWrapTime = Array.from(master);
+      return validVault;
+    });
+
+    renderProbe();
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(screen.getByText('unlocked')).toBeInTheDocument());
+    await waitFor(() => expect(mockBuildMigratedVault).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Manual lock' }));
+    expect(screen.getByText('locked')).toBeInTheDocument();
+    expect(keys.rawEncryptionKey.every((b) => b === 0)).toBe(true);
+
+    await act(async () => { release(); await new Promise((r) => setTimeout(r, 0)); });
+    expect(masterAtWrapTime.slice(0, 32).every((b) => b === 7)).toBe(true);
+    expect(masterAtWrapTime.slice(32).every((b) => b === 8)).toBe(true);
+  });
+
+  it('does not write the vault into a different account if the session changed during the migration', async () => {
+    mockDeriveKeys.mockResolvedValue(filledKeys(3));
+    mockVerifyKeyCheck.mockResolvedValue(true);
+    mockGetUser.mockResolvedValue({ data: { user: { ...baseUser, id: 'someone-else' } } });
+
+    renderProbe();
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(screen.getByText('unlocked')).toBeInTheDocument());
+    await waitFor(() => expect(mockGetUser).toHaveBeenCalled());
+    await settle();
+
+    expect(vaultWrites()).toHaveLength(0);
+  });
+
+  it('does not overwrite a vault another device wrote while this one was migrating', async () => {
+    mockDeriveKeys.mockResolvedValue(filledKeys(3));
+    mockVerifyKeyCheck.mockResolvedValue(true);
+    mockGetUser.mockResolvedValue({
+      data: { user: { ...baseUser, user_metadata: { ...baseUser.user_metadata, vault: validVault } } },
+    });
+
+    renderProbe();
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(screen.getByText('unlocked')).toBeInTheDocument());
+    await waitFor(() => expect(mockGetUser).toHaveBeenCalled());
+    await settle();
+
+    expect(vaultWrites()).toHaveLength(0);
+  });
+
+  it('reports a migration whose write did not read back, and stays unlocked', async () => {
+    mockDeriveKeys.mockResolvedValue(filledKeys(3));
+    mockVerifyKeyCheck.mockResolvedValue(true);
+    // getUser never shows the vault: the first call (pre-write) and the read-back.
+    mockGetUser.mockResolvedValue({ data: { user: baseUser } });
+
+    renderProbe();
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Vault migration to wrapped master key failed' }),
+      expect.any(Error)
+    ));
+    expect(vaultWrites()).toHaveLength(1);
+    expect(screen.getByText('unlocked')).toBeInTheDocument();
+  });
+
+  it('reports a migration as failed, not skipped, when the current user cannot be read', async () => {
+    mockDeriveKeys.mockResolvedValue(filledKeys(3));
+    mockVerifyKeyCheck.mockResolvedValue(true);
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: 'offline' } });
+
+    renderProbe();
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(mockReportReliabilityIssue).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Vault migration to wrapped master key failed' }),
+      expect.any(Error)
+    ));
+    expect(vaultWrites()).toHaveLength(0);
+    expect(screen.getByText('unlocked')).toBeInTheDocument();
+  });
+
+  it('clears any stale vault in the same write that sets up a new passphrase', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: 'vault-user-1', user_metadata: { vault: validVault } } });
+    mockDeriveKeys.mockResolvedValue(filledKeys(3));
+    mockGetUser.mockResolvedValue({ data: { user: { ...baseUser } } });
+
+    function SetupProbe() {
+      const { setupPassphrase } = useEncryption();
+      return (
+        <button type="button" onClick={() => { void setupPassphrase('Correct-Horse-Battery-9!'); }}>
+          Setup
+        </button>
+      );
+    }
+    render(
+      <EncryptionProvider>
+        <SetupProbe />
+      </EncryptionProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Setup' }));
+
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1));
+    expect(mockUpdateUser.mock.calls[0][0].data).toMatchObject({ vault: null });
+    expect(mockBuildMigratedVault).not.toHaveBeenCalled();
+  });
+
+  it('restores a migrated account against the vault key-check, not the legacy one', async () => {
+    mockUseAuth.mockReturnValue({ user: { ...baseUser, user_metadata: { ...baseUser.user_metadata, vault: validVault } } });
+    sessionStorage.setItem(
+      'yidhan-vault-user-1-vault-session',
+      JSON.stringify({ encKey: 'enc', hashKey: 'hash', salt: 'salt' })
+    );
+    const fakeKeys = createFakeKeys();
+    mockImportSessionKeys.mockResolvedValue(fakeKeys);
+    mockVerifyKeyCheck.mockResolvedValue(true);
+
+    renderProbe();
+    await waitFor(() => expect(screen.getByText('unlocked')).toBeInTheDocument());
+
+    expect(mockVerifyKeyCheck).toHaveBeenCalledTimes(1);
+    expect(mockVerifyKeyCheck).toHaveBeenCalledWith(
+      fakeKeys.encryptionKey,
+      validVault.keyCheck,
+      validVault.keyCheckIv,
+      'vault-user-1',
+      2
+    );
+    expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 });

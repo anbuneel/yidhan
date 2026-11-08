@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.35', date: '2026-11-08', changes: [
+    { type: 'improvement', text: 'Your notes are now locked with a key of their own, kept safe by your passphrase. The next time you unlock with your passphrase, Yidhan makes the switch on its own. Nothing about your notes changes, and your passphrase stays the same. This is the groundwork for changing your passphrase and for a recovery key' },
+  ] },
   { version: '3.19.34', date: '2026-11-08', changes: [
     { type: 'fix', text: 'If a note you are writing in is released on another device before your words are saved, the note now stays open and says so. You can keep the words as a new note, copy them, or let them go. Before, the note closed and the unsaved words were lost' },
   ] },

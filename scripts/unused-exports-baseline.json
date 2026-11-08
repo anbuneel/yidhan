@@ -6,7 +6,6 @@
     "src/hooks/useSessionSettings.ts|types|SessionSettings",
     "src/hooks/useSyncEngine.ts|types|TriggerSyncResult",
     "src/hooks/useVaultSettings.ts|types|VaultSettings",
-    "src/lib/encryption.ts|exports|ARGON2_PARAMS",
     "src/lib/encryption.ts|exports|ENCRYPTION_VERSION",
     "src/lib/encryption.ts|exports|SESSION_BLOB_VERSION",
     "src/lib/encryption.ts|types|SessionKeyBlobV1",

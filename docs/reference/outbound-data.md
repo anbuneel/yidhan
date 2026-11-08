@@ -88,10 +88,12 @@ holds ciphertext and no key. `expires_at` is capped at 30 days in the database.
 | `auth.signInWithOAuth` | Provider name; the redirect happens at the provider |
 | `auth.resetPasswordForEmail` | Email |
 | `auth.signOut`, `auth.getSession`, `auth.getUser` | The session token |
-| `auth.updateUser` | `user_metadata`: `encryption_salt`, `encryption_key_check`, `encryption_key_check_iv`, `encryption_key_check_version`, `encryption_version`, `full_name` |
+| `auth.updateUser` | `user_metadata`: `encryption_salt`, `encryption_key_check`, `encryption_key_check_iv`, `encryption_key_check_version`, `encryption_version`, `vault`, `full_name` |
 
 `encryption_key_check` is a short ciphertext of a fixed sentinel. It proves a
-passphrase without carrying anything the reader wrote. The **passphrase itself, the
+passphrase without carrying anything the reader wrote. `vault` (item 24) holds the wrapped
+master key: a version, a wrap counter, a KEK salt, the AES-GCM ciphertext of the key
+with its IV, and a key-check under the key. It is useless without the passphrase. The **passphrase itself, the
 derived keys and the raw key bytes are never sent anywhere** — not to Supabase, not to
 Sentry, not in a URL.
 

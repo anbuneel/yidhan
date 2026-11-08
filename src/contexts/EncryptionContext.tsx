@@ -17,6 +17,24 @@ import {
   reportReliabilityIssue,
 } from '../utils/reliabilityTelemetry';
 import { validatePassphrasePolicy } from '../utils/passphrasePolicy';
+// The vault code (metadata reader, crypto, unlock and migration) is loaded with
+// import() on the paths that need it, so it stays out of the entry chunk. The
+// chunks are precached, so offline unlock still works. Never import those
+// modules statically from app code: Rollup would fold them back into the entry.
+
+function loadVaultUnlock() {
+  return import('../services/vaultUnlock');
+}
+
+/**
+ * The key-check a restore path verifies against: `vault.keyCheck` on a migrated
+ * account (design §1.2), the legacy one otherwise. Takes the metadata as JSON so
+ * the effects that call it can depend on a string, not an object identity.
+ */
+async function resolveRestoreKeyCheck(metadataJson: string) {
+  const { selectKeyCheck } = await loadVaultUnlock();
+  return selectKeyCheck(JSON.parse(metadataJson) as Record<string, unknown>);
+}
 
 export type LockReason = 'auto-lock' | 'manual' | 'sign-out';
 
@@ -150,53 +168,13 @@ interface RestoreVerificationOptions {
   restored: DerivedKeys | null;
   keyCheck?: string;
   keyCheckIv?: string;
-  keyCheckVersion?: unknown;
+  /** Parsed by `selectKeyCheck`; null for a format this client does not know. */
+  keyCheckVersion: KeyCheckVersion | null;
   source: 'sessionStorage_restore' | 'localStorage_restore' | 'activity_gate';
   invalidMessage: string;
   missingMetadataMessage: string;
   cleanup: () => void;
   cleanupLabel: string;
-}
-
-function parseKeyCheckVersion(version: unknown): KeyCheckVersion | null {
-  if (version == null) {
-    return 1;
-  }
-  if (version === 1 || version === '1') {
-    return 1;
-  }
-  if (version === KEY_CHECK_VERSION || version === String(KEY_CHECK_VERSION)) {
-    return KEY_CHECK_VERSION;
-  }
-  return null;
-}
-
-async function upgradeLegacyKeyCheck(
-  userId: string,
-  encryptionKey: CryptoKey,
-  source: RestoreVerificationOptions['source'] | 'unlock_passphrase'
-): Promise<void> {
-  try {
-    const { keyCheck, keyCheckIv, keyCheckVersion } = await createKeyCheck(encryptionKey, userId);
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        encryption_key_check: keyCheck,
-        encryption_key_check_iv: keyCheckIv,
-        encryption_key_check_version: keyCheckVersion,
-      },
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-  } catch (err) {
-    reportReliabilityIssue({
-      category: 'vault',
-      message: 'Failed to upgrade legacy key-check metadata',
-      level: 'warning',
-      data: { source, userId },
-    }, err);
-  }
 }
 
 async function verifyRestoredKeys({
@@ -227,8 +205,7 @@ async function verifyRestoredKeys({
     return null;
   }
 
-  const parsedKeyCheckVersion = parseKeyCheckVersion(keyCheckVersion);
-  if (parsedKeyCheckVersion === null) {
+  if (keyCheckVersion === null) {
     reportReliabilityIssue({
       category: 'vault',
       message: 'Vault restore has unsupported key-check metadata version',
@@ -245,7 +222,7 @@ async function verifyRestoredKeys({
     keyCheck,
     keyCheckIv,
     userId,
-    parsedKeyCheckVersion
+    keyCheckVersion
   );
   if (!isValid) {
     reportReliabilityIssue({
@@ -259,8 +236,12 @@ async function verifyRestoredKeys({
     return null;
   }
 
-  if (parsedKeyCheckVersion !== KEY_CHECK_VERSION) {
-    void upgradeLegacyKeyCheck(userId, restored.encryptionKey, source);
+  if (keyCheckVersion !== KEY_CHECK_VERSION) {
+    // Not a security step (the v1 key-check still verifies), so a failed chunk
+    // load only means the rewrite waits for the next unlock.
+    void loadVaultUnlock()
+      .then(({ upgradeLegacyKeyCheck }) => upgradeLegacyKeyCheck(userId, restored.encryptionKey, source))
+      .catch(() => undefined);
   }
 
   return restored;
@@ -306,6 +287,12 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
   const currentUserId = user?.id ?? null;
 
+  // What the restore key-check is chosen from, as a string so a token refresh
+  // that hands over an equal user object does not re-run (and abort) a restore.
+  // The whole metadata object, not just the key-check fields: it changes only on
+  // an explicit write, and the shorter form keeps the entry chunk in its budget.
+  const keyCheckMetadataJson = JSON.stringify(user?.user_metadata ?? {});
+
   // Clear keyState when user signs out or switches accounts.
   // Uses React's "adjusting state during render" pattern (not an effect).
   const prevUserIdRef = useRef<string | null>(null);
@@ -339,13 +326,10 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     if (sessionRestoreAttemptedRef.current === currentUserId) return;
     sessionRestoreAttemptedRef.current = currentUserId;
 
-    const keyCheck = user?.user_metadata?.encryption_key_check as string | undefined;
-    const keyCheckIv = user?.user_metadata?.encryption_key_check_iv as string | undefined;
-    const keyCheckVersion = user?.user_metadata?.encryption_key_check_version;
-
     let cancelled = false;
     (async () => {
       try {
+        const { keyCheck, keyCheckIv, keyCheckVersion } = await resolveRestoreKeyCheck(keyCheckMetadataJson);
         // Try sessionStorage first (fast path for page refresh)
         let restored = await restoreSession(currentUserId);
         restored = await verifyRestoredKeys({
@@ -410,7 +394,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       }
     })();
     return () => { cancelled = true; };
-  }, [currentUserId, isEncryptionSetup, keyState.keys, user?.user_metadata?.encryption_key_check, user?.user_metadata?.encryption_key_check_iv, user?.user_metadata?.encryption_key_check_version]);
+  }, [currentUserId, isEncryptionSetup, keyState.keys, keyCheckMetadataJson]);
 
   // Activity-gated restore: after auto-lock with rememberBrowser, wait for user activity
   // before restoring keys from localStorage. Calls restoreLocal() directly because
@@ -420,10 +404,6 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       return;
     }
     if (!isRememberBrowserEnabled(currentUserId)) return;
-
-    const keyCheck = user?.user_metadata?.encryption_key_check as string | undefined;
-    const keyCheckIv = user?.user_metadata?.encryption_key_check_iv as string | undefined;
-    const keyCheckVersion = user?.user_metadata?.encryption_key_check_version;
 
     // Abort flag prevents a race where mousedown fires handleActivity (async)
     // and then click fires lockVault('sign-out') synchronously — the in-flight
@@ -437,6 +417,8 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       detachListeners();
 
       try {
+        const { keyCheck, keyCheckIv, keyCheckVersion } = await resolveRestoreKeyCheck(keyCheckMetadataJson);
+        if (aborted) return;
         let restored = await restoreLocal(currentUserId);
         if (aborted) return;
         if (!restored) {
@@ -509,7 +491,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       aborted = true;
       detachListeners();
     };
-  }, [currentUserId, isEncryptionSetup, keyState.keys, user?.user_metadata?.encryption_key_check, user?.user_metadata?.encryption_key_check_iv, user?.user_metadata?.encryption_key_check_version]);
+  }, [currentUserId, isEncryptionSetup, keyState.keys, keyCheckMetadataJson]);
 
   const keys = useMemo(() => {
     if (keyState.userId === null || keyState.userId !== currentUserId) {
@@ -548,6 +530,9 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
         encryption_key_check_iv: keyCheckIv,
         encryption_key_check_version: keyCheckVersion,
         encryption_version: 1,
+        // A vault left behind by an earlier setup wraps a different key. Clear
+        // it in the same write, or the old passphrase would still unwrap it.
+        vault: null,
       },
     });
 
@@ -593,64 +578,39 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       throw new Error('Encryption is not set up for this account.');
     }
 
-    const keyCheck = user.user_metadata?.encryption_key_check as string | undefined;
-    const keyCheckIv = user.user_metadata?.encryption_key_check_iv as string | undefined;
-
-    if (!keyCheck || !keyCheckIv) {
-      reportReliabilityIssue({
-        category: 'vault',
-        message: 'Passphrase unlock missing key-check metadata',
-        level: 'warning',
-        data: { source: 'unlock_passphrase', userId: user.id },
-      });
-      throw new Error('Vault metadata is incomplete. Please sign out and sign back in.');
-    }
-
-    // Decode the stored salt
     const salt = fromBase64(encryptionSalt);
-    const parsedKeyCheckVersion = parseKeyCheckVersion(user.user_metadata?.encryption_key_check_version);
-    if (parsedKeyCheckVersion === null) {
+    const userId = user.id;
+    // A small chunk, fetched while Argon2id is about to run anyway. It is
+    // precached, so offline unlock still works.
+    const { passphraseUnlock, startMigration } = await loadVaultUnlock();
+    const result = await passphraseUnlock({
+      passphrase,
+      salt,
+      userId,
+      metadata: user.user_metadata,
+    });
+    if (!result) return false;
+
+    setKeyState({ keys: result.keys, userId });
+    persistSession(userId, result.keys);
+    if (isRememberBrowserEnabled(userId) && !persistLocal(userId, result.keys)) {
       reportReliabilityIssue({
         category: 'vault',
-        message: 'Passphrase unlock encountered unsupported key-check metadata version',
+        message: 'Failed to persist remembered vault keys during unlock',
         level: 'warning',
-        data: { source: 'unlock_passphrase', userId: user.id },
+        data: { source: 'unlock_passphrase' },
       });
-      throw new Error('Vault metadata uses an unsupported format. Please sign out and sign back in.');
+    }
+    // Mark restore as attempted so auto-lock doesn't trigger immediate re-restore
+    sessionRestoreAttemptedRef.current = userId;
+
+    if (result.migration) {
+      // Item 24: migrate on unlock, in the background. The unlock has already
+      // succeeded; a failed or interrupted migration retries next time.
+      startMigration({ ...result.migration, userId, passphrase, legacySalt: salt });
     }
 
-    // Derive keys from the passphrase + stored salt
-    const derivedKeys = await deriveKeys(passphrase, salt);
-
-    // Verify the key-check
-    const isValid = await verifyKeyCheck(
-      derivedKeys.encryptionKey,
-      keyCheck,
-      keyCheckIv,
-      user.id,
-      parsedKeyCheckVersion
-    );
-
-    if (isValid) {
-      if (parsedKeyCheckVersion !== KEY_CHECK_VERSION) {
-        void upgradeLegacyKeyCheck(user.id, derivedKeys.encryptionKey, 'unlock_passphrase');
-      }
-      setKeyState({ keys: derivedKeys, userId: user.id });
-      persistSession(user.id, derivedKeys);
-      if (isRememberBrowserEnabled(user.id) && !persistLocal(user.id, derivedKeys)) {
-        reportReliabilityIssue({
-          category: 'vault',
-          message: 'Failed to persist remembered vault keys during unlock',
-          level: 'warning',
-          data: { source: 'unlock_passphrase' },
-        });
-      }
-      // Mark restore as attempted so auto-lock doesn't trigger immediate re-restore
-      sessionRestoreAttemptedRef.current = user.id;
-      return true;
-    }
-
-    return false;
+    return true;
   }, [user, encryptionSalt]);
 
   /**

@@ -163,12 +163,12 @@ function buildKeyCheckAad(userId: string): Uint8Array {
 // Uint8Array directly. Cast through BufferSource to satisfy the type checker.
 
 /** Import raw bytes as a non-extractable AES-256-GCM CryptoKey */
-async function importAesKey(raw: Uint8Array): Promise<CryptoKey> {
+export async function importAesKey(raw: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey('raw', raw as BufferSource, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
 }
 
 /** Import raw bytes as a non-extractable HMAC-SHA-256 CryptoKey */
-async function importHmacKey(raw: Uint8Array): Promise<CryptoKey> {
+export async function importHmacKey(raw: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey('raw', raw as BufferSource, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
 
