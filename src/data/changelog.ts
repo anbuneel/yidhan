@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.19.34', date: '2026-11-08', changes: [
+    { type: 'fix', text: 'If a note you are writing in is released on another device before your words are saved, the note now stays open and says so. You can keep the words as a new note, copy them, or let them go. Before, the note closed and the unsaved words were lost' },
+  ] },
   { version: '3.19.33', date: '2026-11-08', changes: [
     { type: 'improvement', text: 'Pages start sooner: error reporting now loads after the page has finished loading instead of before it, so the first visit downloads about 80 KB less before you can use it. Errors that happen in the meantime are still reported, with your note content removed as before' },
   ] },

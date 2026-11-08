@@ -30,6 +30,7 @@ import { useImport } from './hooks/useImport';
 import { useDemoMigration } from './hooks/useDemoMigration';
 import { useShareTargetNote } from './hooks/useShareTargetNote';
 import { useNoteActions } from './hooks/useNoteActions';
+import { holdsUnsavedDraft, useReleasedOpenNote, type OpenDraftState } from './hooks/useReleasedDraft';
 import { useLockedNotes } from './hooks/useLockedNotes';
 import { useFadedNotes } from './hooks/useFadedNotes';
 import { useSyncActions } from './hooks/useSyncActions';
@@ -82,6 +83,11 @@ function App() {
   // Supabase channel is not re-subscribed every time a note is opened or closed.
   const selectedNoteIdRef = useRef<string | null>(null);
 
+  // Issue #205: an open note deleted elsewhere closes only if the editor holds no
+  // unsaved words. Otherwise the editor stays, and the writer decides.
+  // The editor writes what it holds here; realtime handlers and render read it.
+  const openDraftRef = useRef<OpenDraftState | null>(null);
+
   const {
     notes, setNotes, loading,
     tags, setTags,
@@ -93,7 +99,9 @@ function App() {
     keys,
     isHydrating,
     openNoteIdRef: selectedNoteIdRef,
-    onOpenNoteRemoved: () => replaceRoute({ name: 'library' }),
+    onOpenNoteRemoved: (noteId) => {
+      if (!holdsUnsavedDraft(openDraftRef, noteId)) replaceRoute({ name: 'library' });
+    },
     // Sign-out drops the scroll offsets remembered for this session's history entries.
     onSignedOut: clearScrollMemory,
   });
@@ -236,7 +244,11 @@ function App() {
   const { arrangement, setBasis, setSort } = useLibraryArrangement(user?.id ?? null);
 
   const selectedNoteRecord = notes.find((n) => n.id === selectedNoteId);
-  const selectedNote = selectedNoteRecord?.decryptionFailed ? undefined : selectedNoteRecord;
+  // A note released on another device while the editor holds unsaved words resolves to
+  // the last copy the editor saw, so the words stay on screen (issue #205).
+  const { note: openNoteRecord, released: openNoteReleased } =
+    useReleasedOpenNote(openDraftRef, selectedNoteId, selectedNoteRecord);
+  const selectedNote = openNoteRecord?.decryptionFailed ? undefined : openNoteRecord;
   // `replaceRoute`, not a push: the reader arrived at `/n/<locked>`, and pushing `/`
   // would leave that address one Back away.
   const { retryLockedNotes } = useLockedNotes({
@@ -287,6 +299,7 @@ function App() {
       console.error('Failed to create note:', error);
     }
   }, [user, keys, navigate, setNotes, startTransition, trackNoteCreated, warmEditorRoute]);
+
 
   const { handleNoteUpdate, handleNoteDelete, handleTogglePin } = useNoteActions({
     userId: user?.id,
@@ -413,7 +426,7 @@ function App() {
   // fire this alongside the locked-note redirect above and tell the reader their note
   // is gone when it is sitting on the server, readable elsewhere.
   const missingNoteId =
-    route.name === 'note' && user && isUnlocked && !loading && !selectedNoteRecord
+    route.name === 'note' && user && isUnlocked && !loading && !openNoteRecord
       ? route.noteId
       : null;
 
@@ -611,6 +624,21 @@ function App() {
         onUpdate={handleNoteUpdate}
         onDelete={handleNoteDeleteWithToast}
         onToggleTag={handleNoteTagToggle}
+        releasedElsewhere={openNoteReleased}
+        // Retry on a note released elsewhere: the Editor writes the words into a new
+        // note (utils/keepReleasedDraft) rather than back into the released one. That
+        // leaves the other device's choice standing (the note stays in its Faded
+        // Notes, or stays gone) and still keeps every word. `replaceRoute`, so Back
+        // does not return to an address that no longer resolves.
+        vaultKeys={keys}
+        onKeptReleasedDraft={(kept) => {
+          setNotes((prev) => [kept, ...prev]);
+          replaceRoute({ name: 'note', noteId: kept.id });
+          triggerCoalescedSync();
+        }}
+        // Let go: `replaceRoute`, for the same reason as Keep.
+        onLetGoReleasedDraft={() => replaceRoute({ name: 'library' })}
+        onDraftStateChange={(state) => { openDraftRef.current = state; }}
         onCreateTag={handleAddTag}
         onThemeToggle={handleThemeToggle}
         onSettingsClick={() => setShowSettingsModal(true)}
