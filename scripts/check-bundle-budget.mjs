@@ -15,7 +15,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { KB, gzipBytes, readBudget, readEntry, readPrecacheUrls, transferBytes } from './bundle-budget-lib.mjs';
+import { KB, gzipBytes, readBudget, readEntry, readPrecacheUrls, staticClosure, transferBytes } from './bundle-budget-lib.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const distDir = path.join(repoRoot, 'dist');
@@ -77,14 +77,44 @@ if (sentryBuiltIn) {
     );
   check('landing page total, static part (gzip)', staticPage, budget.landingPageTotal);
 
-  // The unlocked library renders from the entry closure today: nothing it needs is
-  // lazy. When step 5 splits the app shell out, add its chunks here.
-  check('app-shell JS, Editor excluded (gzip)', beforeLoadJs, budget.appShellJs);
+  // The unlocked library renders from the entry closure, plus Sentry, which loads
+  // after `load` since step 2 (src/utils/sentryClient.ts and what it imports).
+  // Replay stays out: it is deferred further. When step 5 splits the app shell out,
+  // add its chunks here.
+  const sentryClient = allJs.filter((file) => /^assets\/sentryClient-/.test(file));
+  const appShell = new Set([...entry.classicScripts, ...entry.closure, ...staticClosure(distDir, sentryClient)]);
+  const appShellJs = [...appShell].reduce((sum, file) => sum + gzipBytes(distDir, file), 0);
+  check('app-shell JS, Editor excluded (gzip)', appShellJs, budget.appShellJs);
 
   const largest = allJs
     .map((file) => ({ file, bytes: gzipBytes(distDir, file) }))
     .sort((a, b) => b.bytes - a.bytes)[0];
   check(`largest JS chunk (gzip, ${largest.file})`, largest.bytes, budget.largestChunk);
+}
+
+// Step 4: react and react-dom in one chunk. Before, the object form of manualChunks
+// left react-dom/client in main and put react itself in vendor-sentry. The markers are
+// production strings unique to each package: Component#setState's error (react) and
+// the root container key (react-dom/client).
+const chunksWith = (marker) => allJs.filter((file) => read(file).includes(marker));
+const reactChunks = chunksWith('takes an object of state variables to update');
+const reactDomChunks = chunksWith('__reactContainer$');
+requireThat(
+  'react and react-dom in one chunk',
+  reactChunks.length === 1 && reactDomChunks.length === 1 && reactChunks[0] === reactDomChunks[0],
+  `react is in ${reactChunks.join(', ') || 'no chunk'} and react-dom in ${reactDomChunks.join(', ') || 'no chunk'}; ` +
+    'they must share one (manualChunks in vite.config.ts)'
+);
+
+// Step 2: Sentry loads after `load`, from src/utils/monitoring.ts. A static import of
+// @sentry/react anywhere in the entry path brings all of it back.
+if (sentryBuiltIn) {
+  const sentryInEntry = entry.closure.filter((file) => /BrowserTracing|replay_event/.test(read(file)));
+  requireThat(
+    'Sentry not in the entry closure',
+    sentryInEntry.length === 0,
+    `Sentry is in the entry path (${sentryInEntry.join(', ')}); report through src/utils/monitoring.ts, not @sentry/react`
+  );
 }
 
 // Step 3: the changelog data is read only by /changelog. Its longest entries are
@@ -157,8 +187,17 @@ requireThat(
 
 console.log(rows.join('\n'));
 if (failures.length) {
-  console.error(`\nBundle budget failed:\n- ${failures.join('\n- ')}`);
-  console.error('Budgets: scripts/bundle-budget.json. Reasoning: docs/plans/2026-11-07-first-visit-weight-proposal.md');
-  process.exit(1);
+  const report = `Bundle budget failed:\n- ${failures.join('\n- ')}\nBudgets: scripts/bundle-budget.json. Reasoning: docs/plans/2026-11-07-first-visit-weight-proposal.md`;
+  // CI is the gate, not the deploy. Vercel inlines the production Supabase key, which is
+  // incompressible, so its build measures a few hundred bytes more than CI's placeholder
+  // build; with limits ratcheted to within 1 KB of the last measurement that difference
+  // alone failed every preview deploy. Vercel reports and deploys; GitHub Actions fails.
+  if (process.env.VERCEL) {
+    console.warn(`\n${report}\nNot enforced on Vercel: the GitHub Actions build is the gate.`);
+  } else {
+    console.error(`\n${report}`);
+    process.exit(1);
+  }
+} else {
+  console.log('Bundle budget assertions passed');
 }
-console.log('Bundle budget assertions passed');
