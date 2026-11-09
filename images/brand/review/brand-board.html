@@ -1,0 +1,412 @@
+<title>Yidhan Mark Concepts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..600,100&family=Literata:opsz,wght@7..72,400..600&family=Outfit:wght@400;500&family=Figtree:wght@400;500;600&family=Noto+Sans+Tamil:wght@400&display=swap">
+<style>
+/* Layout: one long board. Round two mark up top, then the open decisions in order (leaves, app icon, wordmark, dark mode), then round one as history. */
+:root{
+  --marigold:#F2A21B; --leaf:#2F9461; --leaf-bright:#3FAE73; --evergreen:#10241B; --daylight:#F8F7F1;
+  --bg:#F8F7F1; --surface:#FFFFFF; --fg:#13261D; --muted:#56635C; --rule:#DCDDD3;
+  --tile-light:#FFFFFF; --tile-dark:#10241B;
+  --f-display:'Fraunces',Georgia,'Times New Roman',serif;
+  --f-body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-ta:'Noto Sans Tamil','Tamil MN','Nirmala UI','Latha',sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B1813;--surface:#12241B;--fg:#ECEDE4;--muted:#A3B0A8;--rule:#24382E;--tile-light:#F8F7F1;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1813;--surface:#12241B;--fg:#ECEDE4;--muted:#A3B0A8;--rule:#24382E;--tile-light:#F8F7F1;color-scheme:dark}
+:root.hollow{--fill-o:0;--hollow-o:1}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.55;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 80px;display:grid;gap:80px}
+section{display:grid;gap:24px}
+.head{display:grid;gap:10px}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;font-variation-settings:'SOFT' 100;text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(40px,7vw,72px);letter-spacing:-0.02em}
+h2{font-size:clamp(28px,4vw,40px)}
+h3{font-size:22px}
+p{margin:0;max-width:64ch}
+.muted{color:var(--muted)}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.ta{font-family:var(--f-ta)}
+svg{display:block}
+.rec{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;background:var(--marigold);color:var(--evergreen);padding:4px 10px;border-radius:99px;vertical-align:middle}
+.lf-fill{opacity:var(--fill-o,1)} .lf-hollow{opacity:var(--hollow-o,0)}
+.ghost{opacity:var(--ghost-o,0);transition:opacity .4s ease}
+:root.reveal{--ghost-o:1}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:center}
+.hero-mark{background:var(--tile-dark);border-radius:28px;aspect-ratio:1;max-width:100%;display:grid;place-items:center;--leaf:#3FAE73}
+.hero-mark svg{width:70%;height:70%}
+.hero-text{display:grid;gap:18px}
+.parts{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.parts li{display:flex;gap:10px;align-items:baseline}
+.sw{width:12px;height:12px;border-radius:50%;flex:none;transform:translateY(1px)}
+.ctrls{display:flex;flex-wrap:wrap;gap:10px}
+button.tg{font:inherit;font-size:14px;font-weight:600;border:1.5px solid var(--fg);background:transparent;color:var(--fg);padding:8px 14px;border-radius:99px;cursor:pointer}
+button.tg[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+button.tg:focus-visible{outline:3px solid var(--marigold);outline-offset:2px}
+
+/* generic specimen grid */
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:16px;padding:16px;display:grid;gap:12px;align-content:start;min-width:0}
+.card.picked{border-color:var(--marigold);box-shadow:0 0 0 2px var(--marigold) inset}
+.card h3{font-size:19px}
+.card p{font-size:15px;color:var(--muted)}
+.tile{border-radius:12px;aspect-ratio:1;display:grid;place-items:center;max-width:100%}
+.tile svg{width:80%;height:80%}
+.tile.light{background:var(--tile-light);border:1px solid var(--rule)}
+.tile.dark{background:var(--tile-dark);--leaf:#3FAE73}
+.sizes{display:flex;gap:14px;align-items:end;padding:14px;border-radius:12px;background:var(--tile-light);border:1px solid var(--rule)}
+.sizes.dark{background:var(--tile-dark);border-color:transparent;--leaf:#3FAE73}
+.sizes span{font-size:11px;color:#7C887F;margin-left:auto;align-self:center}
+
+/* app icon masks */
+.masks{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.mask{width:72px;height:72px;overflow:hidden;flex:none;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.mask svg{width:100%;height:100%}
+.m-circle{border-radius:50%} .m-squircle{border-radius:32%} .m-square{border-radius:18%}
+.home{border-radius:20px;padding:22px 18px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 10px;justify-items:center;background:linear-gradient(160deg,#6E8A7C,#2E4A3E)}
+.home.night{background:linear-gradient(160deg,#25302B,#0C1310)}
+.app{display:grid;gap:6px;justify-items:center;font-size:11px;color:#FFFFFF;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.app i{display:block;width:52px;height:52px;border-radius:32%;overflow:hidden}
+.app i svg{width:100%;height:100%}
+.tabs{display:flex;gap:2px;padding:8px 8px 0;border-radius:12px 12px 0 0;background:#DEE1E4;overflow:hidden}
+.tabs.night{background:#202124}
+.tab{display:flex;gap:8px;align-items:center;padding:8px 12px;border-radius:8px 8px 0 0;font-size:12px;color:#3C4043;min-width:0;white-space:nowrap}
+.tabs.night .tab{color:#BDC1C6}
+.tab.on{background:#FFFFFF}
+.tabs.night .tab.on{background:#35363A;color:#E8EAED}
+.tab svg,.tab .ph{width:16px;height:16px;flex:none}
+.tab .ph{border-radius:4px;background:#9AA0A6}
+
+/* wordmarks */
+.lock{display:flex;align-items:center;gap:14px;padding:28px 18px;border-radius:12px;justify-content:center;flex-wrap:wrap;min-height:120px}
+.lock.light{background:var(--tile-light);border:1px solid var(--rule);color:#13261D}
+.lock.dark{background:var(--tile-dark);color:#F2F0E6;--leaf:#3FAE73}
+.lock svg{width:58px;height:58px;flex:none}
+.word{font-size:50px;line-height:1;letter-spacing:-0.01em}
+.word .i{position:relative;display:inline-block}
+.word .i::after{content:"";position:absolute;left:calc(50% + var(--dx,0em));width:.19em;height:.19em;border-radius:50%;background:var(--marigold);transform:translateX(-50%);top:var(--dot,-.02em)}
+.w-fraunces{font-family:'Fraunces',Georgia,serif;font-weight:440;font-variation-settings:'SOFT' 100,'opsz' 72;--dot:.2em;--dx:-.16em}
+.w-literata{font-family:'Literata',Georgia,serif;font-weight:500;--dot:.18em;--dx:-.12em}
+.w-outfit{font-family:'Outfit',system-ui,sans-serif;font-weight:500;--dot:.16em;--dx:-.16em}
+
+/* editor mock */
+.modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.ui{--u-bg:#F8F7F1;--u-side:#EFEEE6;--u-card:#FFFFFF;--u-fg:#13261D;--u-muted:#5A665F;--u-rule:#E0E0D6;--u-link:#A35E00;--u-tag:#237A4E;--u-tagbg:#E3F0E7;--u-mark-leaf:#2F9461;--u-caret:#F2A21B;
+  border-radius:16px;overflow:hidden;border:1px solid var(--rule);background:var(--u-bg);color:var(--u-fg);display:grid;grid-template-columns:150px minmax(0,1fr);min-height:330px;font-size:13px}
+.ui.night{--u-bg:#0E1C16;--u-side:#0A1611;--u-card:#15271F;--u-fg:#ECEBE2;--u-muted:#9AA79F;--u-rule:#21352B;--u-link:#F2A21B;--u-tag:#7FD0A2;--u-tagbg:#173327;--u-mark-leaf:#3FAE73}
+.ui aside{background:var(--u-side);border-right:1px solid var(--u-rule);padding:14px 12px;display:grid;gap:10px;align-content:start}
+.ui .brand{display:flex;align-items:center;gap:6px;font-family:'Fraunces',Georgia,serif;font-variation-settings:'SOFT' 100;font-size:19px;--leaf:var(--u-mark-leaf)}
+.ui .brand svg{width:24px;height:24px}
+.ui .new{font:inherit;font-size:12px;font-weight:600;background:#F2A21B;color:#13261D;border:0;border-radius:8px;padding:7px 10px;text-align:left}
+.ui .nl{display:grid;gap:2px;padding:6px 8px;border-radius:8px}
+.ui .nl.on{background:var(--u-card)}
+.ui .nl b{font-weight:600;font-size:12px}
+.ui .nl span{font-size:11px;color:var(--u-muted)}
+.ui main{padding:22px 24px;display:grid;gap:10px;align-content:start;min-width:0}
+.ui h4{margin:0;font-family:'Literata',Georgia,serif;font-weight:500;font-size:22px;line-height:1.2}
+.ui .meta{display:flex;gap:8px;align-items:center;color:var(--u-muted);font-size:11px;flex-wrap:wrap}
+.ui .tagc{background:var(--u-tagbg);color:var(--u-tag);border-radius:99px;padding:2px 8px;font-weight:600}
+.ui .body{font-family:'Literata',Georgia,serif;font-size:14px;line-height:1.65}
+.ui .body a{color:var(--u-link);text-decoration:underline;text-underline-offset:2px}
+.ui .caret{display:inline-block;width:2px;height:1.1em;background:var(--u-caret);vertical-align:-2px;margin-left:1px;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.tokens{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.tok{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
+.tok li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:center}
+.tok i{width:22px;height:22px;border-radius:6px;border:1px solid var(--rule)}
+.tok code{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* history */
+.hist{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.hist figure{margin:0;display:grid;gap:6px}
+.hist figcaption{font-size:13px;color:var(--muted)}
+
+.next{display:grid;gap:10px;padding:0;margin:0;list-style:none;max-width:760px}
+.next li{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:14px 16px}
+
+@media (max-width:860px){
+  .hero,.modes,.tokens{grid-template-columns:1fr}
+  .g4,.hist{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g3{grid-template-columns:1fr}
+}
+@media (max-width:480px){
+  .g2{grid-template-columns:1fr}
+  .ui{grid-template-columns:1fr}
+  .ui aside{grid-template-columns:1fr 1fr}
+  .word{font-size:38px}
+  .home{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){.ghost{transition:none}.ui .caret{animation:none}}
+</style>
+
+<!-- Shared geometry, 200x200 grid. Arch: circle r50 at (100,100). Curl: quarter arcs r19, 13.5, 9, 5. Leaves: lenses from (100,154) to tips at x 68 and 132. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <path id="glyph" transform="translate(36.4 141.9) scale(0.1142 -0.1142)" d="M256 -321Q191 -321 144.5 -298.5Q98 -276 73.5 -234.0Q49 -192 49 -134Q49 -63 85.5 -9.0Q122 45 183 81Q242 116 319.0 133.5Q396 151 479 151Q559 151 624.5 137.5Q690 124 740 100Q797 73 835.0 35.5Q873 -2 891.5 -45.5Q910 -89 910 -134Q910 -221 855.5 -271.0Q801 -321 698 -321Q628 -321 561.5 -301.5Q495 -282 433 -243Q381 -218 332.0 -175.0Q283 -132 241.5 -78.5Q200 -25 171 30Q125 113 100.5 197.5Q76 282 76 379Q76 466 105.5 549.0Q135 632 195.5 698.0Q256 764 348.5 803.5Q441 843 567 843Q690 843 778.5 809.0Q867 775 925 707Q963 662 988.0 607.0Q1013 552 1025.5 482.5Q1038 413 1038 322V0H952V272Q952 368 941.0 443.0Q930 518 906.0 574.5Q882 631 843 671Q796 720 729.0 744.0Q662 768 567 768Q483 768 409.5 742.5Q336 717 280.5 667.0Q225 617 193.5 544.0Q162 471 162 375Q162 313 171.0 261.5Q180 210 198.0 163.0Q216 116 241 67Q264 18 303.0 -33.0Q342 -84 394.0 -129.0Q446 -174 506 -206Q549 -230 593.5 -239.5Q638 -249 689 -249Q763 -249 793.5 -215.5Q824 -182 824 -129Q824 -78 793.0 -36.0Q762 6 713 31Q665 56 604.5 67.5Q544 79 481 79Q393 79 327.5 61.5Q262 44 220 16Q176 -13 155.0 -50.5Q134 -88 134 -128Q134 -183 165.5 -216.0Q197 -249 268 -249Q312 -249 352.0 -242.5Q392 -236 431 -214Q493 -186 545.0 -138.0Q597 -90 634.5 -32.0Q672 26 688 83Q702 124 708.5 165.5Q715 207 715 250Q715 322 695.5 371.5Q676 421 645.0 450.0Q614 479 580 490L530 495Q523 496 513.5 496.5Q504 497 495 497Q459 497 430.5 486.5Q402 476 385.0 454.0Q368 432 368 399Q368 362 390.5 337.0Q413 312 454 312Q491 312 514.0 335.5Q537 359 537 402Q537 434 525.0 461.0Q513 488 487 515L567 510Q581 496 591.5 477.5Q602 459 608.5 437.5Q615 416 615 392Q615 349 596.0 315.5Q577 282 541.0 263.0Q505 244 452 244Q407 244 370.0 263.0Q333 282 311.0 317.0Q289 352 289 398Q289 455 318.5 492.5Q348 530 399.0 548.0Q450 566 513 566Q609 566 673.0 527.0Q737 488 769.5 418.0Q802 348 802 254Q802 210 793.0 151.0Q784 92 759 35Q737 -26 701.5 -79.0Q666 -132 620.0 -175.0Q574 -218 520 -249Q456 -283 390.0 -302.0Q324 -321 256 -321Z"/>
+    <g id="parts" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="12">
+      <path style="stroke:var(--sun,#F2A21B)" d="M150 166 V100 A50 50 0 0 0 50 100 V128"/>
+      <path style="stroke:var(--leaf,#2F9461)" d="M100 166 V106 A19 19 0 0 0 81 87 A13.5 13.5 0 0 0 67.5 100.5 A9 9 0 0 0 76.5 109.5 A5 5 0 0 0 81.5 104.5"/>
+      <g class="lf-fill" style="stroke:var(--leaf,#2F9461);fill:var(--leaf,#2F9461)">
+        <path d="M100 154 A28 28 0 0 1 68 140 A28 28 0 0 1 100 154"/>
+        <path d="M100 154 A28 28 0 0 0 132 140 A28 28 0 0 0 100 154"/>
+      </g>
+      <g class="lf-hollow" stroke-width="8" style="stroke:var(--leaf,#2F9461)">
+        <path d="M100 154 A23.1 23.1 0 0 1 68 140 A23.1 23.1 0 0 1 100 154"/>
+        <path d="M100 154 A23.1 23.1 0 0 0 132 140 A23.1 23.1 0 0 0 100 154"/>
+      </g>
+    </g>
+    <symbol id="mark" viewBox="0 0 200 200">
+      <use href="#glyph" class="ghost" style="fill:var(--ghost,#8A938C)" fill-opacity=".35"/>
+      <use href="#parts"/>
+    </symbol>
+    <!-- fixed leaf versions for the comparison cards -->
+    <symbol id="leafA" viewBox="0 0 200 200"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="12">
+      <path stroke="#F2A21B" d="M150 166 V100 A50 50 0 0 0 50 100 V128"/>
+      <path style="stroke:var(--leaf,#2F9461)" d="M100 166 V106 A19 19 0 0 0 81 87 A13.5 13.5 0 0 0 67.5 100.5 A9 9 0 0 0 76.5 109.5 A5 5 0 0 0 81.5 104.5"/>
+      <path style="stroke:var(--leaf,#2F9461);fill:var(--leaf,#2F9461)" d="M100 154 A28 28 0 0 1 68 140 A28 28 0 0 1 100 154 M100 154 A28 28 0 0 0 132 140 A28 28 0 0 0 100 154"/></g></symbol>
+    <symbol id="leafB" viewBox="0 0 200 200"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="12">
+      <path stroke="#F2A21B" d="M150 166 V100 A50 50 0 0 0 50 100 V128"/>
+      <path style="stroke:var(--leaf,#2F9461)" d="M100 166 V106 A19 19 0 0 0 81 87 A13.5 13.5 0 0 0 67.5 100.5 A9 9 0 0 0 76.5 109.5 A5 5 0 0 0 81.5 104.5"/>
+      <path style="stroke:var(--leaf,#2F9461)" stroke-width="8" d="M100 154 A23.1 23.1 0 0 1 68 140 A23.1 23.1 0 0 1 100 154 M100 154 A23.1 23.1 0 0 0 132 140 A23.1 23.1 0 0 0 100 154"/></g></symbol>
+    <symbol id="leafC" viewBox="0 0 200 200"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="12">
+      <path stroke="#F2A21B" d="M150 166 V100 A50 50 0 0 0 50 100 V128"/>
+      <path style="stroke:var(--leaf,#2F9461)" d="M100 166 V106 A19 19 0 0 0 81 87 A13.5 13.5 0 0 0 67.5 100.5 A9 9 0 0 0 76.5 109.5 A5 5 0 0 0 81.5 104.5"/>
+      <path style="stroke:var(--leaf,#2F9461)" d="M100 154 A19.4 19.4 0 0 1 68 140 A19.4 19.4 0 0 1 100 154 M100 154 A19.4 19.4 0 0 0 132 140 A19.4 19.4 0 0 0 100 154"/></g></symbol>
+
+    <clipPath id="disc"><circle cx="100" cy="100" r="88"/></clipPath>
+    <!-- app icon candidates, full-bleed squares; the launcher mask cuts the corners -->
+    <radialGradient id="glow" cx="100" cy="30" r="150" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F2A21B" stop-opacity=".18"/><stop offset="1" stop-color="#F2A21B" stop-opacity="0"/></radialGradient>
+    <symbol id="iconTile" viewBox="0 0 200 200"><rect width="200" height="200" fill="#163026"/><rect width="200" height="200" fill="url(#glow)"/>
+      <g transform="translate(26 22) scale(.74)" style="--leaf:#3FAE73"><use href="#parts"/></g></symbol>
+    <symbol id="iconSeal" viewBox="0 0 200 200"><rect width="200" height="200" fill="#10241B"/>
+      <g clip-path="url(#disc)" transform="translate(14 14) scale(.86)"><rect width="200" height="200" fill="#F2A21B"/><path d="M0 160 C60 146 140 146 200 160 V200 H0Z" fill="#2F9461"/>
+        <g transform="translate(16 8) scale(.84)" style="--sun:#FFF9EA;--leaf:#10241B"><use href="#parts"/></g></g></symbol>
+  </defs>
+</svg>
+
+<main class="wrap">
+
+  <section class="hero">
+    <div class="hero-mark"><svg viewBox="0 0 200 200" role="img" aria-label="Yidhan mark: a sprout with two leaves unfurling under a marigold sun arch"><use href="#mark"/></svg></div>
+    <div class="hero-text">
+      <span class="eyebrow">Yidhan · new mark · round two</span>
+      <h1>A sprout under the sun</h1>
+      <p>Round one's A, kept as three clear parts and redrawn to follow the Tamil letter <span class="ta" lang="ta">இ</span> more closely.</p>
+      <ul class="parts">
+        <li><i class="sw" style="background:#F2A21B"></i><span><b>Sun arch.</b> Brightness, for Idhanth. The arch and straight right stem of the letter.</span></li>
+        <li><i class="sw" style="background:#2F9461"></i><span><b>Unfurling curl.</b> Spring, for Ishya. It now rises on the right and turns left, as the letter does.</span></li>
+        <li><i class="sw" style="background:#7FB58F"></i><span><b>Two leaves.</b> The wide, pointed loop at the foot of the letter, with the stem passing through it.</span></li>
+      </ul>
+      <div class="ctrls">
+        <button class="tg" id="tg-reveal" type="button" aria-pressed="false">Show the letter underneath</button>
+        <button class="tg" id="tg-hollow" type="button" aria-pressed="false">Try hollow leaves</button>
+      </div>
+      <p class="muted" style="font-size:15px">Both buttons change every mark on this page.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="eyebrow">Decision 1</span>
+      <h2>Filled or hollow leaves</h2>
+      <p>The mark is drawn with one line weight. A hollow leaf at that weight leaves almost no space inside it, so there are only three honest ways to do it.</p>
+    </div>
+    <div class="grid g3">
+      <div class="card picked">
+        <h3>Filled <span class="rec">Recommended</span></h3>
+        <div class="grid g2"><div class="tile light"><svg viewBox="0 0 200 200"><use href="#leafA"/></svg></div><div class="tile dark"><svg viewBox="0 0 200 200"><use href="#leafA"/></svg></div></div>
+        <div class="sizes"><svg viewBox="0 0 200 200" style="width:32px;height:32px"><use href="#leafA"/></svg><svg viewBox="0 0 200 200" style="width:16px;height:16px"><use href="#leafA"/></svg><span>32 · 16</span></div>
+        <p>Reads as leaves at every size. The solid base grounds the mark, and the one solid shape against three lines is what makes it memorable.</p>
+      </div>
+      <div class="card">
+        <h3>Hollow, thinner line</h3>
+        <div class="grid g2"><div class="tile light"><svg viewBox="0 0 200 200"><use href="#leafB"/></svg></div><div class="tile dark"><svg viewBox="0 0 200 200"><use href="#leafB"/></svg></div></div>
+        <div class="sizes"><svg viewBox="0 0 200 200" style="width:32px;height:32px"><use href="#leafB"/></svg><svg viewBox="0 0 200 200" style="width:16px;height:16px"><use href="#leafB"/></svg><span>32 · 16</span></div>
+        <p>Lightest and closest to the letter, which is all line. Costs: two line weights in one mark, and the leaves fade first at 16px.</p>
+      </div>
+      <div class="card">
+        <h3>Hollow, same line</h3>
+        <div class="grid g2"><div class="tile light"><svg viewBox="0 0 200 200"><use href="#leafC"/></svg></div><div class="tile dark"><svg viewBox="0 0 200 200"><use href="#leafC"/></svg></div></div>
+        <div class="sizes"><svg viewBox="0 0 200 200" style="width:32px;height:32px"><use href="#leafC"/></svg><svg viewBox="0 0 200 200" style="width:16px;height:16px"><use href="#leafC"/></svg><span>32 · 16</span></div>
+        <p>Keeps one line weight, but the leaves have to get fat to leave any space inside. They start to read as loops, not leaves.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="eyebrow">Decision 2</span>
+      <h2>App icon: dark tile or sunrise seal</h2>
+      <p>Android cuts every app icon to the launcher's shape, and installed web apps do the same. The icon has to survive a circle, a squircle and a rounded square.</p>
+    </div>
+    <div class="grid g2">
+      <div class="card picked">
+        <h3>Dark tile <span class="rec">Recommended</span></h3>
+        <div class="masks"><div class="mask m-circle"><svg viewBox="0 0 200 200"><use href="#iconTile"/></svg></div><div class="mask m-squircle"><svg viewBox="0 0 200 200"><use href="#iconTile"/></svg></div><div class="mask m-square"><svg viewBox="0 0 200 200"><use href="#iconTile"/></svg></div></div>
+        <p>The icon is the logo, not a second design. It splits cleanly into Android's two icon layers: an evergreen background and the mark in the safe zone. Its dark ground matches night mode. A faint marigold glow at the top keeps it from vanishing on dark wallpapers.</p>
+      </div>
+      <div class="card">
+        <h3>Sunrise seal</h3>
+        <div class="masks"><div class="mask m-circle"><svg viewBox="0 0 200 200"><use href="#iconSeal"/></svg></div><div class="mask m-squircle"><svg viewBox="0 0 200 200"><use href="#iconSeal"/></svg></div><div class="mask m-square"><svg viewBox="0 0 200 200"><use href="#iconSeal"/></svg></div></div>
+        <p>Louder on a home screen, but it is a circle inside a shape, and the mark has to shrink to fit inside the sun. Better kept for round places: a profile picture, a sticker, the share image.</p>
+      </div>
+    </div>
+    <div class="grid g2">
+      <div class="home" aria-label="Home screen mock, day wallpaper">
+        <div class="app"><i><svg viewBox="0 0 200 200"><use href="#iconTile"/></svg></i>Yidhan</div>
+        <div class="app"><i style="background:#E8EAED"></i>Calendar</div>
+        <div class="app"><i style="background:#4A7BD0"></i>Mail</div>
+        <div class="app"><i style="background:#F0C24B"></i>Notes</div>
+        <div class="app"><i style="background:#2B2B2B"></i>Camera</div>
+        <div class="app"><i><svg viewBox="0 0 200 200"><use href="#iconSeal"/></svg></i>Seal</div>
+        <div class="app"><i style="background:#D9534F"></i>Music</div>
+        <div class="app"><i style="background:#8E8E93"></i>Settings</div>
+      </div>
+      <div class="home night" aria-label="Home screen mock, night wallpaper">
+        <div class="app"><i><svg viewBox="0 0 200 200"><use href="#iconTile"/></svg></i>Yidhan</div>
+        <div class="app"><i style="background:#E8EAED"></i>Calendar</div>
+        <div class="app"><i style="background:#4A7BD0"></i>Mail</div>
+        <div class="app"><i style="background:#F0C24B"></i>Notes</div>
+        <div class="app"><i style="background:#2B2B2B"></i>Camera</div>
+        <div class="app"><i><svg viewBox="0 0 200 200"><use href="#iconSeal"/></svg></i>Seal</div>
+        <div class="app"><i style="background:#D9534F"></i>Music</div>
+        <div class="app"><i style="background:#8E8E93"></i>Settings</div>
+      </div>
+    </div>
+    <div class="grid g2">
+      <div><div class="tabs"><div class="tab"><i class="ph"></i>Inbox</div><div class="tab on"><svg viewBox="0 0 200 200"><use href="#iconTile"/></svg>Yidhan</div><div class="tab"><svg viewBox="0 0 200 200"><use href="#mark"/></svg>Yidhan</div></div></div>
+      <div><div class="tabs night"><div class="tab"><i class="ph"></i>Inbox</div><div class="tab on"><svg viewBox="0 0 200 200"><use href="#iconTile"/></svg>Yidhan</div><div class="tab" style="--leaf:#3FAE73"><svg viewBox="0 0 200 200"><use href="#mark"/></svg>Yidhan</div></div></div>
+    </div>
+    <p class="muted" style="font-size:15px">Browser tabs, light and dark. The middle tab uses the dark tile as the favicon; the right tab uses the bare mark. At 16px the bare mark is clearer on both tab colours, because the tile spends its pixels on background. Use the bare mark as the favicon.</p>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="eyebrow">Decision 3</span>
+      <h2>The wordmark carries the writing</h2>
+      <p>The mark says spring and light. The wordmark has to say "this is for writing". Book typefaces do that best. Each version swaps the dot of the i for a small marigold sun.</p>
+    </div>
+    <div class="grid g3">
+      <div class="card picked">
+        <h3>Fraunces, soft <span class="rec">Recommended</span></h3>
+        <div class="lock light"><svg viewBox="0 0 200 200"><use href="#mark"/></svg><span class="word w-fraunces">y<span class="i">ı</span>dhan</span></div>
+        <div class="lock dark"><svg viewBox="0 0 200 200"><use href="#mark"/></svg><span class="word w-fraunces">y<span class="i">ı</span>dhan</span></div>
+        <p>A book serif with rounded ends that echo the round ends of the mark. Warm, literary, and a clear step away from the current Cormorant.</p>
+      </div>
+      <div class="card">
+        <h3>Literata</h3>
+        <div class="lock light"><svg viewBox="0 0 200 200"><use href="#mark"/></svg><span class="word w-literata">y<span class="i">ı</span>dhan</span></div>
+        <div class="lock dark"><svg viewBox="0 0 200 200"><use href="#mark"/></svg><span class="word w-literata">y<span class="i">ı</span>dhan</span></div>
+        <p>Made for reading long text on screens. Calmer and more serious than Fraunces. It could also be the editor's body font, which would tie the brand to the writing surface.</p>
+      </div>
+      <div class="card">
+        <h3>Outfit (round one)</h3>
+        <div class="lock light"><svg viewBox="0 0 200 200"><use href="#mark"/></svg><span class="word w-outfit">y<span class="i">ı</span>dhan</span></div>
+        <div class="lock dark"><svg viewBox="0 0 200 200"><use href="#mark"/></svg><span class="word w-outfit">y<span class="i">ı</span>dhan</span></div>
+        <p>For comparison. Friendly and clean, but next to a sprout it reads more like a wellness or habit app than a place to write.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="eyebrow">Your question</span>
+      <h2>Dark mode: yes, and make it the default</h2>
+      <p>People write late at night, and the app opens in dark today. The new palette works in both modes. In the dark, marigold is the light: the caret, links and the main button. In the day, it stays a fill and never carries small text, because it is too pale to read on white.</p>
+    </div>
+    <div class="modes">
+      <div class="ui" aria-label="Editor mock, day mode">
+        <aside>
+          <div class="brand"><svg viewBox="0 0 200 200"><use href="#mark"/></svg>yidhan</div>
+          <button class="new" type="button" tabindex="-1">+ New note</button>
+          <div class="nl on"><b>Hill walk, Sunday</b><span>Edited 9:12</span></div>
+          <div class="nl"><b>Morning pages</b><span>Yesterday</span></div>
+          <div class="nl"><b>Book ideas</b><span>3 Nov</span></div>
+        </aside>
+        <main>
+          <span class="eyebrow" style="color:var(--u-muted)">Day</span>
+          <h4>Hill walk, Sunday</h4>
+          <div class="meta"><span class="tagc">walks</span><span>Synced</span></div>
+          <div class="body">First green on the hawthorn. The path past the old wall was dry for once. I want to come back at sunrise, when the light comes over the ridge. See <a href="#">route notes</a>.<span class="caret"></span></div>
+        </main>
+      </div>
+      <div class="ui night" aria-label="Editor mock, night mode">
+        <aside>
+          <div class="brand"><svg viewBox="0 0 200 200"><use href="#mark"/></svg>yidhan</div>
+          <button class="new" type="button" tabindex="-1">+ New note</button>
+          <div class="nl on"><b>Hill walk, Sunday</b><span>Edited 9:12</span></div>
+          <div class="nl"><b>Morning pages</b><span>Yesterday</span></div>
+          <div class="nl"><b>Book ideas</b><span>3 Nov</span></div>
+        </aside>
+        <main>
+          <span class="eyebrow" style="color:var(--u-muted)">Night</span>
+          <h4>Hill walk, Sunday</h4>
+          <div class="meta"><span class="tagc">walks</span><span>Synced</span></div>
+          <div class="body">First green on the hawthorn. The path past the old wall was dry for once. I want to come back at sunrise, when the light comes over the ridge. See <a href="#">route notes</a>.<span class="caret"></span></div>
+        </main>
+      </div>
+    </div>
+    <div class="tokens">
+      <div class="card"><h3>Day</h3>
+        <ul class="tok">
+          <li><i style="background:#F8F7F1"></i><span>Paper (background)</span><code>#F8F7F1</code></li>
+          <li><i style="background:#13261D"></i><span>Ink (text) · 14.8 : 1</span><code>#13261D</code></li>
+          <li><i style="background:#F2A21B"></i><span>Marigold button, ink text · 7.5 : 1</span><code>#F2A21B</code></li>
+          <li><i style="background:#A35E00"></i><span>Amber links · 4.7 : 1</span><code>#A35E00</code></li>
+          <li><i style="background:#237A4E"></i><span>Leaf text and tags · 4.9 : 1</span><code>#237A4E</code></li>
+        </ul></div>
+      <div class="card"><h3>Night</h3>
+        <ul class="tok">
+          <li><i style="background:#0E1C16"></i><span>Evergreen night (background)</span><code>#0E1C16</code></li>
+          <li><i style="background:#ECEBE2"></i><span>Warm white (text) · 14.7 : 1</span><code>#ECEBE2</code></li>
+          <li><i style="background:#F2A21B"></i><span>Marigold links and caret · 8.3 : 1</span><code>#F2A21B</code></li>
+          <li><i style="background:#3FAE73"></i><span>Leaf, brighter for night · 6.3 : 1</span><code>#3FAE73</code></li>
+          <li><i style="background:#15271F"></i><span>Raised surface</span><code>#15271F</code></li>
+        </ul></div>
+    </div>
+    <p class="muted" style="font-size:15px">One rule carries over from the current app: the main button is always marigold with dark ink text, in both modes. Contrast ratios are against each mode's background. Both modes pass WCAG AA for text.</p>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="eyebrow">How we got here</span>
+      <h2>Round one</h2>
+    </div>
+    <div class="hist">
+      <figure><div class="tile light"><svg viewBox="0 0 200 200"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="12"><path stroke="#F2A21B" d="M148 166 V100 A48 48 0 0 0 52 100 V114"/><path stroke="#2F9461" d="M84 166 V112 A24 24 0 0 1 108 88 A18 18 0 0 1 126 106 A13 13 0 0 1 113 119 A9 9 0 0 1 104 110"/><path stroke="#2F9461" d="M84 156 A30 30 0 0 0 50 138 A30 30 0 0 0 84 156"/></g></svg></div><figcaption>A · Unfurl. Clear parts, kept.</figcaption></figure>
+      <figure><div class="tile light"><svg viewBox="0 0 200 200"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="12"><path stroke="#F2A21B" d="M148 166 V100 A48 48 0 0 0 52 100"/><path stroke="#2F9461" d="M52 100 V122 C52 148 70 166 94 166 C110 166 112 150 98 150 C88 150 84 158 84 144 V112 A24 24 0 0 1 108 88 A18 18 0 0 1 126 106 A13 13 0 0 1 113 119 A9 9 0 0 1 104 110"/></g></svg></div><figcaption>B · One line. Dropped.</figcaption></figure>
+      <figure><div class="tile light"><svg viewBox="0 0 200 200"><g clip-path="url(#disc)"><rect width="200" height="200" fill="#F2A21B"/><path d="M0 150 C60 128 140 128 200 150 V200 H0Z" fill="#2F9461"/></g><g fill="none" stroke="#FFF9EA" stroke-linecap="round" stroke-linejoin="round" stroke-width="12"><path d="M148 166 V100 A48 48 0 0 0 52 100"/><path d="M52 100 V122 C52 148 70 166 94 166 C110 166 112 150 98 150 C88 150 84 158 84 144 V112 A24 24 0 0 1 108 88 A18 18 0 0 1 126 106 A13 13 0 0 1 113 119 A9 9 0 0 1 104 110"/></g></svg></div><figcaption>C · Sunrise seal. Kept for round places.</figcaption></figure>
+      <figure><div class="tile dark"><svg viewBox="0 0 200 200"><use href="#mark"/></svg></div><figcaption>Round two.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><span class="eyebrow">Next</span><h2>After you pick</h2></div>
+    <ul class="next">
+      <li>Draw the wordmark as outlines in the chosen typeface, with the sun dot placed by eye, and set the spacing between mark and wordmark.</li>
+      <li>Export the full set: Android adaptive icon layers, web app icons, favicons, the share image and the splash screen.</li>
+      <li>Turn the day and night palettes into app themes, check every pairing for contrast, and record the change in the design docs.</li>
+    </ul>
+  </section>
+</main>
+
+<script>
+(function(){
+  function wire(id,cls,on,off){
+    var b=document.getElementById(id);
+    b.addEventListener('click',function(){
+      var v=b.getAttribute('aria-pressed')!=='true';
+      b.setAttribute('aria-pressed',String(v));
+      document.documentElement.classList.toggle(cls,v);
+      b.textContent=v?on:off;
+    });
+  }
+  wire('tg-reveal','reveal','Hide the letter','Show the letter underneath');
+  wire('tg-hollow','hollow','Back to filled leaves','Try hollow leaves');
+})();
+</script>
