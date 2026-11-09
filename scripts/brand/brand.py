@@ -25,7 +25,7 @@ word = lambda ink: f'<path fill="{ink}" d="{wm["d"]}"/><circle fill="{SUN}" cx="
 w('wordmark.svg', svg(vb, word(INK), 'Yidhan wordmark: Fraunces (SIL OFL) outlined, with a marigold sun as the dot on the i.'))
 w('wordmark-on-dark.svg', svg(vb, word(WARM), 'Yidhan wordmark for dark grounds.'))
 
-# App icon: "yi" from the wordmark. Stem centre measured in the 560/24 cut at 1463 (bbox 1199..1710).
+# App icon: the "yi" monogram, from the wordmark. Yidhan is the product name; "yi" is its monogram. Stem centre measured in the 560/24 cut at 1463 (bbox 1199..1710).
 def yi_letters(j, dot, i_shift, target_h, cy=100, cx=100):
     gy, gi = j['glyphs']
     st = gi['box'][2] - gi['box'][0]
@@ -41,7 +41,7 @@ def yi_letters(j, dot, i_shift, target_h, cy=100, cx=100):
             f'<circle fill="{SUN}" cx="{sun[0]:.1f}" cy="{sun[1]:.1f}" r="{r:.1f}"/></g>')
 tile = lambda rx=0: f'<rect width="200" height="200" rx="{rx}" fill="{TILE}"/>'
 w('app-icon.svg', svg('0 0 200 200', tile() + yi_letters(yi, 1.5, 0, 142, cy=95),
-  'App icon: "yi" on an evergreen tile, full bleed. Launchers apply their own mask.'))
+  'App icon: the "yi" monogram on an evergreen tile, full bleed. Launchers apply their own mask.'))
 w('android-foreground.svg', svg('0 0 200 200', yi_letters(yi, 1.5, 0, 100, cy=96),
   'Android adaptive icon foreground: letters inside the 72dp visible area. Background layer: ' + TILE + '.'))
 # Favicon: a separate drawing for 16-48 px. Heavier small-size cut, wider y-i gap, bigger dot.
@@ -53,7 +53,7 @@ w('favicon.svg', svg('0 0 200 200', tile(28) + yi_letters(yi16, 1.75, 110, 160, 
 ARCH = 'M150 166 V100 A50 50 0 0 0 50 100 V126'
 CURL = 'M112 156 V108 A20 20 0 0 0 92 88 A13 13 0 0 0 79 101 A12 12 0 0 0 91 113'
 LEAF_L = 'M112 158 Q 96 162 82 154 Q 72 148 66 136 Q 82 132 96 140 Q 106 147 112 158 Z'
-LEAF_R = 'M112 158 Q 122 146 132 141 Q 140 137 146 138 Q 142 150 134 156 Q 124 162 112 158 Z'
+LEAF_R = 'M112 158 Q 114 144 122 134 Q 127 128 132 126 Q 133 138 128 148 Q 122 156 112 158 Z'   # tip at x 132: one line clear of the arch's inner edge (144)
 def sprout(sun, leaf):
     return (f'<g stroke-linecap="round" stroke-linejoin="round"><path fill="none" stroke="{sun}" stroke-width="12" d="{ARCH}"/>'
             f'<path fill="none" stroke="{leaf}" stroke-width="12" d="{CURL}"/><path fill="{leaf}" d="{LEAF_L}"/><path fill="{leaf}" d="{LEAF_R}"/></g>')
