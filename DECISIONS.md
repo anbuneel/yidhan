@@ -19,6 +19,47 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-09 — New brand mark: a sprout under the sun, built on the Tamil letter இ
+
+**Status:** Active
+
+**Why:** The owner is moving the product away from its Japanese design language: the enso
+mark, the Kintsugi and Midnight palettes, the wabi-sabi framing. The name comes from the
+owner's children, Ishya (spring) and Idhanth (brightness). Both names begin with the
+Tamil letter இ (i). The new mark had to carry spring and brightness, contain இ subtly
+enough that a reader who doesn't know Tamil sees a picture rather than a letter, and work
+for a writing app.
+
+The mark is three separate strokes on a 200-unit grid with one 12-unit line: a marigold
+arch with a straight right leg (the sun, and the letter's arch and stem), a green curl
+that rises on the right and turns left (an unfurling fern, and the letter's middle
+curl), and two filled leaves (the wide pointed loop at the letter's foot, with the stem
+passing through it). Palette: marigold `#F2A21B`, leaf `#2F9461` (`#3FAE73` on dark),
+evergreen `#10241B`, daylight `#F8F7F1`. The wordmark is lowercase Fraunces (SOFT 100,
+weight 440), outlined, with a marigold sun as the dot on the i. The writing signal
+lives in the wordmark, not the mark. The app icon is the mark on an evergreen tile; the
+favicon is the bare mark. Sources and exports are in `images/brand/`.
+
+**Rejected:** The letter drawn as one continuous line (round 1, concept B). Simplifying
+the letter's crossing loop into a hook made it look like an ear, neither a clean letter
+nor a clear picture. A faithful one-line tracing fixed the letter but lost the at-a-glance
+picture, which was the part of concept A the owner wanted kept.
+
+**Rejected:** A pen nib in the mark. The two leaves converge into a nib shape easily, but
+the owner wanted the mark to suit a writing app, not depict writing.
+
+**Rejected:** Hollow leaves. At the mark's line weight a hollow leaf this small closes to
+a slit. Opening it means fat, loop-like leaves or a second, thinner line weight.
+
+**Rejected:** The sunrise seal as the app icon. It is a circle inside the launcher's shape,
+and the mark must shrink to fit inside the sun. It is kept for round placements: avatar,
+sticker, share image.
+
+**Rejected:** A rounded sans wordmark (Outfit). Next to a sprout it reads as a wellness or
+habit app rather than a place to write.
+
+---
+
 ## 2026-11-08 — Public pages get a static document each, built from their components
 
 **Status:** Active
