@@ -24,7 +24,7 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 **Status:** Active
 
 **Why:** Three design reviews (two in `docs/reviews/`, dated 2026-11-08 and 2026-11-09,
-and one outside the repo) agreed on the same faults. The two themes share no brand
+and one outside the repo) found these faults between them. The two themes share no brand
 colour: light is terracotta, dark is gold. Dark's `#D4AF37` on near-black reads as a
 luxury or crypto template. Light's terracotta on greige with a light serif reads as
 Claude.ai. The Japanese framing (wabi-sabi, kintsugi, Muji, the enso) has no link to the
@@ -53,11 +53,11 @@ today no italic face is shipped, so every italic is synthesized by the browser.
 editor sheet only. Applied to every card and small element, it read as a template quirk,
 not as a shape with a meaning.
 
-*Editor glow.* It stays, fainter. The reviews found glows to be the most visible
-template pattern and named the editor glow as the one worth keeping.
+*Editor glow.* It stays, fainter. The reviews flagged glows as a template pattern. One
+named the editor glow as worth keeping.
 
 *Default theme.* The theme keeps following the device setting, as the code already
-does. The reviews asked whether light should be the default.
+does. One review asked whether light should be the default.
 
 **Rejected:** Persimmon or terracotta as the brand colour. It is too close to the
 Claude.ai look, and it has nothing to do with the name.
@@ -67,7 +67,7 @@ Claude.ai look, and it has nothing to do with the name.
 **Rejected:** Two brand colours, one per theme. That is the fault the reviews found:
 switching themes changed the brand.
 
-**Rejected:** Fraunces as the only font. Small UI labels in a serif are harder to read.
+**Rejected:** Fraunces as the only font. Small UI labels in a serif can look fussy.
 
 **Rejected:** Keeping Cormorant Garamond. Its thin strokes are weak at small sizes and on
 dark backgrounds, and it would be a different serif from the logo.
