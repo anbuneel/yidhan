@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="12">
+  <!-- Concept B: the Tamil letter i as one continuous line, green rising into a marigold arch. -->
+  <path stroke="#F2A21B" d="M148 166 V100 A48 48 0 0 0 52 100"/>
+  <path stroke="#2F9461" d="M52 100 V122 C52 148 70 166 94 166 C110 166 112 150 98 150 C88 150 84 158 84 144 V112 A24 24 0 0 1 108 88 A18 18 0 0 1 126 106 A13 13 0 0 1 113 119 A9 9 0 0 1 104 110"/>
+</svg>
