@@ -242,7 +242,8 @@ A recovery key is planned; account recovery is not an omission.
 ## Open GitHub issues
 
 The issue tracker is authoritative for open work. Tracked here for orientation
-only, as of 2026-11-08: #207 (two-account RLS test, a launch gate), #210 (closes with
-item 153), #211, #215, #27, #29 (closes with item 27), and #249, which gathers the P3
-review debt deferred from the spring reviews. Issues that duplicated roadmap items
-were closed with a pointer to the item.
+only, as of 2026-11-09: #207 (two-account RLS test, a launch gate), #210 (closes with
+item 153), #211, #215, #27, #257 and #258 (focus traps and reduced motion, from the
+item 160 pass), and #249, which gathers the P3 review debt deferred from the spring
+reviews, #29 included. Issues that duplicated roadmap items were closed with a pointer
+to the item.

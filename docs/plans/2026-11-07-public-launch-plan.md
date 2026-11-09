@@ -1,5 +1,5 @@
 Status: ACTIVE
-Last verified: 2026-11-08
+Last verified: 2026-11-09
 
 # Public launch plan
 
@@ -34,13 +34,14 @@ Effort is **days** (under a week), **weeks** (one to three), or **a month or mor
 
 ## Gates that jump the queue
 
-Two open issues can lose words or leak metadata. Both are bugs, so they live in the
+Two issues could lose words or leak metadata. Both are bugs, so they live in the
 issue tracker, not here, but neither may be open on launch day:
 
-- **#205** — a delete from another device discards an open draft that failed to save.
-  Anything that can lose words goes first; this is first.
+- **#205** — a delete from another device discarded an open draft that failed to save.
+  Closed by PR #248 on 2026-11-08.
 - **#207** — `note_tags` realtime RLS has not been confirmed with a two-account test.
-  Run it before strangers share a database.
+  Still open. Needs two real accounts against the deployed project; the maintainer runs
+  it before strangers share a database.
 
 ---
 
