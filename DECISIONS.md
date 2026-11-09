@@ -19,6 +19,57 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-09 — New logo: a Fraunces wordmark with a sun on the i, and a "yi" monogram as the app icon
+
+**Status:** Active
+
+**Why:** The owner is moving the product away from its Japanese design language, starting
+with the enso mark. The name comes from the owner's children, Ishya (spring) and Idhanth
+(brightness). Both names begin with I, written இ in Tamil. The brief: carry spring and
+brightness, hide இ well enough that a reader who doesn't know Tamil sees a logo rather
+than a letter, and work for a writing app.
+
+The logo is the wordmark: lowercase "yidhan" in Fraunces (SOFT 100, weight 440),
+outlined, with a marigold sun as the dot on the i, set on the i's optical centre. Yidhan
+stays the product name; "yi" is its monogram. The app icon is that monogram, taken from
+the wordmark and cut heavier (weight 560, opsz 24), cream on an evergreen tile
+(`#163026`), with the same sun dot. The favicon is a separate drawing of that tile for
+16 to 48 px (weight 620, opsz 9, a wider y-i gap and a bigger dot), used on light and dark
+tabs alike. A sprout under a sun arch, drawn on the shape of இ, stays as secondary artwork
+for the splash screen, empty states and the About page. That is where the Tamil Easter
+egg now lives. Existing "yi" apps were checked in the stores. YI Home's icon is a camera
+outline, though its screenshots use a sans-serif "yi". The closest icon is YI Smart's
+uppercase sans-serif "YI" on blue. The lowercase serif, sun dot and evergreen tile keep
+Yidhan apart from both. This is not a trademark clearance. Sources, exports and
+the review board are in `images/brand/`. The app
+palette is not decided here; the themes are a separate decision.
+
+**Rejected:** The sprout under the sun as the logo (two rounds). Three independent reviews
+read it as a gardening, wellness or habit app, and found that the arch read as a doorway,
+not a sun. Fixing its geometry would not change what a sprout signals. Reviewers also
+recognised இ only once told.
+
+**Rejected:** The letter drawn as one continuous line. Simplifying its crossing loop made
+it look like an ear. A faithful tracing was legible as the letter but was not a picture.
+
+**Rejected:** A lone "i" as the icon. A dotted i on a tile is the standard information
+icon, and the name starts with Y.
+
+**Rejected:** A "y" with the sun above it, or between its arms. The first reads as ẏ, or a
+person with raised arms, and moves the sun off the i, so the icon stops matching the
+wordmark. The second reads as a y holding a ball, and the sun clogs the fork at 16px.
+
+**Rejected:** A pen nib in the mark. The owner wanted a logo that suits a writing app, not
+one that depicts writing. The writing signal comes from the book typeface.
+
+**Rejected:** A rounded sans wordmark (Outfit). It reads as a wellness app rather than a
+place to write.
+
+**Rejected:** A bare, untiled favicon. Its dark letters disappear on dark tab bars, and a
+favicon cannot switch with the tab colour reliably.
+
+---
+
 ## 2026-11-08 — Public pages get a static document each, built from their components
 
 **Status:** Active
