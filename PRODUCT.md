@@ -1,5 +1,7 @@
 # Product
 
+<!-- impeccable:product-schema 1 -->
+
 What is true about Yidhan now, and what will never be true. For *why* things
 became this way see `DECISIONS.md`; for what shipped see `docs/progress.md`; for
 what is deferred see `docs/roadmap.md`.
@@ -9,6 +11,13 @@ what is deferred see `docs/roadmap.md`.
 A calm, distraction-free note-taking app. Named from Tamil origins meaning
 "Bright Spring". Thoughts are encrypted end-to-end, stored offline-first, and
 synced across devices. Live at https://yidhan.vercel.app.
+
+## Platform
+
+web
+
+The Android app is a Capacitor wrapper around the same web UI. It uses one design
+language on every device and does not follow native Material conventions.
 
 ## Who it is for
 
@@ -20,6 +29,24 @@ organise loosely, and read from any device.
 
 They are **not** teams, not knowledge-base builders, and not people who want to
 configure things.
+
+## Positioning
+
+Private and calm, together. The server cannot read note content (zero-knowledge
+end-to-end encryption), and the writing space is deliberately restrained. Neither
+half is the claim alone: private tools are usually dense, and calm tools usually read
+your notes. Notion, Obsidian, Bear and Apple Notes cannot honestly claim both.
+
+## Operating context
+
+- Capture is quick and often on a phone, sometimes offline. A thought must land before
+  the impulse passes, with no setup.
+- Organising is loose: tags and pinning, not folders or structure.
+- Reading happens on any device, after sync.
+- Visitors can try the editor on the landing page and in `/demo` before signing up.
+  Those drafts are local and labelled as not encrypted.
+- Unlocking needs the user's passphrase on each device. Losing it loses the notes;
+  there is no server-side recovery.
 
 ## Current phase
 
@@ -46,6 +73,29 @@ by preference.
 - **Solo maintenance.** Anything that needs a team to operate is out of scope,
   including infrastructure that cannot be run by one person from a laptop.
 - **WCAG AA across all themes**, with `prefers-reduced-motion` honoured globally.
+
+## Evidence on hand
+
+- Sample notes for the landing page and demo: `src/components/LandingPage.tsx`,
+  `src/services/demoStorage.ts`.
+- Release notes rendered in the app: `src/data/changelog.ts`.
+- Public roadmap: `src/data/roadmap.ts`.
+- **No testimonials, user counts, reviews or press exist.** Do not invent any, and do
+  not imply them.
+- Open question: the landing page says "Free and open source", but the repo has no
+  `LICENSE` file. Settle that before the claim is repeated anywhere new.
+
+## Product principles
+
+1. **Privacy is structural.** If a feature needs the server to read content, it does
+   not ship. No exceptions for convenience.
+2. **Restraint is the product.** Fewer elements beat more. A feature has to earn its
+   place against the calm it costs.
+3. **Never lose words.** Local writes, offline saves, and a failed save that keeps the
+   draft on screen all come before a clean-looking state.
+4. **Honest over smooth.** Show real status ("Synced" only when the server confirms),
+   real empty states, and real limits such as an unrecoverable passphrase.
+5. **The interface recedes.** Nothing asks for attention it has not earned.
 
 ## Permanent non-goals
 
