@@ -37,9 +37,10 @@ the wordmark and cut heavier (weight 560, opsz 24), cream on an evergreen tile
 16 to 48 px (weight 620, opsz 9, a wider y-i gap and a bigger dot), used on light and dark
 tabs alike. A sprout under a sun arch, drawn on the shape of இ, stays as secondary artwork
 for the splash screen, empty states and the About page. That is where the Tamil Easter
-egg now lives. YI Home, a camera app, uses a sans-serif "yi" brand in its store
-screenshots, though its current icon is a camera outline. The serif letters, sun dot and
-evergreen tile keep the two apart; this is not a trademark clearance. Sources, exports and
+egg now lives. Existing "yi" apps were checked in the stores. YI Home's icon is a camera
+outline, though its screenshots use a sans-serif "yi". The closest icon is YI Smart's
+uppercase sans-serif "YI" on blue. The lowercase serif, sun dot and evergreen tile keep
+Yidhan apart from both. This is not a trademark clearance. Sources, exports and
 the review board are in `images/brand/`. The app
 palette is not decided here; the themes are a separate decision.
 
