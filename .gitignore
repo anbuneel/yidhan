@@ -37,6 +37,7 @@ nul
 !docs/**/*.txt
 !public/robots.txt
 !public/licenses/fonts/*.txt
+!images/brand/review/fonts/*.txt
 
 # Claude Code local settings
 .claude/*
