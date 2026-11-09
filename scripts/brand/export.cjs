@@ -7,7 +7,7 @@ const jobs=[ // [source, out, size, rounded?]
  ['favicon.svg','favicon-16.png',16],['favicon.svg','favicon-32.png',32],['favicon.svg','favicon-48.png',48],
  ['app-icon.svg','icon-192.png',192,true],['app-icon.svg','icon-512.png',512,true],
  ['app-icon.svg','maskable-512.png',512],['app-icon.svg','apple-touch-icon.png',180],
- ['android-foreground.svg','android-foreground-432.png',432],['app-icon.svg','play-store-512.png',512],
+ ['android-foreground.svg','android-foreground-432.png',432],
  ['seal.svg','seal-1024.png',1024]];
 (async()=>{const b=await chromium.launch();const p=await b.newPage();
 for(const [src,out,sz,round] of jobs){await p.setViewportSize({width:sz,height:sz});
