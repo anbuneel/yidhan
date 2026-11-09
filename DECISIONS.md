@@ -19,6 +19,64 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-09 — The design direction is Bright Spring: green on paper, a marigold accent, Fraunces and Source Sans 3
+
+**Status:** Active
+
+**Why:** Three design reviews (two in `docs/reviews/`, dated 2026-11-08 and 2026-11-09,
+and one outside the repo) agreed on the same faults. The two themes share no brand
+colour: light is terracotta, dark is gold. Dark's `#D4AF37` on near-black reads as a
+luxury or crypto template. Light's terracotta on greige with a light serif reads as
+Claude.ai. The Japanese framing (wabi-sabi, kintsugi, Muji, the enso) has no link to the
+name, and the theme called Kintsugi has no gold in it. The owner reviewed all three on
+2026-11-09 and decided the following. None of it is in the code yet; the token values
+and the order of work belong to a themes and type plan in `docs/plans/`.
+
+*Direction.* Bright Spring, the meaning of the name. The Japanese framing is dropped.
+The logo entry below already made this move for the mark; this entry makes it for the
+rest of the design.
+
+*Colour.* Green is the brand colour in both themes. The light theme is a paper page.
+Marigold `#F2A21B`, the sun in the logo, is the one small accent. It never carries text
+on the light page, where it measures 1.9:1. The constraint is one brand across both
+themes and the logo: green is the spring, marigold is the brightness, and both are
+already in the logo.
+
+*Night.* The page is `#0F1F18` and cards are `#163026`, the logo tile colour. The old
+page `#050A06` reads as black on screen, so the green only showed on cards.
+
+*Fonts.* Fraunces for titles and quotes, because it is the logo's font. Source Sans 3
+for body text and UI. Cormorant Garamond is removed. Real italic font files are added:
+today no italic face is shipped, so every italic is synthesized by the browser.
+
+*Leaf corner.* The asymmetric corner (`2px 24px 4px 24px`) stays on note cards and the
+editor sheet only. Applied to every card and small element, it read as a template quirk,
+not as a shape with a meaning.
+
+*Editor glow.* It stays, fainter. The reviews found glows to be the most visible
+template pattern and named the editor glow as the one worth keeping.
+
+*Default theme.* The theme keeps following the device setting, as the code already
+does. The reviews asked whether light should be the default.
+
+**Rejected:** Persimmon or terracotta as the brand colour. It is too close to the
+Claude.ai look, and it has nothing to do with the name.
+
+**Rejected:** Gold in both themes. It turns mustard on a light page.
+
+**Rejected:** Two brand colours, one per theme. That is the fault the reviews found:
+switching themes changed the brand.
+
+**Rejected:** Fraunces as the only font. Small UI labels in a serif are harder to read.
+
+**Rejected:** Keeping Cormorant Garamond. Its thin strokes are weak at small sizes and on
+dark backgrounds, and it would be a different serif from the logo.
+
+**Rejected:** A fixed default theme, light or dark. A first visit should arrive in the
+theme the device is already in.
+
+---
+
 ## 2026-11-09 — New logo: a Fraunces wordmark with a sun on the i, and a "yi" monogram as the app icon
 
 **Status:** Active
