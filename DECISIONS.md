@@ -19,44 +19,49 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
-## 2026-11-09 — New brand mark: a sprout under the sun, built on the Tamil letter இ
+## 2026-11-09 — New logo: a Fraunces wordmark with a sun on the i, and a "yi" app icon
 
 **Status:** Active
 
-**Why:** The owner is moving the product away from its Japanese design language: the enso
-mark, the Kintsugi and Midnight palettes, the wabi-sabi framing. The name comes from the
-owner's children, Ishya (spring) and Idhanth (brightness). Both names begin with the
-Tamil letter இ (i). The new mark had to carry spring and brightness, contain இ subtly
-enough that a reader who doesn't know Tamil sees a picture rather than a letter, and work
-for a writing app.
+**Why:** The owner is moving the product away from its Japanese design language, starting
+with the enso mark. The name comes from the owner's children, Ishya (spring) and Idhanth
+(brightness). Both names begin with I, written இ in Tamil. The brief: carry spring and
+brightness, hide இ well enough that a reader who doesn't know Tamil sees a logo rather
+than a letter, and work for a writing app.
 
-The mark is three separate strokes on a 200-unit grid with one 12-unit line: a marigold
-arch with a straight right leg (the sun, and the letter's arch and stem), a green curl
-that rises on the right and turns left (an unfurling fern, and the letter's middle
-curl), and two filled leaves (the wide pointed loop at the letter's foot, with the stem
-passing through it). Palette: marigold `#F2A21B`, leaf `#2F9461` (`#3FAE73` on dark),
-evergreen `#10241B`, daylight `#F8F7F1`. The wordmark is lowercase Fraunces (SOFT 100,
-weight 440), outlined, with a marigold sun as the dot on the i. The writing signal
-lives in the wordmark, not the mark. The app icon is the mark on an evergreen tile; the
-favicon is the bare mark. Sources and exports are in `images/brand/`.
+The logo is the wordmark: lowercase "yidhan" in Fraunces (SOFT 100, weight 440),
+outlined, with a marigold sun as the dot on the i, set on the i's optical centre. The app
+icon is "yi" from the same wordmark, cut heavier (weight 560, opsz 24), cream on an
+evergreen tile, with the same sun dot. The favicon is a separate drawing of that tile for
+16 to 48 px (weight 620, opsz 9, a wider y-i gap and a bigger dot), used on light and dark
+tabs alike. A sprout under a sun arch, drawn on the shape of இ, stays as secondary artwork
+for the splash screen, empty states and the About page. That is where the Tamil Easter
+egg now lives. Sources, exports and the review board are in `images/brand/`. The app
+palette is not decided here; the themes are a separate decision.
 
-**Rejected:** The letter drawn as one continuous line (round 1, concept B). Simplifying
-the letter's crossing loop into a hook made it look like an ear, neither a clean letter
-nor a clear picture. A faithful one-line tracing fixed the letter but lost the at-a-glance
-picture, which was the part of concept A the owner wanted kept.
+**Rejected:** The sprout under the sun as the logo (two rounds). Three independent reviews
+read it as a gardening, wellness or habit app, and found that the arch read as a doorway,
+not a sun. Fixing its geometry would not change what a sprout signals. Reviewers also
+recognised இ only once told.
 
-**Rejected:** A pen nib in the mark. The two leaves converge into a nib shape easily, but
-the owner wanted the mark to suit a writing app, not depict writing.
+**Rejected:** The letter drawn as one continuous line. Simplifying its crossing loop made
+it look like an ear. A faithful tracing was legible as the letter but was not a picture.
 
-**Rejected:** Hollow leaves. At the mark's line weight a hollow leaf this small closes to
-a slit. Opening it means fat, loop-like leaves or a second, thinner line weight.
+**Rejected:** A lone "i" as the icon. A dotted i on a tile is the standard information
+icon, and the name starts with Y.
 
-**Rejected:** The sunrise seal as the app icon. It is a circle inside the launcher's shape,
-and the mark must shrink to fit inside the sun. It is kept for round placements: avatar,
-sticker, share image.
+**Rejected:** A "y" with the sun above it, or between its arms. The first reads as ẏ, or a
+person with raised arms, and moves the sun off the i, so the icon stops matching the
+wordmark. The second reads as a y holding a ball, and the sun clogs the fork at 16px.
 
-**Rejected:** A rounded sans wordmark (Outfit). Next to a sprout it reads as a wellness or
-habit app rather than a place to write.
+**Rejected:** A pen nib in the mark. The owner wanted a logo that suits a writing app, not
+one that depicts writing. The writing signal comes from the book typeface.
+
+**Rejected:** A rounded sans wordmark (Outfit). It reads as a wellness app rather than a
+place to write.
+
+**Rejected:** A bare, untiled favicon. Its dark letters disappear on dark tab bars, and a
+favicon cannot switch with the tab colour reliably.
 
 ---
 
