@@ -6,10 +6,10 @@ interface TermsPageProps {
   theme: Theme;
   onThemeToggle: () => void;
   onSignIn: () => void;
-  onLogoClick: () => void;
-  onChangelogClick: () => void;
-  onRoadmapClick: () => void;
-  onPrivacyClick: () => void;
+  onLogoClick?: () => void;
+  onChangelogClick?: () => void;
+  onRoadmapClick?: () => void;
+  onPrivacyClick?: () => void;
   onTermsClick?: () => void;
   onSupportClick?: () => void;
   onSettingsClick?: () => void;
@@ -218,12 +218,22 @@ export function TermsPage({
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   How we handle your data is covered in our{' '}
-                  <button type="button"
-                    onClick={onPrivacyClick}
-                    style={{ color: 'var(--color-accent)', textDecoration: 'underline', textUnderlineOffset: '3px', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
-                  >
-                    Privacy Policy
-                  </button>
+                  {onPrivacyClick ? (
+                    <button type="button"
+                      onClick={onPrivacyClick}
+                      style={{ color: 'var(--color-accent)', textDecoration: 'underline', textUnderlineOffset: '3px', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
+                    >
+                      Privacy Policy
+                    </button>
+                  ) : (
+                    // The static document for JavaScript-off visitors passes no handlers.
+                    <a
+                      href="/privacy"
+                      style={{ color: 'var(--color-accent)', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                    >
+                      Privacy Policy
+                    </a>
+                  )}
                   . The short version: your notes are encrypted, we don't sell data, and you can delete everything at any time.
                 </p>
               </div>

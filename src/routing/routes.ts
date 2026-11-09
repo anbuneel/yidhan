@@ -9,7 +9,7 @@
 import type { ViewMode } from '../types';
 
 /** Public pages that are nothing but a static route segment. */
-const PUBLIC_PAGE_ROUTES = ['changelog', 'roadmap', 'privacy', 'terms', 'support', 'security'] as const;
+export const PUBLIC_PAGE_ROUTES = ['changelog', 'roadmap', 'privacy', 'terms', 'support', 'security'] as const;
 
 export type PublicPageName = (typeof PUBLIC_PAGE_ROUTES)[number];
 

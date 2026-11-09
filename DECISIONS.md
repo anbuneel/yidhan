@@ -19,6 +19,53 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-08 — Public pages get a static document each, built from their components
+
+**Status:** Active
+
+**Why:** Item 60 asks that `/privacy`, `/terms`, `/support`, `/security`, `/changelog` and
+`/roadmap` be readable with JavaScript off. Until now each served `index.html`, so a
+visitor without scripts saw the landing shell on every one of them, which the 2026-09-10
+entry accepted.
+
+Each page now has its own document, `dist/<page>.html`. A script run after `vite build`
+renders the page component with `renderToStaticMarkup` and puts the markup where the
+landing shell sits in a copy of the built `index.html`: same head, stylesheet, boot.js
+and bundle, its own title and canonical URL. `/changelog` and `/roadmap` render from
+`src/data/` at every build, so nothing is maintained by hand. Vercel serves the files
+through six explicit rewrites ahead of the catch-all; `vite preview` finds them on its
+own; the dev server, which the Playwright suite runs against, renders them on request
+from the same module.
+
+It is the 2026-09-10 pattern extended, not replaced. Nothing is hydrated: React's root
+render replaces the static copy, as it replaces the landing shell. With JavaScript on,
+boot.js already adds `boot-hidden` off `/`, and that class now hides the static copy
+too, so the page loads exactly as before: hidden, then the public shell renders it. The
+static copy shows only when boot.js never ran. Its theme comes from the OS, because the
+stored choice needs boot.js; the dark tokens are repeated under
+`prefers-color-scheme: dark` for a root with no `data-theme`, generated from the same
+theme definition as `index.css`. The theme toggle and Sign in are hidden there, since
+they need JavaScript, and the footer and in-text links render as plain links because no
+handlers are passed.
+
+The documents stay out of the service worker's precache: the script runs after the
+worker is generated, and the budget check forbids any HTML but `index.html` in it. A
+visitor with the worker installed has JavaScript and gets `index.html` from the precache
+as before. No first-visit budget moves.
+
+**Rejected:** A prerender with hydration — it would show the page sooner with JavaScript
+on, but the server render cannot know the stored theme or whether the visitor is
+signed in, so the first client render would disagree with it on both, and a signed-in
+visitor on `/privacy` starts the app shell, not the public one. That mismatch was the
+cost 2026-09-10 declined, and it buys nothing a JavaScript-off reader needs. Showing the
+static copy with JavaScript on until React mounts — the lazy page chunk shows a loading
+fallback first, so the page would flash from content to spinner to content; a change in
+what JavaScript visitors see is out of item 60's scope. Hand-written HTML per route —
+the changelog and roadmap change with every release, and copies drift. Precaching the
+documents — they serve only visitors who cannot run the worker.
+
+---
+
 ## 2026-11-08 — Session Replay waits for the app shell; a budget at its target is capped there
 
 **Status:** Active
@@ -437,6 +484,11 @@ the whole of item 60's cost, and it is not worth carrying before launch. A loadi
 spinner in the shell — it fixes the blank page by showing a different nothing. Showing the
 shell on every route without JavaScript — it does, and that is accepted: a visitor with
 scripts off cannot use the app anyway, and the shell at least says what Yidhan is.
+
+**Erratum 2026-11-08:** The accepted limitation, the landing shell on every route without
+JavaScript, is superseded for the six public pages by item 60 ("Public pages get a
+static document each, built from their components"). Every other route still serves
+`index.html` and its shell.
 
 ---
 

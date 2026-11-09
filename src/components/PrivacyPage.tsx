@@ -6,15 +6,15 @@ interface PrivacyPageProps {
   theme: Theme;
   onThemeToggle: () => void;
   onSignIn: () => void;
-  onLogoClick: () => void;
-  onChangelogClick: () => void;
-  onRoadmapClick: () => void;
+  onLogoClick?: () => void;
+  onChangelogClick?: () => void;
+  onRoadmapClick?: () => void;
   onPrivacyClick?: () => void;
   onTermsClick?: () => void;
   onSupportClick?: () => void;
   onSettingsClick?: () => void;
   /** The threat model — what is visible even so, and what is not solved yet. */
-  onSecurityClick: () => void;
+  onSecurityClick?: () => void;
 }
 
 export function PrivacyPage({
@@ -244,14 +244,25 @@ export function PrivacyPage({
                   If you want the specifics — what an attacker with our whole database
                   would actually get, what remains visible to us even with encryption, and
                   the parts we have not solved yet — that is written out on the{' '}
-                  <button
-                    type="button"
-                    onClick={onSecurityClick}
-                    className="focus-ring bg-transparent border-none p-0 cursor-pointer underline underline-offset-4"
-                    style={{ color: 'var(--color-accent-text)', font: 'inherit' }}
-                  >
-                    security page
-                  </button>
+                  {onSecurityClick ? (
+                    <button
+                      type="button"
+                      onClick={onSecurityClick}
+                      className="focus-ring bg-transparent border-none p-0 cursor-pointer underline underline-offset-4"
+                      style={{ color: 'var(--color-accent-text)', font: 'inherit' }}
+                    >
+                      security page
+                    </button>
+                  ) : (
+                    // The static document for JavaScript-off visitors passes no handlers.
+                    <a
+                      href="/security"
+                      className="focus-ring underline underline-offset-4"
+                      style={{ color: 'var(--color-accent-text)' }}
+                    >
+                      security page
+                    </a>
+                  )}
                   .
                 </p>
               </div>

@@ -19,6 +19,22 @@ describe('Footer', () => {
     expect(onRoadmapClick).toHaveBeenCalledTimes(1);
   });
 
+  it('renders Changelog and Roadmap as plain links when no handler is given', () => {
+    // The JavaScript-off documents for the public pages pass no handlers (item 60).
+    render(<Footer />);
+
+    expect(screen.getByRole('link', { name: 'Changelog' })).toHaveAttribute('href', '/changelog');
+    expect(screen.getByRole('link', { name: 'Roadmap' })).toHaveAttribute('href', '/roadmap');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('keeps Changelog and Roadmap as buttons when handlers are given', () => {
+    render(<Footer {...required} />);
+
+    expect(screen.queryByRole('link', { name: 'Changelog' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Roadmap' })).not.toBeInTheDocument();
+  });
+
   it('omits the optional links when no handler is given', () => {
     render(<Footer {...required} />);
 

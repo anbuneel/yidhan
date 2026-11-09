@@ -8,8 +8,8 @@ interface RoadmapPageProps {
   theme: Theme;
   onThemeToggle: () => void;
   onSignIn: () => void;
-  onLogoClick: () => void;
-  onChangelogClick: () => void;
+  onLogoClick?: () => void;
+  onChangelogClick?: () => void;
   onPrivacyClick?: () => void;
   onTermsClick?: () => void;
   onSupportClick?: () => void;
