@@ -6,8 +6,18 @@ itself and is deliberately not here.
 
 ## Aesthetic direction
 
-Japanese-inspired minimalism with warmth — Muji interiors, Kinfolk spreads. Natural
-materials, generous whitespace, subtle texture.
+Bright Spring, the meaning of the name (`PRODUCT.md`). A paper page in daylight, fresh
+green, and one small marigold sun, as in the logo. Natural materials, generous
+whitespace, subtle texture. Warm and light, never cold or glossy.
+
+The earlier Japanese framing is retired (`DECISIONS.md`, 2026-11-09). Do not cite it as
+direction. Names in the code that still carry it, such as the Kintsugi theme, have not
+been renamed yet.
+
+**Tokens are mid-change.** The colour and type values in this file describe the code as
+it is today. They change under `docs/plans/2026-11-09-themes-and-type-plan.md`: green in
+both themes, a marigold accent, Fraunces for titles. Until that ships, follow the tokens
+in the code.
 
 **Anti-references, and this matters more than the references:** Notion, Obsidian,
 Bear, iA Writer, Apple Notes. Yidhan should not look or feel like any of them. No
@@ -17,8 +27,7 @@ sidebar-heavy layouts, no feature density, no tech-forward aesthetics.
 
 1. **Restraint over features.** Every element must earn its place. When in doubt,
    leave it out.
-2. **Warmth over precision.** Organic, imperfect forms over geometric rigidity.
-   Wabi-sabi: beauty in imperfection.
+2. **Warmth over precision.** Organic, hand-made forms over geometric rigidity.
 3. **Calm over engagement.** The interface should lower the heart rate, not raise
    it.
 4. **Craft over convention.** Sweat the details others skip.
@@ -31,16 +40,17 @@ All colour, type and radius values are CSS custom properties in `src/index.css`.
 Use `--color-*`, `--font-display` / `--font-body`. **Never hardcode a colour** —
 the theme system is the only source of colour truth.
 
-Signature radius: `--radius-card: 2px 24px 4px 24px` (asymmetric wabi-sabi
-corners). Small elements use `2px 12px 4px 12px`.
+Signature radius: `--radius-card: 2px 24px 4px 24px` (the asymmetric leaf
+corner). Small elements use `2px 12px 4px 12px`.
 
 ## Themes
 
 Config in `src/themes/`. Active: **Kintsugi** (light, terracotta) and **Midnight**
-(dark, gold — the default). Washi and Mori are also available. Regenerate CSS with
+(dark, gold). A first visit follows the device setting; dark is the fallback when the
+device states none. Washi and Mori are also available. Regenerate CSS with
 `npm run theme:generate`; preview without writing via `npm run theme:preview`.
 
-Colour philosophy: earthy and natural, drawn from Japanese craft. Never neon, never
+Colour philosophy: earthy and natural, the colours of spring. Never neon, never
 cold blue. Dark themes use deep forest green rather than pure black.
 
 ## Button and accent taxonomy
@@ -80,7 +90,9 @@ Paper noise texture overlay; asymmetric corners; manuscript glow on the editor
 (viewport-following radial gradient); aged-paper gradient on cards (3% accent
 warmth at the bottom); spring-physics animations.
 
-The enso logo mark is two CSS-masked layers filled with theme colours, so the arc
+The logo is the Fraunces wordmark with a marigold sun on the i (`DECISIONS.md`,
+2026-11-09; files in `images/brand/`). The app still renders the old enso mark until
+the logo rollout lands: two CSS-masked layers filled with theme colours, so the arc
 takes `--color-accent` and the seed stays `--color-brand-gold`. Regenerate masks
 with `npm run logo:masks`.
 
