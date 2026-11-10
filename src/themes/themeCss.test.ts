@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   ACTIVE_DARK_THEME,
@@ -195,3 +195,27 @@ describe('the editor sheet', () => {
     expect(indexCss).not.toMatch(/\.editor-manuscript-glow \{[^}]*rgba\(/);
   });
 });
+
+describe('old theme names', () => {
+  it('Settings calls the themes Light and Dark', () => {
+    const settings = read('src/components/SettingsModal.tsx');
+    expect(settings).toContain("{theme === 'light' ? 'Light' : 'Dark'}");
+    expect(settings).not.toMatch(/Kintsugi|Midnight|Washi|Mori/);
+  });
+
+  it('no app source shows a user an old theme name', () => {
+    // Release notes are history; tests may name the old themes to check they are gone.
+    const files = walkSrc(resolve(root, 'src')).filter(
+      (f) => /\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f) && !f.endsWith('changelog.ts'),
+    );
+    const named = files.filter((f) => /\b(Kintsugi|Midnight|Washi|Mori)\b/.test(readFileSync(f, 'utf8')));
+    expect(named).toEqual([]);
+  });
+});
+
+function walkSrc(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    return statSync(path).isDirectory() ? walkSrc(path) : [path];
+  });
+}
