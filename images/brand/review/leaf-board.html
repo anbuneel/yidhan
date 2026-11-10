@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leaf logo review</title>
+<link rel="icon" type="image/svg+xml" href="../source/tile-light-small.svg">
+<!--
+  Review board for the leaf-that-is-a-page logo. Open this file in a browser from the
+  repo checkout: it loads the SVGs from ../source/. Regenerate them with
+  python scripts/brand/leaf.py.
+-->
+<style>
+  @font-face { font-family: Fraunces; src: url(fonts/fraunces.woff2) format("woff2"); font-weight: 100 900; }
+  :root {
+    --page: #FAFAF6; --card: #FFFFFF; --ink: #14241C; --muted: #5A665F; --line: #E1E4DC;
+    --green: #2E7D55; --dpage: #151C18; --dcard: #1B2620; --dink: #E6E3DC; --dmuted: #9AA69F;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font: 500 34px/1.2 Fraunces, Georgia, serif; margin: 0 0 6px; }
+  h2 { font: 500 24px/1.25 Fraunces, Georgia, serif; margin: 56px 0 4px; }
+  h3 { font-size: 15px; margin: 22px 0 8px; }
+  p { margin: 4px 0 10px; max-width: 72ch; }
+  .muted { color: var(--muted); }
+  .note { font-size: 13px; color: var(--muted); }
+  .panel { border: 1px solid var(--line); border-radius: 12px; padding: 20px; background: var(--card); overflow-x: auto; }
+  .panel.dark { background: var(--dpage); color: var(--dink); border-color: #2A362F; }
+  .panel.dark .note { color: var(--dmuted); }
+  .row { display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .cell span { font-size: 12px; color: inherit; opacity: .7; white-space: nowrap; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  img { display: block; }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 99px; background: #E8EFE6; color: #1F583E; margin-left: 6px; vertical-align: 2px; }
+  .proposal { border-left: 3px solid var(--green); padding: 2px 0 2px 12px; margin: 10px 0; }
+  canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; border: 1px solid var(--line); }
+  .dark canvas.px { border-color: #2A362F; }
+
+  /* Browser tab mock */
+  .browser { border-radius: 10px; overflow: hidden; border: 1px solid var(--line); margin-bottom: 14px; max-width: 620px; }
+  .tabs { display: flex; gap: 2px; padding: 8px 8px 0; }
+  .tab { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px 8px 0 0; font: 12px system-ui; width: 190px; white-space: nowrap; overflow: hidden; }
+  .tab img { width: 16px; height: 16px; flex: none; }
+  .bar { height: 34px; }
+  .browser.light { background: #DFE3E8; } .browser.light .tab { color: #333; } .browser.light .tab.on, .browser.light .bar { background: #FFFFFF; }
+  .browser.dark { background: #202124; border-color: #333; } .browser.dark .tab { color: #CCC; } .browser.dark .tab.on, .browser.dark .bar { background: #35363A; }
+  .browser.tint { background: #C9DCEB; } .browser.tint .tab.on, .browser.tint .bar { background: #EAF2F8; }
+  .gicon { width: 16px; height: 16px; border-radius: 4px; flex: none; }
+
+  /* Home screen mock */
+  .phone { width: 300px; border-radius: 28px; padding: 26px 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 10px; }
+  .phone.wall1 { background: linear-gradient(160deg, #3D5A73, #8C6E5D); }
+  .phone.wall2 { background: linear-gradient(160deg, #E9E4D8, #C7D3C2); }
+  .phone.wall3 { background: #111; }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 4px; font: 10px system-ui; color: #fff; text-shadow: 0 1px 2px #0008; }
+  .wall2 .app { color: #222; text-shadow: none; }
+  .ic { width: 54px; height: 54px; overflow: hidden; position: relative; }
+  .ic img, .ic .fake { width: 100%; height: 100%; }
+  .m-circle .ic { border-radius: 50%; }
+  .m-squircle .ic { clip-path: path("M27 0C47 0 54 7 54 27S47 54 27 54 0 47 0 27 7 0 27 0Z"); }
+  .m-rounded .ic { border-radius: 12px; }
+  .m-teardrop .ic { border-radius: 50% 50% 50% 12px; }
+  /* The maskable icon is full bleed; scale the safe zone check up a little (Android shows ~66/108 of the layer). */
+  .fake { display: grid; place-items: center; }
+  .safe { position: absolute; inset: 10%; border: 1px dashed #f0f; border-radius: 50%; pointer-events: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>The leaf that is a page</h1>
+  <p class="muted">Final-artwork review for step 1 of the logo plan (<code>docs/plans/2026-11-09-logo-and-icons-plan.md</code>). The owner decides every open item. Each section shows a proposal, not a decision.</p>
+  <p class="note">Sources: <code>images/brand/source/*.svg</code>, drawn by <code>scripts/brand/leaf.py</code>. Large sizes render at your screen's pixel density. The "actual pixels" strips render at 1x and are then enlarged, so you see what a 1x screen sees.</p>
+
+  <h2>The mark</h2>
+  <div class="grid2">
+    <div class="panel"><div class="row" style="justify-content:center"><img src="../source/mark.svg" width="320" height="320" alt=""></div><p class="note" style="text-align:center">mark.svg</p></div>
+    <div class="panel dark"><div class="row" style="justify-content:center"><img src="../source/mark-on-dark.svg" width="320" height="320" alt=""></div><p class="note" style="text-align:center">mark-on-dark.svg</p></div>
+  </div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="panel"><img src="../source/lockup.svg" style="width:100%;max-width:480px" alt=""><p class="note">lockup.svg: the mark runs from the top of the d to the bottom of the y. No letter in the lockup.</p></div>
+    <div class="panel dark"><img src="../source/lockup-on-dark.svg" style="width:100%;max-width:480px" alt=""><p class="note">lockup-on-dark.svg</p></div>
+  </div>
+
+  <h2>Every size, 16 to 1024</h2>
+  <p>The drawing changes with size: the small mark up to 48px, the plain mark from 64 to 96px, the letter from 128px. That is the proposed size rule (item 1). </p>
+  <h3>Bare mark</h3>
+  <div class="panel"><div class="row" id="bare-light"></div></div>
+  <div class="panel dark" style="margin-top:12px"><div class="row" id="bare-dark"></div></div>
+  <h3>Icon tile, near-white</h3>
+  <div class="panel"><div class="row" id="tile-light-l"></div></div>
+  <div class="panel dark" style="margin-top:12px"><div class="row" id="tile-light-d"></div></div>
+  <h3>Icon tile, dark green</h3>
+  <div class="panel"><div class="row" id="tile-dark-l"></div></div>
+  <div class="panel dark" style="margin-top:12px"><div class="row" id="tile-dark-d"></div></div>
+  <h3>512 and 1024</h3>
+  <div class="panel"><div class="row" style="align-items:flex-start">
+    <div class="cell"><img src="../source/tile-light.svg" width="512" height="512" style="border-radius:22%" alt=""><span>512, near-white</span></div>
+    <div class="cell"><img src="../source/tile-dark.svg" width="512" height="512" style="border-radius:22%" alt=""><span>512, dark green</span></div>
+  </div>
+  <div class="row" style="margin-top:20px"><div class="cell"><img src="../source/mark.svg" width="1024" height="1024" alt=""><span>1024, bare mark</span></div></div></div>
+
+  <h3>Actual pixels at 1x, enlarged 8 times</h3>
+  <div class="panel"><div class="row" id="px-light"></div></div>
+  <div class="panel dark" style="margin-top:12px"><div class="row" id="px-dark"></div></div>
+
+  <h2>In a browser tab</h2>
+  <p>This page's own favicon is <code>tile-light-small.svg</code>. The mocks below use 16px images. A tab shows the favicon unmasked, so the small tiles carry their own rounded corners.</p>
+  <div id="tabs"></div>
+
+  <h2>Android home screen</h2>
+  <p>The tile is full bleed. Each phone applies a different launcher mask. The dashed circle on the first phone is the maskable safe zone (80% of the icon). The mark reaches 92% of its radius.</p>
+  <div class="row" style="align-items:flex-start" id="phones"></div>
+  <p class="note">The other icons are generic stand-ins drawn for this board, not other apps' real icons.</p>
+
+  <h2>Beside other writing apps</h2>
+  <p>Generic stand-ins for the common shapes of writing-app icons: a yellow legal pad, a dark tile with a pen, a blue page, a black tile with a letter, a purple feather, a white tile with a square. None is a real app's icon.</p>
+  <div class="panel"><div class="row" id="peers-l"></div></div>
+  <div class="panel dark" style="margin-top:12px"><div class="row" id="peers-d"></div></div>
+
+  <h2>What the sketch does not settle</h2>
+
+  <h3>1. When the letter shows <span class="tag">proposal</span></h3>
+  <div class="proposal">Show the letter only when it would render at 12px or taller. In practice: the bare mark from 96px, the tile from 128px (the letter is 74% as big on the tile). Below that, the sun is plain. The splash, About, the large app icon and the OG image get the letter; the header, favicons and the 49 to 127px icons do not. At 13 to 16px the letter reads as a knot, not a letter; it becomes legible at about 20px (the 192px tile). If the owner wants it legible wherever it appears, raise the rule to 192px for the tile.</div>
+  <div class="panel"><div class="row" id="threshold"></div></div>
+  <p class="note">Left of each pair: plain. Right: with the letter. The number under each is the letter's rendered height.</p>
+
+  <h3>2. The letter needs a heavier cut <span class="tag">proposal</span></h3>
+  <div class="proposal">Use the "medium" cut: the Inbax outline with a 0.22-unit stroke added (about 1.3 times the thin strokes). "Heavy" fills in the crossing at the bottom at 96 and 128px. Ink or dark green: dark green, as decided; ink is shown for comparison. This is a stroke on the text outline, not a redrawing. A Tamil reader must check it, and Part 2 should flatten the stroke into the path before export.</div>
+  <div class="panel"><div class="row" id="letters"></div></div>
+
+  <h3>3. The icon tile <span class="tag">owner picks</span></h3>
+  <div class="proposal">Both are drawn. Points for each: the near-white tile matches the light page and keeps the leaf the green everyone sees in the app, but it nearly vanishes on white tab bars and white launchers. The dark green tile holds its edge everywhere and makes the marigold sun brighter, but the leaf becomes the light green, so the icon's green is not the app's green. My lean: dark green for the app icon, and either works for the favicon. See every section above.</div>
+  <div class="panel"><div class="row">
+    <div class="cell"><img src="../source/tile-light.svg" width="192" height="192" style="border-radius:22%;box-shadow:0 0 0 1px #E1E4DC" alt=""><span>tile-light.svg</span></div>
+    <div class="cell"><img src="../source/tile-dark.svg" width="192" height="192" style="border-radius:22%" alt=""><span>tile-dark.svg</span></div>
+    <div class="cell"><img src="../source/tile-light-small.svg" width="48" height="48" alt=""><span>tile-light-small</span></div>
+    <div class="cell"><img src="../source/tile-dark-small.svg" width="48" height="48" alt=""><span>tile-dark-small</span></div>
+  </div></div>
+
+  <h3>4. The wordmark's i <span class="tag">proposal</span></h3>
+  <div class="proposal">A plain i everywhere. With the mark beside it, the old sun on the i makes two suns in the lockup, and the second one competes with the mark. The plain i also keeps the wordmark a straight setting of Fraunces.</div>
+  <div class="panel">
+    <div class="row" style="align-items:center"><img src="../source/lockup.svg" height="72" alt=""><span class="note">plain i (proposed)</span></div>
+    <div class="row" style="align-items:center;margin-top:16px"><span style="display:flex;align-items:flex-end;gap:14px"><img src="../source/mark-plain.svg" height="72" alt=""><img src="../wordmark.svg" height="56" alt="" style="margin-bottom:2px"></span><span class="note">the shipped sun-dot wordmark beside the mark: two suns</span></div>
+    <div class="row" style="align-items:center;margin-top:16px"><img src="../source/wordmark-green-y.svg" height="56" alt=""><span class="note">wordmark-green-y.svg alone</span></div>
+  </div>
+
+  <h3>5. Small sizes <span class="tag">proposal</span></h3>
+  <div class="proposal">A separate drawing on a 16-pixel grid: leaf 8 by 9, sun radius 3, a 1px gap, and one 1px line. It is pixel-snapped at 16, 32 and 48. Use it from 16 to 48px. The one-line version keeps a hint of the page; the no-line version is cleaner at 16. My lean: one line. The full drawing scaled down is shown for comparison: its gap and lines turn to mush at 16 and 24.</div>
+  <div class="panel"><div class="row" id="small-cmp"></div></div>
+  <div class="panel dark" style="margin-top:12px"><div class="row" id="small-cmp-d"></div></div>
+
+  <h3>6. One colour <span class="tag">proposal</span></h3>
+  <div class="proposal">One fill for the sun and the leaf. The gap separates them, the lines are cut out, and the letter, when shown, is cut out of the sun. Use it for print, embossing, notification icons and anywhere that takes one colour. Shown in ink and reversed to white.</div>
+  <div class="panel"><div class="row">
+    <div class="cell"><img src="../source/mark-mono.svg" width="160" height="160" alt=""><span>mark-mono.svg</span></div>
+    <div class="cell"><img src="../source/mark-mono-plain.svg" width="96" height="96" alt=""><span>mark-mono-plain</span></div>
+    <div class="cell"><img src="../source/mark-mono-small.svg" width="32" height="32" alt=""><span>32</span></div>
+    <div class="cell"><img src="../source/mark-mono-small.svg" width="16" height="16" alt=""><span>16</span></div>
+  </div></div>
+  <div class="panel dark" style="margin-top:12px"><div class="row">
+    <div class="cell"><img src="../source/mark-mono.svg" width="160" height="160" style="filter:brightness(0) invert(1)" alt=""><span>reversed to white (preview filter)</span></div>
+    <div class="cell"><img src="../source/mark-mono-small.svg" width="24" height="24" style="filter:brightness(0) invert(1)" alt=""><span>24 reversed, e.g. a notification icon</span></div>
+  </div></div>
+
+  <h2>Not done on this board</h2>
+  <p>No search of the app stores for look-alike marks (plan step 4). No trademark clearance. No check of the letter by a Tamil reader. No PNG export; that is Part 2.</p>
+</main>
+
+<script>
+const S = '../source/';
+const sizes = [16, 24, 32, 48, 64, 96, 128, 192, 256];
+// Which drawing to use at each size (the proposed rule).
+const bareFor = (s, dark) => s <= 48 ? (dark ? 'mark-small-on-dark' : 'mark-small') : s < 96 ? (dark ? 'mark-plain-on-dark' : 'mark-plain') : (dark ? 'mark-on-dark' : 'mark');
+const tileFor = (s, tone) => s <= 48 ? `tile-${tone}-small` : s < 128 ? `tile-${tone}-plain` : `tile-${tone}`;
+const el = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstChild; };
+function cell(src, s, label, style = '') {
+  return el(`<div class="cell"><img src="${S}${src}.svg" width="${s}" height="${s}" style="${style}" alt=""><span>${label}</span></div>`);
+}
+const round = (s) => s <= 48 ? '' : 'border-radius:22%';
+for (const [id, dark] of [['bare-light', false], ['bare-dark', true]])
+  for (const s of sizes) document.getElementById(id).append(cell(bareFor(s, dark), s, s));
+for (const tone of ['light', 'dark'])
+  for (const [suffix] of [['l'], ['d']])
+    for (const s of sizes) document.getElementById(`tile-${tone}-${suffix}`).append(cell(tileFor(s, tone), s, s, round(s)));
+
+// Actual pixels: draw each SVG into a canvas at 1x, then show it 8x with no smoothing.
+function px(src, s, label, bg) {
+  const c = document.createElement('canvas'); c.width = s; c.height = s; c.className = 'px';
+  c.style.width = s * 8 + 'px'; c.style.height = s * 8 + 'px';
+  const img = new Image(); img.onload = () => { const x = c.getContext('2d'); x.fillStyle = bg; x.fillRect(0, 0, s, s); x.drawImage(img, 0, 0, s, s); };
+  img.src = S + src + '.svg';
+  const d = el(`<div class="cell"><span>${label}</span></div>`); d.prepend(c); return d;
+}
+for (const [id, bg, dark] of [['px-light', '#FFFFFF', false], ['px-dark', '#151C18', true]]) {
+  const r = document.getElementById(id);
+  r.append(px(dark ? 'mark-small-on-dark' : 'mark-small', 16, 'bare 16', bg));
+  r.append(px('tile-light-small', 16, 'near-white 16', bg));
+  r.append(px('tile-dark-small', 16, 'dark green 16', bg));
+  r.append(px('tile-light-small', 24, 'near-white 24', bg));
+  r.append(px('tile-dark-small', 32, 'dark green 32', bg));
+}
+
+// Browser tabs.
+const otherTabs = ['#4A7BD0', '#D0574A', '#6A6A6A'];
+function browser(cls, fav) {
+  const others = otherTabs.map((c, i) => `<div class="tab"><span class="gicon" style="background:${c}"></span>Other tab ${i + 1}</div>`).join('');
+  return el(`<div class="browser ${cls}"><div class="tabs"><div class="tab on"><img src="${S}${fav}.svg" alt="">Yidhan</div>${others}</div><div class="bar"></div></div>`);
+}
+const tabs = document.getElementById('tabs');
+for (const fav of ['tile-light-small', 'tile-dark-small', 'mark-small'])
+  for (const cls of ['light', 'dark', 'tint']) {
+    const b = browser(cls, fav); tabs.append(b);
+    b.insertAdjacentHTML('beforebegin', cls === 'light' ? `<h3>${fav}.svg</h3>` : '');
+  }
+
+// Generic stand-ins for other apps.
+const stand = [
+  ['#F4CE3D', '<svg viewBox="0 0 54 54"><g stroke="#B08A10" stroke-width="2.5" stroke-linecap="round"><path d="M14 20H40M14 28H40M14 36H32"/></g></svg>', 'Pad'],
+  ['#2B2B2B', '<svg viewBox="0 0 54 54"><path d="M17 37 35 19l4 4-18 18h-4z" fill="#F0F0F0"/></svg>', 'Pen'],
+  ['#3B82F6', '<svg viewBox="0 0 54 54"><rect x="16" y="13" width="22" height="28" rx="3" fill="#fff"/><path d="M21 22H33M21 28H33M21 34H28" stroke="#3B82F6" stroke-width="2.4" stroke-linecap="round"/></svg>', 'Page'],
+  ['#111111', '<svg viewBox="0 0 54 54"><text x="27" y="37" font-family="Georgia" font-size="28" fill="#fff" text-anchor="middle">W</text></svg>', 'Letter'],
+  ['#7C5CC4', '<svg viewBox="0 0 54 54"><path d="M36 14C24 16 18 26 18 40c6-10 12-14 18-26z" fill="#fff"/></svg>', 'Quill'],
+  ['#FFFFFF', '<svg viewBox="0 0 54 54"><rect x="15" y="15" width="24" height="24" rx="5" fill="none" stroke="#222" stroke-width="3"/></svg>', 'Blocks'],
+];
+const fake = ([bg, svg]) => `<div class="fake" style="background:${bg}${bg === '#FFFFFF' ? ';box-shadow:inset 0 0 0 1px #E1E4DC' : ''}">${svg}</div>`;
+function phone(wall, mask, tone, safe) {
+  const ours = `<div class="app"><div class="ic"><img src="${S}tile-${tone}-plain.svg" alt="">${safe ? '<div class="safe"></div>' : ''}</div>Yidhan</div>`;
+  const apps = stand.map((a) => `<div class="app"><div class="ic">${fake(a)}</div>${a[2]}</div>`);
+  apps.splice(1, 0, ours);
+  apps.push(`<div class="app"><div class="ic"><img src="${S}tile-${tone === 'light' ? 'dark' : 'light'}-plain.svg" alt=""></div>Yidhan alt</div>`);
+  return el(`<div class="cell"><div class="phone ${wall} ${mask}">${apps.join('')}</div><span>${mask.slice(2)} mask, ${tone} tile</span></div>`);
+}
+const phones = document.getElementById('phones');
+phones.append(phone('wall1', 'm-circle', 'dark', true));
+phones.append(phone('wall2', 'm-squircle', 'light', false));
+phones.append(phone('wall3', 'm-rounded', 'dark', false));
+phones.append(phone('wall2', 'm-teardrop', 'dark', false));
+
+for (const [id] of [['peers-l'], ['peers-d']]) {
+  const r = document.getElementById(id);
+  for (const s of [64, 48]) {
+    const g = el(`<div style="display:flex;gap:14px;align-items:center"></div>`);
+    g.append(el(`<img src="${S}${tileFor(s, 'light')}.svg" width="${s}" height="${s}" style="border-radius:22%" alt="">`));
+    g.append(el(`<img src="${S}${tileFor(s, 'dark')}.svg" width="${s}" height="${s}" style="border-radius:22%" alt="">`));
+    for (const a of stand) { const f = el(fake(a)); f.style.cssText += `;width:${s}px;height:${s}px;border-radius:22%`; g.append(f); }
+    r.append(g);
+  }
+}
+
+// Item 1: plain vs letter at the threshold sizes.
+const th = document.getElementById('threshold');
+for (const [s, kind] of [[64, 'bare'], [96, 'bare'], [128, 'bare'], [96, 'tile'], [128, 'tile'], [192, 'tile']]) {
+  const k = kind === 'bare' ? 17 / 100.25 : 17 * 0.74 / 120; // letter height as a share of the image
+  const plain = kind === 'bare' ? 'mark-plain' : 'tile-dark-plain', full = kind === 'bare' ? 'mark' : 'tile-dark';
+  const st = kind === 'tile' ? 'border-radius:22%' : '';
+  const g = el(`<div class="cell"><div style="display:flex;gap:8px;align-items:flex-end">
+    <img src="${S}${plain}.svg" width="${s}" height="${s}" style="${st}" alt=""><img src="${S}${full}.svg" width="${s}" height="${s}" style="${st}" alt=""></div>
+    <span>${kind} ${s}px, letter ${(s * k).toFixed(1)}px</span></div>`);
+  th.append(g);
+}
+
+// Item 2: letter weights, as close-ups of the sun.
+const lt = document.getElementById('letters');
+for (const [f, label] of [['mark-letter-text', 'text (Inbax)'], ['mark-letter-medium', 'medium (proposed)'], ['mark-letter-heavy', 'heavy'], ['mark-letter-ink', 'medium, in ink']]) {
+  const g = el(`<div class="cell"><div style="display:flex;gap:10px;align-items:flex-end">
+    <div style="width:220px;height:220px;overflow:hidden"><img src="${S}${f}.svg" width="820" height="820" style="margin:-64px 0 0 -115px" alt=""></div>
+    <img src="${S}${f}.svg" width="128" height="128" alt=""><img src="${S}${f}.svg" width="96" height="96" alt=""></div><span>${label}: close-up, 128, 96</span></div>`);
+  lt.append(g);
+}
+
+// Item 5: small drawings vs the full drawing scaled down.
+for (const [id, dark] of [['small-cmp', false], ['small-cmp-d', true]]) {
+  const r = document.getElementById(id);
+  for (const [f, label] of [[dark ? 'mark-small-on-dark' : 'mark-small', 'small, one line'], ['mark-small-no-line', 'small, no line'], [dark ? 'mark-plain-on-dark' : 'mark-plain', 'full drawing, scaled']]) {
+    const g = el(`<div class="cell"><div style="display:flex;gap:10px;align-items:flex-end"></div><span>${label}: 16, 24, 32, 48</span></div>`);
+    for (const s of [16, 24, 32, 48]) g.firstChild.append(el(`<img src="${S}${f}.svg" width="${s}" height="${s}" alt="">`));
+    r.append(g);
+  }
+  r.append(px(dark ? 'mark-small-on-dark' : 'mark-small', 16, '16 at 1x, one line', dark ? '#151C18' : '#FFFFFF'));
+  r.append(px('mark-small-no-line', 16, '16 at 1x, no line', dark ? '#151C18' : '#FFFFFF'));
+  r.append(px(dark ? 'mark-plain-on-dark' : 'mark-plain', 16, '16 at 1x, full drawing', dark ? '#151C18' : '#FFFFFF'));
+}
+</script>
+</body>
+</html>
