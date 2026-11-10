@@ -263,7 +263,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           position: relative;
         }
 
-        /* Title — Cormorant, the unambiguous hero */
+        /* Title — the display face, the unambiguous hero */
         .page-title {
           font-family: var(--font-display);
           font-weight: 300;
@@ -281,7 +281,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           pointer-events: none;
         }
 
-        /* Prose — exact editor parity (Source Sans 3, 1.2rem, 1.75 line-height) */
+        /* Prose — exact editor parity (body face, 1.2rem, 1.75 line-height) */
         .page-prose {
           font-family: var(--font-body);
           font-size: 1.2rem;

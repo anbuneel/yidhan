@@ -1552,9 +1552,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               onKeyDown={handleTitleKeyDown}
               onBlur={performSave}
               placeholder="Untitled"
-              className="w-full font-semibold bg-transparent outline-none resize-none overflow-hidden leading-tight"
+              className="editor-title w-full font-medium bg-transparent outline-none resize-none overflow-hidden leading-tight"
               style={{
-                fontFamily: 'var(--font-display)',
+                // The display cut has one weight, 500 (font-medium).
+                fontFamily: 'var(--font-title)',
                 fontSize: '2.25rem',
                 color: 'var(--color-text-primary)',
                 letterSpacing: '-0.02em',

@@ -10,10 +10,10 @@ import { publicPageDocumentsPlugin } from './scripts/public-page-documents.mjs'
 // https://vite.dev/config/
 export default defineConfig({
   build: {
-    // Keep fonts and the logo masks as files. The smallest subsets (the 1KB
-    // JetBrains Mono cyrillic-ext face, the 4KB seed mask) sit under the default
-    // inline limit and would be embedded in the CSS as base64 instead — always
-    // downloaded, which defeats unicode-range, and larger than the file.
+    // Keep fonts and the logo masks as files, even under the default inline
+    // limit (the 4KB seed mask is). An inlined font is embedded in the CSS as
+    // base64 — always downloaded, which defeats unicode-range, and larger than
+    // the file.
     assetsInlineLimit: (filePath) =>
       /[\\/]assets[\\/](brand|fonts)[\\/]/.test(filePath) ? false : undefined,
     rollupOptions: {

@@ -59,7 +59,7 @@ export function RecoveryKeyUnlockForm({ onUsePassphrase }: { onUsePassphrase: ()
           autoFocus
           disabled={isSubmitting}
           className="w-full px-3 py-2 text-sm focus-ring"
-          style={{ ...vaultInputStyle, fontFamily: 'ui-monospace, monospace' }}
+          style={{ ...vaultInputStyle, fontFamily: 'var(--font-mono)' }}
         />
       </div>
 

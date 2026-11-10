@@ -339,8 +339,8 @@ export function LandingPage({
         }
         .landing-intro { display: flex; flex-direction: column; align-items: flex-start; }
         .landing-headline {
-          font-family: var(--font-display);
-          font-weight: 300;
+          font-family: var(--font-title);
+          font-weight: 500;
           font-size: clamp(2.75rem, 4.6vw, 4rem);
           line-height: 1.05;
           letter-spacing: 0;
@@ -468,7 +468,6 @@ export function LandingPage({
           font-size: 0.72rem; font-weight: 600; white-space: nowrap;
         }
         .landing-tb[data-label="I"] { font-family: var(--font-display); font-style: italic; font-size: 0.95rem; }
-        .landing-tb[data-label="</>"] { font-family: var(--font-mono); font-weight: 400; }
         .landing-tb[data-label="B"] { font-size: 0.85rem; }
         .landing-manuscript-text {
           font-family: var(--font-body);

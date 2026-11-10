@@ -96,7 +96,7 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     run: ({ editor }, range) => { startChain(editor, range).toggleStrike().run(); },
   },
   {
-    id: 'inlineCode', label: 'Inline code', shortLabel: textLabel('</>', 'font-mono text-[10px]'),
+    id: 'inlineCode', label: 'Inline code', shortLabel: textLabel('</>', 'text-[10px]'),
     description: 'Format a short code fragment', searchTerms: ['code', 'monospace', 'inline'], group: 'text', shortcut: 'Ctrl+E',
     isActive: ({ editor }) => editor.isActive('code'),
     run: ({ editor }, range) => { startChain(editor, range).toggleCode().run(); },
@@ -155,7 +155,7 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     run: ({ editor }, range) => { startChain(editor, range).toggleBlockquote().run(); },
   },
   {
-    id: 'codeBlock', label: 'Code block', shortLabel: textLabel('Code', 'font-mono text-[9px]'),
+    id: 'codeBlock', label: 'Code block', shortLabel: textLabel('Code', 'text-[9px]'),
     description: 'Create a code block', searchTerms: [...shared.structure, 'pre', 'snippet'], group: 'structure',
     isActive: ({ editor }) => editor.isActive('codeBlock'),
     run: ({ editor }, range) => { startChain(editor, range).toggleCodeBlock().run(); },
