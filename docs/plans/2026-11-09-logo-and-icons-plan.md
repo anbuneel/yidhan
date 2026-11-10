@@ -51,8 +51,11 @@ answers:
 6. **One colour.** One fill, with the gap, the lines and the letter cut out
    (`mark-mono*.svg`).
 
-Still to do from Part 1: a Tamil reader has not checked the letter, and the stores
-have not been searched for look-alike marks.
+On 2026-11-09 the owner, who reads Tamil, checked the thickened letter and approved it.
+The owner also chose to start the rollout before the store search for look-alike marks;
+that search is still to do, before the release to `main`. The old artwork (the "yi"
+monogram, the sun-dot wordmark, the sprout) moves to `images/brand/archive/` in the
+rollout PR.
 
 ## Work
 
