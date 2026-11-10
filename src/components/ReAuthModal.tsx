@@ -256,14 +256,14 @@ export function ReAuthModal({
               style={{
                 fontFamily: 'var(--font-body)',
                 background: 'var(--color-bg-secondary)',
-                border: '1px solid var(--glass-border)',
+                border: '1px solid var(--color-input-border)',
                 color: 'var(--color-text-primary)',
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = 'var(--color-accent)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--glass-border)';
+                e.currentTarget.style.borderColor = 'var(--color-input-border)';
               }}
             />
           </div>

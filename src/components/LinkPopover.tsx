@@ -71,7 +71,7 @@ export function LinkPopover({ editor, onClose }: LinkPopoverProps) {
       <input ref={input} id="editor-link-address" type="text" inputMode="url" value={href}
         onChange={event => { setHref(event.target.value); setError(''); }}
         aria-invalid={!!error} aria-describedby={error ? 'editor-link-error' : undefined}
-        className="w-full rounded border border-[var(--glass-border)] bg-[var(--color-bg-primary)] px-3 py-2 text-base"
+        className="w-full rounded border border-[var(--color-input-border)] bg-[var(--color-bg-primary)] px-3 py-2 text-base"
         placeholder="https://example.com" />
       {error && <p id="editor-link-error" role="alert" className="mt-2 text-sm text-[var(--color-error)]">{error}</p>}
       {hadLink && visitAddress && <a href={visitAddress} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm underline">Open link</a>}

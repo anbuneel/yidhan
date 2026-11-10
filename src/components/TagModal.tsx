@@ -178,7 +178,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
                 background: 'var(--color-bg-secondary)',
                 border: error
                   ? '1px solid var(--color-destructive)'
-                  : '1px solid var(--glass-border)',
+                  : '1px solid var(--color-input-border)',
                 color: 'var(--color-text-primary)',
               }}
               onFocus={(e) => {
@@ -188,7 +188,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
               }}
               onBlur={(e) => {
                 if (!error) {
-                  e.currentTarget.style.borderColor = 'var(--glass-border)';
+                  e.currentTarget.style.borderColor = 'var(--color-input-border)';
                 }
               }}
             />

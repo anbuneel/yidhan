@@ -16,8 +16,8 @@ A calm, distraction-free note-taking app — where thoughts bloom with clarity.
 - **Cross-Device Sync** - Notes sync across devices in ~3 seconds with incremental pull, server-authoritative timestamps, and pagination
 - **Recoverable Sync Failures** - Repeated sync failures move into a blocked state with a visible retry action instead of silently dropping local changes
 - **Real-time Updates** - Changes appear instantly across tabs and devices with self-echo suppression
-- **Beautiful Design** - Warm, paper-like aesthetics with asymmetric "wabi-sabi" card corners and a painterly Yidhan brand mark
-- **Light & Dark Themes** - Kintsugi (warm light) and Midnight (forest green dark) themes
+- **Calm Design** - A quiet off-white or green-black page with a faint grain, smooth white cards, one green, and the leaf mark
+- **Light & Dark Themes** - Light and Dark, following the device setting until you choose one
 - **Tag Organization** - Organize notes with colorful tags and filter by multiple tags
 - **Tag Management** - Create, edit, and delete tags with a beautiful color picker
 - **Landing Page** - Quiet hero that becomes a lightweight writing surface on desktop, saves the first draft into signup, and leads directly into real note cards and the privacy promise
@@ -93,12 +93,12 @@ See [the roadmap](docs/roadmap.md) for what's planned on mobile.
 - **Rich Text:** Tiptap (ProseMirror)
 - **Backend:** Supabase (PostgreSQL, Auth, Real-time)
 - **Native:** Capacitor (Android ready, iOS planned)
-- **Fonts:** Cormorant Garamond, Source Sans 3 (self-hosted, no third-party font requests)
+- **Fonts:** Newsreader, Courier Prime for code, Literata for Cyrillic and Greek (self-hosted, no third-party font requests)
 
 Bundled fonts use the SIL Open Font License 1.1. Full notices ship with the web and native builds:
-[Cormorant Garamond](public/licenses/fonts/cormorant-garamond-OFL.txt),
-[Source Sans 3](public/licenses/fonts/source-sans-3-OFL.txt), and
-[JetBrains Mono](public/licenses/fonts/jetbrains-mono-OFL.txt).
+[Newsreader](public/licenses/fonts/newsreader-OFL.txt),
+[Courier Prime](public/licenses/fonts/courier-prime-OFL.txt), and
+[Literata](public/licenses/fonts/literata-OFL.txt).
 
 ## Documentation
 
@@ -214,11 +214,11 @@ here would drift from it.
 Yidhan embraces **wabi-sabi** - finding beauty in imperfection:
 
 - **Asymmetric corners** on cards (`2px 24px 4px 24px`)
-- **Warm, organic colors** - terracotta and antique gold accents
+- **One green** for buttons and links, and marigold only in the logo sun
 - **Curated tag palette** - 8 muted, earthy colors
-- **Serif typography** for display text (Cormorant Garamond)
+- **One serif** for every word (Newsreader)
 - **Theme-aware logo** - the leaf mark and wordmark are inline SVG; the leaf follows the theme and the sun stays marigold
-- **Subtle paper texture** overlay
+- **A faint grain** on the page background only; cards and the editor stay smooth
 - **Gentle animations** that feel natural
 
 ## Tag Colors

@@ -95,7 +95,7 @@ export function TagFilterBar({
     <div
       className="relative z-20"
       style={{
-        background: 'var(--color-bg-primary)',
+        background: 'var(--page-background)',
         // Mobile: no height restriction, Desktop: collapse to 2 rows
         ...(shouldCollapse ? {
           maxHeight: '108px',
@@ -185,7 +185,7 @@ export function TagFilterBar({
             "
             style={{
               fontFamily: 'var(--font-body)',
-              color: 'var(--color-accent)',
+              color: 'var(--color-accent-text)',
               background: 'var(--color-accent-glow)',
               borderRadius: '2px 8px 4px 8px',
               border: '1px solid var(--color-accent)',

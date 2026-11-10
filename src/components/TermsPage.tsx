@@ -30,7 +30,7 @@ export function TermsPage({
   return (
     <div
       className="min-h-screen flex flex-col"
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
     >
       <HeaderShell
         theme={theme}
@@ -221,7 +221,7 @@ export function TermsPage({
                   {onPrivacyClick ? (
                     <button type="button"
                       onClick={onPrivacyClick}
-                      style={{ color: 'var(--color-accent)', textDecoration: 'underline', textUnderlineOffset: '3px', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
+                      style={{ color: 'var(--color-accent-text)', textDecoration: 'underline', textUnderlineOffset: '3px', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
                     >
                       Privacy Policy
                     </button>
@@ -229,7 +229,7 @@ export function TermsPage({
                     // The static document for JavaScript-off visitors passes no handlers.
                     <a
                       href="/privacy"
-                      style={{ color: 'var(--color-accent)', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                      style={{ color: 'var(--color-accent-text)', textDecoration: 'underline', textUnderlineOffset: '3px' }}
                     >
                       Privacy Policy
                     </a>

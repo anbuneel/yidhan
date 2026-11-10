@@ -30,7 +30,7 @@ export function SupportPage({
   return (
     <div
       className="min-h-screen flex flex-col"
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
     >
       <HeaderShell
         theme={theme}

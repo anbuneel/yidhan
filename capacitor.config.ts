@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Yidhan',
   webDir: 'dist',
   android: {
-    backgroundColor: '#1a1f1a', // Dark theme background (Midnight theme)
+    backgroundColor: '#151C18', // Dark theme page (src/themes/dark.ts)
     allowMixedContent: false,
     captureInput: true,
     webContentsDebuggingEnabled: false,
@@ -19,7 +19,7 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
-      backgroundColor: '#1a1f1a',
+      backgroundColor: '#151C18',
       showSpinner: false,
       launchAutoHide: true,
     },

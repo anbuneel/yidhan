@@ -825,7 +825,8 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   // Full page mode: wrap in page container with theme toggle
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4 relative bg-[var(--color-bg-primary)]"
+      className="min-h-screen flex items-center justify-center px-4 relative"
+      style={{ background: 'var(--page-background)' }}
     >
       {/* Theme Toggle */}
       <button type="button"

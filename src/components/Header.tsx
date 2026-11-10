@@ -131,7 +131,7 @@ export function Header({
             background: 'var(--color-bg-secondary)',
             border: isSearchFocused
               ? '1px solid var(--color-accent)'
-              : '1px solid var(--glass-border)',
+              : '1px solid var(--color-input-border)',
             boxShadow: isSearchFocused
               ? '0 4px 20px var(--color-accent-glow)'
               : 'none',
