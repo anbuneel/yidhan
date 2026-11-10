@@ -61,14 +61,14 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div
           className="min-h-screen flex items-center justify-center px-4"
-          style={{ background: 'var(--color-bg-primary, #1a1f1a)' }}
+          style={{ background: 'var(--color-bg-primary, #151C18)' }}
         >
           <div
             className="w-full max-w-md p-8 text-center"
             style={{
-              background: 'var(--color-bg-secondary, #232823)',
-              borderRadius: '2px 24px 4px 24px',
-              border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.08))',
+              background: 'var(--color-bg-secondary, #18211C)',
+              borderRadius: 'var(--radius-plain)',
+              border: '1px solid var(--glass-border, #2A362F)',
             }}
           >
             {/* Decorative icon */}
@@ -76,8 +76,8 @@ export class ErrorBoundary extends Component<Props, State> {
               className="size-12 mx-auto mb-4 rounded-full flex items-center justify-center"
               style={{
                 background: isChunkError
-                  ? 'var(--color-accent-glow, rgba(212, 175, 55, 0.15))'
-                  : 'var(--color-error-light, rgba(220, 38, 38, 0.1))',
+                  ? 'var(--color-accent-glow, rgba(134, 197, 160, 0.14))'
+                  : 'var(--color-error-light, #3A2421)',
               }}
             >
               {isChunkError ? (
@@ -85,7 +85,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <svg
                   className="size-6"
                   fill="none"
-                  stroke="var(--color-accent, #D4AF37)"
+                  stroke="var(--color-accent, #86C5A0)"
                   viewBox="0 0 24 24"
                 >
                   <path
@@ -100,7 +100,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <svg
                   className="size-6"
                   fill="none"
-                  stroke="var(--color-error, #DC2626)"
+                  stroke="var(--color-error, #F09A8F)"
                   viewBox="0 0 24 24"
                 >
                   <path
@@ -117,7 +117,7 @@ export class ErrorBoundary extends Component<Props, State> {
               className="text-2xl font-semibold mb-4"
               style={{
                 fontFamily: 'var(--font-display, Georgia, serif)',
-                color: 'var(--color-text-primary, #f5f5f0)',
+                color: 'var(--color-text-primary, #E6E3DC)',
               }}
             >
               {isChunkError ? "Couldn't finish loading" : 'Something went wrong'}
@@ -126,7 +126,7 @@ export class ErrorBoundary extends Component<Props, State> {
               className="mb-6"
               style={{
                 fontFamily: 'var(--font-body, Inter, sans-serif)',
-                color: 'var(--color-text-secondary, rgba(245, 245, 240, 0.7))',
+                color: 'var(--color-text-secondary, #B9BFB8)',
                 fontSize: '0.95rem',
                 lineHeight: 1.6,
               }}
@@ -141,7 +141,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <details
                 className="mb-6 text-left"
                 style={{
-                  background: 'var(--color-bg-tertiary, #1a1f1a)',
+                  background: 'var(--color-bg-tertiary, #1F2C25)',
                   borderRadius: '8px',
                   padding: '12px',
                 }}
@@ -150,7 +150,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   className="cursor-pointer text-sm mb-2"
                   style={{
                     fontFamily: 'var(--font-body, Inter, sans-serif)',
-                    color: 'var(--color-text-secondary, rgba(245, 245, 240, 0.7))',
+                    color: 'var(--color-text-secondary, #B9BFB8)',
                   }}
                 >
                   Error details
@@ -159,7 +159,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   className="text-xs overflow-auto"
                   style={{
                     fontFamily: 'var(--font-mono, monospace)',
-                    color: 'var(--color-destructive, #DC2626)',
+                    color: 'var(--color-destructive, #E8877C)',
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
                   }}
@@ -174,14 +174,14 @@ export class ErrorBoundary extends Component<Props, State> {
               className="px-6 py-3 rounded-lg font-medium transition-all duration-200"
               style={{
                 fontFamily: 'var(--font-body, Inter, sans-serif)',
-                background: 'var(--color-cta-bg, #D4AF37)',
-                color: 'var(--color-cta-text, #16161F)',
+                background: 'var(--color-cta-bg, #86C5A0)',
+                color: 'var(--color-cta-text, #13201A)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--color-cta-bg-hover, #E5C44A)';
+                e.currentTarget.style.background = 'var(--color-cta-bg-hover, #9AD0B0)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-cta-bg, #D4AF37)';
+                e.currentTarget.style.background = 'var(--color-cta-bg, #86C5A0)';
               }}
             >
               Refresh Page

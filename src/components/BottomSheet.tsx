@@ -216,7 +216,7 @@ export function BottomSheet({
           tabIndex={-1}
           className={`
             relative z-10 w-full max-w-md mx-4 max-h-[85vh] overflow-hidden
-            rounded-2xl shadow-2xl
+            rounded-2xl shadow-[var(--shadow-lg)]
             p-0 border-0
             ${className}
           `}
@@ -282,7 +282,7 @@ export function BottomSheet({
         tabIndex={-1}
         className={`
           fixed left-0 right-0 bottom-0 z-50
-          rounded-t-3xl shadow-2xl overflow-hidden
+          rounded-t-3xl shadow-[var(--shadow-lg)] overflow-hidden
           ${className}
         `}
         style={{

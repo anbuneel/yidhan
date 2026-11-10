@@ -132,7 +132,7 @@ export function HeaderShell({
         {/* Separator - only show if rightActions provided */}
         {rightActions && (
           <div
-            className="w-px h-5 md:h-6 mx-0.5 md:mx-1"
+            className="w-px h-5 md:h-6 mx-0.5 md:mx-1 max-[399px]:hidden"
             style={{ background: 'var(--glass-border)' }}
           />
         )}
@@ -204,7 +204,7 @@ export function HeaderShell({
                   min-w-[200px]
                   py-2
                   rounded-lg
-                  shadow-lg
+                  shadow-[var(--shadow-lg)]
                   z-50
                 "
                 style={{

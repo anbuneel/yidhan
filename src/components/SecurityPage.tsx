@@ -27,7 +27,7 @@ interface SecurityPageProps {
 
 const bodyStyle = {
   color: 'var(--color-text-secondary)',
-  fontWeight: 300,
+  fontWeight: 400,
   lineHeight: 1.7,
   fontSize: '0.95rem',
 } as const;
@@ -72,7 +72,7 @@ export function SecurityPage({
   onSettingsClick,
 }: SecurityPageProps) {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg-primary)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--page-background)' }}>
       <HeaderShell
         theme={theme}
         onThemeToggle={onThemeToggle}
@@ -99,7 +99,7 @@ export function SecurityPage({
             style={{
               fontFamily: 'var(--font-body)',
               color: 'var(--color-text-secondary)',
-              fontWeight: 300,
+              fontWeight: 400,
               fontStyle: 'italic',
             }}
           >

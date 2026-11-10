@@ -263,10 +263,10 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           position: relative;
         }
 
-        /* Title — Cormorant, the unambiguous hero */
+        /* Title — the display face, the unambiguous hero */
         .page-title {
           font-family: var(--font-display);
-          font-weight: 300;
+          font-weight: 400;
           color: var(--color-text-primary);
           letter-spacing: -0.025em;
           line-height: 1.04;
@@ -281,7 +281,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           pointer-events: none;
         }
 
-        /* Prose — exact editor parity (Source Sans 3, 1.2rem, 1.75 line-height) */
+        /* Prose — exact editor parity (body face, 1.2rem, 1.75 line-height) */
         .page-prose {
           font-family: var(--font-body);
           font-size: 1.2rem;
@@ -347,7 +347,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           color: var(--color-accent);
           background: color-mix(in srgb, var(--color-accent) 6%, transparent);
           border: 1px solid color-mix(in srgb, var(--color-accent) 28%, transparent);
-          border-radius: var(--radius-card);
+          border-radius: var(--radius-pill);
           padding: 0.7rem 1.5rem;
           cursor: pointer;
           letter-spacing: 0.005em;
@@ -419,7 +419,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
         }
         .page-editor-title-input {
           font-family: var(--font-display);
-          font-weight: 300;
+          font-weight: 400;
           color: var(--color-text-primary);
           letter-spacing: -0.02em;
           line-height: 1.1;

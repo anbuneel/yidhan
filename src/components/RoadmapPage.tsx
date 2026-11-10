@@ -26,28 +26,28 @@ const statusMateriality: Record<RoadmapStatus, React.CSSProperties> = {
   shipped: {
     background: 'linear-gradient(to bottom, var(--color-card-bg), color-mix(in srgb, var(--color-card-bg) 94%, var(--color-success)))',
     border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-card)',
+    borderRadius: 'var(--radius-plain)',
     boxShadow: 'var(--shadow-md)',
     opacity: 1,
   },
   'in-progress': {
     background: 'linear-gradient(to bottom, var(--color-card-bg), color-mix(in srgb, var(--color-card-bg) 97%, var(--color-accent)))',
     border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-card)',
+    borderRadius: 'var(--radius-plain)',
     boxShadow: 'var(--shadow-sm)',
     opacity: 1,
   },
   'coming-soon': {
     background: 'var(--color-card-bg)',
     border: '1px dashed var(--glass-border)',
-    borderRadius: 'var(--radius-card)',
+    borderRadius: 'var(--radius-plain)',
     boxShadow: 'none',
     opacity: 0.8,
   },
   exploring: {
     background: 'transparent',
     border: '1px solid transparent',
-    borderRadius: 'var(--radius-card)',
+    borderRadius: 'var(--radius-plain)',
     boxShadow: 'none',
     opacity: 0.55,
   },
@@ -123,7 +123,7 @@ export function RoadmapPage({
   return (
     <div
       className="min-h-screen flex flex-col"
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
     >
       <HeaderShell
         theme={theme}
@@ -153,7 +153,7 @@ export function RoadmapPage({
             style={{
               fontFamily: 'var(--font-body)',
               color: 'var(--color-text-secondary)',
-              fontWeight: 300,
+              fontWeight: 400,
               fontStyle: 'italic',
             }}
           >
@@ -183,10 +183,9 @@ export function RoadmapPage({
                     className="mb-5"
                     style={{
                       fontFamily: 'var(--font-body)',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.12em',
+                      fontSize: '1rem',
+                      fontWeight: 400,
+                      fontStyle: 'italic',
                       ...sectionLabelStyle[status],
                     }}
                   >
@@ -222,7 +221,7 @@ export function RoadmapPage({
                             color: status === 'exploring'
                               ? 'var(--color-text-tertiary)'
                               : 'var(--color-text-secondary)',
-                            fontWeight: 300,
+                            fontWeight: 400,
                             lineHeight: 1.6,
                           }}
                         >
@@ -266,7 +265,7 @@ export function RoadmapPage({
         }
         @keyframes roadmap-breath {
           0%, 100% { box-shadow: var(--shadow-sm); }
-          50% { box-shadow: var(--shadow-sm), 0 0 12px var(--color-accent-glow); }
+          50% { box-shadow: var(--shadow-md); }
         }
 
         /* Hide thread on mobile — not enough margin space */

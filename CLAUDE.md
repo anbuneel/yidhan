@@ -45,10 +45,8 @@ Status: PROPOSAL | ACTIVE | COMPLETE | SUPERSEDED
 Last verified: YYYY-MM-DD
 ```
 
-**The cap on ACTIVE plans is one**, enforced by `.githooks/pre-commit`. It is three for
-now: the two redesign plans (logo and icons, themes and type) run beside the launch
-plan (`DECISIONS.md`, 2026-11-09). It returns to one when those two are COMPLETE. To
-open another, close one, or record why in `DECISIONS.md` and raise `MAX_ACTIVE_PLANS`.
+**The cap on ACTIVE plans is one**, enforced by `.githooks/pre-commit`. To open
+another, close one, or record why in `DECISIONS.md` and raise `MAX_ACTIVE_PLANS`.
 Intent shifts → the old plan flips to SUPERSEDED in the same commit that creates its
 replacement. Work ships → it flips to COMPLETE and moves to `docs/archive/`. A
 blocker's detail belongs in its GitHub issue; the plan links it and records only the

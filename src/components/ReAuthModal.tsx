@@ -144,13 +144,13 @@ export function ReAuthModal({
         open
         className="
           relative z-10 w-full max-w-sm
-          shadow-2xl
+          shadow-[var(--shadow-lg)]
           animate-[modal-enter_300ms_ease-out]
           p-0 border-0
         "
         style={{
           background: 'var(--color-bg-primary)',
-          borderRadius: 'var(--radius-card)',
+          borderRadius: 'var(--radius-plain)',
           border: '1px solid var(--glass-border)',
           margin: 0,
         }}
@@ -256,14 +256,14 @@ export function ReAuthModal({
               style={{
                 fontFamily: 'var(--font-body)',
                 background: 'var(--color-bg-secondary)',
-                border: '1px solid var(--glass-border)',
+                border: '1px solid var(--color-input-border)',
                 color: 'var(--color-text-primary)',
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = 'var(--color-accent)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--glass-border)';
+                e.currentTarget.style.borderColor = 'var(--color-input-border)';
               }}
             />
           </div>

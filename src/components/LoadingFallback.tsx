@@ -13,7 +13,7 @@ export function LoadingFallback({ message = 'Loading...' }: LoadingFallbackProps
   return (
     <div
       className="min-h-screen flex items-center justify-center"
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
     >
       <div className="text-center">
         <div

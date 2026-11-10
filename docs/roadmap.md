@@ -176,7 +176,7 @@ the "done when" below is the summary, that document is the detail.
 | 67 | Playwright axe pass in CI; reduced motion and contrast checks per theme | days | Needs #37 | CI fails on new violations · CI log |
 | 68 | Screen-reader verification: editor labelling, status announcements, focus order, modal behaviour | days |  | Checklist passed with VoiceOver and NVDA; the save status is announced · checklist in repo |
 | 108 | Card-to-manuscript view transition and its reverse, progressive enhancement | weeks | Needs #28 | Works in Chrome and Safari; instant elsewhere; respects reduced motion · visual check per browser |
-| 109 | Reading settings: text size (three steps), line length, body typeface; expose Washi and Mori | days |  | Settings persist per device and survive a refresh · E2E |
+| 109 | Reading settings: text size (three steps), line length, body typeface. The Washi and Mori themes were deleted in the redesign (2026-11-09) | days |  | Settings persist per device and survive a refresh · E2E |
 | 110 | In-product hints: one per first three notes; empty search suggests an operator; no tour | days |  | Hints dismiss forever and never reappear after sign-in elsewhere · E2E |
 | 124 | Task tests for long titles, dense tags, RTL, Tamil and CJK input, zoom, real virtual keyboards | days |  | Each fixture renders without clipping or overlap · visual regression |
 | — | App icon and OG image as shippable branding assets | days |  |
@@ -234,7 +234,7 @@ A recovery key is planned; account recovery is not an omission.
 | Real-time collaboration | That's Notion/Craft's game. Single-user only is a design choice |
 | Folders / hierarchy | Contradicts temporal chapters philosophy |
 | Push notifications | Contradicts calm technology philosophy |
-| Gamification | Contradicts wabi-sabi philosophy |
+| Gamification | Contradicts calm technology philosophy |
 | Floating selection toolbar | Feels out of place with Yidhan's calm, static aesthetic — works for Notion/Medium but not for a quiet journal |
 
 ---

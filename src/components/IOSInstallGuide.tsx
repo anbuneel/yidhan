@@ -56,7 +56,7 @@ const INSTALL_STEPS = [
  * they need to open in Safari since only Safari can install PWAs on iOS.
  *
  * Design philosophy:
- * - Matches wabi-sabi aesthetic
+ * - Matches the calm app style
  * - Clear visual steps with Safari icons
  * - Non-intrusive, easy to dismiss
  * - Appears as a gentle guide, not a demand
@@ -109,7 +109,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
         `}
         style={{
           background: 'var(--color-bg-primary)',
-          borderRadius: 'var(--radius-card)',
+          borderRadius: 'var(--radius-plain)',
           boxShadow: 'var(--shadow-lg)',
           transition: 'transform 0.4s var(--ease-out-quint), opacity 0.3s ease-out',
           margin: 0,

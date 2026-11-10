@@ -9,7 +9,7 @@ import { join } from 'node:path';
  *
  * axe-core (WCAG 2.0/2.1/2.2 A and AA rules) on six screens: the landing page, the
  * library, the editor, the unlock screen, the three-step passphrase setup and
- * Settings. Each runs in both themes (Kintsugi light, Midnight dark), at 100% and
+ * Settings. Each runs in both themes (Light and Dark), at 100% and
  * 200% zoom, with `prefers-reduced-motion: reduce`.
  *
  * **200% zoom** is a 640×360 CSS viewport at deviceScaleFactor 2: what Chrome does
@@ -40,8 +40,8 @@ const SUPABASE_ORIGIN = new URL(SUPABASE_URL).origin;
 const STORAGE_KEY = `sb-${new URL(SUPABASE_URL).hostname.split('.')[0]}-auth-token`;
 
 const THEMES = [
-  { name: 'Kintsugi', value: 'light' },
-  { name: 'Midnight', value: 'dark' },
+  { name: 'Light', value: 'light' },
+  { name: 'Dark', value: 'dark' },
 ] as const;
 
 const ZOOMS = [

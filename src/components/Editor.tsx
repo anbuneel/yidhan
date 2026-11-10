@@ -5,6 +5,7 @@ import { keepReleasedDraft } from '../utils/keepReleasedDraft';
 import { useState, useEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { getSaveLabel } from '../utils/saveStatus';
+import { SyncStateIcon, type SyncStateKind } from './SyncStateIcon';
 import type { Note, NoteDeleteHandler, Tag, Theme } from '../types';
 import { LinkPopover } from './LinkPopover';
 import { RichTextEditor } from './RichTextEditor';
@@ -114,14 +115,12 @@ function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): bo
   return a !== null && b !== null && a.title === b.title && a.content === b.content;
 }
 
-function getSaveStatusStyle(status: SaveStatus): { color: string; background: string } {
-  switch (status) {
-    case 'saving':
-      return { color: 'var(--color-accent)', background: 'var(--color-accent-glow)' };
-    default:
-      return { color: 'var(--color-success)', background: 'var(--color-success-glow)' };
-  }
-}
+// The save pill is neutral text in italic; the icon tells the states apart.
+const SAVE_LABEL_ICON: Record<ReturnType<typeof getSaveLabel>, SyncStateKind> = {
+  'Not saved': 'not-saved',
+  'Saved here': 'saved',
+  Synced: 'synced',
+};
 
 export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus, releasedElsewhere = false, onKeptReleasedDraft, vaultKeys = null, onLetGoReleasedDraft, onDraftStateChange }: EditorProps) {
   const [title, setTitle] = useState(note.title);
@@ -1075,9 +1074,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     </div>
   );
 
-  // Right actions: Save status + Export button + Delete button
+  // Right actions: Save status + Export button + Delete button. Under 400px the gap
+  // tightens so the save pill clears the wordmark (a 30px logo leaves no room).
   const rightActions = (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 max-[399px]:gap-1" data-testid="editor-header-actions">
       {/* Save/Copy Status Indicator. The status region is always mounted, so a screen
           reader hears each change; only its contents come and go. sr-only while idle
           takes it out of the row's flex gap. */}
@@ -1085,43 +1085,35 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {saveStatus !== 'idle' && (
         <span
           data-save-status={saveStatus}
-          className={`
-            shrink-0 text-xs px-2 py-1 rounded-full flex items-center gap-1.5
-            transition-opacity duration-300
-            ${saveStatus === 'saved' || saveStatus === 'copied' ? 'opacity-80' : 'opacity-100'}
-          `}
+          className="shrink-0 text-sm italic px-2 py-1 rounded-full flex items-center gap-1.5"
           style={{
             fontFamily: 'var(--font-body)',
-            ...getSaveStatusStyle(saveStatus),
+            color: 'var(--color-text-secondary)',
           }}
         >
           {saveStatus === 'saving' && (
             <>
-              <span
-                className="size-2 rounded-full animate-pulse"
-                style={{ background: 'var(--color-accent)' }}
-              />
+              <SyncStateIcon kind="saving" className="size-3.5 animate-pulse" />
               Saving&hellip;
             </>
           )}
           {saveStatus === 'copied' && (
             <>
-              <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-              </svg>
+              <SyncStateIcon kind="copied" />
               Copied
             </>
           )}
-          {saveStatus === 'saved' && (
-            <>
-              <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-              </svg>
-              {getSaveLabel({ localSaved: title === committedSnapshotRef.current?.title && content === committedSnapshotRef.current?.content, synced: noteSyncStatus === 'synced',
-                matchesDraft: note.title === title && note.content === content,
-                hash: note.contentHash, confirmedHash: note.confirmedContentHash })}
-            </>
-          )}
+          {saveStatus === 'saved' && (() => {
+            const label = getSaveLabel({ localSaved: title === committedSnapshotRef.current?.title && content === committedSnapshotRef.current?.content, synced: noteSyncStatus === 'synced',
+              matchesDraft: note.title === title && note.content === content,
+              hash: note.contentHash, confirmedHash: note.confirmedContentHash });
+            return (
+              <>
+                <SyncStateIcon kind={SAVE_LABEL_ICON[label]} />
+                {label}
+              </>
+            );
+          })()}
         </span>
       )}
       </span>
@@ -1166,7 +1158,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         {/* Export dropdown menu */}
         {showExportMenu && (
           <div
-            className="absolute right-0 mt-2 py-1 rounded-lg shadow-lg z-50 min-w-[180px]"
+            className="absolute right-0 mt-2 py-1 rounded-lg shadow-[var(--shadow-lg)] z-50 min-w-[180px]"
             style={{
               background: 'var(--color-bg-primary)',
               border: '1px solid var(--glass-border)',
@@ -1333,16 +1325,16 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     <div
       ref={scrollContainerRef}
       className={`h-[100dvh] overflow-y-auto ${isFocusMode ? 'focus-mode-active' : ''}`}
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
       data-testid="note-editor"
     >
       {releasedElsewhere && (
-        <div role="alert" data-testid="released-draft-banner" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md flex-wrap items-center gap-3 rounded-[2px_12px_4px_12px] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
+        <div role="alert" data-testid="released-draft-banner" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md flex-wrap items-center gap-3 rounded-[var(--radius-plain)] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
           <span className="mr-auto basis-full">This note was released on another device. Your words here are not saved.
             {keepFailed && <span className="block">Could not keep them as a new note. Copy them instead.</span>}
             {copyFailed && <span className="block">Could not copy — select the text and copy it by hand.</span>}</span>
           <button type="button" onClick={() => { void handleKeepReleasedDraft(); }} disabled={isKeeping}
-            className="rounded-[2px_12px_4px_12px] px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            className="rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200"
             style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}>Keep as new note</button>
           <button type="button" onClick={async () => {
             try {
@@ -1351,19 +1343,19 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               showCopiedIndicator();
             } catch { setCopyFailed(true); }
           }}
-            className="rounded-[2px_12px_4px_12px] border px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            className="rounded-full border px-3 py-1.5 text-sm font-medium transition-all duration-200"
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', background: 'transparent', borderColor: 'var(--glass-border)' }}>Copy</button>
           <button type="button" onClick={onLetGoReleasedDraft ?? onBack}
-            className="rounded-[2px_12px_4px_12px] px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            className="rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200"
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-destructive-text)', background: 'var(--color-destructive)' }}>Let go</button>
         </div>
       )}
       {hasSaveError && !releasedElsewhere && (
-        <div role="alert" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-[2px_12px_4px_12px] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
+        <div role="alert" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-[var(--radius-plain)] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
           <span className="mr-auto">Not saved{saveErrorDetail && <span className="block">{saveErrorDetail}</span>}
             {copyFailed && <span className="block">Could not copy — select the text and copy it by hand.</span>}</span>
           <button type="button" onClick={() => { setCopyFailed(false); void performSave(); }}
-            className="rounded-[2px_12px_4px_12px] px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            className="rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200"
             style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}>Retry</button>
           <button type="button" onClick={async () => {
             try {
@@ -1373,7 +1365,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               showCopiedIndicator();
             } catch { setCopyFailed(true); }
           }}
-            className="rounded-[2px_12px_4px_12px] border px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            className="rounded-full border px-3 py-1.5 text-sm font-medium transition-all duration-200"
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', background: 'transparent', borderColor: 'var(--glass-border)' }}>Copy</button>
         </div>
       )}
@@ -1381,7 +1373,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       <div
         ref={stickyZoneRef}
         className="editor-sticky-zone focus-mode-target"
-        style={{ background: 'var(--color-bg-primary)' }}
+        style={{ background: 'var(--page-background)' }}
       >
         <HeaderShell
           theme={theme}
@@ -1552,9 +1544,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               onKeyDown={handleTitleKeyDown}
               onBlur={performSave}
               placeholder="Untitled"
-              className="w-full font-semibold bg-transparent outline-none resize-none overflow-hidden leading-tight"
+              className="editor-title w-full font-medium bg-transparent outline-none resize-none overflow-hidden leading-tight"
               style={{
-                fontFamily: 'var(--font-display)',
+                // The display cut has one weight, 500 (font-medium).
+                fontFamily: 'var(--font-title)',
                 fontSize: '2.25rem',
                 color: 'var(--color-text-primary)',
                 letterSpacing: '-0.02em',
@@ -1729,12 +1722,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             className="
               relative z-10 w-full max-w-[400px] mx-4
               p-8
-              shadow-2xl
+              shadow-[var(--shadow-lg)]
               border-0
             "
             style={{
               background: 'var(--color-bg-secondary)',
-              borderRadius: 'var(--radius-card)',
+              borderRadius: 'var(--radius-plain)',
               border: '1px solid var(--glass-border)',
               margin: 0,
             }}

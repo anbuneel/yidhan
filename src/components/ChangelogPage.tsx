@@ -90,7 +90,7 @@ export function ChangelogPage({
   return (
     <div
       className="min-h-screen flex flex-col"
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
     >
       <HeaderShell
         theme={theme}
@@ -120,7 +120,7 @@ export function ChangelogPage({
             style={{
               fontFamily: 'var(--font-body)',
               color: 'var(--color-text-secondary)',
-              fontWeight: 300,
+              fontWeight: 400,
               fontStyle: 'italic',
             }}
           >
@@ -151,7 +151,7 @@ export function ChangelogPage({
                       ? 'linear-gradient(to bottom, var(--color-card-bg), color-mix(in srgb, var(--color-card-bg) 97%, var(--color-accent)))'
                       : 'var(--color-card-bg)',
                     border: '1px solid var(--glass-border)',
-                    borderRadius: 'var(--radius-card)',
+                    borderRadius: 'var(--radius-plain)',
                     boxShadow: isRecent ? 'var(--shadow-sm)' : 'none',
                     opacity: isRecent ? 1 : 0.85,
                   }}
@@ -189,7 +189,7 @@ export function ChangelogPage({
                         style={{
                           fontFamily: 'var(--font-body)',
                           color: 'var(--color-text-secondary)',
-                          fontWeight: 300,
+                          fontWeight: 400,
                           fontSize: isRecent ? '0.95rem' : '0.875rem',
                           lineHeight: 1.6,
                         }}

@@ -57,7 +57,7 @@ export interface NoteShare {
 }
 export type Theme = 'light' | 'dark';
 
-// Curated wabi-sabi color palette for tags
+// Tag dot colours, chosen to read on both the light and dark page
 export type TagColor =
   | 'terracotta'
   | 'gold'
@@ -69,12 +69,14 @@ export type TagColor =
   | 'plum';
 
 export const TAG_COLORS: Record<TagColor, string> = {
-  terracotta: '#C25634',
-  gold: '#D4AF37',
-  forest: '#3D5A3D',
-  stone: '#8B8178',
-  indigo: '#4A5568',
-  clay: '#A67B5B',
-  sage: '#87A878',
-  plum: '#6B4C5A',
+  // Earthy mid-tones that reach 3:1 on both the light and the dark page and card, so
+  // one value serves both themes. The keys are stored with each tag; keep them.
+  terracotta: '#B5643F',
+  gold: '#9C7A26',
+  forest: '#4B8659',
+  stone: '#837E72',
+  indigo: '#6577A2',
+  clay: '#A07253',
+  sage: '#71905F',
+  plum: '#9A6B86',
 };

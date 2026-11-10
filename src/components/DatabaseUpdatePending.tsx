@@ -26,7 +26,7 @@ export function DatabaseUpdatePending({
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-6 text-center"
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
       data-testid="database-update-pending"
     >
       <Logo className="mb-12 opacity-40" />
@@ -36,7 +36,7 @@ export function DatabaseUpdatePending({
         style={{
           fontFamily: 'var(--font-display)',
           color: 'var(--color-text-primary)',
-          fontWeight: 300,
+          fontWeight: 400,
         }}
       >
         A database update is pending.

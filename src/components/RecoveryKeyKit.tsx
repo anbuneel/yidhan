@@ -217,14 +217,14 @@ export function RecoveryKeyKit({
           data-testid="recovery-key"
           className="mb-4 p-3 text-sm select-all"
           style={{
-            fontFamily: 'ui-monospace, monospace',
+            fontFamily: 'var(--font-mono)',
             letterSpacing: '0.06em',
             lineHeight: 1.8,
             wordBreak: 'break-word',
             background: 'var(--color-bg-primary)',
             color: 'var(--color-text-primary)',
             border: '1px solid var(--glass-border)',
-            borderRadius: '2px 12px 4px 12px',
+            borderRadius: 'var(--radius-plain)',
           }}
         >
           {displayKey}
@@ -280,7 +280,7 @@ export function RecoveryKeyKit({
           autoFocus
           disabled={saving}
           className="w-full px-3 py-2 text-sm focus-ring mb-2"
-          style={{ ...vaultInputStyle, fontFamily: 'ui-monospace, monospace' }}
+          style={{ ...vaultInputStyle, fontFamily: 'var(--font-mono)' }}
         />
         {typed.length > 0 && !confirmed && (
           <p className="mb-2 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>

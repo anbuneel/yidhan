@@ -236,7 +236,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   style={{
                     fontFamily: 'var(--font-body)',
                     background: 'var(--color-bg-secondary)',
-                    border: '1px solid var(--glass-border)',
+                    border: '1px solid var(--color-input-border)',
                     color: 'var(--color-text-primary)',
                   }}
                 />
@@ -270,14 +270,14 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   style={{
                     fontFamily: 'var(--font-body)',
                     background: 'var(--color-bg-secondary)',
-                    border: '1px solid var(--glass-border)',
+                    border: '1px solid var(--color-input-border)',
                     color: 'var(--color-text-primary)',
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = 'var(--color-accent)';
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--glass-border)';
+                    e.currentTarget.style.borderColor = 'var(--color-input-border)';
                   }}
                 />
               </div>
@@ -325,7 +325,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                       </svg>
                     )}
-                    {theme === 'light' ? 'Light (Kintsugi)' : 'Dark (Midnight)'}
+                    {theme === 'light' ? 'Light' : 'Dark'}
                   </span>
                   <span
                     className="text-xs px-2 py-1 rounded"
@@ -463,14 +463,14 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   style={{
                     fontFamily: 'var(--font-body)',
                     background: 'var(--color-bg-secondary)',
-                    border: '1px solid var(--glass-border)',
+                    border: '1px solid var(--color-input-border)',
                     color: 'var(--color-text-primary)',
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = 'var(--color-accent)';
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--glass-border)';
+                    e.currentTarget.style.borderColor = 'var(--color-input-border)';
                   }}
                 />
               </div>
@@ -505,14 +505,14 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   style={{
                     fontFamily: 'var(--font-body)',
                     background: 'var(--color-bg-secondary)',
-                    border: '1px solid var(--glass-border)',
+                    border: '1px solid var(--color-input-border)',
                     color: 'var(--color-text-primary)',
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = 'var(--color-accent)';
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--glass-border)';
+                    e.currentTarget.style.borderColor = 'var(--color-input-border)';
                   }}
                 />
               </div>
@@ -547,14 +547,14 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   style={{
                     fontFamily: 'var(--font-body)',
                     background: 'var(--color-bg-secondary)',
-                    border: '1px solid var(--glass-border)',
+                    border: '1px solid var(--color-input-border)',
                     color: 'var(--color-text-primary)',
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = 'var(--color-accent)';
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--glass-border)';
+                    e.currentTarget.style.borderColor = 'var(--color-input-border)';
                   }}
                 />
               </div>
@@ -777,7 +777,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         aria-hidden="true"
                       >
                         <span
-                          className="absolute top-0.5 size-5 rounded-full shadow transition-transform duration-200"
+                          className="absolute top-0.5 size-5 rounded-full shadow-[var(--shadow-sm)] transition-transform duration-200"
                           style={{
                             background: 'var(--color-text-primary)',
                             transform: vaultSettings.settings.rememberBrowser
@@ -903,7 +903,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       aria-hidden="true"
                     >
                       <span
-                        className="absolute top-0.5 size-5 rounded-full shadow transition-transform duration-200"
+                        className="absolute top-0.5 size-5 rounded-full shadow-[var(--shadow-sm)] transition-transform duration-200"
                         style={{
                           background: 'var(--color-bg-primary)',
                           transform: sessionSettings.settings.isTrustedDevice

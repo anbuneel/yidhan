@@ -19,6 +19,76 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-10 — The redesign ships to main, and the ACTIVE-plan cap returns to one
+
+**Status:** Active
+
+**Why:** The redesign was built on the `redesign` branch in five PRs (265 to 269), so
+`main` never showed a half-finished look. All five merged, and one PR takes the branch
+to `main` on 2026-11-10. The logo and icons plan and the themes and type plan are
+COMPLETE and moved to `docs/archive/`. The cap was raised to three for those two plans
+only (2026-11-09). With them closed, the launch plan is the one ACTIVE plan, so
+`MAX_ACTIVE_PLANS` is 1 again.
+
+**Rejected:** Keeping the cap at three for later work. An exception that outlives its
+reason becomes the default (2026-09-08).
+
+---
+
+## 2026-11-09 — The wordmark gets the sun on its i, and the header logo draws from a sprite in index.html
+
+**Status:** Active
+
+**Why:** The review board settled on a plain i (logo plan, answer 4). After seeing the
+rollout in the header, the owner asked for the sun over the i and a larger header
+logo. The sun replaces the i's dot, in marigold, at the size and place of the earlier
+sun-dot wordmark. The header lockup grew from 26px (phone) and 30px (desktop) to 30px
+and 36px. Both sizes are under 48px, so the mark is still the one-line small drawing.
+
+The landing's JS before load was at its 90 KB limit with no room. The logo as path data
+in the JS entry measured 94.5 KB. So the header drawings ship once, as an SVG sprite in
+`index.html` outside `#root`, and both the landing shell and `Logo.tsx` draw them with
+`<use>`. The shell and React then show the same markup, and the entry carries only ids
+and viewBoxes. The full mark, which the header never shows, ships in `LogoMark.tsx`
+outside the entry.
+
+**Rejected:** path data in `Logo.tsx` (over the JS budget); an external SVG file (an
+extra request on first paint, and the header would be blank until it arrived); a CSS
+mask, as the enso used (an image request, and masks cannot hold two token colours in
+one layer).
+
+---
+
+## 2026-11-09 — Big titles use a Newsreader display cut, and two first-visit budgets rise for it
+
+**Status:** Active
+
+**Why:** Full variable Newsreader, with its optical-size and weight axes, is 129 KB
+roman and 143 KB italic for latin alone. That would have put the first visit at about
+485 KB against a 292 KB limit, and the precache at about 1540 KB against 1100. So the
+text files pin the optical size at 18 and keep weight 400 to 700. At that cut the note
+title and the landing headline lose the finer, narrower shapes Newsreader has at large
+sizes. The owner picked Newsreader partly for those titles. After seeing both side by
+side, the owner chose a display cut for big titles: one static file, optical size 72,
+weight 500, latin roman, 23.2 KB. It is declared as its own family, with Newsreader
+behind it for any other glyph. The landing headline moved from weight 300 to 500 to use
+it.
+
+The landing page total, measured in the browser until network idle, rose from 287.0 KB
+to 307.8 KB. Its limit went from 292 to 309 KB and its target from 300 to 309 KB. The
+precache rose from 1083.5 KB to 1106.9 KB. Its limit and target went from 1100 to
+1108 KB. Each new value is the measurement rounded up, plus 1 KB.
+
+**Rejected:** The text cut at all sizes. It needed no budget change, but the large titles
+looked heavier and rounder.
+
+**Rejected:** A variable display file covering weight 400 to 500. It is 36.2 KB, about
+13 KB more, for one weight the titles do not use.
+
+**Rejected:** Full variable Newsreader. It is far over both budgets.
+
+---
+
 ## 2026-11-09 — Three plans are ACTIVE while the redesign runs beside the launch plan
 
 **Status:** Active

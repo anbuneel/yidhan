@@ -16,6 +16,10 @@ export interface ThemeColors {
   textPrimary: string;
   textSecondary: string;
   textTertiary: string;
+  /** Running note text: the editor body and card previews. */
+  textNote: string;
+  /** Font weight of note text. Light text on a dark page needs a little more. */
+  noteWeight: string;
 
   // Accent colors
   accent: string;
@@ -47,14 +51,19 @@ export interface ThemeColors {
   changeFix: string;
 
   // Borders and shadows
+  /** Hairline for dividers and card outlines. Below 3:1, so not for inputs. */
   glassBorder: string;
+  /** Input borders: 3:1 or better on the page, card and tinted surface. */
+  inputBorder: string;
   shadowSm: string;
   shadowMd: string;
   shadowLg: string;
 
-  // Effects
+  // Paper grain on the page background only (see --page-background in index.css)
+  /** Grain ink: black specks on a light page, white on a dark one. Never tinted. */
+  grainColor: 'black' | 'white';
+  /** Grain strength, 0 to 1. */
   noiseOpacity: string;
-  noiseFilter: string;
 }
 
 export interface ThemeConfig {
@@ -77,6 +86,8 @@ function themeToCssVariables(theme: ThemeColors): Record<string, string> {
     '--color-text-primary': theme.textPrimary,
     '--color-text-secondary': theme.textSecondary,
     '--color-text-tertiary': theme.textTertiary,
+    '--color-text-note': theme.textNote,
+    '--note-weight': theme.noteWeight,
     '--color-accent': theme.accent,
     '--color-accent-hover': theme.accentHover,
     '--color-accent-glow': theme.accentGlow,
@@ -98,12 +109,29 @@ function themeToCssVariables(theme: ThemeColors): Record<string, string> {
     '--color-change-improvement': theme.changeImprovement,
     '--color-change-fix': theme.changeFix,
     '--glass-border': theme.glassBorder,
+    '--color-input-border': theme.inputBorder,
     '--shadow-sm': theme.shadowSm,
     '--shadow-md': theme.shadowMd,
     '--shadow-lg': theme.shadowLg,
-    '--noise-opacity': theme.noiseOpacity,
-    '--noise-filter': theme.noiseFilter,
+    '--paper-grain': paperGrain(theme.grainColor, theme.noiseOpacity),
   };
+}
+
+/** Side of one grain tile in CSS pixels. The SVG tiles seamlessly (stitchTiles). */
+export const GRAIN_TILE_PX = 180;
+
+/**
+ * The page grain as a CSS url(): fractal noise whose alpha drives a single ink colour,
+ * so the grain darkens (or lightens) the page without tinting it.
+ */
+export function paperGrain(color: 'black' | 'white', opacity: string): string {
+  const ink = color === 'black' ? 0 : 1;
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='${GRAIN_TILE_PX}' height='${GRAIN_TILE_PX}'>` +
+    `<filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/>` +
+    `<feColorMatrix values='0 0 0 0 ${ink} 0 0 0 0 ${ink} 0 0 0 0 ${ink} 0 0 0 1 0'/></filter>` +
+    `<rect width='100%' height='100%' filter='url(#g)' opacity='${opacity}'/></svg>`;
+  return `url("data:image/svg+xml,${svg.replace(/%/g, '%25').replace(/</g, '%3C').replace(/>/g, '%3E').replace(/#/g, '%23')}")`;
 }
 
 /**

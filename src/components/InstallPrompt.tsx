@@ -10,7 +10,7 @@ interface InstallPromptProps {
  *
  * Design philosophy:
  * - Calm, not pushy
- * - Matches wabi-sabi aesthetic
+ * - Matches the calm app style
  * - Easy to dismiss
  * - Appears as gentle suggestion
  */
@@ -45,7 +45,7 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
         fixed bottom-6 left-1/2 -translate-x-1/2
         px-6 py-4
         max-w-sm w-[calc(100%-2rem)]
-        shadow-lg
+        shadow-[var(--shadow-lg)]
         transition-all duration-300 ease-out
         z-50
         m-0 border-0
@@ -54,7 +54,7 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
       style={{
         background: 'var(--color-bg-secondary)',
         border: '1px solid var(--glass-border)',
-        borderRadius: 'var(--radius-card)',
+        borderRadius: 'var(--radius-plain)',
       }}
       aria-labelledby="install-prompt-title"
     >

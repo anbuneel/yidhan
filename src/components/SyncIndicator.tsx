@@ -5,8 +5,9 @@
  * Follows "invisible when working" philosophy:
  * - Synced: No indicator (zen - absence is peace)
  * - Offline: Cloud icon with X
- * - Stuck pending (30s+): Ink dot with count
- * - Blocked: Manual retry needed
+ * - Stuck pending (30s+): Clock with count
+ * - Blocked: Warning sign; manual retry needed
+ * Each state has its own word and icon, so none relies on colour alone.
  * - Normal pending (<30s): No indicator (sync is invisible)
  *
  * One honest exception to the quiet: when the browser has declined persistent
@@ -21,6 +22,7 @@ import { useSyncStatus } from '../hooks/useSyncStatus';
 import { useStoragePersistence } from '../hooks/useStoragePersistence';
 import { claimAtRiskNotice } from '../utils/storagePersistence';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
+import { SyncStateIcon } from './SyncStateIcon';
 
 interface SyncIndicatorProps {
   onRetryBlockedChanges?: () => Promise<void>;
@@ -147,13 +149,11 @@ export function SyncIndicator({
         aria-label={withRisk(label)}
         title={blockedReason ?? undefined}
       >
+        <span style={{ color: 'var(--color-destructive)' }}>
+          <SyncStateIcon kind="blocked" />
+        </span>
         <span
-          className="size-2 rounded-full"
-          style={{ background: 'var(--color-destructive)' }}
-          aria-hidden="true"
-        />
-        <span
-          className="text-xs font-medium"
+          className="text-sm italic"
           style={{
             color: 'var(--color-text-secondary)',
             fontFamily: 'var(--font-body)',
@@ -199,29 +199,11 @@ export function SyncIndicator({
         aria-live="polite"
         aria-label={withRisk('Offline - changes saved locally')}
       >
-        <svg
-          className="size-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          {/* Cloud with X */}
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M3 15a4 4 0 004 4h9a5 5 0 10-5-5 4 4 0 00-8 1z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M18.5 5.5l-3 3m0-3l3 3"
-          />
-        </svg>
+        <span style={{ color: 'var(--color-text-secondary)' }}>
+          <SyncStateIcon kind="offline" className="size-4" />
+        </span>
         <span
-          className="text-xs font-medium"
+          className="text-sm italic"
           style={{
             color: 'var(--color-text-secondary)',
             fontFamily: 'var(--font-body)',
@@ -245,14 +227,11 @@ export function SyncIndicator({
         aria-live="polite"
         aria-label={withRisk(`${pendingCount} change${pendingCount === 1 ? '' : 's'} pending sync`)}
       >
-        {/* Ink dot */}
+        <span style={{ color: 'var(--color-text-secondary)' }}>
+          <SyncStateIcon kind="pending" />
+        </span>
         <span
-          className="size-2 rounded-full animate-pulse"
-          style={{ background: 'var(--color-accent)' }}
-          aria-hidden="true"
-        />
-        <span
-          className="text-xs font-medium"
+          className="text-sm italic"
           style={{
             color: 'var(--color-text-secondary)',
             fontFamily: 'var(--font-body)',

@@ -501,7 +501,7 @@ export function DemoPage({
     <>
       <div
         className="min-h-screen flex flex-col"
-        style={{ background: 'var(--color-bg-primary)' }}
+        style={{ background: 'var(--page-background)' }}
       >
         {/* Impermanence Ribbon */}
         {shouldShowRibbon && (
@@ -703,9 +703,6 @@ function DemoHeader({
                 border: isSearchFocused
                   ? '1px solid var(--color-accent)'
                   : '1px solid var(--glass-border)',
-                boxShadow: isSearchFocused
-                  ? '0 4px 20px var(--color-accent-glow)'
-                  : 'none',
               }}
             >
               <svg
@@ -792,7 +789,7 @@ function DemoHeader({
             style={{
               background: 'var(--color-cta-bg)',
               color: 'var(--color-cta-text)',
-              boxShadow: '0 4px 20px var(--color-accent-glow)',
+              boxShadow: 'none',
               fontFamily: 'var(--font-body)',
             }}
             onMouseEnter={(e) => {
@@ -830,7 +827,7 @@ function DemoHeader({
               : {
                   background: 'var(--color-cta-bg)',
                   color: 'var(--color-cta-text)',
-                  boxShadow: '0 4px 20px var(--color-accent-glow)',
+                  boxShadow: 'none',
                   fontFamily: 'var(--font-body)',
                 }
           }
@@ -840,7 +837,7 @@ function DemoHeader({
               return;
             }
             e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
-            e.currentTarget.style.boxShadow = '0 6px 24px var(--color-accent-glow)';
+            e.currentTarget.style.boxShadow = 'none';
           }}
           onMouseLeave={(e) => {
             if (showKeepCta) {
@@ -848,7 +845,7 @@ function DemoHeader({
               return;
             }
             e.currentTarget.style.background = 'var(--color-cta-bg)';
-            e.currentTarget.style.boxShadow = '0 4px 20px var(--color-accent-glow)';
+            e.currentTarget.style.boxShadow = 'none';
           }}
           aria-label="New note"
         >

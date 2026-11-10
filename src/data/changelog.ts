@@ -7,6 +7,14 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.20.0', date: '2026-11-10', changes: [
+    { type: 'improvement', text: 'Yidhan has a new look. The page is a calm off-white by day and a deep green-black at night, with one green for buttons and links. The two themes are now called Light and Dark, and still follow your device unless you pick one' },
+    { type: 'improvement', text: 'Every word is now set in one serif, Newsreader, with a larger cut for note titles. Code and your recovery key use Courier Prime. Cyrillic and Greek text uses Literata, which loads only when a note needs it. Bold and italic text are now true bold and italic, not imitations' },
+    { type: 'improvement', text: 'A new logo: a green leaf that is also a page, with a small marigold sun. The app icon and the browser tab icon match it' },
+    { type: 'improvement', text: '"Saved" and "Synced" now show as a word with a small icon, so each state can be told apart without relying on colour. Dates and counts are in italic instead of small capitals' },
+    { type: 'improvement', text: 'A faint paper grain now sits behind the page only. Notes, the editor and dialogs are smooth, so text stays crisp. Shadows are lighter, and there are none at night' },
+    { type: 'fix', text: 'On a phone, the note title is now larger than the note text again' },
+  ] },
   { version: '3.19.44', date: '2026-11-08', changes: [
     { type: 'improvement', text: 'The privacy, terms, support, security, changelog and roadmap pages can now be read with JavaScript turned off. Before, those addresses showed the landing page instead' },
   ] },

@@ -118,13 +118,13 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
         className="
           relative z-10 w-full max-w-[400px] mx-4
           p-8
-          shadow-2xl
+          shadow-[var(--shadow-lg)]
           animate-[modal-enter_300ms_ease-out]
           border-0
         "
         style={{
           background: 'var(--color-bg-primary)',
-          borderRadius: 'var(--radius-card)',
+          borderRadius: 'var(--radius-plain)',
           border: '1px solid var(--glass-border)',
           margin: 0,
         }}
@@ -178,7 +178,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
                 background: 'var(--color-bg-secondary)',
                 border: error
                   ? '1px solid var(--color-destructive)'
-                  : '1px solid var(--glass-border)',
+                  : '1px solid var(--color-input-border)',
                 color: 'var(--color-text-primary)',
               }}
               onFocus={(e) => {
@@ -188,7 +188,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
               }}
               onBlur={(e) => {
                 if (!error) {
-                  e.currentTarget.style.borderColor = 'var(--glass-border)';
+                  e.currentTarget.style.borderColor = 'var(--color-input-border)';
                 }
               }}
             />
@@ -266,7 +266,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
               style={{
                 background: `${TAG_COLORS[color]}20`,
                 border: `1px solid ${TAG_COLORS[color]}`,
-                borderRadius: '2px 12px 4px 12px',
+                borderRadius: 'var(--radius-pill)',
                 color: TAG_COLORS[color],
               }}
             >

@@ -184,13 +184,13 @@ export function PassphraseUnlock() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
     >
       <div
         className="w-full max-w-md p-8"
         style={{
           background: 'var(--color-bg-secondary)',
-          borderRadius: '2px 24px 4px 24px',
+          borderRadius: 'var(--radius-plain)',
           border: '1px solid var(--glass-border)',
         }}
       >
@@ -241,8 +241,8 @@ export function PassphraseUnlock() {
               style={{
                 background: 'var(--color-bg-primary)',
                 color: 'var(--color-text-primary)',
-                border: '1px solid var(--glass-border)',
-                borderRadius: '2px 12px 4px 12px',
+                border: '1px solid var(--color-input-border)',
+                borderRadius: 'var(--radius-input)',
                 fontFamily: 'var(--font-body)',
               }}
             />
@@ -288,7 +288,7 @@ export function PassphraseUnlock() {
             style={{
               background: 'var(--color-cta-bg)',
               color: 'var(--color-cta-text)',
-              borderRadius: '2px 12px 4px 12px',
+              borderRadius: 'var(--radius-pill)',
               fontFamily: 'var(--font-body)',
               fontWeight: 500,
               opacity: passphrase && !isSubmitting && !isLockedOut ? 1 : 0.5,
