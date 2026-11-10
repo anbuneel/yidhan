@@ -339,8 +339,8 @@ export function LandingPage({
         }
         .landing-intro { display: flex; flex-direction: column; align-items: flex-start; }
         .landing-headline {
-          font-family: var(--font-display);
-          font-weight: 300;
+          font-family: var(--font-title);
+          font-weight: 500;
           font-size: clamp(2.75rem, 4.6vw, 4rem);
           line-height: 1.05;
           letter-spacing: 0;

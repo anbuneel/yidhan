@@ -19,6 +19,36 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-09 — Big titles use a Newsreader display cut, and two first-visit budgets rise for it
+
+**Status:** Active
+
+**Why:** Full variable Newsreader, with its optical-size and weight axes, is 129 KB
+roman and 143 KB italic for latin alone. That would have put the first visit at about
+485 KB against a 292 KB limit, and the precache at about 1540 KB against 1100. So the
+text files pin the optical size at 18 and keep weight 400 to 700. At that cut the note
+title and the landing headline lose the finer, narrower shapes Newsreader has at large
+sizes. The owner picked Newsreader partly for those titles. After seeing both side by
+side, the owner chose a display cut for big titles: one static file, optical size 72,
+weight 500, latin roman, 23.2 KB. It is declared as its own family, with Newsreader
+behind it for any other glyph. The landing headline moved from weight 300 to 500 to use
+it.
+
+The landing page total, measured in the browser until network idle, rose from 287.0 KB
+to 307.8 KB. Its limit went from 292 to 309 KB and its target from 300 to 309 KB. The
+precache rose from 1083.5 KB to 1106.9 KB. Its limit and target went from 1100 to
+1108 KB. Each new value is the measurement rounded up, plus 1 KB.
+
+**Rejected:** The text cut at all sizes. It needed no budget change, but the large titles
+looked heavier and rounder.
+
+**Rejected:** A variable display file covering weight 400 to 500. It is 36.2 KB, about
+13 KB more, for one weight the titles do not use.
+
+**Rejected:** Full variable Newsreader. It is far over both budgets.
+
+---
+
 ## 2026-11-09 — Three plans are ACTIVE while the redesign runs beside the launch plan
 
 **Status:** Active

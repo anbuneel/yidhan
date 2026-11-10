@@ -123,6 +123,8 @@
      rename. */
   --font-serif: 'Newsreader', 'Literata', Georgia, serif;
   --font-display: var(--font-serif);
+  /* Big titles only: the note title and the landing headline, at weight 500. */
+  --font-title: 'Newsreader Display', var(--font-serif);
   --font-body: var(--font-serif);
   /* Code, code blocks and the recovery key only. Courier Prime is latin only,
      so other scripts fall to the system monospace. */

@@ -28,10 +28,11 @@ from fontTools.varLib.instancer import instantiateVariableFont
 OUT = Path(__file__).resolve().parent.parent / "src" / "assets" / "fonts"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 
-# Text optical size. Newsreader's default is 18; titles lose their display
-# cut, which was the price of fitting the budget.
+# Text optical size, Newsreader's default. Big titles use the display file
+# below instead, so they keep the display cut.
 OPSZ = 18
 WEIGHTS = (400, 700)
+DISPLAY_OPSZ = 72
 
 FAMILIES = [
     # (file prefix, Google Fonts css2 query, subsets to keep or None for all, trim?)
@@ -80,7 +81,28 @@ def main() -> int:
             name = f"{prefix}-{variant(prefix, style, weight)}-{subset}.woff2"
             font.save(OUT / name)
             print(f"{name}  {(OUT / name).stat().st_size} B  {urange}")
+    build_display()
     return 0
+
+
+def build_display() -> None:
+    """One static display cut for big titles: the note title and the landing
+    headline. Latin roman only, weight 500 only, so it stays one small file.
+    Declared in src/fonts.css as 'Newsreader Display', with Newsreader behind it
+    for any glyph outside latin. The owner chose it on 2026-11-09 (DECISIONS.md)."""
+    css = fetch(f"https://fonts.googleapis.com/css2?family={FAMILIES[0][1]}&display=swap").decode()
+    for m in re.finditer(r"/\* ([\w-]+) \*/\s*@font-face \{(.*?)\}", css, re.S):
+        subset, body = m.group(1), m.group(2)
+        if subset != "latin" or "font-style: normal" not in body:
+            continue
+        url = re.search(r"url\((.*?)\)", body).group(1)
+        font = instantiateVariableFont(
+            TTFont(io.BytesIO(fetch(url))), {"opsz": DISPLAY_OPSZ, "wght": 500}, updateFontNames=True
+        )
+        font.flavor = "woff2"
+        name = "newsreader-display-roman-latin.woff2"
+        font.save(OUT / name)
+        print(f"{name}  {(OUT / name).stat().st_size} B")
 
 
 if __name__ == "__main__":

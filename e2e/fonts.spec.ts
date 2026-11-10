@@ -85,6 +85,36 @@ test.describe('Real faces, not faked ones', () => {
   });
 });
 
+test.describe('The display cut', () => {
+  test('draws the note title, and not the note text', async ({ page }) => {
+    await openDraft(page);
+    await page.getByPlaceholder(/untitled/i).fill('A title');
+    await writeBody(page, 'Body text.');
+    // Chrome reports no platform font for a textarea's value, so check the style
+    // and that the display face itself loaded.
+    const title = page.locator('textarea[aria-label="Note title"]');
+    expect(await title.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/^"Newsreader Display", /);
+    expect(await title.evaluate((el) => getComputedStyle(el).fontWeight)).toBe('500');
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          [...document.fonts].some((f) => f.family.includes('Newsreader Display') && f.status === 'loaded')
+        )
+      )
+      .toBe(true);
+    // The display file names itself "… 72pt Medium"; the text cut does not.
+    expect(await usedFonts(page, '.ProseMirror p')).toEqual([expect.not.stringMatching(/72pt/)]);
+  });
+
+  test('draws the landing headline at 500, with no faked weight', async ({ page }) => {
+    await page.goto('/');
+    const headline = page.locator('.landing-headline');
+    await expect(headline).toBeVisible();
+    expect(await headline.evaluate((el) => getComputedStyle(el).fontWeight)).toBe('500');
+    await expect.poll(() => usedFonts(page, '.landing-headline')).toEqual([expect.stringMatching(/72pt Medium$/)]);
+  });
+});
+
 test.describe('The phone title', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

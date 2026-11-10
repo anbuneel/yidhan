@@ -48,9 +48,36 @@ function walk(dir: string): string[] {
 }
 
 describe('self-hosted fonts', () => {
-  it('declares only the three families', () => {
+  it('declares only the four families', () => {
     expect(new Set(faces.map((face) => face.family))).toEqual(
-      new Set(['Newsreader', 'Literata', 'Courier Prime'])
+      new Set(['Newsreader', 'Newsreader Display', 'Literata', 'Courier Prime'])
+    );
+  });
+
+  it('gives the display cut one face: latin roman at 500, nothing else', () => {
+    const display = facesOf('Newsreader Display');
+    expect(display).toHaveLength(1);
+    expect(display[0]).toMatchObject({ style: 'normal', weight: '500', file: 'newsreader-display-roman-latin.woff2' });
+    // Latin only, so Cyrillic or Greek in a title falls through to Newsreader and Literata.
+    expect(display[0].ranges).toEqual(facesOf('Newsreader').find((f) => f.file === 'newsreader-roman-latin.woff2')!.ranges);
+  });
+
+  it('uses the display cut only for the note title and the landing headline, at 500', () => {
+    const indexCss = read('src/index.css');
+    expect(indexCss).toMatch(/--font-title: 'Newsreader Display', var\(--font-serif\);/);
+    // Any other weight would be faked from the one face, so every use is checked.
+    const users = walk(resolve(root, 'src'))
+      .filter((file) => /\.(css|tsx?)$/.test(file) && file !== __filename)
+      .filter((file) => /var\(--font-title\)/.test(readFileSync(file, 'utf8')))
+      .map((file) => file.replace(/\\/g, '/').replace(/^.*\/src\//, 'src/'))
+      .sort();
+    expect(users).toEqual(['src/components/Editor.tsx', 'src/components/LandingPage.tsx']);
+    expect(read('src/components/Editor.tsx')).toMatch(
+      /aria-label="Note title"[\s\S]{0,200}className="editor-title [^"]*font-medium[\s\S]{0,200}fontFamily: 'var\(--font-title\)'/
+    );
+    expect(read('src/components/Editor.tsx')).not.toMatch(/className="editor-title [^"]*font-(semibold|bold)/);
+    expect(read('src/components/LandingPage.tsx')).toMatch(
+      /\.landing-headline \{\s*font-family: var\(--font-title\);\s*font-weight: 500;/
     );
   });
 
@@ -174,18 +201,26 @@ describe('the landing shell', () => {
   const html = read('index.html');
   const style = html.match(/<style>([\s\S]*?)<\/style>/)?.[1] ?? '';
 
-  it('preloads and declares the latin Newsreader roman, exactly as fonts.css does', () => {
-    const latin = facesOf('Newsreader').find((face) => face.style === 'normal' && face.file.endsWith('-latin.woff2'))!;
+  it('preloads and declares the two latin faces the first screen uses, exactly as fonts.css does', () => {
+    const expected = ['newsreader-roman-latin.woff2', 'newsreader-display-roman-latin.woff2'];
     const preloads = [...html.matchAll(/<link rel="preload" href="\/src\/assets\/fonts\/([^"]+)"/g)].map((m) => m[1]);
-    expect(preloads).toEqual([latin.file]);
+    expect(preloads).toEqual(expected);
 
     const shellFaces = [...style.matchAll(/@font-face \{([^}]*)\}/g)].map(([, body]) => body);
-    expect(shellFaces).toHaveLength(1);
-    expect(shellFaces[0]).toContain(`font-family: 'Newsreader'`);
-    expect(shellFaces[0]).toContain('font-style: normal');
-    expect(shellFaces[0]).toContain(`font-weight: ${latin.weight}`);
-    expect(shellFaces[0]).toContain(`/src/assets/fonts/${latin.file}`);
-    expect(parseRanges(shellFaces[0].match(/unicode-range: ([^;]+);/)![1])).toEqual(latin.ranges);
+    expect(shellFaces).toHaveLength(expected.length);
+    for (const file of expected) {
+      const face = faces.find((f) => f.file === file)!;
+      const body = shellFaces.find((b) => b.includes(`/src/assets/fonts/${file}`));
+      expect(body, file).toBeDefined();
+      expect(body).toContain(`font-family: '${face.family}';`);
+      expect(body).toContain(`font-style: ${face.style};`);
+      expect(body).toContain(`font-weight: ${face.weight};`);
+      expect(parseRanges(body!.match(/unicode-range: ([^;]+);/)![1])).toEqual(face.ranges);
+    }
+  });
+
+  it('sets the shell headline in the display cut at 500, like the page', () => {
+    expect(style).toMatch(/\.boot-intro h1 \{ font-family: 'Newsreader Display', 'Newsreader', [^;]*; font-weight: 500;/);
   });
 
   it('names no family that fonts.css does not declare', () => {

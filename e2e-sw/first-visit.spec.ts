@@ -132,10 +132,13 @@ test.describe('first visit', () => {
     }
     // Literata is the Cyrillic and Greek fallback. The landing is latin only.
     expect(fonts.map((r) => r.url()).filter((url) => /literata/.test(url)), 'Literata on the first visit').toEqual([]);
-    // Only Newsreader latin, roman and italic. Courier Prime is for code, which the
-    // landing does not show; it used to load for the toolbar's "</>" label.
+    // Only Newsreader latin: roman, italic, and the display cut for the headline.
+    // Courier Prime is for code, which the landing does not show; it used to load
+    // for the toolbar's "</>" label.
     expect(
-      fonts.map((r) => new URL(r.url()).pathname).filter((path) => !/\/newsreader-(roman|italic)-latin-/.test(path)),
+      fonts
+        .map((r) => new URL(r.url()).pathname)
+        .filter((path) => !/\/newsreader-(roman|italic|display-roman)-latin-/.test(path)),
       'fonts other than Newsreader latin on the first visit'
     ).toEqual([]);
 
