@@ -1,5 +1,5 @@
 Status: ACTIVE
-Last verified: 2026-11-09
+Last verified: 2026-11-10
 
 # Themes and type: calm page, one serif
 
@@ -331,6 +331,37 @@ merge, because both touch `index.html`.
 | 6 | Both | `redesign` to `main`, docs, changelog | All of the above; the full e2e suite |
 
 One lane per session: each step is its own session.
+
+Progress:
+
+- Step 1 is merged into `redesign` (PR 265).
+- Step 2 is merged into `redesign` (PR 266, 2026-11-09). The text files pin
+  Newsreader's optical size at 18, weights 400 to 700. The owner chose a display cut
+  for big titles: one static file, optical size 72, weight 500, latin roman, family
+  `Newsreader Display`, token `--font-title`. It sets the note title and the landing
+  headline. The landing and precache budgets rose for it (`DECISIONS.md`, 2026-11-09).
+  Both have about 1 KB of headroom left.
+- Left from step 2 for later steps: the sample note title in the landing preview still
+  uses the text cut; `scripts/generate-og-image.ts` still names Source Sans 3; the
+  mono-lane test does not cover the search box or status text.
+
+- Step 3 is merged into `redesign` (PR 267).
+- Step 4 is merged into `redesign` (PR 268, 2026-11-09). The themes are `light.ts` and
+  `dark.ts`; Washi and Mori are gone. The owner approved the grain at 7% in light and
+  5% in dark from screenshots. The landing JS is at exactly 90 of 90 KB.
+
+Settled by the owner on 2026-11-09, before step 4:
+
+- Open question 1: the themes are named "Light" and "Dark" (`light`, `dark`).
+- Open question 4: Washi and Mori are deleted.
+- Open question 6: the owner approves the grain strength from screenshots.
+
+Settled by the owner on 2026-11-10, before step 5:
+
+- Open question 2: "Saved" and "Synced" are the word in italic with a small tick.
+- Open question 3: the editor glow stays, fainter and neutral.
+- Open question 5: full pills for buttons and chips, 8px for inputs, as in the mock-up.
+- On a phone the editor sheet stays edge to edge.
 
 ## Open questions
 

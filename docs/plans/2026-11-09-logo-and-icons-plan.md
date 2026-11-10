@@ -1,5 +1,5 @@
 Status: ACTIVE
-Last verified: 2026-11-09
+Last verified: 2026-11-10
 
 # Logo and icons: the leaf that is a page
 
@@ -53,8 +53,10 @@ answers:
 6. **One colour.** One fill, with the gap, the lines and the letter cut out
    (`mark-mono*.svg`).
 
-Still to do from Part 1: a Tamil reader has not checked the letter, and the stores
-have not been searched for look-alike marks.
+On 2026-11-09 the owner, who reads Tamil, checked the thickened letter and approved it.
+The owner dropped the store search for look-alike marks. The old artwork (the "yi"
+monogram, the sun-dot wordmark, the sprout) moves to `images/brand/archive/` in the
+rollout PR.
 
 ## Work
 
@@ -139,6 +141,12 @@ merge, because both touch `index.html`.
 | 6 | Both | `redesign` to `main`, docs, changelog | All of the above; the full e2e suite |
 
 One lane per session: each step is its own session.
+
+Progress: steps 1 and 2 are merged into `redesign` (PRs 265 and 266). Step 3 is PR 267.
+In it the owner reversed board answer 4: the wordmark's i carries the marigold sun, and
+the header logo is larger (`DECISIONS.md`, in PR 267). The fonts step
+left about 1 KB of headroom in the landing and precache budgets; the rollout may need
+to raise them, with a `DECISIONS.md` entry.
 
 ## Open questions
 
