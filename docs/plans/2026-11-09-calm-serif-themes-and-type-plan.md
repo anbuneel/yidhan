@@ -332,6 +332,19 @@ merge, because both touch `index.html`.
 
 One lane per session: each step is its own session.
 
+Progress:
+
+- Step 1 is merged into `redesign` (PR 265).
+- Step 2 is merged into `redesign` (PR 266, 2026-11-09). The text files pin
+  Newsreader's optical size at 18, weights 400 to 700. The owner chose a display cut
+  for big titles: one static file, optical size 72, weight 500, latin roman, family
+  `Newsreader Display`, token `--font-title`. It sets the note title and the landing
+  headline. The landing and precache budgets rose for it (`DECISIONS.md`, 2026-11-09).
+  Both have about 1 KB of headroom left.
+- Left from step 2 for later steps: the sample note title in the landing preview still
+  uses the text cut; `scripts/generate-og-image.ts` still names Source Sans 3; the
+  mono-lane test does not cover the search box or status text.
+
 ## Open questions
 
 1. **Theme names.** "Kintsugi" and "Midnight" no longer fit. What are the two themes

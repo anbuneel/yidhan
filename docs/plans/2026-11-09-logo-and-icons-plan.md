@@ -138,6 +138,10 @@ merge, because both touch `index.html`.
 
 One lane per session: each step is its own session.
 
+Progress: steps 1 and 2 are merged into `redesign` (PRs 265 and 266). The fonts step
+left about 1 KB of headroom in the landing and precache budgets; the rollout may need
+to raise them, with a `DECISIONS.md` entry.
+
 ## Open questions
 
 1. **The old artwork.** The "yi" monogram, the sun-dot wordmark and the sprout drawing
