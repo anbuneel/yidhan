@@ -345,6 +345,14 @@ Progress:
   uses the text cut; `scripts/generate-og-image.ts` still names Source Sans 3; the
   mono-lane test does not cover the search box or status text.
 
+- Step 3 is merged into `redesign` (PR 267).
+
+Settled by the owner on 2026-11-09, before step 4:
+
+- Open question 1: the themes are named "Light" and "Dark" (`light`, `dark`).
+- Open question 4: Washi and Mori are deleted.
+- Open question 6: the owner approves the grain strength from screenshots.
+
 ## Open questions
 
 1. **Theme names.** "Kintsugi" and "Midnight" no longer fit. What are the two themes
