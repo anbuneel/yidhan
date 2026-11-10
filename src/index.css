@@ -118,9 +118,15 @@
   --space-10: 64px;
 
   /* Typography (faces are self-hosted, see fonts.css) */
-  --font-display: 'Cormorant Garamond', Georgia, serif;
-  --font-body: 'Source Sans 3', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', Consolas, monospace;
+  /* One serif for every word. Literata covers Cyrillic and Greek, which
+     Newsreader lacks. display and body stay as aliases so no component needs a
+     rename. */
+  --font-serif: 'Newsreader', 'Literata', Georgia, serif;
+  --font-display: var(--font-serif);
+  --font-body: var(--font-serif);
+  /* Code, code blocks and the recovery key only. Courier Prime is latin only,
+     so other scripts fall to the system monospace. */
+  --font-mono: 'Courier Prime', ui-monospace, monospace;
 
   /* Brand: the gold seed in the logo mark stays gold in every theme */
   --color-brand-gold: #D4AF37;
@@ -1699,9 +1705,12 @@ textarea:focus,
   }
 }
 
-/* Prevent iOS zoom on input focus (font-size >= 16px) */
+/* Prevent iOS zoom on input focus (font-size >= 16px). The note title is a
+   textarea set larger than 16px, so it stays out: forcing it to 16px made the
+   phone title the same size as the note text. */
 @media (max-width: 640px) {
-  textarea,
+  textarea:not(.editor-title),
+  input[type="search"],
   input[type="text"],
   input[type="email"],
   input[type="password"] {

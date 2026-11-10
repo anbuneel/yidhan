@@ -107,7 +107,7 @@ test.describe('first visit', () => {
     // within a few hundred ms, before the old code reached `register()` either, so
     // without this the test passed against the code it guards against. A preloaded
     // font delays `load`; registering from main.js would now land before it.
-    await page.route(/cormorant-garamond-latin-[^/]*\.woff2$/, async (route) => {
+    await page.route(/newsreader-roman-latin-[^/]*\.woff2$/, async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 1500));
       await route.continue();
     });
@@ -125,6 +125,19 @@ test.describe('first visit', () => {
         `(${scriptsBeforeLoad.length} scripts), ${(pageTotal / KB).toFixed(1)} KB until network idle ` +
         `(${untilIdle.length} requests)`
     );
+
+    const fonts = untilIdle.filter((r) => /\.woff2$/.test(new URL(r.url()).pathname));
+    for (const font of fonts) {
+      console.log(`first visit font: ${new URL(font.url()).pathname} ${(bytesFor(font.url(), baseURL) / KB).toFixed(1)} KB`);
+    }
+    // Literata is the Cyrillic and Greek fallback. The landing is latin only.
+    expect(fonts.map((r) => r.url()).filter((url) => /literata/.test(url)), 'Literata on the first visit').toEqual([]);
+    // Only Newsreader latin, roman and italic. Courier Prime is for code, which the
+    // landing does not show; it used to load for the toolbar's "</>" label.
+    expect(
+      fonts.map((r) => new URL(r.url()).pathname).filter((path) => !/\/newsreader-(roman|italic)-latin-/.test(path)),
+      'fonts other than Newsreader latin on the first visit'
+    ).toEqual([]);
 
     expect(jsBeforeLoad / KB, 'JS requested before load, KB gzip').toBeLessThanOrEqual(
       budget.landingJsBeforeLoad.limitKB
@@ -259,7 +272,7 @@ test.describe('first visit', () => {
     await expect(page.getByRole('button', { name: /^try writing$/i }).first()).toBeVisible();
     await expect(page.locator('.boot-landing')).toHaveCount(0);
     await expect.poll(loadedFamilies).toEqual(
-      expect.arrayContaining([expect.stringMatching(/Cormorant Garamond/), expect.stringMatching(/Source Sans 3/)])
+      expect.arrayContaining([expect.stringMatching(/Newsreader/)])
     );
 
     // The practice space is the library a visitor without an account reaches.
@@ -271,7 +284,7 @@ test.describe('first visit', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.locator('.changelog-item').first()).toBeAttached();
     await expect.poll(loadedFamilies).toEqual(
-      expect.arrayContaining([expect.stringMatching(/Cormorant Garamond/)])
+      expect.arrayContaining([expect.stringMatching(/Newsreader/)])
     );
   });
 });

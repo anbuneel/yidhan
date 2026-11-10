@@ -1552,7 +1552,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               onKeyDown={handleTitleKeyDown}
               onBlur={performSave}
               placeholder="Untitled"
-              className="w-full font-semibold bg-transparent outline-none resize-none overflow-hidden leading-tight"
+              className="editor-title w-full font-semibold bg-transparent outline-none resize-none overflow-hidden leading-tight"
               style={{
                 fontFamily: 'var(--font-display)',
                 fontSize: '2.25rem',
