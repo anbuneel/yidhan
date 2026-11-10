@@ -203,7 +203,7 @@ export function FadedNotesView({
             style={{
               background: 'var(--color-bg-primary)',
               border: '1px solid var(--glass-border)',
-              borderRadius: 'var(--radius-card)',
+              borderRadius: 'var(--radius-plain)',
               boxShadow: 'var(--shadow-lg)',
               margin: 0,
             }}

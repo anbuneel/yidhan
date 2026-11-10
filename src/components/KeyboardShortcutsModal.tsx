@@ -91,7 +91,7 @@ const shortcuts: ShortcutSection[] = [
 /**
  * Modal showing all keyboard shortcuts, slash commands, and mobile gestures.
  *
- * Uses wabi-sabi styling with calm "Quiet Shortcuts" title.
+ * Calm styling with a "Quiet Shortcuts" title.
  * Platform-aware: shows the macOS command symbol on Mac, Ctrl on Windows/Linux.
  */
 export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsModalProps) {
@@ -133,13 +133,13 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
         aria-labelledby="shortcuts-title"
         className="
           relative z-10 w-full max-w-lg max-h-[80vh] overflow-y-auto
-          shadow-2xl
+          shadow-[var(--shadow-lg)]
           animate-[modal-enter_300ms_ease-out]
           p-0 border-0
         "
         style={{
           background: 'var(--color-bg-primary)',
-          borderRadius: 'var(--radius-card)',
+          borderRadius: 'var(--radius-plain)',
           border: '1px solid var(--glass-border)',
           margin: 0,
         }}
@@ -192,7 +192,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
           {shortcuts.map((section, sectionIndex) => (
             <div key={section.title} className={sectionIndex > 0 ? 'mt-5' : ''}>
               <h3
-                className="text-xs font-medium uppercase tracking-wider mb-3"
+                className="text-sm italic mb-3"
                 style={{
                   fontFamily: 'var(--font-body)',
                   color: 'var(--color-text-tertiary)',

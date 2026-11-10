@@ -172,7 +172,7 @@ describe('the font tokens', () => {
       expect(read(file), file).not.toMatch(/font-mono/);
     }
     const editor = read('src/components/Editor.tsx');
-    const status = editor.match(/function getSaveStatusStyle[\s\S]*?\n\}/)?.[0];
+    const status = editor.match(/data-save-status=[\s\S]*?<\/span>/)?.[0];
     expect(status).toBeDefined();
     expect(status).not.toMatch(/font-mono/);
     // Status classes in the stylesheet: none set the mono face.

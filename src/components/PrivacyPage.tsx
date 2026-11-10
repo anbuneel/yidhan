@@ -62,7 +62,7 @@ export function PrivacyPage({
             style={{
               fontFamily: 'var(--font-body)',
               color: 'var(--color-text-secondary)',
-              fontWeight: 300,
+              fontWeight: 400,
               fontStyle: 'italic',
             }}
           >
@@ -83,7 +83,7 @@ export function PrivacyPage({
               >
                 Your notes are encrypted
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   Yidhan uses end-to-end encryption (AES-256-GCM) to protect your notes. Your passphrase never leaves your device; it is used locally to derive encryption keys via Argon2id. Note titles and content are encrypted before they reach our servers.
                 </p>
@@ -106,7 +106,7 @@ export function PrivacyPage({
               >
                 What we store
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Encrypted:</strong> Note titles and content (stored as encrypted blobs, unreadable without your passphrase).</p>
                 <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Not encrypted:</strong> Tag names, timestamps (created/updated), and whether a note is pinned. These remain in plaintext to enable sorting and filtering.</p>
                 <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Account:</strong> Your email address, display name (optional), and authentication credentials managed by Supabase.</p>
@@ -126,7 +126,7 @@ export function PrivacyPage({
               >
                 What stays on your device
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   Yidhan stores data locally using IndexedDB (for offline access) and sessionStorage (for encryption keys during your session). Keys are cleared when you close the tab or sign out.
                 </p>
@@ -149,7 +149,7 @@ export function PrivacyPage({
               >
                 Error monitoring
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   Yidhan uses Sentry for error tracking to help us find and fix bugs. Sentry receives crash reports and basic performance data. It does not receive your note content; encrypted fields are stripped before any data reaches Sentry.
                 </p>
@@ -172,7 +172,7 @@ export function PrivacyPage({
               >
                 Third-party services
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Supabase</strong>: Database, authentication, and real-time sync. Your encrypted data is stored on Supabase's infrastructure with row-level security.</p>
                 <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Sentry</strong>: Error monitoring (no note content). Optional; Yidhan works without it.</p>
                 <p><strong style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Vercel</strong>: Hosting and deployment.</p>
@@ -192,7 +192,7 @@ export function PrivacyPage({
               >
                 What we don't do
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>We don't sell your data. We don't show ads. We don't use your notes to train AI models. We don't track you across websites. We don't send marketing emails. We don't use dark patterns to keep you engaged.</p>
               </div>
             </section>
@@ -210,7 +210,7 @@ export function PrivacyPage({
               >
                 Your data, your choice
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   You can export all your notes at any time (JSON or Markdown). Self-serve account deletion is paused for public launch until a server-owned deletion workflow is available; contact support if you need account removal before that flow returns.
                 </p>
@@ -235,7 +235,7 @@ export function PrivacyPage({
                 className="space-y-3"
                 style={{
                   color: 'var(--color-text-secondary)',
-                  fontWeight: 300,
+                  fontWeight: 400,
                   lineHeight: 1.7,
                   fontSize: '0.95rem',
                 }}

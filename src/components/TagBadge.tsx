@@ -13,16 +13,13 @@ export function TagBadge({ tag }: TagBadgeProps) {
       className="
         inline-flex items-center gap-1
         px-2 py-0.5
-        text-[0.65rem]
-        font-medium
-        uppercase
-        tracking-wider
+        text-xs
       "
       style={{
         fontFamily: 'var(--font-body)',
         background: `${colorValue}0A`, // 10% opacity (reduced from 15%)
         color: 'var(--color-text-secondary)', // Muted text, not full color
-        borderRadius: 'var(--radius-sm)',
+        borderRadius: 'var(--radius-pill)',
       }}
     >
       <span

@@ -67,7 +67,7 @@ export class ErrorBoundary extends Component<Props, State> {
             className="w-full max-w-md p-8 text-center"
             style={{
               background: 'var(--color-bg-secondary, #18211C)',
-              borderRadius: '2px 24px 4px 24px',
+              borderRadius: 'var(--radius-plain)',
               border: '1px solid var(--glass-border, #2A362F)',
             }}
           >

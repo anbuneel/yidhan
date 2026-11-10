@@ -204,7 +204,7 @@ export function HeaderShell({
                   min-w-[200px]
                   py-2
                   rounded-lg
-                  shadow-lg
+                  shadow-[var(--shadow-lg)]
                   z-50
                 "
                 style={{

@@ -132,9 +132,6 @@ export function Header({
             border: isSearchFocused
               ? '1px solid var(--color-accent)'
               : '1px solid var(--color-input-border)',
-            boxShadow: isSearchFocused
-              ? '0 4px 20px var(--color-accent-glow)'
-              : 'none',
           }}
         >
           <svg
@@ -220,16 +217,16 @@ export function Header({
       style={{
         background: 'var(--color-cta-bg)',
         color: 'var(--color-cta-text)',
-        boxShadow: '0 4px 20px var(--color-accent-glow)',
+        boxShadow: 'none',
         fontFamily: 'var(--font-body)',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
-        e.currentTarget.style.boxShadow = '0 6px 24px var(--color-accent-glow)';
+        e.currentTarget.style.boxShadow = 'none';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background = 'var(--color-cta-bg)';
-        e.currentTarget.style.boxShadow = '0 4px 20px var(--color-accent-glow)';
+        e.currentTarget.style.boxShadow = 'none';
       }}
       aria-label="New note"
     >

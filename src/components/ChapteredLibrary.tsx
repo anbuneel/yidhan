@@ -239,15 +239,15 @@ export function ChapteredLibrary({
                     fontFamily: 'var(--font-body)',
                     background: 'var(--color-cta-bg)',
                     color: 'var(--color-cta-text)',
-                    boxShadow: '0 4px 20px var(--color-accent-glow)',
+                    boxShadow: 'none',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
-                    e.currentTarget.style.boxShadow = '0 8px 28px var(--color-accent-glow)';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'var(--color-cta-bg)';
-                    e.currentTarget.style.boxShadow = '0 4px 20px var(--color-accent-glow)';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
                   Create your first note

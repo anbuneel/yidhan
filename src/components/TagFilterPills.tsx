@@ -26,13 +26,10 @@ export function AllNotesPill({ isActive, onClick }: AllNotesPillProps) {
         border: isActive
           ? '1px solid var(--color-accent)'
           : '1px solid var(--glass-border)',
-        borderRadius: '2px 12px 4px 12px',
+        borderRadius: 'var(--radius-pill)',
         color: isActive
           ? 'var(--color-accent-text)'
           : 'var(--color-text-secondary)',
-        boxShadow: isActive
-          ? '0 4px 20px var(--color-accent-glow)'
-          : 'none',
       }}
     >
       All Notes
@@ -63,7 +60,7 @@ export function AddTagPill({ onClick }: AddTagPillProps) {
         background: 'var(--color-card-bg)',
         backdropFilter: 'blur(10px)',
         border: '1px solid var(--glass-border)',
-        borderRadius: '2px 12px 4px 12px',
+        borderRadius: 'var(--radius-pill)',
         color: 'var(--color-text-tertiary)',
       }}
       aria-label="Add new tag"

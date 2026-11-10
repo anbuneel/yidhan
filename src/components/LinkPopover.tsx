@@ -65,7 +65,7 @@ export function LinkPopover({ editor, onClose }: LinkPopoverProps) {
 
   return (
     <form ref={panel} role="dialog" aria-label="Edit link" data-editor-popover="link"
-      className="fixed inset-x-4 top-24 z-50 mx-auto max-w-sm rounded-[2px_12px_4px_12px] border border-[var(--glass-border)] bg-[var(--color-bg-secondary)] p-4 text-[var(--color-text-primary)]"
+      className="fixed inset-x-4 top-24 z-50 mx-auto max-w-sm rounded-[var(--radius-plain)] border border-[var(--glass-border)] bg-[var(--color-bg-secondary)] p-4 text-[var(--color-text-primary)]"
       onSubmit={event => { event.preventDefault(); save(); }}>
       <label htmlFor="editor-link-address" className="mb-2 block text-sm">Link address</label>
       <input ref={input} id="editor-link-address" type="text" inputMode="url" value={href}

@@ -159,7 +159,7 @@ export function TagFilterBar({
               fontFamily: 'var(--font-body)',
               color: 'var(--color-text-tertiary)',
               background: 'var(--color-bg-secondary)',
-              borderRadius: '2px 8px 4px 8px',
+              borderRadius: 'var(--radius-pill)',
               border: '1px solid var(--glass-border)',
             }}
             aria-expanded="false"
@@ -187,7 +187,7 @@ export function TagFilterBar({
               fontFamily: 'var(--font-body)',
               color: 'var(--color-accent-text)',
               background: 'var(--color-accent-glow)',
-              borderRadius: '2px 8px 4px 8px',
+              borderRadius: 'var(--radius-pill)',
               border: '1px solid var(--color-accent)',
             }}
             aria-expanded="true"

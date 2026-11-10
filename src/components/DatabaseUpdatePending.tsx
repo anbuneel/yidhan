@@ -36,7 +36,7 @@ export function DatabaseUpdatePending({
         style={{
           fontFamily: 'var(--font-display)',
           color: 'var(--color-text-primary)',
-          fontWeight: 300,
+          fontWeight: 400,
         }}
       >
         A database update is pending.

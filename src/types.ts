@@ -57,7 +57,7 @@ export interface NoteShare {
 }
 export type Theme = 'light' | 'dark';
 
-// Curated wabi-sabi color palette for tags
+// Tag dot colours, chosen to read on both the light and dark page
 export type TagColor =
   | 'terracotta'
   | 'gold'

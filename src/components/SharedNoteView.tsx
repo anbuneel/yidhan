@@ -191,7 +191,7 @@ export function SharedNoteView({
             className="text-center max-w-md p-8"
             style={{
               background: 'var(--color-bg-secondary)',
-              borderRadius: 'var(--radius-card)',
+              borderRadius: 'var(--radius-plain)',
               border: '1px solid var(--glass-border)',
             }}
           >
@@ -275,7 +275,7 @@ export function SharedNoteView({
             className="text-center max-w-md p-8"
             style={{
               background: 'var(--color-bg-secondary)',
-              borderRadius: 'var(--radius-card)',
+              borderRadius: 'var(--radius-plain)',
               border: '1px solid var(--glass-border)',
             }}
           >

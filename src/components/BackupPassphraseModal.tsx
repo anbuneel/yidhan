@@ -98,7 +98,7 @@ export function BackupPassphraseModal({
           style={{
             fontFamily: 'var(--font-display)',
             color: 'var(--color-text-primary)',
-            fontWeight: 300,
+            fontWeight: 400,
           }}
         >
           {isCreating ? 'Choose a backup passphrase' : 'Open this backup'}

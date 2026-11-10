@@ -113,7 +113,7 @@ function subscribe(callback: () => void): () => void {
  * Uses Capacitor Network plugin for native apps (Android/iOS) which provides
  * more reliable network detection than the browser's navigator.onLine API.
  *
- * Uses Zen-inspired messaging that aligns with wabi-sabi design:
+ * Uses calm messaging:
  * - Offline is presented as natural, not alarming
  * - Online return is quiet, not celebratory
  *

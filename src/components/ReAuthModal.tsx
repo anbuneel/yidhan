@@ -144,13 +144,13 @@ export function ReAuthModal({
         open
         className="
           relative z-10 w-full max-w-sm
-          shadow-2xl
+          shadow-[var(--shadow-lg)]
           animate-[modal-enter_300ms_ease-out]
           p-0 border-0
         "
         style={{
           background: 'var(--color-bg-primary)',
-          borderRadius: 'var(--radius-card)',
+          borderRadius: 'var(--radius-plain)',
           border: '1px solid var(--glass-border)',
           margin: 0,
         }}

@@ -36,13 +36,10 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
         border: isActive
           ? `1px solid ${colorValue}`
           : '1px solid var(--glass-border)',
-        borderRadius: '2px 12px 4px 12px',
+        borderRadius: 'var(--radius-pill)',
         color: isActive
           ? colorValue
           : 'var(--color-text-secondary)',
-        boxShadow: isActive
-          ? `0 4px 20px ${colorValue}30`
-          : 'none',
       }}
     >
       {onClick && (
