@@ -19,9 +19,143 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
-## 2026-11-09 — The design direction is Bright Spring: green on paper, a marigold accent, Fraunces and Source Sans 3
+## 2026-11-09 — Three plans are ACTIVE while the redesign runs beside the launch plan
 
 **Status:** Active
+
+**Why:** The cap on ACTIVE plans was one, so that "what are we working on now" has one
+answer. The owner started the redesign while the public launch plan was still open, and
+split it into two plans: the logo and icons, and the themes and type. They are separate
+lanes with separate sessions, and they share one order of work that both plans carry.
+The launch plan keeps running. So three plans are ACTIVE, and `MAX_ACTIVE_PLANS` in the
+pre-commit hook is 3. The cap returns to one when the two redesign plans are COMPLETE.
+
+**Rejected:** One redesign plan holding both the logo and the themes. The logo needs
+drawing and the owner's approval before any code; the font work does not. One plan would
+tie the two together.
+
+**Rejected:** Pausing the launch plan. Its work does not wait on the redesign.
+
+---
+
+## 2026-11-09 — The design direction is a calm page and one serif: Newsreader, Courier Prime, grain behind the page
+
+**Status:** Active
+
+**Why:** The owner looked at Bright Spring on mock-ups the same day it was decided and
+found it still read as generated: a cream page, a soft serif for headings and one warm
+accent is the most common look AI tools produce. The owner wants a look with its own
+personality that stays true to "a calm space for your thoughts", and does not want bold
+colour. The app is for everyone, so it does not need Tamil-script typefaces. The owner's
+other app, Inbax, uses no sans-serif at all, and the owner asked whether that would
+work here. The owner chose the following from mock-ups of the landing page, library and
+editor. None of it is in the code yet; the values and the order of work belong to the
+themes and type plan in `docs/plans/`.
+
+*What stays from Bright Spring.* Green is the brand colour in both themes. Marigold
+`#F2A21B` is the one small accent and never carries text on the light page. The leaf
+corner stays on note cards and the editor sheet only. The theme follows the device. The
+Japanese framing stays dropped.
+
+*Colour.* The light page is near-white, not cream, with white sheets and dark green
+ink. The night page is a soft dark green-grey, taken from the unused Mori theme without
+its gold. Marigold appears only in the logo sun and the pin.
+
+*Type.* Newsreader for every word: titles, note text, buttons, labels and forms.
+Hierarchy comes from size, weight and italic. Newsreader was tested and has no small
+capitals, so counts and dates are italic and there are no capital-letter labels, which
+is what the three earlier reviews asked for. Fraunces remains only in the wordmark.
+
+*Monospace.* Courier Prime, because a typewriter is the one monospace that says
+writing. It is used only for inline code, code blocks and keys copied by hand. Its zero
+and capital O look alike. The recovery key is base32, which has no zero, so that does
+not affect it.
+
+*Other scripts.* Newsreader and Courier Prime have no Cyrillic or Greek, which the app
+shipped before. Literata is the fallback serif for those scripts and loads only when a
+note needs it. Monospace in those scripts uses the system font.
+
+*Texture.* A faint, untinted grain on the page background only. Sheets, cards, modals
+and inputs are smooth, so the grain reads as a desk under paper. The grain that covered
+the whole screen, text included, is removed.
+
+**Rejected:** The cream page. The owner asked why it was there, and the honest answer
+was habit. It is the largest part of the generated look.
+
+**Rejected:** Bolder palettes drawn from a silk sari, a doorstep at dawn and a floor
+tile. They had a clear source, but they were too loud for a calm writing app.
+
+**Rejected:** Typefaces chosen to draw Tamil and English as one design. The app does not
+need to support Tamil writing specially.
+
+**Rejected:** Fraunces for titles with Source Sans 3 for the interface. Two families,
+one of them the default humanist sans, read as a template.
+
+**Rejected:** Literata and Vollkorn as the one serif. Literata's upright is quiet and
+most of its character is in the italic. Vollkorn is heavy for long notes. Literata is
+kept only as the Cyrillic and Greek fallback.
+
+**Rejected:** Geist Serif. It is a display face with one weight and no italic, its tone
+is sharp, and it ships in a package many generated sites already use.
+
+**Rejected:** JetBrains Mono. It was made for code editors and looks like one.
+
+**Rejected:** Small capitals for labels. The font has none, and the browser's imitation
+is lighter and thinner than the text around it.
+
+**Rejected:** Keeping the full-screen grain. It sits on top of text, and its brown tint
+would pull the page back toward cream.
+
+---
+
+## 2026-11-09 — The logo is a leaf that is a page, with a sun behind it and இ inside the sun
+
+**Status:** Active
+
+**Why:** The owner looked again at the wordmark-and-monogram logo decided earlier the
+same day and found it too plain to be a logo. Forty-one sketches followed. The owner
+liked three: a quotation mark made of a leaf and a flame, a fan of palm leaves, and a
+leaf that is also a page. The third was chosen.
+
+The mark is a green leaf in the shape of the app's leaf corner, with three lines of
+text cut out of it. A leaf is a page in English, and the first Tamil books were palm
+leaves. A small marigold sun sits behind its top-left corner. The leaf is spring, for
+Ishya; the sun is brightness, for Idhanth. Inside the sun, in dark green, is the letter
+இ, which both names begin with. It shows only at large sizes. At icon sizes the sun is
+plain, so the letter is something to find. The outline of the letter is the one the
+owner's Inbax app uses, taken from Noto Serif Tamil, so the two apps share it.
+
+The wordmark stays lowercase "yidhan" in Fraunces. The y is green and the rest is ink:
+the name is the y of Ishya joined to the "idhan" of Idhanth.
+
+This is a chosen sketch, not final artwork. The final drawing, the icon tile and the
+size at which the letter appears belong to the logo plan in `docs/plans/`. No trademark
+clearance has been done.
+
+**Rejected:** The wordmark alone as the logo, with the "yi" monogram as the icon. The
+owner found it too plain.
+
+**Rejected:** The letter shown outright, as the mark or on the leaf. The owner wants it
+subtle and joined to another idea.
+
+**Rejected:** The letter as the dot on the i of the wordmark. It was the first version
+of "a dot that is a letter up close". The owner preferred it inside the sun of the mark.
+
+**Rejected:** The sun in front of the leaf, a leaf without text lines, and a letter in
+the same colour family as the sun. The owner asked for lines, the sun behind, and a
+letter in a different colour.
+
+**Rejected:** A cream letter. Cream is leaving the palette. A burnt orange letter was
+the quietest option; the owner chose dark green.
+
+**Rejected:** A large sun. The owner asked for a smaller one, which is why the letter
+only reads at large sizes.
+
+---
+
+## 2026-11-09 — The design direction is Bright Spring: green on paper, a marigold accent, Fraunces and Source Sans 3
+
+**Status:** Superseded by the 2026-11-09 entry "The design direction is a calm page and one serif"
 
 **Why:** Three design reviews (two in `docs/reviews/`, dated 2026-11-08 and 2026-11-09,
 and one outside the repo) found these faults between them. The two themes share no brand
@@ -79,7 +213,7 @@ theme the device is already in.
 
 ## 2026-11-09 — New logo: a Fraunces wordmark with a sun on the i, and a "yi" monogram as the app icon
 
-**Status:** Active
+**Status:** Superseded by the 2026-11-09 entry "The logo is a leaf that is a page"
 
 **Why:** The owner is moving the product away from its Japanese design language, starting
 with the enso mark. The name comes from the owner's children, Ishya (spring) and Idhanth

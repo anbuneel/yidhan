@@ -14,7 +14,9 @@ fi
 # One ACTIVE plan, so "what are we working on now" has one answer. It was 2 while
 # the documentation overhaul ran alongside the product ledger; that plan is now
 # COMPLETE (DECISIONS.md, 2026-09-08). Raising this needs a DECISIONS.md entry.
-MAX_ACTIVE_PLANS=1
+# It is 3 while the two redesign plans (logo and icons, themes and type) run beside
+# the launch plan (DECISIONS.md, 2026-11-09). Back to 1 when those two are COMPLETE.
+MAX_ACTIVE_PLANS=3
 
 actives=$(git grep --cached -l -e '^Status: ACTIVE$' -- ':(glob)docs/plans/*.md' 2>/dev/null || true)
 count=0
