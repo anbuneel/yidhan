@@ -6,7 +6,9 @@
     <meta name="referrer" content="strict-origin-when-cross-origin" />
 
     <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/icons/icon-48.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
 
     <!-- PWA Meta Tags -->
@@ -15,7 +17,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Yidhan" />
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
 
     <!-- Apple Splash Screens (prevent white flash on PWA launch) -->
     <link rel="apple-touch-startup-image" href="/splash/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
@@ -38,7 +40,7 @@
     <meta property="og:description" content="Personal notes, encrypted on your device before they sync. Nothing to set up to try it. Works offline. Free and open source." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://yidhan.vercel.app" />
-    <meta property="og:image" content="https://yidhan.vercel.app/og-image.png?v=2" />
+    <meta property="og:image" content="https://yidhan.vercel.app/og-image.png?v=3" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <link rel="canonical" href="https://yidhan.vercel.app" />
@@ -47,7 +49,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Yidhan — A quiet home for your personal notes" />
     <meta name="twitter:description" content="Personal notes, encrypted on your device before they sync. Nothing to set up to try it. Works offline. Free and open source." />
-    <meta name="twitter:image" content="https://yidhan.vercel.app/og-image.png?v=2" />
+    <meta name="twitter:image" content="https://yidhan.vercel.app/og-image.png?v=3" />
 
     <!-- Fonts are self-hosted (src/fonts.css). Preload the latin Newsreader face
          every page paints with, and the display cut the headline uses, so they
@@ -58,20 +60,26 @@
 
     <!-- Landing shell: the first screen, painted before the bundle arrives. React
          replaces it on mount. /boot.js sets the theme and hides it off the home path
-         or when a session exists. Values mirror src/components/LandingPage.tsx and
+         or when a session exists. Values mirror src/components/LandingPage.tsx (the logo
+         mirrors src/components/Logo.tsx and logoPaths.ts) and
          the theme tokens; keep them in step when either changes. -->
     <style>
       @font-face { font-family: 'Newsreader'; font-style: normal; font-weight: 400 700; font-display: swap; src: url('/src/assets/fonts/newsreader-roman-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
       @font-face { font-family: 'Newsreader Display'; font-style: normal; font-weight: 500; font-display: swap; src: url('/src/assets/fonts/newsreader-display-roman-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-      :root { --b-bg: #050A06; --b-bg2: #0A120B; --b-text: #EAE6D8; --b-text2: #A3ABA3; --b-text3: #8E9A8E; --b-accent: #D4AF37; --b-cta-bg: #D4AF37; --b-cta-text: #16161F; --b-border: rgba(212, 175, 55, 0.25); --b-glow: rgba(212, 175, 55, 0.15); --b-surface: color-mix(in srgb, #050A06 92%, white 8%); }
-      @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --b-bg: #EBE8E4; --b-bg2: #E5E2DD; --b-text: #3E3B36; --b-text2: #55524C; --b-text3: #65625C; --b-accent: #BF5432; --b-cta-bg: #B04A2C; --b-cta-text: #fff; --b-border: rgba(62, 59, 54, 0.25); --b-glow: rgba(194, 86, 52, 0.2); --b-surface: color-mix(in srgb, #EBE8E4 92%, white 8%); } }
-      :root[data-theme="light"] { --b-bg: #EBE8E4; --b-bg2: #E5E2DD; --b-text: #3E3B36; --b-text2: #55524C; --b-text3: #65625C; --b-accent: #BF5432; --b-cta-bg: #B04A2C; --b-cta-text: #fff; --b-border: rgba(62, 59, 54, 0.25); --b-glow: rgba(194, 86, 52, 0.2); --b-surface: color-mix(in srgb, #EBE8E4 92%, white 8%); }
+      :root { --b-bg: #050A06; --b-bg2: #0A120B; --b-text: #EAE6D8; --b-text2: #A3ABA3; --b-text3: #8E9A8E; --b-accent: #D4AF37; --b-cta-bg: #D4AF37; --b-cta-text: #16161F; --b-border: rgba(212, 175, 55, 0.25); --b-glow: rgba(212, 175, 55, 0.15); --b-surface: color-mix(in srgb, #050A06 92%, white 8%); --b-leaf: #86C5A0; }
+      @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --b-bg: #EBE8E4; --b-bg2: #E5E2DD; --b-text: #3E3B36; --b-text2: #55524C; --b-text3: #65625C; --b-accent: #BF5432; --b-cta-bg: #B04A2C; --b-cta-text: #fff; --b-border: rgba(62, 59, 54, 0.25); --b-glow: rgba(194, 86, 52, 0.2); --b-surface: color-mix(in srgb, #EBE8E4 92%, white 8%); --b-leaf: #2E7D55; } }
+      :root[data-theme="light"] { --b-bg: #EBE8E4; --b-bg2: #E5E2DD; --b-text: #3E3B36; --b-text2: #55524C; --b-text3: #65625C; --b-accent: #BF5432; --b-cta-bg: #B04A2C; --b-cta-text: #fff; --b-border: rgba(62, 59, 54, 0.25); --b-glow: rgba(194, 86, 52, 0.2); --b-surface: color-mix(in srgb, #EBE8E4 92%, white 8%); --b-leaf: #2E7D55; }
       html { background: var(--b-bg); }
       html.boot-hidden .boot-landing { display: none; }
       .boot-landing { min-height: 100vh; background: var(--b-bg); color: var(--b-text); font-family: 'Newsreader', Georgia, serif; overflow-x: hidden; }
       .boot-header { display: flex; align-items: center; height: 64px; padding: 0 1rem; }
-      .boot-wordmark { display: inline-flex; align-items: center; gap: 0.28rem; font-family: 'Newsreader', Georgia, serif; font-size: 1.95rem; line-height: 1; letter-spacing: -0.045em; color: var(--b-text); }
-      .boot-mark { display: inline-block; width: 46px; height: 30px; }
+      .logo-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+      .logo-leaf { fill: var(--color-brand-leaf, var(--b-leaf)); }
+      .logo-ink { fill: var(--color-text-primary, var(--b-text)); }
+      .boot-logo { display: inline-flex; align-items: center; gap: 9px; }
+      .boot-mark { width: 30px; height: 30px; flex-shrink: 0; }
+      .boot-word { height: 30px; width: auto; aspect-ratio: 6003 / 1954; flex-shrink: 0; }
+      @media (min-width: 640px) { .boot-logo { gap: 10.8px; } .boot-mark { width: 36px; height: 36px; } .boot-word { height: 36px; } }
       .boot-hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; align-items: center; width: 100%; max-width: 1440px; margin: 0 auto; box-sizing: border-box; padding: 2rem clamp(1.25rem, 3.5vw, 3rem) 0; }
       .boot-intro h1 { font-family: 'Newsreader Display', 'Newsreader', Georgia, serif; font-weight: 500; font-size: clamp(2.75rem, 4.6vw, 4rem); line-height: 1.05; letter-spacing: 0; margin: 0 0 1.5rem; text-wrap: balance; }
       .boot-intro p { font-weight: 300; font-size: clamp(1.05rem, 1.2vw, 1.15rem); line-height: 1.65; color: var(--b-text2); max-width: 30rem; margin: 0 0 0.85rem; }
@@ -96,10 +104,11 @@
     <title>Yidhan — A quiet home for your personal notes</title>
   </head>
   <body>
+    <!-- logo sprite: scripts/brand/flatten.py --><svg class="logo-sprite" aria-hidden="true" focusable="false"><defs><g id="yidhan-mark-small"><path fill="#F2A21B" d="m1.5 4.5c0-1.66 1.34-3 3-3c1.49 0 2.72 1.08 2.96 2.5h-.46q-2 0-2 2v1.46c-.16.03-.33.04-.5.04c-1.66 0-3-1.34-3-3z"/><path class="logo-leaf" d="m7 5h3c2.21 0 4 1.79 4 4v4c0 .55-.45 1-1 1h-3c-2.21 0-4-1.79-4-4v-4c0-.55.45-1 1-1zm1 5v1h4v-1z"/></g><g id="yidhan-wordmark"><path class="logo-leaf" d="m613-97l-118 214l-359-841q-17-41-36-55q-20-15-59-28q-20-10-30-22q-9-12-9-29q0-24 16-38q15-13 41-13h370q27 0 41 13q15 12 15 36q0 19-12 31q-11 12-35 20l-35 10q-35 10-40 35q-6 25 13 73zm-184 276l68-163l43-82l245-628q17-44 10-70q-8-25-42-35l-41-10q-22-7-33-20q-10-12-10-31q0-23 15-36q15-13 42-13h264q27 0 42 13q15 12 15 36q0 15-8 28q-8 12-31 23q-41 14-62 35q-20 21-41 72l-352 866q-49 118-94 187q-45 69-97 98q-52 29-121 29q-106 0-165-60q-59-60-59-146q0-53 25-85q25-31 68-31q40 0 61 23q22 23 37 71l10 35q7 36 25 52q17 15 42 15q27 0 50-16q23-16 46-54q23-38 48-103z"/><path class="logo-ink" d="m1434-863v678q0 35 11 51q11 16 31 23l32 10q20 9 31 21q10 12 10 31q0 23-15 36q-15 13-42 13h-329q-26 0-42-13q-15-13-15-36q0-19 10-31q11-12 31-21l33-10q20-7 31-23q11-16 11-51v-494q0-31-10-44q-9-14-28-18l-56-4q-18-6-28-17q-10-11-10-28q0-18 13-32q12-13 39-23l149-53q29-11 50-18q22-6 41-6q24 0 38 16q14 16 14 43zm919 687l-9-10v-1048q0-32-9-45q-10-14-29-18l-56-3q-18-7-28-18q-10-11-10-27q0-19 12-32q13-14 40-24l144-51q32-12 54-18q21-6 40-6q26 0 40 16q15 16 15 44v1231q0 35 10 51q11 17 32 24l34 9q18 9 29 21q10 12 10 31q0 23-15 36q-15 13-42 13h-153q-50 0-79-28q-30-29-30-79zm-696-257q0-156 59-267q59-110 159-169q100-60 223-60q115 0 205 59q91 58 144 159l-56 87q-46-93-114-138q-68-45-146-45q-71 0-128 41q-57 41-91 120q-33 79-33 190q0 110 33 186q33 77 90 117q58 40 131 40q82 0 149-47q66-47 114-133l36 66q-71 117-170 183q-100 66-218 66q-113 0-200-57q-88-57-137-160q-50-102-50-238zm1440-200l-49-56l47-45q105-102 196-149q91-46 174-46q118 0 191 76q74 76 74 206v462q0 36 10 52q11 15 32 23l34 9q19 9 29 21q10 12 10 31q0 23-14 36q-15 13-42 13h-330q-52 0-52-49q0-31 34-47l35-10q22-8 32-24q10-17 10-55v-408q0-89-44-135q-43-46-115-46q-49 0-105 24q-56 25-117 81zm29-783v1231q0 38 10 55q9 16 31 24l35 10q34 16 34 47q0 49-52 49h-330q-26 0-41-13q-15-13-15-36q0-19 10-31q10-12 29-21l35-9q21-8 31-23q11-16 11-52v-1049q0-32-10-45q-9-14-29-18l-55-3q-19-7-28-18q-10-11-10-27q0-19 12-32q12-14 39-24l145-51q32-12 54-18q21-6 40-6q25 0 40 16q14 16 14 44zm1404 1296v-31l-16-15v-514q0-75-41-116q-41-40-113-40q-66 0-101 27q-35 27-35 67v56q0 51-31 79q-31 27-87 27q-51 0-77-27q-26-26-26-70q0-63 47-121q47-57 139-94q91-36 222-36q156 0 235 71q79 72 79 195v494q0 22 11 36q10 14 32 14q14 0 23-5q9-4 16-12q5-5 11-10q6-4 14-4q15 0 24 11q9 12 9 30q0 32-20 62q-21 30-58 49q-37 19-87 19q-75 0-122-38q-48-38-48-104zm-568-85q0-122 106-196q105-74 285-74q55 0 108 8q54 9 92 24l-19 80q-37-15-77-23q-40-9-86-9q-88 0-140 40q-52 41-52 112q0 69 42 104q43 35 108 35q65 0 122-31q57-30 98-85l23 72q-54 81-144 126q-91 44-194 44q-123 0-198-61q-74-61-74-166zm1324-657v677q0 38 10 55q9 16 31 24l35 10q34 16 34 47q0 49-52 49h-330q-26 0-41-13q-15-13-15-36q0-19 10-31q10-12 29-21l35-9q21-8 32-23q10-16 10-52v-495q0-32-10-45q-9-13-29-18l-55-3q-19-7-28-18q-10-11-10-27q0-19 12-32q12-14 40-23l144-52q32-12 54-18q21-6 40-6q26 0 40 16q14 16 14 44zm-29 228l-49-56l47-45q103-101 194-147q91-47 176-47q120 0 192 75q73 76 73 202v467q0 36 10 52q11 16 32 23l34 9q19 9 29 21q10 12 10 31q0 23-14 36q-15 13-42 13h-330q-52 0-52-49q0-31 34-47l36-10q21-8 31-24q10-17 10-55v-413q0-86-43-131q-42-45-116-45q-52 0-108 24q-57 25-115 80z"/><path fill="#F2A21B" d="m1112-1222c0 99 81 180 180 180c100 0 180-81 180-180c0-99-80-180-180-180c-99 0-180 81-180 180z"/></g></defs></svg><!-- /logo sprite -->
     <div id="root">
       <div class="boot-landing">
         <header class="boot-header">
-          <span class="boot-wordmark"><span class="boot-mark" aria-hidden="true"></span>Yidhan</span>
+          <span class="boot-logo"><svg class="boot-mark" viewBox="1.5 1.5 12.5 12.5" aria-hidden="true" focusable="false"><use href="#yidhan-mark-small"/></svg><svg class="boot-word" viewBox="2 -1476 6003 1954" role="img" aria-label="Yidhan" focusable="false"><use href="#yidhan-wordmark"/></svg></span>
         </header>
         <section class="boot-hero">
           <div class="boot-intro">

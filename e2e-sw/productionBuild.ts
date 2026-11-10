@@ -35,6 +35,8 @@ export function buildForProduction(): void {
   execFileSync('npm', ['run', 'build'], {
     cwd: repoRoot,
     stdio: 'pipe',
+    // Windows: npm is npm.cmd, which execFileSync can only start through a shell.
+    shell: process.platform === 'win32',
     env: {
       ...process.env,
       VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL ?? 'https://placeholder.supabase.co',

@@ -141,7 +141,8 @@ def max_radius(g, box):
 
 
 # ---- Wordmark ---------------------------------------------------------------------
-def wordmark_paths():
+def wordmark_paths(dotted_i=True):
+    """dotted_i=False keeps the dotless i, for a wordmark that puts the sun on it."""
     wm = json.load(open(OUT + 'wordmark.json'))
     f = TTFont(FRAUNCES)
     inst = instantiateVariableFont(f, {'wght': 440, 'SOFT': 100, 'opsz': 72, 'WONK': 0})
@@ -150,7 +151,7 @@ def wordmark_paths():
     for name, box in wm['boxes']:
         bp = BoundsPen(gs); gs[name].draw(bp)
         origin = box[0] - bp.bounds[0]
-        draw = 'i' if name == 'dotlessi' else name
+        draw = 'i' if (name == 'dotlessi' and dotted_i) else name
         pen = SVGPathPen(gs)
         gs[draw].draw(TransformPen(pen, (1, 0, 0, -1, origin, 0)))
         bp2 = BoundsPen(gs); gs[draw].draw(bp2); b = bp2.bounds

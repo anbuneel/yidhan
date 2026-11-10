@@ -217,7 +217,7 @@ Yidhan embraces **wabi-sabi** - finding beauty in imperfection:
 - **Warm, organic colors** - terracotta and antique gold accents
 - **Curated tag palette** - 8 muted, earthy colors
 - **Serif typography** for display text (Cormorant Garamond)
-- **Theme-aware logo mark** - the hand-painted enso follows the accent (terracotta on Kintsugi, gold on Midnight)
+- **Theme-aware logo** - the leaf mark and wordmark are inline SVG; the leaf follows the theme and the sun stays marigold
 - **Subtle paper texture** overlay
 - **Gentle animations** that feel natural
 

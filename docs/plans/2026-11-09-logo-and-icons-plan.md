@@ -45,7 +45,9 @@ answers:
 3. **The icon tile.** Dark green, for the app icon and the favicon. The near-white tile
    disappears on white tab bars and launchers. The cost: on the tile the leaf is the
    light green, not the green of the app's buttons.
-4. **The wordmark's i.** A plain i everywhere. No sun on the i.
+4. **The wordmark's i.** A plain i everywhere. No sun on the i. **Reversed by the owner
+   during the rollout (2026-11-09):** the sun goes on the i, and the header logo is
+   larger (`DECISIONS.md`).
 5. **Small sizes.** From 16 to 48px, the separate small drawing with one line
    (`mark-small.svg`, `tile-dark-small.svg`).
 6. **One colour.** One fill, with the gap, the lines and the letter cut out
