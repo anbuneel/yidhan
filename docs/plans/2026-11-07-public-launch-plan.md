@@ -89,7 +89,7 @@ Everything here runs on the device only, so the server stays ignorant.
 | 4 | Navigation | 42, then 92 | Any note in three keystrokes; note links on the same switcher |
 | 5 | Library | 161 (Return to a thought), then — (Quiet Intelligence) | "Return to a thought": from an older note, "Add a reflection" creates a dated companion note and keeps the original; related notes on request from the in-memory index. Then "On this day": one card at the top of the library from a year ago today. No server, no notification |
 | 6 | Sharing | 122, then 123 | Optional passphrase on a letter; refresh a letter under the same link. Then the landing page talks about letters |
-| 7 | Design | 109 | Reading settings: text size, line length, Washi and Mori |
+| 7 | Design | 109 | Reading settings: text size, line length. The Washi and Mori themes were deleted in the redesign (2026-11-09); extra themes would be new work |
 | 8 | Import | 78, then 89, then 90 | A real Markdown parser; Apple Notes, Bear and Obsidian importers; a preview of what carries over |
 
 Two things people will ask for on day one and should be told are coming, not built

@@ -346,6 +346,9 @@ Progress:
   mono-lane test does not cover the search box or status text.
 
 - Step 3 is merged into `redesign` (PR 267).
+- Step 4 is merged into `redesign` (PR 268, 2026-11-09). The themes are `light.ts` and
+  `dark.ts`; Washi and Mori are gone. The owner approved the grain at 7% in light and
+  5% in dark from screenshots. The landing JS is at exactly 90 of 90 KB.
 
 Settled by the owner on 2026-11-09, before step 4:
 
