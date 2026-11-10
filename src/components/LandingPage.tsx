@@ -471,10 +471,8 @@ export function LandingPage({
         .landing-tb[data-label="B"] { font-size: 0.85rem; }
         .landing-manuscript-text {
           font-family: var(--font-body);
-          font-weight: var(--note-weight);
           font-size: clamp(1.05rem, 1.25vw, 1.2rem);
           line-height: 1.75;
-          color: var(--color-text-note);
           min-height: 6.5em;
         }
         .landing-manuscript-text p { margin: 0; }

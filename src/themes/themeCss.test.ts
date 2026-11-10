@@ -17,7 +17,8 @@ import {
 // crept back over content.
 
 const root = resolve(__dirname, '../..');
-const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
+// Line endings normalised, so a CRLF checkout on Windows compares the same as CI.
+const read = (path: string) => readFileSync(resolve(root, path), 'utf8').replace(/\r\n/g, '\n');
 const indexCss = read('src/index.css');
 const indexHtml = read('index.html');
 const light = ACTIVE_LIGHT_THEME.colors;
@@ -144,7 +145,9 @@ describe('landing shell mirror (index.html)', () => {
 
   it('sets the sample note text in the note colour and weight', () => {
     expect(indexHtml).toMatch(/\.boot-manuscript p \{[^}]*font-weight: var\(--b-note-weight\);[^}]*color: var\(--b-note\);/);
-    expect(read('src/components/LandingPage.tsx')).toMatch(/\.landing-manuscript-text \{[^}]*font-weight: var\(--note-weight\);[^}]*color: var\(--color-text-note\);/);
+    expect(rule(indexCss, '.landing-manuscript-text')).toMatch(/font-weight: var\(--note-weight\);\s*color: var\(--color-text-note\);/);
+    // The React rule must not set them again in the colour or weight it used before.
+    expect(read('src/components/LandingPage.tsx')).not.toMatch(/\.landing-manuscript-text \{[^}]*(font-weight|color):/);
   });
 });
 

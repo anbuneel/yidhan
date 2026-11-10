@@ -1297,6 +1297,13 @@ nav,
   box-shadow: none;
 }
 
+/* The landing's sample note takes the editor's note colour and weight. It lives here,
+   not in LandingPage.tsx, because the landing's JS before load is at its budget. */
+.landing-manuscript-text {
+  font-weight: var(--note-weight);
+  color: var(--color-text-note);
+}
+
 /* Viewport-following manuscript glow */
 .editor-manuscript-glow {
   position: absolute;

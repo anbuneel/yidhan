@@ -11,7 +11,7 @@ import { TAG_COLORS } from '../types';
 
 const MARIGOLD = '#F2A21B';
 const root = resolve(__dirname, '../..');
-const indexCss = readFileSync(resolve(root, 'src/index.css'), 'utf8');
+const indexCss = readFileSync(resolve(root, 'src/index.css'), 'utf8').replace(/\r\n/g, '\n');
 
 const TEXT_TOKENS = [
   'textPrimary',
@@ -142,7 +142,7 @@ describe('marigold and the accent are not text colours where they fail', () => {
       }
     }
     expect(offenders).toEqual([]);
-    expect(readFileSync(resolve(root, 'src/components/Editor.tsx'), 'utf8')).toContain(
+    expect(readFileSync(resolve(root, 'src/components/Editor.tsx'), 'utf8').replace(/\r\n/g, '\n')).toContain(
       "case 'saving':\n      return { color: 'var(--color-accent-text)'",
     );
   });
