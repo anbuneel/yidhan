@@ -1,5 +1,5 @@
 Status: ACTIVE
-Last verified: 2026-11-09
+Last verified: 2026-11-10
 
 # Themes and type: calm page, one serif
 
@@ -355,6 +355,13 @@ Settled by the owner on 2026-11-09, before step 4:
 - Open question 1: the themes are named "Light" and "Dark" (`light`, `dark`).
 - Open question 4: Washi and Mori are deleted.
 - Open question 6: the owner approves the grain strength from screenshots.
+
+Settled by the owner on 2026-11-10, before step 5:
+
+- Open question 2: "Saved" and "Synced" are the word in italic with a small tick.
+- Open question 3: the editor glow stays, fainter and neutral.
+- Open question 5: full pills for buttons and chips, 8px for inputs, as in the mock-up.
+- On a phone the editor sheet stays edge to edge.
 
 ## Open questions
 
