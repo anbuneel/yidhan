@@ -75,16 +75,22 @@ export default defineConfig({
       // update path is testable instead of relying on an injected script.
       injectRegister: null,
       // The precache is what an offline visit reads, nothing more (item 61, step 1).
-      // Kept: the two icons the shell links (favicon, icon-192) and the font
+      // Kept: the icons the shell links (favicon, icon-16, icon-48, icon-192) and the font
       // licences, which travel with the precached fonts. Left out: the iOS splash
       // screens (Safari fetches them when adding to the home screen, not through the
       // worker), og-image.png (read by crawlers), icons above 192 px and the
       // apple-touch icons (the OS copies installed icons at install time), and
       // robots.txt. scripts/check-bundle-budget.mjs fails the build if any return.
-      includeAssets: ['favicon.png', 'icons/icon-192.png', 'licenses/fonts/*.txt'],
-      // The manifest still lists icon-512 for installability; it is fetched from
-      // the network at install. Adding manifest icons here also listed favicon and
-      // icon-192 a second time.
+      includeAssets: [
+        'favicon.png',
+        'icons/icon-16.png',
+        'icons/icon-48.png',
+        'icons/icon-192.png',
+        'licenses/fonts/*.txt',
+      ],
+      // The manifest still lists icon-512 and maskable-512 for installability; they
+      // are fetched from the network at install. Adding manifest icons here also
+      // listed favicon and icon-192 a second time.
       includeManifestIcons: false,
       workbox: {
         // No png/svg/ico glob: the PNGs worth precaching are named in includeAssets.
@@ -123,7 +129,8 @@ export default defineConfig({
             type: 'image/png',
           },
           {
-            src: '/icons/icon-512.png',
+            // Full bleed; the mark sits inside the 40% safe zone.
+            src: '/icons/maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',

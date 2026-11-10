@@ -45,8 +45,9 @@
     ],
     "required": [
       "^favicon\\.png$",
+      "^icons/icon-16\\.png$",
+      "^icons/icon-48\\.png$",
       "^icons/icon-192\\.png$",
-      "^assets/yidhan-logo-.*\\.webp$",
       "^licenses/fonts/.*\\.txt$"
     ]
   },

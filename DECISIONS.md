@@ -19,6 +19,30 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-09 — The wordmark gets the sun on its i, and the header logo draws from a sprite in index.html
+
+**Status:** Active
+
+**Why:** The review board settled on a plain i (logo plan, answer 4). After seeing the
+rollout in the header, the owner asked for the sun over the i and a larger header
+logo. The sun replaces the i's dot, in marigold, at the size and place of the earlier
+sun-dot wordmark. The header lockup grew from 26px (phone) and 30px (desktop) to 30px
+and 36px. Both sizes are under 48px, so the mark is still the one-line small drawing.
+
+The landing's JS before load was at its 90 KB limit with no room. The logo as path data
+in the JS entry measured 94.5 KB. So the header drawings ship once, as an SVG sprite in
+`index.html` outside `#root`, and both the landing shell and `Logo.tsx` draw them with
+`<use>`. The shell and React then show the same markup, and the entry carries only ids
+and viewBoxes. The full mark, which the header never shows, ships in `LogoMark.tsx`
+outside the entry.
+
+**Rejected:** path data in `Logo.tsx` (over the JS budget); an external SVG file (an
+extra request on first paint, and the header would be blank until it arrived); a CSS
+mask, as the enso used (an image request, and masks cannot hold two token colours in
+one layer).
+
+---
+
 ## 2026-11-09 — Big titles use a Newsreader display cut, and two first-visit budgets rise for it
 
 **Status:** Active

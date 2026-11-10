@@ -1,11 +1,12 @@
 /**
- * Generate Open Graph image for Yidhan
+ * Generate the Open Graph image for Yidhan.
  *
- * Composites the brand lockup (mark + gold-foil wordmark) onto a warm paper
- * background with the tagline below. Uses the pre-designed lockup asset so the
- * OG image matches the actual brand identity.
+ * The leaf lockup, with the letter in the sun (owner, 2026-11-09: large uses carry
+ * it), over the tagline in Newsreader, on a warm paper background. Both drawings are
+ * flat SVGs from images/brand/export/ (python scripts/brand/flatten.py). The tagline is
+ * outlined there, so no font is fetched or needed here.
  *
- * Usage: npx tsx scripts/generate-og-image.ts
+ * Usage: npm run og:generate
  */
 
 import sharp from 'sharp';
@@ -24,100 +25,63 @@ const HEIGHT = 630;
 const BG_COLOR = '#f5f0e8'; // Warm paper tone (Kintsugi light bg)
 const TEXT_MUTED = '#7a7068'; // Warm muted text for tagline
 
-// ── Layout constants ────────────────────────────────────────────
-const LOCKUP_HEIGHT = 360; // Height to fit the lockup within
-const LOCKUP_TOP = 60; // Top padding above lockup
+// ── Layout ──────────────────────────────────────────────────────
+const LOCKUP_HEIGHT = 200; // The mark carries the letter at this size (128px and up)
+const TAGLINE_SIZE = 34; // Font size of the tagline, px
+const GAP = 64; // Lockup bottom to tagline baseline
 
 // ── Source / output paths ───────────────────────────────────────
-const LOCKUP_PATH = path.join(__dirname, '../images/yidhan-logo-lockup-tight-1200.webp');
+const EXPORT_DIR = path.join(__dirname, '../images/brand/export');
+const LOCKUP_PATH = path.join(EXPORT_DIR, 'lockup-letter.svg');
+const TAGLINE_PATH = path.join(EXPORT_DIR, 'og-tagline.svg');
 const OUTPUT_PATH = path.join(__dirname, '../public/og-image.png');
 
-// ── Text content ────────────────────────────────────────────────
-const TAGLINE = 'A quiet home for your personal notes';
-
-/**
- * Build an SVG buffer for the tagline text below the lockup.
- */
-function buildTaglineSvg(y: number): Buffer {
-  const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}">
-  <defs>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300&amp;display=swap');
-    </style>
-  </defs>
-  <text
-    x="${WIDTH / 2}"
-    y="${y}"
-    text-anchor="middle"
-    font-family="'Source Sans 3', 'Source Sans Pro', sans-serif"
-    font-weight="300"
-    font-size="26"
-    letter-spacing="1"
-    fill="${TEXT_MUTED}"
-  >${TAGLINE}</text>
-</svg>`.trim();
-
-  return Buffer.from(svg);
+/** viewBox numbers and the inner markup of a flat export SVG. */
+function readSvg(file: string) {
+  const text = fs.readFileSync(file, 'utf8');
+  const vb = /viewBox="([^"]+)"/.exec(text)![1].split(' ').map(Number);
+  const inner = text
+    .replace(/^[\s\S]*?<\/title>/, '')
+    .replace(/<\/svg>\s*$/, '')
+    .trim();
+  return { vb, inner };
 }
 
 async function generateOgImage() {
-  console.log('🖼  Yidhan OG Image Generator\n');
-
-  // ── Validate source lockup exists ──────────────────────────────
-  if (!fs.existsSync(LOCKUP_PATH)) {
-    console.error(`❌ Brand lockup not found: ${LOCKUP_PATH}`);
-    process.exit(1);
+  for (const file of [LOCKUP_PATH, TAGLINE_PATH]) {
+    if (!fs.existsSync(file)) {
+      console.error(`Not found: ${file}. Run: python scripts/brand/flatten.py`);
+      process.exit(1);
+    }
   }
 
-  // ── Prepare the lockup ────────────────────────────────────────
-  const lockupMeta = await sharp(LOCKUP_PATH).metadata();
-  const lockupAspect = (lockupMeta.width || 1) / (lockupMeta.height || 1);
-  const lockupW = Math.round(LOCKUP_HEIGHT * lockupAspect);
-  const lockupH = LOCKUP_HEIGHT;
+  const lockup = readSvg(LOCKUP_PATH);
+  const tagline = readSvg(TAGLINE_PATH);
 
-  const lockupBuffer = await sharp(LOCKUP_PATH)
-    .resize(lockupW, lockupH, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .png()
-    .toBuffer();
+  // Lockup: scaled to LOCKUP_HEIGHT, centred.
+  const [lx, ly, lw, lh] = lockup.vb;
+  const lk = LOCKUP_HEIGHT / lh;
+  const lockupW = lw * lk;
 
-  const lockupLeft = Math.round((WIDTH - lockupW) / 2);
+  // Tagline: font units to px. The viewBox is 0, -em, advance, 1.3 em.
+  const [, emNeg, tw] = tagline.vb;
+  const tk = TAGLINE_SIZE / -emNeg;
+  const taglineW = tw * tk;
 
-  // ── Build the tagline SVG ──────────────────────────────────────
-  const taglineY = LOCKUP_TOP + lockupH + 40;
-  const taglineSvg = buildTaglineSvg(taglineY);
+  const blockH = LOCKUP_HEIGHT + GAP + TAGLINE_SIZE * 0.3;
+  const top = (HEIGHT - blockH) / 2;
+  const baseline = top + LOCKUP_HEIGHT + GAP;
 
-  // ── Composite everything onto the warm paper background ────────
-  await sharp({
-    create: {
-      width: WIDTH,
-      height: HEIGHT,
-      channels: 4,
-      background: BG_COLOR,
-    },
-  })
-    .composite([
-      // Brand lockup (mark + wordmark)
-      {
-        input: lockupBuffer,
-        left: lockupLeft,
-        top: LOCKUP_TOP,
-      },
-      // Tagline
-      {
-        input: taglineSvg,
-        left: 0,
-        top: 0,
-      },
-    ])
-    .png()
-    .toFile(OUTPUT_PATH);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
+  <rect width="${WIDTH}" height="${HEIGHT}" fill="${BG_COLOR}"/>
+  <g transform="translate(${(WIDTH - lockupW) / 2} ${top}) scale(${lk}) translate(${-lx} ${-ly})">${lockup.inner}</g>
+  <g transform="translate(${(WIDTH - taglineW) / 2} ${baseline}) scale(${tk})" fill="${TEXT_MUTED}">${tagline.inner}</g>
+</svg>`;
 
-  console.log(`✓ Generated OG image: ${OUTPUT_PATH}`);
-  console.log(`  Dimensions: ${WIDTH}×${HEIGHT}`);
-  console.log(`  Background: ${BG_COLOR}`);
-  console.log(`  Lockup:     ${lockupW}×${lockupH} (centered)`);
-  console.log(`\n✨ Done! The image is referenced in index.html as /og-image.png`);
+  await sharp(Buffer.from(svg)).png({ compressionLevel: 9, palette: true, effort: 10 }).toFile(OUTPUT_PATH);
+
+  console.log(`Generated OG image: ${OUTPUT_PATH}`);
+  console.log(`  ${WIDTH}x${HEIGHT}, lockup ${lockupW.toFixed(0)}x${LOCKUP_HEIGHT}, tagline ${taglineW.toFixed(0)}px wide`);
 }
 
 generateOgImage().catch((err) => {

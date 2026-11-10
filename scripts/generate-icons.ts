@@ -1,13 +1,14 @@
 /**
- * Generate PWA icons from logo PNG
+ * Render the app icons from the flat leaf drawings.
  *
- * Usage: npx tsx scripts/generate-icons.ts
+ * Source: images/brand/export/*.svg, written by `python scripts/brand/flatten.py`.
+ * Output: PNGs in images/brand/export/, copies where the app serves them (public/),
+ * and the Android launcher icons.
  *
- * This script:
- * 1. Takes the full logo PNG (with text)
- * 2. Crops just the icon portion (arc + dot) for app icons
- * 3. Generates all required PWA icon sizes
- * 4. Creates favicon
+ * Size rule (owner, 2026-11-09): from 16 to 48px the one-line small drawing; the
+ * letter இ shows on the icon tile from 192px. Below that the sun is plain.
+ *
+ * Usage: npm run icons:generate
  */
 
 import sharp from 'sharp';
@@ -17,96 +18,122 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const ROOT = path.join(__dirname, '..');
+const SRC = path.join(ROOT, 'images/brand/export');
+const PUBLIC = path.join(ROOT, 'public');
+const ANDROID_RES = path.join(ROOT, 'android/app/src/main/res');
 
-// Source files (in design-assets folder, not included in build)
-const FULL_LOGO = path.join(__dirname, '../design-assets/yidhan-logo-primary.png');
-const OUTPUT_DIR = path.join(__dirname, '../public/icons');
-const PUBLIC_DIR = path.join(__dirname, '../public');
+/** The tile letter rule: 192px and up. */
+const TILE_LETTER_MIN = 192;
 
-// Icon sizes for PWA
-const ICON_SIZES = [
-  { name: 'icon-512.png', size: 512 },
-  { name: 'icon-192.png', size: 192 },
-  { name: 'apple-touch-icon.png', size: 180 },
-  { name: 'icon-32.png', size: 32 },
-  { name: 'icon-16.png', size: 16 },
+/** Corner radius for icons the platform shows as they are (purpose "any"). */
+const ROUND = 0.22;
+
+type Job = {
+  /** Flat SVG in images/brand/export/. */
+  svg: string;
+  size: number;
+  /** Paths relative to the repo root. */
+  out: string[];
+  /** Round the tile's corners (the platform does not mask it). */
+  round?: boolean;
+  /** Clip to a circle (Android legacy round icon). */
+  circle?: boolean;
+};
+
+const tile = (size: number) => (size >= TILE_LETTER_MIN ? 'tile-dark.svg' : 'tile-dark-plain.svg');
+
+const JOBS: Job[] = [
+  // Favicons: the small drawing on a rounded dark tile.
+  { svg: 'tile-dark-small.svg', size: 16, out: ['images/brand/export/favicon-16.png', 'public/icons/icon-16.png'] },
+  {
+    svg: 'tile-dark-small.svg',
+    size: 32,
+    out: ['images/brand/export/favicon-32.png', 'public/icons/icon-32.png', 'public/favicon.png'],
+  },
+  { svg: 'tile-dark-small.svg', size: 48, out: ['images/brand/export/favicon-48.png', 'public/icons/icon-48.png'] },
+  // Install icons. The OS rounds the Apple touch icon and masks the maskable one.
+  { svg: tile(192), size: 192, round: true, out: ['images/brand/export/icon-192.png', 'public/icons/icon-192.png'] },
+  { svg: tile(512), size: 512, round: true, out: ['images/brand/export/icon-512.png', 'public/icons/icon-512.png'] },
+  { svg: tile(512), size: 512, out: ['images/brand/export/maskable-512.png', 'public/icons/maskable-512.png'] },
+  {
+    svg: tile(180),
+    size: 180,
+    out: [
+      'images/brand/export/apple-touch-icon.png',
+      'public/icons/apple-touch-icon.png',
+      'public/apple-touch-icon.png',
+    ],
+  },
+  { svg: 'android-foreground.svg', size: 432, out: ['images/brand/export/android-foreground-432.png'] },
 ];
 
-async function generateIcons() {
-  console.log('🎨 Yidhan Icon Generator\n');
+// Android launcher icons, per density. Launcher icons are 48dp and the adaptive
+// foreground is 108dp, of which the centre 72dp shows. The letter follows the tile
+// rule on the size the tile is shown at.
+const DENSITIES: Array<[string, number]> = [
+  ['mdpi', 1],
+  ['hdpi', 1.5],
+  ['xhdpi', 2],
+  ['xxhdpi', 3],
+  ['xxxhdpi', 4],
+];
+for (const [name, k] of DENSITIES) {
+  const icon = 48 * k;
+  const fg = 108 * k;
+  const dir = `android/app/src/main/res/mipmap-${name}`;
+  JOBS.push(
+    { svg: tile(icon), size: icon, round: true, out: [`${dir}/ic_launcher.png`] },
+    { svg: tile(icon), size: icon, circle: true, out: [`${dir}/ic_launcher_round.png`] },
+    {
+      svg: icon >= TILE_LETTER_MIN ? 'android-foreground.svg' : 'android-foreground-plain.svg',
+      size: fg,
+      out: [`${dir}/ic_launcher_foreground.png`],
+    },
+  );
+}
 
-  // Ensure output directory exists
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+/** Set the render size, and round or clip the tile. */
+function prepare(svg: string, job: Job): string {
+  let s = svg.replace('<svg ', `<svg width="${job.size}" height="${job.size}" `);
+  const vb = /viewBox="0 0 (\d+) \d+"/.exec(s);
+  const grid = vb ? Number(vb[1]) : 120;
+  if (job.round) {
+    s = s.replace(`<rect width="${grid}" height="${grid}"`, `<rect width="${grid}" height="${grid}" rx="${grid * ROUND}"`);
   }
+  if (job.circle) {
+    s = s.replace(`<rect width="${grid}" height="${grid}"`, `<rect width="${grid}" height="${grid}" rx="${grid / 2}"`);
+  }
+  return s;
+}
 
-  // Check if source exists
-  if (!fs.existsSync(FULL_LOGO)) {
-    console.error(`❌ Source logo not found: ${FULL_LOGO}`);
-    console.log('Please ensure yidhan-logo-primary.png is in the public folder.');
+async function renderPng(svg: string, size: number): Promise<Buffer> {
+  return sharp(Buffer.from(svg))
+    .resize(size, size)
+    .png({ compressionLevel: 9, palette: true, effort: 10 })
+    .toBuffer();
+}
+
+async function generateIcons() {
+  if (!fs.existsSync(path.join(SRC, 'tile-dark.svg'))) {
+    console.error(`Flat drawings not found in ${SRC}. Run: python scripts/brand/flatten.py`);
     process.exit(1);
   }
-
-  // Get source image metadata
-  const metadata = await sharp(FULL_LOGO).metadata();
-  console.log(`📐 Source image: ${metadata.width}x${metadata.height}`);
-
-  // The logo has the arc+dot in the upper portion of the image
-  // Image is 2816x1536 (landscape), arc+dot is centered in top ~50%
-  const width = metadata.width!;
-  const height = metadata.height!;
-
-  // Crop parameters: focus on arc + dot only (exclude text)
-  // The text "Yidhan" starts around 55% down, we want to exclude it
-  const cropHeight = Math.floor(height * 0.52); // Top 52% has just the icon
-  const cropWidth = Math.floor(width * 0.4); // Center 40% width
-  const cropSize = Math.min(cropWidth, cropHeight);
-  const cropLeft = Math.floor((width - cropSize) / 2);
-  const cropTop = Math.floor(height * 0.05); // Start 5% from top to include full arc
-
-  console.log(`✂️  Cropping icon area: ${cropSize}x${cropSize}\n`);
-
-  // Extract and process the icon portion
-  const iconBuffer = await sharp(FULL_LOGO)
-    .extract({
-      left: cropLeft,
-      top: cropTop,
-      width: cropSize,
-      height: cropSize,
-    })
-    .toBuffer();
-
-  // Generate all icon sizes
-  for (const { name, size } of ICON_SIZES) {
-    const outputPath = path.join(OUTPUT_DIR, name);
-
-    await sharp(iconBuffer)
-      .resize(size, size, {
-        fit: 'contain',
-        background: { r: 250, g: 246, b: 241, alpha: 1 }, // Warm paper background
-      })
-      .png()
-      .toFile(outputPath);
-
-    console.log(`✓ Generated ${name} (${size}x${size})`);
+  for (const job of JOBS) {
+    const svg = prepare(fs.readFileSync(path.join(SRC, job.svg), 'utf8'), job);
+    const png = await renderPng(svg, job.size);
+    for (const out of job.out) {
+      fs.mkdirSync(path.dirname(path.join(ROOT, out)), { recursive: true });
+      fs.writeFileSync(path.join(ROOT, out), png);
+    }
+    console.log(`${job.svg} -> ${job.size}px (${(png.length / 1024).toFixed(1)} KB): ${job.out.join(', ')}`);
   }
-
-  // Copy apple-touch-icon to public root (required by iOS)
-  const appleTouchSrc = path.join(OUTPUT_DIR, 'apple-touch-icon.png');
-  const appleTouchDst = path.join(PUBLIC_DIR, 'apple-touch-icon.png');
-  fs.copyFileSync(appleTouchSrc, appleTouchDst);
-  console.log('✓ Copied apple-touch-icon.png to public root');
-
-  // Generate favicon (32x32)
-  const faviconPath = path.join(PUBLIC_DIR, 'favicon.png');
-  fs.copyFileSync(path.join(OUTPUT_DIR, 'icon-32.png'), faviconPath);
-  console.log('✓ Generated favicon.png');
-
-  console.log('\n✨ All icons generated successfully!');
-  console.log('\nNext steps:');
-  console.log('1. Review generated icons in public/icons/');
-  console.log('2. Update index.html favicon link if needed');
-  console.log('3. Verify PWA manifest in vite.config.ts');
+  // The adaptive icon draws the dark tile colour behind the foreground.
+  fs.writeFileSync(
+    path.join(ANDROID_RES, 'values/ic_launcher_background.xml'),
+    '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#163026</color>\n</resources>\n',
+  );
+  console.log(`\nDone. ${PUBLIC} and ${ANDROID_RES} updated.`);
 }
 
 generateIcons().catch((err) => {
