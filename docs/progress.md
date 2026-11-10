@@ -756,3 +756,20 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   covers each page with JavaScript off and on, `/` keeping the landing shell, `/demo`,
   `/s/abc`, an unknown path and `/privacy/extra` getting no static document, and a
   stored session on `/privacy` still starting the app shell.
+- **2026-11-10** — The redesign reaches `main`: a calm page, one serif, a leaf logo.
+  Built on the `redesign` branch in five PRs, then taken to `main` in one. Step 1
+  (#265): the leaf mark, the icon tile and the review board in `images/brand/`. Step 2
+  (#266): Newsreader for every word, a Newsreader Display cut for big titles, Courier
+  Prime for code and the recovery key, Literata for Cyrillic and Greek; Cormorant
+  Garamond, Source Sans 3 and JetBrains Mono removed; faux bold, faux italic and the
+  small phone title fixed. Step 3 (#267): the logo rollout. The header logo is an SVG
+  sprite in `index.html`, the wordmark is a path with a sun on the i, and the enso and
+  its mask script are gone. Step 4 (#268): the Light and Dark themes replace Kintsugi
+  and Midnight; Washi and Mori are deleted; the full-screen noise overlay becomes a
+  grain on the page background only. Step 5 (#269): pill buttons and chips, 8px
+  inputs, 12px panels, the leaf corner on note cards and the editor sheet only; save
+  and sync states as an italic word plus an icon; italic dates and counts, no capital
+  labels; a neutral editor glow; no shadows at night. Budgets: landing total 292 to
+  309 KB and precache 1100 to 1108 KB, for the display cut (`DECISIONS.md`,
+  2026-11-09). Both redesign plans are COMPLETE and archived, and the ACTIVE-plan cap
+  is back to one. Not verified on Android or iOS devices, or in Safari.

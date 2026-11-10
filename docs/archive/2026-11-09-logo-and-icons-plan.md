@@ -1,5 +1,7 @@
-Status: ACTIVE
+Status: COMPLETE
 Last verified: 2026-11-10
+
+Shipped: to `main` on 2026-11-10, in the redesign release PR. Built on `redesign` in PRs 265 (artwork and review board) and 267 (rollout), beside the themes plan's PRs 266, 268 and 269.
 
 # Logo and icons: the leaf that is a page
 

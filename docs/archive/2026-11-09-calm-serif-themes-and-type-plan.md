@@ -1,5 +1,7 @@
-Status: ACTIVE
+Status: COMPLETE
 Last verified: 2026-11-10
+
+Shipped: to `main` on 2026-11-10, in the redesign release PR. Built on `redesign` in PRs 266 (fonts), 268 (tokens and texture) and 269 (review fixes), beside the logo plan's PRs 265 and 267.
 
 # Themes and type: calm page, one serif
 

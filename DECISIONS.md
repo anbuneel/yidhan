@@ -19,6 +19,22 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-10 — The redesign ships to main, and the ACTIVE-plan cap returns to one
+
+**Status:** Active
+
+**Why:** The redesign was built on the `redesign` branch in five PRs (265 to 269), so
+`main` never showed a half-finished look. All five merged, and one PR takes the branch
+to `main` on 2026-11-10. The logo and icons plan and the themes and type plan are
+COMPLETE and moved to `docs/archive/`. The cap was raised to three for those two plans
+only (2026-11-09). With them closed, the launch plan is the one ACTIVE plan, so
+`MAX_ACTIVE_PLANS` is 1 again.
+
+**Rejected:** Keeping the cap at three for later work. An exception that outlives its
+reason becomes the default (2026-09-08).
+
+---
+
 ## 2026-11-09 — The wordmark gets the sun on its i, and the header logo draws from a sprite in index.html
 
 **Status:** Active

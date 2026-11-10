@@ -211,7 +211,7 @@ here would drift from it.
 
 ## Design Philosophy
 
-Yidhan embraces **wabi-sabi** - finding beauty in imperfection:
+Yidhan is a calm page and one serif:
 
 - **Asymmetric corners** on cards (`2px 24px 4px 24px`)
 - **One green** for buttons and links, and marigold only in the logo sun
@@ -223,18 +223,18 @@ Yidhan embraces **wabi-sabi** - finding beauty in imperfection:
 
 ## Tag Colors
 
-Tags use a curated wabi-sabi color palette:
+Tags use eight muted, earthy colours. Each reaches 3:1 on both the light and the dark page, so one value serves both themes:
 
 | Color | Hex |
 |-------|-----|
-| Terracotta | `#C25634` |
-| Gold | `#D4AF37` |
-| Forest | `#3D5A3D` |
-| Stone | `#8B8178` |
-| Indigo | `#4A5568` |
-| Clay | `#A67B5B` |
-| Sage | `#87A878` |
-| Plum | `#6B4C5A` |
+| Terracotta | `#B5643F` |
+| Gold | `#9C7A26` |
+| Forest | `#4B8659` |
+| Stone | `#837E72` |
+| Indigo | `#6577A2` |
+| Clay | `#A07253` |
+| Sage | `#71905F` |
+| Plum | `#9A6B86` |
 
 ## Deployment
 
