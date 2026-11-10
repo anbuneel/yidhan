@@ -1,7 +1,9 @@
-Status: PROPOSAL
+Status: SUPERSEDED
 Last verified: 2026-11-09
 
 # Themes and type: Bright Spring
+
+Superseded on 2026-11-09 by `2026-11-09-calm-serif-themes-and-type-plan.md`.
 
 A plan to put the owner's 2026-11-09 design decisions into the app. The decisions are
 in `DECISIONS.md` (2026-11-09, "The design direction is Bright Spring"). The reviews
