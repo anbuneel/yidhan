@@ -958,6 +958,38 @@ describe('Editor', () => {
   });
 
   describe('sync confirmation indicator', () => {
+    // Review fix 9: the accent is green, so the state must read without colour.
+    const showSynced = async (note: typeof mockNote) => {
+      const { rerender } = render(<Editor {...defaultProps} note={note} noteSyncStatus="pending" />);
+      await act(async () => {
+        vi.advanceTimersByTime(2500);
+      });
+      rerender(<Editor {...defaultProps} note={note} noteSyncStatus="synced" />);
+      return document.querySelector('[data-save-status]') as HTMLElement;
+    };
+
+    it('does not show "Synced" or its cloud icon before the server confirms the content hash', async () => {
+      const pill = await showSynced({ ...mockNote, contentHash: 'h1', confirmedContentHash: null });
+      expect(pill).toHaveTextContent('Saved here');
+      expect(pill).not.toHaveTextContent('Synced');
+      expect(pill.querySelector('[data-sync-icon="synced"]')).toBeNull();
+      expect(pill.querySelector('[data-sync-icon="saved"]')).not.toBeNull();
+    });
+
+    it('does not tint the pill green: the word and the icon carry the state', async () => {
+      const pill = await showSynced({ ...mockNote, contentHash: 'h1', confirmedContentHash: 'h1' });
+      expect(pill.style.color).toBe('var(--color-text-secondary)');
+      expect(pill.style.background).toBe('');
+      expect(pill.className).toContain('italic');
+    });
+
+    it('shows "Synced" with the cloud icon once the server hash matches', async () => {
+      const pill = await showSynced({ ...mockNote, contentHash: 'h1', confirmedContentHash: 'h1' });
+      expect(pill).toHaveTextContent('Synced');
+      expect(pill.querySelector('[data-sync-icon="synced"]')).not.toBeNull();
+      expect(pill.querySelector('[data-sync-icon="saved"]')).toBeNull();
+    });
+
     it('shows "Saved" when noteSyncStatus transitions from pending to synced', async () => {
       const { rerender } = render(
         <Editor {...defaultProps} noteSyncStatus="pending" />

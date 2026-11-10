@@ -239,7 +239,7 @@ export const ChapterSection = memo(function ChapterSection({
       />
 
       <span
-        className="text-xs shrink-0"
+        className="text-sm italic shrink-0"
         style={{
           fontFamily: 'var(--font-body)',
           color: 'var(--color-text-tertiary)',
@@ -256,8 +256,6 @@ export const ChapterSection = memo(function ChapterSection({
       className="mb-0"
       aria-label={`${label} - ${notes.length} ${notes.length === 1 ? 'note' : 'notes'}`}
       style={isPinned ? {
-        background: 'color-mix(in srgb, var(--color-accent) 3%, transparent)',
-        borderRadius: '8px',
         marginBottom: '0.75rem',
         padding: '0.25rem 0',
       } : undefined}

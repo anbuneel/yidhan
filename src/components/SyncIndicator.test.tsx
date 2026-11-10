@@ -45,6 +45,53 @@ describe('SyncIndicator', () => {
     mockInstall.mockReturnValue({ isInstallable: false, canInstallOnIOS: false, triggerInstall });
   });
 
+  // Review fix 9: each state reads by word and icon alone, without colour.
+  describe('states without colour', () => {
+    const states = {
+      pending: stuckPending,
+      offline: { ...synced, isOnline: false, pendingCount: 1 },
+      blocked,
+    } as const;
+    const show = (status: (typeof states)[keyof typeof states]) => {
+      mockSyncStatus.mockReturnValue(status);
+      const { container } = render(<SyncIndicator />);
+      const icons = [...container.querySelectorAll('[data-sync-icon]')].map((el) => el.getAttribute('data-sync-icon'));
+      return { text: container.textContent ?? '', icons, container };
+    };
+
+    it('does not show a pending, offline or blocked mark for normal sub-threshold pending', () => {
+      const { container } = show({ ...synced, pendingCount: 3, isStuck: false });
+      expect(container.querySelector('[data-sync-icon]')).toBeNull();
+    });
+
+    it('does not reuse an icon or a word across pending, offline and blocked', () => {
+      const seen = Object.entries(states).map(([name, status]) => {
+        const { text, icons, container } = show(status);
+        container.remove();
+        return { name, text, icons };
+      });
+      expect(seen.map((s) => s.icons)).toEqual([['pending'], ['offline'], ['blocked']]);
+      expect(seen[0].text).toMatch(/pending/);
+      expect(seen[1].text).toMatch(/Offline/);
+      expect(seen[2].text).toMatch(/blocked/);
+      expect(seen[0].text).not.toMatch(/Offline|blocked/);
+      expect(seen[1].text).not.toMatch(/pending|blocked/);
+    });
+
+    it('does not use a coloured dot as the only mark', () => {
+      for (const status of Object.values(states)) {
+        const { container } = show(status);
+        expect(container.querySelector('.rounded-full[style*="background"]')).toBeNull();
+        container.remove();
+      }
+    });
+
+    it('sets the state word in italic', () => {
+      const { container } = show(stuckPending);
+      expect(container.querySelector('.italic')).toHaveTextContent('1 pending');
+    });
+  });
+
   it('renders nothing when everything is synced', () => {
     mockSyncStatus.mockReturnValue(synced);
     const { container } = render(<SyncIndicator />);

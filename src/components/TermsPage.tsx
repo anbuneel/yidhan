@@ -59,7 +59,7 @@ export function TermsPage({
             style={{
               fontFamily: 'var(--font-body)',
               color: 'var(--color-text-secondary)',
-              fontWeight: 300,
+              fontWeight: 400,
               fontStyle: 'italic',
             }}
           >
@@ -80,7 +80,7 @@ export function TermsPage({
               >
                 What Yidhan is
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   Yidhan is a free, open-source note-taking application with end-to-end encryption. It is offered as-is, without warranty of any kind. We do our best to keep it running, secure, and improving, but we're a small project, not a corporation with an SLA.
                 </p>
@@ -100,7 +100,7 @@ export function TermsPage({
               >
                 Your notes are yours
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   You own everything you write in Yidhan. We don't claim any rights over your content. We can't read it anyway; it's encrypted with your passphrase, which we never see.
                 </p>
@@ -123,7 +123,7 @@ export function TermsPage({
               >
                 Acceptable use
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   Use Yidhan for personal note-taking. Don't use the service to store or distribute illegal content, attempt to compromise other users' accounts, or abuse the infrastructure (automated scraping, denial-of-service, etc.).
                 </p>
@@ -146,7 +146,7 @@ export function TermsPage({
               >
                 Encryption is your responsibility
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   Your passphrase is the key to your notes. We don't store it, we can't recover it, and we can't reset it. If you forget your passphrase, the recovery key you keep can restore access to your encrypted notes. If you lose both your passphrase and your recovery key, your encrypted notes cannot be recovered by anyone, including Yidhan. We recommend keeping a backup of your passphrase in a secure location.
                 </p>
@@ -166,7 +166,7 @@ export function TermsPage({
               >
                 Availability
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   We aim to keep Yidhan available, but we can't guarantee 100% uptime. The app works offline, your notes are stored locally and sync when connectivity returns. If we ever need to shut down the service, we'll give advance notice so you can export your data.
                 </p>
@@ -186,7 +186,7 @@ export function TermsPage({
               >
                 Open source
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   Yidhan's source code is publicly available on{' '}
                   <a
@@ -215,7 +215,7 @@ export function TermsPage({
               >
                 Privacy
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   How we handle your data is covered in our{' '}
                   {onPrivacyClick ? (

@@ -111,7 +111,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
 
     try {
       await onResolve(choice);
-      // Small delay to show kintsugi animation before closing
+      // Small delay to show the resolve animation before closing
       await new Promise((resolve) => setTimeout(resolve, 600));
       onDismiss();
     } catch (error) {
@@ -137,13 +137,13 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
         className={`
           relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto
           p-6 md:p-8
-          shadow-2xl
+          shadow-[var(--shadow-lg)]
           border-0
-          ${resolvedChoice ? 'animate-[kintsugi-glow_600ms_ease-out]' : 'animate-[modal-enter_300ms_ease-out]'}
+          ${resolvedChoice ? 'animate-[resolve-glow_600ms_ease-out]' : 'animate-[modal-enter_300ms_ease-out]'}
         `}
         style={{
           background: 'var(--color-bg-primary)',
-          borderRadius: 'var(--radius-card)',
+          borderRadius: 'var(--radius-plain)',
           border: resolvedChoice
             ? '2px solid var(--color-accent)'
             : '1px solid var(--glass-border)',
@@ -156,7 +156,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
         <div className="text-center mb-8">
           <h2
             id="conflict-title"
-            className="text-2xl md:text-3xl font-light mb-3"
+            className="text-2xl md:text-3xl font-normal mb-3"
             style={{
               fontFamily: 'var(--font-display)',
               color: 'var(--color-text-primary)',
@@ -190,7 +190,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
           >
             <div className="flex items-center justify-between mb-3">
               <span
-                className="text-xs font-medium uppercase tracking-wider"
+                className="text-sm italic"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
                 Your device
@@ -277,7 +277,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
           >
             <div className="flex items-center justify-between mb-3">
               <span
-                className="text-xs font-medium uppercase tracking-wider"
+                className="text-sm italic"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
                 {isHardDeletedConflict ? 'Deleted elsewhere' : 'Another device'}

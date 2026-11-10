@@ -224,7 +224,7 @@ export function RecoveryKeyKit({
             background: 'var(--color-bg-primary)',
             color: 'var(--color-text-primary)',
             border: '1px solid var(--glass-border)',
-            borderRadius: '2px 12px 4px 12px',
+            borderRadius: 'var(--radius-plain)',
           }}
         >
           {displayKey}

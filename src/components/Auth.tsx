@@ -589,7 +589,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               disabled:opacity-50
             "
             style={{
-              boxShadow: '0 4px 20px var(--color-accent-glow)',
+              boxShadow: 'none',
             }}
           >
             {loading ? (

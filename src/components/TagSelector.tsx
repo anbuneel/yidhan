@@ -56,7 +56,7 @@ export function TagSelector({
             min-w-[200px] max-w-[calc(100vw-2rem)]
             py-2
             rounded-lg
-            shadow-lg
+            shadow-[var(--shadow-lg)]
             z-50
           "
           onClick={(e) => e.stopPropagation()}

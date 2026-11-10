@@ -112,7 +112,6 @@ describe('landing shell mirror (index.html)', () => {
     '--b-cta-bg': c.ctaBg,
     '--b-cta-text': c.ctaText,
     '--b-border': c.glassBorder,
-    '--b-glow': c.accentGlow,
     '--b-leaf': c.accent,
     '--b-grain': paperGrain(c.grainColor, c.noiseOpacity),
   });
@@ -190,8 +189,8 @@ describe('the editor sheet', () => {
     expect(indexCss).not.toMatch(/\.editor-writing-area \{[^}]*color-mix/);
   });
 
-  it('takes its glow from the accent, not a copied old colour', () => {
-    expect(rule(indexCss, '.editor-manuscript-glow')).toContain('var(--color-accent)');
+  it('takes its glow from a theme token, not a copied old colour', () => {
+    expect(rule(indexCss, '.editor-manuscript-glow')).toContain('var(--color-text-primary)');
     expect(indexCss).not.toMatch(/\.editor-manuscript-glow \{[^}]*rgba\(/);
   });
 });

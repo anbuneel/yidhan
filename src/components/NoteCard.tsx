@@ -322,12 +322,10 @@ export const NoteCard = memo(function NoteCard({
         {/* Timestamp */}
         <time
           className={`
-            uppercase
-            tracking-[0.1em]
-            font-medium
+            italic
             shrink-0
             ml-3
-            ${isCompact ? 'text-[0.6rem]' : 'text-[0.65rem]'}
+            ${isCompact ? 'text-xs' : 'text-[0.85rem]'}
           `}
           dateTime={note.updatedAt.toISOString()}
           style={{

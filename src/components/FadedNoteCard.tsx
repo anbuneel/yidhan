@@ -21,7 +21,7 @@ function getDaysRemaining(deletedAt: Date): number {
 
 /**
  * Get organic phrase based on days remaining
- * Creates a gentle, wabi-sabi feeling about the note's lifecycle
+ * Gives a gentle sense of the note's lifecycle
  */
 function getOrganicPhrase(daysRemaining: number): string {
   if (daysRemaining >= 25) return 'Just arrived';
@@ -155,10 +155,8 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
         {/* Deletion info */}
         <div
           className="
-            text-[0.6rem]
-            uppercase
-            tracking-[0.08em]
-            font-medium
+            text-xs
+            italic
             shrink-0
             ml-3
             text-right
@@ -170,9 +168,6 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
         >
           <div style={{
             color: daysRemaining <= 6 ? 'var(--color-destructive)' : 'var(--color-text-secondary)',
-            fontStyle: 'italic',
-            textTransform: 'none',
-            letterSpacing: '0.02em',
           }}>
             {organicPhrase}
           </div>

@@ -251,13 +251,13 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
         className="
           relative z-10 w-full max-w-[420px] mx-4
           p-8
-          shadow-2xl
+          shadow-[var(--shadow-lg)]
           animate-[modal-enter_300ms_ease-out]
           border-0
         "
         style={{
           background: 'var(--color-bg-primary)',
-          borderRadius: 'var(--radius-card)',
+          borderRadius: 'var(--radius-plain)',
           border: '1px solid var(--glass-border)',
           margin: 0,
         }}
@@ -479,7 +479,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                   {showPrivacyTip && (
                     <div
                       id="share-privacy-tip"
-                      className="absolute left-0 top-6 z-10 w-64 max-w-[calc(100vw-2rem)] p-3 rounded-lg shadow-lg text-xs"
+                      className="absolute left-0 top-6 z-10 w-64 max-w-[calc(100vw-2rem)] p-3 rounded-lg shadow-[var(--shadow-lg)] text-xs"
                       role="tooltip"
                       style={{
                         background: 'var(--color-bg-tertiary)',

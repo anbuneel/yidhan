@@ -213,7 +213,7 @@ export function PullToRefresh({
         }}
       >
         <animated.div
-          className="size-full rounded-full flex items-center justify-center shadow-lg"
+          className="size-full rounded-full flex items-center justify-center shadow-[var(--shadow-lg)]"
           style={{
             transform: rotate.to((r) => `rotate(${r}deg)`),
             background: 'var(--color-bg-secondary)',

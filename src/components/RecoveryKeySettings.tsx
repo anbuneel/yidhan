@@ -31,7 +31,7 @@ export function RecoveryKeySettings() {
         Recovery key
       </span>
       {isOpen ? (
-        <div className="mt-2 p-4" style={{ border: '1px solid var(--glass-border)', borderRadius: '2px 12px 4px 12px' }}>
+        <div className="mt-2 p-4" style={{ border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-plain)' }}>
           {hasKey && (
             <p className="text-xs mb-3" style={textStyle}>
               The new key replaces your current one once it is saved.

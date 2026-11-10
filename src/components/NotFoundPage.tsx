@@ -16,7 +16,7 @@ export function NotFoundPage({ onGoHome }: NotFoundPageProps) {
         style={{
           fontFamily: 'var(--font-display)',
           color: 'var(--color-text-primary)',
-          fontWeight: 300,
+          fontWeight: 400,
         }}
       >
         This path leads nowhere.

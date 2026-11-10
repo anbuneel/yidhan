@@ -61,7 +61,7 @@ function ArrangeGroup<T extends string>({
             "
             style={{
               fontFamily: 'var(--font-body)',
-              borderRadius: '2px 12px 4px 12px',
+              borderRadius: 'var(--radius-pill)',
               background: isActive ? 'var(--color-accent-glow)' : 'transparent',
               border: isActive ? '1px solid var(--color-accent)' : '1px solid transparent',
               color: isActive ? 'var(--color-accent-text)' : 'var(--color-text-tertiary)',

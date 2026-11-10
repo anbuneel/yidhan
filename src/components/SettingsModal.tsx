@@ -777,7 +777,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         aria-hidden="true"
                       >
                         <span
-                          className="absolute top-0.5 size-5 rounded-full shadow transition-transform duration-200"
+                          className="absolute top-0.5 size-5 rounded-full shadow-[var(--shadow-sm)] transition-transform duration-200"
                           style={{
                             background: 'var(--color-text-primary)',
                             transform: vaultSettings.settings.rememberBrowser
@@ -903,7 +903,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       aria-hidden="true"
                     >
                       <span
-                        className="absolute top-0.5 size-5 rounded-full shadow transition-transform duration-200"
+                        className="absolute top-0.5 size-5 rounded-full shadow-[var(--shadow-sm)] transition-transform duration-200"
                         style={{
                           background: 'var(--color-bg-primary)',
                           transform: sessionSettings.settings.isTrustedDevice

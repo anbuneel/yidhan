@@ -26,7 +26,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
         style={{
           background: 'var(--color-card-bg)',
           border: '1px solid var(--glass-border)',
-          borderRadius: '2px 24px 4px 24px',
+          borderRadius: 'var(--radius-plain)',
           animation: 'modal-enter 0.4s ease-out',
           margin: 0,
         }}
@@ -85,15 +85,15 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
             color: 'var(--color-cta-text)',
             border: 'none',
             cursor: 'pointer',
-            boxShadow: '0 4px 16px var(--color-accent-glow)',
+            boxShadow: 'none',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
-            e.currentTarget.style.boxShadow = '0 8px 24px var(--color-accent-glow)';
+            e.currentTarget.style.boxShadow = 'none';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'var(--color-cta-bg)';
-            e.currentTarget.style.boxShadow = '0 4px 16px var(--color-accent-glow)';
+            e.currentTarget.style.boxShadow = 'none';
           }}
         >
           Keep My Thoughts

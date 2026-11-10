@@ -59,7 +59,7 @@ export function SupportPage({
             style={{
               fontFamily: 'var(--font-body)',
               color: 'var(--color-text-secondary)',
-              fontWeight: 300,
+              fontWeight: 400,
               fontStyle: 'italic',
             }}
           >
@@ -80,7 +80,7 @@ export function SupportPage({
               >
                 Get help
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   The best way to report bugs or request features is through{' '}
                   <a
@@ -164,7 +164,7 @@ export function SupportPage({
                     >
                       {q}
                     </h3>
-                    <p style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+                    <p style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                       {a}
                     </p>
                   </div>
@@ -185,7 +185,7 @@ export function SupportPage({
               >
                 Contribute
               </h2>
-              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 300, lineHeight: 1.7, fontSize: '0.95rem' }}>
+              <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
                   Yidhan is open source. If you'd like to contribute, the code is on{' '}
                   <a

@@ -350,7 +350,7 @@ export function LandingPage({
         }
         .landing-sub {
           font-family: var(--font-body);
-          font-weight: 300;
+          font-weight: 400;
           font-size: clamp(1.05rem, 1.2vw, 1.15rem);
           line-height: 1.65;
           color: var(--color-text-secondary);
@@ -374,16 +374,14 @@ export function LandingPage({
           background: var(--color-cta-bg);
           color: var(--color-cta-text);
           border: none;
-          border-radius: 2px 16px 4px 16px;
+          border-radius: var(--radius-pill);
           padding: 0.9rem 2.4rem;
           cursor: pointer;
-          box-shadow: 0 6px 24px var(--color-accent-glow);
-          transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+          transition: transform 0.3s ease, background-color 0.3s ease;
         }
         .landing-cta:hover {
           transform: translateY(-1px);
           background: var(--color-cta-bg-hover);
-          box-shadow: 0 10px 34px var(--color-accent-glow);
         }
         .landing-micro {
           margin: 1.1rem 0 0;
@@ -420,7 +418,7 @@ export function LandingPage({
         }
         .landing-manuscript-glow {
           position: absolute; inset: 0; pointer-events: none;
-          background: radial-gradient(ellipse 80% 50% at 50% 42%, color-mix(in srgb, var(--color-accent) 12%, transparent) 0%, transparent 70%);
+          background: radial-gradient(ellipse 80% 50% at 50% 42%, color-mix(in srgb, var(--color-text-primary) 4%, transparent) 0%, transparent 70%);
         }
         .landing-manuscript-open {
           position: absolute; inset: 0; z-index: 2;
@@ -454,7 +452,7 @@ export function LandingPage({
           display: flex; align-items: center; gap: 2px;
           min-height: 44px; padding: 6px 8px; margin: 0.85rem 0 1.25rem;
           border: 1px solid var(--glass-border);
-          border-radius: 2px 12px 4px 12px;
+          border-radius: var(--radius-plain);
           background: var(--color-bg-secondary);
           box-shadow: var(--shadow-sm);
           overflow: hidden;
@@ -491,9 +489,9 @@ export function LandingPage({
         }
         .landing-saved {
           display: inline-flex; align-items: center; gap: 0.35rem;
-          padding: 0.25rem 0.6rem; border-radius: 999px;
-          background: var(--color-success-glow); color: var(--color-success);
-          font-family: var(--font-body); font-size: 0.78rem; font-weight: 500; white-space: nowrap;
+          padding: 0.25rem 0;
+          color: var(--color-text-secondary);
+          font-family: var(--font-body); font-size: 0.875rem; font-style: italic; white-space: nowrap;
         }
         .landing-manuscript-note {
           flex: 1 1 14rem;
@@ -506,7 +504,7 @@ export function LandingPage({
           color: var(--color-text-secondary);
           background: none;
           border: 1px solid var(--glass-border);
-          border-radius: 2px 12px 4px 12px;
+          border-radius: var(--radius-pill);
           padding: 0.45rem 1rem;
           cursor: pointer;
           white-space: nowrap;
@@ -541,7 +539,7 @@ export function LandingPage({
           padding: clamp(4.5rem, 8vw, 7.5rem) clamp(1.25rem, 3.5vw, 3rem) 0;
         }
         .landing-h2 {
-          font-family: var(--font-display); font-weight: 300;
+          font-family: var(--font-display); font-weight: 400;
           font-size: clamp(2.1rem, 2.8vw, 2.65rem); line-height: 1.1; letter-spacing: 0;
           margin: 0; color: var(--color-text-primary);
         }
@@ -594,7 +592,7 @@ export function LandingPage({
           text-align: center;
         }
         .landing-close-line {
-          font-family: var(--font-display); font-weight: 300;
+          font-family: var(--font-display); font-weight: 400;
           font-size: clamp(1.85rem, 2.2vw, 2rem);
           color: var(--color-text-primary); margin: 0;
         }
