@@ -28,26 +28,31 @@ The chosen sketch is number 40 in round five.
 - **Same letter as Inbax.** The sketches reuse the இ outline from the owner's Inbax
   app, which was outlined from Noto Serif Tamil (SIL OFL).
 
-## What the sketch does not settle
+## What the review board settled
 
-The sketch was drawn on a 120-unit grid for a web page. It is not final artwork.
+Part 1 is done: the drawings and the review board are in PR 265 into `redesign`
+(`images/brand/source/`, `images/brand/review/leaf-board.html`, drawn by
+`scripts/brand/leaf.py`). The owner approved the board on 2026-11-09 with these
+answers:
 
-1. **When the letter shows.** In the sketch the letter is about 7px tall in a 64px
-   icon, and reads only from about 128px. Proposal: the letter appears at 128px and
-   above (splash, About, the large app icon, the OG image). Below that the sun is
-   plain. Set the exact size once the final drawing exists.
-2. **The letter needs redrawing.** The Inbax outline is a text face. At icon sizes its
-   thin strokes fill in. Draw a heavier cut for this use, and check it against a Tamil
-   reader for correctness.
-3. **The icon tile.** A favicon needs a tile, because a bare mark disappears on some tab
-   bars (see the superseded logo decision). Draw both: a near-white tile with the green
-   leaf, and a dark green tile with the light green leaf. Pick on the review board.
-4. **The wordmark's i.** The shipped drawing puts a sun on the i. With the mark beside
-   it there would be two suns. Proposal: a plain i in the lockup, and no sun on the i
-   anywhere.
-5. **Small sizes.** At 16px the three lines and the gap will not survive. Draw a
-   separate 16 to 48px version: probably the leaf, the sun, and one or no lines.
-6. **One colour.** A single-colour version for places that cannot take two.
+1. **When the letter shows.** The bare mark shows it from 128px. The icon tile shows it
+   from 192px, because the mark is smaller on a tile and the letter reads as a knot
+   below about 20px. Below those sizes the sun is plain. So the splash, About, the
+   large app icon and the OG image carry the letter; the header and favicons do not.
+2. **Letter weight.** The "medium" cut (`mark-letter-medium.svg`): the Inbax outline
+   with a slightly thicker stroke. It is a stroked outline, not a redrawing. Flatten
+   the stroke into the path before export.
+3. **The icon tile.** Dark green, for the app icon and the favicon. The near-white tile
+   disappears on white tab bars and launchers. The cost: on the tile the leaf is the
+   light green, not the green of the app's buttons.
+4. **The wordmark's i.** A plain i everywhere. No sun on the i.
+5. **Small sizes.** From 16 to 48px, the separate small drawing with one line
+   (`mark-small.svg`, `tile-dark-small.svg`).
+6. **One colour.** One fill, with the gap, the lines and the letter cut out
+   (`mark-mono*.svg`).
+
+Still to do from Part 1: a Tamil reader has not checked the letter, and the stores
+have not been searched for look-alike marks.
 
 ## Work
 
@@ -135,10 +140,8 @@ One lane per session: each step is its own session.
 
 ## Open questions
 
-1. **The icon tile colour.** Near-white or dark green. Decided on the review board.
-2. **The size at which the letter appears.** Proposed 128px.
-3. **The old artwork.** The "yi" monogram, the sun-dot wordmark and the sprout drawing
+1. **The old artwork.** The "yi" monogram, the sun-dot wordmark and the sprout drawing
    are in `images/brand/`. Keep them as history, or delete them? The sprout was kept as
    secondary artwork by the superseded decision; it has no role in this one yet.
-4. **Who draws the final letter.** A redrawn இ should be checked by someone who reads
-   Tamil.
+2. **Who checks the letter.** The thickened இ should be checked by someone who reads
+   Tamil before the rollout exports it.
