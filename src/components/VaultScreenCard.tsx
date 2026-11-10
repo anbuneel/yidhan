@@ -5,7 +5,7 @@ export function VaultScreenCard({ children }: { children: ReactNode }) {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
     >
       <div
         className="w-full max-w-md p-8"

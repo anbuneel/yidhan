@@ -72,7 +72,7 @@ export function SecurityPage({
   onSettingsClick,
 }: SecurityPageProps) {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg-primary)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--page-background)' }}>
       <HeaderShell
         theme={theme}
         onThemeToggle={onThemeToggle}

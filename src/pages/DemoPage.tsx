@@ -501,7 +501,7 @@ export function DemoPage({
     <>
       <div
         className="min-h-screen flex flex-col"
-        style={{ background: 'var(--color-bg-primary)' }}
+        style={{ background: 'var(--page-background)' }}
       >
         {/* Impermanence Ribbon */}
         {shouldShowRibbon && (

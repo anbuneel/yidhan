@@ -22,8 +22,8 @@ const WIDTH = 1200;
 const HEIGHT = 630;
 
 // ── Brand tokens ────────────────────────────────────────────────
-const BG_COLOR = '#f5f0e8'; // Warm paper tone (Kintsugi light bg)
-const TEXT_MUTED = '#7a7068'; // Warm muted text for tagline
+const BG_COLOR = '#FAFAF6'; // Light theme page (src/themes/light.ts)
+const TEXT_MUTED = '#5A665F'; // Light theme muted text, for the tagline
 
 // ── Layout ──────────────────────────────────────────────────────
 const LOCKUP_HEIGHT = 200; // The mark carries the letter at this size (128px and up)

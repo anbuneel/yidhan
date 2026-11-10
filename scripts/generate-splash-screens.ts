@@ -21,7 +21,7 @@ const OUTPUT_DIR = path.join(__dirname, '../public/splash');
 const ANDROID_RES = path.join(__dirname, '../android/app/src/main/res');
 
 // Midnight theme background color (dark theme default). Matches capacitor.config.ts.
-const BACKGROUND_COLOR = '#1a1f1a';
+const BACKGROUND_COLOR = '#151C18';
 
 // Logo size as percentage of the smaller dimension
 const LOGO_SIZE_RATIO = 0.2;

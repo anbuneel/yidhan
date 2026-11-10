@@ -8,6 +8,7 @@ import * as path from 'path';
 import { inflateSync } from 'zlib';
 import { MARIGOLD, SMALL_MARK, WORDMARK } from './logoPaths';
 import { SPRITE_MARK_SMALL, SPRITE_WORDMARK } from './logoSprite';
+import { ACTIVE_DARK_THEME, ACTIVE_LIGHT_THEME } from '../themes';
 
 const ROOT = process.cwd();
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -259,12 +260,13 @@ describe('landing shell mirrors Logo.tsx', () => {
     expect(indexHtml).toContain('.logo-ink { fill: var(--color-text-primary, var(--b-text)); }');
   });
 
-  it('the shell leaf colour matches the app token on each theme', () => {
-    const appLight = /:root \{\s*--color-brand-leaf: (#[0-9A-Fa-f]{6});/.exec(indexCss)![1];
-    const appDark = /\[data-theme="dark"\] \{\s*--color-brand-leaf: (#[0-9A-Fa-f]{6});/.exec(indexCss)![1];
+  it('the leaf is the theme accent, so the mark matches the buttons, in the app and the shell', () => {
+    expect(indexCss).toMatch(/:root \{\s*--color-brand-leaf: var\(--color-accent\);/);
+    // No theme block overrides it with a fixed colour.
+    expect(indexCss.match(/--color-brand-leaf:/g)).toHaveLength(1);
     const shell = [...indexHtml.matchAll(/--b-leaf: (#[0-9A-Fa-f]{6})/g)].map((m) => m[1]);
     // Dark default, light media query, light data-theme.
-    expect(shell).toEqual([appDark, appLight, appLight]);
+    expect(shell).toEqual([ACTIVE_DARK_THEME.colors.accent, ACTIVE_LIGHT_THEME.colors.accent, ACTIVE_LIGHT_THEME.colors.accent]);
   });
 
   it('sizes match the header lockup: 30px, and 36px from 640px, with a 0.3 gap', () => {

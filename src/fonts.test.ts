@@ -161,6 +161,26 @@ describe('the font tokens', () => {
     expect(read('src/components/LandingPage.tsx')).not.toMatch(/\.landing-tb[^{]*\{[^}]*--font-mono/);
   });
 
+  it('keeps the search box and status text out of the mono token', () => {
+    // The search box, its help text, and the save and sync status are Newsreader.
+    const header = read('src/components/Header.tsx');
+    const search = header.match(/id=\{LIBRARY_SEARCH_INPUT_ID\}[\s\S]*?\/>/)?.[0];
+    expect(search).toBeDefined();
+    expect(search).toMatch(/fontFamily: 'var\(--font-body\)'/);
+    expect(header).not.toMatch(/font-mono/);
+    for (const file of ['src/components/SyncIndicator.tsx', 'src/utils/searchQuery.ts', 'src/components/KeyboardShortcutsModal.tsx']) {
+      expect(read(file), file).not.toMatch(/font-mono/);
+    }
+    const editor = read('src/components/Editor.tsx');
+    const status = editor.match(/function getSaveStatusStyle[\s\S]*?\n\}/)?.[0];
+    expect(status).toBeDefined();
+    expect(status).not.toMatch(/font-mono/);
+    // Status classes in the stylesheet: none set the mono face.
+    for (const [, selector, body] of indexCss.matchAll(/([^{}]*(?:status|sync|search)[^{}]*)\{([^}]*)\}/gi)) {
+      expect(body, selector.trim()).not.toMatch(/--font-mono/);
+    }
+  });
+
   it('keeps the phone title out of the iOS zoom rule, and every input in it', () => {
     const rule = indexCss.match(/Prevent iOS zoom[\s\S]*?\{([\s\S]*?)\{\s*font-size:\s*16px !important;/)?.[1];
     expect(rule).toBeDefined();

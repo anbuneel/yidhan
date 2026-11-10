@@ -128,7 +128,7 @@ export function BackupPassphraseModal({
           className="w-full px-4 py-2.5 rounded-lg mb-2 focus-ring"
           style={{
             background: 'var(--color-bg-secondary)',
-            border: '1px solid var(--glass-border)',
+            border: '1px solid var(--color-input-border)',
             color: 'var(--color-text-primary)',
             fontFamily: 'var(--font-body)',
           }}
@@ -162,7 +162,7 @@ export function BackupPassphraseModal({
               className="w-full px-4 py-2.5 rounded-lg mb-2 focus-ring"
               style={{
                 background: 'var(--color-bg-secondary)',
-                border: '1px solid var(--glass-border)',
+                border: '1px solid var(--color-input-border)',
                 color: 'var(--color-text-primary)',
                 fontFamily: 'var(--font-body)',
               }}
@@ -176,7 +176,7 @@ export function BackupPassphraseModal({
           <p
             role="alert"
             className="text-sm mt-3"
-            style={{ fontFamily: 'var(--font-body)', color: 'var(--color-error, #C25634)' }}
+            style={{ fontFamily: 'var(--font-body)', color: 'var(--color-error)' }}
           >
             {shown}
           </p>

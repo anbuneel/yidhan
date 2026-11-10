@@ -31,7 +31,7 @@ function SharedNoteHeader({ theme, onThemeToggle }: SharedNoteHeaderProps) {
   return (
     <header
       className="px-4 md:px-12 shrink-0"
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
     >
       <div className="h-16 flex items-center justify-between">
         <Logo />
@@ -160,7 +160,7 @@ export function SharedNoteView({
     return (
       <div
         className="min-h-screen flex flex-col"
-        style={{ background: 'var(--color-bg-primary)' }}
+        style={{ background: 'var(--page-background)' }}
       >
         <SharedNoteHeader theme={theme} onThemeToggle={onThemeToggle} />
         <div className="flex-1 flex items-center justify-center">
@@ -183,7 +183,7 @@ export function SharedNoteView({
     return (
       <div
         className="min-h-screen flex flex-col"
-        style={{ background: 'var(--color-bg-primary)' }}
+        style={{ background: 'var(--page-background)' }}
       >
         <SharedNoteHeader theme={theme} onThemeToggle={onThemeToggle} />
         <div className="flex-1 flex items-center justify-center px-4">
@@ -267,7 +267,7 @@ export function SharedNoteView({
     return (
       <div
         className="min-h-screen flex flex-col"
-        style={{ background: 'var(--color-bg-primary)' }}
+        style={{ background: 'var(--page-background)' }}
       >
         <SharedNoteHeader theme={theme} onThemeToggle={onThemeToggle} />
         <div className="flex-1 flex items-center justify-center px-4">
@@ -353,7 +353,7 @@ export function SharedNoteView({
   return (
     <div
       className="min-h-screen flex flex-col"
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
     >
       <SharedNoteHeader theme={theme} onThemeToggle={onThemeToggle} />
 

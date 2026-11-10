@@ -25,7 +25,6 @@
     "src/services/syncEngine.ts|types|ServerNoteVersion",
     "src/services/syncEngine.ts|types|TagConflictInfo",
     "src/test/factories.ts|types|MockSupabaseClient",
-    "src/themes/index.ts|types|ThemeColors",
     "src/utils/exportImport.ts|types|exportImport.FullAccountExport",
     "src/utils/serviceWorkerUpdates.ts|types|UpdateApplier"
   ]

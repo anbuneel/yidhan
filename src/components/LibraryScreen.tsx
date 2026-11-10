@@ -22,7 +22,7 @@ export interface LibraryScreenProps {
 
 export function LibraryScreen({ header, tagFilter, library, footer, modals }: LibraryScreenProps) {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg-primary)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--page-background)' }}>
       <a href="#main-content" className="skip-to-content">
         Skip to content
       </a>

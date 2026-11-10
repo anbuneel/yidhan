@@ -8,7 +8,7 @@ export function NotFoundPage({ onGoHome }: NotFoundPageProps) {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-6"
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
     >
       <Logo className="mb-12 opacity-40" />
       <h1

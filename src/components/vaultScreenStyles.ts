@@ -3,7 +3,7 @@
 export const vaultInputStyle = {
   background: 'var(--color-bg-primary)',
   color: 'var(--color-text-primary)',
-  border: '1px solid var(--glass-border)',
+  border: '1px solid var(--color-input-border)',
   borderRadius: '2px 12px 4px 12px',
   fontFamily: 'var(--font-body)',
 } as const;

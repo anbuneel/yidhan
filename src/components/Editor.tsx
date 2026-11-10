@@ -117,7 +117,7 @@ function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): bo
 function getSaveStatusStyle(status: SaveStatus): { color: string; background: string } {
   switch (status) {
     case 'saving':
-      return { color: 'var(--color-accent)', background: 'var(--color-accent-glow)' };
+      return { color: 'var(--color-accent-text)', background: 'var(--color-accent-glow)' };
     default:
       return { color: 'var(--color-success)', background: 'var(--color-success-glow)' };
   }
@@ -1333,7 +1333,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     <div
       ref={scrollContainerRef}
       className={`h-[100dvh] overflow-y-auto ${isFocusMode ? 'focus-mode-active' : ''}`}
-      style={{ background: 'var(--color-bg-primary)' }}
+      style={{ background: 'var(--page-background)' }}
       data-testid="note-editor"
     >
       {releasedElsewhere && (
@@ -1381,7 +1381,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       <div
         ref={stickyZoneRef}
         className="editor-sticky-zone focus-mode-target"
-        style={{ background: 'var(--color-bg-primary)' }}
+        style={{ background: 'var(--page-background)' }}
       >
         <HeaderShell
           theme={theme}

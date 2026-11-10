@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TagBadge, TagBadgeList } from './TagBadge';
-import type { Tag } from '../types';
+import { TAG_COLORS, type Tag } from '../types';
 
 const createTag = (overrides: Partial<Tag> = {}): Tag => ({
   id: '1',
@@ -30,7 +30,7 @@ describe('TagBadge', () => {
     const tag = createTag({ color: 'gold' });
     const { container } = render(<TagBadge tag={tag} />);
     const dot = container.querySelector('.rounded-full');
-    expect(dot).toHaveStyle({ background: '#D4AF37' });
+    expect(dot).toHaveStyle({ background: TAG_COLORS.gold });
   });
 });
 
