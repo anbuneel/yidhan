@@ -61,6 +61,15 @@ function runExternalAction(
   else dispatchEditorAction(context.editor, action);
 }
 
+// The one drawn label: a bullet glyph alone read as a stray dot. Three bullets and three
+// lines, on the 1.5 stroke the other inline SVGs use (DESIGN.md).
+const listIcon: ReactNode = (
+  <svg className="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden="true">
+    <path d="M9 6.5h11M9 12h11M9 17.5h11" />
+    <path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" strokeWidth={2.5} />
+  </svg>
+);
+
 function textLabel(text: string, className?: string): ReactNode {
   return <span className={className}>{text}</span>;
 }
@@ -131,7 +140,7 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     run: ({ editor }, range) => { startChain(editor, range).toggleHeading({ level }).run(); },
   })),
   {
-    id: 'bulletList', label: 'Bullet list', shortLabel: textLabel('•', 'text-[22px]'),
+    id: 'bulletList', label: 'Bullet list', shortLabel: listIcon,
     description: 'Create a bullet list', searchTerms: [...shared.structure, 'unordered'], group: 'structure',
     isActive: ({ editor }) => editor.isActive('bulletList'),
     run: ({ editor }, range) => { startChain(editor, range).toggleBulletList().run(); },
