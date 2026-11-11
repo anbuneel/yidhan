@@ -184,11 +184,11 @@ describe('the editor glow', () => {
 });
 
 describe('the landing sample "Saved here"', () => {
-  it('is not tinted green: italic neutral text with its tick', () => {
+  it('is not tinted green: roman neutral text with its tick', () => {
     const saved = rule(landing, '.landing-saved');
     expect(saved).not.toMatch(/--color-success|background/);
     expect(saved).toContain('color: var(--color-text-secondary)');
-    expect(saved).toContain('font-style: italic');
+    expect(saved).not.toContain('font-style: italic');
   });
 });
 

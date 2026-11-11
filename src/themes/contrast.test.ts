@@ -151,7 +151,7 @@ describe('marigold and the accent are not text colours where they fail', () => {
     expect(offenders).toEqual([]);
     expect(readFileSync(resolve(root, 'src/components/Editor.tsx'), 'utf8').replace(/\r\n/g, '\n')).toContain(
       // The save pill is neutral text; its icon, not a colour, tells the states apart.
-      "data-save-status={saveStatus}\n          className=\"shrink-0 text-sm italic px-2 py-1 rounded-full flex items-center gap-1.5\"\n          style={{\n            fontFamily: 'var(--font-body)',\n            color: 'var(--color-text-secondary)',",
+      "data-save-status={saveStatus}\n          className=\"shrink-0 text-sm px-2 py-1 rounded-full flex items-center gap-1.5\"\n          style={{\n            fontFamily: 'var(--font-body)',\n            color: 'var(--color-text-secondary)',",
     );
   });
 });

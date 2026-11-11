@@ -123,7 +123,8 @@ are aliases of it.
 
 Rules:
 
-- **Counts and dates are italic**, like "Synced" and "Just now".
+- **Italic is for dates and relative times only**, like "Nov 11" and "Just now".
+  Counts ("4 notes") and save and sync words ("Saved here", "Synced") are roman.
 - **No capital-letter labels.** No uppercase, no letter-spaced labels.
 - **No `font-variant-caps` or `small-caps`.** Newsreader has no small capitals, so the
   browser fakes them.
@@ -155,8 +156,8 @@ cards carry a 3% accent tint at the bottom.
 
 ## Save and sync states
 
-Colour cannot carry the meaning, because the accent is green. Each state is a word in
-italic plus its own small line icon (`src/components/SyncStateIcon.tsx`), in the
+Colour cannot carry the meaning, because the accent is green. Each state is a roman
+word plus its own small line icon (`src/components/SyncStateIcon.tsx`), in the
 neutral text colour: saving, not saved, saved, synced, copied, pending, offline,
 blocked. Only the blocked icon takes a colour, `--color-destructive`. "Synced" still
 needs a server-confirmed content hash (`CLAUDE.md`).

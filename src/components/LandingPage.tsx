@@ -485,7 +485,7 @@ export function LandingPage({
           display: inline-flex; align-items: center; gap: 0.35rem;
           padding: 0.25rem 0;
           color: var(--color-text-secondary);
-          font-family: var(--font-body); font-size: 0.875rem; font-style: italic; white-space: nowrap;
+          font-family: var(--font-body); font-size: 0.875rem; white-space: nowrap;
         }
         .landing-manuscript-note {
           flex: 1 1 14rem;

@@ -115,7 +115,7 @@ function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): bo
   return a !== null && b !== null && a.title === b.title && a.content === b.content;
 }
 
-// The save pill is neutral text in italic; the icon tells the states apart.
+// The save pill is neutral roman text; the icon tells the states apart.
 const SAVE_LABEL_ICON: Record<ReturnType<typeof getSaveLabel>, SyncStateKind> = {
   'Not saved': 'not-saved',
   'Saved here': 'saved',
@@ -1085,7 +1085,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {saveStatus !== 'idle' && (
         <span
           data-save-status={saveStatus}
-          className="shrink-0 text-sm italic px-2 py-1 rounded-full flex items-center gap-1.5"
+          className="shrink-0 text-sm px-2 py-1 rounded-full flex items-center gap-1.5"
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-secondary)',

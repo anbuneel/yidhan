@@ -980,7 +980,7 @@ describe('Editor', () => {
       const pill = await showSynced({ ...mockNote, contentHash: 'h1', confirmedContentHash: 'h1' });
       expect(pill.style.color).toBe('var(--color-text-secondary)');
       expect(pill.style.background).toBe('');
-      expect(pill.className).toContain('italic');
+      expect(pill.className).not.toContain('italic');
     });
 
     it('shows "Synced" with the cloud icon once the server hash matches', async () => {
