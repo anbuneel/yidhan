@@ -338,10 +338,12 @@ describe('PassphraseSetup — step 3, done', () => {
     expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
     expect(screen.getByText(/Devices already open\s+keep working; the next time one asks for your passphrase, enter the new one/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
-    await waitFor(() => expect(mockCreateEncryptedNote).toHaveBeenCalledTimes(4));
-    expect(mockCreateTagOffline).toHaveBeenCalledWith('user-setup-1', 'Recipes', 'sage');
+    await waitFor(() => expect(mockCreateEncryptedNote).toHaveBeenCalledTimes(2));
     expect(mockCreateEncryptedNote).toHaveBeenCalledWith('user-setup-1', 'Welcome to Yidhan', expect.any(String), KEYS, true);
-    expect(mockAddTagToNoteOffline).toHaveBeenCalledWith('user-setup-1', 'note-3', 'tag-recipes');
+    expect(mockCreateEncryptedNote).toHaveBeenCalledWith('user-setup-1', 'Things you can type', expect.any(String), KEYS, false);
+    // The starters carry no tag, so setup creates none.
+    expect(mockCreateTagOffline).not.toHaveBeenCalled();
+    expect(mockAddTagToNoteOffline).not.toHaveBeenCalled();
 
     expect(mockFinishAccountSetup).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Open my notes' }));
@@ -350,12 +352,14 @@ describe('PassphraseSetup — step 3, done', () => {
 
   it('opens the library only after the starter notes are written', async () => {
     let release!: () => void;
-    mockAddTagToNoteOffline.mockImplementation(() => new Promise<void>((resolve) => { release = resolve; }));
+    mockCreateEncryptedNote
+      .mockImplementationOnce(async () => ({ id: 'note-1' }))
+      .mockImplementationOnce(() => new Promise((resolve) => { release = () => resolve({ id: 'note-2' }); }));
     render(<PassphraseSetup />);
     await continueToKey();
     await confirmAndSave();
     await screen.findByRole('heading', { name: 'Your notes are ready' });
-    await waitFor(() => expect(mockAddTagToNoteOffline).toHaveBeenCalled());
+    await waitFor(() => expect(mockCreateEncryptedNote).toHaveBeenCalledTimes(2));
     fireEvent.click(screen.getByRole('button', { name: 'Open my notes' }));
     expect(screen.getByRole('button', { name: 'Open my notes' })).toBeDisabled();
     expect(mockFinishAccountSetup).not.toHaveBeenCalled();
@@ -365,7 +369,7 @@ describe('PassphraseSetup — step 3, done', () => {
 
   it('still reaches step 3 when the starter notes fail', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    mockCreateTagOffline.mockRejectedValue(new Error('IndexedDB unavailable'));
+    mockCreateEncryptedNote.mockRejectedValue(new Error('IndexedDB unavailable'));
     render(<PassphraseSetup />);
     await continueToKey();
     await confirmAndSave();

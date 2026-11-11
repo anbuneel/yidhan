@@ -142,7 +142,7 @@ export function routeToPath(route: Route): string {
  * letter all keep it: a tab title is visible metadata, so a note's title never goes
  * there.
  */
-export const DEFAULT_DOCUMENT_TITLE = 'Yidhan — A quiet home for your personal notes';
+export const DEFAULT_DOCUMENT_TITLE = 'Yidhan — A notes app built around writing';
 
 const PAGE_TITLES: Record<PublicPageName | 'demo' | 'notFound', string> = {
   security: 'Security',

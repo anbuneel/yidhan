@@ -31,10 +31,11 @@ export const DEMO_STORAGE_KEY = 'yidhan-demo-state';
 export const DEMO_CONTENT_STORAGE_KEY = 'yidhan-demo-content';
 
 /**
- * Starters that shipped before 2026-09-10 and are no longer offered. A browser that
- * already holds them keeps recognising them as starters: an untouched one is not the
- * reader's work and must never migrate into an account, and an edited one is theirs
- * and is kept exactly as they left it. Content is byte-for-byte what shipped.
+ * Starters that are no longer offered: the first set shipped until 2026-09-10, the
+ * second until 2026-11-10. A browser that already holds them keeps recognising them as
+ * starters: an untouched one is not the reader's work and must never migrate into an
+ * account, and an edited one is theirs and is kept exactly as they left it. Content is
+ * byte-for-byte what shipped.
  */
 const LEGACY_STARTER_NOTES: readonly Pick<DemoNote, 'localId' | 'title' | 'content' | 'pinned'>[] = [
   {
@@ -64,6 +65,33 @@ const LEGACY_STARTER_NOTES: readonly Pick<DemoNote, 'localId' | 'title' | 'conte
 <li>Fix the kitchen shelf (finally)</li>
 <li>Try that new coffee place on 5th</li>
 </ul>`,
+    pinned: false,
+  },
+  {
+    localId: 'starter-saturday',
+    title: 'An idea for Saturday',
+    content: `<p>Leave the morning unplanned.</p>
+<p>Walk to the market. Pick up something for lunch. Take the longer way home.</p>
+<p>Maybe that is enough.</p>`,
+    pinned: false,
+  },
+  {
+    localId: 'starter-say',
+    title: 'What I wanted to say',
+    content: `<p>I do not need an answer yet. I just need to put this into words before it turns into something else.</p>`,
+    pinned: false,
+  },
+  {
+    localId: 'starter-passage',
+    title: 'A passage worth keeping',
+    content: `<p>“Attention is the rarest and purest form of generosity.” — Simone Weil</p>
+<p>Something to come back to when the week gets loud.</p>`,
+    pinned: false,
+  },
+  {
+    localId: 'starter-train',
+    title: 'Tuesday, on the train',
+    content: `<p>Three things I keep circling: the flat, October, whether to say yes to the Sunday thing. Not deciding today.</p>`,
     pinned: false,
   },
 ];
@@ -102,6 +130,9 @@ const SUPERSEDED_STARTER_CONTENT: Record<string, readonly string[]> = {
   'starter-welcome': [
     `<p>A calm space for your thoughts. Pin important notes, organize with tags, and write in focus mode.</p>
 <p>Your notes are end-to-end encrypted — only you can read them.</p>`,
+    // The welcome note until 2026-11-10. Accurate, but replaced when the landing copy changed.
+    `<p>A calm space for your thoughts. Pin important notes, organize with tags, and write in focus mode.</p>
+<p>Practice drafts are saved on this device and are not encrypted. Sign up and set up your vault to encrypt your notes.</p>`,
   ],
 };
 

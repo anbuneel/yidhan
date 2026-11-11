@@ -212,6 +212,14 @@ so it stays larger than the body text.
 
 ## Voice
 
-Calm, intentional, warm. Yidhan never shouts and never sells. Language is organic:
-"Faded Notes" not "Trash", "Release" not "Delete", "Letting Go" not "Delete
-Account". The app recedes; the thoughts do not.
+Plain and direct. Describe the writing, the action, or the feature, and let the reader
+decide how it feels. Short sentences. No metaphor, no slogans, no mood words such as
+*quiet*, *calm* or *home*. Warmth comes from the design and from specific, believable
+examples, not from adjectives. Yidhan never shouts and never sells.
+
+Sample and starter notes look like real work in progress: a draft, an outline,
+revision notes. They do not end in a lesson, and they do not pretend to be someone's
+private journal.
+
+Some existing labels use softer names ("Faded Notes" for trash, "Letting Go" for
+account deletion). Keep them consistent where they appear; do not add more.

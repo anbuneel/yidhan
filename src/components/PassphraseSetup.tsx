@@ -5,8 +5,6 @@ import type { AccountSetup } from '../contexts/EncryptionContext';
 import type { DerivedKeys } from '../lib/encryption';
 import { GENERATED_PASSPHRASE_BITS, GENERATED_PASSPHRASE_WORDS, generatePassphrase } from '../lib/passphraseGenerator';
 import { createEncryptedNote } from '../services/encryptedNotes';
-import { createTagOffline } from '../services/offlineTags';
-import { addTagToNoteOffline } from '../services/offlineNotes';
 import {
   evaluatePassphraseStrength,
   MIN_PASSPHRASE_LENGTH,
@@ -45,52 +43,29 @@ const STRENGTH_COLORS: Record<PassphraseStrengthLabel, string> = {
 const STARTER_NOTES = [
   {
     title: 'Welcome to Yidhan',
-    content: `<p>A calm space for your thoughts. Pin important notes, organize with tags, and write in focus mode.</p>
-<p>Your notes are end-to-end encrypted — only you can read them.</p>`,
+    content: `<p>Your note titles and content are encrypted on this device before they sync. We can’t read them.</p>
+<p>Keep your recovery key somewhere safe. If you lose it and forget your passphrase, we can’t get your notes back.</p>
+<p>Edit or delete this note whenever you like.</p>`,
     pinned: true,
-    tagKey: null as string | null,
   },
   {
-    title: 'Book Recommendations',
-    content: `<p>Books people keep telling me to read:</p>
+    title: 'Things you can type',
+    content: `<p>Type / in a note to format it:</p>
 <ul>
-<li>Atomic Habits</li>
-<li>The Almanack of Naval Ravikant</li>
-<li>Four Thousand Weeks</li>
+<li>/h2 for a heading</li>
+<li>/quote for a block quote</li>
+<li>/todo for a checklist</li>
 </ul>
-<p>Started Four Thousand Weeks last night. The bit about how we'll never "get on top of everything" was oddly freeing.</p>`,
+<p>In search, try is:pinned, or put a phrase in quotes to match it exactly.</p>`,
     pinned: false,
-    tagKey: null,
-  },
-  {
-    title: 'Recipe — Overnight Oats',
-    content: `<p>Equal parts oats and milk. Spoon of yogurt, pinch of salt, honey to taste. Mix, fridge overnight. Top with whatever fruit is around.</p>
-<p>The trick is the salt — makes everything else pop.</p>`,
-    pinned: false,
-    tagKey: 'recipes',
-  },
-  {
-    title: 'Weekend Plans',
-    content: `<ul>
-<li>Farmers market Saturday morning</li>
-<li>Fix the kitchen shelf (finally)</li>
-<li>Try that new coffee place on 5th</li>
-</ul>`,
-    pinned: false,
-    tagKey: null,
   },
 ];
 
-/** Create the starter notes and their tag. Nice to have: a failure never blocks setup. */
+/** Create the starter notes. Nice to have: a failure never blocks setup. */
 async function createStarterNotes(userId: string, keys: DerivedKeys): Promise<void> {
   try {
-    const recipesTag = await createTagOffline(userId, 'Recipes', 'sage');
-    const tagMap: Record<string, string> = { recipes: recipesTag.id };
     for (const starter of STARTER_NOTES) {
-      const note = await createEncryptedNote(userId, starter.title, starter.content, keys, starter.pinned);
-      if (starter.tagKey && tagMap[starter.tagKey]) {
-        await addTagToNoteOffline(userId, note.id, tagMap[starter.tagKey]);
-      }
+      await createEncryptedNote(userId, starter.title, starter.content, keys, starter.pinned);
     }
   } catch {
     console.error('Failed to create starter notes');

@@ -53,14 +53,14 @@ const DEMO_STORAGE_VERSION = 1;
  * The note shown in the landing page hero. It is a starter too, so the page and the
  * Practice Space agree about what the first note looks like.
  */
-export const HERO_STARTER_NOTE_ID = 'starter-saturday';
+export const HERO_STARTER_NOTE_ID = 'starter-opening';
 
 export const STARTER_NOTES: DemoNote[] = [
   {
     localId: 'starter-welcome',
     title: 'Welcome to Yidhan',
-    content: `<p>A calm space for your thoughts. Pin important notes, organize with tags, and write in focus mode.</p>
-<p>Practice drafts are saved on this device and are not encrypted. Sign up and set up your vault to encrypt your notes.</p>`,
+    content: `<p>This is the Practice Space. Write, edit and tag notes to see how it works.</p>
+<p>Notes here are saved in this browser and are not encrypted. Sign up to encrypt and sync them.</p>`,
     pinned: true,
     tagIds: [],
     createdAt: Date.now(),
@@ -68,40 +68,44 @@ export const STARTER_NOTES: DemoNote[] = [
   },
   {
     localId: HERO_STARTER_NOTE_ID,
-    title: 'An idea for Saturday',
-    content: `<p>Leave the morning unplanned.</p>
-<p>Walk to the market. Pick up something for lunch. Take the longer way home.</p>
-<p>Maybe that is enough.</p>`,
+    title: 'Opening draft',
+    content: `<p>By nine, everyone in the building had received the same letter. Except Sam.</p>
+<p>He checked the empty mailbox again, then knocked on his neighbour’s door.</p>
+<p>[Try starting with the knock. Explain the letter later.]</p>`,
     pinned: false,
     tagIds: [],
     createdAt: Date.now(),
     updatedAt: Date.now(),
   },
   {
-    localId: 'starter-say',
-    title: 'What I wanted to say',
-    content: `<p>I do not need an answer yet. I just need to put this into words before it turns into something else.</p>`,
+    localId: 'starter-used-books',
+    title: 'Why I still buy used books',
+    content: `<p>Start with the cookbook with handwritten substitutions.</p>
+<p>Main point: someone else has already tested what’s on the page.</p>
+<p>Find another example. The ending repeats the introduction.</p>`,
+    pinned: false,
+    tagIds: ['tag-ideas'],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    localId: 'starter-revision',
+    title: 'Revision notes',
+    content: `<p>The opening takes too long. Start at the station.</p>
+<p>Cut the second explanation of why she left.</p>
+<p>Read the dialogue aloud. Both characters sound the same.</p>`,
+    pinned: false,
+    tagIds: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    localId: 'starter-tuesday',
+    title: 'Tuesday',
+    content: `<p>Tried writing before checking email. Finished the opening section in about half an hour.</p>
+<p>Still stuck on the ending. Tomorrow, read the whole draft before changing anything.</p>`,
     pinned: false,
     tagIds: ['tag-journal'],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
-  {
-    localId: 'starter-passage',
-    title: 'A passage worth keeping',
-    content: `<p>“Attention is the rarest and purest form of generosity.” — Simone Weil</p>
-<p>Something to come back to when the week gets loud.</p>`,
-    pinned: false,
-    tagIds: ['tag-reading'],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
-  {
-    localId: 'starter-train',
-    title: 'Tuesday, on the train',
-    content: `<p>Three things I keep circling: the flat, October, whether to say yes to the Sunday thing. Not deciding today.</p>`,
-    pinned: false,
-    tagIds: [],
     createdAt: Date.now(),
     updatedAt: Date.now(),
   },
