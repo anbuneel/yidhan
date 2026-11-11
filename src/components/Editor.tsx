@@ -1634,7 +1634,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               flex items-center gap-2
               px-4 py-3
               min-h-[44px]
-              text-sm
+              text-sm font-medium
               transition-colors duration-300
               hover:text-[var(--color-accent-text)]
               active:text-[var(--color-accent-text)]
@@ -1662,10 +1662,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
           {/* Keyboard hint - desktop only */}
           <span
-            className="hidden sm:block text-xs"
+            className="hidden sm:block text-[13px]"
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-tertiary)' }}
           >
-            Press <kbd className="px-1.5 py-0.5 rounded text-[10px] bg-[var(--color-bg-secondary)]">Esc</kbd> to save & exit
+            Press <kbd className="px-1.5 py-0.5 rounded text-xs bg-[var(--color-bg-secondary)]">Esc</kbd> to save & exit
           </span>
         </footer>
       </main>

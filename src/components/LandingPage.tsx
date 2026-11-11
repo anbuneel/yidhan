@@ -380,13 +380,13 @@ export function LandingPage({
         .landing-micro {
           margin: 1.1rem 0 0;
           font-family: var(--font-body);
-          font-size: 0.8rem;
+          font-size: 0.875rem;
           color: var(--color-text-tertiary);
         }
         .landing-demo-link {
           display: inline-flex; align-items: center; gap: 0.3rem;
           font-family: var(--font-body);
-          font-size: 0.92rem;
+          font-size: 0.92rem; font-weight: 500;
           color: var(--color-text-tertiary);
           text-decoration: none;
           border-bottom: 1px dotted var(--color-text-tertiary);
@@ -437,7 +437,7 @@ export function LandingPage({
           font-size: 0.75rem;
           color: var(--color-text-tertiary);
         }
-        .landing-manuscript-tag { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; }
+        .landing-manuscript-tag { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.875rem; font-weight: 500; }
         .landing-manuscript-divider {
           height: 1px; margin-top: 0.85rem; opacity: 0.6;
           background: linear-gradient(to right, transparent 0%, color-mix(in srgb, var(--color-accent) 25%, transparent) 30%, color-mix(in srgb, var(--color-accent) 25%, transparent) 70%, transparent 100%);
@@ -452,12 +452,12 @@ export function LandingPage({
           overflow: hidden;
         }
         .landing-tb {
-          width: 32px; height: 32px; flex: 0 0 32px;
+          min-width: 32px; height: 32px; flex: 0 0 auto; padding-inline: 4px;
           display: inline-flex; align-items: center; justify-content: center;
           border-radius: 6px;
           color: var(--color-text-secondary);
           font-family: var(--font-body);
-          font-size: 0.72rem; font-weight: 600; white-space: nowrap;
+          font-size: 0.75rem; font-weight: 500; white-space: nowrap;
         }
         .landing-tb[data-label="I"] { font-family: var(--font-display); font-style: italic; font-size: 0.95rem; }
         .landing-tb[data-label="B"] { font-size: 0.85rem; }
@@ -597,7 +597,7 @@ export function LandingPage({
           gap: 0.5rem; flex-wrap: wrap;
           padding: 2.5rem clamp(1rem, 4vw, 4rem) 3rem;
           margin-top: auto;
-          font-family: var(--font-body); font-size: 0.78rem;
+          font-family: var(--font-body); font-size: 0.875rem;
           color: var(--color-text-tertiary);
         }
         .landing-nav-link {

@@ -1430,7 +1430,7 @@ nav,
 /* Vertical sidebar toolbar — slim, ghostly, left margin */
 .editor-sidebar {
   position: fixed;
-  left: max(calc((100vw - 900px) / 2 - 56px), 12px);
+  left: max(calc((100vw - 900px) / 2 - 66px), 12px);
   top: 50%;
   transform: translateY(-50%);
   z-index: 15;
@@ -1698,9 +1698,13 @@ textarea:focus,
 }
 
 .editor-command-button {
-  width: 32px;
+  /* Labels are 12px at weight 500 (DESIGN.md, Typography), so a word such as
+     "Quote" needs more than the 32px square. */
+  min-width: 32px;
+  width: auto;
   height: 32px;
-  flex: 0 0 32px;
+  flex: 0 0 auto;
+  padding-inline: 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1780,7 +1784,7 @@ textarea:focus,
   width: 100%;
   min-height: 44px;
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 6px 8px;
@@ -1869,7 +1873,7 @@ textarea:focus,
    `.editor-sidebar button` rule, which gave it to every button in the sidebar.
    Neither base class sets a cursor, so both need it named explicitly. */
 .editor-sidebar .editor-command-button {
-  width: 32px;
+  width: 44px;
   height: 32px;
   cursor: pointer;
 }

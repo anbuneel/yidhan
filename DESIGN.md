@@ -128,6 +128,9 @@ Rules:
 - **No `font-variant-caps` or `small-caps`.** Newsreader has no small capitals, so the
   browser fakes them.
 - **Body weight is 400.** Note text in dark is 430 (`--note-weight`).
+- **Controls are firmer than metadata.** Anything you can press (toolbar labels, "Add
+  tag", secondary links and actions) is at least 12px and weight 500. Supporting text
+  (dates, counts, hints) stays 400 and is at least 12px. Footnotes are 13px or more.
 
 **Self-hosted, never loaded from Google Fonts**: files in `src/assets/fonts/`,
 declared in `src/fonts.css`, licences in `public/licenses/fonts/`. See `DECISIONS.md`
