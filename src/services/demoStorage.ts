@@ -31,109 +31,72 @@ export const DEMO_STORAGE_KEY = 'yidhan-demo-state';
 export const DEMO_CONTENT_STORAGE_KEY = 'yidhan-demo-content';
 
 /**
- * Starters that are no longer offered: the first set shipped until 2026-09-10, the
- * second until 2026-11-10. A browser that already holds them keeps recognising them as
- * starters: an untouched one is not the reader's work and must never migrate into an
- * account, and an edited one is theirs and is kept exactly as they left it. Content is
- * byte-for-byte what shipped.
+ * A short, stable fingerprint of a string (cyrb53, 53 bits). Retired starter copy is
+ * recognised by fingerprint rather than by shipping its text: that text sits on the app
+ * shell's path, and the bundle budget has no room for words nobody is shown any more.
  */
-const LEGACY_STARTER_NOTES: readonly Pick<DemoNote, 'localId' | 'title' | 'content' | 'pinned'>[] = [
-  {
-    localId: 'starter-books',
-    title: 'Book Recommendations',
-    content: `<p>Books people keep telling me to read:</p>
-<ul>
-<li>Atomic Habits</li>
-<li>The Almanack of Naval Ravikant</li>
-<li>Four Thousand Weeks</li>
-</ul>
-<p>Started Four Thousand Weeks last night. The bit about how we'll never "get on top of everything" was oddly freeing.</p>`,
-    pinned: false,
-  },
-  {
-    localId: 'starter-recipe',
-    title: 'Recipe — Overnight Oats',
-    content: `<p>Equal parts oats and milk. Spoon of yogurt, pinch of salt, honey to taste. Mix, fridge overnight. Top with whatever fruit is around.</p>
-<p>The trick is the salt — makes everything else pop.</p>`,
-    pinned: false,
-  },
-  {
-    localId: 'starter-weekend',
-    title: 'Weekend Plans',
-    content: `<ul>
-<li>Farmers market Saturday morning</li>
-<li>Fix the kitchen shelf (finally)</li>
-<li>Try that new coffee place on 5th</li>
-</ul>`,
-    pinned: false,
-  },
-  {
-    localId: 'starter-saturday',
-    title: 'An idea for Saturday',
-    content: `<p>Leave the morning unplanned.</p>
-<p>Walk to the market. Pick up something for lunch. Take the longer way home.</p>
-<p>Maybe that is enough.</p>`,
-    pinned: false,
-  },
-  {
-    localId: 'starter-say',
-    title: 'What I wanted to say',
-    content: `<p>I do not need an answer yet. I just need to put this into words before it turns into something else.</p>`,
-    pinned: false,
-  },
-  {
-    localId: 'starter-passage',
-    title: 'A passage worth keeping',
-    content: `<p>“Attention is the rarest and purest form of generosity.” — Simone Weil</p>
-<p>Something to come back to when the week gets loud.</p>`,
-    pinned: false,
-  },
-  {
-    localId: 'starter-train',
-    title: 'Tuesday, on the train',
-    content: `<p>Three things I keep circling: the flat, October, whether to say yes to the Sunday thing. Not deciding today.</p>`,
-    pinned: false,
-  },
-];
+function fingerprint(text: string): string {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
 
-// IDs of all starter notes for detection, current and legacy
-const STARTER_NOTE_IDS = new Set(
-  [...STARTER_NOTES, ...LEGACY_STARTER_NOTES].map((n) => n.localId)
-);
-
-/** The starter a stored note was copied from, current or legacy; undefined for the reader's own notes. */
-function findStarterOriginal(localId: string) {
-  return (
-    STARTER_NOTES.find((s) => s.localId === localId) ??
-    LEGACY_STARTER_NOTES.find((s) => s.localId === localId)
-  );
+/** What a stored starter is compared on: its title, content and pin, exactly. */
+function starterFingerprint(note: Pick<DemoNote, 'title' | 'content' | 'pinned'>): string {
+  return fingerprint(JSON.stringify([note.title, note.content, note.pinned]));
 }
 
 /**
- * Starter copy that shipped in an earlier release and is no longer true.
+ * Starters that are no longer offered, by ID, as the fingerprint of what shipped. The
+ * first set (books, recipe, weekend) shipped until 2026-09-10; the second (Saturday, what
+ * I wanted to say, a passage, the train) until 2026-11-10. A browser that already holds
+ * them keeps recognising them as starters: an untouched one is not the reader's work and
+ * must never migrate into an account, and an edited one is theirs and is kept exactly as
+ * they left it. Any edit at all changes the fingerprint.
+ */
+const LEGACY_STARTER_FINGERPRINTS: Readonly<Record<string, string>> = {
+  'starter-books': '19ciza7d82j',
+  'starter-recipe': '2e3hqbz77k8',
+  'starter-weekend': '289lka7sm1i',
+  'starter-saturday': 'fbm771233o',
+  'starter-say': '5etqp1ahmq',
+  'starter-passage': '1imwbrvlw45',
+  'starter-train': 'klxttobnbp',
+};
+
+// IDs of all starter notes for detection, current and legacy
+const STARTER_NOTE_IDS = new Set([
+  ...STARTER_NOTES.map((n) => n.localId),
+  ...Object.keys(LEGACY_STARTER_FINGERPRINTS),
+]);
+
+/**
+ * Starter copy that shipped in an earlier release and is no longer offered, as content
+ * fingerprints.
  *
  * `createDefaultState()` only runs for a browser with no stored state, so correcting
  * the source above left every existing Practice Space still showing the old words. The
- * welcome note claimed practice drafts were end-to-end encrypted; they are not, and
- * they never were — a practice draft lives in localStorage in the clear.
+ * first welcome note claimed practice drafts were end-to-end encrypted; they are not, and
+ * they never were — a practice draft lives in localStorage in the clear. The second was
+ * accurate, and was replaced when the landing copy changed on 2026-11-10.
  *
- * A stored note is corrected only when its content matches one of these strings
- * *exactly*. Any edit at all, however small, means the words are the reader's and are
- * left alone.
+ * A stored note is corrected only when its content matches one of these *exactly*. Any
+ * edit at all, however small, means the words are the reader's and are left alone.
  *
  * There is a second consequence worth naming. `hasStarterNoteBeenEdited()` compares
  * against the current copy, so an untouched old starter reads as edited — which makes
- * `hasDemoState()` true and carries the false claim into the account on migration.
+ * `hasDemoState()` true and carries the old words into the account on migration.
  * Correcting the content at read time fixes that too.
  */
-const SUPERSEDED_STARTER_CONTENT: Record<string, readonly string[]> = {
-  'starter-welcome': [
-    `<p>A calm space for your thoughts. Pin important notes, organize with tags, and write in focus mode.</p>
-<p>Your notes are end-to-end encrypted — only you can read them.</p>`,
-    // The welcome note until 2026-11-10. Accurate, but replaced when the landing copy changed.
-    `<p>A calm space for your thoughts. Pin important notes, organize with tags, and write in focus mode.</p>
-<p>Practice drafts are saved on this device and are not encrypted. Sign up and set up your vault to encrypt your notes.</p>`,
-  ],
+const SUPERSEDED_STARTER_CONTENT: Readonly<Record<string, readonly string[]>> = {
+  'starter-welcome': ['1p2h2uug9xg', 'axmeffbsbu'],
 };
 
 /**
@@ -145,7 +108,7 @@ function refreshSupersededStarterCopy(state: DemoState): boolean {
 
   for (const note of state.notes) {
     const superseded = SUPERSEDED_STARTER_CONTENT[note.localId];
-    if (!superseded?.includes(note.content)) continue;
+    if (!superseded?.includes(fingerprint(note.content))) continue;
 
     const current = STARTER_NOTES.find((s) => s.localId === note.localId);
     if (!current || current.content === note.content) continue;
@@ -165,7 +128,7 @@ function refreshSupersededStarterCopy(state: DemoState): boolean {
  * as starters and never migrate. Returns true when anything changed.
  */
 function refreshLegacyStarterSet(state: DemoState): boolean {
-  const hasLegacy = state.notes.some((n) => LEGACY_STARTER_NOTES.some((l) => l.localId === n.localId));
+  const hasLegacy = state.notes.some((n) => n.localId in LEGACY_STARTER_FINGERPRINTS);
   if (!hasLegacy) return false;
   const pristine = state.notes.every(
     (n) => STARTER_NOTE_IDS.has(n.localId) && !hasStarterNoteBeenEdited(n)
@@ -231,13 +194,17 @@ export function saveDemoState(state: DemoState): void {
  * Check if a starter note has been edited from its default state
  */
 function hasStarterNoteBeenEdited(note: DemoNote): boolean {
-  const original = findStarterOriginal(note.localId);
-  if (!original) return false;
-  return (
-    note.title !== original.title ||
-    note.content !== original.content ||
-    note.pinned !== original.pinned
-  );
+  const current = STARTER_NOTES.find((s) => s.localId === note.localId);
+  if (current) {
+    return (
+      note.title !== current.title ||
+      note.content !== current.content ||
+      note.pinned !== current.pinned
+    );
+  }
+  const legacy = LEGACY_STARTER_FINGERPRINTS[note.localId];
+  if (!legacy) return false;
+  return starterFingerprint(note) !== legacy;
 }
 
 /**
