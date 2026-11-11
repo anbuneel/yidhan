@@ -773,3 +773,10 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   309 KB and precache 1100 to 1108 KB, for the display cut (`DECISIONS.md`,
   2026-11-09). Both redesign plans are COMPLETE and archived, and the ACTIVE-plan cap
   is back to one. Not verified on Android or iOS devices, or in Safari.
+- **2026-11-11** — The day page becomes a new leaf (`#F2F7F0`) and the green turns
+  toward leaf (`#357A45` by day, `#8FC79A` at night), so the colours show the name's
+  "Bright Spring". The logo, web and Android icons, splash screens and share image are
+  drawn again from the new values. The light editor glow, invisible as a neutral shade
+  on a white sheet, becomes the accent at 8% through a new per-theme token,
+  `--color-editor-glow`; dark keeps the neutral 4%. Contrast is the same or better
+  (`DECISIONS.md`, 2026-11-10). (#274)
