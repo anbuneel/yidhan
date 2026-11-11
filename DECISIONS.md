@@ -19,6 +19,35 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-10 — The landing page leads with writing, in plain words
+
+**Status:** Active
+
+**Why:** The owner said the landing page did not sound like them and read as artificial,
+and the sample notes were too wistful. The copy leaned on metaphor ("A quiet home for
+your personal notes"), slogan fragments ("Small thoughts, worth keeping", "Your words
+stay yours") and notes that each ended in a small life lesson. Together they implied the
+app expected one kind of reflective writer.
+
+**Decision:** The hero says what the app is for: "A notes app built around writing",
+then drafts, ideas, focus mode, tags and search. One clause keeps encryption on the
+first screen ("With an account, your notes sync across your devices and are encrypted
+before they leave this one"). The passphrase, recovery key and visible metadata move to
+the privacy section, which now also states that losing both passphrase and recovery key
+loses the notes. Sample notes become work in progress: a story opening with a revision
+note, an essay outline, revision notes, a short journal entry. New accounts get two
+starters, a welcome note and a list of things to type, and no Recipes tag. `DESIGN.md`
+Voice now says: describe the writing, the action, or the feature; let the reader decide
+how it feels.
+
+**Rejected:** Leading with privacy in the hero as before. It is the differentiator, but a
+first screen of passphrase and ciphertext detail did not say what the app is for.
+Dropping encryption from the hero entirely, as first proposed. "Built around writing"
+alone is a claim Bear or iA Writer could also make. Practical utility samples (recipes,
+house reminders, a reading list). They removed the wistfulness but did not show writing.
+
+---
+
 ## 2026-11-10 — The day page becomes a new leaf, and the green turns toward leaf
 
 **Status:** Active
