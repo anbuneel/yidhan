@@ -69,7 +69,9 @@
       :root { --b-bg: #151C18; --b-bg2: #18211C; --b-surface: #1D2922; --b-text: #E6E3DC; --b-note: #D3D2CA; --b-note-weight: 430; --b-text2: #B9BFB8; --b-text3: #9AA69F; --b-accent: #8FC79A; --b-cta-bg: #8FC79A; --b-cta-text: #13201A; --b-border: #33423A; --b-leaf: #8FC79A; --b-shadow: none; --b-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.05'/%3E%3C/svg%3E"); }
       @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --b-bg: #F2F7F0; --b-bg2: #EBF1E9; --b-surface: #FFFFFF; --b-text: #14241C; --b-note: #22332A; --b-note-weight: 400; --b-text2: #46544C; --b-text3: #5A665F; --b-accent: #357A45; --b-cta-bg: #357A45; --b-cta-text: #FFFFFF; --b-border: #D9E4D4; --b-leaf: #357A45; --b-shadow: 0 1px 2px rgba(20, 36, 28, 0.06), 0 4px 12px rgba(20, 36, 28, 0.045), 0 16px 32px rgba(20, 36, 28, 0.035), 0 32px 64px rgba(20, 36, 28, 0.03); --b-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.04'/%3E%3C/svg%3E"); } }
       :root[data-theme="light"] { --b-bg: #F2F7F0; --b-bg2: #EBF1E9; --b-surface: #FFFFFF; --b-text: #14241C; --b-note: #22332A; --b-note-weight: 400; --b-text2: #46544C; --b-text3: #5A665F; --b-accent: #357A45; --b-cta-bg: #357A45; --b-cta-text: #FFFFFF; --b-border: #D9E4D4; --b-leaf: #357A45; --b-shadow: 0 1px 2px rgba(20, 36, 28, 0.06), 0 4px 12px rgba(20, 36, 28, 0.045), 0 16px 32px rgba(20, 36, 28, 0.035), 0 32px 64px rgba(20, 36, 28, 0.03); --b-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.04'/%3E%3C/svg%3E"); }
-      html { background: var(--b-bg); }
+      html { background: var(--b-bg); scrollbar-gutter: stable; }
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
+      body { margin: 0; }
       html.boot-hidden .boot-landing { display: none; }
       .boot-landing { min-height: 100vh; background: var(--b-grain) 0 0 / 180px 180px repeat, var(--b-bg); color: var(--b-text); font-family: 'Newsreader', Georgia, serif; overflow-x: hidden; }
       .boot-header { display: flex; align-items: center; height: 64px; padding: 0 1rem; }
@@ -80,23 +82,29 @@
       .boot-mark { width: 30px; height: 30px; flex-shrink: 0; }
       .boot-word { height: 30px; width: auto; aspect-ratio: 6003 / 1954; flex-shrink: 0; }
       @media (min-width: 640px) { .boot-logo { gap: 10.8px; } .boot-mark { width: 36px; height: 36px; } .boot-word { height: 36px; } }
-      .boot-hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; align-items: center; width: 100%; max-width: 1440px; margin: 0 auto; box-sizing: border-box; padding: 2rem clamp(1.25rem, 3.5vw, 3rem) 0; }
-      .boot-intro h1 { font-family: 'Newsreader Display', 'Newsreader', Georgia, serif; font-weight: 500; font-size: clamp(2.75rem, 4.6vw, 4rem); line-height: 1.05; letter-spacing: 0; margin: 0 0 1.5rem; text-wrap: balance; }
-      .boot-intro p { font-weight: 400; font-size: clamp(1.05rem, 1.2vw, 1.15rem); line-height: 1.65; color: var(--b-text2); max-width: 30rem; margin: 0 0 0.85rem; }
-      .boot-cta { display: inline-block; margin-top: 1.4rem; font-size: 1rem; font-weight: 500; background: var(--b-cta-bg); color: var(--b-cta-text); border-radius: 9999px; padding: 0.9rem 2.4rem; text-decoration: none; }
-      .boot-intro .boot-micro { font-size: 0.875rem; font-weight: 400; color: var(--b-text3); margin: 1.1rem 0 0; }
-      .boot-manuscript { box-sizing: border-box; padding: clamp(1.5rem, 3vw, 2.25rem) clamp(1.25rem, 3vw, 2.75rem) clamp(1.25rem, 2.5vw, 1.9rem); background: var(--b-surface); border: 1px solid var(--b-border); border-radius: 2px 24px 4px 24px; box-shadow: var(--b-shadow); }
-      .boot-manuscript h2 { font-family: 'Newsreader Display', 'Newsreader', Georgia, serif; font-weight: 500; font-size: clamp(1.75rem, 2.4vw, 2.25rem); line-height: 1.15; letter-spacing: -0.02em; margin: 0; }
-      .boot-meta { display: flex; justify-content: space-between; min-height: 1.5rem; margin: 0.35rem 0 0.5rem; font-size: 0.75rem; color: var(--b-text3); }
-      .boot-toolbar { height: 44px; margin: 0.85rem 0 1.25rem; box-sizing: border-box; border: 1px solid var(--b-border); border-radius: 12px; background: var(--b-bg2); }
-      .boot-manuscript p { font-size: clamp(1.05rem, 1.25vw, 1.2rem); font-weight: var(--b-note-weight); line-height: 1.75; color: var(--b-note); margin: 0; }
-      .boot-manuscript p + p { margin-top: 1.75em; }
-      .boot-foot { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--b-border); font-size: 0.8rem; color: var(--b-text3); }
+      .boot-hero { width: 100%; max-width: 1100px; margin: 0 auto; box-sizing: border-box; padding: 2.5rem clamp(1.25rem, 3.5vw, 3rem) 0; text-align: center; }
+      .boot-intro { display: flex; flex-direction: column; align-items: center; }
+      .boot-intro h1 { font-family: 'Newsreader Display', 'Newsreader', Georgia, serif; font-weight: 500; font-size: clamp(2.75rem, 7vw, 6.5rem); line-height: 1; letter-spacing: -0.02em; margin: 0 0 1.5rem; text-wrap: balance; }
+      .boot-intro p { font-weight: 400; font-size: clamp(1.05rem, 1.3vw, 1.25rem); line-height: 1.65; color: var(--b-text2); max-width: 36rem; margin: 0 0 0.85rem; text-wrap: pretty; }
+      .boot-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1rem 1.5rem; margin-top: 1.4rem; }
+      .boot-demo { font-size: 0.92rem; font-weight: 500; line-height: 1.5; color: var(--b-text3); text-decoration: none; border-bottom: 1px dotted var(--b-text3); }
+      .boot-cta { display: inline-block; font-size: 1rem; font-weight: 500; line-height: 1.5; background: var(--b-cta-bg); color: var(--b-cta-text); border-radius: 9999px; padding: 0.9rem 2.4rem; text-decoration: none; }
+      .boot-intro .boot-micro { font-size: 0.875rem; line-height: 1.5; font-weight: 400; color: var(--b-text3); margin: 1.1rem 0 0; }
+      .boot-manuscript { box-sizing: border-box; width: calc(100% - 2 * clamp(1rem, 3.5vw, 3rem)); max-width: 1000px; margin: clamp(2.5rem, 5vw, 3.5rem) auto 0; padding: clamp(1.75rem, 5vw, 3.5rem) clamp(1.25rem, 8vw, 5.5rem) clamp(2rem, 5vw, 4rem); background: var(--b-surface); border: 1px solid var(--b-border); border-radius: 2px 24px 4px 24px; box-shadow: var(--b-shadow); }
+      .boot-manuscript > * { max-width: 46rem; }
+      .boot-manuscript h2 { font-family: 'Newsreader Display', 'Newsreader', Georgia, serif; font-weight: 500; font-size: clamp(1.9rem, 3vw, 2.6rem); line-height: 1.15; letter-spacing: -0.02em; margin: 0; }
+      .boot-meta { display: flex; justify-content: space-between; min-height: 1.5rem; margin: 0.35rem 0 1.5rem; font-size: 0.8rem; color: var(--b-text3); }
+      .boot-meta span + span { font-style: italic; }
+      .boot-manuscript p { font-size: clamp(1.05rem, 1.35vw, 1.25rem); font-weight: var(--b-note-weight); line-height: 1.75; color: var(--b-note); margin: 0; }
+      .boot-manuscript p + p { margin-top: 1.1em; }
+      .boot-manuscript .boot-revision { color: var(--b-text3); }
+      .boot-foot { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--b-border); font-size: 0.8125rem; color: var(--b-text3); }
       .boot-proof a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--b-text3); }
-      .boot-proof { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 0.9rem; padding: 2.25rem clamp(1.25rem, 3.5vw, 3rem) 0; font-size: 0.95rem; color: var(--b-text2); text-align: center; }
+      .boot-proof { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 0.9rem; margin: 0; padding-top: 1.75rem; font-size: 0.95rem; line-height: 1.5; color: var(--b-text2); }
+      .boot-proof span, .boot-proof a { padding-bottom: 1px; }
       @media (min-width: 768px) { .boot-header { padding: 0 3rem; } }
-      @media (min-width: 1024px) { .boot-hero { grid-template-columns: minmax(0, 30rem) minmax(0, 1fr); gap: clamp(3rem, 5vw, 4.5rem); padding-top: 3.5rem; } }
-      @media (max-width: 767px) { .boot-cta { display: block; text-align: center; } }
+      @media (min-width: 1024px) { .boot-hero { padding-top: 4rem; } }
+      @media (max-width: 767px) { .boot-actions { width: 100%; } .boot-cta { display: block; width: 100%; box-sizing: border-box; text-align: center; } }
     </style>
     <script src="/boot.js"></script>
 
@@ -114,20 +122,19 @@
             <h1>A notes app built around writing.</h1>
             <p>Write a first draft, work through an idea, or make notes for something longer. Use focus mode when you’re writing, and tags and search when you need to find something.</p>
             <p>Works offline. With an account, your notes sync across your devices and are encrypted before they leave this one.</p>
-            <a class="boot-cta" href="/demo/new">Try writing</a>
+            <div class="boot-actions"><a class="boot-cta" href="/demo/new">Try writing</a><a class="boot-demo" href="/demo">Browse sample notes →</a></div>
             <p class="boot-micro">Free to use. No account needed to try.</p>
           </div>
-          <div class="boot-manuscript" aria-hidden="true">
-            <h2>Opening draft</h2>
-            <div class="boot-meta"><span>+ Add tag</span><span>Just now</span></div>
-            <div class="boot-toolbar"></div>
-            <p>By nine, everyone in the building had received the same letter. Except Sam.</p>
-            <p>He checked the empty mailbox again, then knocked on his neighbour’s door.</p>
-            <p>[Try starting with the knock. Explain the letter later.]</p>
-            <div class="boot-foot">Demo notes are saved in this browser and are not encrypted.</div>
-          </div>
+          <p class="boot-proof"><span>Encrypted before it syncs</span><span>·</span><span>Works offline</span><span>·</span><a href="https://github.com/anbuneel/yidhan/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Free and open source</a><span>·</span><span>Export any time</span></p>
         </section>
-        <p class="boot-proof"><span>Encrypted before it syncs</span><span>·</span><span>Works offline</span><span>·</span><a href="https://github.com/anbuneel/yidhan/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Free and open source</a><span>·</span><span>Export any time</span></p>
+        <div class="boot-manuscript" aria-hidden="true">
+          <h2>Opening draft</h2>
+          <div class="boot-meta"><span>+ Add tag</span><span>Just now</span></div>
+          <p>By nine, everyone in the building had received the same letter. Except Sam.</p>
+          <p>He checked the empty mailbox again, then knocked on his neighbour’s door.</p>
+          <p class="boot-revision">[Try starting with the knock. Explain the letter later.]</p>
+          <div class="boot-foot">Demo notes are saved in this browser and are not encrypted.</div>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>

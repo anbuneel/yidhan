@@ -60,11 +60,11 @@ describe('the leaf corner', () => {
     const allowed = ['NoteCard.tsx', 'SwipeableNoteCard.tsx', 'FadedNoteCard.tsx', 'LandingPage.tsx', 'index.css'];
     const users = sources.filter((f) => read(f).includes('var(--radius-card)'));
     expect(users.filter((f) => !allowed.some((a) => f.endsWith(a)))).toEqual([]);
-    // In the stylesheets, only the editor sheet, the landing manuscript and the sample card.
+    // In the stylesheets, only the editor sheet and the landing sheet.
     expect(indexCss.match(/var\(--radius-card\)/g)).toHaveLength(1);
     expect(rule(indexCss, '.editor-writing-area')).toContain('var(--radius-card)');
-    expect(landing.match(/var\(--radius-card\)/g)).toHaveLength(2);
-    expect(rule(landing, '.landing-manuscript')).toContain('var(--radius-card)');
+    expect(landing.match(/var\(--radius-card\)/g)).toHaveLength(1);
+    expect(rule(landing, '.landing-sheet')).toContain('var(--radius-card)');
   });
 
   it('is not on a modal, a tag chip or a button in the page', () => {

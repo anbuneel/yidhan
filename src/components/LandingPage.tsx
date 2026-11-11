@@ -2,8 +2,7 @@ import { useMemo, type MouseEvent } from 'react';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { HeaderShell } from './HeaderShell';
 import { createDemoStarterPreviewState, HERO_STARTER_NOTE_ID } from '../services/demoStarters';
-import { NoteCard } from './NoteCard';
-import type { Note, Tag, Theme } from '../types';
+import type { Theme } from '../types';
 
 interface LandingPageProps {
   /** Opens sign-up. Reached from the preview's "keep and sync" link; the primary
@@ -42,12 +41,11 @@ const isPlainClick = (event: MouseEvent<HTMLAnchorElement>) =>
   !event.ctrlKey &&
   !event.shiftKey;
 
-/**
- * The first five labels of the real editor toolbar, in its order (`PRIMARY_COMMANDS` in
- * `EditorToolbar.tsx`). Decorative: the preview is a picture. At most five, and never
- * Undo and Redo, which a fresh note shows greyed out.
- */
-const TOOLBAR_LABELS = ['B', 'I', '</>', 'H1', 'List'] as const;
+/** The first paragraph of a starter note as plain text, for a one-line preview. */
+function firstLine(html: string): string {
+  const paragraph = /<p[^>]*>([\s\S]*?)<\/p>/.exec(html)?.[1] ?? html;
+  return paragraph.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
 export function LandingPage({
   onStartWriting,
@@ -65,32 +63,13 @@ export function LandingPage({
 }: LandingPageProps) {
   const { isInstallable, isInstalled, triggerInstall } = useInstallPrompt();
 
-  // The sample cards are the Practice Space's own starters, so "open" shows the same
-  // note there. The pinned welcome and the note already in the hero are left out.
-  const sampleNotes = useMemo<Note[]>(() => {
+  // The samples are the practice space's own starters, so "open" shows the same note
+  // there. The pinned welcome and the note already in the sheet are left out.
+  const sampleNotes = useMemo(() => {
     const demoState = createDemoStarterPreviewState();
-    const tagsById = new Map<string, Tag>(
-      demoState.tags.map((tag) => [
-        tag.localId,
-        { id: tag.localId, name: tag.name, color: tag.color, createdAt: new Date(tag.createdAt) },
-      ])
-    );
-
     return demoState.notes
       .filter((note) => !note.pinned && note.localId !== HERO_STARTER_NOTE_ID)
-      .map((note) => ({
-        id: note.localId,
-        title: note.title,
-        content: note.content,
-        createdAt: new Date(note.createdAt),
-        updatedAt: new Date(note.updatedAt),
-        tags: note.tagIds
-          .map((tagId) => tagsById.get(tagId))
-          .filter((tag): tag is Tag => Boolean(tag)),
-        pinned: note.pinned,
-        deletedAt: null,
-        syncStatus: 'synced',
-      }));
+      .map((note) => ({ id: note.localId, title: note.title, preview: firstLine(note.content) }));
   }, []);
 
   const handleDemoLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -109,7 +88,7 @@ export function LandingPage({
     <div className="landing-canvas">
       <HeaderShell theme={theme} onThemeToggle={onThemeToggle} onSignIn={onSignIn} />
 
-      {/* ─── First screen: the product named, the promise stated, the editor shown ─── */}
+      {/* ─── On the page: the product named, the promise stated ─── */}
       <section className="landing-hero">
         <div className="landing-intro">
           <h1 className="landing-headline">A notes app built around writing.</h1>
@@ -134,9 +113,26 @@ export function LandingPage({
           <p className="landing-micro">Free to use. No account needed to try.</p>
         </div>
 
-        {/* The manuscript as the practice space renders it. A picture of the editor, not
-            an imitation of one: clicking anywhere on it opens the real thing. */}
-        <div className="landing-manuscript">
+        <div className="landing-proof">
+          <button type="button" onClick={onSecurityClick} className="landing-fact focus-ring">
+            Encrypted before it syncs
+          </button>
+          <span className="landing-proof-dot" aria-hidden="true">·</span>
+          <span className="landing-fact-plain">Works offline</span>
+          <span className="landing-proof-dot" aria-hidden="true">·</span>
+          <a href={LICENSE_URL} target="_blank" rel="noopener noreferrer" className="landing-fact focus-ring">
+            Free and open source
+          </a>
+          <span className="landing-proof-dot" aria-hidden="true">·</span>
+          <span className="landing-fact-plain">Export any time</span>
+        </div>
+      </section>
+
+      {/* ─── One sheet holds the rest, at reading width (DECISIONS.md, 2026-11-11) ─── */}
+      <article className="landing-sheet">
+        {/* The draft as the practice space renders it. A picture of the editor, not an
+            imitation of one: clicking anywhere on it opens the real thing. */}
+        <div className="landing-draft">
           <div className="landing-manuscript-glow" aria-hidden="true" />
           <button
             type="button"
@@ -153,20 +149,12 @@ export function LandingPage({
                 </svg>
                 Add tag
               </span>
-              <span>Just now</span>
-            </div>
-            <div className="landing-manuscript-divider" aria-hidden="true" />
-            <div className="landing-manuscript-toolbar" aria-hidden="true">
-              {TOOLBAR_LABELS.map((label) => (
-                <span key={label} className="landing-tb" data-label={label}>
-                  {label}
-                </span>
-              ))}
+              <span className="landing-manuscript-time">Just now</span>
             </div>
             <div className="landing-manuscript-text">
               <p>By nine, everyone in the building had received the same letter. Except Sam.</p>
               <p>He checked the empty mailbox again, then knocked on his neighbour’s door.</p>
-              <p>
+              <p className="landing-revision">
                 [Try starting with the knock. Explain the letter later.]
                 <span className="landing-caret" aria-hidden="true" />
               </p>
@@ -187,56 +175,33 @@ export function LandingPage({
             </button>
           </div>
         </div>
-      </section>
 
-      {/* ─── Proof: one line, stated once ─── */}
-      <div className="landing-proof">
-        <button type="button" onClick={onSecurityClick} className="landing-fact focus-ring">
-          Encrypted before it syncs
-        </button>
-        <span className="landing-proof-dot" aria-hidden="true">·</span>
-        <span className="landing-fact-plain">Works offline</span>
-        <span className="landing-proof-dot" aria-hidden="true">·</span>
-        <a href={LICENSE_URL} target="_blank" rel="noopener noreferrer" className="landing-fact focus-ring">
-          Free and open source
-        </a>
-        <span className="landing-proof-dot" aria-hidden="true">·</span>
-        <span className="landing-fact-plain">Export any time</span>
-      </div>
-
-      {/* ─── Sample notes: three uses, each opens in the practice space ─── */}
-      <section className="landing-section" aria-labelledby="landing-samples-title">
-        <div className="landing-section-head">
+        {/* ─── Sample notes: each opens in the practice space ─── */}
+        <section className="landing-part" aria-labelledby="landing-samples-title">
           <h2 id="landing-samples-title" className="landing-h2">See what writing looks like in Yidhan.</h2>
           <p className="landing-section-body">
             Browse the sample notes, edit them, or start your own.
           </p>
-        </div>
-        <div className="landing-samples">
-          {sampleNotes.map((note) => (
-            <div key={note.id} className="landing-sample">
-              <NoteCard
-                note={note}
-                onClick={() => undefined}
-                onDelete={() => false}
-                onTogglePin={() => undefined}
-                isDecorative
-              />
-              <button
-                type="button"
-                onClick={onDemoClick}
-                className="landing-sample-open focus-ring"
-                aria-label={`Open “${note.title}” in the practice space`}
-              />
-            </div>
-          ))}
-        </div>
-      </section>
+          <ul className="landing-samples">
+            {sampleNotes.map((note) => (
+              <li key={note.id}>
+                <button
+                  type="button"
+                  onClick={onDemoClick}
+                  className="landing-sample focus-ring"
+                  aria-label={`Open “${note.title}” in the practice space`}
+                >
+                  <span className="landing-sample-title">{note.title}</span>
+                  <span className="landing-sample-preview">{note.preview}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
 
-      {/* ─── Trust: the promise once, then the exits ─── */}
-      <section className="landing-section landing-trust" aria-labelledby="landing-trust-title">
-        <h2 id="landing-trust-title" className="landing-h2">Your writing is private.</h2>
-        <div className="landing-trust-body">
+        {/* ─── Privacy: the promise once, then the exit ─── */}
+        <section className="landing-part landing-trust" aria-labelledby="landing-trust-title">
+          <h2 id="landing-trust-title" className="landing-h2">Your writing is private.</h2>
           <p className="landing-section-body">
             With an account, your note titles and content are encrypted on your device before
             they sync. We can’t read them. Dates, note sizes and tag names are not encrypted.
@@ -249,16 +214,16 @@ export function LandingPage({
           <a href="/security" onClick={handleSecurityLinkClick} className="landing-link focus-ring">
             How encryption works →
           </a>
-        </div>
-      </section>
+        </section>
 
-      {/* ─── Closing action ─── */}
-      <section className="landing-close">
-        <p className="landing-close-line">Start with one note.</p>
-        <button type="button" onClick={onDemoDraftClick} className="landing-cta focus-ring">
-          Try writing
-        </button>
-      </section>
+        {/* ─── Closing action ─── */}
+        <section className="landing-part landing-close">
+          <p className="landing-close-line">Start with one note.</p>
+          <button type="button" onClick={onDemoDraftClick} className="landing-cta focus-ring">
+            Try writing
+          </button>
+        </section>
+      </article>
 
       {/* ─── Footer nav ─── */}
       <nav className="landing-footer">
@@ -318,32 +283,25 @@ export function LandingPage({
           overflow-x: hidden;
         }
 
-        /* ─── First screen ─── */
+        /* ─── On the page ─── */
         .landing-hero {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr);
-          gap: 2.5rem;
-          align-items: center;
           width: 100%;
-          max-width: 1440px;
+          max-width: 1100px;
           margin: 0 auto;
-          padding: 2rem clamp(1.25rem, 3.5vw, 3rem) 0;
+          padding: 2.5rem clamp(1.25rem, 3.5vw, 3rem) 0;
+          text-align: center;
           animation: landing-fade-up 0.7s var(--ease-out-quint, ease-out) backwards;
         }
         @media (min-width: 1024px) {
-          .landing-hero {
-            grid-template-columns: minmax(0, 30rem) minmax(0, 1fr);
-            gap: clamp(3rem, 5vw, 4.5rem);
-            padding-top: 3.5rem;
-          }
+          .landing-hero { padding-top: 4rem; }
         }
-        .landing-intro { display: flex; flex-direction: column; align-items: flex-start; }
+        .landing-intro { display: flex; flex-direction: column; align-items: center; }
         .landing-headline {
           font-family: var(--font-title);
           font-weight: 500;
-          font-size: clamp(2.75rem, 4.6vw, 4rem);
-          line-height: 1.05;
-          letter-spacing: 0;
+          font-size: clamp(2.75rem, 7vw, 6.5rem);
+          line-height: 1;
+          letter-spacing: -0.02em;
           margin: 0 0 1.5rem;
           text-wrap: balance;
           color: var(--color-text-primary);
@@ -351,14 +309,16 @@ export function LandingPage({
         .landing-sub {
           font-family: var(--font-body);
           font-weight: 400;
-          font-size: clamp(1.05rem, 1.2vw, 1.15rem);
+          font-size: clamp(1.05rem, 1.3vw, 1.25rem);
           line-height: 1.65;
           color: var(--color-text-secondary);
-          max-width: 30rem;
+          max-width: 36rem;
           margin: 0 0 0.85rem;
+          text-wrap: pretty;
         }
         .landing-actions {
-          display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem;
+          display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+          gap: 1rem 1.5rem;
           margin-top: 1.4rem;
         }
         .landing-cta {
@@ -370,6 +330,7 @@ export function LandingPage({
           border: none;
           border-radius: var(--radius-pill);
           padding: 0.9rem 2.4rem;
+          line-height: 1.5;
           cursor: pointer;
           transition: transform 0.3s ease, background-color 0.3s ease;
         }
@@ -381,12 +342,13 @@ export function LandingPage({
           margin: 1.1rem 0 0;
           font-family: var(--font-body);
           font-size: 0.875rem;
+          line-height: 1.5;
           color: var(--color-text-tertiary);
         }
         .landing-demo-link {
           display: inline-flex; align-items: center; gap: 0.3rem;
           font-family: var(--font-body);
-          font-size: 0.92rem; font-weight: 500;
+          font-size: 0.92rem; font-weight: 500; line-height: 1.5;
           color: var(--color-text-tertiary);
           text-decoration: none;
           border-bottom: 1px dotted var(--color-text-tertiary);
@@ -396,35 +358,55 @@ export function LandingPage({
         .landing-demo-arrow { display: inline-block; transition: transform 0.2s ease; }
         .landing-demo-link:hover .landing-demo-arrow { transform: translateX(4px); }
 
-        /* ─── The manuscript preview ─── */
-        .landing-manuscript {
+        .landing-proof {
+          display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+          gap: 0.5rem 0.9rem;
+          padding-top: 1.75rem;
+          font-size: 0.95rem; line-height: 1.5;
+        }
+        .landing-fact, .landing-fact-plain {
+          font-family: var(--font-body);
+          font-size: 0.95rem; line-height: 1.5;
+          color: var(--color-text-secondary);
+          background: none; border: 0; padding: 0 0 1px; cursor: pointer;
+          text-decoration: none;
+        }
+        .landing-fact { border-bottom: 1px dotted var(--color-text-tertiary); transition: color 0.2s ease, border-bottom-color 0.2s ease; }
+        .landing-fact:hover { color: var(--color-accent-text); border-bottom-color: var(--color-accent); }
+        .landing-fact-plain { cursor: default; }
+        .landing-proof-dot { color: var(--color-text-tertiary); }
+
+        /* ─── The sheet: everything below the hero, at reading width ─── */
+        .landing-sheet {
           position: relative;
-          padding: clamp(1.5rem, 3vw, 2.25rem) clamp(1.25rem, 3vw, 2.75rem) clamp(1.25rem, 2.5vw, 1.9rem);
+          box-sizing: border-box;
+          width: calc(100% - 2 * clamp(1rem, 3.5vw, 3rem));
+          max-width: 1000px;
+          margin: clamp(2.5rem, 5vw, 3.5rem) auto 0;
+          padding: clamp(1.75rem, 5vw, 3.5rem) clamp(1.25rem, 8vw, 5.5rem) clamp(2rem, 5vw, 4rem);
           background: var(--color-manuscript-bg);
           border: 1px solid var(--glass-border);
           border-radius: var(--radius-card);
           box-shadow: var(--shadow-manuscript);
           overflow: hidden;
-          transition: border-color 0.25s ease, box-shadow 0.25s ease;
         }
-        .landing-manuscript:has(.landing-manuscript-open:hover) {
-          border-color: var(--color-accent-muted);
-        }
+        .landing-sheet > * { max-width: 46rem; }
+        .landing-draft { position: relative; }
         .landing-manuscript-glow {
-          position: absolute; inset: 0; pointer-events: none;
+          position: absolute; inset: -2rem -3rem; pointer-events: none;
           background: radial-gradient(ellipse 80% 50% at 50% 42%, var(--color-editor-glow) 0%, transparent 70%);
         }
         .landing-manuscript-open {
-          position: absolute; inset: 0; z-index: 2;
+          position: absolute; inset: -0.75rem; z-index: 2;
           background: transparent; border: 0; padding: 0; margin: 0;
-          border-radius: inherit;
+          border-radius: var(--radius-input);
           cursor: text;
         }
         .landing-manuscript-page { position: relative; z-index: 1; pointer-events: none; }
         .landing-manuscript-title {
           font-family: var(--font-title);
           font-weight: 500;
-          font-size: clamp(1.75rem, 2.4vw, 2.25rem);
+          font-size: clamp(1.9rem, 3vw, 2.6rem);
           line-height: 1.15;
           letter-spacing: -0.02em;
           color: var(--color-text-primary);
@@ -432,43 +414,21 @@ export function LandingPage({
         }
         .landing-manuscript-meta {
           display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
-          margin: 0.35rem 0 0.5rem; min-height: 1.5rem;
+          margin: 0.35rem 0 1.5rem; min-height: 1.5rem;
           font-family: var(--font-body);
-          font-size: 0.75rem;
+          font-size: 0.8rem;
           color: var(--color-text-tertiary);
         }
+        .landing-manuscript-time { font-style: italic; }
         .landing-manuscript-tag { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.875rem; font-weight: 500; }
-        .landing-manuscript-divider {
-          height: 1px; margin-top: 0.85rem; opacity: 0.6;
-          background: linear-gradient(to right, transparent 0%, color-mix(in srgb, var(--color-accent) 25%, transparent) 30%, color-mix(in srgb, var(--color-accent) 25%, transparent) 70%, transparent 100%);
-        }
-        .landing-manuscript-toolbar {
-          display: flex; align-items: center; gap: 2px;
-          min-height: 44px; padding: 6px 8px; margin: 0.85rem 0 1.25rem;
-          border: 1px solid var(--glass-border);
-          border-radius: var(--radius-plain);
-          background: var(--color-bg-secondary);
-          box-shadow: var(--shadow-sm);
-          overflow: hidden;
-        }
-        .landing-tb {
-          min-width: 32px; height: 32px; flex: 0 0 auto; padding-inline: 4px;
-          display: inline-flex; align-items: center; justify-content: center;
-          border-radius: 6px;
-          color: var(--color-text-secondary);
-          font-family: var(--font-body);
-          font-size: 0.75rem; font-weight: 500; white-space: nowrap;
-        }
-        .landing-tb[data-label="I"] { font-family: var(--font-display); font-style: italic; font-size: 0.95rem; }
-        .landing-tb[data-label="B"] { font-size: 0.85rem; }
         .landing-manuscript-text {
           font-family: var(--font-body);
-          font-size: clamp(1.05rem, 1.25vw, 1.2rem);
+          font-size: clamp(1.05rem, 1.35vw, 1.25rem);
           line-height: 1.75;
-          min-height: 6.5em;
         }
         .landing-manuscript-text p { margin: 0; }
-        .landing-manuscript-text p + p { margin-top: 1.75em; }
+        .landing-manuscript-text p + p { margin-top: 1.1em; }
+        .landing-manuscript-text .landing-revision { color: var(--color-text-tertiary); }
         .landing-caret {
           display: inline-block; width: 2px; height: 1.15em;
           margin-left: 2px; vertical-align: -0.2em;
@@ -478,8 +438,8 @@ export function LandingPage({
         .landing-manuscript-foot {
           position: relative; z-index: 3;
           display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 0.75rem;
-          margin-top: 1.5rem; padding-top: 1rem;
-          border-top: 1px solid color-mix(in srgb, var(--glass-border) 60%, transparent);
+          margin-top: 2rem; padding-top: 1rem;
+          border-top: 1px solid var(--glass-border);
         }
         .landing-saved {
           display: inline-flex; align-items: center; gap: 0.35rem;
@@ -489,12 +449,12 @@ export function LandingPage({
         }
         .landing-manuscript-note {
           flex: 1 1 14rem;
-          font-family: var(--font-body); font-size: 0.8rem; line-height: 1.4;
+          font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.4;
           color: var(--color-text-tertiary);
         }
         .landing-keep {
           font-family: var(--font-body);
-          font-size: 0.8rem;
+          font-size: 0.8125rem; font-weight: 500;
           color: var(--color-text-secondary);
           background: none;
           border: 1px solid var(--glass-border);
@@ -506,89 +466,51 @@ export function LandingPage({
         }
         .landing-keep:hover { color: var(--color-accent-text); border-color: var(--color-accent); }
 
-        /* ─── Proof line ─── */
-        .landing-proof {
-          display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
-          gap: 0.5rem 0.9rem;
-          padding: 2.25rem clamp(1.25rem, 3.5vw, 3rem) 0;
-          text-align: center;
-        }
-        .landing-fact, .landing-fact-plain {
-          font-family: var(--font-body);
-          font-size: 0.95rem;
-          color: var(--color-text-secondary);
-          background: none; border: 0; padding: 0 0 1px; cursor: pointer;
-          text-decoration: none;
-        }
-        .landing-fact { border-bottom: 1px dotted var(--color-text-tertiary); transition: color 0.2s ease, border-bottom-color 0.2s ease; }
-        .landing-fact:hover { color: var(--color-accent-text); border-bottom-color: var(--color-accent); }
-        .landing-fact-plain { cursor: default; }
-        .landing-proof-dot { color: var(--color-text-tertiary); }
-
-        /* ─── Sections ─── */
-        .landing-section {
-          width: 100%;
-          max-width: 1440px;
-          margin: 0 auto;
-          padding: clamp(4.5rem, 8vw, 7.5rem) clamp(1.25rem, 3.5vw, 3rem) 0;
-        }
+        /* ─── Parts of the sheet: a heading and space, no divider ─── */
+        .landing-part { margin-top: clamp(3.5rem, 7vw, 4.5rem); }
         .landing-h2 {
-          font-family: var(--font-display); font-weight: 400;
-          font-size: clamp(2.1rem, 2.8vw, 2.65rem); line-height: 1.1; letter-spacing: 0;
-          margin: 0; color: var(--color-text-primary);
+          font-family: var(--font-title); font-weight: 500;
+          font-size: clamp(1.9rem, 3vw, 2.6rem); line-height: 1.1; letter-spacing: -0.02em;
+          margin: 0 0 0.85rem; color: var(--color-text-primary);
         }
         .landing-section-body {
           font-family: var(--font-body);
-          font-size: 1.02rem; line-height: 1.7;
-          color: var(--color-text-secondary); margin: 0;
+          font-size: clamp(1.05rem, 1.35vw, 1.25rem); line-height: 1.75;
+          font-weight: var(--note-weight);
+          color: var(--color-text-note); margin: 0 0 1.1em;
         }
-        .landing-section-head {
-          display: flex; flex-direction: column; gap: 0.75rem;
-          margin-bottom: 1.75rem;
+        .landing-samples { list-style: none; margin: 1.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+        .landing-sample {
+          display: flex; flex-direction: column; gap: 0.15rem; width: 100%;
+          padding: 0.35rem 0 0.35rem 1.25rem;
+          background: none; border: 0; border-left: 2px solid var(--color-accent);
+          text-align: left; cursor: pointer;
+          font-family: var(--font-body);
+          transition: border-left-color 0.2s ease;
         }
-        @media (min-width: 1024px) {
-          .landing-section-head { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 3rem; margin-bottom: 2.25rem; }
-          .landing-section-head .landing-h2 { max-width: 24rem; }
-          .landing-section-head .landing-section-body { max-width: 26rem; text-align: right; padding-bottom: 0.35rem; }
+        .landing-sample-title { font-size: 1.05rem; font-weight: 600; color: var(--color-text-primary); transition: color 0.2s ease; }
+        .landing-sample-preview {
+          font-size: 0.95rem; color: var(--color-text-secondary);
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .landing-samples {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
-          gap: 1.5rem;
-          align-items: start;
-        }
-        .landing-sample { position: relative; }
-        .landing-sample-open {
-          position: absolute; inset: 0; z-index: 2;
-          background: transparent; border: 0; padding: 0; margin: 0;
-          border-radius: var(--radius-card);
-          cursor: pointer;
-        }
-        .landing-sample:has(.landing-sample-open:hover) .note-card { box-shadow: var(--shadow-lg); }
-
-        .landing-trust { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; align-items: start; }
-        @media (min-width: 1024px) {
-          .landing-trust { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(3rem, 5vw, 4.5rem); }
-        }
-        .landing-trust-body { display: flex; flex-direction: column; align-items: flex-start; gap: 1.25rem; max-width: 34rem; }
-        .landing-trust-body .landing-section-body { font-size: 1.08rem; line-height: 1.75; }
+        .landing-sample:hover .landing-sample-title { color: var(--color-accent-text); }
         .landing-link {
-          font-family: var(--font-body); font-size: 0.95rem;
+          font-family: var(--font-body); font-size: 1rem; font-weight: 500;
           color: var(--color-accent-text); background: none; border: 0; padding: 0; cursor: pointer;
           text-decoration: none;
         }
         .landing-link:hover { text-decoration: underline; }
 
         .landing-close {
-          display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
-          gap: 1.1rem 1.75rem;
-          padding: clamp(4rem, 7vw, 6.5rem) clamp(1.25rem, 3.5vw, 3rem) 0;
-          text-align: center;
+          display: flex; flex-wrap: wrap; align-items: center; gap: 1.1rem 1.75rem;
+          padding-top: 1.5rem;
+          border-top: 1px solid var(--glass-border);
         }
         .landing-close-line {
-          font-family: var(--font-display); font-weight: 400;
-          font-size: clamp(1.85rem, 2.2vw, 2rem);
+          font-family: var(--font-title); font-weight: 500;
+          font-size: clamp(1.75rem, 2.6vw, 2.25rem); letter-spacing: -0.02em;
           color: var(--color-text-primary); margin: 0;
+          flex: 1 1 auto;
         }
 
         /* ─── Footer ─── */
@@ -608,7 +530,7 @@ export function LandingPage({
         .landing-nav-link:hover { color: var(--color-accent-text); }
 
         @media (max-width: 767px) {
-          .landing-cta { width: 100%; }
+          .landing-actions .landing-cta, .landing-close .landing-cta { width: 100%; }
           .landing-actions { width: 100%; }
           .landing-manuscript-foot .landing-keep { white-space: normal; text-align: left; }
         }
@@ -623,7 +545,7 @@ export function LandingPage({
         @media (prefers-reduced-motion: reduce) {
           .landing-hero { animation: none !important; }
           .landing-caret { animation: none !important; }
-          .landing-cta, .landing-demo-arrow { transition: none !important; }
+          .landing-cta, .landing-demo-arrow, .landing-sample, .landing-sample-title { transition: none !important; }
         }
       `}</style>
     </div>

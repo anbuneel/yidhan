@@ -57,7 +57,7 @@ The logo greens are `--color-brand-leaf` (the theme accent) and
 
 | Token | Value | Use |
 |---|---|---|
-| `--radius-card` | `2px 24px 4px 24px` | The leaf corner. Note cards and the editor sheet only, including the landing's sample sheet |
+| `--radius-card` | `2px 24px 4px 24px` | The leaf corner. Note cards, the editor sheet and the landing sheet only |
 | `--radius-pill` | `9999px` | Buttons and chips |
 | `--radius-input` | `8px` | Inputs |
 | `--radius-plain` | `12px` | Modals, menus, toolbars, popovers, panels |
@@ -117,7 +117,7 @@ are aliases of it.
 | Family | Token | Where |
 |---|---|---|
 | Newsreader, roman and italic, 400 to 700, optical size pinned at 18 | `--font-serif` | Every word not listed below |
-| Newsreader Display, optical size 72, weight 500, latin roman | `--font-title` | Big titles: the note title and the landing headline |
+| Newsreader Display, optical size 72, weight 500, latin roman | `--font-title` | Big titles: the note title, the landing headline and the landing sheet's headings |
 | Courier Prime, regular, italic, bold | `--font-mono` | Inline code, code blocks and the recovery key only. Not the toolbar, the search box or status text |
 | Literata, roman and italic | in `--font-serif`, after Newsreader | Cyrillic and Greek only. Declared with those unicode ranges, so a Latin page never fetches it |
 
@@ -154,7 +154,7 @@ between sections. A divider in a note is a short centred hairline.
 In dark the editor keeps a faint glow that follows the viewport, from
 `--color-editor-glow`: the text colour at 4%, no accent. In light the token is fully
 transparent. Nothing is lighter than the white sheet, so any tint there reads as a smudge,
-not light. The landing's sample sheet
+not light. The landing sheet
 uses the same token. A ref-based scroll handler positions it (`CLAUDE.md`). Note
 cards carry a 3% accent tint at the bottom.
 

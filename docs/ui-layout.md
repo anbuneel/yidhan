@@ -2,58 +2,54 @@
 
 Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detailed layout work.
 
-## Landing Page (Product Beside the Promise)
+## Landing Page (One Sheet)
 
-**Desktop (>=1024px), first screen:**
+The headline sits on the page. One leaf-corner sheet below it holds everything else at
+reading width (`DECISIONS.md`, 2026-11-11). The copy is not final.
+
+**Desktop (>=1024px):**
 ```
 +--------------------------------------------------------------------------+
 | Yidhan                                               [theme] [Sign in]   |
-+--------------------------------------------------------------------------+
-|                                  | +-----------------------------------+ |
-|  A notes app                     | | Opening draft                     | |
-|  built around                    | | + Add tag                Just now | |
-|  writing.                        | | [B  I  </>  H1  List            ] | |
-|                                  | |                                   | |
-|  Write a first draft, work       | | By nine, everyone in the building | |
-|  through an idea ... focus mode  | | had received the same letter. ... | |
-|  ... tags and search ...         | |                                   | |
-|                                  | | He checked the empty mailbox ...  | |
-|  Works offline. With an account, | |                                   | |
-|  your notes sync ... and are     | | [Try starting with the knock. ...]| |
-|  encrypted before they leave     | |                                   | |
-|  this one.                       | |                                   | |
-|                                  | |-----------------------------------| |
-|  [ Try writing ]  Browse sample  | | (Saved here)  Demo notes are ...  | |
-|                   notes ->       | |        [Create an account to keep] | |
-|  Free to use. No account needed. | +-----------------------------------+ |
 |                                                                          |
-|   Encrypted before it syncs . Works offline . Free and open source .     |
-|   Export any time                                                        |
-+--------------------------------------------------------------------------+
-```
-
-**Below the first screen:**
-```
-+--------------------------------------------------------------------------+
-| See what writing looks like in Yidhan.  Browse the sample notes, edit    |
-|                                         them, or start your own.         |
-| [Why I still buy used books] [Revision notes] [Tuesday]                  |
-|                                                                          |
-| Your writing is private.      | With an account, your note titles ...    |
-|                               | When you sign up, you choose a ...       |
-|                               | You can export your notes at any time.   |
-|                               | How encryption works ->                  |
-|                                                                          |
-|                  Start with one note.  [ Try writing ]                   |
-|                                                                          |
+|                 A notes app built around writing.                        |
+|          Write a first draft, work through an idea ... focus mode ...    |
+|          Works offline. With an account, your notes sync ...             |
+|                 [ Try writing ]  Browse sample notes ->                  |
+|                  Free to use. No account needed to try.                  |
+|    Encrypted before it syncs . Works offline . Free and open source .    |
+|                              Export any time                             |
+|      +--------------------------------------------------------------+    |
+|      |  Opening draft                                               |    |
+|      |  + Add tag                                        Just now   |    |
+|      |  By nine, everyone in the building had received ...          |    |
+|      |  He checked the empty mailbox again ...                      |    |
+|      |  [Try starting with the knock. Explain the letter later.]|   |    |
+|      |  ------------------------------------------------------      |    |
+|      |  (Saved here)  Demo notes are ...  [Create an account ...]   |    |
+|      |                                                              |    |
+|      |  See what writing looks like in Yidhan.                      |    |
+|      |  Browse the sample notes, edit them, or start your own.      |    |
+|      |  | Why I still buy used books                                |    |
+|      |  | Start with the cookbook ...                               |    |
+|      |  | Revision notes / Tuesday ...                              |    |
+|      |                                                              |    |
+|      |  Your writing is private.                                    |    |
+|      |  With an account, ... / When you sign up, ... / Export ...   |    |
+|      |  How encryption works ->                                     |    |
+|      |  ------------------------------------------------------      |    |
+|      |  Start with one note.                      [ Try writing ]   |    |
+|      +--------------------------------------------------------------+    |
 |        Changelog . Roadmap . GitHub . Privacy . Terms . Support          |
 +--------------------------------------------------------------------------+
 ```
 
-**Mobile (<1024px):** the same blocks stacked. The intro comes first, the
-manuscript preview peeks under the fold, the proof facts wrap, and the sample
-cards stack in one column. Below 768px the primary button spans the width.
+**Mobile:** the same order. The sheet keeps a 16px gutter, the proof facts wrap, and
+below 768px the hero and closing buttons span the width. A sample preview is one line
+with an ellipsis.
 
+- The sheet's parts are separated by their headings and space. No divider and no
+  ornament; the closing row has a hairline above it.
 - The hero leads with writing. Its one privacy clause says encryption comes with an
   account. The passphrase, recovery key and visible metadata are not in the hero.
 - The privacy section claims only what `/security` backs: titles and content
@@ -61,24 +57,25 @@ cards stack in one column. Below 768px the primary button spans the width.
   encrypted; losing both passphrase and recovery key loses the notes. Its "How
   encryption works" link goes to `/security` (a plain click routes in-app). No absolute
   claim ("nobody", "not even us") and no audit claim until item 104 has a report.
-- The manuscript is a static rendering of the real editor (title, tag row, the first
-  five toolbar labels — B, I, </>, H1, List — body, saved chip) with the `starter-opening` note in it. An invisible
-  overlay button covers it; clicking anywhere on the page opens the practice space
-  draft. It is a picture of the editor, not an imitation of one: there is no
+- The draft at the top of the sheet is a static rendering of the real editor (title,
+  tag row, body, saved chip) with the `starter-opening` note in it. No toolbar. An
+  invisible overlay button covers the draft; clicking anywhere on it opens the practice
+  space draft. It is a picture of the editor, not an imitation of one: there is no
   in-page textarea and nothing is written to `yidhan-demo-content` from here.
 - Every "Try writing" (hero, preview overlay, closing line) routes to `/demo/new` at
   every width. The account comes from inside the practice space ("Keep these notes")
   or from the preview's "Create an account to keep and sync", which opens sign-up.
 - "Browse sample notes" is a real link to `/demo`; a plain click is routed in-app,
   a modified click is left to the browser.
-- The sample cards are the practice space starters minus the pinned welcome and the
-  hero note, rendered with the real `NoteCard` in decorative mode. Each has an
-  overlay button that opens the practice space.
+- The samples are the practice space starters minus the pinned welcome and the hero
+  note. Each is a button with a 2px accent rule on its left, the title, and the first
+  paragraph as a one-line plain-text preview. It opens the practice space.
 - Proof facts: "Encrypted before it syncs" opens the security page, as does the
   privacy section's "How encryption works"; "Free and open source" opens the LICENSE file on GitHub
   (in the `index.html` shell too); the other two are plain text.
 - Before the bundle arrives, `index.html` carries a static copy of the first screen
-  (the intro column, a plain manuscript and the proof line) styled by an inline
+  (the centred intro, the proof line and the top of the sheet with the draft) styled
+  by an inline
   block that mirrors the landing CSS and both themes. `public/boot.js` runs first: it
   sets `data-theme` the way `useAppTheme` would, and hides the shell on any path but
   `/` or when a Supabase session key exists. React replaces the shell on mount.
