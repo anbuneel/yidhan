@@ -74,13 +74,13 @@ fallback when the device states none. Preview generated CSS without writing via
 | Token | Light | Dark |
 |---|---|---|
 | Page (`bgPrimary`) | `#F2F7F0` | `#151C18` |
-| Card and sheet (`cardBg`) | `#FFFFFF` | `#1B2620` |
+| Card and sheet (`cardBg`) | `#FFFFFF` | `#1D2922` |
 | Tinted surface (`bgTertiary`) | `#E5EEE1` | `#1F2C25` |
 | Text | `#14241C` | `#E6E3DC` |
 | Note text | `#22332A` | `#D3D2CA` |
 | Accent | `#357A45` | `#8FC79A` |
 | Accent as text | `#2A6638` | `#A0D2A6` |
-| Hairline | `#D9E4D4` | `#2A362F` |
+| Hairline | `#D9E4D4` | `#33423A` |
 
 Cards and sheets are solid, so contrast is measured on them directly. The dark theme
 has no shadows. Light shadows are soft and in the text's green-black. A note card's

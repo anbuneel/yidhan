@@ -55,9 +55,9 @@ describe('theme registry', () => {
       accentText: '#2A6638', glassBorder: '#D9E4D4',
     });
     expect(ACTIVE_DARK_THEME.colors).toMatchObject({
-      bgPrimary: '#151C18', cardBg: '#1B2620', bgTertiary: '#1F2C25', textPrimary: '#E6E3DC',
+      bgPrimary: '#151C18', cardBg: '#1D2922', bgTertiary: '#1F2C25', textPrimary: '#E6E3DC',
       textNote: '#D3D2CA', textTertiary: '#9AA69F', accent: '#8FC79A', onAccent: '#13201A',
-      accentText: '#A0D2A6', glassBorder: '#2A362F',
+      accentText: '#A0D2A6', glassBorder: '#33423A',
     });
   });
 });

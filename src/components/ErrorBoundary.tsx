@@ -68,7 +68,7 @@ export class ErrorBoundary extends Component<Props, State> {
             style={{
               background: 'var(--color-bg-secondary, #18211C)',
               borderRadius: 'var(--radius-plain)',
-              border: '1px solid var(--glass-border, #2A362F)',
+              border: '1px solid var(--glass-border, #33423A)',
             }}
           >
             {/* Decorative icon */}
