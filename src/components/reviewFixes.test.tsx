@@ -173,9 +173,8 @@ describe('the editor glow', () => {
     expect(landingGlow).not.toContain('--color-accent');
   });
 
-  it('is a faint leaf green in light, because nothing is lighter than the white sheet', () => {
-    expect(ACTIVE_LIGHT_THEME.colors.editorGlow).toBe('rgba(53, 122, 69, 0.08)');
-    expect(ACTIVE_LIGHT_THEME.colors.accent).toBe('#357A45');
+  it('is off in light, because nothing is lighter than the white sheet', () => {
+    expect(ACTIVE_LIGHT_THEME.colors.editorGlow).toBe('rgba(53, 122, 69, 0)');
   });
 
   it('stays neutral in dark: the text colour at 4%, no green', () => {

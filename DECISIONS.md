@@ -19,6 +19,27 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-11 — No editor glow in the light theme
+
+**Status:** Active
+
+**Why:** Two visual reviews found that the light glow, the accent at 8%, read as a grey
+smudge in the middle of the white editor sheet. The 2026-11-10 entry chose it over a
+neutral shade for the same reason it now fails: nothing is lighter than white, so any
+tint on the sheet darkens it.
+
+**Decision:** `editorGlow` in light is fully transparent. The token, the glow layer and
+its scroll handler stay, so dark keeps its neutral 4% glow and the landing's sample sheet
+follows the same token. The same pass made light card shadows a slight lift, lowered the
+light grain from 7% to 4%, and lifted the dark card (`#1D2922`) and hairline (`#33423A`)
+so cards separate from the page without a shadow.
+
+**Rejected:** A fainter accent. The owner already found 5% too faint, and below that the
+glow cannot be seen at all. Tinting the sheet off-white so a white glow could show: the
+sheet is white by rule, and contrast is measured on it.
+
+---
+
 ## 2026-11-10 — The landing page leads with writing, in plain words
 
 **Status:** Active

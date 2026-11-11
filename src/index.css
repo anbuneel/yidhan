@@ -22,7 +22,7 @@
   --color-accent-glow: rgba(53, 122, 69, 0.12);
   --color-accent-muted: rgba(53, 122, 69, 0.6);
   --color-accent-text: #2A6638;
-  --color-editor-glow: rgba(53, 122, 69, 0.08);
+  --color-editor-glow: rgba(53, 122, 69, 0);
   --color-on-accent: #FFFFFF;
   --color-cta-bg: #357A45;
   --color-cta-bg-hover: #2D693B;
