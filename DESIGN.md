@@ -52,7 +52,7 @@ Rules the contrast numbers force (`src/themes/contrast.test.ts` checks them):
   (400 in light, 430 in dark, because light strokes fade on a dark page).
 
 The logo greens are `--color-brand-leaf` (the theme accent) and
-`--color-brand-leaf-deep` (`#163026`, the icon tile and the letter).
+`--color-brand-leaf-deep` (`#163026`, the icon tile and the pinned mark's bookmark).
 
 ### Radius
 
@@ -160,28 +160,27 @@ needs a server-confirmed content hash (`CLAUDE.md`).
 
 A green leaf that is also a page, in the leaf-corner shape, with text lines cut out of
 it. A small marigold sun sits behind its top-left corner, with a thin gap in the page
-colour between them. Inside the sun is the Tamil letter இ in deep green. Beside the mark is
+colour between them. The sun holds no letter (`DECISIONS.md`, 2026-11-11). Beside the mark is
 the lowercase "yidhan" wordmark as an SVG path, with a green y and a marigold sun as
 the dot of the i. Fraunces never ships as a font. Decisions: `DECISIONS.md`,
 2026-11-09.
 
-- **Size rule** (`src/components/logoSizeRule.ts`): the bare mark shows the letter from
-  128px, the icon tile from 192px. Below that the sun is plain.
+- **Size rule** (`src/components/logoSizeRule.ts`): the small drawing to 48px, the full
+  drawing from 49px. The icon tile follows the same rule.
 - **Small sizes, 17 to 48px**, use a separate drawing with two text lines, a long one
   and a short one (`mark-small.svg`, `tile-dark-small.svg`). One line read as a minus
   sign. The header logo (30px on a phone, 36px from 640px) uses it. **At 16px** the
   favicon has no lines (`tile-dark-small-no-line.svg`).
 - **The pinned mark** (`PinnedMark` in `src/components/NoteCard.tsx`). A pinned note
   shows a marigold disc holding a bookmark in `--color-brand-leaf-deep`, where the pin
-  button sits. The disc is the logo's sun and the bookmark stands where the letter
-  does. This is marigold's one job in the product. Do not use marigold for anything
+  button sits. The disc is the logo's sun. This is marigold's one job in the product. Do not use marigold for anything
   else: not highlights, not badges, not buttons. The bookmark carries the meaning,
   because marigold alone is 1.94:1 on a white card.
 - **The sun is tucked behind the leaf.** Its centre sits just outside the leaf's
-  top-left corner, the same distance left as above: 2.75 in the full mark (radius 19),
-  0.5 in the small one (radius 3). The leaf and a thin gap (1.75, and 0.5) hide almost a
-  quarter of the sun. Do not widen the gap or pull the sun out: that made it read as a
-  badge stuck on the leaf. The letter is 13 units tall, in the part of the sun that shows.
+  top-left corner, the same distance left as above: 4.5 in the full mark (radius 19),
+  0.75 in the small one (radius 3). The leaf and a thin gap (1.75, and 0.5) hide about
+  a sixth of the sun. Do not widen the gap or pull the sun out: that made it read as a
+  badge stuck on the leaf.
 - **The icon tile is dark green** (`#163026`), for the app icon and the favicon. The
   leaf on it is the light green.
 - **Colours follow the theme.** The leaf and the y take `--color-brand-leaf`, the rest

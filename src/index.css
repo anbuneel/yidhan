@@ -87,10 +87,10 @@
 }
 /* THEME-END */
 
-/* Logo (src/components/Logo.tsx): the leaf and the letter in the sun. The page shows
-   through the gap and the lines, so only these two take a colour; the sun is a fixed
-   marigold. The leaf is the theme's accent, so the mark matches the buttons. The
-   letter is a fixed deep green: it sits on the marigold sun, not on the page. */
+/* Logo (src/components/Logo.tsx). The page shows through the gap and the lines, so only
+   the leaf takes a theme colour; the sun is a fixed marigold. The leaf is the theme's
+   accent, so the mark matches the buttons. The deep green is the icon tile, and the
+   bookmark on a pinned note's marigold disc. */
 :root {
   --color-brand-leaf: var(--color-accent);
   --color-brand-leaf-deep: #163026;

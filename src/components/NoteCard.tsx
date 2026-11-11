@@ -22,7 +22,7 @@ interface NoteCardProps {
 
 /**
  * The mark of a pinned note: a marigold disc holding a bookmark in the logo's deep
- * green, as the logo's sun holds its letter. Marigold's one job in the product
+ * green. The disc is the logo's sun. Marigold's one job in the product
  * (DESIGN.md). The bookmark carries the meaning; marigold alone is 1.94:1 on white.
  */
 function PinnedMark({ className }: { className: string }) {

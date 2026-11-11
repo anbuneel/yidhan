@@ -19,6 +19,29 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-11 — The logo drops the Tamil letter, and the share image says what the app is
+
+**Status:** Active
+
+**Why:** The owner looked at the mark after the sun was tucked behind the leaf and said
+it was trying to do too much: a leaf, a page, text lines, a sun and a letter. Both blind
+reviews had said the same of the large mark. The letter showed only from 128px, so most
+people never saw it, and tucking the sun left it less room. Separately, the share image
+still carried "A quiet home for your personal notes", the line the 2026-11-10 entry
+retired from the landing page.
+
+**Decision:** The sun holds no letter at any size. This reverses the letter part of the
+2026-11-09 logo decision. There are now two drawings, small (to 48px) and full (from
+49px), and the files that existed only to carry or omit the letter are gone. The letter
+artwork is kept in `images/brand/archive/letter-in-sun/`. The share image's line is the
+landing headline: "A notes app built around writing".
+
+**Rejected:** Keeping the letter for the app icon and share image only (two versions of
+one mark, and the letter would still be the smallest thing in it). Making the letter
+the mark itself (legible only from about 32px, and it would restart the logo).
+
+---
+
 ## 2026-11-11 — The small mark has two lines, and marigold marks a pinned note
 
 **Status:** Active
@@ -56,6 +79,11 @@ sun's centre is 2.75 from the leaf's corner each way (was 10.75) and the gap is 
 badge stuck on the leaf. No gap at all was considered and set aside: the one-colour mark
 needs a gap, and marigold and the dark theme's light green are close in brightness. The
 letter shrank from 17 to 13 units to stay inside the visible part of the sun.
+
+**Erratum 2026-11-11 (3):** After seeing three depths side by side the owner chose the
+middle one: the sun's centre 4.5 from the corner in the full mark and 0.75 in the small
+one, about a sixth hidden. The letter is gone (next entry up), so its size no longer
+matters.
 
 ---
 

@@ -22,7 +22,7 @@ EXPORT = 'images/brand/export/'
 NEWSREADER = 'src/assets/fonts/newsreader-roman-latin.woff2'
 # The share image's tagline, outlined so the OG script needs no font (sharp's text
 # renderer cannot read woff2). scripts/generate-og-image.ts places it.
-TAGLINE = 'A quiet home for your personal notes'
+TAGLINE = 'A notes app built around writing'
 TS_OUT = 'src/components/logoPaths.ts'
 INDEX_HTML = 'index.html'
 SPRITE_START, SPRITE_END = '<!-- logo sprite: scripts/brand/flatten.py -->', '<!-- /logo sprite -->'
@@ -197,28 +197,24 @@ def text_path(text, font_path, wght):
 
 def main():
     os.makedirs(EXPORT, exist_ok=True)
-    full = parts(leaf.FULL, letter=True)
+    full = parts(leaf.FULL)
     small = parts(leaf.SMALL)
     small_plain = parts({**leaf.SMALL, 'lines': []})  # 16px: two lines blur there
     w = lambda name, text: open(EXPORT + name, 'w', encoding='utf-8', newline='\n').write(text)
     vb_full = leaf.box_viewbox(leaf.FULL_BOX, pad=4)
 
     # Bare marks.
-    w('mark.svg', svg(vb_full, mark_body(full, leaf.GREEN), 'Full mark with the letter, 128px and up.'))
-    w('mark-plain.svg', svg(vb_full, mark_body(full, leaf.GREEN, letter=False), 'Full mark, 49 to 127px.'))
-    w('mark-on-dark.svg', svg(vb_full, mark_body(full, leaf.LIGHT_GREEN), 'Full mark with the letter, dark pages.'))
-    w('mark-plain-on-dark.svg', svg(vb_full, mark_body(full, leaf.LIGHT_GREEN, letter=False), 'Full mark, dark pages, 49 to 127px.'))
+    w('mark.svg', svg(vb_full, mark_body(full, leaf.GREEN), 'Full mark, 49px and up.'))
+    w('mark-on-dark.svg', svg(vb_full, mark_body(full, leaf.LIGHT_GREEN), 'Full mark, dark pages.'))
     w('mark-small.svg', svg('0 0 16 16', mark_body(small, leaf.GREEN), 'Small mark, 17 to 48px. Two lines.'))
     w('mark-small-no-line.svg', svg('0 0 16 16', mark_body(small_plain, leaf.GREEN), 'Small mark, 16px. No line.'))
-    w('mark-mono.svg', svg(vb_full, mark_body(full, None, mono=leaf.INK), 'One colour, letter cut out.'))
-    w('mark-mono-plain.svg', svg(vb_full, mark_body(full, None, letter=False, mono=leaf.INK), 'One colour.'))
+    w('mark-mono.svg', svg(vb_full, mark_body(full, None, mono=leaf.INK), 'One colour.'))
     w('mark-mono-small.svg', svg('0 0 16 16', mark_body(small, None, mono=leaf.INK), 'One colour, 16 to 48px.'))
 
     # Dark tiles: app icon (full bleed, the platform rounds it) and favicon (rounded).
     scale = 0.74
-    for name, letter in [('tile-dark.svg', True), ('tile-dark-plain.svg', False)]:
-        w(name, svg('0 0 120 120', tile_body(full, leaf.FULL, leaf.FULL_BOX, 120, leaf.DARK_GREEN, leaf.LIGHT_GREEN,
-                                             scale, letter), 'App icon tile, dark. Mark inside the maskable safe zone.'))
+    w('tile-dark.svg', svg('0 0 120 120', tile_body(full, leaf.FULL, leaf.FULL_BOX, 120, leaf.DARK_GREEN, leaf.LIGHT_GREEN,
+                                                    scale, False), 'App icon tile, dark. Mark inside the maskable safe zone.'))
     w('tile-dark-small.svg', svg('0 0 16 16', tile_body(small, leaf.SMALL, leaf.SMALL_BOX, 16, leaf.DARK_GREEN,
                                                         leaf.LIGHT_GREEN, 1, False, rx=3.5, center=False),
                                  'Favicon tile, dark, 17 to 48px.'))
@@ -227,10 +223,9 @@ def main():
                                          'Favicon tile, dark, 16px. No line.'))
     # Android adaptive foreground: 108 grid, transparent; the launcher masks the
     # centre 72 and draws the tile colour behind it. Mark kept inside the 66 safe circle.
-    for name, letter in [('android-foreground.svg', True), ('android-foreground-plain.svg', False)]:
-        w(name, svg('0 0 108 108', tile_body(full, leaf.FULL, leaf.FULL_BOX, 108, 'none', leaf.LIGHT_GREEN,
-                                             0.5, letter).replace('<rect width="108" height="108" fill="none"/>', ''),
-                    'Android adaptive icon foreground. Background colour is the dark tile.'))
+    w('android-foreground.svg', svg('0 0 108 108', tile_body(full, leaf.FULL, leaf.FULL_BOX, 108, 'none', leaf.LIGHT_GREEN,
+                                                             0.5, False).replace('<rect width="108" height="108" fill="none"/>', ''),
+                                    'Android adaptive icon foreground. Background colour is the dark tile.'))
 
     # Wordmark: green y, ink for the rest. Tight box, ascender to descender, so the
     # header can set it to the same height as the mark.
@@ -247,7 +242,7 @@ def main():
     i_sun = circle(1292.5, -1222, 180)
     i_sun_d = whole(to_d(i_sun, 1))
 
-    # Lockup for the OG image: plain mark (OG is large, but the lockup never carries the letter).
+    # Lockup, for the OG image.
     k = (leaf.FULL_BOX[3] - leaf.FULL_BOX[1]) / (asc + desc)
     gap = 0.3 * (leaf.FULL_BOX[2] - leaf.FULL_BOX[0])
     wx = leaf.FULL_BOX[2] + gap - x0 * k
@@ -257,9 +252,7 @@ def main():
     word = (f'<g transform="translate({wx:.2f} {base:.2f}) scale({k:.5f})">'
             f'<path fill="{leaf.GREEN}" d="{y_d}"/><path fill="{leaf.INK}" d="{rest_d}"/>'
             f'<path fill="{leaf.MARIGOLD}" d="{i_sun_d}"/></g>')
-    w('lockup.svg', svg(vb_lock, mark_body(full, leaf.GREEN, letter=False) + word, 'Horizontal lockup, no letter.'))
-    w('lockup-letter.svg', svg(vb_lock, mark_body(full, leaf.GREEN) + word,
-                               'Horizontal lockup with the letter, for large uses such as the OG image.'))
+    w('lockup.svg', svg(vb_lock, mark_body(full, leaf.GREEN) + word, 'Horizontal lockup.'))
     w('wordmark.svg', svg(vb_wm, f'<path fill="{leaf.GREEN}" d="{y_d}"/><path fill="{leaf.INK}" d="{rest_d}"/>'
                           f'<path fill="{leaf.MARIGOLD}" d="{i_sun_d}"/>',
                           'Wordmark, Fraunces outlined. Green y, marigold sun on the i.'))
@@ -274,19 +267,18 @@ def main():
 // index.html sprite; this file is the reference the tests check the sprite against.
 // FULL_MARK ships through LogoMark.tsx, outside the landing's entry.
 
-/** Small drawing, 17 to 48px: two lines, no letter. A square box, the drawing centred. */
+/** Small drawing, 17 to 48px: two lines. A square box, the drawing centred. */
 export const SMALL_MARK = {{
   viewBox: '{leaf.box_viewbox(leaf.SMALL_BOX)}',
   sun: '{compact(to_d(small['sun']), 2)}',
   leaf: '{compact(to_d(small['leaf']), 2)}',
 }} as const;
 
-/** Full drawing, 49px and up. The letter shows only from 128px (owner, 2026-11-09). */
+/** Full drawing, 49px and up. */
 export const FULL_MARK = {{
   viewBox: '{leaf.box_viewbox(leaf.FULL_BOX)}',
   sun: '{compact(to_d(full['sun']), 1)}',
   leaf: '{compact(to_d(full['leaf']), 1)}',
-  letter: '{compact(to_d(full['letter']), 1)}',
 }} as const;
 
 /** Wordmark, Fraunces outlined: "y" green, the rest ink, a marigold sun on the i.

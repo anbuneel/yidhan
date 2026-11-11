@@ -183,19 +183,19 @@ describe('icons named by the manifest and index.html', () => {
     expect(markInside).toBeGreaterThan(w * h * 0.1); // the mark is really there
   });
 
-  it('the icons at 192px and up carry the letter; the favicons are the small drawing', () => {
-    // The letter is drawn in the dark tile colour inside the marigold sun, so a large
-    // icon has tile-coloured pixels inside the sun; a plain one has none.
+  it('no icon carries a letter in the sun', () => {
+    // The retired letter was drawn in the dark tile colour inside the marigold sun, so
+    // an icon with one has tile-coloured pixels there; the current icons have none.
     const sunHasLetter = (file: string) => {
       const { w, rgba } = decodePng(path.join(ROOT, 'public', file));
       const tile = rgba(0, Math.floor(w / 2)); // left edge, mid-height: tile colour
-      // The letter's centre on the 120 grid (42, 38 in scripts/brand/leaf.py), placed as
-      // scripts/brand/flatten.py places the tile: the mark's box centre is 66.125, 68.125.
+      // Where the letter last sat on the 120 grid (42, 38), placed as
+      // scripts/brand/flatten.py places the tile: the mark's box centre is 65.25, 67.25.
       // Sample 5 units around it: inside the part of the sun the leaf does not hide, so
       // the gap, which also shows the tile colour, is not counted.
       const k = w / 120;
-      const cx = (42 * 0.74 + 120 / 2 - 66.125 * 0.74) * k;
-      const cy = (38 * 0.74 + 120 / 2 - 68.125 * 0.74) * k;
+      const cx = (42 * 0.74 + 120 / 2 - 65.25 * 0.74) * k;
+      const cy = (38 * 0.74 + 120 / 2 - 67.25 * 0.74) * k;
       const rr = 5 * 0.74 * k;
       let dark = 0;
       for (let y = Math.floor(cy - rr); y < cy + rr; y++) {
@@ -207,9 +207,9 @@ describe('icons named by the manifest and index.html', () => {
       }
       return dark > 0;
     };
-    expect(sunHasLetter('icons/icon-192.png')).toBe(true);
-    expect(sunHasLetter('icons/icon-512.png')).toBe(true);
-    expect(sunHasLetter('icons/maskable-512.png')).toBe(true);
+    expect(sunHasLetter('icons/icon-192.png')).toBe(false);
+    expect(sunHasLetter('icons/icon-512.png')).toBe(false);
+    expect(sunHasLetter('icons/maskable-512.png')).toBe(false);
     expect(sunHasLetter('icons/apple-touch-icon.png')).toBe(false);
   });
 });
