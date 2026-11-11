@@ -6,6 +6,7 @@ import { createMockNote } from '../test/factories';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 import { NoteCard } from './NoteCard';
 import { TagBadge } from './TagBadge';
+import { ACTIVE_DARK_THEME, ACTIVE_LIGHT_THEME } from '../themes';
 
 // The fixes the three design reviews agreed on (themes plan, PR 3). Each block
 // checks first where the old style must no longer appear, then where it should.
@@ -162,11 +163,24 @@ describe('body weight', () => {
 });
 
 describe('the editor glow', () => {
-  it('is neutral: no accent in the gradient', () => {
+  it('takes its colour from the per-theme glow token, in the editor and the landing sample', () => {
     const glow = rule(indexCss, '.editor-manuscript-glow');
+    expect(glow).toContain('var(--color-editor-glow)');
     expect(glow).not.toContain('--color-accent');
-    expect(glow).toContain('var(--color-text-primary) 4%');
-    expect(rule(landing, '.landing-manuscript-glow')).not.toContain('--color-accent');
+    expect(glow).not.toContain('--color-text-primary');
+    const landingGlow = rule(landing, '.landing-manuscript-glow');
+    expect(landingGlow).toContain('var(--color-editor-glow)');
+    expect(landingGlow).not.toContain('--color-accent');
+  });
+
+  it('is a faint leaf green in light, because nothing is lighter than the white sheet', () => {
+    expect(ACTIVE_LIGHT_THEME.colors.editorGlow).toBe('rgba(53, 122, 69, 0.08)');
+    expect(ACTIVE_LIGHT_THEME.colors.accent).toBe('#357A45');
+  });
+
+  it('stays neutral in dark: the text colour at 4%, no green', () => {
+    expect(ACTIVE_DARK_THEME.colors.editorGlow).toBe('rgba(230, 227, 220, 0.04)');
+    expect(ACTIVE_DARK_THEME.colors.textPrimary).toBe('#E6E3DC');
   });
 });
 

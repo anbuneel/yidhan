@@ -50,14 +50,14 @@ describe('theme registry', () => {
 
   it('keeps the proposed values from the themes plan', () => {
     expect(ACTIVE_LIGHT_THEME.colors).toMatchObject({
-      bgPrimary: '#FAFAF6', cardBg: '#FFFFFF', bgTertiary: '#EDF1EA', textPrimary: '#14241C',
-      textNote: '#22332A', textTertiary: '#5A665F', accent: '#2E7D55', onAccent: '#FFFFFF',
-      accentText: '#1F6A49', glassBorder: '#E1E4DC',
+      bgPrimary: '#F2F7F0', cardBg: '#FFFFFF', bgTertiary: '#E5EEE1', textPrimary: '#14241C',
+      textNote: '#22332A', textTertiary: '#5A665F', accent: '#357A45', onAccent: '#FFFFFF',
+      accentText: '#2A6638', glassBorder: '#D9E4D4',
     });
     expect(ACTIVE_DARK_THEME.colors).toMatchObject({
       bgPrimary: '#151C18', cardBg: '#1B2620', bgTertiary: '#1F2C25', textPrimary: '#E6E3DC',
-      textNote: '#D3D2CA', textTertiary: '#9AA69F', accent: '#86C5A0', onAccent: '#13201A',
-      accentText: '#9AD0B0', glassBorder: '#2A362F',
+      textNote: '#D3D2CA', textTertiary: '#9AA69F', accent: '#8FC79A', onAccent: '#13201A',
+      accentText: '#A0D2A6', glassBorder: '#2A362F',
     });
   });
 });
@@ -89,6 +89,13 @@ describe.each(themes)('%s theme contrast', (_name, c) => {
     for (const surface of [c.bgPrimary, c.cardBg]) {
       expect(contrast(c.accentText, blend(c.accentGlow, surface))).toBeGreaterThanOrEqual(4.5);
       expect(contrast(c.success, blend(c.successGlow, surface))).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('keeps every text colour at 4.5:1 where the editor glow is strongest', () => {
+    const glowed = blend(c.editorGlow, c.cardBg);
+    for (const token of TEXT_TOKENS) {
+      expect(contrast(c[token], glowed), `${token} on the glow`).toBeGreaterThanOrEqual(4.5);
     }
   });
 

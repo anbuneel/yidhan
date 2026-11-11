@@ -76,7 +76,7 @@ export class ErrorBoundary extends Component<Props, State> {
               className="size-12 mx-auto mb-4 rounded-full flex items-center justify-center"
               style={{
                 background: isChunkError
-                  ? 'var(--color-accent-glow, rgba(134, 197, 160, 0.14))'
+                  ? 'var(--color-accent-glow, rgba(143, 199, 154, 0.14))'
                   : 'var(--color-error-light, #3A2421)',
               }}
             >
@@ -85,7 +85,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <svg
                   className="size-6"
                   fill="none"
-                  stroke="var(--color-accent, #86C5A0)"
+                  stroke="var(--color-accent, #8FC79A)"
                   viewBox="0 0 24 24"
                 >
                   <path
@@ -174,14 +174,14 @@ export class ErrorBoundary extends Component<Props, State> {
               className="px-6 py-3 rounded-lg font-medium transition-all duration-200"
               style={{
                 fontFamily: 'var(--font-body, Inter, sans-serif)',
-                background: 'var(--color-cta-bg, #86C5A0)',
+                background: 'var(--color-cta-bg, #8FC79A)',
                 color: 'var(--color-cta-text, #13201A)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--color-cta-bg-hover, #9AD0B0)';
+                e.currentTarget.style.background = 'var(--color-cta-bg-hover, #A0D2A6)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-cta-bg, #86C5A0)';
+                e.currentTarget.style.background = 'var(--color-cta-bg, #8FC79A)';
               }}
             >
               Refresh Page

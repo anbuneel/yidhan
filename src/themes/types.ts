@@ -29,6 +29,8 @@ export interface ThemeColors {
   onAccent: string; // Contrast-safe text color for accent surfaces (non-CTA)
   /** Accent as text: links and selected labels. 4.5:1 on the page, card and glow backgrounds. */
   accentText: string;
+  /** The editor's glow, behind the words. Light: the accent at 8%. Dark: the text at 4%. */
+  editorGlow: string;
 
   // CTA button (separate from accent for accessibility)
   ctaBg: string;
@@ -93,6 +95,7 @@ function themeToCssVariables(theme: ThemeColors): Record<string, string> {
     '--color-accent-glow': theme.accentGlow,
     '--color-accent-muted': theme.accentMuted,
     '--color-accent-text': theme.accentText,
+    '--color-editor-glow': theme.editorGlow,
     '--color-on-accent': theme.onAccent,
     '--color-cta-bg': theme.ctaBg,
     '--color-cta-bg-hover': theme.ctaBgHover,

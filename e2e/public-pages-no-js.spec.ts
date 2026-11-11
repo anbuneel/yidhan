@@ -88,7 +88,7 @@ test.describe('Public pages without JavaScript', () => {
   test('the theme follows the OS preference', async ({ browser }) => {
     for (const [colorScheme, background] of [
       ['dark', 'rgb(21, 28, 24)'],
-      ['light', 'rgb(250, 250, 246)'],
+      ['light', 'rgb(242, 247, 240)'],
     ] as const) {
       const context = await browser.newContext({ javaScriptEnabled: false, colorScheme });
       const page = await context.newPage();

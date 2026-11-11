@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" role="img" aria-label="Yidhan">
   <!-- Favicon tile, dark, 16 to 48px. Flattened by scripts/brand/flatten.py. -->
   <title>Yidhan</title>
-  <rect width="16" height="16" rx="3.5" fill="#163026"/><path fill="#F2A21B" d="M1.5 4.5C1.5 2.84 2.84 1.5 4.5 1.5C5.99 1.5 7.22 2.58 7.46 4H7Q5 4 5 6V7.46C4.84 7.49 4.67 7.5 4.5 7.5C2.84 7.5 1.5 6.16 1.5 4.5Z"/><path fill="#86C5A0" d="M7 5H10C12.21 5 14 6.79 14 9V13C14 13.55 13.55 14 13 14H10C7.79 14 6 12.21 6 10V6C6 5.45 6.45 5 7 5ZM8 10V11H12V10Z"/>
+  <rect width="16" height="16" rx="3.5" fill="#163026"/><path fill="#F2A21B" d="M1.5 4.5C1.5 2.84 2.84 1.5 4.5 1.5C5.99 1.5 7.22 2.58 7.46 4H7Q5 4 5 6V7.46C4.84 7.49 4.67 7.5 4.5 7.5C2.84 7.5 1.5 6.16 1.5 4.5Z"/><path fill="#8FC79A" d="M7 5H10C12.21 5 14 6.79 14 9V13C14 13.55 13.55 14 13 14H10C7.79 14 6 12.21 6 10V6C6 5.45 6.45 5 7 5ZM8 10V11H12V10Z"/>
 </svg>
