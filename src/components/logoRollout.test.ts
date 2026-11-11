@@ -189,11 +189,14 @@ describe('icons named by the manifest and index.html', () => {
     const sunHasLetter = (file: string) => {
       const { w, rgba } = decodePng(path.join(ROOT, 'public', file));
       const tile = rgba(0, Math.floor(w / 2)); // left edge, mid-height: tile colour
-      // Sun centre on the 120 grid: from scripts/brand/flatten.py tile placement.
+      // The letter's centre on the 120 grid (42, 38 in scripts/brand/leaf.py), placed as
+      // scripts/brand/flatten.py places the tile: the mark's box centre is 66.125, 68.125.
+      // Sample 5 units around it: inside the part of the sun the leaf does not hide, so
+      // the gap, which also shows the tile colour, is not counted.
       const k = w / 120;
-      const cx = (41 * 0.74 + 120 / 2 - 62.125 * 0.74) * k;
-      const cy = (37 * 0.74 + 120 / 2 - 64.125 * 0.74) * k;
-      const rr = 19 * 0.74 * k * 0.6;
+      const cx = (42 * 0.74 + 120 / 2 - 66.125 * 0.74) * k;
+      const cy = (38 * 0.74 + 120 / 2 - 68.125 * 0.74) * k;
+      const rr = 5 * 0.74 * k;
       let dark = 0;
       for (let y = Math.floor(cy - rr); y < cy + rr; y++) {
         for (let x = Math.floor(cx - rr); x < cx + rr; x++) {

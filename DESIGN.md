@@ -159,8 +159,8 @@ needs a server-confirmed content hash (`CLAUDE.md`).
 ## Logo
 
 A green leaf that is also a page, in the leaf-corner shape, with text lines cut out of
-it. A small marigold sun sits behind its top-left corner, with a gap in the page colour
-between them. Inside the sun is the Tamil letter இ in deep green. Beside the mark is
+it. A small marigold sun sits behind its top-left corner, with a thin gap in the page
+colour between them. Inside the sun is the Tamil letter இ in deep green. Beside the mark is
 the lowercase "yidhan" wordmark as an SVG path, with a green y and a marigold sun as
 the dot of the i. Fraunces never ships as a font. Decisions: `DECISIONS.md`,
 2026-11-09.
@@ -177,8 +177,11 @@ the dot of the i. Fraunces never ships as a font. Decisions: `DECISIONS.md`,
   does. This is marigold's one job in the product. Do not use marigold for anything
   else: not highlights, not badges, not buttons. The bookmark carries the meaning,
   because marigold alone is 1.94:1 on a white card.
-- **The sun's offset is the same both ways.** Its centre sits as far left of the leaf's
-  top-left corner as above it: 10.75 in the full mark, 1.5 in the small one.
+- **The sun is tucked behind the leaf.** Its centre sits just outside the leaf's
+  top-left corner, the same distance left as above: 2.75 in the full mark (radius 19),
+  0.5 in the small one (radius 3). The leaf and a thin gap (1.75, and 0.5) hide almost a
+  quarter of the sun. Do not widen the gap or pull the sun out: that made it read as a
+  badge stuck on the leaf. The letter is 13 units tall, in the part of the sun that shows.
 - **The icon tile is dark green** (`#163026`), for the app icon and the favicon. The
   leaf on it is the light green.
 - **Colours follow the theme.** The leaf and the y take `--color-brand-leaf`, the rest

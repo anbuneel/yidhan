@@ -43,30 +43,34 @@ def leaf_path(x, y, w, h, tl, tr, br, bl):
 
 
 # ---- The full mark, 120 grid -------------------------------------------------------
+# The sun is tucked behind the leaf (owner, 2026-11-11): its centre sits 2.75 left of
+# the leaf's top-left corner and 2.75 above it, so the leaf and a thin 1.75 gap hide
+# almost a quarter of it. Before, the offset was 10.75 and the gap 3.5: a small bite
+# and a wide notch, which read as a badge stuck on the leaf.
 FULL = dict(
-    sun=(41, 37, 19),
+    sun=(49, 45, 19),
     leaf=(51.75, 47.75, 50.5, 62.5, 3.25, 25.25, 3.25, 25.25),
-    gap=3.5,
+    gap=1.75,
     lines=[(63, 73, 91), (63, 85, 91), (63, 97, 78)], line_w=4.5, line_cap='round',
-    letter=(39.5, 35.3, 17),   # centre x, centre y, height
+    letter=(42, 38, 13),   # centre x, centre y, height: inside the part of the sun that shows
 )
 # Mark bounds: sun left/top to leaf right/bottom.
-FULL_BOX = (22, 18, 102.25, 110.25)
+FULL_BOX = (30, 26, 102.25, 110.25)
 
 # ---- The small mark, 16 grid, pixel-snapped ----------------------------------------
-# Leaf 8 x 9 at (6, 6); sun r 3 at (4.5, 4.5), so the sun's centre is 1.5 left of the
-# leaf's corner and 1.5 above it, the same both ways, as in the full mark (10.75 and
-# 10.75). It was 1.5 and 0.5, which made the bite lopsided. A 1px gap; two 1px lines, long and short,
-# or none. One line read as a minus sign (DECISIONS.md, 2026-11-11); two lines of
-# unequal length read as text. The no-line drawing is for 16px, where two lines blur.
+# Leaf 8 x 9 at (6, 5); sun r 3 at (5.5, 4.5), so the sun's centre is 0.5 left of the
+# leaf's corner and 0.5 above it: tucked behind the leaf, the same both ways, as in the
+# full mark. A 0.5 gap; two 1px lines, long and short, or none. One line read as a minus
+# sign (DECISIONS.md, 2026-11-11); two lines of unequal length read as text. The no-line
+# drawing is for 16px, where two lines blur.
 SMALL = dict(
-    sun=(4.5, 4.5, 3),
-    leaf=(6, 6, 8, 9, 1, 4, 1, 4),
-    gap=1,
-    lines=[(8, 10.5, 12), (8, 12.5, 10.5)], line_w=1, line_cap='butt',
+    sun=(5.5, 4.5, 3),
+    leaf=(6, 5, 8, 9, 1, 4, 1, 4),
+    gap=0.5,
+    lines=[(8, 9.5, 12), (8, 11.5, 10.5)], line_w=1, line_cap='butt',
     letter=None,
 )
-SMALL_BOX = (1.5, 1.5, 14, 15)
+SMALL_BOX = (2.5, 1.5, 14, 14)
 
 
 def mark_body(g, uid, leaf_fill, sun_fill=MARIGOLD, letter=None, letter_fill=DARK_GREEN,

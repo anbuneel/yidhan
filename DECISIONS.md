@@ -49,6 +49,14 @@ inside the card where the pin button sits. The same review found the small mark'
 was 1.5 units left of the leaf's corner but only 0.5 above it. It is now 1.5 both ways,
 matching the full mark, and the small mark's box is square with the drawing centred.
 
+**Erratum 2026-11-11 (2):** The owner then asked for a thinner gap with more of the sun
+behind the leaf, "almost a quarter but not quite". Both drawings changed. Full mark: the
+sun's centre is 2.75 from the leaf's corner each way (was 10.75) and the gap is 1.75 (was
+3.5). Small mark: 0.5 each way and a 0.5 gap. The wide gap and small bite had read as a
+badge stuck on the leaf. No gap at all was considered and set aside: the one-colour mark
+needs a gap, and marigold and the dark theme's light green are close in brightness. The
+letter shrank from 17 to 13 units to stay inside the visible part of the sun.
+
 ---
 
 ## 2026-11-10 — The landing page leads with writing, in plain words
