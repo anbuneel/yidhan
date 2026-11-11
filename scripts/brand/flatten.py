@@ -22,7 +22,7 @@ EXPORT = 'images/brand/export/'
 NEWSREADER = 'src/assets/fonts/newsreader-roman-latin.woff2'
 # The share image's tagline, outlined so the OG script needs no font (sharp's text
 # renderer cannot read woff2). scripts/generate-og-image.ts places it.
-TAGLINE = 'A quiet home for your personal notes'
+TAGLINE = 'A notes app built around writing'
 TS_OUT = 'src/components/logoPaths.ts'
 INDEX_HTML = 'index.html'
 SPRITE_START, SPRITE_END = '<!-- logo sprite: scripts/brand/flatten.py -->', '<!-- /logo sprite -->'
