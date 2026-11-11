@@ -563,7 +563,7 @@ export function DemoPage({
                 letterSpacing: '-0.01em',
               }}
             >
-              Write freely, no account needed
+              Write and edit notes without an account
             </p>
             <p
               className="text-sm mt-1.5"
@@ -729,7 +729,7 @@ function DemoHeader({
                 }}
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setIsSearchFocused(false)}
-                placeholder="Search your thoughts..."
+                placeholder="Search notes..."
                 aria-label="Search notes"
                 className="flex-1 bg-transparent border-none outline-none text-sm min-w-0"
                 style={{

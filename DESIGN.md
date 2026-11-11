@@ -225,7 +225,8 @@ so it stays larger than the body text.
 Plain and direct. Describe the writing, the action, or the feature, and let the reader
 decide how it feels. Short sentences. No metaphor, no slogans, no mood words such as
 *quiet*, *calm* or *home*. Warmth comes from the design and from specific, believable
-examples, not from adjectives. Yidhan never shouts and never sells.
+examples, not from adjectives. Placeholders and headings name the action: "Search notes",
+"Start writing", "Write and edit notes without an account". Yidhan never shouts and never sells.
 
 Sample and starter notes look like real work in progress: a draft, an outline,
 revision notes. They do not end in a lesson, and they do not pretend to be someone's
