@@ -787,3 +787,6 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   of four and no Recipes tag. Returning demo visitors keep any starter they edited;
   untouched old starters are recognised by fingerprint and do not migrate. The page
   title and share text change with the headline (`DECISIONS.md`, 2026-11-10). (#275)
+- **2026-11-11** — The share image carries the new tagline, "A notes app built around
+  writing.", redrawn from `scripts/brand/flatten.py`. The `og:image` and
+  `twitter:image` links move to `?v=4` so link previews fetch the new image. (#276)
