@@ -1,6 +1,6 @@
-Status: PROPOSAL
+Status: COMPLETE
 
-Last verified: 2026-11-10
+Last verified: 2026-11-11
 # Landing page copy
 The page should lead with writing: what you can do, what the editor gives you, and how you keep your work. Privacy supports that promise.
 

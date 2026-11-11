@@ -780,3 +780,10 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   on a white sheet, becomes the accent at 8% through a new per-theme token,
   `--color-editor-glow`; dark keeps the neutral 4%. Contrast is the same or better
   (`DECISIONS.md`, 2026-11-10). (#274)
+- **2026-11-11** — The landing page leads with writing, in plain words: "A notes app
+  built around writing." Encryption keeps one clause in the hero; the passphrase,
+  recovery key and what stays visible move to the privacy section. Sample notes read as
+  work in progress, not small life lessons. New accounts get two starter notes instead
+  of four and no Recipes tag. Returning demo visitors keep any starter they edited;
+  untouched old starters are recognised by fingerprint and do not migrate. The page
+  title and share text change with the headline (`DECISIONS.md`, 2026-11-10). (#275)
