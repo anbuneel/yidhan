@@ -172,7 +172,8 @@ the dot of the i. Fraunces never ships as a font. Decisions: `DECISIONS.md`,
   sign. The header logo (30px on a phone, 36px from 640px) uses it. **At 16px** the
   favicon has no lines (`tile-dark-small-no-line.svg`).
 - **The pinned sun** (`src/components/PinSun.tsx`). A pinned note carries the sun behind
-  its top-left corner, with the logo's gap, and the sun is the unpin button. This is
+  its top-left corner, with the logo's gap and offset (the corner takes a small bite,
+  not a quarter), and the sun is the unpin button. This is
   marigold's one job in the product. Do not use marigold for anything else: not
   highlights, not badges, not buttons. The chapter grid draws the sun beside the card,
   because the card clips its overflow.

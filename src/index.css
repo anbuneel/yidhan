@@ -463,8 +463,8 @@ nav,
    button. An 18px drawing in a 40px target. Marigold's one job (DESIGN.md). */
 .pin-sun {
   position: absolute;
-  top: -20px;
-  left: -20px;
+  top: -25px;
+  left: -25px;
   z-index: 30;
   width: 40px;
   height: 40px;
@@ -501,14 +501,14 @@ nav,
   outline-offset: -8px;
 }
 
-/* A finger needs a larger target. It grows away from the card, and reaches only 8px
+/* A finger needs a larger target. It grows away from the card, and reaches only 5px
    into the corner, so a tap on the title still opens the note. */
 @media (pointer: coarse) {
   .pin-sun::before {
     content: '';
     position: absolute;
-    top: -6px;
-    left: -6px;
+    top: -4px;
+    left: -4px;
     width: 34px;
     height: 34px;
     border-radius: 9999px;
@@ -516,9 +516,13 @@ nav,
   }
 }
 
-/* Room for a first-row sun under the chapter header. */
+/* Room for the sun: under the chapter header, and above a card lower in a column. */
 .masonry-grid:has(.pin-sun) {
   margin-top: 8px;
+}
+
+.note-card-entrance:has(.pin-sun) {
+  margin-top: 6px;
 }
 
 /* Waterline affordance */
