@@ -16,6 +16,7 @@ export const changelog: ChangelogEntry[] = [
     { type: 'improvement', text: 'Plainer wording: the search box says "Search notes...", an empty note says "Start writing.", and the practice space says "Write and edit notes without an account"' },
     { type: 'improvement', text: 'The three dots under every note are gone, and a divider inside a note is now a short line instead of three dots' },
     { type: 'improvement', text: 'The landing page has a new layout. The headline is centred, and everything below it sits on one page, the way a note does in the editor: the sample draft, the sample notes, what is private, and a last "Try writing"' },
+    { type: 'improvement', text: 'In the practice space, "New note" stays the main button after you change a note. "Keep these notes" is now a link beside it, shortened to "Keep" on a phone so "Sign in" still fits' },
   ] },
   { version: '3.20.2', date: '2026-11-10', changes: [
     { type: 'improvement', text: 'The landing page now leads with writing. It says what Yidhan is for and shows a draft with a revision note in the editor. What encryption covers, the passphrase and the recovery key are explained further down the page' },

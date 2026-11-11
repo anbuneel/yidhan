@@ -97,10 +97,11 @@ by well-meaning edits.
 | **CTA** | `--color-cta-bg` / `--color-cta-text` | Positive primary actions (Save, Submit, Create, Stay) |
 | **Destructive** | `--color-destructive` / `--color-destructive-text` | Irreversible danger (Delete, Let go) |
 | **On-accent** | `--color-accent` / `--color-on-accent` | Toggle and active indicators (toolbar bold/italic/H1) |
-| **Accent as text** | `--color-accent-text` | Links and selected labels; the only accent allowed as running text |
+| **Accent as text** | `--color-accent-text` | Links and selected labels; the only accent allowed as running text. Secondary prompts beside a CTA, such as the practice space's "Keep these notes" |
 
 Primary buttons must use the CTA tokens — **not** `--color-accent` with `#fff`. No
-coloured glow under buttons.
+coloured glow under buttons. One filled CTA per header: a prompt to sign up never
+out-weighs the main action.
 
 **The dark theme flips CTA polarity:** a light green fill with dark text, not a dark
 green with white text. The reasoning, first made for gold, is in `DECISIONS.md`
