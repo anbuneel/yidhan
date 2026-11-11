@@ -10,20 +10,20 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 | Yidhan                                               [theme] [Sign In]   |
 +--------------------------------------------------------------------------+
 |                                  | +-----------------------------------+ |
-|  A quiet home                    | | An idea for Saturday              | |
-|  for your                        | | + Add tag                Just now | |
-|  personal notes.                 | | [B  I  </>  H1  List            ] | |
+|  A notes app                     | | Opening draft                     | |
+|  built around                    | | + Add tag                Just now | |
+|  writing.                        | | [B  I  </>  H1  List            ] | |
 |                                  | |                                   | |
-|  Capture an idea ... Trying it   | | Leave the morning unplanned.      | |
-|  needs nothing set up. An account| |                                   | |
-|  asks for a passphrase ...       | | Walk to the market. ...           | |
-|  Each note is encrypted on your  | |                                   | |
-|  device before it syncs ... Dates| | Maybe that is enough.|            | |
-|  ... stay visible to us.         | |                                   | |
-|  What is protected, and what is  | |                                   | |
-|  not ->                          | |                                   | |
+|  Write a first draft, work       | | By nine, everyone in the building | |
+|  through an idea ... focus mode  | | had received the same letter. ... | |
+|  ... tags and search ...         | |                                   | |
+|                                  | | He checked the empty mailbox ...  | |
+|  Works offline. With an account, | |                                   | |
+|  your notes sync ... and are     | | [Try starting with the knock. ...]| |
+|  encrypted before they leave     | |                                   | |
+|  this one.                       | |                                   | |
 |                                  | |-----------------------------------| |
-|  [ Try writing ]  Explore sample | | (Saved here)  A practice draft... | |
+|  [ Try writing ]  Browse sample  | | (Saved here)  Demo notes are ...  | |
 |                   notes ->       | |        [Create an account to keep] | |
 |  Free to use. No account needed. | +-----------------------------------+ |
 |                                                                          |
@@ -35,12 +35,14 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 **Below the first screen:**
 ```
 +--------------------------------------------------------------------------+
-| Small thoughts, worth keeping.          Write a little. Come back when   |
-|                                         you want. Open any of these ...  |
-| [What I wanted to say] [A passage worth keeping] [Tuesday, on the train] |
+| See what writing looks like in Yidhan.  Browse the sample notes, edit    |
+|                                         them, or start your own.         |
+| [Why I still buy used books] [Revision notes] [Tuesday]                  |
 |                                                                          |
-| Your words stay yours.        | Notes are encrypted on your device ...   |
-|                               | How the locking works ->                 |
+| Your writing is private.      | With an account, your note titles ...    |
+|                               | When you sign up, you choose a ...       |
+|                               | You can export your notes at any time.   |
+|                               | How encryption works ->                  |
 |                                                                          |
 |                  Start with one note.  [ Try writing ]                   |
 |                                                                          |
@@ -52,27 +54,28 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 manuscript preview peeks under the fold, the proof facts wrap, and the sample
 cards stack in one column. Below 768px the primary button spans the width.
 
-- The hero's privacy line claims only what `/security` backs: encrypted on the
-  device before it syncs, ciphertext on the server, dates, sizes and tag names
-  visible. It links to `/security` (a plain click routes in-app). No absolute claim
-  ("nobody", "not even us") and no audit claim until item 104 has a report.
-- "Nothing set up" applies to trying the app; the same line says an account asks for
-  a passphrase and a recovery key.
+- The hero leads with writing. Its one privacy clause says encryption comes with an
+  account. The passphrase, recovery key and visible metadata are not in the hero.
+- The privacy section claims only what `/security` backs: titles and content
+  encrypted on the device before they sync; dates, note sizes and tag names not
+  encrypted; losing both passphrase and recovery key loses the notes. Its "How
+  encryption works" link goes to `/security` (a plain click routes in-app). No absolute
+  claim ("nobody", "not even us") and no audit claim until item 104 has a report.
 - The manuscript is a static rendering of the real editor (title, tag row, the first
-  five toolbar labels — B, I, </>, H1, List — body, saved chip) with the `starter-saturday` note in it. An invisible
+  five toolbar labels — B, I, </>, H1, List — body, saved chip) with the `starter-opening` note in it. An invisible
   overlay button covers it; clicking anywhere on the page opens the Practice Space
   draft. It is a picture of the editor, not an imitation of one: there is no
   in-page textarea and nothing is written to `yidhan-demo-content` from here.
 - Every "Try writing" (hero, preview overlay, closing line) routes to `/demo/new` at
   every width. The account comes from inside the Practice Space ("Keep these notes")
   or from the preview's "Create an account to keep and sync", which opens sign-up.
-- "Explore sample notes" is a real link to `/demo`; a plain click is routed in-app,
+- "Browse sample notes" is a real link to `/demo`; a plain click is routed in-app,
   a modified click is left to the browser.
 - The sample cards are the Practice Space starters minus the pinned welcome and the
   hero note, rendered with the real `NoteCard` in decorative mode. Each has an
   overlay button that opens the Practice Space.
-- Proof facts: "Encrypted before it syncs" and "How the locking works" open the
-  security page, as does the hero's "What is protected, and what is not"; "Free and open source" opens the LICENSE file on GitHub
+- Proof facts: "Encrypted before it syncs" opens the security page, as does the
+  privacy section's "How encryption works"; "Free and open source" opens the LICENSE file on GitHub
   (in the `index.html` shell too); the other two are plain text.
 - Before the bundle arrives, `index.html` carries a static copy of the first screen
   (the intro column, a plain manuscript and the proof line) styled by an inline

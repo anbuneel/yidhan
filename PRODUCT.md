@@ -37,6 +37,10 @@ end-to-end encryption), and the writing space is deliberately restrained. Neithe
 half is the claim alone: private tools are usually dense, and calm tools usually read
 your notes. Notion, Obsidian, Bear and Apple Notes cannot honestly claim both.
 
+The landing page leads with writing: what you can do and what the editor gives you.
+Privacy backs that up in one clause in the hero and in full further down. It is the
+reason to choose Yidhan, not the first thing a visitor has to read.
+
 ## Operating context
 
 - Capture is quick and often on a phone, sometimes offline. A thought must land before
@@ -76,8 +80,8 @@ by preference.
 
 ## Evidence on hand
 
-- Sample notes for the landing page and demo: `src/components/LandingPage.tsx`,
-  `src/services/demoStorage.ts`.
+- Sample notes for the landing page and demo: `src/services/demoStarters.ts`. Starter
+  notes for new accounts: `src/components/PassphraseSetup.tsx`.
 - Release notes rendered in the app: `src/data/changelog.ts`.
 - Public roadmap: `src/data/roadmap.ts`.
 - **No testimonials, user counts, reviews or press exist.** Do not invent any, and do

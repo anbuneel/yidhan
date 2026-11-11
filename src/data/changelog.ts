@@ -7,6 +7,11 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.20.2', date: '2026-11-10', changes: [
+    { type: 'improvement', text: 'The landing page now leads with writing. It says what Yidhan is for and shows a draft with a revision note in the editor. What encryption covers, the passphrase and the recovery key are explained further down the page' },
+    { type: 'improvement', text: 'The Practice Space has new sample notes: a story opening, an essay outline, revision notes and a short journal entry. If you had not changed the old ones, they are replaced. Any you edited stay as you left them' },
+    { type: 'improvement', text: 'New accounts now start with two notes: a welcome note about encryption and your recovery key, and a short list of things you can type. The sample book, recipe and weekend notes, and the Recipes tag, are gone' },
+  ] },
   { version: '3.20.1', date: '2026-11-10', changes: [
     { type: 'improvement', text: 'The light theme now has the pale, cool white of a new leaf, and the green is a fresher leaf green, in both themes. Yidhan means "Bright Spring", and the colours now show it. The logo, app icon and share image match. Text and buttons are as easy to read as before, or easier' },
     { type: 'improvement', text: 'In the light theme, the soft glow behind your words in the editor is back. It is now a faint leaf green, because a grey glow could not show on a white page' },

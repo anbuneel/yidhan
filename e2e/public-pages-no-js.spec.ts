@@ -28,7 +28,7 @@ const APP_SHELL_MODULE = '**/src/shells/AppShell.tsx*';
 async function expectLandingShell(page: Page) {
   await expect(page.locator('.boot-landing')).toHaveCount(1);
   await expect(
-    page.getByRole('heading', { level: 1, name: /a quiet home for your personal notes/i })
+    page.getByRole('heading', { level: 1, name: /a notes app built around writing/i })
   ).toBeVisible();
   await expect(page.locator('.static-page')).toHaveCount(0);
 }
@@ -44,7 +44,7 @@ test.describe('Public pages without JavaScript', () => {
       await expect(page.getByText(text)).toBeVisible();
       await expect(page).toHaveTitle(title);
       await expect(page.locator('.boot-landing')).toHaveCount(0);
-      await expect(page.getByText(/a quiet home for your personal notes\./i)).toHaveCount(0);
+      await expect(page.getByText(/a notes app built around writing\./i)).toHaveCount(0);
       // Controls that need JavaScript are not offered.
       await expect(page.getByTestId('theme-toggle')).toBeHidden();
       await expect(page.getByRole('button', { name: /sign in/i })).toBeHidden();

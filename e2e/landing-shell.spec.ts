@@ -13,12 +13,10 @@ test.describe('Landing shell', () => {
       await page.goto('/');
 
       await expect(
-        page.getByRole('heading', { name: /a quiet home for your personal notes/i })
+        page.getByRole('heading', { name: /a notes app built around writing/i })
       ).toBeVisible();
-      await expect(page.getByText(/encrypted on your device before it syncs/i)).toBeVisible();
-      await expect(
-        page.getByRole('link', { name: /what is protected, and what is not/i })
-      ).toHaveAttribute('href', '/security');
+      await expect(page.getByText(/encrypted before they leave this one/i)).toBeVisible();
+      await expect(page.getByText(/^encrypted before it syncs$/i)).toBeVisible();
       await expect(page.getByRole('link', { name: /^try writing$/i })).toHaveAttribute(
         'href',
         '/demo/new'

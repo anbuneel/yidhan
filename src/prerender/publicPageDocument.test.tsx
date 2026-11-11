@@ -41,7 +41,7 @@ describe('public page documents', () => {
       expect(html).toMatch(HEADINGS[page]);
       expect(html).toContain(`<div id="root"><div class="${STATIC_PAGE_CLASS}">`);
       expect(html).not.toContain('boot-landing"');
-      expect(html).not.toContain('A quiet home for your personal notes.</h1>');
+      expect(html).not.toContain('A notes app built around writing.</h1>');
     });
 
     it('keeps the head, boot.js and the bundle, with its own title and canonical URL', () => {

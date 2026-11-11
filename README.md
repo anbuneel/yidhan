@@ -1,6 +1,6 @@
 # Yidhan
 
-A calm, distraction-free note-taking app — where thoughts bloom with clarity.
+A notes app built around writing. Notes are encrypted on your device before they sync.
 
 **Live Demo:** [https://yidhan.vercel.app](https://yidhan.vercel.app)
 

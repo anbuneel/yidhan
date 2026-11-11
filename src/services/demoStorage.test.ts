@@ -357,3 +357,112 @@ describe('legacy starters in an existing Practice Space', () => {
     expect(getDemoDataForMigration().notes.map((n) => n.localId)).toEqual(['mine']);
   });
 });
+
+describe('the 2026-11-10 starter change in an existing Practice Space', () => {
+  const PREVIOUS_WELCOME = `<p>A calm space for your thoughts. Pin important notes, organize with tags, and write in focus mode.</p>
+<p>Practice drafts are saved on this device and are not encrypted. Sign up and set up your vault to encrypt your notes.</p>`;
+  const PREVIOUS = [
+    {
+      localId: 'starter-saturday',
+      title: 'An idea for Saturday',
+      content: `<p>Leave the morning unplanned.</p>
+<p>Walk to the market. Pick up something for lunch. Take the longer way home.</p>
+<p>Maybe that is enough.</p>`,
+      tagIds: [] as string[],
+    },
+    {
+      localId: 'starter-say',
+      title: 'What I wanted to say',
+      content: `<p>I do not need an answer yet. I just need to put this into words before it turns into something else.</p>`,
+      tagIds: ['tag-journal'],
+    },
+    {
+      localId: 'starter-passage',
+      title: 'A passage worth keeping',
+      content: `<p>“Attention is the rarest and purest form of generosity.” — Simone Weil</p>
+<p>Something to come back to when the week gets loud.</p>`,
+      tagIds: ['tag-reading'],
+    },
+    {
+      localId: 'starter-train',
+      title: 'Tuesday, on the train',
+      content: `<p>Three things I keep circling: the flat, October, whether to say yes to the Sunday thing. Not deciding today.</p>`,
+      tagIds: [] as string[],
+    },
+  ];
+
+  /** A stored space exactly as the 2026-09-10 release created it. */
+  function seedPreviousSpace(mutate: (state: DemoState) => void = () => {}): void {
+    seedState((state) => {
+      const welcome = welcomeNote(state);
+      welcome.content = PREVIOUS_WELCOME;
+      const now = Date.now();
+      state.notes = [
+        welcome,
+        ...PREVIOUS.map((n, i) => ({
+          ...n,
+          pinned: false,
+          createdAt: now - (i + 1) * 60_000,
+          updatedAt: now - (i + 1) * 60_000,
+        })),
+      ];
+      mutate(state);
+    });
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('refreshes an untouched space to the new starters', () => {
+    seedPreviousSpace();
+
+    const state = getDemoState();
+
+    expect(state.notes.map((n) => n.localId)).toEqual(
+      createDemoStarterPreviewState().notes.map((n) => n.localId)
+    );
+    expect(welcomeNote(state).content).not.toContain('A calm space');
+    expect(hasDemoState()).toBe(false);
+  });
+
+  it('never counts the untouched previous starters as the reader’s work', () => {
+    seedPreviousSpace((state) => {
+      state.notes.push({
+        localId: 'mine',
+        title: 'Mine',
+        content: '<p>Something I wrote.</p>',
+        pinned: false,
+        tagIds: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    });
+
+    // The reader wrote something, so the space is left alone…
+    const ids = getDemoState().notes.map((n) => n.localId);
+    expect(ids).toContain('starter-saturday');
+    expect(ids).not.toContain('starter-opening');
+    // …and only their own note would move into an account.
+    expect(getDemoDataForMigration().notes.map((n) => n.localId)).toEqual(['mine']);
+  });
+
+  it('keeps an edited previous starter as the reader’s, exactly as they left it', () => {
+    seedPreviousSpace((state) => {
+      state.notes.find((n) => n.localId === 'starter-train')!.content = '<p>Said yes.</p>';
+    });
+
+    expect(hasDemoState()).toBe(true);
+    const { notes } = getDemoDataForMigration();
+    expect(notes.map((n) => n.localId)).toEqual(['starter-train']);
+    expect(notes[0].content).toBe('<p>Said yes.</p>');
+  });
+
+  it('leaves a welcome note the reader edited alone', () => {
+    seedPreviousSpace((state) => {
+      welcomeNote(state).content = `${PREVIOUS_WELCOME}<p>Mine now.</p>`;
+    });
+
+    expect(welcomeNote(getDemoState()).content).toContain('Mine now.');
+  });
+});

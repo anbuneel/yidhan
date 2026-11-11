@@ -112,24 +112,22 @@ export function LandingPage({
       {/* ─── First screen: the product named, the promise stated, the editor shown ─── */}
       <section className="landing-hero">
         <div className="landing-intro">
-          <h1 className="landing-headline">A quiet home for your personal notes.</h1>
+          <h1 className="landing-headline">A notes app built around writing.</h1>
           <p className="landing-sub">
-            Capture an idea, think something through, or keep a passage worth returning to.
-            Trying it needs nothing set up. An account asks for a passphrase and a recovery key.
+            Write a first draft, work through an idea, or make notes for something longer.
+            Use focus mode when you’re writing, and tags and search when you need to find
+            something.
           </p>
           <p className="landing-sub">
-            Each note is encrypted on your device before it syncs, so our servers hold your
-            writing only as ciphertext. Dates, sizes and tag names stay visible to us.{' '}
-            <a href="/security" onClick={handleSecurityLinkClick} className="landing-sub-link focus-ring">
-              What is protected, and what is not
-            </a>
+            Works offline. With an account, your notes sync across your devices and are
+            encrypted before they leave this one.
           </p>
           <div className="landing-actions">
             <button type="button" onClick={onDemoDraftClick} className="landing-cta focus-ring">
               Try writing
             </button>
             <a href="/demo" onClick={handleDemoLinkClick} className="landing-demo-link focus-ring">
-              Explore sample notes
+              Browse sample notes
               <span className="landing-demo-arrow" aria-hidden="true">→</span>
             </a>
           </div>
@@ -147,7 +145,7 @@ export function LandingPage({
             aria-label="Try writing in the Practice Space"
           />
           <div className="landing-manuscript-page">
-            <p className="landing-manuscript-title">An idea for Saturday</p>
+            <p className="landing-manuscript-title">Opening draft</p>
             <div className="landing-manuscript-meta" aria-hidden="true">
               <span className="landing-manuscript-tag">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
@@ -166,10 +164,10 @@ export function LandingPage({
               ))}
             </div>
             <div className="landing-manuscript-text">
-              <p>Leave the morning unplanned.</p>
-              <p>Walk to the market. Pick up something for lunch. Take the longer way home.</p>
+              <p>By nine, everyone in the building had received the same letter. Except Sam.</p>
+              <p>He checked the empty mailbox again, then knocked on his neighbour’s door.</p>
               <p>
-                Maybe that is enough.
+                [Try starting with the knock. Explain the letter later.]
                 <span className="landing-caret" aria-hidden="true" />
               </p>
             </div>
@@ -182,7 +180,7 @@ export function LandingPage({
               Saved here
             </span>
             <span className="landing-manuscript-note">
-              A practice draft. It stays on this device and is not encrypted.
+              Demo notes are saved in this browser and are not encrypted.
             </span>
             <button type="button" onClick={onStartWriting} className="landing-keep focus-ring">
               Create an account to keep and sync →
@@ -209,11 +207,9 @@ export function LandingPage({
       {/* ─── Sample notes: three uses, each opens in the Practice Space ─── */}
       <section className="landing-section" aria-labelledby="landing-samples-title">
         <div className="landing-section-head">
-          <h2 id="landing-samples-title" className="landing-h2">Small thoughts, worth keeping.</h2>
+          <h2 id="landing-samples-title" className="landing-h2">See what writing looks like in Yidhan.</h2>
           <p className="landing-section-body">
-            Write a little. Come back when you want.
-            <br />
-            Open any of these in the editor and change it.
+            Browse the sample notes, edit them, or start your own.
           </p>
         </div>
         <div className="landing-samples">
@@ -239,16 +235,20 @@ export function LandingPage({
 
       {/* ─── Trust: the promise once, then the exits ─── */}
       <section className="landing-section landing-trust" aria-labelledby="landing-trust-title">
-        <h2 id="landing-trust-title" className="landing-h2">Your words stay yours.</h2>
+        <h2 id="landing-trust-title" className="landing-h2">Your writing is private.</h2>
         <div className="landing-trust-body">
           <p className="landing-section-body">
-            Notes are encrypted on your device before they sync. The server keeps ciphertext it
-            cannot read, and neither can we. Export your notes any time. Read the source. Leave
-            whenever you want.
+            With an account, your note titles and content are encrypted on your device before
+            they sync. We can’t read them. Dates, note sizes and tag names are not encrypted.
           </p>
-          <button type="button" onClick={onSecurityClick} className="landing-link focus-ring">
-            How the locking works →
-          </button>
+          <p className="landing-section-body">
+            When you sign up, you choose a passphrase and get a recovery key. If you lose both,
+            we can’t get your notes back.
+          </p>
+          <p className="landing-section-body">You can export your notes at any time.</p>
+          <a href="/security" onClick={handleSecurityLinkClick} className="landing-link focus-ring">
+            How encryption works →
+          </a>
         </div>
       </section>
 
@@ -357,12 +357,6 @@ export function LandingPage({
           max-width: 30rem;
           margin: 0 0 0.85rem;
         }
-        .landing-sub-link {
-          color: inherit; text-decoration: none;
-          border-bottom: 1px dotted var(--color-text-tertiary);
-          transition: color 0.2s ease, border-bottom-color 0.2s ease;
-        }
-        .landing-sub-link:hover { color: var(--color-accent-text); border-bottom-color: var(--color-accent); }
         .landing-actions {
           display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem;
           margin-top: 1.4rem;

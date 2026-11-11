@@ -35,29 +35,45 @@ describe('LandingPage', () => {
     vi.clearAllMocks();
   });
 
-  it('names the product and states the promise in the first screen', () => {
+  it('leads with writing, and says encryption needs an account', () => {
     renderLanding();
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/personal notes/i);
-    expect(screen.getByText(/encrypted on your device before it syncs/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/a notes app built around writing/i);
+    expect(screen.getByText(/focus mode/i)).toBeInTheDocument();
+    const line = screen.getByText(/encrypted before they leave this one/i);
+    expect(line).toHaveTextContent(/with an account/i);
     expect(screen.getByText(/free to use\. no account needed to try\./i)).toBeInTheDocument();
   });
 
-  it('the privacy line states the design and what stays visible, not an absolute', () => {
+  it('keeps the passphrase, recovery key and visible metadata out of the hero', () => {
+    const { container } = render(<LandingPage {...{
+      onStartWriting: vi.fn(), onSignIn: vi.fn(), theme: 'dark' as const, onThemeToggle: vi.fn(),
+      onDemoClick: vi.fn(), onDemoDraftClick: vi.fn(), onSecurityClick: vi.fn(),
+      onChangelogClick: vi.fn(), onRoadmapClick: vi.fn(), onPrivacyClick: vi.fn(),
+      onTermsClick: vi.fn(), onSupportClick: vi.fn(),
+    }} />);
+
+    const hero = container.querySelector('.landing-intro') as HTMLElement;
+    expect(hero).not.toHaveTextContent(/passphrase|recovery key|tag names/i);
+  });
+
+  it('the privacy section states what stays visible and the recovery limit, not an absolute', () => {
     renderLanding();
 
-    const line = screen.getByText(/encrypted on your device before it syncs/i);
-    expect(line).toHaveTextContent(/our servers hold your writing only as ciphertext/i);
-    expect(line).toHaveTextContent(/dates, sizes and tag names stay visible to us/i);
+    const section = screen.getByRole('heading', { name: /your writing is private/i }).closest('section') as HTMLElement;
+    expect(section).toHaveTextContent(/encrypted on your device before they sync/i);
+    expect(section).toHaveTextContent(/dates, note sizes and tag names are not encrypted/i);
+    expect(section).toHaveTextContent(/choose a passphrase and get a recovery key/i);
+    expect(section).toHaveTextContent(/if you lose both, we can’t get your notes back/i);
     // No claim the security page cannot back: nothing absolute, nothing about audits.
     expect(document.body).not.toHaveTextContent(/not even us/i);
     expect(document.body).not.toHaveTextContent(/nobody else can read/i);
     expect(document.body).not.toHaveTextContent(/audited|independently reviewed/i);
   });
 
-  it('the privacy line links to the security page, in-app on a plain click only', () => {
+  it('the privacy section links to the security page, in-app on a plain click only', () => {
     const props = renderLanding();
-    const link = screen.getByRole('link', { name: /what is protected, and what is not/i });
+    const link = screen.getByRole('link', { name: /how encryption works/i });
     expect(link).toHaveAttribute('href', '/security');
 
     fireEvent.click(link, { ctrlKey: true });
@@ -67,15 +83,7 @@ describe('LandingPage', () => {
     expect(props.onSecurityClick).toHaveBeenCalledTimes(1);
   });
 
-  it('"nothing set up" applies to trying it; an account asks for a passphrase and recovery key', () => {
-    renderLanding();
-
-    expect(document.body).not.toHaveTextContent(/nothing to set up/i);
-    const line = screen.getByText(/trying it needs nothing set up/i);
-    expect(line).toHaveTextContent(/an account asks for a passphrase and a recovery key/i);
-  });
-
-  it('the security page still backs each thing the hero says stays visible', () => {
+  it('the security page still backs each thing the privacy section says stays visible', () => {
     render(<SecurityPage
       theme="dark"
       onThemeToggle={vi.fn()}
@@ -130,7 +138,8 @@ describe('LandingPage', () => {
     expect(normalise(shellIntro.querySelector('.boot-micro')!.textContent)).toBe(
       normalise(container.querySelector('.landing-micro')!.textContent)
     );
-    expect(shellIntro.querySelector('a[href="/security"]')).not.toBeNull();
+    // The security detail lives in the privacy section now; the proof line still links to it.
+    expect(shellIntro.querySelector('a[href="/security"]')).toBeNull();
     expect(html).not.toMatch(/not even us/i);
   });
 
@@ -178,15 +187,15 @@ describe('LandingPage', () => {
     const openers = screen.getAllByRole('button', { name: /^open “.+” in the practice space$/i });
     expect(openers).toHaveLength(3);
     expect(screen.queryByText('Welcome to Yidhan')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'An idea for Saturday' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Opening draft' })).not.toBeInTheDocument();
 
     fireEvent.click(openers[0]);
     expect(props.onDemoClick).toHaveBeenCalledTimes(1);
   });
 
-  it('routes a plain click on Explore sample notes in-app but leaves a modified click to the browser', () => {
+  it('routes a plain click on Browse sample notes in-app but leaves a modified click to the browser', () => {
     const props = renderLanding();
-    const link = screen.getByRole('link', { name: /explore sample notes/i });
+    const link = screen.getByRole('link', { name: /browse sample notes/i });
     expect(link).toHaveAttribute('href', '/demo');
 
     fireEvent.click(link, { metaKey: true });
@@ -196,11 +205,11 @@ describe('LandingPage', () => {
     expect(props.onDemoClick).toHaveBeenCalledTimes(1);
   });
 
-  it('the encryption fact and the locking link both reach the security page', () => {
+  it('the encryption fact and the encryption link both reach the security page', () => {
     const props = renderLanding();
 
     fireEvent.click(screen.getByRole('button', { name: /encrypted before it syncs/i }));
-    fireEvent.click(screen.getByRole('button', { name: /how the locking works/i }));
+    fireEvent.click(screen.getByRole('link', { name: /how encryption works/i }));
 
     expect(props.onSecurityClick).toHaveBeenCalledTimes(2);
   });

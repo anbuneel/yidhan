@@ -618,8 +618,8 @@ describe('three-step setup (item 27)', () => {
 
     expect(await screen.findByRole('heading', { name: 'Your notes are ready' }, { timeout: 20_000 })).toBeInTheDocument();
     expect(mockUpdateUser).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(mockCreateEncryptedNote).toHaveBeenCalledTimes(4));
-    expect(mockAddTagToNoteOffline).toHaveBeenCalledWith(USER_ID, 'starter-3', 'tag-recipes');
+    await waitFor(() => expect(mockCreateEncryptedNote).toHaveBeenCalledTimes(2));
+    expect(mockAddTagToNoteOffline).not.toHaveBeenCalled();
     expect(h.ctx.isUnlocked).toBe(false);
 
     refreshAuth(app, true);
