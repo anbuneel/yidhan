@@ -83,7 +83,9 @@ fallback when the device states none. Preview generated CSS without writing via
 | Hairline | `#D9E4D4` | `#2A362F` |
 
 Cards and sheets are solid, so contrast is measured on them directly. The dark theme
-has no shadows. Light shadows are soft and in the text's green-black.
+has no shadows. Light shadows are soft and in the text's green-black. A note card's
+shadow is a slight lift, not a raised block: the white sheet already separates from
+the page.
 
 ## Button and accent taxonomy
 
@@ -135,7 +137,7 @@ the declarations. The display cut exists because of the first-visit budget
 
 ## Texture
 
-A faint, untinted grain sits on the page background only: 7% black in light, 5% white
+A faint, untinted grain sits on the page background only: 4% black in light, 5% white
 in dark (`grainColor`, `noiseOpacity`). Page-level containers paint
 `var(--page-background)`. A new full-page container must too, or it covers the grain
 with a smooth band. Nothing sits over content. Cards, the editor sheet, modals, menus
