@@ -7,8 +7,9 @@
 # with a 3.5 stroke in the page colour. Here the leaf is the visible shape (that rect
 # inset by 1.75) and the gap is a mask, so every file has a transparent background.
 #
-# The letter outline is MONOGRAM_PATH from the Inbax app (outlined from Noto Serif
-# Tamil, SIL OFL). Its source box is centred at 24,24 and is 6.8 units tall.
+# The mark carries no letter (owner, 2026-11-11). The outline of the Tamil letter below
+# is kept so the retired studies in images/brand/archive/ can be redrawn: MONOGRAM_PATH
+# from the Inbax app (outlined from Noto Serif Tamil, SIL OFL), centred at 24,24, 6.8 tall.
 # The wordmark is Fraunces (SIL OFL), wght 440, SOFT 100, opsz 72, WONK 0, the same
 # instance as source/wordmark.json. Glyph positions come from that file's boxes.
 import json, math, os, re
@@ -43,26 +44,34 @@ def leaf_path(x, y, w, h, tl, tr, br, bl):
 
 
 # ---- The full mark, 120 grid -------------------------------------------------------
+# The sun is tucked behind the leaf (owner, 2026-11-11): its centre sits 4.5 left of
+# the leaf's top-left corner and 4.5 above it, so the leaf and a thin 1.75 gap hide
+# about a sixth of it. Before, the offset was 10.75 and the gap 3.5: a small bite
+# and a wide notch, which read as a badge stuck on the leaf.
 FULL = dict(
-    sun=(41, 37, 19),
+    sun=(47.25, 43.25, 19),
     leaf=(51.75, 47.75, 50.5, 62.5, 3.25, 25.25, 3.25, 25.25),
-    gap=3.5,
+    gap=1.75,
     lines=[(63, 73, 91), (63, 85, 91), (63, 97, 78)], line_w=4.5, line_cap='round',
-    letter=(39.5, 35.3, 17),   # centre x, centre y, height
-)
-# Mark bounds: sun left/top to leaf right/bottom.
-FULL_BOX = (22, 18, 102.25, 110.25)
-
-# ---- The small mark, 16 grid, pixel-snapped ----------------------------------------
-# Leaf 8 x 9 at (6, 5); sun r 3 at (4.5, 4.5); a 1px gap; one 1px line, or none.
-SMALL = dict(
-    sun=(4.5, 4.5, 3),
-    leaf=(6, 5, 8, 9, 1, 4, 1, 4),
-    gap=1,
-    lines=[(8, 10.5, 12)], line_w=1, line_cap='butt',
     letter=None,
 )
-SMALL_BOX = (1.5, 1.5, 14, 14)
+# Mark bounds: sun left/top to leaf right/bottom.
+FULL_BOX = (28.25, 24.25, 102.25, 110.25)
+
+# ---- The small mark, 16 grid, pixel-snapped ----------------------------------------
+# Leaf 8 x 9 at (6, 5); sun r 3 at (5.25, 4.25), so the sun's centre is 0.75 left of the
+# leaf's corner and 0.75 above it: tucked behind the leaf, the same both ways, as in the
+# full mark. A 0.5 gap; two 1px lines, long and short, or none. One line read as a minus
+# sign (DECISIONS.md, 2026-11-11); two lines of unequal length read as text. The no-line
+# drawing is for 16px, where two lines blur.
+SMALL = dict(
+    sun=(5.25, 4.25, 3),
+    leaf=(6, 5, 8, 9, 1, 4, 1, 4),
+    gap=0.5,
+    lines=[(8, 9.5, 12), (8, 11.5, 10.5)], line_w=1, line_cap='butt',
+    letter=None,
+)
+SMALL_BOX = (2.25, 1.25, 14, 14)
 
 
 def mark_body(g, uid, leaf_fill, sun_fill=MARIGOLD, letter=None, letter_fill=DARK_GREEN,
@@ -175,52 +184,39 @@ def main():
     vb_full = box_viewbox(FULL_BOX, pad=4)
     vb_small = '0 0 16 16'  # keep the 16 grid so the drawing stays pixel-snapped
 
-    # Full mark.
-    w('mark.svg', svg(vb_full, mark_body(FULL, 'm', GREEN, letter=LETTER_DEFAULT), 'Yidhan',
-      'Full mark, 128px and up: leaf, sun, and இ in the sun. Letter cut: medium.'))
-    w('mark-plain.svg', svg(vb_full, mark_body(FULL, 'mp', GREEN), 'Yidhan',
-      'Full mark without the letter, for 49px to 127px.'))
-    w('mark-on-dark.svg', svg(vb_full, mark_body(FULL, 'md', LIGHT_GREEN, letter=LETTER_DEFAULT), 'Yidhan',
+    # Full mark, 49px and up. No letter (owner, 2026-11-11).
+    w('mark.svg', svg(vb_full, mark_body(FULL, 'm', GREEN), 'Yidhan',
+      'Full mark, 49px and up: leaf and sun.'))
+    w('mark-on-dark.svg', svg(vb_full, mark_body(FULL, 'md', LIGHT_GREEN), 'Yidhan',
       'Full mark for dark pages: light green leaf.'))
-    w('mark-plain-on-dark.svg', svg(vb_full, mark_body(FULL, 'mpd', LIGHT_GREEN), 'Yidhan',
-      'Full mark without the letter, for dark pages.'))
-    for k in LETTER_WEIGHTS:
-        w(f'mark-letter-{k}.svg', svg(vb_full, mark_body(FULL, f'ml{k}', GREEN, letter=k), 'Yidhan',
-          f'Letter study: the {k} cut of இ.'))
-    w('mark-letter-ink.svg', svg(vb_full, mark_body(FULL, 'mli', GREEN, letter=LETTER_DEFAULT, letter_fill=INK), 'Yidhan',
-      'Letter study: இ in ink #14241C instead of dark green #163026.'))
 
     # Small mark, 16 to 48px.
     w('mark-small.svg', svg(vb_small, mark_body(SMALL, 's', GREEN), 'Yidhan',
-      'Small mark for 16 to 48px. 16-unit grid, pixel-snapped. One line.'))
+      'Small mark for 17 to 48px. 16-unit grid, pixel-snapped. Two lines, long and short.'))
     w('mark-small-no-line.svg', svg(vb_small, mark_body(SMALL, 'sn', GREEN, lines=False), 'Yidhan',
-      'Small mark for 16 to 48px, with no line.'))
+      'Small mark for 16px, with no line.'))
     w('mark-small-on-dark.svg', svg(vb_small, mark_body(SMALL, 'sd', LIGHT_GREEN), 'Yidhan',
       'Small mark for dark pages.'))
 
     # One colour.
-    for name, col, g, vb, letter in [('mark-mono.svg', INK, FULL, vb_full, LETTER_DEFAULT),
-                                     ('mark-mono-plain.svg', INK, FULL, vb_full, None),
-                                     ('mark-mono-small.svg', INK, SMALL, vb_small, None)]:
-        w(name, svg(vb, mark_body(g, name[:-4], GREEN, letter=letter, mono=col), 'Yidhan',
-          'One colour. Recolour the single fill. The gap and the lines are cut out; the letter, '
-          'when present, is cut out of the sun.'))
+    for name, col, g, vb in [('mark-mono.svg', INK, FULL, vb_full),
+                             ('mark-mono-small.svg', INK, SMALL, vb_small)]:
+        w(name, svg(vb, mark_body(g, name[:-4], GREEN, mono=col), 'Yidhan',
+          'One colour. Recolour the single fill. The gap and the lines are cut out.'))
 
     # Icon tiles. Large: 120 grid, full bleed, mark scale 0.74 (inside the maskable safe zone).
     scale = 0.74
     r = max_radius(FULL, FULL_BOX) * scale
     print(f'large tile: mark reaches {r:.1f} of 120 from centre; maskable safe zone is 48')
     for tone, bg, leaf in [('light', NEAR_WHITE, GREEN), ('dark', DARK_GREEN, LIGHT_GREEN)]:
-        w(f'tile-{tone}.svg', svg('0 0 120 120', tile(FULL, FULL_BOX, 120, f't{tone}', bg, leaf, scale, letter=LETTER_DEFAULT),
-          'Yidhan', f'App icon tile, {tone}, 128px and up. Full bleed: the platform rounds or masks it. '
+        w(f'tile-{tone}.svg', svg('0 0 120 120', tile(FULL, FULL_BOX, 120, f't{tone}', bg, leaf, scale),
+          'Yidhan', f'App icon tile, {tone}, 49px and up. Full bleed: the platform rounds or masks it. '
           f'The mark stays inside the maskable safe zone.'))
-        w(f'tile-{tone}-plain.svg', svg('0 0 120 120', tile(FULL, FULL_BOX, 120, f'tp{tone}', bg, leaf, scale),
-          'Yidhan', f'App icon tile, {tone}, 49px to 127px. No letter.'))
         # Small: the 16-grid drawing on a rounded tile, as the favicon.
         w(f'tile-{tone}-small.svg', svg('0 0 16 16', tile(SMALL, SMALL_BOX, 16, f'ts{tone}', bg, leaf, 1, rx=3.5, center=False),
-          'Yidhan', f'Favicon tile, {tone}, 16 to 48px. Rounded, because a browser tab does not mask it.'))
+          'Yidhan', f'Favicon tile, {tone}, 17 to 48px. Rounded, because a browser tab does not mask it.'))
         w(f'tile-{tone}-small-no-line.svg', svg('0 0 16 16', tile(SMALL, SMALL_BOX, 16, f'tsn{tone}', bg, leaf, 1, lines=False, rx=3.5, center=False),
-          'Yidhan', f'Favicon tile, {tone}, with no line.'))
+          'Yidhan', f'Favicon tile, {tone}, 16px, with no line.'))
 
     # Wordmark with a green y and a plain i.
     parts = wordmark_paths()

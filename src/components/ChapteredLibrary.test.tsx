@@ -176,7 +176,7 @@ describe('ChapteredLibrary', () => {
 
     const mockChapters = [
       { key: 'pinned', label: 'Pinned', notes: [mockNotes[0]], isPinned: true },
-      { key: 'thisWeek', label: 'This Week', notes: [mockNotes[1], mockNotes[2]], isPinned: false },
+      { key: 'thisWeek', label: 'This week', notes: [mockNotes[1], mockNotes[2]], isPinned: false },
     ];
 
     beforeEach(() => {
@@ -198,7 +198,7 @@ describe('ChapteredLibrary', () => {
       expect(screen.getByTestId('chapter-thisWeek')).toBeInTheDocument();
       // Use getAllByText since text appears in multiple elements (h2, nav, ribbon)
       expect(screen.getAllByText('Pinned').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('This Week').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('This week').length).toBeGreaterThan(0);
     });
 
     it('renders correct note counts per chapter', () => {
@@ -421,7 +421,7 @@ describe('ChapteredLibrary', () => {
 
     beforeEach(() => {
       vi.mocked(temporalGrouping.groupNotesByChapter).mockReturnValue([
-        { key: 'thisWeek', label: 'This Week', notes },
+        { key: 'thisWeek', label: 'This week', notes },
       ]);
     });
 

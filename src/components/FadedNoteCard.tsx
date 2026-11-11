@@ -273,7 +273,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
                 e.currentTarget.style.borderColor = 'var(--glass-border)';
               }}
             >
-              Keep Resting
+              Keep resting
             </button>
             <button type="button"
               onClick={handleConfirmDelete}

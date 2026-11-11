@@ -19,6 +19,123 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-11 — The landing page becomes one sheet
+
+**Status:** Active
+
+**Why:** Two visual reviews found the landing used the common template: headline left,
+product card right, a trust row, three cards, two-column text, a closing call to action.
+The privacy section left half the screen empty and the samples section's subtext
+floated at the far right. The owner wanted a layout only Yidhan would have.
+
+**Decision:** Option C of three mockups. A centred headline and buttons sit on the
+page. Below them one leaf-corner sheet holds everything else at reading width: the
+sample draft, finding notes, privacy, and the closing button. Sections are separated by
+their headings and space. The copy is not final; the owner will revisit the messaging
+separately.
+
+The same day the decorative three dots were removed everywhere: from under every note
+in the editor, and as the rendering of a divider inside a note, which is now a short
+centred hairline. They came from the retired letter framing and nothing depended on
+them.
+
+**Rejected:** Option A, the landing as one note with facts in a right margin. The margin
+stayed mostly empty and the sample cards were cramped. Option B, the landing built from
+library chapters and cards: closest to the app, but card-heavy. A version of C with the
+editor's formatting sidebar reused as a section menu: most visitors have not seen the
+editor, so the reference does not read, and it is a toolbar posing as a menu.
+
+---
+
+## 2026-11-11 — No editor glow in the light theme
+
+**Status:** Active
+
+**Why:** Two visual reviews found that the light glow, the accent at 8%, read as a grey
+smudge in the middle of the white editor sheet. The 2026-11-10 entry chose it over a
+neutral shade for the same reason it now fails: nothing is lighter than white, so any
+tint on the sheet darkens it.
+
+**Decision:** `editorGlow` in light is fully transparent. The token, the glow layer and
+its scroll handler stay, so dark keeps its neutral 4% glow and the landing's sample sheet
+follows the same token. The same pass made light card shadows a slight lift, lowered the
+light grain from 7% to 4%, and lifted the dark card (`#1D2922`) and hairline (`#33423A`)
+so cards separate from the page without a shadow.
+
+**Rejected:** A fainter accent. The owner already found 5% too faint, and below that the
+glow cannot be seen at all. Tinting the sheet off-white so a white glow could show: the
+sheet is white by rule, and contrast is measured on it.
+
+---
+
+## 2026-11-11 — The logo drops the Tamil letter, and the share image says what the app is
+
+**Status:** Active
+
+**Why:** The owner looked at the mark after the sun was tucked behind the leaf and said
+it was trying to do too much: a leaf, a page, text lines, a sun and a letter. Both blind
+reviews had said the same of the large mark. The letter showed only from 128px, so most
+people never saw it, and tucking the sun left it less room. Separately, the share image
+still carried "A quiet home for your personal notes", the line the 2026-11-10 entry
+retired from the landing page.
+
+**Decision:** The sun holds no letter at any size. This reverses the letter part of the
+2026-11-09 logo decision. There are now two drawings, small (to 48px) and full (from
+49px), and the files that existed only to carry or omit the letter are gone. The letter
+artwork is kept in `images/brand/archive/letter-in-sun/`. The share image's line is the
+landing headline: "A notes app built around writing".
+
+**Rejected:** Keeping the letter for the app icon and share image only (two versions of
+one mark, and the letter would still be the smallest thing in it). Making the letter
+the mark itself (legible only from about 32px, and it would restart the logo).
+
+---
+
+## 2026-11-11 — The small mark has two lines, and marigold marks a pinned note
+
+**Status:** Active
+
+**Why:** Two blind reviews of the redesign found the same two faults. At header size the
+one-line small mark read as a minus sign in a green square, not as a page. And marigold
+appeared only in the logo, so the brand and the product looked like two systems.
+
+**Decision:** The small drawing (17 to 48px) cuts two lines, a long one and a short one.
+Unequal lengths read as text. The 16px favicon drops the lines, because two 1px lines
+blur there. This amends the size rule of 2026-11-09, which gave the small drawing one
+line. Marigold gets one job in the product: a pinned note carries the logo's sun behind
+its top-left corner, with the same gap, and the sun is the unpin button. The card is
+already the leaf shape, so a pinned card is the logo. `DESIGN.md` principle 2 now names
+that one exception to "green is the one working colour".
+
+**Rejected:** No line at every small size (clean, but loses the page). The full
+three-line drawing in the header (thin at 30px). A diagonal leaf vein (reads as a
+"disabled" slash). For marigold: a highlighter colour for search matches and the
+editor's Highlight (useful, but says nothing about the brand), and both uses together
+(one job keeps marigold rare).
+
+**Erratum 2026-11-11:** The sun behind the card's corner shipped for an hour and was
+withdrawn the same day. Centred on the corner it read as a different shape; moved out to
+the logo's offset it looked stuck on. The owner kept the idea of marigold for pinned but
+not the placement. The pinned mark is now a marigold disc holding a deep-green bookmark,
+inside the card where the pin button sits. The same review found the small mark's sun
+was 1.5 units left of the leaf's corner but only 0.5 above it. It is now 1.5 both ways,
+matching the full mark, and the small mark's box is square with the drawing centred.
+
+**Erratum 2026-11-11 (2):** The owner then asked for a thinner gap with more of the sun
+behind the leaf, "almost a quarter but not quite". Both drawings changed. Full mark: the
+sun's centre is 2.75 from the leaf's corner each way (was 10.75) and the gap is 1.75 (was
+3.5). Small mark: 0.5 each way and a 0.5 gap. The wide gap and small bite had read as a
+badge stuck on the leaf. No gap at all was considered and set aside: the one-colour mark
+needs a gap, and marigold and the dark theme's light green are close in brightness. The
+letter shrank from 17 to 13 units to stay inside the visible part of the sun.
+
+**Erratum 2026-11-11 (3):** After seeing three depths side by side the owner chose the
+middle one: the sun's centre 4.5 from the corner in the full mark and 0.75 in the small
+one, about a sixth hidden. The letter is gone (next entry up), so its size no longer
+matters.
+
+---
+
 ## 2026-11-10 — The landing page leads with writing, in plain words
 
 **Status:** Active

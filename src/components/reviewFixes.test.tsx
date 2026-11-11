@@ -60,11 +60,11 @@ describe('the leaf corner', () => {
     const allowed = ['NoteCard.tsx', 'SwipeableNoteCard.tsx', 'FadedNoteCard.tsx', 'LandingPage.tsx', 'index.css'];
     const users = sources.filter((f) => read(f).includes('var(--radius-card)'));
     expect(users.filter((f) => !allowed.some((a) => f.endsWith(a)))).toEqual([]);
-    // In the stylesheets, only the editor sheet, the landing manuscript and the sample card.
+    // In the stylesheets, only the editor sheet and the landing sheet.
     expect(indexCss.match(/var\(--radius-card\)/g)).toHaveLength(1);
     expect(rule(indexCss, '.editor-writing-area')).toContain('var(--radius-card)');
-    expect(landing.match(/var\(--radius-card\)/g)).toHaveLength(2);
-    expect(rule(landing, '.landing-manuscript')).toContain('var(--radius-card)');
+    expect(landing.match(/var\(--radius-card\)/g)).toHaveLength(1);
+    expect(rule(landing, '.landing-sheet')).toContain('var(--radius-card)');
   });
 
   it('is not on a modal, a tag chip or a button in the page', () => {
@@ -173,9 +173,8 @@ describe('the editor glow', () => {
     expect(landingGlow).not.toContain('--color-accent');
   });
 
-  it('is a faint leaf green in light, because nothing is lighter than the white sheet', () => {
-    expect(ACTIVE_LIGHT_THEME.colors.editorGlow).toBe('rgba(53, 122, 69, 0.08)');
-    expect(ACTIVE_LIGHT_THEME.colors.accent).toBe('#357A45');
+  it('is off in light, because nothing is lighter than the white sheet', () => {
+    expect(ACTIVE_LIGHT_THEME.colors.editorGlow).toBe('rgba(53, 122, 69, 0)');
   });
 
   it('stays neutral in dark: the text colour at 4%, no green', () => {
@@ -185,11 +184,11 @@ describe('the editor glow', () => {
 });
 
 describe('the landing sample "Saved here"', () => {
-  it('is not tinted green: italic neutral text with its tick', () => {
+  it('is not tinted green: roman neutral text with its tick', () => {
     const saved = rule(landing, '.landing-saved');
     expect(saved).not.toMatch(/--color-success|background/);
     expect(saved).toContain('color: var(--color-text-secondary)');
-    expect(saved).toContain('font-style: italic');
+    expect(saved).not.toContain('font-style: italic');
   });
 });
 

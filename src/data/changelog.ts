@@ -7,6 +7,23 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.20.4', date: '2026-11-11', changes: [
+    { type: 'improvement', text: 'Note cards in the light theme sit flatter, with a softer shadow, and the paper grain behind the page is fainter. In the dark theme, cards are a little lighter than the page, so they are easier to tell apart' },
+    { type: 'improvement', text: 'The light theme no longer has a glow behind your words in the editor. On a white page it showed as a grey patch. The dark theme keeps its glow' },
+    { type: 'improvement', text: 'Small buttons such as Add tag and Return to notes are larger and firmer, so they are easier to read and press' },
+    { type: 'improvement', text: 'Only dates and times are in italic now. Counts such as "4 notes" and words such as "Saved here" and "Synced" are upright' },
+    { type: 'improvement', text: 'Buttons, headings and menus now use sentence case, for example "New note", "Sign in" and "This week"' },
+    { type: 'improvement', text: 'Plainer wording: the search box says "Search notes...", an empty note says "Start writing.", and the practice space says "Write and edit notes without an account"' },
+    { type: 'improvement', text: 'The three dots under every note are gone, and a divider inside a note is now a short line instead of three dots' },
+    { type: 'improvement', text: 'The landing page has a new layout. The headline is centred, and everything below it sits on one page, the way a note does in the editor: the sample draft, the sample notes, what is private, and a last "Try writing"' },
+    { type: 'improvement', text: 'In the practice space, "New note" stays the main button after you change a note. "Keep these notes" is now a link beside it, shortened to "Keep" on a phone so "Sign in" still fits' },
+  ] },
+  { version: '3.20.3', date: '2026-11-11', changes: [
+    { type: 'improvement', text: 'The editor toolbar is now white, like the page you write on, and on a wide screen it sits clear of the page instead of touching its edge. It fades while you type and comes back when you move the mouse or select text. Its labels are larger and match each other' },
+    { type: 'improvement', text: 'The pin on a pinned note is now a marigold disc with a dark green bookmark, the colours of the logo. It was pale green before' },
+    { type: 'improvement', text: 'The logo is simpler: the sun no longer holds a letter. The share image now reads "A notes app built around writing"' },
+    { type: 'improvement', text: 'The small logo in the header and the browser tab now shows two lines of text on the leaf. The single line it had before looked like a minus sign. In every size of the logo, the sun now sits further behind the leaf, with a thinner gap between them' },
+  ] },
   { version: '3.20.2', date: '2026-11-10', changes: [
     { type: 'improvement', text: 'The landing page now leads with writing. It says what Yidhan is for and shows a draft with a revision note in the editor. What encryption covers, the passphrase and the recovery key are explained further down the page' },
     { type: 'improvement', text: 'The Practice Space has new sample notes: a story opening, an essay outline, revision notes and a short journal entry. If you had not changed the old ones, they are replaced. Any you edited stay as you left them' },

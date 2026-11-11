@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Logo } from './Logo';
 import { LogoMark } from './LogoMark';
-import { LETTER_MIN_PX, SMALL_MARK_MAX_PX, markDrawingFor } from './logoSizeRule';
+import { SMALL_MARK_MAX_PX, markDrawingFor } from './logoSizeRule';
 import { FULL_MARK, MARIGOLD, SMALL_MARK, WORDMARK } from './logoPaths';
 import {
   SMALL_MARK_VIEWBOX,
@@ -14,11 +14,15 @@ import {
 } from './logoSprite';
 
 const pathsIn = (root: Element) => Array.from(root.querySelectorAll('path'));
-const hasLetter = (root: Element) => pathsIn(root).some((p) => p.getAttribute('d') === FULL_MARK.letter);
+// The letter in the sun is retired (owner, 2026-11-11). A mark with one would hold a
+// path that is neither the sun nor the leaf.
+const hasLetter = (root: Element) =>
+  root.querySelector('[data-part="letter"]') !== null ||
+  pathsIn(root).some((p) => ![FULL_MARK.sun, FULL_MARK.leaf].includes(p.getAttribute('d') ?? ''));
 const uses = (root: Element) => Array.from(root.querySelectorAll('use')).map((u) => u.getAttribute('href'));
 
 describe('Logo: where the letter must not appear', () => {
-  it.each([16, 32, SMALL_MARK_MAX_PX, SMALL_MARK_MAX_PX + 1, 64, LETTER_MIN_PX - 1])(
+  it.each([16, 32, SMALL_MARK_MAX_PX, SMALL_MARK_MAX_PX + 1, 64, 127, 128, 512, 1024])(
     'a %ipx mark holds no letter path',
     (size) => {
       const { container } = render(<LogoMark size={size} />);
@@ -30,7 +34,7 @@ describe('Logo: where the letter must not appear', () => {
   it('the header lockup draws the small mark and holds no letter path', () => {
     const { container } = render(<Logo />);
     expect(hasLetter(container)).toBe(false);
-    // Header sizes (30 and 36px) are under 48: the one-line small drawing, from the sprite.
+    // Header sizes (30 and 36px) are under 48: the two-line small drawing, from the sprite.
     expect(uses(container)).toEqual([SPRITE_MARK_SMALL, SPRITE_WORDMARK]);
   });
 
@@ -52,18 +56,17 @@ describe('Logo: where the letter must not appear', () => {
 });
 
 describe('Logo: size rule', () => {
-  it('picks the small drawing to 48px, the plain mark to 127px, the letter from 128px', () => {
+  it('picks the small drawing to 48px and the full drawing from 49px', () => {
     expect(markDrawingFor(16)).toBe('small');
     expect(markDrawingFor(48)).toBe('small');
-    expect(markDrawingFor(49)).toBe('plain');
-    expect(markDrawingFor(127)).toBe('plain');
-    expect(markDrawingFor(128)).toBe('letter');
-    expect(markDrawingFor(1024)).toBe('letter');
+    expect(markDrawingFor(49)).toBe('full');
+    expect(markDrawingFor(128)).toBe('full');
+    expect(markDrawingFor(1024)).toBe('full');
   });
 
-  it.each([LETTER_MIN_PX, 512])('a %ipx mark carries the letter', (size) => {
+  it.each([128, 512])('a %ipx mark draws the sun and the leaf, and nothing else', (size) => {
     const { container } = render(<LogoMark size={size} />);
-    expect(hasLetter(container)).toBe(true);
+    expect(pathsIn(container).map((p) => p.getAttribute('d'))).toEqual([FULL_MARK.sun, FULL_MARK.leaf]);
   });
 
   it('a small mark uses the sprite; larger sizes draw the full paths', () => {
@@ -145,10 +148,9 @@ describe('Logo: colours of the larger mark', () => {
     }
   });
 
-  it('the leaf takes the leaf token and the letter its own', () => {
+  it('the leaf takes the leaf token', () => {
     const { container } = render(<LogoMark size={128} />);
     const fill = (d: string) => pathsIn(container).find((p) => p.getAttribute('d') === d)!.style.fill;
     expect(fill(FULL_MARK.leaf)).toBe('var(--color-brand-leaf)');
-    expect(fill(FULL_MARK.letter)).toBe('var(--color-brand-leaf-deep)');
   });
 });

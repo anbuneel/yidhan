@@ -32,7 +32,7 @@ export function AllNotesPill({ isActive, onClick }: AllNotesPillProps) {
           : 'var(--color-text-secondary)',
       }}
     >
-      All Notes
+      All notes
     </button>
   );
 }

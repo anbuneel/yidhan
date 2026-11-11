@@ -5,8 +5,9 @@
  * Output: PNGs in images/brand/export/, copies where the app serves them (public/),
  * and the Android launcher icons.
  *
- * Size rule (owner, 2026-11-09): from 16 to 48px the one-line small drawing; the
- * letter இ shows on the icon tile from 192px. Below that the sun is plain.
+ * Size rule (owner, 2026-11-09 and 2026-11-11): at 16px the small drawing with no
+ * line; from 17 to 48px the two-line small drawing; the
+ * full drawing on the icon tile above that. No letter at any size (owner, 2026-11-11).
  *
  * Usage: npm run icons:generate
  */
@@ -23,9 +24,6 @@ const SRC = path.join(ROOT, 'images/brand/export');
 const PUBLIC = path.join(ROOT, 'public');
 const ANDROID_RES = path.join(ROOT, 'android/app/src/main/res');
 
-/** The tile letter rule: 192px and up. */
-const TILE_LETTER_MIN = 192;
-
 /** Corner radius for icons the platform shows as they are (purpose "any"). */
 const ROUND = 0.22;
 
@@ -41,11 +39,11 @@ type Job = {
   circle?: boolean;
 };
 
-const tile = (size: number) => (size >= TILE_LETTER_MIN ? 'tile-dark.svg' : 'tile-dark-plain.svg');
+const TILE = 'tile-dark.svg';
 
 const JOBS: Job[] = [
-  // Favicons: the small drawing on a rounded dark tile.
-  { svg: 'tile-dark-small.svg', size: 16, out: ['images/brand/export/favicon-16.png', 'public/icons/icon-16.png'] },
+  // Favicons: the small drawing on a rounded dark tile. 16px has no lines; two blur there.
+  { svg: 'tile-dark-small-no-line.svg', size: 16, out: ['images/brand/export/favicon-16.png', 'public/icons/icon-16.png'] },
   {
     svg: 'tile-dark-small.svg',
     size: 32,
@@ -53,11 +51,11 @@ const JOBS: Job[] = [
   },
   { svg: 'tile-dark-small.svg', size: 48, out: ['images/brand/export/favicon-48.png', 'public/icons/icon-48.png'] },
   // Install icons. The OS rounds the Apple touch icon and masks the maskable one.
-  { svg: tile(192), size: 192, round: true, out: ['images/brand/export/icon-192.png', 'public/icons/icon-192.png'] },
-  { svg: tile(512), size: 512, round: true, out: ['images/brand/export/icon-512.png', 'public/icons/icon-512.png'] },
-  { svg: tile(512), size: 512, out: ['images/brand/export/maskable-512.png', 'public/icons/maskable-512.png'] },
+  { svg: TILE, size: 192, round: true, out: ['images/brand/export/icon-192.png', 'public/icons/icon-192.png'] },
+  { svg: TILE, size: 512, round: true, out: ['images/brand/export/icon-512.png', 'public/icons/icon-512.png'] },
+  { svg: TILE, size: 512, out: ['images/brand/export/maskable-512.png', 'public/icons/maskable-512.png'] },
   {
-    svg: tile(180),
+    svg: TILE,
     size: 180,
     out: [
       'images/brand/export/apple-touch-icon.png',
@@ -69,8 +67,8 @@ const JOBS: Job[] = [
 ];
 
 // Android launcher icons, per density. Launcher icons are 48dp and the adaptive
-// foreground is 108dp, of which the centre 72dp shows. The letter follows the tile
-// rule on the size the tile is shown at.
+// foreground is 108dp, of which the centre 72dp shows. Every density uses the same
+// drawing.
 const DENSITIES: Array<[string, number]> = [
   ['mdpi', 1],
   ['hdpi', 1.5],
@@ -83,10 +81,10 @@ for (const [name, k] of DENSITIES) {
   const fg = 108 * k;
   const dir = `android/app/src/main/res/mipmap-${name}`;
   JOBS.push(
-    { svg: tile(icon), size: icon, round: true, out: [`${dir}/ic_launcher.png`] },
-    { svg: tile(icon), size: icon, circle: true, out: [`${dir}/ic_launcher_round.png`] },
+    { svg: TILE, size: icon, round: true, out: [`${dir}/ic_launcher.png`] },
+    { svg: TILE, size: icon, circle: true, out: [`${dir}/ic_launcher_round.png`] },
     {
-      svg: icon >= TILE_LETTER_MIN ? 'android-foreground.svg' : 'android-foreground-plain.svg',
+      svg: 'android-foreground.svg',
       size: fg,
       out: [`${dir}/ic_launcher_foreground.png`],
     },

@@ -100,7 +100,7 @@ describe('LandingPage', () => {
     expect(screen.getByText(/this has not had one yet/i)).toBeInTheDocument();
   });
 
-  it('the editor picture shows the first five real toolbar labels and no Undo or Redo', () => {
+  it('holds the draft, the samples, privacy and the closing action in one sheet', () => {
     const { container } = render(<LandingPage {...{
       onStartWriting: vi.fn(), onSignIn: vi.fn(), theme: 'dark' as const, onThemeToggle: vi.fn(),
       onDemoClick: vi.fn(), onDemoDraftClick: vi.fn(), onSecurityClick: vi.fn(),
@@ -108,12 +108,28 @@ describe('LandingPage', () => {
       onTermsClick: vi.fn(), onSupportClick: vi.fn(),
     }} />);
 
-    const toolbar = container.querySelector('.landing-manuscript-toolbar') as HTMLElement;
-    const labels = Array.from(toolbar.querySelectorAll('.landing-tb')).map((el) => el.textContent);
-    expect(labels.length).toBeLessThanOrEqual(5);
-    expect(labels).toEqual(['B', 'I', '</>', 'H1', 'List']);
-    expect(within(toolbar).queryByText(/undo|redo/i)).not.toBeInTheDocument();
-    expect(toolbar.querySelector('.dim')).toBeNull();
+    const sheets = container.querySelectorAll('.landing-sheet');
+    expect(sheets).toHaveLength(1);
+    const sheet = sheets[0] as HTMLElement;
+    expect(sheet.querySelector('.landing-manuscript-title')).toHaveTextContent('Opening draft');
+    expect(within(sheet).getByRole('heading', { name: /see what writing looks like/i })).toBeInTheDocument();
+    expect(within(sheet).getByRole('heading', { name: /your writing is private/i })).toBeInTheDocument();
+    expect(within(sheet).getByText('Start with one note.')).toBeInTheDocument();
+    // The hero stays on the page, outside the sheet.
+    expect(sheet.querySelector('.landing-headline')).toBeNull();
+    // No editor toolbar picture, no note cards and no ornament dots in the sheet.
+    expect(sheet.querySelector('.landing-manuscript-toolbar, .note-card')).toBeNull();
+    expect(sheet).not.toHaveTextContent(/· · ·|•/);
+  });
+
+  it('gives each sample a one-line plain-text preview, not markup', () => {
+    renderLanding();
+    const openers = screen.getAllByRole('button', { name: /^open “.+” in the practice space$/i });
+    for (const opener of openers) {
+      const preview = opener.querySelector('.landing-sample-preview')!;
+      expect(preview.textContent!.length).toBeGreaterThan(0);
+      expect(preview.textContent).not.toMatch(/[<>]/);
+    }
   });
 
   it('the index.html shell carries the same hero copy as the page', () => {

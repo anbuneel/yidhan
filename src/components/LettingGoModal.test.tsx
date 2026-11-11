@@ -122,13 +122,13 @@ describe('LettingGoModal re-auth feature switch', () => {
     const user = userEvent.setup({ delay: null });
     renderLettingGoModal();
 
-    await user.click(screen.getByRole('button', { name: 'Full Backup' }));
+    await user.click(screen.getByRole('button', { name: 'Full backup' }));
 
     await waitFor(() => {
       expect(mockFetchAllNoteShares).toHaveBeenCalledOnce();
     });
 
-    expect(screen.queryByText('A Moment of Verification')).not.toBeInTheDocument();
+    expect(screen.queryByText('A moment of verification')).not.toBeInTheDocument();
     expect(mockIsRecentlyReauthed).not.toHaveBeenCalled();
     expect(mockExportFullAccountData).toHaveBeenCalledWith(
       notes,
@@ -148,9 +148,9 @@ describe('LettingGoModal re-auth feature switch', () => {
     const user = userEvent.setup({ delay: null });
     renderLettingGoModal();
 
-    await user.click(screen.getByRole('button', { name: 'Full Backup' }));
+    await user.click(screen.getByRole('button', { name: 'Full backup' }));
 
-    expect(await screen.findByText('A Moment of Verification')).toBeInTheDocument();
+    expect(await screen.findByText('A moment of verification')).toBeInTheDocument();
     expect(screen.getByText(/download your full backup/)).toBeInTheDocument();
     expect(mockIsRecentlyReauthed).toHaveBeenCalledOnce();
     expect(mockFetchAllNoteShares).not.toHaveBeenCalled();
@@ -162,7 +162,7 @@ describe('LettingGoModal re-auth feature switch', () => {
     renderLettingGoModal();
 
     await user.click(screen.getByRole('button', { name: 'Let go' }));
-    expect(await screen.findByText('A Moment of Verification')).toBeInTheDocument();
+    expect(await screen.findByText('A moment of verification')).toBeInTheDocument();
     expect(screen.getByText(/begin your departure/)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText('Your password'), 'correct horse battery staple');
@@ -184,7 +184,7 @@ describe('LettingGoModal re-auth feature switch', () => {
 
     await user.click(screen.getByRole('button', { name: 'Let go' }));
 
-    expect(await screen.findByText('A Moment of Verification')).toBeInTheDocument();
+    expect(await screen.findByText('A moment of verification')).toBeInTheDocument();
     expect(screen.getByText(/begin your departure/)).toBeInTheDocument();
     expect(mockIsRecentlyReauthed).not.toHaveBeenCalled();
     expect(mockInitiateOffboarding).not.toHaveBeenCalled();

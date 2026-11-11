@@ -289,7 +289,7 @@ export function DemoPage({
       toast(
         (t) => (
           <div className="flex items-center gap-3">
-            <span>Note removed from Practice Space</span>
+            <span>Note removed from practice space</span>
             <button type="button"
               onClick={() => {
                 toast.dismiss(t.id);
@@ -563,7 +563,7 @@ export function DemoPage({
                 letterSpacing: '-0.01em',
               }}
             >
-              Write freely, no account needed
+              Write and edit notes without an account
             </p>
             <p
               className="text-sm mt-1.5"
@@ -684,7 +684,7 @@ function DemoHeader({
               letterSpacing: '0.02em',
             }}
           >
-            Practice Space
+            Practice space
           </span>
         </div>
       }
@@ -729,7 +729,7 @@ function DemoHeader({
                 }}
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setIsSearchFocused(false)}
-                placeholder="Search your thoughts..."
+                placeholder="Search notes..."
                 aria-label="Search notes"
                 className="flex-1 bg-transparent border-none outline-none text-sm min-w-0"
                 style={{
@@ -771,35 +771,35 @@ function DemoHeader({
       rightActions={
         <div className="flex items-center gap-2">
         {showKeepCta && (
+          // Accent as text, not a CTA: "New note" stays the one filled button
+          // (DESIGN.md, Button and accent taxonomy).
           <button
             type="button"
             onClick={onKeep}
+            aria-label="Keep these notes"
             className="
-              px-3 sm:px-4 py-2
-              rounded-full
-              flex items-center gap-2
-              transition-all duration-300
-              focus:outline-none
-              focus:ring-2
-              focus:ring-[var(--color-accent)]
-              focus:ring-offset-2
+              px-1.5 sm:px-2 py-2
               shrink-0
-              touch-press
+              text-sm font-medium whitespace-nowrap
+              underline decoration-1 underline-offset-4
+              decoration-[var(--color-accent-muted)]
+              hover:decoration-[var(--color-accent)]
+              transition-colors duration-200
+              focus:outline-none
+              focus-visible:ring-2
+              focus-visible:ring-[var(--color-accent)]
+              rounded
             "
             style={{
-              background: 'var(--color-cta-bg)',
-              color: 'var(--color-cta-text)',
-              boxShadow: 'none',
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-accent-text)',
               fontFamily: 'var(--font-body)',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--color-cta-bg)';
-            }}
           >
-            <span className="text-sm font-medium whitespace-nowrap">Keep these notes</span>
+            {/* "Keep" on a phone, so Sign in still fits beside it. */}
+            <span className="sm:hidden">Keep</span>
+            <span className="hidden sm:inline">Keep these notes</span>
           </button>
         )}
         <button type="button"
@@ -816,43 +816,24 @@ function DemoHeader({
             shrink-0
             touch-press
           "
-          style={
-            showKeepCta
-              ? {
-                  background: 'transparent',
-                  color: 'var(--color-accent-text)',
-                  border: '1px solid var(--glass-border)',
-                  fontFamily: 'var(--font-body)',
-                }
-              : {
-                  background: 'var(--color-cta-bg)',
-                  color: 'var(--color-cta-text)',
-                  boxShadow: 'none',
-                  fontFamily: 'var(--font-body)',
-                }
-          }
+          style={{
+            background: 'var(--color-cta-bg)',
+            color: 'var(--color-cta-text)',
+            boxShadow: 'none',
+            fontFamily: 'var(--font-body)',
+          }}
           onMouseEnter={(e) => {
-            if (showKeepCta) {
-              e.currentTarget.style.borderColor = 'var(--color-accent)';
-              return;
-            }
             e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
-            e.currentTarget.style.boxShadow = 'none';
           }}
           onMouseLeave={(e) => {
-            if (showKeepCta) {
-              e.currentTarget.style.borderColor = 'var(--glass-border)';
-              return;
-            }
             e.currentTarget.style.background = 'var(--color-cta-bg)';
-            e.currentTarget.style.boxShadow = 'none';
           }}
           aria-label="New note"
         >
           <svg className="size-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
           </svg>
-          <span className="hidden sm:inline text-sm font-medium">New Note</span>
+          <span className="hidden sm:inline text-sm font-medium">New note</span>
         </button>
         </div>
       }

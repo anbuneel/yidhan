@@ -202,7 +202,7 @@ export function PassphraseUnlock() {
             fontWeight: 500,
           }}
         >
-          Unlock Your Notes
+          Unlock your notes
         </h1>
         <p
           className="mb-6 text-sm"

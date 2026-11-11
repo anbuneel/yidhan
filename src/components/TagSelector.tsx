@@ -195,7 +195,7 @@ export function TagSelector({
           aria-expanded={isOpen}
           aria-haspopup="listbox"
           aria-label="Add tag"
-          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs transition-colors duration-200 rounded hover:bg-[var(--color-bg-tertiary)]"
+          className="inline-flex items-center gap-1 px-2 py-0.5 text-sm font-medium transition-colors duration-200 rounded hover:bg-[var(--color-bg-tertiary)]"
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-tertiary)',

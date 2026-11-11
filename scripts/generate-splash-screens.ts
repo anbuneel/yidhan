@@ -2,8 +2,8 @@
  * Generate the splash screens: Apple PWA launch images and the Android splash drawables.
  *
  * Each shows the bare leaf mark centred on the dark theme background. The mark is a
- * flat SVG from images/brand/export/ (python scripts/brand/flatten.py). At 128px and up
- * it carries the letter (owner, 2026-11-09); below that the sun is plain.
+ * flat SVG from images/brand/export/ (python scripts/brand/flatten.py). It is the
+ * full drawing, with no letter (owner, 2026-11-11).
  *
  * Usage: npm run splash:generate
  */
@@ -26,11 +26,8 @@ const BACKGROUND_COLOR = '#151C18';
 // Logo size as percentage of the smaller dimension
 const LOGO_SIZE_RATIO = 0.2;
 
-/** The bare-mark letter rule: 128px and up. */
-const LETTER_MIN_PX = 128;
-
 async function renderMark(size: number): Promise<Buffer> {
-  const file = size >= LETTER_MIN_PX ? 'mark-on-dark.svg' : 'mark-plain-on-dark.svg';
+  const file = 'mark-on-dark.svg';
   const svg = fs
     .readFileSync(path.join(EXPORT_DIR, file), 'utf8')
     .replace('<svg ', `<svg width="${size}" height="${size}" `);

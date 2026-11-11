@@ -2,58 +2,54 @@
 
 Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detailed layout work.
 
-## Landing Page (Product Beside the Promise)
+## Landing Page (One Sheet)
 
-**Desktop (>=1024px), first screen:**
-```
-+--------------------------------------------------------------------------+
-| Yidhan                                               [theme] [Sign In]   |
-+--------------------------------------------------------------------------+
-|                                  | +-----------------------------------+ |
-|  A notes app                     | | Opening draft                     | |
-|  built around                    | | + Add tag                Just now | |
-|  writing.                        | | [B  I  </>  H1  List            ] | |
-|                                  | |                                   | |
-|  Write a first draft, work       | | By nine, everyone in the building | |
-|  through an idea ... focus mode  | | had received the same letter. ... | |
-|  ... tags and search ...         | |                                   | |
-|                                  | | He checked the empty mailbox ...  | |
-|  Works offline. With an account, | |                                   | |
-|  your notes sync ... and are     | | [Try starting with the knock. ...]| |
-|  encrypted before they leave     | |                                   | |
-|  this one.                       | |                                   | |
-|                                  | |-----------------------------------| |
-|  [ Try writing ]  Browse sample  | | (Saved here)  Demo notes are ...  | |
-|                   notes ->       | |        [Create an account to keep] | |
-|  Free to use. No account needed. | +-----------------------------------+ |
-|                                                                          |
-|   Encrypted before it syncs . Works offline . Free and open source .     |
-|   Export any time                                                        |
-+--------------------------------------------------------------------------+
-```
+The headline sits on the page. One leaf-corner sheet below it holds everything else at
+reading width (`DECISIONS.md`, 2026-11-11). The copy is not final.
 
-**Below the first screen:**
+**Desktop (>=1024px):**
 ```
 +--------------------------------------------------------------------------+
-| See what writing looks like in Yidhan.  Browse the sample notes, edit    |
-|                                         them, or start your own.         |
-| [Why I still buy used books] [Revision notes] [Tuesday]                  |
+| Yidhan                                               [theme] [Sign in]   |
 |                                                                          |
-| Your writing is private.      | With an account, your note titles ...    |
-|                               | When you sign up, you choose a ...       |
-|                               | You can export your notes at any time.   |
-|                               | How encryption works ->                  |
-|                                                                          |
-|                  Start with one note.  [ Try writing ]                   |
-|                                                                          |
+|                 A notes app built around writing.                        |
+|          Write a first draft, work through an idea ... focus mode ...    |
+|          Works offline. With an account, your notes sync ...             |
+|                 [ Try writing ]  Browse sample notes ->                  |
+|                  Free to use. No account needed to try.                  |
+|    Encrypted before it syncs . Works offline . Free and open source .    |
+|                              Export any time                             |
+|      +--------------------------------------------------------------+    |
+|      |  Opening draft                                               |    |
+|      |  + Add tag                                        Just now   |    |
+|      |  By nine, everyone in the building had received ...          |    |
+|      |  He checked the empty mailbox again ...                      |    |
+|      |  [Try starting with the knock. Explain the letter later.]|   |    |
+|      |  ------------------------------------------------------      |    |
+|      |  (Saved here)  Demo notes are ...  [Create an account ...]   |    |
+|      |                                                              |    |
+|      |  See what writing looks like in Yidhan.                      |    |
+|      |  Browse the sample notes, edit them, or start your own.      |    |
+|      |  | Why I still buy used books                                |    |
+|      |  | Start with the cookbook ...                               |    |
+|      |  | Revision notes / Tuesday ...                              |    |
+|      |                                                              |    |
+|      |  Your writing is private.                                    |    |
+|      |  With an account, ... / When you sign up, ... / Export ...   |    |
+|      |  How encryption works ->                                     |    |
+|      |  ------------------------------------------------------      |    |
+|      |  Start with one note.                      [ Try writing ]   |    |
+|      +--------------------------------------------------------------+    |
 |        Changelog . Roadmap . GitHub . Privacy . Terms . Support          |
 +--------------------------------------------------------------------------+
 ```
 
-**Mobile (<1024px):** the same blocks stacked. The intro comes first, the
-manuscript preview peeks under the fold, the proof facts wrap, and the sample
-cards stack in one column. Below 768px the primary button spans the width.
+**Mobile:** the same order. The sheet keeps a 16px gutter, the proof facts wrap, and
+below 768px the hero and closing buttons span the width. A sample preview is one line
+with an ellipsis.
 
+- The sheet's parts are separated by their headings and space. No divider and no
+  ornament; the closing row has a hairline above it.
 - The hero leads with writing. Its one privacy clause says encryption comes with an
   account. The passphrase, recovery key and visible metadata are not in the hero.
 - The privacy section claims only what `/security` backs: titles and content
@@ -61,24 +57,25 @@ cards stack in one column. Below 768px the primary button spans the width.
   encrypted; losing both passphrase and recovery key loses the notes. Its "How
   encryption works" link goes to `/security` (a plain click routes in-app). No absolute
   claim ("nobody", "not even us") and no audit claim until item 104 has a report.
-- The manuscript is a static rendering of the real editor (title, tag row, the first
-  five toolbar labels — B, I, </>, H1, List — body, saved chip) with the `starter-opening` note in it. An invisible
-  overlay button covers it; clicking anywhere on the page opens the Practice Space
-  draft. It is a picture of the editor, not an imitation of one: there is no
+- The draft at the top of the sheet is a static rendering of the real editor (title,
+  tag row, body, saved chip) with the `starter-opening` note in it. No toolbar. An
+  invisible overlay button covers the draft; clicking anywhere on it opens the practice
+  space draft. It is a picture of the editor, not an imitation of one: there is no
   in-page textarea and nothing is written to `yidhan-demo-content` from here.
 - Every "Try writing" (hero, preview overlay, closing line) routes to `/demo/new` at
-  every width. The account comes from inside the Practice Space ("Keep these notes")
+  every width. The account comes from inside the practice space ("Keep these notes")
   or from the preview's "Create an account to keep and sync", which opens sign-up.
 - "Browse sample notes" is a real link to `/demo`; a plain click is routed in-app,
   a modified click is left to the browser.
-- The sample cards are the Practice Space starters minus the pinned welcome and the
-  hero note, rendered with the real `NoteCard` in decorative mode. Each has an
-  overlay button that opens the Practice Space.
+- The samples are the practice space starters minus the pinned welcome and the hero
+  note. Each is a button with a 2px accent rule on its left, the title, and the first
+  paragraph as a one-line plain-text preview. It opens the practice space.
 - Proof facts: "Encrypted before it syncs" opens the security page, as does the
   privacy section's "How encryption works"; "Free and open source" opens the LICENSE file on GitHub
   (in the `index.html` shell too); the other two are plain text.
 - Before the bundle arrives, `index.html` carries a static copy of the first screen
-  (the intro column, a plain manuscript and the proof line) styled by an inline
+  (the centred intro, the proof line and the top of the sheet with the draft) styled
+  by an inline
   block that mirrors the landing CSS and both themes. `public/boot.js` runs first: it
   sets `data-theme` the way `useAppTheme` would, and hides the shell on any path but
   `/` or when a Supabase session key exists. React replaces the shell on mount.
@@ -115,10 +112,10 @@ cards stack in one column. Below 768px the primary button spans the width.
 │  └─────────────────────────────┘    │
 │                                     │
 │  ┌─────────────────────────────┐    │
-│  │         Sign In             │    │
+│  │         Sign in             │    │
 │  └─────────────────────────────┘    │
 │                                     │
-│  Don't have an account? Sign Up     │
+│  Don't have an account? Sign up     │
 └─────────────────────────────────────┘
 ```
 
@@ -140,15 +137,15 @@ All pages use `HeaderShell` component for pixel-perfect header consistency:
 
 **Library Header (Desktop):**
 ```
-[Yidhan]   [  Search...  ⌘K  ] [+ New Note]   [☀] [JD ↓]
+[Yidhan]   [  Search...  ⌘K  ] [+ New note]   [☀] [JD ↓]
                                                     │
                                           ┌─────────┴─────────┐
                                           │ ⚙ Settings        │
                                           │───────────────────│
                                           │ ↑ Export (JSON)   │
                                           │ ↑ Export (MD)     │
-                                          │ ↓ Import Notes    │
-                                          │ ⏱ Faded Notes     │
+                                          │ ↓ Import notes    │
+                                          │ ⏱ Faded notes     │
                                           │───────────────────│
                                           │ → Sign out        │
                                           └───────────────────┘
@@ -159,7 +156,7 @@ All pages use `HeaderShell` component for pixel-perfect header consistency:
 Row 1: [Yidhan]                    [+] [☀] [JD]
 Row 2: [         Search...          ]
 ```
-- New Note button moved to Row 1 for quick access
+- New note button moved to Row 1 for quick access
 - Search bar gets full width on Row 2
 
 **Editor Header (Desktop):**
@@ -184,14 +181,14 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
 
 **Landing/Public Pages:**
 ```
-[Yidhan]                                         [☀] [Sign In]
+[Yidhan]                                         [☀] [Sign in]
 ```
 
 **HeaderShell Props by Page:**
 
 | Page | Left Content | Center Content | Right Actions | Menu Sections |
 |------|--------------|----------------|---------------|---------------|
-| Library | - (default logo) | Search bar | New Note button | Export, Import, Faded Notes |
+| Library | - (default logo) | Search bar | New note button | Export, Import, Faded notes |
 | Editor | Logo + Breadcrumb | - | Save status + Delete | - |
 | Landing | - (default logo) | - | - | - |
 | Changelog | - (default logo) | - | - | - |
@@ -202,6 +199,11 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
 - **Toolbar** — `EditorToolbar.tsx`, with `variant: 'inline' | 'bottom' | 'sidebar'`.
   Every variant ends in an overflow menu that lists every command, so each surface
   reaches everything on its own.
+  All three are the sheet's material: card colour, hairline, soft shadow. The sidebar
+  sits clear of the sheet, and fades to 30% while the writer types in the body or the
+  title; pointer movement, a selection, a shortcut, hover or focus bring it back.
+  Labels are serif glyphs or short words at one of three sizes (15px, 13px, 12px),
+  at weight 500. The bullet list is the one drawn icon.
 - **One toolbar at a time.** Below 768px the bottom toolbar, in the thumb zone. From
   768px to 1099px the inline toolbar under the title. From 1100px the vertical sidebar
   (`EditorSidebar.tsx`) alone, in the left margin; CSS hides the inline toolbar
@@ -260,14 +262,14 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
 
 **Desktop (2 rows collapsed, expandable):**
 ```
-[All Notes]  |  [Tag 1 ✏]  [Tag 2 ✏]  [Tag 3 ✏]  [Tag 4 ✏]  [Tag 5 ✏]
+[All notes]  |  [Tag 1 ✏]  [Tag 2 ✏]  [Tag 3 ✏]  [Tag 4 ✏]  [Tag 5 ✏]
               [Tag 6 ✏]  [Tag 7 ✏]  [+]  [+3 ▼]
                                           ↑ Expand button (if >2 rows)
 ```
 
 **Mobile (all tags visible, wrapped):**
 ```
-[All Notes]  |  [Tag 1]  [Tag 2]
+[All notes]  |  [Tag 1]  [Tag 2]
               [Tag 3]  [Tag 4]  [+]
 ```
 - Mobile shows all tags in wrapping layout (no collapse)
@@ -343,7 +345,8 @@ Card design: Compact "editorial index card" style
 - Grid: Masonry-style (items-start) - cards size to content
 
 Pinned notes:
-- Pin icon is always visible and filled with accent color
+- The pin button shows a marigold disc holding a dark green bookmark, always visible
+  (`DESIGN.md`, Logo)
 - Sorted to appear first in the library
 ```
 
@@ -357,14 +360,14 @@ Pinned notes:
 │  │ Note Card   │  │ Note Card   │                          │
 │  └─────────────┘  └─────────────┘                          │
 ├─────────────────────────────────────────────────────────────┤
-│ ▶ This Week                                        5 notes  │
+│ ▶ This week                                        5 notes  │
 │   Note A · Note B · Note C ...                              │
 ├─────────────────────────────────────────────────────────────┤
-│ ▶ This Month                                       8 notes  │
+│ ▶ This month                                       8 notes  │
 │   Note X · Note Y · Note Z ...                              │
 └─────────────────────────────────────────────────────────────┘
 ```
-- Notes automatically grouped by time (Pinned, This Week, Last Week, This Month, Earlier, Archive)
+- Notes automatically grouped by time (Pinned, This week, Last week, This month, Earlier, Archive)
 - Empty chapters are not rendered ("Honest Presence" pattern)
 - Collapsed state shows first 3 note titles as preview
 - Each chapter has its own masonry grid
@@ -377,13 +380,13 @@ Pinned notes:
 - Other chapters with one or two cards cap their columns to the card count and centre
   the group
 
-## Faded Notes View
+## Faded notes view
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ [Yidhan]                          [Release All] | [☀] [JD] │
+│ [Yidhan]                          [Release all] | [☀] [JD] │
 ├─────────────────────────────────────────────────────────────┤
-│ Faded Notes                                                 │
+│ Faded notes                                                 │
 │ Notes rest here before releasing.                           │
 │                                                             │
 │  ┌─────────────────────────────────────────────────────┐   │
@@ -394,11 +397,11 @@ Pinned notes:
 └─────────────────────────────────────────────────────────────┘
 ```
 - Uses HeaderShell for consistent header (clickable logo, theme toggle, avatar)
-- Accessed via "Faded Notes" in profile menu (shows badge count)
+- Accessed via "Faded notes" in profile menu (shows badge count)
 - Cards show organic time phrases and days until release
 - Restore returns note to library
 - "Release" permanently removes note
-- "Release All" permanently deletes all faded notes
+- "Release all" permanently deletes all faded notes
 
 ## Footer (Library & Landing Page)
 
@@ -416,7 +419,7 @@ Pinned notes:
 ┌─────────────────────────────────────────────────────────────┐
 │ ← Back                                                      │
 ├─────────────────────────────────────────────────────────────┤
-│                      What's New                             │
+│                      What's new                             │
 │                                                             │
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │ v1.3.0                               Dec 18, 2024     │  │
@@ -440,14 +443,14 @@ Pinned notes:
 │                       Roadmap                               │
 │       What we're building and exploring next                │
 │                                                             │
-│  Coming Soon ─────────────────────────────────────────────  │
+│  Coming soon ─────────────────────────────────────────────  │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │ Feature Title                         [Coming Soon]   │  │
+│  │ Feature title                         [Coming soon]   │  │
 │  │ Description of the feature                            │  │
 │  └───────────────────────────────────────────────────────┘  │
 │                                                             │
 │              Changelog  ·  Roadmap  ·  GitHub               │
 └─────────────────────────────────────────────────────────────┘
 ```
-- Status badges: In Progress (gold), Coming Soon (terracotta), Exploring (stone)
+- Status badges: In progress (gold), Coming soon (terracotta), Exploring (stone)
 - Data stored in `src/data/roadmap.ts`

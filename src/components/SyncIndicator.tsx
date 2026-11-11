@@ -153,7 +153,7 @@ export function SyncIndicator({
           <SyncStateIcon kind="blocked" />
         </span>
         <span
-          className="text-sm italic"
+          className="text-sm"
           style={{
             color: 'var(--color-text-secondary)',
             fontFamily: 'var(--font-body)',
@@ -203,7 +203,7 @@ export function SyncIndicator({
           <SyncStateIcon kind="offline" className="size-4" />
         </span>
         <span
-          className="text-sm italic"
+          className="text-sm"
           style={{
             color: 'var(--color-text-secondary)',
             fontFamily: 'var(--font-body)',
@@ -231,7 +231,7 @@ export function SyncIndicator({
           <SyncStateIcon kind="pending" />
         </span>
         <span
-          className="text-sm italic"
+          className="text-sm"
           style={{
             color: 'var(--color-text-secondary)',
             fontFamily: 'var(--font-body)',

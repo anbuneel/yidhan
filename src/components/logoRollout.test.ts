@@ -183,17 +183,20 @@ describe('icons named by the manifest and index.html', () => {
     expect(markInside).toBeGreaterThan(w * h * 0.1); // the mark is really there
   });
 
-  it('the icons at 192px and up carry the letter; the favicons are the small drawing', () => {
-    // The letter is drawn in the dark tile colour inside the marigold sun, so a large
-    // icon has tile-coloured pixels inside the sun; a plain one has none.
+  it('no icon carries a letter in the sun', () => {
+    // The retired letter was drawn in the dark tile colour inside the marigold sun, so
+    // an icon with one has tile-coloured pixels there; the current icons have none.
     const sunHasLetter = (file: string) => {
       const { w, rgba } = decodePng(path.join(ROOT, 'public', file));
       const tile = rgba(0, Math.floor(w / 2)); // left edge, mid-height: tile colour
-      // Sun centre on the 120 grid: from scripts/brand/flatten.py tile placement.
+      // Where the letter last sat on the 120 grid (42, 38), placed as
+      // scripts/brand/flatten.py places the tile: the mark's box centre is 65.25, 67.25.
+      // Sample 5 units around it: inside the part of the sun the leaf does not hide, so
+      // the gap, which also shows the tile colour, is not counted.
       const k = w / 120;
-      const cx = (41 * 0.74 + 120 / 2 - 62.125 * 0.74) * k;
-      const cy = (37 * 0.74 + 120 / 2 - 64.125 * 0.74) * k;
-      const rr = 19 * 0.74 * k * 0.6;
+      const cx = (42 * 0.74 + 120 / 2 - 65.25 * 0.74) * k;
+      const cy = (38 * 0.74 + 120 / 2 - 67.25 * 0.74) * k;
+      const rr = 5 * 0.74 * k;
       let dark = 0;
       for (let y = Math.floor(cy - rr); y < cy + rr; y++) {
         for (let x = Math.floor(cx - rr); x < cx + rr; x++) {
@@ -204,9 +207,9 @@ describe('icons named by the manifest and index.html', () => {
       }
       return dark > 0;
     };
-    expect(sunHasLetter('icons/icon-192.png')).toBe(true);
-    expect(sunHasLetter('icons/icon-512.png')).toBe(true);
-    expect(sunHasLetter('icons/maskable-512.png')).toBe(true);
+    expect(sunHasLetter('icons/icon-192.png')).toBe(false);
+    expect(sunHasLetter('icons/icon-512.png')).toBe(false);
+    expect(sunHasLetter('icons/maskable-512.png')).toBe(false);
     expect(sunHasLetter('icons/apple-touch-icon.png')).toBe(false);
   });
 });
@@ -227,6 +230,14 @@ describe('landing shell mirrors Logo.tsx', () => {
   it('the sprite holds the generated small mark and wordmark, with the sun on the i', () => {
     expect(ds(group(SPRITE_MARK_SMALL.slice(1)))).toEqual([SMALL_MARK.sun, SMALL_MARK.leaf]);
     expect(ds(group(SPRITE_WORDMARK.slice(1)))).toEqual([WORDMARK.y, WORDMARK.rest, WORDMARK.sun]);
+  });
+
+  it('the small mark has two cut lines of unequal length, so it does not read as a minus sign', () => {
+    // The leaf path is the outline plus one closed subpath per line (owner, 2026-11-11).
+    const subpaths = SMALL_MARK.leaf.split('z').filter(Boolean);
+    expect(subpaths).toHaveLength(3);
+    const width = (d: string) => Math.abs(Number(/h(-?[\d.]+)/.exec(d)![1]));
+    expect(width(subpaths[1])).not.toBe(width(subpaths[2]));
   });
 
   it('the shell draws the same sprite entries, in the same boxes, as Logo.tsx', () => {
