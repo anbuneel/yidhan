@@ -100,8 +100,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # --with-deps also asks apt for extra font packages. When the runner's package
+      # mirror is unreachable that fails before any test runs (2026-11-11: two PRs red
+      # for hours). The runner image already has the browser's shared libraries, so fall
+      # back to the browser alone and let the tests run.
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium || npx playwright install chromium
 
       - name: Service worker update tests
         run: npm run e2e:sw
@@ -142,8 +146,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # --with-deps also asks apt for extra font packages. When the runner's package
+      # mirror is unreachable that fails before any test runs (2026-11-11: two PRs red
+      # for hours). The runner image already has the browser's shared libraries, so fall
+      # back to the browser alone and let the tests run.
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium || npx playwright install chromium
 
       # Whether this run typed real credentials into a browser. Only true/false
       # is written out, never the secret. See the upload step for why it matters.
