@@ -299,7 +299,7 @@ for (const theme of THEMES) {
         // A new tab session: the vault asks for the passphrase.
         await page.evaluate(() => sessionStorage.clear());
         await page.reload();
-        await expect(page.getByRole('heading', { name: 'Unlock Your Notes', exact: true })).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByRole('heading', { name: 'Unlock your notes', exact: true })).toBeVisible({ timeout: 20_000 });
         all.unlock = await scan(page, testInfo, 'unlock', label);
         motion.unlock = await runningAnimations(page);
 

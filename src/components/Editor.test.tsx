@@ -59,7 +59,7 @@ vi.mock('./LinkPopover', () => ({
 vi.mock('./TagSelector', () => ({
   TagSelector: ({ onCreateTag }: { onCreateTag?: () => void }) => (
     <div data-testid="tag-selector">
-      {onCreateTag && <button type="button" onClick={onCreateTag}>Create Tag</button>}
+      {onCreateTag && <button type="button" onClick={onCreateTag}>Create tag</button>}
     </div>
   ),
 }));
@@ -533,7 +533,7 @@ describe('Editor', () => {
       expect(screen.getByText('Copy as text')).toBeInTheDocument();
       expect(screen.getByText('Copy with formatting')).toBeInTheDocument();
       // E2EE sharing re-enabled — share option should be visible
-      expect(screen.getByText('Share as Letter')).toBeInTheDocument();
+      expect(screen.getByText('Share as letter')).toBeInTheDocument();
       expect(screen.getByText('Download (.md)')).toBeInTheDocument();
       expect(screen.getByText('Download (.json)')).toBeInTheDocument();
     });
@@ -587,7 +587,7 @@ describe('Editor', () => {
       await user.click(screen.getByLabelText('Export note'));
 
       // E2EE sharing re-enabled — share option should be visible
-      expect(screen.getByText('Share as Letter')).toBeInTheDocument();
+      expect(screen.getByText('Share as letter')).toBeInTheDocument();
     });
 
     it('closes export menu when clicking outside', async () => {
@@ -980,7 +980,7 @@ describe('Editor', () => {
       const pill = await showSynced({ ...mockNote, contentHash: 'h1', confirmedContentHash: 'h1' });
       expect(pill.style.color).toBe('var(--color-text-secondary)');
       expect(pill.style.background).toBe('');
-      expect(pill.className).toContain('italic');
+      expect(pill.className).not.toContain('italic');
     });
 
     it('shows "Synced" with the cloud icon once the server hash matches', async () => {
@@ -1083,7 +1083,7 @@ describe('Editor', () => {
       const onCreateTag = vi.fn();
       render(<Editor {...defaultProps} onCreateTag={onCreateTag} />);
 
-      await user.click(screen.getByText('Create Tag'));
+      await user.click(screen.getByText('Create tag'));
 
       expect(onCreateTag).toHaveBeenCalled();
     });

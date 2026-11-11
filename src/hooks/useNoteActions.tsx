@@ -122,7 +122,7 @@ export function useNoteActions({
       toast(
         (t) => (
           <div className="flex items-center gap-3">
-            <span>Note moved to Faded Notes</span>
+            <span>Note moved to Faded notes</span>
             <button type="button"
               onClick={async () => {
                 toast.dismiss(t.id);

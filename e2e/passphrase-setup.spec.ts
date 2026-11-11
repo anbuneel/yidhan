@@ -169,7 +169,7 @@ test.describe('Three-step passphrase setup', () => {
     // generated one opens the vault. A recovery key exists, so no offer follows.
     await page.evaluate(() => sessionStorage.clear());
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'Unlock Your Notes', exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: 'Unlock your notes', exact: true })).toBeVisible({ timeout: 20_000 });
     await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
     await page.getByRole('button', { name: 'Unlock', exact: true }).click();
     await expect(page.getByTestId('library-view')).toBeVisible({ timeout: 30_000 });

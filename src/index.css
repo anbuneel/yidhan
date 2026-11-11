@@ -22,7 +22,7 @@
   --color-accent-glow: rgba(53, 122, 69, 0.12);
   --color-accent-muted: rgba(53, 122, 69, 0.6);
   --color-accent-text: #2A6638;
-  --color-editor-glow: rgba(53, 122, 69, 0.08);
+  --color-editor-glow: rgba(53, 122, 69, 0);
   --color-on-accent: #FFFFFF;
   --color-cta-bg: #357A45;
   --color-cta-bg-hover: #2D693B;
@@ -40,10 +40,10 @@
   --color-change-fix: #5A665F;
   --glass-border: #D9E4D4;
   --color-input-border: #7D8A82;
-  --shadow-sm: 0 2px 8px rgba(20, 36, 28, 0.09);
-  --shadow-md: 0 4px 12px rgba(20, 36, 28, 0.06), 0 20px 40px -10px rgba(20, 36, 28, 0.19);
-  --shadow-lg: 0 4px 12px rgba(20, 36, 28, 0.075), 0 10px 40px rgba(20, 36, 28, 0.19);
-  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.07'/%3E%3C/svg%3E");
+  --shadow-sm: 0 1px 3px rgba(20, 36, 28, 0.05);
+  --shadow-md: 0 1px 2px rgba(20, 36, 28, 0.04), 0 8px 20px -8px rgba(20, 36, 28, 0.08);
+  --shadow-lg: 0 2px 6px rgba(20, 36, 28, 0.05), 0 12px 32px -8px rgba(20, 36, 28, 0.12);
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.04'/%3E%3C/svg%3E");
 }
 
 /* Dark Theme: Dark - Green-black page, solid cards, light green */
@@ -51,7 +51,7 @@
   --color-bg-primary: #151C18;
   --color-bg-secondary: #18211C;
   --color-bg-tertiary: #1F2C25;
-  --color-card-bg: #1B2620;
+  --color-card-bg: #1D2922;
   --color-text-primary: #E6E3DC;
   --color-text-secondary: #B9BFB8;
   --color-text-tertiary: #9AA69F;
@@ -78,7 +78,7 @@
   --color-status-exploring: #9AA69F;
   --color-change-improvement: #A0D2A6;
   --color-change-fix: #9AA69F;
-  --glass-border: #2A362F;
+  --glass-border: #33423A;
   --color-input-border: #6F7F75;
   --shadow-sm: none;
   --shadow-md: none;
@@ -738,22 +738,13 @@ nav,
   font-size: inherit;
 }
 
-/* Decorative three-dot divider — matches editor footer motif */
+/* A divider is a short centred hairline. No ornament (DESIGN.md, Texture). */
 .rich-text-editor .ProseMirror hr {
+  width: 6rem;
+  height: 0;
+  margin: 2.5rem auto;
   border: none;
-  margin: 2.5rem 0;
-  height: auto;
-  overflow: visible;
-}
-
-.rich-text-editor .ProseMirror hr::after {
-  content: '· · ·';
-  display: block;
-  text-align: center;
-  font-size: 1.25rem;
-  letter-spacing: 0.5em;
-  color: var(--color-text-tertiary);
-  opacity: 0.5;
+  border-top: 1px solid var(--glass-border);
 }
 
 /* Links */
@@ -1710,6 +1701,8 @@ textarea:focus,
   flex: 0 0 36px;
   font-family: var(--font-serif);
   font-size: 15px;
+  /* Controls are firmer than metadata (DESIGN.md, Typography). */
+  font-weight: 500;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -1790,7 +1783,7 @@ textarea:focus,
   width: 100%;
   min-height: 44px;
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 6px 8px;
@@ -1879,8 +1872,8 @@ textarea:focus,
    `.editor-sidebar button` rule, which gave it to every button in the sidebar.
    Neither base class sets a cursor, so both need it named explicitly. */
 .editor-sidebar .editor-command-button {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
 }
 

@@ -114,7 +114,7 @@ export function TagFilterBar({
           gap-2 sm:gap-3
         "
       >
-        {/* All Notes pill */}
+        {/* All notes pill */}
         <AllNotesPill
           isActive={isAllNotesActive}
           onClick={onClearFilter}

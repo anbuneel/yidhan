@@ -13,8 +13,8 @@ vi.mock('../data/roadmap', () => ({
   ],
   statusLabels: {
     'shipped': 'Shipped',
-    'in-progress': 'In Progress',
-    'coming-soon': 'Coming Soon',
+    'in-progress': 'In progress',
+    'coming-soon': 'Coming soon',
     'exploring': 'Exploring',
   },
 }));
@@ -37,7 +37,7 @@ describe('RoadmapPage', () => {
     expect(screen.getByRole('heading', { name: 'Shipped' })).toBeInTheDocument();
     expect(screen.getByText('Shipped thing')).toBeInTheDocument();
     expect(screen.getByText('Already done')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'In Progress' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'In progress' })).toBeInTheDocument();
     expect(screen.getByText('Current thing')).toBeInTheDocument();
   });
 
@@ -45,7 +45,7 @@ describe('RoadmapPage', () => {
     render(<RoadmapPage {...defaultProps} />);
 
     // An empty "Coming Soon" heading with nothing under it reads as a bug.
-    expect(screen.queryByRole('heading', { name: 'Coming Soon' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Coming soon' })).not.toBeInTheDocument();
   });
 
   it('orders the groups shipped first, exploring last', () => {
@@ -55,7 +55,7 @@ describe('RoadmapPage', () => {
 
     // Fixed order, not data order: the mock lists exploring before it would
     // sort naturally, so a render that followed the array would fail here.
-    expect(headings).toEqual(['Shipped', 'In Progress', 'Exploring']);
+    expect(headings).toEqual(['Shipped', 'In progress', 'Exploring']);
   });
 
   it('navigates to the changelog from the footer', async () => {

@@ -69,9 +69,9 @@ export interface ChapterGroup {
 
 export const CHAPTER_LABELS: Record<ChapterKey, string> = {
   pinned: 'Pinned',
-  thisWeek: 'This Week',
-  lastWeek: 'Last Week',
-  thisMonth: 'This Month',
+  thisWeek: 'This week',
+  lastWeek: 'Last week',
+  thisMonth: 'This month',
   earlier: 'Earlier',
   archive: 'Archive',
 };

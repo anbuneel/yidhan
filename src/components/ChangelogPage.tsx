@@ -113,7 +113,7 @@ export function ChangelogPage({
               letterSpacing: '-0.02em',
             }}
           >
-            What's New
+            What's new
           </h1>
           <p
             className="text-base mb-12"

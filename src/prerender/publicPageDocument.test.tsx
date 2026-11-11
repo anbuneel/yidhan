@@ -21,7 +21,7 @@ const indexHtml = readFileSync(resolve(repo, 'index.html'), 'utf8');
 const asText = (text: string) => renderToStaticMarkup(<>{text}</>);
 
 const HEADINGS: Record<(typeof PUBLIC_PAGE_NAMES)[number], RegExp> = {
-  changelog: /<h1[^>]*>What&#x27;s New<\/h1>/,
+  changelog: /<h1[^>]*>What&#x27;s new<\/h1>/,
   roadmap: /<h1[^>]*>Roadmap<\/h1>/,
   privacy: /<h1[^>]*>Privacy<\/h1>/,
   terms: /<h1[^>]*>Terms[^<]*<\/h1>/,

@@ -86,9 +86,10 @@ describe('SyncIndicator', () => {
       }
     });
 
-    it('sets the state word in italic', () => {
+    it('sets the state word in roman: italic is for dates only', () => {
       const { container } = show(stuckPending);
-      expect(container.querySelector('.italic')).toHaveTextContent('1 pending');
+      expect(container).toHaveTextContent('1 pending');
+      expect(container.querySelector('.italic')).toBeNull();
     });
   });
 

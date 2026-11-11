@@ -58,7 +58,7 @@ The logo greens are `--color-brand-leaf` (the theme accent) and
 
 | Token | Value | Use |
 |---|---|---|
-| `--radius-card` | `2px 24px 4px 24px` | The leaf corner. Note cards and the editor sheet only, including the landing's sample sheet |
+| `--radius-card` | `2px 24px 4px 24px` | The leaf corner. Note cards, the editor sheet and the landing sheet only |
 | `--radius-pill` | `9999px` | Buttons and chips |
 | `--radius-input` | `8px` | Inputs |
 | `--radius-plain` | `12px` | Modals, menus, toolbars, popovers, panels |
@@ -75,16 +75,18 @@ fallback when the device states none. Preview generated CSS without writing via
 | Token | Light | Dark |
 |---|---|---|
 | Page (`bgPrimary`) | `#F2F7F0` | `#151C18` |
-| Card and sheet (`cardBg`) | `#FFFFFF` | `#1B2620` |
+| Card and sheet (`cardBg`) | `#FFFFFF` | `#1D2922` |
 | Tinted surface (`bgTertiary`) | `#E5EEE1` | `#1F2C25` |
 | Text | `#14241C` | `#E6E3DC` |
 | Note text | `#22332A` | `#D3D2CA` |
 | Accent | `#357A45` | `#8FC79A` |
 | Accent as text | `#2A6638` | `#A0D2A6` |
-| Hairline | `#D9E4D4` | `#2A362F` |
+| Hairline | `#D9E4D4` | `#33423A` |
 
 Cards and sheets are solid, so contrast is measured on them directly. The dark theme
-has no shadows. Light shadows are soft and in the text's green-black.
+has no shadows. Light shadows are soft and in the text's green-black. A note card's
+shadow is a slight lift, not a raised block: the white sheet already separates from
+the page.
 
 ## Button and accent taxonomy
 
@@ -96,10 +98,11 @@ by well-meaning edits.
 | **CTA** | `--color-cta-bg` / `--color-cta-text` | Positive primary actions (Save, Submit, Create, Stay) |
 | **Destructive** | `--color-destructive` / `--color-destructive-text` | Irreversible danger (Delete, Let go) |
 | **On-accent** | `--color-accent` / `--color-on-accent` | Toggle and active indicators (toolbar bold/italic/H1) |
-| **Accent as text** | `--color-accent-text` | Links and selected labels; the only accent allowed as running text |
+| **Accent as text** | `--color-accent-text` | Links and selected labels; the only accent allowed as running text. Secondary prompts beside a CTA, such as the practice space's "Keep these notes" |
 
 Primary buttons must use the CTA tokens — **not** `--color-accent` with `#fff`. No
-coloured glow under buttons.
+coloured glow under buttons. One filled CTA per header: a prompt to sign up never
+out-weighs the main action.
 
 **The dark theme flips CTA polarity:** a light green fill with dark text, not a dark
 green with white text. The reasoning, first made for gold, is in `DECISIONS.md`
@@ -116,17 +119,24 @@ are aliases of it.
 | Family | Token | Where |
 |---|---|---|
 | Newsreader, roman and italic, 400 to 700, optical size pinned at 18 | `--font-serif` | Every word not listed below |
-| Newsreader Display, optical size 72, weight 500, latin roman | `--font-title` | Big titles: the note title and the landing headline |
+| Newsreader Display, optical size 72, weight 500, latin roman | `--font-title` | Big titles: the note title, the landing headline and the landing sheet's headings |
 | Courier Prime, regular, italic, bold | `--font-mono` | Inline code, code blocks and the recovery key only. Not the toolbar, the search box or status text |
 | Literata, roman and italic | in `--font-serif`, after Newsreader | Cyrillic and Greek only. Declared with those unicode ranges, so a Latin page never fetches it |
 
 Rules:
 
-- **Counts and dates are italic**, like "Synced" and "Just now".
+- **Italic is for dates and relative times only**, like "Nov 11" and "Just now".
+  Counts ("4 notes") and save and sync words ("Saved here", "Synced") are roman.
 - **No capital-letter labels.** No uppercase, no letter-spaced labels.
+- **Sentence case everywhere**: buttons, headings, menu items, tabs, chapter names
+  ("New note", "Sign in", "This week", "Faded notes"). Proper nouns keep their capitals
+  (Yidhan, Google, GitHub, Safari).
 - **No `font-variant-caps` or `small-caps`.** Newsreader has no small capitals, so the
   browser fakes them.
 - **Body weight is 400.** Note text in dark is 430 (`--note-weight`).
+- **Controls are firmer than metadata.** Anything you can press (toolbar labels, "Add
+  tag", secondary links and actions) is at least 12px and weight 500. Supporting text
+  (dates, counts, hints) stays 400 and is at least 12px. Footnotes are 13px or more.
 
 **Self-hosted, never loaded from Google Fonts**: files in `src/assets/fonts/`,
 declared in `src/fonts.css`, licences in `public/licenses/fonts/`. See `DECISIONS.md`
@@ -136,22 +146,24 @@ the declarations. The display cut exists because of the first-visit budget
 
 ## Texture
 
-A faint, untinted grain sits on the page background only: 7% black in light, 5% white
+A faint, untinted grain sits on the page background only: 4% black in light, 5% white
 in dark (`grainColor`, `noiseOpacity`). Page-level containers paint
 `var(--page-background)`. A new full-page container must too, or it covers the grain
 with a smooth band. Nothing sits over content. Cards, the editor sheet, modals, menus
-and inputs are opaque and smooth.
+and inputs are opaque and smooth. There are no ornaments: no three-dot marks under a note or
+between sections. A divider in a note is a short centred hairline.
 
-The editor keeps a faint glow that follows the viewport, from `--color-editor-glow`. In
-light it is the accent at 8%: nothing is lighter than the white sheet, so a neutral glow
-cannot show. In dark it is the text colour at 4%, no accent. The landing's sample sheet
+In dark the editor keeps a faint glow that follows the viewport, from
+`--color-editor-glow`: the text colour at 4%, no accent. In light the token is fully
+transparent. Nothing is lighter than the white sheet, so any tint there reads as a smudge,
+not light. The landing sheet
 uses the same token. A ref-based scroll handler positions it (`CLAUDE.md`). Note
 cards carry a 3% accent tint at the bottom.
 
 ## Save and sync states
 
-Colour cannot carry the meaning, because the accent is green. Each state is a word in
-italic plus its own small line icon (`src/components/SyncStateIcon.tsx`), in the
+Colour cannot carry the meaning, because the accent is green. Each state is a roman
+word plus its own small line icon (`src/components/SyncStateIcon.tsx`), in the
 neutral text colour: saving, not saved, saved, synced, copied, pending, offline,
 blocked. Only the blocked icon takes a colour, `--color-destructive`. "Synced" still
 needs a server-confirmed content hash (`CLAUDE.md`).
@@ -227,11 +239,12 @@ so it stays larger than the body text.
 Plain and direct. Describe the writing, the action, or the feature, and let the reader
 decide how it feels. Short sentences. No metaphor, no slogans, no mood words such as
 *quiet*, *calm* or *home*. Warmth comes from the design and from specific, believable
-examples, not from adjectives. Yidhan never shouts and never sells.
+examples, not from adjectives. Placeholders and headings name the action: "Search notes",
+"Start writing", "Write and edit notes without an account". Yidhan never shouts and never sells.
 
 Sample and starter notes look like real work in progress: a draft, an outline,
 revision notes. They do not end in a lesson, and they do not pretend to be someone's
 private journal.
 
-Some existing labels use softer names ("Faded Notes" for trash, "Letting Go" for
+Some existing labels use softer names ("Faded notes" for trash, "Letting go" for
 account deletion). Keep them consistent where they appear; do not add more.

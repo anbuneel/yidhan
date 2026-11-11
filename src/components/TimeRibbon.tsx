@@ -14,7 +14,7 @@ interface TimeRibbonProps {
 const SHORT_LABELS: Record<ChapterKey, string> = {
   pinned: 'Pinned',
   thisWeek: 'Week',
-  lastWeek: 'Last Wk',
+  lastWeek: 'Last wk',
   thisMonth: 'Month',
   earlier: 'Earlier',
   archive: 'Archive',
