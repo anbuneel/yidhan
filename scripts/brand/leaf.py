@@ -54,17 +54,19 @@ FULL = dict(
 FULL_BOX = (22, 18, 102.25, 110.25)
 
 # ---- The small mark, 16 grid, pixel-snapped ----------------------------------------
-# Leaf 8 x 9 at (6, 5); sun r 3 at (4.5, 4.5); a 1px gap; two 1px lines, long and short,
+# Leaf 8 x 9 at (6, 6); sun r 3 at (4.5, 4.5), so the sun's centre is 1.5 left of the
+# leaf's corner and 1.5 above it, the same both ways, as in the full mark (10.75 and
+# 10.75). It was 1.5 and 0.5, which made the bite lopsided. A 1px gap; two 1px lines, long and short,
 # or none. One line read as a minus sign (DECISIONS.md, 2026-11-11); two lines of
 # unequal length read as text. The no-line drawing is for 16px, where two lines blur.
 SMALL = dict(
     sun=(4.5, 4.5, 3),
-    leaf=(6, 5, 8, 9, 1, 4, 1, 4),
+    leaf=(6, 6, 8, 9, 1, 4, 1, 4),
     gap=1,
-    lines=[(8, 9.5, 12), (8, 11.5, 10.5)], line_w=1, line_cap='butt',
+    lines=[(8, 10.5, 12), (8, 12.5, 10.5)], line_w=1, line_cap='butt',
     letter=None,
 )
-SMALL_BOX = (1.5, 1.5, 14, 14)
+SMALL_BOX = (1.5, 1.5, 14, 15)
 
 
 def mark_body(g, uid, leaf_fill, sun_fill=MARIGOLD, letter=None, letter_fill=DARK_GREEN,

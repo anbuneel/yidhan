@@ -41,6 +41,14 @@ three-line drawing in the header (thin at 30px). A diagonal leaf vein (reads as 
 editor's Highlight (useful, but says nothing about the brand), and both uses together
 (one job keeps marigold rare).
 
+**Erratum 2026-11-11:** The sun behind the card's corner shipped for an hour and was
+withdrawn the same day. Centred on the corner it read as a different shape; moved out to
+the logo's offset it looked stuck on. The owner kept the idea of marigold for pinned but
+not the placement. The pinned mark is now a marigold disc holding a deep-green bookmark,
+inside the card where the pin button sits. The same review found the small mark's sun
+was 1.5 units left of the leaf's corner but only 0.5 above it. It is now 1.5 both ways,
+matching the full mark, and the small mark's box is square with the drawing centred.
+
 ---
 
 ## 2026-11-10 — The landing page leads with writing, in plain words

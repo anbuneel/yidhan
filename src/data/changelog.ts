@@ -8,8 +8,8 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   { version: '3.20.3', date: '2026-11-11', changes: [
-    { type: 'improvement', text: 'A pinned note now carries a small marigold sun on its top-left corner, like the logo. Click or tap the sun to unpin. It replaces the green bookmark' },
-    { type: 'improvement', text: 'The small logo in the header and the browser tab now shows two lines of text on the leaf. The single line it had before looked like a minus sign' },
+    { type: 'improvement', text: 'The pin on a pinned note is now a marigold disc with a dark green bookmark, the colours of the logo. It was pale green before' },
+    { type: 'improvement', text: 'The small logo in the header and the browser tab now shows two lines of text on the leaf. The single line it had before looked like a minus sign. The sun now sits evenly on the corner of the leaf' },
   ] },
   { version: '3.20.2', date: '2026-11-10', changes: [
     { type: 'improvement', text: 'The landing page now leads with writing. It says what Yidhan is for and shows a draft with a revision note in the editor. What encryption covers, the passphrase and the recovery key are explained further down the page' },

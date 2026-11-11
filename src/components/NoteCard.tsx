@@ -14,13 +14,24 @@ interface NoteCardProps {
   isCompact?: boolean;
   /** Keep the pin button on a compact card: the pinned row's only mouse unpin. */
   keepPin?: boolean;
-  /** The parent draws the pinned sun (PinSun), which is the unpin button. A pinned
-   * card then draws no pin mark of its own. */
-  pinSun?: boolean;
   isDecorative?: boolean;
   searchQuery?: string;
   searchMatchTerms?: readonly string[];
   isFocused?: boolean;
+}
+
+/**
+ * The mark of a pinned note: a marigold disc holding a bookmark in the logo's deep
+ * green, as the logo's sun holds its letter. Marigold's one job in the product
+ * (DESIGN.md). The bookmark carries the meaning; marigold alone is 1.94:1 on white.
+ */
+function PinnedMark({ className }: { className: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="12" fill="var(--color-brand-marigold)" />
+      <path fill="var(--color-brand-leaf-deep)" d="M8 7.5a1.5 1.5 0 011.5-1.5h5A1.5 1.5 0 0116 7.5V18l-4-2.25L8 18V7.5z" />
+    </svg>
+  );
 }
 
 export const NoteCard = memo(function NoteCard({
@@ -30,7 +41,6 @@ export const NoteCard = memo(function NoteCard({
   onTogglePin,
   isCompact = false,
   keepPin = false,
-  pinSun = false,
   isDecorative = false,
   searchQuery,
   searchMatchTerms,
@@ -208,7 +218,7 @@ export const NoteCard = memo(function NoteCard({
       )}
 
       {/* Pin button - top-right corner (full mode, or the compact pinned row) */}
-      {(!isCompact || keepPin) && !isDecorative && !(pinSun && note.pinned) && (
+      {(!isCompact || keepPin) && !isDecorative && (
         <button type="button"
           onClick={handlePinClick}
           className={`
@@ -224,42 +234,30 @@ export const NoteCard = memo(function NoteCard({
             focus-visible:opacity-100
             ${note.pinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-40 hover:!opacity-85'}
           `}
-          style={{
-            background: note.pinned ? 'var(--color-accent-glow)' : 'transparent',
-            color: note.pinned ? 'var(--color-accent-muted)' : 'var(--color-text-tertiary)',
-          }}
+          style={{ color: 'var(--color-text-tertiary)' }}
           aria-label={note.pinned ? 'Unpin note' : 'Pin note'}
           title={note.pinned ? 'Unpin note' : 'Pin note'}
         >
-          <svg className="size-4" fill={note.pinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-          </svg>
+          {note.pinned ? (
+            <PinnedMark className="size-6" />
+          ) : (
+            <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+          )}
         </button>
       )}
       {!isCompact && isDecorative && note.pinned && (
-        <span
-          className="absolute top-4 right-4 z-20 flex size-6 items-center justify-center"
-          style={{ color: 'var(--color-accent-muted)' }}
-          aria-hidden="true"
-        >
-          <svg className="size-4" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-          </svg>
+        <span className="absolute top-4 right-4 z-20" aria-hidden="true">
+          <PinnedMark className="size-6" />
         </span>
       )}
 
       {/* Title row - with inline pin in compact mode */}
-      <div className={`flex items-center gap-2 ${isCompact ? 'mb-1' : 'mb-3'} ${keepPin && !(pinSun && note.pinned) ? 'pr-9' : ''} shrink-0`}>
+      <div className={`flex items-center gap-2 ${isCompact ? 'mb-1' : 'mb-3'} ${keepPin ? 'pr-9' : ''} shrink-0`}>
         {/* Inline pin icon (compact mode only, unless the pin button is kept) */}
-        {isCompact && !keepPin && !pinSun && note.pinned && (
-          <svg
-            className="size-3.5 shrink-0"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-            style={{ color: 'var(--color-accent)' }}
-          >
-            <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-          </svg>
+        {isCompact && !keepPin && note.pinned && (
+          <PinnedMark className="size-4 shrink-0" />
         )}
         {/* Title - sanitized to prevent XSS */}
         <h3

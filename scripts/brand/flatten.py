@@ -274,9 +274,9 @@ def main():
 // index.html sprite; this file is the reference the tests check the sprite against.
 // FULL_MARK ships through LogoMark.tsx, outside the landing's entry.
 
-/** Small drawing, 17 to 48px: two lines, no letter. Tight box around the drawing. */
+/** Small drawing, 17 to 48px: two lines, no letter. A square box, the drawing centred. */
 export const SMALL_MARK = {{
-  viewBox: '{box_vb(leaf.SMALL_BOX)}',
+  viewBox: '{leaf.box_viewbox(leaf.SMALL_BOX)}',
   sun: '{compact(to_d(small['sun']), 2)}',
   leaf: '{compact(to_d(small['leaf']), 2)}',
 }} as const;

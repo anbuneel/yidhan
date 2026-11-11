@@ -12,7 +12,6 @@ interface SwipeableNoteCardProps {
   disabled?: boolean;
   isCompact?: boolean;
   keepPin?: boolean;
-  pinSun?: boolean;
   searchQuery?: string;
   searchMatchTerms?: readonly string[];
   isFocused?: boolean;
@@ -38,7 +37,6 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
   disabled = false,
   isCompact = false,
   keepPin,
-  pinSun,
   searchQuery,
   searchMatchTerms,
   isFocused = false,
@@ -199,7 +197,6 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
           isFocused={isFocused}
           isCompact={isCompact}
           keepPin={keepPin}
-          pinSun={pinSun}
           searchQuery={searchQuery}
           searchMatchTerms={searchMatchTerms}
         />

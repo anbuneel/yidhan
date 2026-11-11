@@ -5,7 +5,6 @@ import type { Note, NoteDeleteHandler } from '../types';
 import type { LibrarySectionKey } from '../utils/temporalGrouping';
 import { WATERLINE_TEXT } from '../utils/temporalGrouping';
 import { NoteCard } from './NoteCard';
-import { PinSun } from './PinSun';
 import { SwipeableNoteCard } from './SwipeableNoteCard';
 import { LockedNoteCard } from './LockedNoteCard';
 import { useTouchCapable } from '../hooks/useMobileDetect';
@@ -339,7 +338,7 @@ export const ChapterSection = memo(function ChapterSection({
                 {displayNotes.map((note, index) => (
                   <div
                     key={note.id}
-                    className="note-card-entrance relative"
+                    className="note-card-entrance"
                     style={{
                       animationDelay: `${Math.min(index * 0.06, 0.6)}s`,
                     }}
@@ -361,7 +360,6 @@ export const ChapterSection = memo(function ChapterSection({
                         onTogglePin={onTogglePin}
                         isCompact={isCompact || isPinnedRow}
                         keepPin={isPinnedRow}
-                        pinSun
                         searchQuery={isSearching ? searchQuery : undefined}
                         searchMatchTerms={searchMatchTerms?.get(note.id)}
                         isFocused={note.id === focusedNoteId}
@@ -374,14 +372,10 @@ export const ChapterSection = memo(function ChapterSection({
                         onTogglePin={onTogglePin}
                         isCompact={isCompact || isPinnedRow}
                         keepPin={isPinnedRow}
-                        pinSun
                         searchQuery={isSearching ? searchQuery : undefined}
                         searchMatchTerms={searchMatchTerms?.get(note.id)}
                         isFocused={note.id === focusedNoteId}
                       />
-                    )}
-                    {note.pinned && !note.decryptionFailed && (
-                      <PinSun noteId={note.id} onTogglePin={onTogglePin} />
                     )}
                     {showGestureHint && index === 0 && <GestureHint />}
                   </div>
