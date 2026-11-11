@@ -343,7 +343,8 @@ Card design: Compact "editorial index card" style
 - Grid: Masonry-style (items-start) - cards size to content
 
 Pinned notes:
-- Pin icon is always visible and filled with accent color
+- A marigold sun sits behind the card's top-left corner. It is the unpin button, and
+  replaces the bookmark on a pinned card (`DESIGN.md`, Logo)
 - Sorted to appear first in the library
 ```
 

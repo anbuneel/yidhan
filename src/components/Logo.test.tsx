@@ -30,7 +30,7 @@ describe('Logo: where the letter must not appear', () => {
   it('the header lockup draws the small mark and holds no letter path', () => {
     const { container } = render(<Logo />);
     expect(hasLetter(container)).toBe(false);
-    // Header sizes (30 and 36px) are under 48: the one-line small drawing, from the sprite.
+    // Header sizes (30 and 36px) are under 48: the two-line small drawing, from the sprite.
     expect(uses(container)).toEqual([SPRITE_MARK_SMALL, SPRITE_WORDMARK]);
   });
 

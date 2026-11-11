@@ -4,11 +4,11 @@
 // index.html sprite; this file is the reference the tests check the sprite against.
 // FULL_MARK ships through LogoMark.tsx, outside the landing's entry.
 
-/** Small drawing, 16 to 48px: one line, no letter. Tight box around the drawing. */
+/** Small drawing, 17 to 48px: two lines, no letter. Tight box around the drawing. */
 export const SMALL_MARK = {
   viewBox: '1.5 1.5 12.5 12.5',
   sun: 'm1.5 4.5c0-1.66 1.34-3 3-3c1.49 0 2.72 1.08 2.96 2.5h-.46q-2 0-2 2v1.46c-.16.03-.33.04-.5.04c-1.66 0-3-1.34-3-3z',
-  leaf: 'm7 5h3c2.21 0 4 1.79 4 4v4c0 .55-.45 1-1 1h-3c-2.21 0-4-1.79-4-4v-4c0-.55.45-1 1-1zm1 5v1h4v-1z',
+  leaf: 'm7 5h3c2.21 0 4 1.79 4 4v4c0 .55-.45 1-1 1h-3c-2.21 0-4-1.79-4-4v-4c0-.55.45-1 1-1zm1 4v1h4v-1zm0 2v1h2.5v-1z',
 } as const;
 
 /** Full drawing, 49px and up. The letter shows only from 128px (owner, 2026-11-09). */

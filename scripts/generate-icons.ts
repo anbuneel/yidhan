@@ -5,7 +5,8 @@
  * Output: PNGs in images/brand/export/, copies where the app serves them (public/),
  * and the Android launcher icons.
  *
- * Size rule (owner, 2026-11-09): from 16 to 48px the one-line small drawing; the
+ * Size rule (owner, 2026-11-09 and 2026-11-11): at 16px the small drawing with no
+ * line; from 17 to 48px the two-line small drawing; the
  * letter இ shows on the icon tile from 192px. Below that the sun is plain.
  *
  * Usage: npm run icons:generate
@@ -44,8 +45,8 @@ type Job = {
 const tile = (size: number) => (size >= TILE_LETTER_MIN ? 'tile-dark.svg' : 'tile-dark-plain.svg');
 
 const JOBS: Job[] = [
-  // Favicons: the small drawing on a rounded dark tile.
-  { svg: 'tile-dark-small.svg', size: 16, out: ['images/brand/export/favicon-16.png', 'public/icons/icon-16.png'] },
+  // Favicons: the small drawing on a rounded dark tile. 16px has no lines; two blur there.
+  { svg: 'tile-dark-small-no-line.svg', size: 16, out: ['images/brand/export/favicon-16.png', 'public/icons/icon-16.png'] },
   {
     svg: 'tile-dark-small.svg',
     size: 32,

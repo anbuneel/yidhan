@@ -229,6 +229,14 @@ describe('landing shell mirrors Logo.tsx', () => {
     expect(ds(group(SPRITE_WORDMARK.slice(1)))).toEqual([WORDMARK.y, WORDMARK.rest, WORDMARK.sun]);
   });
 
+  it('the small mark has two cut lines of unequal length, so it does not read as a minus sign', () => {
+    // The leaf path is the outline plus one closed subpath per line (owner, 2026-11-11).
+    const subpaths = SMALL_MARK.leaf.split('z').filter(Boolean);
+    expect(subpaths).toHaveLength(3);
+    const width = (d: string) => Math.abs(Number(/h(-?[\d.]+)/.exec(d)![1]));
+    expect(width(subpaths[1])).not.toBe(width(subpaths[2]));
+  });
+
   it('the shell draws the same sprite entries, in the same boxes, as Logo.tsx', () => {
     expect(mark![0]).toContain(`viewBox="${SMALL_MARK.viewBox}"`);
     expect(mark![1]).toBe(`<use href="${SPRITE_MARK_SMALL}"/>`);

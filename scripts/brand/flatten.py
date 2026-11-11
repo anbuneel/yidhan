@@ -199,6 +199,7 @@ def main():
     os.makedirs(EXPORT, exist_ok=True)
     full = parts(leaf.FULL, letter=True)
     small = parts(leaf.SMALL)
+    small_plain = parts({**leaf.SMALL, 'lines': []})  # 16px: two lines blur there
     w = lambda name, text: open(EXPORT + name, 'w', encoding='utf-8', newline='\n').write(text)
     vb_full = leaf.box_viewbox(leaf.FULL_BOX, pad=4)
 
@@ -207,7 +208,8 @@ def main():
     w('mark-plain.svg', svg(vb_full, mark_body(full, leaf.GREEN, letter=False), 'Full mark, 49 to 127px.'))
     w('mark-on-dark.svg', svg(vb_full, mark_body(full, leaf.LIGHT_GREEN), 'Full mark with the letter, dark pages.'))
     w('mark-plain-on-dark.svg', svg(vb_full, mark_body(full, leaf.LIGHT_GREEN, letter=False), 'Full mark, dark pages, 49 to 127px.'))
-    w('mark-small.svg', svg('0 0 16 16', mark_body(small, leaf.GREEN), 'Small mark, 16 to 48px.'))
+    w('mark-small.svg', svg('0 0 16 16', mark_body(small, leaf.GREEN), 'Small mark, 17 to 48px. Two lines.'))
+    w('mark-small-no-line.svg', svg('0 0 16 16', mark_body(small_plain, leaf.GREEN), 'Small mark, 16px. No line.'))
     w('mark-mono.svg', svg(vb_full, mark_body(full, None, mono=leaf.INK), 'One colour, letter cut out.'))
     w('mark-mono-plain.svg', svg(vb_full, mark_body(full, None, letter=False, mono=leaf.INK), 'One colour.'))
     w('mark-mono-small.svg', svg('0 0 16 16', mark_body(small, None, mono=leaf.INK), 'One colour, 16 to 48px.'))
@@ -219,7 +221,10 @@ def main():
                                              scale, letter), 'App icon tile, dark. Mark inside the maskable safe zone.'))
     w('tile-dark-small.svg', svg('0 0 16 16', tile_body(small, leaf.SMALL, leaf.SMALL_BOX, 16, leaf.DARK_GREEN,
                                                         leaf.LIGHT_GREEN, 1, False, rx=3.5, center=False),
-                                 'Favicon tile, dark, 16 to 48px.'))
+                                 'Favicon tile, dark, 17 to 48px.'))
+    w('tile-dark-small-no-line.svg', svg('0 0 16 16', tile_body(small_plain, leaf.SMALL, leaf.SMALL_BOX, 16, leaf.DARK_GREEN,
+                                                                leaf.LIGHT_GREEN, 1, False, rx=3.5, center=False),
+                                         'Favicon tile, dark, 16px. No line.'))
     # Android adaptive foreground: 108 grid, transparent; the launcher masks the
     # centre 72 and draws the tile colour behind it. Mark kept inside the 66 safe circle.
     for name, letter in [('android-foreground.svg', True), ('android-foreground-plain.svg', False)]:
@@ -269,7 +274,7 @@ def main():
 // index.html sprite; this file is the reference the tests check the sprite against.
 // FULL_MARK ships through LogoMark.tsx, outside the landing's entry.
 
-/** Small drawing, 16 to 48px: one line, no letter. Tight box around the drawing. */
+/** Small drawing, 17 to 48px: two lines, no letter. Tight box around the drawing. */
 export const SMALL_MARK = {{
   viewBox: '{box_vb(leaf.SMALL_BOX)}',
   sun: '{compact(to_d(small['sun']), 2)}',

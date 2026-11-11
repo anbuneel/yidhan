@@ -19,6 +19,30 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-11 — The small mark has two lines, and marigold marks a pinned note
+
+**Status:** Active
+
+**Why:** Two blind reviews of the redesign found the same two faults. At header size the
+one-line small mark read as a minus sign in a green square, not as a page. And marigold
+appeared only in the logo, so the brand and the product looked like two systems.
+
+**Decision:** The small drawing (17 to 48px) cuts two lines, a long one and a short one.
+Unequal lengths read as text. The 16px favicon drops the lines, because two 1px lines
+blur there. This amends the size rule of 2026-11-09, which gave the small drawing one
+line. Marigold gets one job in the product: a pinned note carries the logo's sun behind
+its top-left corner, with the same gap, and the sun is the unpin button. The card is
+already the leaf shape, so a pinned card is the logo. `DESIGN.md` principle 2 now names
+that one exception to "green is the one working colour".
+
+**Rejected:** No line at every small size (clean, but loses the page). The full
+three-line drawing in the header (thin at 30px). A diagonal leaf vein (reads as a
+"disabled" slash). For marigold: a highlighter colour for search matches and the
+editor's Highlight (useful, but says nothing about the brand), and both uses together
+(one job keeps marigold rare).
+
+---
+
 ## 2026-11-10 — The landing page leads with writing, in plain words
 
 **Status:** Active

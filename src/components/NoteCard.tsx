@@ -14,6 +14,9 @@ interface NoteCardProps {
   isCompact?: boolean;
   /** Keep the pin button on a compact card: the pinned row's only mouse unpin. */
   keepPin?: boolean;
+  /** The parent draws the pinned sun (PinSun), which is the unpin button. A pinned
+   * card then draws no pin mark of its own. */
+  pinSun?: boolean;
   isDecorative?: boolean;
   searchQuery?: string;
   searchMatchTerms?: readonly string[];
@@ -27,6 +30,7 @@ export const NoteCard = memo(function NoteCard({
   onTogglePin,
   isCompact = false,
   keepPin = false,
+  pinSun = false,
   isDecorative = false,
   searchQuery,
   searchMatchTerms,
@@ -204,7 +208,7 @@ export const NoteCard = memo(function NoteCard({
       )}
 
       {/* Pin button - top-right corner (full mode, or the compact pinned row) */}
-      {(!isCompact || keepPin) && !isDecorative && (
+      {(!isCompact || keepPin) && !isDecorative && !(pinSun && note.pinned) && (
         <button type="button"
           onClick={handlePinClick}
           className={`
@@ -245,9 +249,9 @@ export const NoteCard = memo(function NoteCard({
       )}
 
       {/* Title row - with inline pin in compact mode */}
-      <div className={`flex items-center gap-2 ${isCompact ? 'mb-1' : 'mb-3'} ${keepPin ? 'pr-9' : ''} shrink-0`}>
+      <div className={`flex items-center gap-2 ${isCompact ? 'mb-1' : 'mb-3'} ${keepPin && !(pinSun && note.pinned) ? 'pr-9' : ''} shrink-0`}>
         {/* Inline pin icon (compact mode only, unless the pin button is kept) */}
-        {isCompact && !keepPin && note.pinned && (
+        {isCompact && !keepPin && !pinSun && note.pinned && (
           <svg
             className="size-3.5 shrink-0"
             fill="currentColor"

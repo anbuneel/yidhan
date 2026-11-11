@@ -54,12 +54,14 @@ FULL = dict(
 FULL_BOX = (22, 18, 102.25, 110.25)
 
 # ---- The small mark, 16 grid, pixel-snapped ----------------------------------------
-# Leaf 8 x 9 at (6, 5); sun r 3 at (4.5, 4.5); a 1px gap; one 1px line, or none.
+# Leaf 8 x 9 at (6, 5); sun r 3 at (4.5, 4.5); a 1px gap; two 1px lines, long and short,
+# or none. One line read as a minus sign (DECISIONS.md, 2026-11-11); two lines of
+# unequal length read as text. The no-line drawing is for 16px, where two lines blur.
 SMALL = dict(
     sun=(4.5, 4.5, 3),
     leaf=(6, 5, 8, 9, 1, 4, 1, 4),
     gap=1,
-    lines=[(8, 10.5, 12)], line_w=1, line_cap='butt',
+    lines=[(8, 9.5, 12), (8, 11.5, 10.5)], line_w=1, line_cap='butt',
     letter=None,
 )
 SMALL_BOX = (1.5, 1.5, 14, 14)
@@ -192,9 +194,9 @@ def main():
 
     # Small mark, 16 to 48px.
     w('mark-small.svg', svg(vb_small, mark_body(SMALL, 's', GREEN), 'Yidhan',
-      'Small mark for 16 to 48px. 16-unit grid, pixel-snapped. One line.'))
+      'Small mark for 17 to 48px. 16-unit grid, pixel-snapped. Two lines, long and short.'))
     w('mark-small-no-line.svg', svg(vb_small, mark_body(SMALL, 'sn', GREEN, lines=False), 'Yidhan',
-      'Small mark for 16 to 48px, with no line.'))
+      'Small mark for 16px, with no line.'))
     w('mark-small-on-dark.svg', svg(vb_small, mark_body(SMALL, 'sd', LIGHT_GREEN), 'Yidhan',
       'Small mark for dark pages.'))
 
@@ -218,9 +220,9 @@ def main():
           'Yidhan', f'App icon tile, {tone}, 49px to 127px. No letter.'))
         # Small: the 16-grid drawing on a rounded tile, as the favicon.
         w(f'tile-{tone}-small.svg', svg('0 0 16 16', tile(SMALL, SMALL_BOX, 16, f'ts{tone}', bg, leaf, 1, rx=3.5, center=False),
-          'Yidhan', f'Favicon tile, {tone}, 16 to 48px. Rounded, because a browser tab does not mask it.'))
+          'Yidhan', f'Favicon tile, {tone}, 17 to 48px. Rounded, because a browser tab does not mask it.'))
         w(f'tile-{tone}-small-no-line.svg', svg('0 0 16 16', tile(SMALL, SMALL_BOX, 16, f'tsn{tone}', bg, leaf, 1, lines=False, rx=3.5, center=False),
-          'Yidhan', f'Favicon tile, {tone}, with no line.'))
+          'Yidhan', f'Favicon tile, {tone}, 16px, with no line.'))
 
     # Wordmark with a green y and a plain i.
     parts = wordmark_paths()

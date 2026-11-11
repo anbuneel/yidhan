@@ -22,7 +22,7 @@ interface LogoProps {
 
 // The header lockup. The mark runs from the wordmark's ascender to its descender, so
 // both share one height; the gap is 0.3 of the mark's width (scripts/brand/leaf.py).
-// Both sizes are under 48px, so the mark is the one-line small drawing.
+// Both sizes are under 48px, so the mark is the two-line small drawing.
 // index.html's .boot-logo, .boot-mark and .boot-word copy these sizes.
 const markClass = 'h-[30px] w-[30px] sm:h-[36px] sm:w-[36px] shrink-0 select-none';
 const wordClass = 'h-[30px] sm:h-[36px] w-auto shrink-0 select-none';

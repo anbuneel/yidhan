@@ -7,6 +7,10 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.20.3', date: '2026-11-11', changes: [
+    { type: 'improvement', text: 'A pinned note now carries a small marigold sun on its top-left corner, like the logo. Click or tap the sun to unpin. It replaces the green bookmark' },
+    { type: 'improvement', text: 'The small logo in the header and the browser tab now shows two lines of text on the leaf. The single line it had before looked like a minus sign' },
+  ] },
   { version: '3.20.2', date: '2026-11-10', changes: [
     { type: 'improvement', text: 'The landing page now leads with writing. It says what Yidhan is for and shows a draft with a revision note in the editor. What encryption covers, the passphrase and the recovery key are explained further down the page' },
     { type: 'improvement', text: 'The Practice Space has new sample notes: a story opening, an essay outline, revision notes and a short journal entry. If you had not changed the old ones, they are replaced. Any you edited stay as you left them' },
