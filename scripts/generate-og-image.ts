@@ -22,7 +22,7 @@ const WIDTH = 1200;
 const HEIGHT = 630;
 
 // ── Brand tokens ────────────────────────────────────────────────
-const BG_COLOR = '#FAFAF6'; // Light theme page (src/themes/light.ts)
+const BG_COLOR = '#F2F7F0'; // Light theme page (src/themes/light.ts)
 const TEXT_MUTED = '#5A665F'; // Light theme muted text, for the tagline
 
 // ── Layout ──────────────────────────────────────────────────────

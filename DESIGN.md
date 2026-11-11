@@ -6,9 +6,11 @@ itself and is deliberately not here.
 
 ## Aesthetic direction
 
-A calm page and one serif (`DECISIONS.md`, 2026-11-09). A near-white page in daylight,
-a deep green-black one at night, solid sheets on top, and one green. Marigold is the
-logo's sun. Hierarchy comes from size, weight
+A calm page and one serif (`DECISIONS.md`, 2026-11-09). In daylight the page is the
+pale, cool white of a leaf that has just opened; at night it is a deep green-black.
+Solid sheets sit on top, and there is one green, turned toward leaf (`DECISIONS.md`,
+2026-11-10). Green is the spring in the name and marigold is the brightness, so marigold
+is the logo's sun. Hierarchy comes from size, weight
 and italic, not from colour or a second typeface.
 
 Earlier framings are retired: the Japanese one (kintsugi, wabi-sabi, the enso) and
@@ -42,7 +44,7 @@ Rules the contrast numbers force (`src/themes/contrast.test.ts` checks them):
 - **Green as text uses `--color-accent-text`.** `--color-accent` is for fills and
   marks. In light it falls to 4.39:1 on the tinted surface.
 - **Marigold (`--color-brand-marigold`, `#F2A21B`) is never text on the light page**
-  (2.02:1).
+  (1.94:1).
 - **`--color-glass-border` is a hairline**, for dividers and card outlines only. Input
   borders use `--color-input-border`, at 3:1 or better.
 - **Note text has its own colour and weight**: `--color-text-note` and `--note-weight`
@@ -71,14 +73,14 @@ fallback when the device states none. Preview generated CSS without writing via
 
 | Token | Light | Dark |
 |---|---|---|
-| Page (`bgPrimary`) | `#FAFAF6` | `#151C18` |
+| Page (`bgPrimary`) | `#F2F7F0` | `#151C18` |
 | Card and sheet (`cardBg`) | `#FFFFFF` | `#1B2620` |
-| Tinted surface (`bgTertiary`) | `#EDF1EA` | `#1F2C25` |
+| Tinted surface (`bgTertiary`) | `#E5EEE1` | `#1F2C25` |
 | Text | `#14241C` | `#E6E3DC` |
 | Note text | `#22332A` | `#D3D2CA` |
-| Accent | `#2E7D55` | `#86C5A0` |
-| Accent as text | `#1F6A49` | `#9AD0B0` |
-| Hairline | `#E1E4DC` | `#2A362F` |
+| Accent | `#357A45` | `#8FC79A` |
+| Accent as text | `#2A6638` | `#A0D2A6` |
+| Hairline | `#D9E4D4` | `#2A362F` |
 
 Cards and sheets are solid, so contrast is measured on them directly. The dark theme
 has no shadows. Light shadows are soft and in the text's green-black.

@@ -19,6 +19,55 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-10 — The day page becomes a new leaf, and the green turns toward leaf
+
+**Status:** Active
+
+**Why:** After the redesign shipped, the owner asked how the green relates to the name.
+Yidhan means "Bright Spring": green is the spring (Ishya) and marigold is the brightness
+(Idhanth), as the logo entry of 2026-11-09 records. The shipped accent `#2E7D55` sits at
+hue 150°, a blue-leaning jade that reads as evergreen. The day page `#FAFAF6` is a warm
+near-white. Neither one says spring.
+
+The owner's first palette idea, "New leaf", had already put spring in the ground: keep
+green and marigold because they are the two names, and make the page "the pale, cool
+white of a leaf that has just opened". That idea was never written down here. When the
+calm page replaced cream with near-white, the leaf ground went with it.
+
+The owner compared four options on mock panels, in day and night: the current colours, a
+leafier green, a new-leaf page, and both together. The owner chose both:
+
+- Day page `#F2F7F0` (hue 103°), secondary `#EBF1E9`, tinted surface `#E5EEE1`, hairline
+  `#D9E4D4`. Cards and sheets stay white, so they stand off the page a little more.
+- Day accent `#357A45` (hue 134°), hover `#2D693B`, accent as text `#2A6638`.
+- Night accent `#8FC79A`, accent as text and hover `#A0D2A6`. The night page does not
+  change. It is already a green-black.
+- The logo leaf follows the accent, so the icons, the share image and the logo exports
+  are drawn again from the new values.
+
+Contrast is the same or better. White on the day button is 5.22:1 (was 5.02), the day
+link on a card 6.87:1 (was 6.53), and the accent on the tinted surface 4.39:1, as before.
+Marigold on the day page is 1.94:1, so it is still never text.
+
+This is not the cream that the 2026-11-09 calm-page entry removed. Cream is a warm
+yellow-white. The new page is cool and faintly green, and the ink, type and grain are
+unchanged.
+
+**Rejected:** Keeping the current colours. Spring would live only in the logo story, and
+the page would not show it.
+
+**Rejected:** A true spring yellow-green (around hue 88°, such as `#7CB342`) for the
+accent. It measures 2.1 to 2.5:1 on white, too faint for a button, a link or an icon.
+Darkened until it passes, it reads as moss or olive.
+
+**Rejected:** A spring yellow-green for the logo leaf only. Logos are exempt from
+contrast rules, but the leaf would stop matching the accent, and the app has one green.
+
+**Rejected:** The "New leaf" typefaces, Tiro Tamil and Catamaran. The calm-page entry
+chose Newsreader for every word, and that stands.
+
+---
+
 ## 2026-11-10 — The redesign ships to main, and the ACTIVE-plan cap returns to one
 
 **Status:** Active
@@ -175,6 +224,11 @@ is lighter and thinner than the text around it.
 
 **Rejected:** Keeping the full-screen grain. It sits on top of text, and its brown tint
 would pull the page back toward cream.
+
+**Erratum 2026-11-10:** Marigold did not ship on the pin. The pin is green, and stays
+green: marigold is under 3:1 on the light page, too faint for an icon that shows state.
+The day page and the green changed the same day (the entry "The day page becomes a new
+leaf").
 
 ---
 
