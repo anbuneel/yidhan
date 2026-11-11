@@ -7,6 +7,14 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.20.3', date: '2026-11-11', changes: [
+    { type: 'improvement', text: 'Note cards in the light theme sit flatter, with a softer shadow, and the paper grain behind the page is fainter. In the dark theme, cards are a little lighter than the page, so they are easier to tell apart' },
+    { type: 'improvement', text: 'The light theme no longer has a glow behind your words in the editor. On a white page it showed as a grey patch. The dark theme keeps its glow' },
+    { type: 'improvement', text: 'Toolbar labels such as List, Quote and H1, and small buttons such as Add tag and Return to notes, are larger and firmer, so they are easier to read and press' },
+    { type: 'improvement', text: 'Only dates and times are in italic now. Counts such as "4 notes" and words such as "Saved here" and "Synced" are upright' },
+    { type: 'improvement', text: 'Buttons, headings and menus now use sentence case, for example "New note", "Sign in" and "This week"' },
+    { type: 'improvement', text: 'Plainer wording: the search box says "Search notes...", an empty note says "Start writing.", and the practice space says "Write and edit notes without an account"' },
+  ] },
   { version: '3.20.2', date: '2026-11-10', changes: [
     { type: 'improvement', text: 'The landing page now leads with writing. It says what Yidhan is for and shows a draft with a revision note in the editor. What encryption covers, the passphrase and the recovery key are explained further down the page' },
     { type: 'improvement', text: 'The Practice Space has new sample notes: a story opening, an essay outline, revision notes and a short journal entry. If you had not changed the old ones, they are replaced. Any you edited stay as you left them' },
