@@ -7,7 +7,7 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
-  { version: '3.20.3', date: '2026-11-11', changes: [
+  { version: '3.20.4', date: '2026-11-11', changes: [
     { type: 'improvement', text: 'Note cards in the light theme sit flatter, with a softer shadow, and the paper grain behind the page is fainter. In the dark theme, cards are a little lighter than the page, so they are easier to tell apart' },
     { type: 'improvement', text: 'The light theme no longer has a glow behind your words in the editor. On a white page it showed as a grey patch. The dark theme keeps its glow' },
     { type: 'improvement', text: 'Toolbar labels such as List, Quote and H1, and small buttons such as Add tag and Return to notes, are larger and firmer, so they are easier to read and press' },
