@@ -202,6 +202,10 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
 - **Toolbar** — `EditorToolbar.tsx`, with `variant: 'inline' | 'bottom' | 'sidebar'`.
   Every variant ends in an overflow menu that lists every command, so each surface
   reaches everything on its own.
+  All three are the sheet's material: card colour, hairline, soft shadow. The sidebar
+  sits clear of the sheet, and fades to 30% while the writer types in the body or the
+  title; pointer movement, a selection, a shortcut, hover or focus bring it back.
+  Labels are serif glyphs or short words at one of three sizes (15px, 13px, 11px).
 - **One toolbar at a time.** Below 768px the bottom toolbar, in the thumb zone. From
   768px to 1099px the inline toolbar under the title. From 1100px the vertical sidebar
   (`EditorSidebar.tsx`) alone, in the left margin; CSS hides the inline toolbar

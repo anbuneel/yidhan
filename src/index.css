@@ -1427,10 +1427,13 @@ nav,
   }
 }
 
-/* Vertical sidebar toolbar — slim, ghostly, left margin */
+/* Vertical sidebar toolbar: a rail in the left margin, clear of the sheet by about
+   22px. It is the sheet's own material (card colour, hairline, soft shadow), not a
+   third surface colour. While the writer types it fades (data-quiet, set by
+   EditorSidebar) and comes back on pointer movement, a selection, hover or focus. */
 .editor-sidebar {
   position: fixed;
-  left: max(calc((100vw - 900px) / 2 - 56px), 12px);
+  left: max(calc((100vw - 900px) / 2 - 74px), 8px);
   top: 50%;
   transform: translateY(-50%);
   z-index: 15;
@@ -1438,16 +1441,19 @@ nav,
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 8px 4px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--color-bg-secondary) 60%, transparent);
+  padding: 6px 4px;
+  border-radius: var(--radius-plain);
+  background: var(--color-card-bg);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  /* 0.9 at rest, not lower: below it the command labels fall under 4.5:1 in
-     the old dark theme (item 160). The panel stays quiet through the secondary text colour. */
-  opacity: 0.9;
+  box-shadow: var(--shadow-sm);
+  /* Full opacity at rest: the labels are read then, and must hold 4.5:1 (item 160). */
+  opacity: 1;
   transition: opacity 300ms ease;
+}
+
+/* Typing: step back. Nobody reads the labels mid-sentence. */
+.editor-sidebar[data-quiet] {
+  opacity: 0.3;
 }
 
 /* Show only on wide screens where there's margin space */
@@ -1678,7 +1684,8 @@ textarea:focus,
   padding: 6px 8px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-plain);
-  background: var(--color-bg-secondary);
+  /* The sheet's material, on every surface: rail, inline bar and phone bar. */
+  background: var(--color-card-bg);
   box-shadow: var(--shadow-sm);
 }
 
@@ -1698,9 +1705,12 @@ textarea:focus,
 }
 
 .editor-command-button {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;

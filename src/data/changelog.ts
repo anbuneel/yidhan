@@ -8,6 +8,7 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   { version: '3.20.3', date: '2026-11-11', changes: [
+    { type: 'improvement', text: 'The editor toolbar is now white, like the page you write on, and on a wide screen it sits clear of the page instead of touching its edge. It fades while you type and comes back when you move the mouse or select text. Its labels are larger and match each other' },
     { type: 'improvement', text: 'The pin on a pinned note is now a marigold disc with a dark green bookmark, the colours of the logo. It was pale green before' },
     { type: 'improvement', text: 'The logo is simpler: the sun no longer holds a letter. The share image now reads "A notes app built around writing"' },
     { type: 'improvement', text: 'The small logo in the header and the browser tab now shows two lines of text on the leaf. The single line it had before looked like a minus sign. In every size of the logo, the sun now sits further behind the leaf, with a thinner gap between them' },
