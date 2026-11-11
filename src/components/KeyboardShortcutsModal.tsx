@@ -61,7 +61,7 @@ const shortcuts: ShortcutSection[] = [
     ],
   },
   {
-    title: 'Slash Commands',
+    title: 'Slash commands',
     items: [
       { keys: ['/h1'], description: 'Large heading' },
       { keys: ['/h2'], description: 'Medium heading' },
@@ -79,7 +79,7 @@ const shortcuts: ShortcutSection[] = [
     ],
   },
   {
-    title: 'Mobile Gestures',
+    title: 'Mobile gestures',
     items: [
       { keys: ['Swipe right'], description: 'Pin/unpin note' },
       { keys: ['Pull down'], description: 'Refresh notes' },
@@ -161,7 +161,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                 color: 'var(--color-text-primary)',
               }}
             >
-              Quiet Shortcuts
+              Quiet shortcuts
             </h2>
             <button type="button"
               onClick={onClose}

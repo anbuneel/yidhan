@@ -134,7 +134,7 @@ export function LandingPage({
           <p className="landing-micro">Free to use. No account needed to try.</p>
         </div>
 
-        {/* The manuscript as the Practice Space renders it. A picture of the editor, not
+        {/* The manuscript as the practice space renders it. A picture of the editor, not
             an imitation of one: clicking anywhere on it opens the real thing. */}
         <div className="landing-manuscript">
           <div className="landing-manuscript-glow" aria-hidden="true" />
@@ -142,7 +142,7 @@ export function LandingPage({
             type="button"
             onClick={onDemoDraftClick}
             className="landing-manuscript-open focus-ring"
-            aria-label="Try writing in the Practice Space"
+            aria-label="Try writing in the practice space"
           />
           <div className="landing-manuscript-page">
             <p className="landing-manuscript-title">Opening draft</p>
@@ -204,7 +204,7 @@ export function LandingPage({
         <span className="landing-fact-plain">Export any time</span>
       </div>
 
-      {/* ─── Sample notes: three uses, each opens in the Practice Space ─── */}
+      {/* ─── Sample notes: three uses, each opens in the practice space ─── */}
       <section className="landing-section" aria-labelledby="landing-samples-title">
         <div className="landing-section-head">
           <h2 id="landing-samples-title" className="landing-h2">See what writing looks like in Yidhan.</h2>
@@ -226,7 +226,7 @@ export function LandingPage({
                 type="button"
                 onClick={onDemoClick}
                 className="landing-sample-open focus-ring"
-                aria-label={`Open “${note.title}” in the Practice Space`}
+                aria-label={`Open “${note.title}” in the practice space`}
               />
             </div>
           ))}

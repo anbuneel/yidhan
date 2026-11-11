@@ -126,6 +126,9 @@ Rules:
 - **Italic is for dates and relative times only**, like "Nov 11" and "Just now".
   Counts ("4 notes") and save and sync words ("Saved here", "Synced") are roman.
 - **No capital-letter labels.** No uppercase, no letter-spaced labels.
+- **Sentence case everywhere**: buttons, headings, menu items, tabs, chapter names
+  ("New note", "Sign in", "This week", "Faded notes"). Proper nouns keep their capitals
+  (Yidhan, Google, GitHub, Safari).
 - **No `font-variant-caps` or `small-caps`.** Newsreader has no small capitals, so the
   browser fakes them.
 - **Body weight is 400.** Note text in dark is 430 (`--note-weight`).
@@ -228,5 +231,5 @@ Sample and starter notes look like real work in progress: a draft, an outline,
 revision notes. They do not end in a lesson, and they do not pretend to be someone's
 private journal.
 
-Some existing labels use softer names ("Faded Notes" for trash, "Letting Go" for
+Some existing labels use softer names ("Faded notes" for trash, "Letting go" for
 account deletion). Keep them consistent where they appear; do not add more.

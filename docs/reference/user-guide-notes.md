@@ -83,12 +83,12 @@ Type `/` in the editor to access quick commands:
 
 ---
 
-## Faded Notes (Soft Delete)
+## Faded notes (soft delete)
 
-When you delete a note, it moves to "Faded Notes" instead of being permanently deleted.
+When you delete a note, it moves to "Faded notes" instead of being permanently deleted.
 
-- Notes rest in Faded Notes for **30 days**
-- Access via the profile menu → "Faded Notes"
+- Notes rest in Faded notes for **30 days**
+- Access via the profile menu → "Faded notes"
 - **Restore**: Brings the note back to your library
 - **Release**: Permanently deletes the note
 - After 30 days, notes are automatically released
@@ -101,9 +101,9 @@ Notes are automatically organized by time:
 
 - **Pinned**: Notes you've pinned (always at top)
 - **Today**: Notes edited today
-- **This Week**: Notes from the past 7 days
-- **Last Week**: Notes from 7-14 days ago
-- **This Month**: Notes from this calendar month
+- **This week**: Notes from the past 7 days
+- **Last week**: Notes from 7-14 days ago
+- **This month**: Notes from this calendar month
 - **Earlier**: Notes from previous months
 - **Archive**: Notes older than 6 months
 
@@ -116,7 +116,7 @@ Click a chapter header to collapse/expand it.
 ### From Library (profile menu)
 - **Export (JSON)**: Full backup of all notes and tags
 - **Export (Markdown)**: All notes in a single `.md` file
-- **Import Notes**: Restore from JSON or Markdown backup
+- **Import notes**: Restore from JSON or Markdown backup
 
 ### From Editor (export button)
 - **Copy as text**: Copy to clipboard (plain text)
@@ -158,7 +158,7 @@ Click the pin icon on any note card to keep it at the top of your library.
 Press `Cmd/Ctrl + Shift + K` anywhere in the library to jump to search.
 
 ### Tag filtering
-Click tags in the filter bar to show only notes with those tags. Click "All Notes" to clear filters.
+Click tags in the filter bar to show only notes with those tags. Click "All notes" to clear filters.
 
 ### Theme toggle
 Click the sun/moon icon in the header to switch between light and dark themes.

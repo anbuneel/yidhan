@@ -289,7 +289,7 @@ export function DemoPage({
       toast(
         (t) => (
           <div className="flex items-center gap-3">
-            <span>Note removed from Practice Space</span>
+            <span>Note removed from practice space</span>
             <button type="button"
               onClick={() => {
                 toast.dismiss(t.id);
@@ -684,7 +684,7 @@ function DemoHeader({
               letterSpacing: '0.02em',
             }}
           >
-            Practice Space
+            Practice space
           </span>
         </div>
       }
@@ -852,7 +852,7 @@ function DemoHeader({
           <svg className="size-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
           </svg>
-          <span className="hidden sm:inline text-sm font-medium">New Note</span>
+          <span className="hidden sm:inline text-sm font-medium">New note</span>
         </button>
         </div>
       }

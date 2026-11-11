@@ -21,13 +21,13 @@ describe('TagModal', () => {
 
     it('renders modal when isOpen is true', () => {
       render(<TagModal {...defaultProps} />);
-      expect(screen.getByRole('heading', { name: 'Create Tag' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Create tag' })).toBeInTheDocument();
     });
 
     it('shows "Edit Tag" title when editing', () => {
       const tag = createMockTag({ name: 'Existing Tag' });
       render(<TagModal {...defaultProps} editingTag={tag} />);
-      expect(screen.getByRole('heading', { name: 'Edit Tag' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Edit tag' })).toBeInTheDocument();
     });
 
     it('populates form with tag data when editing', () => {
@@ -41,18 +41,18 @@ describe('TagModal', () => {
       const onDelete = vi.fn();
 
       const { rerender } = render(<TagModal {...defaultProps} />);
-      expect(screen.queryByText('Delete Tag')).not.toBeInTheDocument();
+      expect(screen.queryByText('Delete tag')).not.toBeInTheDocument();
 
       rerender(<TagModal {...defaultProps} editingTag={tag} />);
-      expect(screen.queryByText('Delete Tag')).not.toBeInTheDocument();
+      expect(screen.queryByText('Delete tag')).not.toBeInTheDocument();
 
       rerender(<TagModal {...defaultProps} editingTag={tag} onDelete={onDelete} />);
-      expect(screen.getByText('Delete Tag')).toBeInTheDocument();
+      expect(screen.getByText('Delete tag')).toBeInTheDocument();
     });
   });
 
   // Helper to get the submit button (not the heading)
-  const getSubmitButton = () => screen.getByRole('button', { name: /Create Tag|Save Changes/ });
+  const getSubmitButton = () => screen.getByRole('button', { name: /Create tag|Save changes/ });
 
   describe('form validation', () => {
     it('shows error for empty tag name', async () => {
@@ -117,7 +117,7 @@ describe('TagModal', () => {
       );
 
       // Name is already 'Work', just submit
-      await user.click(screen.getByText('Save Changes'));
+      await user.click(screen.getByText('Save changes'));
 
       await waitFor(() => {
         expect(onSave).toHaveBeenCalledWith('Work', 'terracotta');
@@ -243,7 +243,7 @@ describe('TagModal', () => {
 
       render(<TagModal {...defaultProps} editingTag={tag} onDelete={onDelete} />);
 
-      await user.click(screen.getByText('Delete Tag'));
+      await user.click(screen.getByText('Delete tag'));
 
       await waitFor(() => {
         expect(onDelete).toHaveBeenCalled();
@@ -261,7 +261,7 @@ describe('TagModal', () => {
 
       render(<TagModal {...defaultProps} editingTag={tag} onDelete={onDelete} />);
 
-      await user.click(screen.getByText('Delete Tag'));
+      await user.click(screen.getByText('Delete tag'));
 
       expect(screen.getByText('Deleting...')).toBeInTheDocument();
 
@@ -278,7 +278,7 @@ describe('TagModal', () => {
 
       render(<TagModal {...defaultProps} editingTag={tag} onDelete={onDelete} />);
 
-      await user.click(screen.getByText('Delete Tag'));
+      await user.click(screen.getByText('Delete tag'));
 
       await waitFor(() => {
         expect(screen.getByText('Failed to delete tag. Please try again.')).toBeInTheDocument();
@@ -293,7 +293,7 @@ describe('TagModal', () => {
 
       render(<TagModal {...defaultProps} editingTag={tag} onClose={onClose} onDelete={onDelete} />);
 
-      await user.click(screen.getByText('Delete Tag'));
+      await user.click(screen.getByText('Delete tag'));
 
       await waitFor(() => {
         expect(onClose).toHaveBeenCalled();
@@ -328,7 +328,7 @@ describe('TagModal', () => {
       render(<TagModal {...defaultProps} onClose={onClose} />);
 
       // Click on the modal content (not the backdrop)
-      await user.click(screen.getByRole('heading', { name: 'Create Tag' }));
+      await user.click(screen.getByRole('heading', { name: 'Create tag' }));
 
       expect(onClose).not.toHaveBeenCalled();
     });
@@ -346,12 +346,12 @@ describe('TagModal', () => {
       render(<TagModal {...defaultProps} onSave={onSave} editingTag={tag} onDelete={onDelete} />);
 
       await user.type(screen.getByPlaceholderText(/Work, Personal/), 'Test');
-      await user.click(screen.getByText('Save Changes'));
+      await user.click(screen.getByText('Save changes'));
 
       // All buttons should be disabled during save
       expect(screen.getByText('Cancel')).toBeDisabled();
       expect(screen.getByText('Saving...')).toBeDisabled();
-      expect(screen.getByText('Delete Tag')).toBeDisabled();
+      expect(screen.getByText('Delete tag')).toBeDisabled();
 
       resolvePromise!();
     });

@@ -51,7 +51,7 @@ export function FadedNotesView({
         border: '1px solid var(--color-destructive)',
       }}
     >
-      Release All
+      Release all
     </button>
   ) : undefined;
 
@@ -82,7 +82,7 @@ export function FadedNotesView({
             color: 'var(--color-text-primary)',
           }}
         >
-          Faded Notes
+          Faded notes
         </h1>
         <p
           style={{
@@ -245,7 +245,7 @@ export function FadedNotesView({
                   border: '1px solid var(--glass-border)',
                 }}
               >
-                Keep Resting
+                Keep resting
               </button>
               <button type="button"
                 onClick={handleEmptyAll}
@@ -261,7 +261,7 @@ export function FadedNotesView({
                   background: 'var(--color-destructive)',
                 }}
               >
-                Release All
+                Release all
               </button>
             </div>
           </dialog>

@@ -184,7 +184,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 e.currentTarget.style.background = 'var(--color-cta-bg, #8FC79A)';
               }}
             >
-              Refresh Page
+              Refresh page
             </button>
           </div>
         </div>

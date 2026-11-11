@@ -181,7 +181,7 @@ describe('temporalGrouping', () => {
       const result = groupNotesByChapter([pinnedNote, thisWeekNote]);
 
       expect(result[0].label).toBe('Pinned');
-      expect(result[1].label).toBe('This Week');
+      expect(result[1].label).toBe('This week');
     });
   });
 
@@ -544,15 +544,15 @@ describe('temporalGrouping', () => {
     });
 
     it('returns "This Week" for thisWeek key', () => {
-      expect(getChapterLabel('thisWeek')).toBe('This Week');
+      expect(getChapterLabel('thisWeek')).toBe('This week');
     });
 
     it('returns "Last Week" for lastWeek key', () => {
-      expect(getChapterLabel('lastWeek')).toBe('Last Week');
+      expect(getChapterLabel('lastWeek')).toBe('Last week');
     });
 
     it('returns "This Month" for thisMonth key', () => {
-      expect(getChapterLabel('thisMonth')).toBe('This Month');
+      expect(getChapterLabel('thisMonth')).toBe('This month');
     });
 
     it('returns "Earlier" for earlier key', () => {

@@ -140,7 +140,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
             color: 'var(--color-text-primary)',
           }}
         >
-          {editingTag ? 'Edit Tag' : 'Create Tag'}
+          {editingTag ? 'Edit tag' : 'Create tag'}
         </h3>
 
         <form onSubmit={handleSubmit}>
@@ -313,7 +313,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
                     style={{ borderColor: 'var(--color-destructive)', borderTopColor: 'transparent' }}
                   />
                 )}
-                {isDeleting ? 'Deleting...' : 'Delete Tag'}
+                {isDeleting ? 'Deleting...' : 'Delete tag'}
               </button>
             ) : (
               <div />
@@ -382,8 +382,8 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
                 {isSaving
                   ? 'Saving...'
                   : editingTag
-                    ? 'Save Changes'
-                    : 'Create Tag'}
+                    ? 'Save changes'
+                    : 'Create tag'}
               </button>
             </div>
           </div>

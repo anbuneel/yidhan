@@ -7,7 +7,7 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 **Desktop (>=1024px), first screen:**
 ```
 +--------------------------------------------------------------------------+
-| Yidhan                                               [theme] [Sign In]   |
+| Yidhan                                               [theme] [Sign in]   |
 +--------------------------------------------------------------------------+
 |                                  | +-----------------------------------+ |
 |  A notes app                     | | Opening draft                     | |
@@ -63,17 +63,17 @@ cards stack in one column. Below 768px the primary button spans the width.
   claim ("nobody", "not even us") and no audit claim until item 104 has a report.
 - The manuscript is a static rendering of the real editor (title, tag row, the first
   five toolbar labels — B, I, </>, H1, List — body, saved chip) with the `starter-opening` note in it. An invisible
-  overlay button covers it; clicking anywhere on the page opens the Practice Space
+  overlay button covers it; clicking anywhere on the page opens the practice space
   draft. It is a picture of the editor, not an imitation of one: there is no
   in-page textarea and nothing is written to `yidhan-demo-content` from here.
 - Every "Try writing" (hero, preview overlay, closing line) routes to `/demo/new` at
-  every width. The account comes from inside the Practice Space ("Keep these notes")
+  every width. The account comes from inside the practice space ("Keep these notes")
   or from the preview's "Create an account to keep and sync", which opens sign-up.
 - "Browse sample notes" is a real link to `/demo`; a plain click is routed in-app,
   a modified click is left to the browser.
-- The sample cards are the Practice Space starters minus the pinned welcome and the
+- The sample cards are the practice space starters minus the pinned welcome and the
   hero note, rendered with the real `NoteCard` in decorative mode. Each has an
-  overlay button that opens the Practice Space.
+  overlay button that opens the practice space.
 - Proof facts: "Encrypted before it syncs" opens the security page, as does the
   privacy section's "How encryption works"; "Free and open source" opens the LICENSE file on GitHub
   (in the `index.html` shell too); the other two are plain text.
@@ -115,10 +115,10 @@ cards stack in one column. Below 768px the primary button spans the width.
 │  └─────────────────────────────┘    │
 │                                     │
 │  ┌─────────────────────────────┐    │
-│  │         Sign In             │    │
+│  │         Sign in             │    │
 │  └─────────────────────────────┘    │
 │                                     │
-│  Don't have an account? Sign Up     │
+│  Don't have an account? Sign up     │
 └─────────────────────────────────────┘
 ```
 
@@ -140,15 +140,15 @@ All pages use `HeaderShell` component for pixel-perfect header consistency:
 
 **Library Header (Desktop):**
 ```
-[Yidhan]   [  Search...  ⌘K  ] [+ New Note]   [☀] [JD ↓]
+[Yidhan]   [  Search...  ⌘K  ] [+ New note]   [☀] [JD ↓]
                                                     │
                                           ┌─────────┴─────────┐
                                           │ ⚙ Settings        │
                                           │───────────────────│
                                           │ ↑ Export (JSON)   │
                                           │ ↑ Export (MD)     │
-                                          │ ↓ Import Notes    │
-                                          │ ⏱ Faded Notes     │
+                                          │ ↓ Import notes    │
+                                          │ ⏱ Faded notes     │
                                           │───────────────────│
                                           │ → Sign out        │
                                           └───────────────────┘
@@ -159,7 +159,7 @@ All pages use `HeaderShell` component for pixel-perfect header consistency:
 Row 1: [Yidhan]                    [+] [☀] [JD]
 Row 2: [         Search...          ]
 ```
-- New Note button moved to Row 1 for quick access
+- New note button moved to Row 1 for quick access
 - Search bar gets full width on Row 2
 
 **Editor Header (Desktop):**
@@ -184,14 +184,14 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
 
 **Landing/Public Pages:**
 ```
-[Yidhan]                                         [☀] [Sign In]
+[Yidhan]                                         [☀] [Sign in]
 ```
 
 **HeaderShell Props by Page:**
 
 | Page | Left Content | Center Content | Right Actions | Menu Sections |
 |------|--------------|----------------|---------------|---------------|
-| Library | - (default logo) | Search bar | New Note button | Export, Import, Faded Notes |
+| Library | - (default logo) | Search bar | New note button | Export, Import, Faded notes |
 | Editor | Logo + Breadcrumb | - | Save status + Delete | - |
 | Landing | - (default logo) | - | - | - |
 | Changelog | - (default logo) | - | - | - |
@@ -260,14 +260,14 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
 
 **Desktop (2 rows collapsed, expandable):**
 ```
-[All Notes]  |  [Tag 1 ✏]  [Tag 2 ✏]  [Tag 3 ✏]  [Tag 4 ✏]  [Tag 5 ✏]
+[All notes]  |  [Tag 1 ✏]  [Tag 2 ✏]  [Tag 3 ✏]  [Tag 4 ✏]  [Tag 5 ✏]
               [Tag 6 ✏]  [Tag 7 ✏]  [+]  [+3 ▼]
                                           ↑ Expand button (if >2 rows)
 ```
 
 **Mobile (all tags visible, wrapped):**
 ```
-[All Notes]  |  [Tag 1]  [Tag 2]
+[All notes]  |  [Tag 1]  [Tag 2]
               [Tag 3]  [Tag 4]  [+]
 ```
 - Mobile shows all tags in wrapping layout (no collapse)
@@ -357,14 +357,14 @@ Pinned notes:
 │  │ Note Card   │  │ Note Card   │                          │
 │  └─────────────┘  └─────────────┘                          │
 ├─────────────────────────────────────────────────────────────┤
-│ ▶ This Week                                        5 notes  │
+│ ▶ This week                                        5 notes  │
 │   Note A · Note B · Note C ...                              │
 ├─────────────────────────────────────────────────────────────┤
-│ ▶ This Month                                       8 notes  │
+│ ▶ This month                                       8 notes  │
 │   Note X · Note Y · Note Z ...                              │
 └─────────────────────────────────────────────────────────────┘
 ```
-- Notes automatically grouped by time (Pinned, This Week, Last Week, This Month, Earlier, Archive)
+- Notes automatically grouped by time (Pinned, This week, Last week, This month, Earlier, Archive)
 - Empty chapters are not rendered ("Honest Presence" pattern)
 - Collapsed state shows first 3 note titles as preview
 - Each chapter has its own masonry grid
@@ -377,13 +377,13 @@ Pinned notes:
 - Other chapters with one or two cards cap their columns to the card count and centre
   the group
 
-## Faded Notes View
+## Faded notes view
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ [Yidhan]                          [Release All] | [☀] [JD] │
+│ [Yidhan]                          [Release all] | [☀] [JD] │
 ├─────────────────────────────────────────────────────────────┤
-│ Faded Notes                                                 │
+│ Faded notes                                                 │
 │ Notes rest here before releasing.                           │
 │                                                             │
 │  ┌─────────────────────────────────────────────────────┐   │
@@ -394,11 +394,11 @@ Pinned notes:
 └─────────────────────────────────────────────────────────────┘
 ```
 - Uses HeaderShell for consistent header (clickable logo, theme toggle, avatar)
-- Accessed via "Faded Notes" in profile menu (shows badge count)
+- Accessed via "Faded notes" in profile menu (shows badge count)
 - Cards show organic time phrases and days until release
 - Restore returns note to library
 - "Release" permanently removes note
-- "Release All" permanently deletes all faded notes
+- "Release all" permanently deletes all faded notes
 
 ## Footer (Library & Landing Page)
 
@@ -416,7 +416,7 @@ Pinned notes:
 ┌─────────────────────────────────────────────────────────────┐
 │ ← Back                                                      │
 ├─────────────────────────────────────────────────────────────┤
-│                      What's New                             │
+│                      What's new                             │
 │                                                             │
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │ v1.3.0                               Dec 18, 2024     │  │
@@ -440,14 +440,14 @@ Pinned notes:
 │                       Roadmap                               │
 │       What we're building and exploring next                │
 │                                                             │
-│  Coming Soon ─────────────────────────────────────────────  │
+│  Coming soon ─────────────────────────────────────────────  │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │ Feature Title                         [Coming Soon]   │  │
+│  │ Feature title                         [Coming soon]   │  │
 │  │ Description of the feature                            │  │
 │  └───────────────────────────────────────────────────────┘  │
 │                                                             │
 │              Changelog  ·  Roadmap  ·  GitHub               │
 └─────────────────────────────────────────────────────────────┘
 ```
-- Status badges: In Progress (gold), Coming Soon (terracotta), Exploring (stone)
+- Status badges: In progress (gold), Coming soon (terracotta), Exploring (stone)
 - Data stored in `src/data/roadmap.ts`

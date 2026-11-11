@@ -139,7 +139,7 @@ describe('HeaderShell', () => {
       const onSignIn = vi.fn();
       render(<HeaderShell {...defaultProps} onSignIn={onSignIn} />);
 
-      expect(screen.getByText('Sign In')).toBeInTheDocument();
+      expect(screen.getByText('Sign in')).toBeInTheDocument();
     });
 
     it('calls onSignIn when Sign In clicked', async () => {
@@ -147,7 +147,7 @@ describe('HeaderShell', () => {
       const onSignIn = vi.fn();
       render(<HeaderShell {...defaultProps} onSignIn={onSignIn} />);
 
-      await user.click(screen.getByText('Sign In'));
+      await user.click(screen.getByText('Sign in'));
       expect(onSignIn).toHaveBeenCalled();
     });
 

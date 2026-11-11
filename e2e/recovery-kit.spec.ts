@@ -82,7 +82,7 @@ test.describe('Recovery kit', () => {
 
     // 2. Forget the passphrase: lock the vault.
     await page.getByRole('button', { name: 'Lock vault now' }).click();
-    await expect(page.getByRole('heading', { name: 'Unlock Your Notes', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Unlock your notes', exact: true })).toBeVisible();
 
     // 3. Unlock with the recovery key.
     await page.getByRole('button', { name: 'Use your recovery key' }).click();

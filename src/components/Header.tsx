@@ -83,7 +83,7 @@ export function Header({
           onClick: onExportMarkdown,
         },
         {
-          label: 'Import Notes',
+          label: 'Import notes',
           icon: (
             <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -92,7 +92,7 @@ export function Header({
           onClick: () => fileInputRef.current?.click(),
         },
         {
-          label: 'Faded Notes',
+          label: 'Faded notes',
           icon: (
             <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.6 }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -233,7 +233,7 @@ export function Header({
       <svg className="size-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
       </svg>
-      <span className="hidden sm:inline text-sm font-medium">New Note</span>
+      <span className="hidden sm:inline text-sm font-medium">New note</span>
     </button>
   );
 
