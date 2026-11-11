@@ -738,22 +738,13 @@ nav,
   font-size: inherit;
 }
 
-/* Decorative three-dot divider — matches editor footer motif */
+/* A divider is a short centred hairline. No ornament (DESIGN.md, Texture). */
 .rich-text-editor .ProseMirror hr {
+  width: 6rem;
+  height: 0;
+  margin: 2.5rem auto;
   border: none;
-  margin: 2.5rem 0;
-  height: auto;
-  overflow: visible;
-}
-
-.rich-text-editor .ProseMirror hr::after {
-  content: '· · ·';
-  display: block;
-  text-align: center;
-  font-size: 1.25rem;
-  letter-spacing: 0.5em;
-  color: var(--color-text-tertiary);
-  opacity: 0.5;
+  border-top: 1px solid var(--glass-border);
 }
 
 /* Links */

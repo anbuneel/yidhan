@@ -19,6 +19,34 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-11 — The landing page becomes one sheet
+
+**Status:** Active
+
+**Why:** Two visual reviews found the landing used the common template: headline left,
+product card right, a trust row, three cards, two-column text, a closing call to action.
+The privacy section left half the screen empty and the samples section's subtext
+floated at the far right. The owner wanted a layout only Yidhan would have.
+
+**Decision:** Option C of three mockups. A centred headline and buttons sit on the
+page. Below them one leaf-corner sheet holds everything else at reading width: the
+sample draft, finding notes, privacy, and the closing button. Sections are separated by
+their headings and space. The copy is not final; the owner will revisit the messaging
+separately.
+
+The same day the decorative three dots were removed everywhere: from under every note
+in the editor, and as the rendering of a divider inside a note, which is now a short
+centred hairline. They came from the retired letter framing and nothing depended on
+them.
+
+**Rejected:** Option A, the landing as one note with facts in a right margin. The margin
+stayed mostly empty and the sample cards were cramped. Option B, the landing built from
+library chapters and cards: closest to the app, but card-heavy. A version of C with the
+editor's formatting sidebar reused as a section menu: most visitors have not seen the
+editor, so the reference does not read, and it is a toolbar posing as a menu.
+
+---
+
 ## 2026-11-11 — No editor glow in the light theme
 
 **Status:** Active

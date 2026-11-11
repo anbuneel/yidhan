@@ -148,7 +148,8 @@ A faint, untinted grain sits on the page background only: 4% black in light, 5% 
 in dark (`grainColor`, `noiseOpacity`). Page-level containers paint
 `var(--page-background)`. A new full-page container must too, or it covers the grain
 with a smooth band. Nothing sits over content. Cards, the editor sheet, modals, menus
-and inputs are opaque and smooth.
+and inputs are opaque and smooth. There are no ornaments: no three-dot marks under a note or
+between sections. A divider in a note is a short centred hairline.
 
 In dark the editor keeps a faint glow that follows the viewport, from
 `--color-editor-glow`: the text colour at 4%, no accent. In light the token is fully

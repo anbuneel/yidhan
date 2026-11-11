@@ -14,6 +14,7 @@ export const changelog: ChangelogEntry[] = [
     { type: 'improvement', text: 'Only dates and times are in italic now. Counts such as "4 notes" and words such as "Saved here" and "Synced" are upright' },
     { type: 'improvement', text: 'Buttons, headings and menus now use sentence case, for example "New note", "Sign in" and "This week"' },
     { type: 'improvement', text: 'Plainer wording: the search box says "Search notes...", an empty note says "Start writing.", and the practice space says "Write and edit notes without an account"' },
+    { type: 'improvement', text: 'The three dots under every note are gone, and a divider inside a note is now a short line instead of three dots' },
   ] },
   { version: '3.20.2', date: '2026-11-10', changes: [
     { type: 'improvement', text: 'The landing page now leads with writing. It says what Yidhan is for and shows a draft with a revision note in the editor. What encryption covers, the passphrase and the recovery key are explained further down the page' },

@@ -1615,17 +1615,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
         </div>
 
-        {/* Organic Footer - sits below the elevated page surface */}
+        {/* Footer: sits below the page surface */}
         <footer
           className="max-w-[900px] mx-auto mt-16 mb-8 flex flex-col items-center gap-4 focus-mode-target"
           style={{ color: 'var(--color-text-tertiary)' }}
         >
-          {/* Decorative dots - like end of a letter */}
-          <div className="flex gap-2 opacity-40">
-            <span className="size-1 rounded-full bg-current" />
-            <span className="size-1 rounded-full bg-current" />
-            <span className="size-1 rounded-full bg-current" />
-          </div>
 
           {/* Return link - larger touch target on mobile */}
           <button type="button"
