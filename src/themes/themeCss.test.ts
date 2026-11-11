@@ -190,7 +190,7 @@ describe('the editor sheet', () => {
   });
 
   it('takes its glow from a theme token, not a copied old colour', () => {
-    expect(rule(indexCss, '.editor-manuscript-glow')).toContain('var(--color-text-primary)');
+    expect(rule(indexCss, '.editor-manuscript-glow')).toContain('var(--color-editor-glow)');
     expect(indexCss).not.toMatch(/\.editor-manuscript-glow \{[^}]*rgba\(/);
   });
 });

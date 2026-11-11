@@ -141,8 +141,10 @@ in dark (`grainColor`, `noiseOpacity`). Page-level containers paint
 with a smooth band. Nothing sits over content. Cards, the editor sheet, modals, menus
 and inputs are opaque and smooth.
 
-The editor keeps a faint, neutral glow that follows the viewport: a 4% shade of the
-text colour, no accent. A ref-based scroll handler positions it (`CLAUDE.md`). Note
+The editor keeps a faint glow that follows the viewport, from `--color-editor-glow`. In
+light it is the accent at 8%: nothing is lighter than the white sheet, so a neutral glow
+cannot show. In dark it is the text colour at 4%, no accent. The landing's sample sheet
+uses the same token. A ref-based scroll handler positions it (`CLAUDE.md`). Note
 cards carry a 3% accent tint at the bottom.
 
 ## Save and sync states

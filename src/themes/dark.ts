@@ -31,6 +31,8 @@ const dark: ThemeConfig = {
     accentGlow: 'rgba(143, 199, 154, 0.14)',
     accentMuted: 'rgba(143, 199, 154, 0.55)',
     accentText: '#A0D2A6',
+    // The text colour at 4%: it lifts the dark sheet. Neutral, no accent.
+    editorGlow: 'rgba(230, 227, 220, 0.04)',
     onAccent: '#13201A',
 
     ctaBg: '#8FC79A',

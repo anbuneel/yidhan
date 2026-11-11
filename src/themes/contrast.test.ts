@@ -92,6 +92,13 @@ describe.each(themes)('%s theme contrast', (_name, c) => {
     }
   });
 
+  it('keeps every text colour at 4.5:1 where the editor glow is strongest', () => {
+    const glowed = blend(c.editorGlow, c.cardBg);
+    for (const token of TEXT_TOKENS) {
+      expect(contrast(c[token], glowed), `${token} on the glow`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   it('gives input borders and the focus ring 3:1, which the hairline does not reach', () => {
     for (const surface of SURFACES) {
       expect(contrast(c.inputBorder, c[surface]), `inputBorder on ${surface}`).toBeGreaterThanOrEqual(3);

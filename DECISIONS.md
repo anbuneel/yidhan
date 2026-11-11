@@ -45,6 +45,12 @@ leafier green, a new-leaf page, and both together. The owner chose both:
 - The logo leaf follows the accent, so the icons, the share image and the logo exports
   are drawn again from the new values.
 
+*Editor glow.* The calm-page redesign made the glow a 4% shade of the text colour. In
+dark that lifts the sheet. In light it darkens a white sheet very slightly, so the owner
+could not find it. Nothing is lighter than white, so no neutral glow can show there. The
+owner compared six light glows and chose the accent at 8%. Dark keeps the neutral 4%. Each
+theme now sets the glow as its own token, and the landing's sample sheet uses it too.
+
 Contrast is the same or better. White on the day button is 5.22:1 (was 5.02), the day
 link on a card 6.87:1 (was 6.53), and the accent on the tinted surface 4.39:1, as before.
 Marigold on the day page is 1.94:1, so it is still never text.
@@ -62,6 +68,10 @@ Darkened until it passes, it reads as moss or olive.
 
 **Rejected:** A spring yellow-green for the logo leaf only. Logos are exempt from
 contrast rules, but the leaf would stop matching the accent, and the app has one green.
+
+**Rejected for the light glow:** a neutral shade at 8%, which reads as a grey patch, not
+light; marigold at 6%, which breaks the rule that marigold is only in the logo and warms
+the page toward cream; the accent at 5%, which the owner found too faint; and no glow.
 
 **Rejected:** The "New leaf" typefaces, Tiro Tamil and Catamaran. The calm-page entry
 chose Newsreader for every word, and that stands.

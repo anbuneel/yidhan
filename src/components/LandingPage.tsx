@@ -418,7 +418,7 @@ export function LandingPage({
         }
         .landing-manuscript-glow {
           position: absolute; inset: 0; pointer-events: none;
-          background: radial-gradient(ellipse 80% 50% at 50% 42%, color-mix(in srgb, var(--color-text-primary) 4%, transparent) 0%, transparent 70%);
+          background: radial-gradient(ellipse 80% 50% at 50% 42%, var(--color-editor-glow) 0%, transparent 70%);
         }
         .landing-manuscript-open {
           position: absolute; inset: 0; z-index: 2;

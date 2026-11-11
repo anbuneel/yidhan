@@ -31,6 +31,9 @@ const light: ThemeConfig = {
     accentGlow: 'rgba(53, 122, 69, 0.12)',
     accentMuted: 'rgba(53, 122, 69, 0.6)',
     accentText: '#2A6638',
+    // Nothing is lighter than the white sheet, so a neutral glow cannot show here.
+    // A faint leaf green does (DECISIONS.md, 2026-11-10).
+    editorGlow: 'rgba(53, 122, 69, 0.08)',
     onAccent: '#FFFFFF',
 
     ctaBg: '#357A45',

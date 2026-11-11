@@ -22,6 +22,7 @@
   --color-accent-glow: rgba(53, 122, 69, 0.12);
   --color-accent-muted: rgba(53, 122, 69, 0.6);
   --color-accent-text: #2A6638;
+  --color-editor-glow: rgba(53, 122, 69, 0.08);
   --color-on-accent: #FFFFFF;
   --color-cta-bg: #357A45;
   --color-cta-bg-hover: #2D693B;
@@ -61,6 +62,7 @@
   --color-accent-glow: rgba(143, 199, 154, 0.14);
   --color-accent-muted: rgba(143, 199, 154, 0.55);
   --color-accent-text: #A0D2A6;
+  --color-editor-glow: rgba(230, 227, 220, 0.04);
   --color-on-accent: #13201A;
   --color-cta-bg: #8FC79A;
   --color-cta-bg-hover: #A0D2A6;
@@ -1318,11 +1320,10 @@ nav,
   pointer-events: none;
   z-index: 1;
   transition: top 800ms ease-out;
-  /* Neutral and faint: a shade of the text colour, so it darkens the light sheet
-     a touch and lifts the dark one. No accent. */
+  /* Per theme: a faint leaf green on the light sheet, a neutral lift on the dark one. */
   background: radial-gradient(
     ellipse 80% 50% at 50% 50%,
-    color-mix(in srgb, var(--color-text-primary) 4%, transparent) 0%,
+    var(--color-editor-glow) 0%,
     transparent 70%
   );
 }

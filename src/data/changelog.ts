@@ -9,6 +9,7 @@ export interface ChangelogEntry {
 export const changelog: ChangelogEntry[] = [
   { version: '3.20.1', date: '2026-11-10', changes: [
     { type: 'improvement', text: 'The light theme now has the pale, cool white of a new leaf, and the green is a fresher leaf green, in both themes. Yidhan means "Bright Spring", and the colours now show it. The logo, app icon and share image match. Text and buttons are as easy to read as before, or easier' },
+    { type: 'improvement', text: 'In the light theme, the soft glow behind your words in the editor is back. It is now a faint leaf green, because a grey glow could not show on a white page' },
   ] },
   { version: '3.20.0', date: '2026-11-10', changes: [
     { type: 'improvement', text: 'Yidhan has a new look. The page is a calm off-white by day and a deep green-black at night, with one green for buttons and links. The two themes are now called Light and Dark, and still follow your device unless you pick one' },
