@@ -54,7 +54,7 @@ describe('ShareModal', () => {
       render(<ShareModal {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: 'Share as Letter' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Share as letter' })).toBeInTheDocument();
       });
     });
 
@@ -67,16 +67,16 @@ describe('ShareModal', () => {
       render(<ShareModal {...defaultProps} />);
 
       // Loading spinner should be visible
-      expect(screen.getByRole('heading', { name: 'Share as Letter' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Share as letter' })).toBeInTheDocument();
       // Create button should not be visible during loading
-      expect(screen.queryByText('Create Share Link')).not.toBeInTheDocument();
+      expect(screen.queryByText('Create share link')).not.toBeInTheDocument();
     });
 
     it('shows create share UI when no share exists', async () => {
       render(<ShareModal {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Create Share Link')).toBeInTheDocument();
+        expect(screen.getByText('Create share link')).toBeInTheDocument();
       });
       expect(screen.getByText('Link expires in')).toBeInTheDocument();
     });
@@ -122,12 +122,12 @@ describe('ShareModal', () => {
       render(<ShareModal {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Create Share Link')).toBeInTheDocument();
+        expect(screen.getByText('Create share link')).toBeInTheDocument();
       });
 
       // Select 30 days expiration
       await user.click(screen.getByText('30 days'));
-      await user.click(screen.getByText('Create Share Link'));
+      await user.click(screen.getByText('Create share link'));
 
       await waitFor(() => {
         expect(notesService.createNoteShare).toHaveBeenCalledWith(
@@ -151,10 +151,10 @@ describe('ShareModal', () => {
       render(<ShareModal {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Create Share Link')).toBeInTheDocument();
+        expect(screen.getByText('Create share link')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('Create Share Link'));
+      await user.click(screen.getByText('Create share link'));
 
       await waitFor(() => {
         // Should show the share link with /s/ path format and #k= fragment
@@ -175,10 +175,10 @@ describe('ShareModal', () => {
       render(<ShareModal {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Create Share Link')).toBeInTheDocument();
+        expect(screen.getByText('Create share link')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('Create Share Link'));
+      await user.click(screen.getByText('Create share link'));
 
       expect(screen.getByText('Encrypting...')).toBeInTheDocument();
 
@@ -197,10 +197,10 @@ describe('ShareModal', () => {
       render(<ShareModal {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Create Share Link')).toBeInTheDocument();
+        expect(screen.getByText('Create share link')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('Create Share Link'));
+      await user.click(screen.getByText('Create share link'));
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith('Failed to create share link');
@@ -253,15 +253,15 @@ describe('ShareModal', () => {
 
       // Create a share first
       await waitFor(() => {
-        expect(screen.getByText('Create Share Link')).toBeInTheDocument();
+        expect(screen.getByText('Create share link')).toBeInTheDocument();
       });
-      await user.click(screen.getByText('Create Share Link'));
+      await user.click(screen.getByText('Create share link'));
 
       // Now revoke it
       await waitFor(() => {
-        expect(screen.getByText('Revoke Link')).toBeInTheDocument();
+        expect(screen.getByText('Revoke link')).toBeInTheDocument();
       });
-      await user.click(screen.getByText('Revoke Link'));
+      await user.click(screen.getByText('Revoke link'));
 
       await waitFor(() => {
         expect(notesService.revokeNoteShare).toHaveBeenCalledWith(mockNote.id);
@@ -332,11 +332,11 @@ describe('ShareModal', () => {
       render(<ShareModal {...defaultProps} onClose={onClose} />);
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: 'Share as Letter' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Share as letter' })).toBeInTheDocument();
       });
 
       // Click the heading (inside the modal content)
-      await user.click(screen.getByRole('heading', { name: 'Share as Letter' }));
+      await user.click(screen.getByRole('heading', { name: 'Share as letter' }));
 
       expect(onClose).not.toHaveBeenCalled();
     });

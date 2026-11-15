@@ -44,22 +44,22 @@ describe('Auth', () => {
       render(<Auth {...defaultProps} />);
 
       expect(screen.getByText('Welcome back')).toBeInTheDocument();
-      expect(screen.getByText('Sign In')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument();
+      expect(screen.getByText('Sign in')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     });
 
     it('renders signup mode when specified', () => {
       render(<Auth {...defaultProps} initialMode="signup" />);
 
       expect(screen.getByText('Create your account')).toBeInTheDocument();
-      expect(screen.getByText('Sign Up')).toBeInTheDocument();
+      expect(screen.getByText('Sign up')).toBeInTheDocument();
     });
 
     it('renders forgot password mode', () => {
       render(<Auth {...defaultProps} initialMode="forgot" />);
 
       expect(screen.getByText('Reset your password')).toBeInTheDocument();
-      expect(screen.getByText('Send Reset Link')).toBeInTheDocument();
+      expect(screen.getByText('Send reset link')).toBeInTheDocument();
     });
 
     it('says a new password does not open encrypted notes, only where a reset is requested', () => {
@@ -77,8 +77,8 @@ describe('Auth', () => {
       render(<Auth {...defaultProps} initialMode="reset" />);
 
       expect(screen.getByText('Set new password')).toBeInTheDocument();
-      expect(screen.getByText('New Password')).toBeInTheDocument();
-      expect(screen.getByText('Confirm Password')).toBeInTheDocument();
+      expect(screen.getByText('New password')).toBeInTheDocument();
+      expect(screen.getByText('Confirm password')).toBeInTheDocument();
     });
 
     it('renders theme toggle button', () => {
@@ -107,7 +107,7 @@ describe('Auth', () => {
       const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} />);
 
-      await user.click(screen.getByText('Sign Up'));
+      await user.click(screen.getByText('Sign up'));
 
       expect(screen.getByText('Create your account')).toBeInTheDocument();
     });
@@ -116,7 +116,7 @@ describe('Auth', () => {
       const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} initialMode="signup" />);
 
-      await user.click(screen.getByText('Sign In'));
+      await user.click(screen.getByText('Sign in'));
 
       expect(screen.getByText('Welcome back')).toBeInTheDocument();
     });
@@ -134,7 +134,7 @@ describe('Auth', () => {
       const user = userEvent.setup({ delay: null });
       render(<Auth {...defaultProps} initialMode="forgot" />);
 
-      await user.click(screen.getByText('Sign In'));
+      await user.click(screen.getByText('Sign in'));
 
       expect(screen.getByText('Welcome back')).toBeInTheDocument();
     });
@@ -146,8 +146,8 @@ describe('Auth', () => {
       const emailInput = screen.getByRole('textbox');
       await user.type(emailInput, 'test@example.com');
 
-      await user.click(screen.getByText('Sign Up'));
-      await user.click(screen.getByText('Sign In'));
+      await user.click(screen.getByText('Sign up'));
+      await user.click(screen.getByText('Sign in'));
 
       // Email should still be there, but password should be cleared
       expect(emailInput).toHaveValue('test@example.com');
@@ -167,7 +167,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByRole('textbox'), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign In' }));
+      await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
       await waitFor(() => {
         expect(mockAuthContext.signIn).toHaveBeenCalledWith(
@@ -185,7 +185,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByRole('textbox'), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign In' }));
+      await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
       expect(screen.getByText('Loading…')).toBeInTheDocument();
     });
@@ -200,7 +200,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByRole('textbox'), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign In' }));
+      await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
       await waitFor(() => {
         expect(screen.getByText('Invalid email or password')).toBeInTheDocument();
@@ -215,7 +215,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.click(screen.getByRole('button', { name: 'Sign up' }));
 
       await waitFor(() => {
         expect(mockAuthContext.signUp).toHaveBeenCalledWith(
@@ -231,7 +231,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.click(screen.getByRole('button', { name: 'Sign up' }));
 
       await waitFor(() => {
         expect(screen.getByText('Check your inbox')).toBeInTheDocument();
@@ -246,7 +246,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.click(screen.getByRole('button', { name: 'Sign up' }));
 
       await waitFor(() => {
         expect(screen.getByText('Use a different email')).toBeInTheDocument();
@@ -264,7 +264,7 @@ describe('Auth', () => {
       render(<Auth {...defaultProps} initialMode="forgot" />);
 
       await user.type(screen.getByRole('textbox'), 'test@example.com');
-      await user.click(screen.getByRole('button', { name: 'Send Reset Link' }));
+      await user.click(screen.getByRole('button', { name: 'Send reset link' }));
 
       await waitFor(() => {
         expect(mockAuthContext.resetPassword).toHaveBeenCalledWith('test@example.com');
@@ -276,7 +276,7 @@ describe('Auth', () => {
       render(<Auth {...defaultProps} initialMode="forgot" />);
 
       await user.type(screen.getByRole('textbox'), 'test@example.com');
-      await user.click(screen.getByRole('button', { name: 'Send Reset Link' }));
+      await user.click(screen.getByRole('button', { name: 'Send reset link' }));
 
       await waitFor(() => {
         expect(screen.getByText('Check your email for a password reset link!')).toBeInTheDocument();
@@ -301,7 +301,7 @@ describe('Auth', () => {
       const { newPassword, confirmPassword } = getPasswordInputs();
       await user.type(newPassword, 'short');
       await user.type(confirmPassword, 'short');
-      await user.click(screen.getByRole('button', { name: 'Update Password' }));
+      await user.click(screen.getByRole('button', { name: 'Update password' }));
 
       await waitFor(() => {
         expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument();
@@ -316,7 +316,7 @@ describe('Auth', () => {
       const { newPassword, confirmPassword } = getPasswordInputs();
       await user.type(newPassword, 'password123');
       await user.type(confirmPassword, 'password456');
-      await user.click(screen.getByRole('button', { name: 'Update Password' }));
+      await user.click(screen.getByRole('button', { name: 'Update password' }));
 
       await waitFor(() => {
         expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
@@ -331,7 +331,7 @@ describe('Auth', () => {
       const { newPassword, confirmPassword } = getPasswordInputs();
       await user.type(newPassword, 'newpassword123');
       await user.type(confirmPassword, 'newpassword123');
-      await user.click(screen.getByRole('button', { name: 'Update Password' }));
+      await user.click(screen.getByRole('button', { name: 'Update password' }));
 
       await waitFor(() => {
         expect(mockAuthContext.updatePassword).toHaveBeenCalledWith('newpassword123');
@@ -352,7 +352,7 @@ describe('Auth', () => {
       const { newPassword, confirmPassword } = getPasswordInputs();
       await user.type(newPassword, 'newpassword123');
       await user.type(confirmPassword, 'newpassword123');
-      await user.click(screen.getByRole('button', { name: 'Update Password' }));
+      await user.click(screen.getByRole('button', { name: 'Update password' }));
 
       await waitFor(() => {
         expect(onPasswordResetComplete).toHaveBeenCalled();
@@ -518,7 +518,7 @@ describe('Auth', () => {
       await user.type(screen.getByRole('textbox'), 'test@example.com');
       await user.click(screen.getByLabelText('Close'));
 
-      expect(screen.getByText('Keep Editing')).toHaveFocus();
+      expect(screen.getByText('Keep editing')).toHaveFocus();
     });
 
     it('treats Escape in the confirmation as Keep Editing, and does not close the form behind it', async () => {
@@ -545,9 +545,9 @@ describe('Auth', () => {
       await user.type(screen.getByRole('textbox'), 'test@example.com');
       const closeButton = screen.getByLabelText('Close');
       await user.click(closeButton);
-      expect(screen.getByText('Keep Editing')).toHaveFocus();
+      expect(screen.getByText('Keep editing')).toHaveFocus();
 
-      await user.click(screen.getByText('Keep Editing'));
+      await user.click(screen.getByText('Keep editing'));
 
       // Moving focus in obliges us to put it back. The button that held focus
       // has unmounted; without a restore, focus lands on document.body and a
@@ -608,7 +608,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByRole('textbox'), 'test@example.com');
       await user.click(screen.getByLabelText('Close'));
-      await user.click(screen.getByText('Keep Editing'));
+      await user.click(screen.getByText('Keep editing'));
 
       expect(screen.queryByText('Discard changes?')).not.toBeInTheDocument();
       expect(onClose).not.toHaveBeenCalled();
@@ -635,7 +635,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByRole('textbox'), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign In' }));
+      await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
       await waitFor(() => {
         expect(screen.getByText('Too many attempts. Please try again later')).toBeInTheDocument();
@@ -652,7 +652,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByRole('textbox'), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign In' }));
+      await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
       await waitFor(() => {
         expect(screen.getByText('Network error. Please check your connection')).toBeInTheDocument();
@@ -669,7 +669,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign Up' }));
+      await user.click(screen.getByRole('button', { name: 'Sign up' }));
 
       await waitFor(() => {
         expect(screen.getByText('An account with this email already exists')).toBeInTheDocument();

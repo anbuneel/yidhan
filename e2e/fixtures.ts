@@ -84,7 +84,7 @@ export async function loginUser(
  */
 async function unlockVault(page: Page, passphrase: string): Promise<void> {
   const library = page.getByTestId('library-view');
-  const unlockGate = page.getByRole('heading', { name: 'Unlock Your Notes', exact: true });
+  const unlockGate = page.getByRole('heading', { name: 'Unlock your notes', exact: true });
   const setupGate = page.getByRole('heading', { name: 'Choose a passphrase', exact: true });
 
   await expect(library.or(unlockGate).or(setupGate).first()).toBeVisible({ timeout: 15000 });

@@ -5,6 +5,6 @@
 
 export const SPRITE_MARK_SMALL = '#yidhan-mark-small';
 export const SPRITE_WORDMARK = '#yidhan-wordmark';
-export const SMALL_MARK_VIEWBOX = '1.5 1.5 12.5 12.5';
+export const SMALL_MARK_VIEWBOX = '1.75 1.25 12.75 12.75';
 export const WORDMARK_VIEWBOX = '2 -1476 6003 1954';
 export const WORDMARK_ASPECT = '6003 / 1954';

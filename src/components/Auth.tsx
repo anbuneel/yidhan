@@ -15,10 +15,10 @@ const AUTH_TITLES: Record<AuthMode, string> = {
 };
 
 const AUTH_BUTTON_TEXTS: Record<AuthMode, string> = {
-  login: 'Sign In',
-  signup: 'Sign Up',
-  forgot: 'Send Reset Link',
-  reset: 'Update Password',
+  login: 'Sign in',
+  signup: 'Sign up',
+  forgot: 'Send reset link',
+  reset: 'Update password',
 };
 
 /**
@@ -487,7 +487,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 htmlFor="auth-password"
                 className="auth-text-secondary block text-sm mb-2"
               >
-                {mode === 'reset' ? 'New Password' : 'Password'}
+                {mode === 'reset' ? 'New password' : 'Password'}
               </label>
               <input
                 id="auth-password"
@@ -509,14 +509,14 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             </div>
           )}
 
-          {/* Confirm Password - only for reset */}
+          {/* Confirm password - only for reset */}
           {mode === 'reset' && (
             <div className="mb-4 md:mb-5">
               <label
                 htmlFor="auth-confirm-password"
                 className="auth-text-secondary block text-sm mb-2"
               >
-                Confirm Password
+                Confirm password
               </label>
               <input
                 id="auth-confirm-password"
@@ -632,7 +632,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 onClick={() => switchMode('signup')}
                 className="auth-text-accent underline transition-colors"
               >
-                Sign Up
+                Sign up
               </button>
             </p>
           )}
@@ -645,7 +645,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 onClick={() => switchMode('login')}
                 className="auth-text-accent underline transition-colors"
               >
-                Sign In
+                Sign in
               </button>
             </p>
           )}
@@ -658,7 +658,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 onClick={() => switchMode('login')}
                 className="auth-text-accent underline transition-colors"
               >
-                Sign In
+                Sign in
               </button>
             </p>
           )}
@@ -670,7 +670,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 onClick={() => switchMode('login')}
                 className="auth-text-accent underline transition-colors"
               >
-                Back to Sign In
+                Back to sign in
               </button>
             </p>
           )}
@@ -806,7 +806,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                   onClick={() => setShowCloseConfirm(false)}
                   className="auth-btn-ghost px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                 >
-                  Keep Editing
+                  Keep editing
                 </button>
                 <button type="button"
                   onClick={handleConfirmClose}

@@ -55,9 +55,9 @@ describe('theme registry', () => {
       accentText: '#2A6638', glassBorder: '#D9E4D4',
     });
     expect(ACTIVE_DARK_THEME.colors).toMatchObject({
-      bgPrimary: '#151C18', cardBg: '#1B2620', bgTertiary: '#1F2C25', textPrimary: '#E6E3DC',
+      bgPrimary: '#151C18', cardBg: '#1D2922', bgTertiary: '#1F2C25', textPrimary: '#E6E3DC',
       textNote: '#D3D2CA', textTertiary: '#9AA69F', accent: '#8FC79A', onAccent: '#13201A',
-      accentText: '#A0D2A6', glassBorder: '#2A362F',
+      accentText: '#A0D2A6', glassBorder: '#33423A',
     });
   });
 });
@@ -151,7 +151,7 @@ describe('marigold and the accent are not text colours where they fail', () => {
     expect(offenders).toEqual([]);
     expect(readFileSync(resolve(root, 'src/components/Editor.tsx'), 'utf8').replace(/\r\n/g, '\n')).toContain(
       // The save pill is neutral text; its icon, not a colour, tells the states apart.
-      "data-save-status={saveStatus}\n          className=\"shrink-0 text-sm italic px-2 py-1 rounded-full flex items-center gap-1.5\"\n          style={{\n            fontFamily: 'var(--font-body)',\n            color: 'var(--color-text-secondary)',",
+      "data-save-status={saveStatus}\n          className=\"shrink-0 text-sm px-2 py-1 rounded-full flex items-center gap-1.5\"\n          style={{\n            fontFamily: 'var(--font-body)',\n            color: 'var(--color-text-secondary)',",
     );
   });
 });

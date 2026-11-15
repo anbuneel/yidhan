@@ -176,7 +176,7 @@ base.describe('Addresses without an account', () => {
     ['/support', 'Support'],
     ['/changelog', 'Changelog'],
     ['/roadmap', 'Roadmap'],
-    ['/demo', 'Practice Space'],
+    ['/demo', 'Practice space'],
     ['/definitely-not-a-route', 'Not found'],
   ] as const) {
     base(`${path} has a title that names the page`, async ({ page }) => {

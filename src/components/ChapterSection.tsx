@@ -239,7 +239,7 @@ export const ChapterSection = memo(function ChapterSection({
       />
 
       <span
-        className="text-sm italic shrink-0"
+        className="text-sm shrink-0"
         style={{
           fontFamily: 'var(--font-body)',
           color: 'var(--color-text-tertiary)',

@@ -175,9 +175,9 @@ export function SecurityPage({
                 open them, Yidhan included.
               </p>
               <p>
-                <Term>Practice drafts.</Term> Anything written in the Practice Space before
+                <Term>Practice drafts.</Term> Anything written in the practice space before
                 you sign up is stored in your browser without encryption. It is never sent
-                anywhere, but it is not protected on the device either. The Practice Space
+                anywhere, but it is not protected on the device either. The practice space
                 says so on its own first note.
               </p>
               <p>

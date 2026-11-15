@@ -96,7 +96,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
             e.currentTarget.style.boxShadow = 'none';
           }}
         >
-          Keep My Thoughts
+          Keep my thoughts
         </button>
 
         {/* Dismiss link */}

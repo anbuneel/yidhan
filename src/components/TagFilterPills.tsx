@@ -30,7 +30,7 @@ export function AddTagPill({ onClick }: AddTagPillProps) {
       type="button"
       onClick={onClick}
       aria-label="Add tag"
-      className={`${tagWordClass} gap-1 rounded-sm text-xs sm:text-sm hover:text-[var(--color-accent-text)]`}
+      className={`${tagWordClass} gap-1 rounded-sm text-xs sm:text-sm font-medium hover:text-[var(--color-accent-text)]`}
       style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-tertiary)' }}
     >
       <span aria-hidden="true">+</span>

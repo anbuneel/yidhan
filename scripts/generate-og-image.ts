@@ -1,8 +1,7 @@
 /**
  * Generate the Open Graph image for Yidhan.
  *
- * The leaf lockup, with the letter in the sun (owner, 2026-11-09: large uses carry
- * it), over the tagline in Newsreader, on a warm paper background. Both drawings are
+ * The leaf lockup over the tagline in Newsreader, on a warm paper background. Both drawings are
  * flat SVGs from images/brand/export/ (python scripts/brand/flatten.py). The tagline is
  * outlined there, so no font is fetched or needed here.
  *
@@ -26,13 +25,13 @@ const BG_COLOR = '#F2F7F0'; // Light theme page (src/themes/light.ts)
 const TEXT_MUTED = '#5A665F'; // Light theme muted text, for the tagline
 
 // ── Layout ──────────────────────────────────────────────────────
-const LOCKUP_HEIGHT = 200; // The mark carries the letter at this size (128px and up)
+const LOCKUP_HEIGHT = 200;
 const TAGLINE_SIZE = 34; // Font size of the tagline, px
 const GAP = 64; // Lockup bottom to tagline baseline
 
 // ── Source / output paths ───────────────────────────────────────
 const EXPORT_DIR = path.join(__dirname, '../images/brand/export');
-const LOCKUP_PATH = path.join(EXPORT_DIR, 'lockup-letter.svg');
+const LOCKUP_PATH = path.join(EXPORT_DIR, 'lockup.svg');
 const TAGLINE_PATH = path.join(EXPORT_DIR, 'og-tagline.svg');
 const OUTPUT_PATH = path.join(__dirname, '../public/og-image.png');
 

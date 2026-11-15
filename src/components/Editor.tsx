@@ -115,7 +115,7 @@ function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): bo
   return a !== null && b !== null && a.title === b.title && a.content === b.content;
 }
 
-// The save pill is neutral text in italic; the icon tells the states apart.
+// The save pill is neutral roman text; the icon tells the states apart.
 const SAVE_LABEL_ICON: Record<ReturnType<typeof getSaveLabel>, SyncStateKind> = {
   'Not saved': 'not-saved',
   'Saved here': 'saved',
@@ -1085,7 +1085,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {saveStatus !== 'idle' && (
         <span
           data-save-status={saveStatus}
-          className="shrink-0 text-sm italic px-2 py-1 rounded-full flex items-center gap-1.5"
+          className="shrink-0 text-sm px-2 py-1 rounded-full flex items-center gap-1.5"
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-secondary)',
@@ -1235,7 +1235,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                   <svg className="size-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                   </svg>
-                  Share as Letter
+                  Share as letter
                 </button>
               </>
             )}
@@ -1615,17 +1615,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
         </div>
 
-        {/* Organic Footer - sits below the elevated page surface */}
+        {/* Footer: sits below the page surface */}
         <footer
           className="max-w-[900px] mx-auto mt-16 mb-8 flex flex-col items-center gap-4 focus-mode-target"
           style={{ color: 'var(--color-text-tertiary)' }}
         >
-          {/* Decorative dots - like end of a letter */}
-          <div className="flex gap-2 opacity-40">
-            <span className="size-1 rounded-full bg-current" />
-            <span className="size-1 rounded-full bg-current" />
-            <span className="size-1 rounded-full bg-current" />
-          </div>
 
           {/* Return link - larger touch target on mobile */}
           <button type="button"
@@ -1634,7 +1628,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               flex items-center gap-2
               px-4 py-3
               min-h-[44px]
-              text-sm
+              text-sm font-medium
               transition-colors duration-300
               hover:text-[var(--color-accent-text)]
               active:text-[var(--color-accent-text)]
@@ -1662,10 +1656,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
           {/* Keyboard hint - desktop only */}
           <span
-            className="hidden sm:block text-xs"
+            className="hidden sm:block text-[13px]"
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-tertiary)' }}
           >
-            Press <kbd className="px-1.5 py-0.5 rounded text-[10px] bg-[var(--color-bg-secondary)]">Esc</kbd> to save & exit
+            Press <kbd className="px-1.5 py-0.5 rounded text-xs bg-[var(--color-bg-secondary)]">Esc</kbd> to save & exit
           </span>
         </footer>
       </main>
@@ -1754,7 +1748,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             >
               {isDemo
                 ? 'This note will be permanently removed from your practice space.'
-                : 'It will rest in Faded Notes for 30 days, then quietly disappear.'}
+                : 'It will rest in Faded notes for 30 days, then quietly disappear.'}
             </p>
             <div className="flex gap-3 justify-end">
               <button type="button"

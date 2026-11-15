@@ -64,7 +64,7 @@ export function SessionTimeoutModal({
                 color: 'var(--color-text-primary)',
               }}
             >
-              A Gentle Pause
+              A gentle pause
             </h2>
             <button type="button"
               onClick={onStay}

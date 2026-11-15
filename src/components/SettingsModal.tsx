@@ -252,7 +252,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                     color: 'var(--color-text-secondary)',
                   }}
                 >
-                  Display Name
+                  Display name
                 </label>
                 <input
                   id="settings-display-name"
@@ -376,7 +376,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   e.currentTarget.style.background = 'var(--color-cta-bg)';
                 }}
               >
-                {profileLoading ? 'Saving...' : 'Save Profile'}
+                {profileLoading ? 'Saving...' : 'Save profile'}
               </button>
 
               {ACCOUNT_OFFBOARDING_ENABLED && (
@@ -434,7 +434,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 Verify your current password, then enter a new one.
               </p>
 
-              {/* Current Password */}
+              {/* Current password */}
               <div className="mb-5">
                 <label
                   htmlFor="settings-current-password"
@@ -444,7 +444,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                     color: 'var(--color-text-secondary)',
                   }}
                 >
-                  Current Password
+                  Current password
                 </label>
                 <input
                   id="settings-current-password"
@@ -475,7 +475,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 />
               </div>
 
-              {/* New Password */}
+              {/* New password */}
               <div className="mb-5">
                 <label
                   htmlFor="settings-new-password"
@@ -485,7 +485,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                     color: 'var(--color-text-secondary)',
                   }}
                 >
-                  New Password
+                  New password
                 </label>
                 <input
                   id="settings-new-password"
@@ -517,7 +517,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 />
               </div>
 
-              {/* Confirm Password */}
+              {/* Confirm password */}
               <div className="mb-6">
                 <label
                   htmlFor="settings-confirm-password"
@@ -527,7 +527,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                     color: 'var(--color-text-secondary)',
                   }}
                 >
-                  Confirm New Password
+                  Confirm new password
                 </label>
                 <input
                   id="settings-confirm-password"
@@ -596,7 +596,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   e.currentTarget.style.background = 'var(--color-cta-bg)';
                 }}
               >
-                {passwordLoading ? 'Updating...' : 'Update Password'}
+                {passwordLoading ? 'Updating...' : 'Update password'}
               </button>
             </form>
           )}
@@ -614,7 +614,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 Manage your vault, session, and device trust settings.
               </p>
 
-              {/* Encryption Vault */}
+              {/* Encryption vault */}
               {vaultSettings && (
                 <div
                   className="mb-6 pb-5"
@@ -627,7 +627,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       color: 'var(--color-text-primary)',
                     }}
                   >
-                    Encryption Vault
+                    Encryption vault
                   </h3>
 
                   {/* Vault Status */}
@@ -802,7 +802,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 </div>
               )}
 
-              {/* Session & Trust */}
+              {/* Session & trust */}
               <div>
                 <h3
                   className="text-sm font-medium mb-3"
@@ -811,7 +811,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                     color: 'var(--color-text-primary)',
                   }}
                 >
-                  Session & Trust
+                  Session & trust
                 </h3>
 
                 {/* Session Timeout */}

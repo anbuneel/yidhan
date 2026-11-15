@@ -133,7 +133,7 @@ test.describe('The phone title', () => {
     await page.goto('/demo');
     await expect(page.getByTestId('library-view')).toBeVisible();
     // Measure every search box, shown or not: the rule applies by width, not by visibility.
-    const searches = page.getByPlaceholder(/search your thoughts/i);
+    const searches = page.getByPlaceholder(/search notes/i);
     expect(await searches.count()).toBeGreaterThan(0);
     for (const size of await searches.evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)))) {
       expect(size).toBeGreaterThanOrEqual(16);

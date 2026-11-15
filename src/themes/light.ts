@@ -31,9 +31,9 @@ const light: ThemeConfig = {
     accentGlow: 'rgba(53, 122, 69, 0.12)',
     accentMuted: 'rgba(53, 122, 69, 0.6)',
     accentText: '#2A6638',
-    // Nothing is lighter than the white sheet, so a neutral glow cannot show here.
-    // A faint leaf green does (DECISIONS.md, 2026-11-10).
-    editorGlow: 'rgba(53, 122, 69, 0.08)',
+    // No glow in light. Nothing is lighter than the white sheet, and a tint of any
+    // colour reads as a smudge (DECISIONS.md, 2026-11-11).
+    editorGlow: 'rgba(53, 122, 69, 0)',
     onAccent: '#FFFFFF',
 
     ctaBg: '#357A45',
@@ -56,13 +56,14 @@ const light: ThemeConfig = {
 
     glassBorder: '#D9E4D4',
     inputBorder: '#7D8A82',
-    // About half the old opacity, in the text's green-black instead of brown.
-    shadowSm: '0 2px 8px rgba(20, 36, 28, 0.09)',
-    shadowMd: '0 4px 12px rgba(20, 36, 28, 0.06), 0 20px 40px -10px rgba(20, 36, 28, 0.19)',
-    shadowLg: '0 4px 12px rgba(20, 36, 28, 0.075), 0 10px 40px rgba(20, 36, 28, 0.19)',
+    // The white sheet already separates from the green page, so card shadows only
+    // lift it a little. In the text's green-black.
+    shadowSm: '0 1px 3px rgba(20, 36, 28, 0.05)',
+    shadowMd: '0 1px 2px rgba(20, 36, 28, 0.04), 0 8px 20px -8px rgba(20, 36, 28, 0.08)',
+    shadowLg: '0 2px 6px rgba(20, 36, 28, 0.05), 0 12px 32px -8px rgba(20, 36, 28, 0.12)',
 
     grainColor: 'black',
-    noiseOpacity: '0.07',
+    noiseOpacity: '0.04',
   },
 };
 

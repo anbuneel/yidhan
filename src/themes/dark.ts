@@ -18,7 +18,7 @@ const dark: ThemeConfig = {
     bgSecondary: '#18211C',
     // The selected or tinted surface.
     bgTertiary: '#1F2C25',
-    cardBg: '#1B2620',
+    cardBg: '#1D2922',
 
     textPrimary: '#E6E3DC',
     textNote: '#D3D2CA',
@@ -52,7 +52,7 @@ const dark: ThemeConfig = {
     changeImprovement: '#A0D2A6',
     changeFix: '#9AA69F',
 
-    glassBorder: '#2A362F',
+    glassBorder: '#33423A',
     inputBorder: '#6F7F75',
     shadowSm: 'none',
     shadowMd: 'none',

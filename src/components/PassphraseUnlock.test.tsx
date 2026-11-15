@@ -80,7 +80,7 @@ describe('PassphraseUnlock', () => {
   it('should render the unlock form', () => {
     render(<PassphraseUnlock />);
 
-    expect(screen.getByText('Unlock Your Notes')).toBeInTheDocument();
+    expect(screen.getByText('Unlock your notes')).toBeInTheDocument();
     expect(screen.getByLabelText('Passphrase')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();

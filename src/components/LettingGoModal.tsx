@@ -265,7 +265,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 color: 'var(--color-text-primary)',
               }}
             >
-              Letting Go
+              Letting go
             </h2>
             <button type="button"
               onClick={onClose}
@@ -415,7 +415,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 e.currentTarget.style.background = 'var(--color-cta-bg)';
               }}
             >
-              {isExportingFull ? 'Preparing...' : 'Full Backup'}
+              {isExportingFull ? 'Preparing...' : 'Full backup'}
             </button>
             <button type="button"
               onClick={handleExportEncryptedBackup}

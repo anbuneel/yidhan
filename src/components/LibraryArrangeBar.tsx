@@ -50,7 +50,7 @@ function ArrangeGroup<T extends string>({
             aria-pressed={isActive}
             className="
               px-2.5 py-1.5
-              text-xs font-medium
+              text-[13px] font-medium
               transition-all duration-300
               focus:outline-none
               focus:ring-2

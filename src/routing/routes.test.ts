@@ -152,8 +152,8 @@ describe('routeToDocumentTitle', () => {
     ['/support', 'Support · Yidhan'],
     ['/changelog', 'Changelog · Yidhan'],
     ['/roadmap', 'Roadmap · Yidhan'],
-    ['/demo', 'Practice Space · Yidhan'],
-    ['/demo/new', 'Practice Space · Yidhan'],
+    ['/demo', 'Practice space · Yidhan'],
+    ['/demo/new', 'Practice space · Yidhan'],
     ['/nowhere', 'Not found · Yidhan'],
   ])('names the page at %s', (path, title) => {
     expect(routeToDocumentTitle(parseRoute(path))).toBe(title);

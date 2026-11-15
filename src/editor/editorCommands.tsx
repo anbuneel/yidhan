@@ -61,6 +61,15 @@ function runExternalAction(
   else dispatchEditorAction(context.editor, action);
 }
 
+// The one drawn label: a bullet glyph alone read as a stray dot. Three bullets and three
+// lines, on the 1.5 stroke the other inline SVGs use (DESIGN.md).
+const listIcon: ReactNode = (
+  <svg className="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden="true">
+    <path d="M9 6.5h11M9 12h11M9 17.5h11" />
+    <path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" strokeWidth={2.5} />
+  </svg>
+);
+
 function textLabel(text: string, className?: string): ReactNode {
   return <span className={className}>{text}</span>;
 }
@@ -96,19 +105,19 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     run: ({ editor }, range) => { startChain(editor, range).toggleStrike().run(); },
   },
   {
-    id: 'inlineCode', label: 'Inline code', shortLabel: textLabel('</>', 'text-[10px]'),
+    id: 'inlineCode', label: 'Inline code', shortLabel: textLabel('</>', 'text-[12px]'),
     description: 'Format a short code fragment', searchTerms: ['code', 'monospace', 'inline'], group: 'text', shortcut: 'Ctrl+E',
     isActive: ({ editor }) => editor.isActive('code'),
     run: ({ editor }, range) => { startChain(editor, range).toggleCode().run(); },
   },
   {
-    id: 'link', label: 'Link', shortLabel: textLabel('Link', 'text-[10px]'),
+    id: 'link', label: 'Link', shortLabel: textLabel('Link', 'text-[12px]'),
     description: 'Insert or edit a link', searchTerms: ['url', 'href'], group: 'text', shortcut: 'Ctrl+K',
     isActive: ({ editor }) => editor.isActive('link'),
     run: (context, range) => runExternalAction(context, 'link', context.onLink, range),
   },
   {
-    id: 'highlight', label: 'Highlight', shortLabel: textLabel('Mark', 'text-[10px]'),
+    id: 'highlight', label: 'Highlight', shortLabel: textLabel('Mark', 'text-[12px]'),
     description: 'Add a warm highlight', searchTerms: [...shared.text, 'mark', 'color'], group: 'text',
     isActive: ({ editor }) => editor.isActive('highlight'),
     run: ({ editor }, range) => { startChain(editor, range).toggleHighlight().run(); },
@@ -122,7 +131,7 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
   ...([1, 2, 3] as const).map((level): EditorCommandDefinition => ({
     id: `heading${level}`,
     label: `Heading ${level}`,
-    shortLabel: textLabel(`H${level}`, 'text-[10px] font-semibold'),
+    shortLabel: textLabel(`H${level}`, 'text-[13px] font-semibold'),
     visibleLabel: `H${level}`,
     description: `${level === 1 ? 'Large' : level === 2 ? 'Medium' : 'Small'} section heading`,
     searchTerms: [...shared.structure, `h${level}`, 'heading'],
@@ -131,44 +140,44 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     run: ({ editor }, range) => { startChain(editor, range).toggleHeading({ level }).run(); },
   })),
   {
-    id: 'bulletList', label: 'Bullet list', shortLabel: textLabel('List', 'text-[10px]'),
+    id: 'bulletList', label: 'Bullet list', shortLabel: listIcon,
     description: 'Create a bullet list', searchTerms: [...shared.structure, 'unordered'], group: 'structure',
     isActive: ({ editor }) => editor.isActive('bulletList'),
     run: ({ editor }, range) => { startChain(editor, range).toggleBulletList().run(); },
   },
   {
-    id: 'orderedList', label: 'Numbered list', shortLabel: textLabel('1. List', 'text-[9px]'),
+    id: 'orderedList', label: 'Numbered list', shortLabel: textLabel('1.', 'text-[13px]'),
     description: 'Create a numbered list', searchTerms: [...shared.structure, 'ordered', 'number'], group: 'structure',
     isActive: ({ editor }) => editor.isActive('orderedList'),
     run: ({ editor }, range) => { startChain(editor, range).toggleOrderedList().run(); },
   },
   {
-    id: 'taskList', label: 'Task list', shortLabel: textLabel('Task', 'text-[9px]'),
+    id: 'taskList', label: 'Task list', shortLabel: textLabel('Task', 'text-[12px]'),
     description: 'Create a quiet checklist', searchTerms: [...shared.structure, 'todo', 'checkbox'], group: 'structure',
     isActive: ({ editor }) => editor.isActive('taskList'),
     run: ({ editor }, range) => { startChain(editor, range).toggleTaskList().run(); },
   },
   {
-    id: 'blockquote', label: 'Quote', shortLabel: textLabel('Quote', 'text-[9px]'),
+    id: 'blockquote', label: 'Quote', shortLabel: textLabel('“', 'text-[24px] relative top-[5px]'),
     description: 'Set text apart as a quote', searchTerms: [...shared.structure, 'blockquote'], group: 'structure',
     isActive: ({ editor }) => editor.isActive('blockquote'),
     run: ({ editor }, range) => { startChain(editor, range).toggleBlockquote().run(); },
   },
   {
-    id: 'codeBlock', label: 'Code block', shortLabel: textLabel('Code', 'text-[9px]'),
+    id: 'codeBlock', label: 'Code block', shortLabel: textLabel('Code', 'text-[12px]'),
     description: 'Create a code block', searchTerms: [...shared.structure, 'pre', 'snippet'], group: 'structure',
     isActive: ({ editor }) => editor.isActive('codeBlock'),
     run: ({ editor }, range) => { startChain(editor, range).toggleCodeBlock().run(); },
   },
   {
-    id: 'horizontalRule', label: 'Divider', shortLabel: textLabel('Rule', 'text-[9px]'),
+    id: 'horizontalRule', label: 'Divider', shortLabel: textLabel('Rule', 'text-[12px]'),
     description: 'Insert a horizontal divider', searchTerms: ['rule', 'line', 'separator'], group: 'insert',
     run: ({ editor }, range) => { startChain(editor, range).setHorizontalRule().run(); },
   },
   ...(['left', 'center', 'right', 'justify'] as const).map((alignment): EditorCommandDefinition => ({
     id: `align${alignment[0].toUpperCase()}${alignment.slice(1)}` as EditorCommandId,
     label: `Align ${alignment}`,
-    shortLabel: textLabel(alignment === 'justify' ? 'Justify' : alignment[0].toUpperCase(), 'text-[9px]'),
+    shortLabel: textLabel(alignment === 'justify' ? 'Justify' : alignment[0].toUpperCase(), 'text-[12px]'),
     description: `${alignment[0].toUpperCase()}${alignment.slice(1)} align this block`,
     searchTerms: ['align', 'text', alignment],
     group: 'structure',
@@ -176,36 +185,36 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     run: ({ editor }, range) => { startChain(editor, range).setTextAlign(alignment).run(); },
   })),
   {
-    id: 'date', label: 'Date', shortLabel: textLabel('Date', 'text-[9px]'),
+    id: 'date', label: 'Date', shortLabel: textLabel('Date', 'text-[12px]'),
     description: 'Insert the current date', searchTerms: ['today', 'day'], group: 'insert',
     run: ({ editor }, range) => { startChain(editor, range).insertContent(new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })).run(); },
   },
   {
-    id: 'time', label: 'Time', shortLabel: textLabel('Time', 'text-[9px]'),
+    id: 'time', label: 'Time', shortLabel: textLabel('Time', 'text-[12px]'),
     description: 'Insert the current time', searchTerms: ['clock', 'hour'], group: 'insert',
     run: ({ editor }, range) => { startChain(editor, range).insertContent(new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })).run(); },
   },
   {
-    id: 'now', label: 'Date and time', shortLabel: textLabel('Now', 'text-[9px]'),
+    id: 'now', label: 'Date and time', shortLabel: textLabel('Now', 'text-[12px]'),
     description: 'Insert the current date and time', searchTerms: ['now', 'timestamp'], group: 'insert',
     run: ({ editor }, range) => { startChain(editor, range).insertContent(new Date().toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })).run(); },
   },
   {
-    id: 'undo', label: 'Undo', shortLabel: textLabel('Undo', 'text-[9px]'),
+    id: 'undo', label: 'Undo', shortLabel: textLabel('Undo', 'text-[12px]'),
     description: 'Undo the last change', searchTerms: ['history', 'back'], group: 'history', shortcut: 'Ctrl+Z',
     availableInSlash: false,
     canRun: ({ editor }) => editor.can().undo(),
     run: ({ editor }) => { editor.chain().focus().undo().run(); },
   },
   {
-    id: 'redo', label: 'Redo', shortLabel: textLabel('Redo', 'text-[9px]'),
+    id: 'redo', label: 'Redo', shortLabel: textLabel('Redo', 'text-[12px]'),
     description: 'Redo the last undone change', searchTerms: ['history', 'forward'], group: 'history', shortcut: 'Ctrl+Shift+Z',
     availableInSlash: false,
     canRun: ({ editor }) => editor.can().redo(),
     run: ({ editor }) => { editor.chain().focus().redo().run(); },
   },
   {
-    id: 'findReplace', label: 'Find and replace', shortLabel: textLabel('Find', 'text-[9px]'),
+    id: 'findReplace', label: 'Find and replace', shortLabel: textLabel('Find', 'text-[12px]'),
     description: 'Find words in this note', searchTerms: ['search', 'replace'], group: 'view', shortcut: 'Ctrl+F',
     run: (context, range) => runExternalAction(context, 'findReplace', context.onFindReplace, range),
   },
@@ -219,7 +228,7 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     },
   },
   {
-    id: 'focusMode', label: 'Focus mode', shortLabel: textLabel('Focus', 'text-[9px]'),
+    id: 'focusMode', label: 'Focus mode', shortLabel: textLabel('Focus', 'text-[12px]'),
     description: 'Let the page recede while you write', searchTerms: ['distraction', 'view'], group: 'view', shortcut: 'Ctrl+Shift+F',
     isActive: ({ isFocusMode }) => Boolean(isFocusMode),
     run: (context, range) => runExternalAction(context, 'focusMode', context.onToggleFocusMode, range),

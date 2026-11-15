@@ -274,7 +274,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
               color: 'var(--color-text-primary)',
             }}
           >
-            Share as Letter
+            Share as letter
           </h3>
           <button type="button"
             onClick={onClose}
@@ -430,7 +430,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                   style={{ borderColor: 'var(--color-cta-text)', borderTopColor: 'transparent' }}
                 />
               )}
-              {isCreating ? 'Encrypting...' : 'Create Share Link'}
+              {isCreating ? 'Encrypting...' : 'Create share link'}
             </button>
           </div>
         )}
@@ -573,7 +573,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
             </div>
 
             <ShareActionBar
-              revokeLabel="Revoke Link"
+              revokeLabel="Revoke link"
               isRevoking={isRevoking}
               onRevoke={handleRevoke}
               onClose={onClose}

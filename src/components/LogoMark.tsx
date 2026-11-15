@@ -36,9 +36,6 @@ export function LogoMark({ size, className = '', label }: LogoMarkProps) {
       ) : (
         <>
           <path d={FULL_MARK.sun} style={{ fill: MARIGOLD }} />
-          {drawing === 'letter' && (
-            <path d={FULL_MARK.letter} style={{ fill: 'var(--color-brand-leaf-deep)' }} data-part="letter" />
-          )}
           <path d={FULL_MARK.leaf} style={{ fill: 'var(--color-brand-leaf)' }} />
         </>
       )}

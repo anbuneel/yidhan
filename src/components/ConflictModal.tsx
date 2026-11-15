@@ -190,13 +190,13 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
           >
             <div className="flex items-center justify-between mb-3">
               <span
-                className="text-sm italic"
+                className="text-sm"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
                 Your device
               </span>
               <span
-                className="text-xs"
+                className="text-xs italic"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
                 {formatDate(localNote.localUpdatedAt || localNote.updatedAt)}
@@ -277,13 +277,13 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
           >
             <div className="flex items-center justify-between mb-3">
               <span
-                className="text-sm italic"
+                className="text-sm"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
                 {isHardDeletedConflict ? 'Deleted elsewhere' : 'Another device'}
               </span>
               <span
-                className="text-xs"
+                className="text-xs italic"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
                 {formatDate(serverNote.updated_at)}

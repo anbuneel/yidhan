@@ -124,7 +124,7 @@ export function HeaderShell({
           {center}
         </div>
 
-        {/* Right Zone - Theme Toggle + Avatar/Sign In (fixed position) */}
+        {/* Right Zone - Theme Toggle + Avatar/Sign in (fixed position) */}
         <div className="ml-auto sm:ml-0 flex items-center gap-1 shrink-0">
         {/* Page-specific right actions (e.g., delete button) */}
         {rightActions}
@@ -166,7 +166,7 @@ export function HeaderShell({
           )}
         </button>
 
-        {/* Avatar (authenticated) or Sign In (unauthenticated) */}
+        {/* Avatar (authenticated) or Sign in (unauthenticated) */}
         {isAuthenticated ? (
           <div className="relative" ref={profileMenuRef}>
             <button type="button"
@@ -354,7 +354,7 @@ export function HeaderShell({
                 e.currentTarget.style.borderColor = 'var(--color-accent-muted)';
               }}
             >
-              Sign In
+              Sign in
             </button>
           )
         )}

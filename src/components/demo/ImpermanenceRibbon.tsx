@@ -62,11 +62,10 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
 
         {/* Message */}
         <span
-          className="text-xs"
+          className="text-[13px]"
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-tertiary)',
-            letterSpacing: '0.02em',
           }}
         >
           Your notes live in this browser
@@ -74,7 +73,7 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
             {' '}&middot;{' '}
             <button type="button"
               onClick={onSignUp}
-              className="transition-colors duration-200"
+              className="font-medium transition-colors duration-200"
               style={{
                 color: 'var(--color-accent-text)',
                 background: 'none',
@@ -97,7 +96,7 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
         {/* Mobile sign up link */}
         <button type="button"
           onClick={onSignUp}
-          className="sm:hidden text-xs transition-colors duration-200"
+          className="sm:hidden text-[13px] font-medium transition-colors duration-200"
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-accent-text)',

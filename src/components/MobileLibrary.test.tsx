@@ -9,7 +9,7 @@ import { createDemoStarterPreviewState } from '../services/demoStorage';
 const originalObserver = window.IntersectionObserver;
 afterEach(() => { vi.restoreAllMocks(); window.IntersectionObserver = originalObserver; });
 it('puts a caption under the first card without a modal', () => {
-  render(<ChapterSection chapterKey="thisWeek" label="This Week" notes={[createMockNote()]} defaultExpanded showGestureHint onNoteClick={vi.fn()} onNoteDelete={vi.fn()} onTogglePin={vi.fn()} />);
+  render(<ChapterSection chapterKey="thisWeek" label="This week" notes={[createMockNote()]} defaultExpanded showGestureHint onNoteClick={vi.fn()} onNoteDelete={vi.fn()} onTogglePin={vi.fn()} />);
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(screen.getByText('Swipe right to pin a note.')).toBeVisible();
 });

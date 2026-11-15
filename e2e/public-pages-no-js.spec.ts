@@ -19,7 +19,7 @@ const PAGES = [
     text: /what is protected, what is visible, and what we have not solved yet/i,
     title: 'Security · Yidhan',
   },
-  { path: '/changelog', heading: "What's New", text: /what we remember/i, title: 'Changelog · Yidhan' },
+  { path: '/changelog', heading: "What's new", text: /what we remember/i, title: 'Changelog · Yidhan' },
   { path: '/roadmap', heading: 'Roadmap', text: /some thoughts have settled/i, title: 'Roadmap · Yidhan' },
 ];
 
@@ -82,7 +82,7 @@ test.describe('Public pages without JavaScript', () => {
 
     await page.getByRole('link', { name: 'Changelog', exact: true }).click();
     await expect(page).toHaveURL(/\/changelog$/);
-    await expect(page.getByRole('heading', { level: 1, name: "What's New" })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: "What's new" })).toBeVisible();
   });
 
   test('the theme follows the OS preference', async ({ browser }) => {

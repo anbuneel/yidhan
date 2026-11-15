@@ -22,7 +22,7 @@
   --color-accent-glow: rgba(53, 122, 69, 0.12);
   --color-accent-muted: rgba(53, 122, 69, 0.6);
   --color-accent-text: #2A6638;
-  --color-editor-glow: rgba(53, 122, 69, 0.08);
+  --color-editor-glow: rgba(53, 122, 69, 0);
   --color-on-accent: #FFFFFF;
   --color-cta-bg: #357A45;
   --color-cta-bg-hover: #2D693B;
@@ -40,10 +40,10 @@
   --color-change-fix: #5A665F;
   --glass-border: #D9E4D4;
   --color-input-border: #7D8A82;
-  --shadow-sm: 0 2px 8px rgba(20, 36, 28, 0.09);
-  --shadow-md: 0 4px 12px rgba(20, 36, 28, 0.06), 0 20px 40px -10px rgba(20, 36, 28, 0.19);
-  --shadow-lg: 0 4px 12px rgba(20, 36, 28, 0.075), 0 10px 40px rgba(20, 36, 28, 0.19);
-  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.07'/%3E%3C/svg%3E");
+  --shadow-sm: 0 1px 3px rgba(20, 36, 28, 0.05);
+  --shadow-md: 0 1px 2px rgba(20, 36, 28, 0.04), 0 8px 20px -8px rgba(20, 36, 28, 0.08);
+  --shadow-lg: 0 2px 6px rgba(20, 36, 28, 0.05), 0 12px 32px -8px rgba(20, 36, 28, 0.12);
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.04'/%3E%3C/svg%3E");
 }
 
 /* Dark Theme: Dark - Green-black page, solid cards, light green */
@@ -51,7 +51,7 @@
   --color-bg-primary: #151C18;
   --color-bg-secondary: #18211C;
   --color-bg-tertiary: #1F2C25;
-  --color-card-bg: #1B2620;
+  --color-card-bg: #1D2922;
   --color-text-primary: #E6E3DC;
   --color-text-secondary: #B9BFB8;
   --color-text-tertiary: #9AA69F;
@@ -78,7 +78,7 @@
   --color-status-exploring: #9AA69F;
   --color-change-improvement: #A0D2A6;
   --color-change-fix: #9AA69F;
-  --glass-border: #2A362F;
+  --glass-border: #33423A;
   --color-input-border: #6F7F75;
   --shadow-sm: none;
   --shadow-md: none;
@@ -87,10 +87,10 @@
 }
 /* THEME-END */
 
-/* Logo (src/components/Logo.tsx): the leaf and the letter in the sun. The page shows
-   through the gap and the lines, so only these two take a colour; the sun is a fixed
-   marigold. The leaf is the theme's accent, so the mark matches the buttons. The
-   letter is a fixed deep green: it sits on the marigold sun, not on the page. */
+/* Logo (src/components/Logo.tsx). The page shows through the gap and the lines, so only
+   the leaf takes a theme colour; the sun is a fixed marigold. The leaf is the theme's
+   accent, so the mark matches the buttons. The deep green is the icon tile, and the
+   bookmark on a pinned note's marigold disc. */
 :root {
   --color-brand-leaf: var(--color-accent);
   --color-brand-leaf-deep: #163026;
@@ -738,22 +738,13 @@ nav,
   font-size: inherit;
 }
 
-/* Decorative three-dot divider — matches editor footer motif */
+/* A divider is a short centred hairline. No ornament (DESIGN.md, Texture). */
 .rich-text-editor .ProseMirror hr {
+  width: 6rem;
+  height: 0;
+  margin: 2.5rem auto;
   border: none;
-  margin: 2.5rem 0;
-  height: auto;
-  overflow: visible;
-}
-
-.rich-text-editor .ProseMirror hr::after {
-  content: '· · ·';
-  display: block;
-  text-align: center;
-  font-size: 1.25rem;
-  letter-spacing: 0.5em;
-  color: var(--color-text-tertiary);
-  opacity: 0.5;
+  border-top: 1px solid var(--glass-border);
 }
 
 /* Links */
@@ -1427,10 +1418,13 @@ nav,
   }
 }
 
-/* Vertical sidebar toolbar — slim, ghostly, left margin */
+/* Vertical sidebar toolbar: a rail in the left margin, clear of the sheet by about
+   22px. It is the sheet's own material (card colour, hairline, soft shadow), not a
+   third surface colour. While the writer types it fades (data-quiet, set by
+   EditorSidebar) and comes back on pointer movement, a selection, hover or focus. */
 .editor-sidebar {
   position: fixed;
-  left: max(calc((100vw - 900px) / 2 - 56px), 12px);
+  left: max(calc((100vw - 900px) / 2 - 74px), 8px);
   top: 50%;
   transform: translateY(-50%);
   z-index: 15;
@@ -1438,16 +1432,19 @@ nav,
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 8px 4px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--color-bg-secondary) 60%, transparent);
+  padding: 6px 4px;
+  border-radius: var(--radius-plain);
+  background: var(--color-card-bg);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  /* 0.9 at rest, not lower: below it the command labels fall under 4.5:1 in
-     the old dark theme (item 160). The panel stays quiet through the secondary text colour. */
-  opacity: 0.9;
+  box-shadow: var(--shadow-sm);
+  /* Full opacity at rest: the labels are read then, and must hold 4.5:1 (item 160). */
+  opacity: 1;
   transition: opacity 300ms ease;
+}
+
+/* Typing: step back. Nobody reads the labels mid-sentence. */
+.editor-sidebar[data-quiet] {
+  opacity: 0.3;
 }
 
 /* Show only on wide screens where there's margin space */
@@ -1678,7 +1675,8 @@ textarea:focus,
   padding: 6px 8px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-plain);
-  background: var(--color-bg-secondary);
+  /* The sheet's material, on every surface: rail, inline bar and phone bar. */
+  background: var(--color-card-bg);
   box-shadow: var(--shadow-sm);
 }
 
@@ -1698,9 +1696,14 @@ textarea:focus,
 }
 
 .editor-command-button {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  /* Controls are firmer than metadata (DESIGN.md, Typography). */
+  font-weight: 500;
+  line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1780,7 +1783,7 @@ textarea:focus,
   width: 100%;
   min-height: 44px;
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 6px 8px;
@@ -1869,8 +1872,8 @@ textarea:focus,
    `.editor-sidebar button` rule, which gave it to every button in the sidebar.
    Neither base class sets a cursor, so both need it named explicitly. */
 .editor-sidebar .editor-command-button {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
 }
 

@@ -151,7 +151,7 @@ const PAGE_TITLES: Record<PublicPageName | 'demo' | 'notFound', string> = {
   support: 'Support',
   changelog: 'Changelog',
   roadmap: 'Roadmap',
-  demo: 'Practice Space',
+  demo: 'Practice space',
   notFound: 'Not found',
 };
 

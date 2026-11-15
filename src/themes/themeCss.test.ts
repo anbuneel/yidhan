@@ -65,7 +65,7 @@ describe('the grain is behind content, not over it', () => {
     }
     expect(light.grainColor).toBe('black');
     expect(dark.grainColor).toBe('white');
-    expect(Number(light.noiseOpacity)).toBeCloseTo(0.07);
+    expect(Number(light.noiseOpacity)).toBeCloseTo(0.04);
     expect(Number(dark.noiseOpacity)).toBeCloseTo(0.05);
   });
 
