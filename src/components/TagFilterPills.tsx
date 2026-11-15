@@ -1,3 +1,5 @@
+import { tagWordClass, tagWordStyle } from './tagWord';
+
 interface AllNotesPillProps {
   isActive: boolean;
   onClick: () => void;
@@ -5,34 +7,15 @@ interface AllNotesPillProps {
 
 export function AllNotesPill({ isActive, onClick }: AllNotesPillProps) {
   return (
-    <button type="button"
+    <button
+      type="button"
       onClick={onClick}
-      className="
-        px-3 py-1.5 sm:px-4 sm:py-2
-        text-xs sm:text-sm font-medium
-        transition-all duration-300
-        focus:outline-none
-        focus:ring-2
-        focus:ring-[var(--color-accent)]
-        focus:ring-offset-1
-        shrink-0
-      "
-      style={{
-        fontFamily: 'var(--font-body)',
-        background: isActive
-          ? 'var(--color-accent-glow)'
-          : 'var(--color-card-bg)',
-        backdropFilter: 'blur(10px)',
-        border: isActive
-          ? '1px solid var(--color-accent)'
-          : '1px solid var(--glass-border)',
-        borderRadius: 'var(--radius-pill)',
-        color: isActive
-          ? 'var(--color-accent-text)'
-          : 'var(--color-text-secondary)',
-      }}
+      aria-pressed={isActive}
+      // mr-7 matches the space each tag keeps for its edit control, so the gaps are even.
+      className={`${tagWordClass} mr-7 rounded-sm hover:text-[var(--color-text-primary)]`}
+      style={tagWordStyle(isActive)}
     >
-      All Notes
+      All notes
     </button>
   );
 }
@@ -43,31 +26,15 @@ interface AddTagPillProps {
 
 export function AddTagPill({ onClick }: AddTagPillProps) {
   return (
-    <button type="button"
+    <button
+      type="button"
       onClick={onClick}
-      className="
-        size-9
-        flex items-center justify-center
-        transition-all duration-300
-        focus:outline-none
-        focus:ring-2
-        focus:ring-[var(--color-accent)]
-        focus:ring-offset-1
-        hover:border-[var(--color-accent)]
-        shrink-0
-      "
-      style={{
-        background: 'var(--color-card-bg)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid var(--glass-border)',
-        borderRadius: 'var(--radius-pill)',
-        color: 'var(--color-text-tertiary)',
-      }}
-      aria-label="Add new tag"
+      aria-label="Add tag"
+      className={`${tagWordClass} gap-1 rounded-sm text-xs sm:text-sm hover:text-[var(--color-accent-text)]`}
+      style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-tertiary)' }}
     >
-      <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
-      </svg>
+      <span aria-hidden="true">+</span>
+      <span>Tag</span>
     </button>
   );
 }

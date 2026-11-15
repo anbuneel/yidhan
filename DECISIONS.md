@@ -19,6 +19,36 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-14 — Tags are plain words, with no colour in the UI
+
+**Status:** Active
+
+**Why:** The owner said the tags looked AI-generated. They were the stock UI-kit chip:
+a coloured dot in a rounded pill with a hairline border and a leftover glass blur.
+Eight tag colours, and an active filter painted in its tag's colour, broke the rule
+that green is the one working colour. Hierarchy elsewhere comes from size, weight and
+italic; tags were the one place everything sat in a box.
+
+**Decision:** Every tag surface renders tag names as text. The filter row uses
+secondary text, with the active filter alone in the accent text colour and
+underlined. Cards, the editor control and shared letters use small italic names
+joined by middots. The colour picker is gone.
+
+**Kept:** the stored `color` field on each tag, in IndexedDB, Supabase, exports,
+imports and share payloads. Removing it would need a database migration and a change to
+every export format, for no visible gain. New tags store `stone`; renaming keeps the
+existing value.
+
+**Rejected:**
+- *Folders, notebooks or nested tags* as part of this change. Folders stay refused
+  (`PRODUCT.md`, `docs/roadmap.md`); nested tags are folders under another name.
+- *Keeping colour as a small dot.* Any per-tag colour brings the rainbow back once a
+  user has more than a few tags.
+- *Forcing names to lowercase.* It looked calmer in the mockup but rewrites how the
+  user typed their own words, such as acronyms.
+
+---
+
 ## 2026-11-10 — The landing page leads with writing, in plain words
 
 **Status:** Active

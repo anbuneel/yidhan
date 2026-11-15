@@ -31,17 +31,15 @@ test.describe('Tags', () => {
       await expect(page.getByRole('button', { name: new RegExp(tagName, 'i') })).toBeVisible();
     });
 
-    test('creates tag with custom color', async ({ authenticatedPage: page }) => {
-      const tagName = uniqueTagName('ColorTag');
+    test('creates a tag from a name alone, with no colour picker', async ({ authenticatedPage: page }) => {
+      const tagName = uniqueTagName('NameOnly');
 
       // Click add tag button
       await page.getByRole('button', { name: /add tag/i }).click();
 
       // Fill name
       await page.getByPlaceholder(/tag name/i).fill(tagName);
-
-      // Select terracotta color
-      await page.getByRole('button', { name: /terracotta/i }).click();
+      await expect(page.getByRole('button', { name: /terracotta/i })).toHaveCount(0);
 
       // Save
       await page.getByRole('button', { name: /create|save/i }).click();

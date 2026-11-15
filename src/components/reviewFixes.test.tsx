@@ -71,7 +71,7 @@ describe('the leaf corner', () => {
     render(<KeyboardShortcutsModal isOpen onClose={vi.fn()} />);
     expect(screen.getByRole('dialog').getAttribute('style') ?? '').not.toContain('--radius-card');
     const { container } = render(<TagBadge tag={{ id: 't', name: 'Chip', color: 'gold', createdAt: new Date() }} />);
-    expect((container.firstChild as HTMLElement).style.borderRadius).toBe('var(--radius-pill)');
+    expect((container.firstChild as HTMLElement).style.borderRadius).not.toContain('--radius-card');
   });
 
   it('is on a note card', () => {

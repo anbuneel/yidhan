@@ -106,6 +106,21 @@ green with white text. The reasoning, first made for gold, is in `DECISIONS.md`
 
 `onAccent` is per-theme: white in light, the dark page colour in dark.
 
+## Tags
+
+Tags are words, not chips. No border, fill, blur or coloured dot on any tag surface:
+the filter row, note cards, the editor's tag control and shared letters.
+
+- **Filter row:** tag names in `--color-text-secondary`. The active filter is the
+  only coloured item: `--color-accent-text` with an underline. "All notes" and
+  "+ Tag" share the same style.
+- **Cards, editor and letters:** small italic names joined with ` · `, in
+  `--color-text-tertiary` (secondary in the editor). Overflow shows as `+N`.
+- **No tag colours in the UI.** Each tag still stores a `color` key for data and
+  backup compatibility; nothing renders it, and there is no colour picker
+  (`DECISIONS.md`, 2026-11-14).
+- Names show as the user typed them. Do not force lowercase.
+
 ## Typography
 
 **Newsreader for everything**: titles, note text, buttons, labels, forms. There is no

@@ -21,13 +21,13 @@ describe('TagModal', () => {
 
     it('renders modal when isOpen is true', () => {
       render(<TagModal {...defaultProps} />);
-      expect(screen.getByRole('heading', { name: 'Create Tag' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'New tag' })).toBeInTheDocument();
     });
 
-    it('shows "Edit Tag" title when editing', () => {
+    it('shows "Edit tag" title when editing', () => {
       const tag = createMockTag({ name: 'Existing Tag' });
       render(<TagModal {...defaultProps} editingTag={tag} />);
-      expect(screen.getByRole('heading', { name: 'Edit Tag' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Edit tag' })).toBeInTheDocument();
     });
 
     it('populates form with tag data when editing', () => {
@@ -41,18 +41,18 @@ describe('TagModal', () => {
       const onDelete = vi.fn();
 
       const { rerender } = render(<TagModal {...defaultProps} />);
-      expect(screen.queryByText('Delete Tag')).not.toBeInTheDocument();
+      expect(screen.queryByText('Delete tag')).not.toBeInTheDocument();
 
       rerender(<TagModal {...defaultProps} editingTag={tag} />);
-      expect(screen.queryByText('Delete Tag')).not.toBeInTheDocument();
+      expect(screen.queryByText('Delete tag')).not.toBeInTheDocument();
 
       rerender(<TagModal {...defaultProps} editingTag={tag} onDelete={onDelete} />);
-      expect(screen.getByText('Delete Tag')).toBeInTheDocument();
+      expect(screen.getByText('Delete tag')).toBeInTheDocument();
     });
   });
 
   // Helper to get the submit button (not the heading)
-  const getSubmitButton = () => screen.getByRole('button', { name: /Create Tag|Save Changes/ });
+  const getSubmitButton = () => screen.getByRole('button', { name: /^(Create tag|Save changes)$/ });
 
   describe('form validation', () => {
     it('shows error for empty tag name', async () => {
@@ -69,7 +69,7 @@ describe('TagModal', () => {
       const user = userEvent.setup({ delay: null });
       render(<TagModal {...defaultProps} />);
 
-      await user.type(screen.getByPlaceholderText(/Work, Personal/), '   ');
+      await user.type(screen.getByPlaceholderText('Tag name'), '   ');
       await user.click(getSubmitButton());
 
       expect(screen.getByText('Tag name is required')).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('TagModal', () => {
 
       // Input has maxLength=20, so we can't type more than 20 chars via UI
       // But the validation should still work for edge cases
-      const input = screen.getByPlaceholderText(/Work, Personal/);
+      const input = screen.getByPlaceholderText('Tag name');
       await user.type(input, 'This is exactly twenty');
       await user.click(getSubmitButton());
 
@@ -95,7 +95,7 @@ describe('TagModal', () => {
       const existingTags = [createMockTag({ name: 'Work' })];
       render(<TagModal {...defaultProps} existingTags={existingTags} />);
 
-      await user.type(screen.getByPlaceholderText(/Work, Personal/), 'work');
+      await user.type(screen.getByPlaceholderText('Tag name'), 'work');
       await user.click(getSubmitButton());
 
       expect(screen.getByText('A tag with this name already exists')).toBeInTheDocument();
@@ -117,7 +117,7 @@ describe('TagModal', () => {
       );
 
       // Name is already 'Work', just submit
-      await user.click(screen.getByText('Save Changes'));
+      await user.click(screen.getByText('Save changes'));
 
       await waitFor(() => {
         expect(onSave).toHaveBeenCalledWith('Work', 'terracotta');
@@ -133,54 +133,62 @@ describe('TagModal', () => {
       expect(screen.getByText('Tag name is required')).toBeInTheDocument();
 
       // Type to clear error
-      await user.type(screen.getByPlaceholderText(/Work, Personal/), 'a');
+      await user.type(screen.getByPlaceholderText('Tag name'), 'a');
       expect(screen.queryByText('Tag name is required')).not.toBeInTheDocument();
     });
   });
 
-  describe('color selection', () => {
-    it('selects default color (stone)', () => {
+  describe('colour', () => {
+    it('has no colour picker or preview', () => {
       render(<TagModal {...defaultProps} />);
-      // Preview should show stone color by default
-      const preview = screen.getByText('Tag name');
-      expect(preview).toBeInTheDocument();
+      ['terracotta', 'gold', 'forest', 'stone', 'indigo', 'clay', 'sage', 'plum'].forEach((color) => {
+        expect(screen.queryByRole('button', { name: color })).not.toBeInTheDocument();
+      });
+      expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+      expect(screen.queryByText('Color')).not.toBeInTheDocument();
     });
 
-    it('changes color when clicking color button', async () => {
+    it('saves a new tag with the stored default colour', async () => {
       const user = userEvent.setup({ delay: null });
       const onSave = vi.fn().mockResolvedValue(undefined);
       render(<TagModal {...defaultProps} onSave={onSave} />);
 
-      await user.type(screen.getByPlaceholderText(/Work, Personal/), 'Test');
-      await user.click(screen.getByRole('button', { name: 'forest' }));
+      await user.type(screen.getByPlaceholderText('Tag name'), 'Test');
       await user.click(getSubmitButton());
 
       await waitFor(() => {
-        expect(onSave).toHaveBeenCalledWith('Test', 'forest');
+        expect(onSave).toHaveBeenCalledWith('Test', 'stone');
       });
     });
 
-    it('renders all 8 color options', () => {
-      render(<TagModal {...defaultProps} />);
-      const colors = ['terracotta', 'gold', 'forest', 'stone', 'indigo', 'clay', 'sage', 'plum'];
-      colors.forEach(color => {
-        expect(screen.getByRole('button', { name: color })).toBeInTheDocument();
+    it('keeps the stored colour when renaming a tag', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const tag = createMockTag({ name: 'Work', color: 'plum' });
+      render(<TagModal {...defaultProps} onSave={onSave} editingTag={tag} />);
+
+      const input = screen.getByDisplayValue('Work');
+      await user.clear(input);
+      await user.type(input, 'Office');
+      await user.click(getSubmitButton());
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith('Office', 'plum');
       });
     });
   });
 
   describe('save functionality', () => {
-    it('calls onSave with trimmed name and selected color', async () => {
+    it('calls onSave with the trimmed name', async () => {
       const user = userEvent.setup({ delay: null });
       const onSave = vi.fn().mockResolvedValue(undefined);
       render(<TagModal {...defaultProps} onSave={onSave} />);
 
-      await user.type(screen.getByPlaceholderText(/Work, Personal/), '  My Tag  ');
-      await user.click(screen.getByRole('button', { name: 'gold' }));
+      await user.type(screen.getByPlaceholderText('Tag name'), '  My Tag  ');
       await user.click(getSubmitButton());
 
       await waitFor(() => {
-        expect(onSave).toHaveBeenCalledWith('My Tag', 'gold');
+        expect(onSave).toHaveBeenCalledWith('My Tag', 'stone');
       });
     });
 
@@ -190,7 +198,7 @@ describe('TagModal', () => {
       const onSave = vi.fn().mockResolvedValue(undefined);
       render(<TagModal {...defaultProps} onClose={onClose} onSave={onSave} />);
 
-      await user.type(screen.getByPlaceholderText(/Work, Personal/), 'Test');
+      await user.type(screen.getByPlaceholderText('Tag name'), 'Test');
       await user.click(getSubmitButton());
 
       await waitFor(() => {
@@ -208,7 +216,7 @@ describe('TagModal', () => {
 
       render(<TagModal {...defaultProps} onSave={onSave} />);
 
-      await user.type(screen.getByPlaceholderText(/Work, Personal/), 'Test');
+      await user.type(screen.getByPlaceholderText('Tag name'), 'Test');
       await user.click(getSubmitButton());
 
       // Should show "Saving..." while promise is pending
@@ -226,7 +234,7 @@ describe('TagModal', () => {
       const onSave = vi.fn().mockRejectedValue(new Error('Network error'));
       render(<TagModal {...defaultProps} onSave={onSave} />);
 
-      await user.type(screen.getByPlaceholderText(/Work, Personal/), 'Test');
+      await user.type(screen.getByPlaceholderText('Tag name'), 'Test');
       await user.click(getSubmitButton());
 
       await waitFor(() => {
@@ -243,7 +251,7 @@ describe('TagModal', () => {
 
       render(<TagModal {...defaultProps} editingTag={tag} onDelete={onDelete} />);
 
-      await user.click(screen.getByText('Delete Tag'));
+      await user.click(screen.getByText('Delete tag'));
 
       await waitFor(() => {
         expect(onDelete).toHaveBeenCalled();
@@ -261,7 +269,7 @@ describe('TagModal', () => {
 
       render(<TagModal {...defaultProps} editingTag={tag} onDelete={onDelete} />);
 
-      await user.click(screen.getByText('Delete Tag'));
+      await user.click(screen.getByText('Delete tag'));
 
       expect(screen.getByText('Deleting...')).toBeInTheDocument();
 
@@ -278,7 +286,7 @@ describe('TagModal', () => {
 
       render(<TagModal {...defaultProps} editingTag={tag} onDelete={onDelete} />);
 
-      await user.click(screen.getByText('Delete Tag'));
+      await user.click(screen.getByText('Delete tag'));
 
       await waitFor(() => {
         expect(screen.getByText('Failed to delete tag. Please try again.')).toBeInTheDocument();
@@ -293,7 +301,7 @@ describe('TagModal', () => {
 
       render(<TagModal {...defaultProps} editingTag={tag} onClose={onClose} onDelete={onDelete} />);
 
-      await user.click(screen.getByText('Delete Tag'));
+      await user.click(screen.getByText('Delete tag'));
 
       await waitFor(() => {
         expect(onClose).toHaveBeenCalled();
@@ -328,7 +336,7 @@ describe('TagModal', () => {
       render(<TagModal {...defaultProps} onClose={onClose} />);
 
       // Click on the modal content (not the backdrop)
-      await user.click(screen.getByRole('heading', { name: 'Create Tag' }));
+      await user.click(screen.getByRole('heading', { name: 'New tag' }));
 
       expect(onClose).not.toHaveBeenCalled();
     });
@@ -345,13 +353,13 @@ describe('TagModal', () => {
 
       render(<TagModal {...defaultProps} onSave={onSave} editingTag={tag} onDelete={onDelete} />);
 
-      await user.type(screen.getByPlaceholderText(/Work, Personal/), 'Test');
-      await user.click(screen.getByText('Save Changes'));
+      await user.type(screen.getByPlaceholderText('Tag name'), 'Test');
+      await user.click(screen.getByText('Save changes'));
 
       // All buttons should be disabled during save
       expect(screen.getByText('Cancel')).toBeDisabled();
       expect(screen.getByText('Saving...')).toBeDisabled();
-      expect(screen.getByText('Delete Tag')).toBeDisabled();
+      expect(screen.getByText('Delete tag')).toBeDisabled();
 
       resolvePromise!();
     });
@@ -363,7 +371,7 @@ describe('TagModal', () => {
       const { rerender } = render(<TagModal {...defaultProps} onClose={onClose} />);
 
       // Type something
-      await user.type(screen.getByPlaceholderText(/Work, Personal/), 'Test');
+      await user.type(screen.getByPlaceholderText('Tag name'), 'Test');
 
       // Close modal
       rerender(<TagModal {...defaultProps} isOpen={false} onClose={onClose} />);
@@ -372,7 +380,7 @@ describe('TagModal', () => {
       rerender(<TagModal {...defaultProps} isOpen={true} onClose={onClose} />);
 
       // Input should be empty
-      expect(screen.getByPlaceholderText(/Work, Personal/)).toHaveValue('');
+      expect(screen.getByPlaceholderText('Tag name')).toHaveValue('');
     });
   });
 });

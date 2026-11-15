@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Tag, TagColor } from '../types';
-import { TAG_COLORS } from '../types';
 import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface TagModalProps {
@@ -12,21 +11,13 @@ interface TagModalProps {
   existingTags?: Tag[];
 }
 
-const COLOR_OPTIONS: TagColor[] = [
-  'terracotta',
-  'gold',
-  'forest',
-  'stone',
-  'indigo',
-  'clay',
-  'sage',
-  'plum',
-];
+// Tags no longer have a colour in the UI. New tags get the stored default; an edit
+// keeps whatever colour the tag already has, so older data and backups stay intact.
+const DEFAULT_TAG_COLOR: TagColor = 'stone';
 const EMPTY_TAGS: Tag[] = [];
 
 export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existingTags = EMPTY_TAGS }: TagModalProps) {
   const [name, setName] = useState('');
-  const [color, setColor] = useState<TagColor>('stone');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -44,13 +35,12 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
   }, [isOpen]);
 
   const openFormKey = isOpen
-    ? `${editingTag?.id ?? 'new'}:${editingTag?.name ?? ''}:${editingTag?.color ?? 'stone'}`
+    ? `${editingTag?.id ?? 'new'}:${editingTag?.name ?? ''}`
     : null;
   if (formKeyRef.current !== openFormKey) {
     formKeyRef.current = openFormKey;
     if (openFormKey) {
       setName(editingTag?.name ?? '');
-      setColor(editingTag?.color ?? 'stone');
       setError(null);
       setIsSaving(false);
       setIsDeleting(false);
@@ -83,7 +73,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
 
     setIsSaving(true);
     try {
-      await onSave(trimmedName, color);
+      await onSave(trimmedName, editingTag?.color ?? DEFAULT_TAG_COLOR);
       onClose();
     } catch {
       setError('Failed to save tag. Please try again.');
@@ -140,12 +130,12 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
             color: 'var(--color-text-primary)',
           }}
         >
-          {editingTag ? 'Edit Tag' : 'Create Tag'}
+          {editingTag ? 'Edit tag' : 'New tag'}
         </h3>
 
         <form onSubmit={handleSubmit}>
           {/* Name input */}
-          <div className="mb-6">
+          <div className="mb-8">
             <label
               htmlFor="tag-name"
               className="block text-sm mb-2"
@@ -165,7 +155,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
                 setName(e.target.value);
                 setError(null);
               }}
-              placeholder="e.g., Work, Personal, Ideas"
+              placeholder="Tag name"
               maxLength={20}
               className="
                 w-full px-4 py-3
@@ -200,82 +190,6 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
                 {error}
               </p>
             )}
-          </div>
-
-          {/* Color picker */}
-          <div className="mb-8">
-            <span
-              className="block text-sm mb-3"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-secondary)',
-              }}
-            >
-              Color
-            </span>
-            <div className="flex flex-wrap gap-3">
-              {COLOR_OPTIONS.map((colorOption) => {
-                const colorValue = TAG_COLORS[colorOption];
-                const isSelected = color === colorOption;
-
-                return (
-                  <button
-                    key={colorOption}
-                    type="button"
-                    onClick={() => setColor(colorOption)}
-                    className="
-                      size-8
-                      rounded-full
-                      transition-all duration-200
-                      focus:outline-none
-                      focus:ring-2
-                      focus:ring-offset-2
-                    "
-                    style={{
-                      background: colorValue,
-                      transform: isSelected ? 'scale(1.2)' : 'scale(1)',
-                      boxShadow: isSelected
-                        ? `0 0 0 2px var(--color-bg-primary), 0 0 0 4px ${colorValue}`
-                        : 'none',
-                    }}
-                    aria-label={colorOption}
-                    title={colorOption.charAt(0).toUpperCase() + colorOption.slice(1)}
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Preview */}
-          <div className="mb-8">
-            <span
-              className="block text-sm mb-3"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-secondary)',
-              }}
-            >
-              Preview
-            </span>
-            <div
-              className="
-                inline-flex items-center gap-2
-                px-4 py-2
-                text-sm font-medium
-              "
-              style={{
-                background: `${TAG_COLORS[color]}20`,
-                border: `1px solid ${TAG_COLORS[color]}`,
-                borderRadius: 'var(--radius-pill)',
-                color: TAG_COLORS[color],
-              }}
-            >
-              <span
-                className="size-2 rounded-full"
-                style={{ background: TAG_COLORS[color] }}
-              />
-              {name || 'Tag name'}
-            </div>
           </div>
 
           {/* Actions */}
@@ -313,7 +227,7 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
                     style={{ borderColor: 'var(--color-destructive)', borderTopColor: 'transparent' }}
                   />
                 )}
-                {isDeleting ? 'Deleting...' : 'Delete Tag'}
+                {isDeleting ? 'Deleting...' : 'Delete tag'}
               </button>
             ) : (
               <div />
@@ -382,8 +296,8 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
                 {isSaving
                   ? 'Saving...'
                   : editingTag
-                    ? 'Save Changes'
-                    : 'Create Tag'}
+                    ? 'Save changes'
+                    : 'Create tag'}
               </button>
             </div>
           </div>

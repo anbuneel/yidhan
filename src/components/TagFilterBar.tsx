@@ -111,24 +111,16 @@ export function TagFilterBar({
           py-2 sm:py-3
           flex flex-wrap
           items-center
-          gap-2 sm:gap-3
+          gap-x-2 gap-y-1
         "
       >
-        {/* All Notes pill */}
+        {/* All notes */}
         <AllNotesPill
           isActive={isAllNotesActive}
           onClick={onClearFilter}
         />
 
-        {/* Divider */}
-        {tags.length > 0 && (
-          <div
-            className="w-px h-5 sm:h-6 shrink-0"
-            style={{ background: 'var(--glass-border)' }}
-          />
-        )}
-
-        {/* Tag pills */}
+        {/* Tags */}
         {tags.map((tag) => (
           <TagPill
             key={tag.id}
@@ -147,20 +139,18 @@ export function TagFilterBar({
           <button type="button"
             onClick={() => setIsExpanded(true)}
             className="
-              px-2 py-1 sm:px-3 sm:py-1.5
+              min-h-9 px-1
               flex items-center gap-1
-              text-xs sm:text-sm font-medium
+              text-xs sm:text-sm
               shrink-0
-              transition-all duration-200
-              hover:border-[var(--color-accent)]
+              rounded-sm
+              transition-colors duration-150
+              focus-ring
               hover:text-[var(--color-accent-text)]
             "
             style={{
               fontFamily: 'var(--font-body)',
               color: 'var(--color-text-tertiary)',
-              background: 'var(--color-bg-secondary)',
-              borderRadius: 'var(--radius-pill)',
-              border: '1px solid var(--glass-border)',
             }}
             aria-expanded="false"
             aria-label={`Show ${hiddenCount} more tags`}
@@ -177,18 +167,18 @@ export function TagFilterBar({
           <button type="button"
             onClick={() => setIsExpanded(false)}
             className="
-              px-2 py-1 sm:px-3 sm:py-1.5
+              min-h-9 px-1
               flex items-center gap-1
-              text-xs sm:text-sm font-medium
+              text-xs sm:text-sm
               shrink-0
-              transition-all duration-200
+              rounded-sm
+              transition-colors duration-150
+              focus-ring
+              hover:text-[var(--color-accent-text)]
             "
             style={{
               fontFamily: 'var(--font-body)',
-              color: 'var(--color-accent-text)',
-              background: 'var(--color-accent-glow)',
-              borderRadius: 'var(--radius-pill)',
-              border: '1px solid var(--color-accent)',
+              color: 'var(--color-text-tertiary)',
             }}
             aria-expanded="true"
             aria-label="Collapse tags"
