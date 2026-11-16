@@ -790,3 +790,8 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
 - **2026-11-11** — The share image carries the new tagline, "A notes app built around
   writing.", redrawn from `scripts/brand/flatten.py`. The `og:image` and
   `twitter:image` links move to `?v=4` so link previews fetch the new image. (#276)
+- **2026-11-16** — Tags are plain words, not coloured pills. The active filter is the
+  only coloured item: accent text with an underline. Cards, the editor and shared
+  letters show small upright names joined with a middot. The colour picker is gone;
+  each tag still stores its `color` key, so no migration. Folders were rejected
+  (`DECISIONS.md`, 2026-11-14). (#279)
