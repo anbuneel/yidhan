@@ -200,7 +200,7 @@ export async function deleteNoteFromLibrary(page: Page, title: string): Promise<
 /**
  * Create a tag
  */
-export async function createTag(page: Page, name: string, color?: string): Promise<void> {
+export async function createTag(page: Page, name: string): Promise<void> {
   // Click add tag button in filter bar
   await page.getByRole('button', { name: /add tag/i }).click();
 
@@ -209,11 +209,6 @@ export async function createTag(page: Page, name: string, color?: string): Promi
 
   // Fill tag name
   await page.getByPlaceholder(/tag name/i).fill(name);
-
-  // Select color if provided
-  if (color) {
-    await page.getByRole('button', { name: new RegExp(color, 'i') }).click();
-  }
 
   // Save
   await page.getByRole('button', { name: /create|save/i }).click();

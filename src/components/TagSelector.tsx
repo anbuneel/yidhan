@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Tag } from '../types';
-import { TAG_COLORS } from '../types';
 
 interface TagSelectorProps {
   tags: Tag[];
@@ -78,51 +77,35 @@ export function TagSelector({
           ) : (
             tags.map((tag) => {
               const isSelected = selectedTagIds.includes(tag.id);
-              const colorValue = TAG_COLORS[tag.color];
 
               return (
                 <button type="button"
                   key={tag.id}
                   onClick={() => onToggleTag(tag.id)}
+                  aria-pressed={isSelected}
                   className="
                     w-full px-4 py-2
-                    flex items-center gap-3
+                    flex items-center justify-between gap-3
                     text-left text-sm
                     transition-colors duration-150
                     hover:bg-[var(--color-bg-tertiary)]
                   "
                   style={{
                     fontFamily: 'var(--font-body)',
-                    color: isSelected ? colorValue : 'var(--color-text-secondary)',
+                    color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                   }}
                 >
-                  {/* Checkbox */}
-                  <span
-                    className="
-                      size-4
-                      rounded
-                      flex items-center justify-center
-                      transition-colors duration-150
-                    "
-                    style={{
-                      border: `1.5px solid ${isSelected ? colorValue : 'var(--color-text-tertiary)'}`,
-                      background: isSelected ? `${colorValue}20` : 'transparent',
-                    }}
+                  <span className="truncate">{tag.name}</span>
+                  <svg
+                    className="size-4 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    style={{ color: 'var(--color-accent-text)', visibility: isSelected ? 'visible' : 'hidden' }}
                   >
-                    {isSelected && (
-                      <svg className="size-3" fill="none" stroke={colorValue} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </span>
-
-                  {/* Color dot */}
-                  <span
-                    className="size-2 rounded-full shrink-0"
-                    style={{ background: colorValue }}
-                  />
-
-                  {tag.name}
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
+                  </svg>
                 </button>
               );
             })
@@ -166,26 +149,22 @@ export function TagSelector({
   if (variant === 'inline') {
     return (
       <div className="relative flex items-center gap-1.5 flex-wrap" ref={containerRef}>
-        {selectedTags.map((tag) => (
+        {selectedTags.map((tag, index) => (
           <button
             key={tag.id}
             type="button"
-            className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium cursor-pointer transition-opacity duration-200 hover:opacity-80"
+            className="inline-flex items-baseline gap-1.5 py-0.5 text-xs cursor-pointer rounded-sm transition-colors duration-150 hover:text-[var(--color-text-primary)]"
             style={{
-              background: `${TAG_COLORS[tag.color]}15`,
-              color: TAG_COLORS[tag.color],
-              borderRadius: '4px',
+              fontFamily: 'var(--font-body)',
+              color: 'var(--color-text-secondary)',
               border: 'none',
+              background: 'transparent',
             }}
             onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
             aria-haspopup="listbox"
             aria-expanded={isOpen}
           >
-            <span
-              className="size-1.5 rounded-full"
-              style={{ background: TAG_COLORS[tag.color] }}
-              aria-hidden="true"
-            />
+            {index > 0 && <span aria-hidden="true" style={{ color: 'var(--color-text-tertiary)' }}>·</span>}
             {tag.name}
           </button>
         ))}
@@ -240,25 +219,9 @@ export function TagSelector({
           <span>Add tags</span>
         ) : (
           <span className="flex items-center gap-1.5">
-            {selectedTags.slice(0, 2).map((tag) => (
-              <span
-                key={tag.id}
-                className="
-                  inline-flex items-center gap-1
-                  px-2 py-0.5
-                  text-xs
-                  font-medium
-                "
-                style={{
-                  background: `${TAG_COLORS[tag.color]}15`,
-                  color: TAG_COLORS[tag.color],
-                  borderRadius: '4px',
-                }}
-              >
-                <span
-                  className="size-1.5 rounded-full"
-                  style={{ background: TAG_COLORS[tag.color] }}
-                />
+            {selectedTags.slice(0, 2).map((tag, index) => (
+              <span key={tag.id} className="inline-flex items-baseline gap-1.5 text-xs">
+                {index > 0 && <span aria-hidden="true" style={{ color: 'var(--color-text-tertiary)' }}>·</span>}
                 {tag.name}
               </span>
             ))}

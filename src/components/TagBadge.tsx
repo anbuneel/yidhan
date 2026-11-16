@@ -1,31 +1,20 @@
 import type { Tag } from '../types';
-import { TAG_COLORS } from '../types';
 
 interface TagBadgeProps {
   tag: Tag;
 }
 
+// Tags on a card are small upright words, not chips. They never read the tag's
+// stored colour.
 export function TagBadge({ tag }: TagBadgeProps) {
-  const colorValue = TAG_COLORS[tag.color];
-
   return (
     <span
-      className="
-        inline-flex items-center gap-1
-        px-2 py-0.5
-        text-xs
-      "
+      className="text-xs"
       style={{
         fontFamily: 'var(--font-body)',
-        background: `${colorValue}0A`, // 10% opacity (reduced from 15%)
-        color: 'var(--color-text-secondary)', // Muted text, not full color
-        borderRadius: 'var(--radius-pill)',
+        color: 'var(--color-text-tertiary)',
       }}
     >
-      <span
-        className="size-1.5 rounded-full"
-        style={{ background: colorValue }} // Colored dot remains
-      />
       {tag.name}
     </span>
   );
@@ -43,23 +32,27 @@ export function TagBadgeList({ tags, maxDisplay = 1 }: TagBadgeListProps) {
   const remainingCount = tags.length - maxDisplay;
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {displayTags.map((tag) => (
-        <TagBadge key={tag.id} tag={tag} />
+    <div className="flex flex-wrap items-baseline gap-x-1.5 min-w-0">
+      {displayTags.map((tag, index) => (
+        <span key={tag.id} className="inline-flex items-baseline gap-x-1.5">
+          {index > 0 && (
+            <span aria-hidden="true" className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+              ·
+            </span>
+          )}
+          <TagBadge tag={tag} />
+        </span>
       ))}
       {remainingCount > 0 && (
         <span
-          className="
-            px-2 py-0.5
-            text-[0.65rem]
-            font-medium
-          "
+          className="text-xs"
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-tertiary)',
           }}
+          aria-label={`${remainingCount} more ${remainingCount === 1 ? 'tag' : 'tags'}`}
         >
-          +{remainingCount} more
+          +{remainingCount}
         </span>
       )}
     </div>

@@ -69,8 +69,8 @@ export type TagColor =
   | 'plum';
 
 export const TAG_COLORS: Record<TagColor, string> = {
-  // Earthy mid-tones that reach 3:1 on both the light and the dark page and card, so
-  // one value serves both themes. The keys are stored with each tag; keep them.
+  // Stored keys only: the UI no longer renders tag colours (DECISIONS.md, 2026-11-14).
+  // Import validation uses the keys. Keep them so stored tags and backups stay valid.
   terracotta: '#B5643F',
   gold: '#9C7A26',
   forest: '#4B8659',

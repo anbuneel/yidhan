@@ -8,7 +8,6 @@ import { Footer } from './Footer';
 import { Logo } from './Logo';
 import { reportReliabilityIssue } from '../utils/reliabilityTelemetry';
 
-const VALID_TAG_COLORS = new Set(['terracotta', 'gold', 'forest', 'stone', 'indigo', 'clay', 'sage', 'plum']);
 
 interface SharedNoteViewProps {
   token: string;
@@ -375,25 +374,17 @@ export function SharedNoteView({
 
           {/* Tags */}
           {payload?.tags && payload.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-6">
-              {payload.tags.map((tag) => {
-                const safeColor = VALID_TAG_COLORS.has(tag.color) ? tag.color : 'stone';
-                return (
-                  <span
-                    key={`${tag.name}-${safeColor}`}
-                    className="px-2.5 py-0.5 text-xs rounded-full"
-                    style={{
-                      fontFamily: 'var(--font-body)',
-                      background: `color-mix(in srgb, var(--tag-${safeColor}, var(--color-accent)) 15%, transparent)`,
-                      color: `var(--tag-${safeColor}, var(--color-accent-text))`,
-                      border: `1px solid color-mix(in srgb, var(--tag-${safeColor}, var(--color-accent)) 30%, transparent)`,
-                    }}
-                  >
-                    {tag.name}
-                  </span>
-                );
-              })}
-            </div>
+            <p
+              className="flex flex-wrap items-baseline gap-x-1.5 mb-6 text-sm"
+              style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-tertiary)' }}
+            >
+              {payload.tags.map((tag, index) => (
+                <span key={tag.name} className="inline-flex items-baseline gap-x-1.5">
+                  {index > 0 && <span aria-hidden="true">·</span>}
+                  {tag.name}
+                </span>
+              ))}
+            </p>
           )}
 
           {/* Divider */}
