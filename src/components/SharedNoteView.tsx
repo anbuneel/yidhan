@@ -375,12 +375,12 @@ export function SharedNoteView({
           {/* Tags */}
           {payload?.tags && payload.tags.length > 0 && (
             <p
-              className="flex flex-wrap items-baseline gap-x-1.5 mb-6 text-sm italic"
+              className="flex flex-wrap items-baseline gap-x-1.5 mb-6 text-sm"
               style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-tertiary)' }}
             >
               {payload.tags.map((tag, index) => (
                 <span key={tag.name} className="inline-flex items-baseline gap-x-1.5">
-                  {index > 0 && <span aria-hidden="true" className="not-italic">·</span>}
+                  {index > 0 && <span aria-hidden="true">·</span>}
                   {tag.name}
                 </span>
               ))}

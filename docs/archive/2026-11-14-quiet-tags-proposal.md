@@ -101,3 +101,4 @@ Tags look like a stock UI kit: a coloured dot inside a rounded pill with a hairl
   would rewrite the user's own words.
 - "All notes" stays as two words in sentence case, and the add control reads "+ Tag".
 - Shared letters were also chips and now use the same italic words.
+- Tags on cards, in the editor and in shared letters are upright, not italic. Main changed the type rule while this was in review: italic is for dates and relative times only.

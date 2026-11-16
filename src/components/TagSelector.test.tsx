@@ -30,10 +30,10 @@ it('lists tags without stored colours and marks the selected one', () => {
   expect(html).not.toContain('#9c7a26');
 });
 
-it('shows selected tags as plain italic words, not tinted chips', () => {
+it('shows selected tags as plain upright words, not tinted chips', () => {
   render(<TagSelector tags={colouredTags} selectedTagIds={['a', 'b']} onToggleTag={vi.fn()} />);
   const journal = screen.getByText('Journal');
-  expect(journal.closest('.italic')).not.toBeNull();
+  expect(journal.closest('.italic')).toBeNull();
   expect(journal.closest('[style*="background"]')).toBeNull();
 });
 

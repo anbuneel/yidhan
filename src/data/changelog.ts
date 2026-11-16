@@ -8,7 +8,7 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   { version: '3.20.5', date: '2026-11-14', changes: [
-    { type: 'improvement', text: 'Tags are now plain words instead of coloured pills. In the library, the tag you filter by is the only one in green, and underlined. On notes, tags show as small italic words. Tags no longer have colours, so the colour picker is gone. Your tags and notes are unchanged' },
+    { type: 'improvement', text: 'Tags are now plain words instead of coloured pills. In the library, the tag you filter by is the only one in green, and underlined. On notes, tags show as small plain words. Tags no longer have colours, so the colour picker is gone. Your tags and notes are unchanged' },
   ] },
   { version: '3.20.4', date: '2026-11-11', changes: [
     { type: 'improvement', text: 'Note cards in the light theme sit flatter, with a softer shadow, and the paper grain behind the page is fainter. In the dark theme, cards are a little lighter than the page, so they are easier to tell apart' },

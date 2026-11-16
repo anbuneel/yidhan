@@ -4,12 +4,12 @@ interface TagBadgeProps {
   tag: Tag;
 }
 
-// Tags on a card are small italic words, not chips. They never read the tag's
+// Tags on a card are small upright words, not chips. They never read the tag's
 // stored colour.
 export function TagBadge({ tag }: TagBadgeProps) {
   return (
     <span
-      className="text-xs italic"
+      className="text-xs"
       style={{
         fontFamily: 'var(--font-body)',
         color: 'var(--color-text-tertiary)',

@@ -31,7 +31,7 @@ italic; tags were the one place everything sat in a box.
 
 **Decision:** Every tag surface renders tag names as text. The filter row uses
 secondary text, with the active filter alone in the accent text colour and
-underlined. Cards, the editor control and shared letters use small italic names
+underlined. Cards, the editor control and shared letters use small upright names
 joined by middots. The colour picker is gone.
 
 **Kept:** the stored `color` field on each tag, in IndexedDB, Supabase, exports,

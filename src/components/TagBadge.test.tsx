@@ -12,10 +12,10 @@ const createTag = (overrides: Partial<Tag> = {}): Tag => ({
 });
 
 describe('TagBadge', () => {
-  it('renders the tag name as quiet italic text', () => {
+  it('renders the tag name as quiet upright text', () => {
     render(<TagBadge tag={createTag({ name: 'Important' })} />);
     const badge = screen.getByText('Important');
-    expect(badge).toHaveClass('italic');
+    expect(badge).not.toHaveClass('italic');
     expect(badge).toHaveStyle({ color: 'var(--color-text-tertiary)' });
   });
 

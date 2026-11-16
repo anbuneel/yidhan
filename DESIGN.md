@@ -118,7 +118,7 @@ the filter row, note cards, the editor's tag control and shared letters.
 - **Filter row:** tag names in `--color-text-secondary`. The active filter is the
   only coloured item: `--color-accent-text` with an underline. "All notes" and
   "+ Tag" share the same style.
-- **Cards, editor and letters:** small italic names joined with ` · `, in
+- **Cards, editor and letters:** small upright names joined with ` · `, in
   `--color-text-tertiary` (secondary in the editor). Overflow shows as `+N`.
 - **No tag colours in the UI.** Each tag still stores a `color` key for data and
   backup compatibility; nothing renders it, and there is no colour picker

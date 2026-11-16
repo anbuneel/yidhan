@@ -153,7 +153,7 @@ export function TagSelector({
           <button
             key={tag.id}
             type="button"
-            className="inline-flex items-baseline gap-1.5 py-0.5 text-xs italic cursor-pointer rounded-sm transition-colors duration-150 hover:text-[var(--color-text-primary)]"
+            className="inline-flex items-baseline gap-1.5 py-0.5 text-xs cursor-pointer rounded-sm transition-colors duration-150 hover:text-[var(--color-text-primary)]"
             style={{
               fontFamily: 'var(--font-body)',
               color: 'var(--color-text-secondary)',
@@ -164,7 +164,7 @@ export function TagSelector({
             aria-haspopup="listbox"
             aria-expanded={isOpen}
           >
-            {index > 0 && <span aria-hidden="true" className="not-italic" style={{ color: 'var(--color-text-tertiary)' }}>·</span>}
+            {index > 0 && <span aria-hidden="true" style={{ color: 'var(--color-text-tertiary)' }}>·</span>}
             {tag.name}
           </button>
         ))}
@@ -220,8 +220,8 @@ export function TagSelector({
         ) : (
           <span className="flex items-center gap-1.5">
             {selectedTags.slice(0, 2).map((tag, index) => (
-              <span key={tag.id} className="inline-flex items-baseline gap-1.5 text-xs italic">
-                {index > 0 && <span aria-hidden="true" className="not-italic" style={{ color: 'var(--color-text-tertiary)' }}>·</span>}
+              <span key={tag.id} className="inline-flex items-baseline gap-1.5 text-xs">
+                {index > 0 && <span aria-hidden="true" style={{ color: 'var(--color-text-tertiary)' }}>·</span>}
                 {tag.name}
               </span>
             ))}
