@@ -173,13 +173,19 @@ describe('the editor glow', () => {
     expect(landingGlow).not.toContain('--color-accent');
   });
 
-  it('is off in light, because nothing is lighter than the white sheet', () => {
-    expect(ACTIVE_LIGHT_THEME.colors.editorGlow).toBe('rgba(53, 122, 69, 0)');
+  it('is the brand marigold at 8% in both themes', () => {
+    expect(indexCss).toContain('--color-brand-marigold: #F2A21B;');
+    // #F2A21B is rgb(242, 162, 27).
+    expect(ACTIVE_LIGHT_THEME.colors.editorGlow).toBe('rgba(242, 162, 27, 0.08)');
+    expect(ACTIVE_DARK_THEME.colors.editorGlow).toBe('rgba(242, 162, 27, 0.08)');
   });
 
-  it('stays neutral in dark: the text colour at 4%, no green', () => {
-    expect(ACTIVE_DARK_THEME.colors.editorGlow).toBe('rgba(230, 227, 220, 0.04)');
-    expect(ACTIVE_DARK_THEME.colors.textPrimary).toBe('#E6E3DC');
+  it('is not the accent green or a neutral shade in either theme', () => {
+    for (const theme of [ACTIVE_LIGHT_THEME, ACTIVE_DARK_THEME]) {
+      expect(theme.colors.editorGlow).not.toContain('53, 122, 69');
+      expect(theme.colors.editorGlow).not.toContain('143, 199, 154');
+      expect(theme.colors.editorGlow).not.toContain('230, 227, 220');
+    }
   });
 });
 

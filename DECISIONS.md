@@ -19,6 +19,30 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-24 — The editor glow is marigold, in both themes
+
+**Status:** Active
+
+**Why:** Light had no glow after 2026-11-11, because green and neutral tints read as a
+smudge on the white sheet. Every tint darkens white, but yellow is the lightest hue, so
+it darkens white the least. On a comparison of marigold at 3, 4, 5, 6 and 8%, beside no
+glow and the old green 8%, the owner found marigold reads as warm light rather than a
+patch, and chose 8%. The logo calls marigold the brightness, and a glow is brightness.
+
+**Decision:** `editorGlow` is the brand marigold `#F2A21B` at 8% in light and dark. Dark
+drops its neutral 4% so both themes have one glow. Marigold now has two jobs: the logo's
+sun, with the pinned mark, and the editor glow. It is still never text. At the glow's
+centre the note text measures 12.61:1 in light (13.33:1 on plain white) and 8.59:1 in
+dark (9.94:1 with no glow). The landing's sample sheet follows the same token.
+
+**Rejected:** Marigold in light only, with neutral kept in dark. Dark's glow already
+worked, but two glows would need two rules. Lower strengths: 3 to 6% were on the same
+comparison and the owner chose 8%. This reverses two earlier rejections: marigold at 6%
+on 2026-11-10, for warming the page toward cream and for breaking the logo-only rule, and
+the transparent light glow of 2026-11-11.
+
+---
+
 ## 2026-11-14 — Tags are plain words, with no colour in the UI
 
 **Status:** Active
@@ -79,7 +103,7 @@ editor, so the reference does not read, and it is a toolbar posing as a menu.
 
 ## 2026-11-11 — No editor glow in the light theme
 
-**Status:** Active
+**Status:** Superseded by 2026-11-24 — The editor glow is marigold, in both themes
 
 **Why:** Two visual reviews found that the light glow, the accent at 8%, read as a grey
 smudge in the middle of the white editor sheet. The 2026-11-10 entry chose it over a

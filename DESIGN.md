@@ -10,7 +10,7 @@ A calm page and one serif (`DECISIONS.md`, 2026-11-09). In daylight the page is 
 pale, cool white of a leaf that has just opened; at night it is a deep green-black.
 Solid sheets sit on top, and there is one green, turned toward leaf (`DECISIONS.md`,
 2026-11-10). Green is the spring in the name and marigold is the brightness, so marigold
-is the logo's sun. Hierarchy comes from size, weight
+is the logo's sun and the glow in the editor. Hierarchy comes from size, weight
 and italic, not from colour or a second typeface.
 
 Earlier framings are retired: the Japanese one (kintsugi, wabi-sabi, the enso) and
@@ -25,7 +25,7 @@ sidebar-heavy layouts, no feature density, no tech-forward aesthetics.
 1. **Restraint over features.** Every element must earn its place. When in doubt,
    leave it out.
 2. **Quiet over bold.** No bold colour. Green is the one working colour. Marigold has
-   one job outside the logo: the mark on a pinned note (see Logo).
+   two jobs outside the logo: the mark on a pinned note (see Logo) and the editor glow.
 3. **Calm over engagement.** The interface should lower the heart rate, not raise
    it.
 4. **Craft over convention.** Sweat the details others skip.
@@ -45,7 +45,7 @@ Rules the contrast numbers force (`src/themes/contrast.test.ts` checks them):
 - **Green as text uses `--color-accent-text`.** `--color-accent` is for fills and
   marks. In light it falls to 4.39:1 on the tinted surface.
 - **Marigold (`--color-brand-marigold`, `#F2A21B`) is never text on the light page**
-  (1.94:1). It is a fill, in the logo and the pinned mark only.
+  (1.94:1). It is a fill, in the logo and the pinned mark, and at 8% in the editor glow.
 - **`--color-glass-border` is a hairline**, for dividers and card outlines only. Input
   borders use `--color-input-border`, at 3:1 or better.
 - **Note text has its own colour and weight**: `--color-text-note` and `--note-weight`
@@ -168,11 +168,10 @@ with a smooth band. Nothing sits over content. Cards, the editor sheet, modals, 
 and inputs are opaque and smooth. There are no ornaments: no three-dot marks under a note or
 between sections. A divider in a note is a short centred hairline.
 
-In dark the editor keeps a faint glow that follows the viewport, from
-`--color-editor-glow`: the text colour at 4%, no accent. In light the token is fully
-transparent. Nothing is lighter than the white sheet, so any tint there reads as a smudge,
-not light. The landing sheet
-uses the same token. A ref-based scroll handler positions it (`CLAUDE.md`). Note
+The editor has a faint glow that follows the viewport, from `--color-editor-glow`: the
+brand marigold at 8%, in both themes. Every tint darkens the white sheet, and yellow
+darkens it least, so marigold reads as warm light where green or grey reads as a smudge.
+Do not swap it for the accent or a neutral shade. The landing sheet uses the same token. A ref-based scroll handler positions it (`CLAUDE.md`). Note
 cards carry a 3% accent tint at the bottom.
 
 ## Save and sync states
@@ -200,8 +199,8 @@ the dot of the i. Fraunces never ships as a font. Decisions: `DECISIONS.md`,
   favicon has no lines (`tile-dark-small-no-line.svg`).
 - **The pinned mark** (`PinnedMark` in `src/components/NoteCard.tsx`). A pinned note
   shows a marigold disc holding a bookmark in `--color-brand-leaf-deep`, where the pin
-  button sits. The disc is the logo's sun. This is marigold's one job in the product. Do not use marigold for anything
-  else: not highlights, not badges, not buttons. The bookmark carries the meaning,
+  button sits. The disc is the logo's sun. Apart from the editor glow, this is marigold's one job in
+  the product. Do not use marigold for anything else: not highlights, not badges, not buttons. The bookmark carries the meaning,
   because marigold alone is 1.94:1 on a white card.
 - **The sun is tucked behind the leaf.** Its centre sits just outside the leaf's
   top-left corner, the same distance left as above: 4.5 in the full mark (radius 19),
