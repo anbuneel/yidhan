@@ -837,3 +837,8 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   edited starter; added the "What stays out of the way" overview (chapters, search,
   Share as Letter, phone and offline) and a four-question FAQ; moved non-tested landing
   CSS to `src/index.css` to keep JS bundles within budget.
+- **2026-11-25** — Fixed stale save status and dropped autosave on in-place note switch
+  in `Editor.tsx`: guarded `performSave` completion and failure paths against
+  `activeNoteIdRef.current !== saveNoteId`, reset save status and timers on note switch,
+  and flushed pending unsaved edits for the leaving note after commit without touching
+  autosave timing. (#285)

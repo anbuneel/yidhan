@@ -1864,4 +1864,182 @@ describe('Editor', () => {
       expect(screen.queryByText(/not encrypted/i)).not.toBeInTheDocument();
     });
   });
+
+  describe('note switch while saving or autosaving (issue #285)', () => {
+    const noteB = createMockNote({
+      id: 'note-456',
+      title: 'Second Note',
+      content: '<p>Second content</p>',
+      tags: [],
+    });
+
+    it('does not show the first note’s saved status on the next note when switched mid-save', async () => {
+      let resolveFirstSave!: () => void;
+      const onUpdate = vi.fn().mockImplementation(
+        () => new Promise<void>((resolve) => { resolveFirstSave = resolve; })
+      );
+
+      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Edited A' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+      expect(container.querySelector('[data-save-status="saving"]')).not.toBeNull();
+
+      // Switch to note B while note A's save is still in flight.
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      expect(screen.getByDisplayValue('Second Note')).toBeInTheDocument();
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+
+      // Note A's save resolves after the switch.
+      await act(async () => {
+        resolveFirstSave();
+        await Promise.resolve();
+      });
+
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('does not show the first note’s failed-save banner on the next note when switched mid-save', async () => {
+      let rejectFirstSave!: (err: Error) => void;
+      const onUpdate = vi.fn().mockImplementation(
+        () => new Promise<void>((_, reject) => { rejectFirstSave = reject; })
+      );
+
+      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Edited A' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Switch to note B while note A's save is still in flight.
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+
+      // Note A's save fails after the switch.
+      await act(async () => {
+        rejectFirstSave(new Error('offline'));
+        await Promise.resolve();
+      });
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+    });
+
+    it('saves the first note’s last keystrokes when switching inside the 800ms autosave window', async () => {
+      const onUpdate = vi.fn().mockResolvedValue(undefined);
+      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Last keystrokes' } });
+      await act(async () => { vi.advanceTimersByTime(300); });
+      expect(onUpdate).not.toHaveBeenCalled();
+
+      // Switch to note B before the 800ms autosave timer fires.
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      await act(async () => { await Promise.resolve(); });
+
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+      expect(onUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: mockNote.id,
+          title: 'Last keystrokes',
+        })
+      );
+      expect(screen.getByDisplayValue('Second Note')).toBeInTheDocument();
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+    });
+
+    it('still shows save status and keeps failed drafts with Retry and Copy for the active note after a switch', async () => {
+      let resolveFirstSave!: () => void;
+      const onUpdate = vi
+        .fn()
+        .mockImplementationOnce(
+          () => new Promise<void>((resolve) => { resolveFirstSave = resolve; })
+        )
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('offline'));
+
+      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Edited A' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      await act(async () => {
+        resolveFirstSave();
+        await Promise.resolve();
+      });
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+
+      // A save for note B (the note on screen) still shows its saved status.
+      fireEvent.change(screen.getByDisplayValue('Second Note'), { target: { value: 'Second Saved' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      await act(async () => { await Promise.resolve(); });
+      expect(container.querySelector('[data-save-status="saved"]')).not.toBeNull();
+
+      // Parent echoes the saved note back (as App.tsx does after onUpdate resolves).
+      const savedNoteB = { ...noteB, title: 'Second Saved' };
+      rerender(<Editor {...defaultProps} note={savedNoteB} onUpdate={onUpdate} />);
+
+      // A failed save for note B still keeps the draft on screen with Retry and Copy.
+      fireEvent.change(screen.getByDisplayValue('Second Saved'), { target: { value: 'Second Unsaved' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      await act(async () => { await Promise.resolve(); });
+
+      expect(screen.getByDisplayValue('Second Unsaved')).toBeInTheDocument();
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent('Not saved');
+      expect(within(alert).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+      expect(within(alert).getByRole('button', { name: 'Copy' })).toBeInTheDocument();
+    });
+
+    it('flushes newer keystrokes after an in-flight save finishes when switched mid-save', async () => {
+      let resolveFirstSave!: () => void;
+      const onUpdate = vi
+        .fn()
+        .mockImplementationOnce(
+          () => new Promise<void>((resolve) => { resolveFirstSave = resolve; })
+        )
+        .mockResolvedValueOnce(undefined);
+
+      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'First version' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Type more while the first save is still in flight, then switch before 800ms elapses.
+      fireEvent.change(screen.getByDisplayValue('First version'), { target: { value: 'Newer version' } });
+      await act(async () => { vi.advanceTimersByTime(200); });
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+
+      // Waiting for the in-flight save before writing the newer version preserves write order.
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        resolveFirstSave();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(onUpdate).toHaveBeenCalledTimes(2);
+      expect(onUpdate).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ id: mockNote.id, title: 'Newer version' })
+      );
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('does not write back to a released note when switching away from it', async () => {
+      const onUpdate = vi.fn().mockResolvedValue(undefined);
+      const { rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} releasedElsewhere />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Released words' } });
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      await act(async () => { await Promise.resolve(); });
+
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -219,6 +219,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // Track in-flight save promise to await on navigation
   const inFlightSaveRef = useRef<Promise<boolean> | null>(null);
   const currentNoteIdRef = useRef(note.id);
+  const prevNoteStateRef = useRef({ note, releasedElsewhere });
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
+  const pendingSwitchFlushRef = useRef<Array<{ note: Note; waitFor: Promise<boolean> | null }>>([]);
+  const prevSyncStatusRef = useRef(noteSyncStatus);
+  const shouldStartSyncedStatusTimerRef = useRef(false);
 
   // Remote update tracking (2B): detect when the note prop changes from
   // another device's sync, distinguish from our own save echoing back
@@ -240,12 +246,53 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // and any typed while the note was written are newer than the stored copy.
     const switchIsKeep = keepingFromNoteIdRef.current !== null &&
       keepingFromNoteIdRef.current === currentNoteIdRef.current;
+
+    // Issue #285: switching notes while the editor stays mounted cancels the
+    // leaving note's pending 800ms autosave. Queue its unsaved draft to flush
+    // after commit without letting its result touch the new note's status.
+    const prev = prevNoteStateRef.current;
+    if (!switchIsKeep && !prev.releasedElsewhere) {
+      const prevDraft = buildSnapshot(title, content, prev.note.tags);
+      const differsFromCommitted = !sameTitleAndContent(prevDraft, committedSnapshotRef.current);
+      const differsFromInFlight =
+        inFlightSnapshotRef.current === null ||
+        !sameTitleAndContent(prevDraft, inFlightSnapshotRef.current);
+      if (differsFromCommitted && differsFromInFlight && (!hasSaveError || autoSaveTimeoutRef.current !== null)) {
+        pendingSwitchFlushRef.current.push({
+          note: {
+            ...prev.note,
+            title: prevDraft.title,
+            content: prevDraft.content,
+            updatedAt: new Date(),
+          },
+          waitFor: inFlightSaveRef.current,
+        });
+      }
+    }
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+      autoSaveTimeoutRef.current = null;
+    }
+    if (savePhaseTimeoutRef.current) {
+      clearTimeout(savePhaseTimeoutRef.current);
+      savePhaseTimeoutRef.current = null;
+    }
+    if (hideIndicatorTimeoutRef.current) {
+      clearTimeout(hideIndicatorTimeoutRef.current);
+      hideIndicatorTimeoutRef.current = null;
+    }
+
     keepingFromNoteIdRef.current = null;
     currentNoteIdRef.current = note.id;
     if (!switchIsKeep) {
       setTitle(note.title);
       setContent(note.content);
     }
+    setSaveStatus('idle');
+    inFlightSaveRef.current = null;
+    prevSyncStatusRef.current = noteSyncStatus;
+    shouldStartSyncedStatusTimerRef.current = false;
     setKeepFailed(false);
     setCopyFailed(false);
     setHasSaveError(false);
@@ -262,6 +309,25 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     throttledScrollSaveRef.current = null;
     pendingScrollSaveRef.current = null; // Clear pending data for old note
   }
+  prevNoteStateRef.current = { note, releasedElsewhere };
+
+  useEffect(() => {
+    const pending = pendingSwitchFlushRef.current;
+    if (pending.length === 0) return;
+    pendingSwitchFlushRef.current = [];
+    for (const item of pending) {
+      void (async () => {
+        try {
+          if (item.waitFor) {
+            await item.waitFor.catch(() => {});
+          }
+          await onUpdateRef.current(item.note);
+        } catch {
+          // The writer already switched away; never show a stale error banner on the active note.
+        }
+      })();
+    }
+  }, [note.id]);
 
   // Detect remote updates to the currently open note (2B)
   // When the note prop changes (from sync rehydration) while the same note is open:
@@ -498,6 +564,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // Escape keep the writer here; the released banner offers the ways out.
     if (releasedElsewhere) return false;
 
+    const saveNoteId = note.id;
     const draftSnapshot = buildSnapshot(title, content, note.tags);
 
     // Nothing to write means nothing is unsaved, so any banner left by an
@@ -517,6 +584,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
     if (inFlightSaveRef.current) {
       await inFlightSaveRef.current;
+      if (activeNoteIdRef.current !== saveNoteId) return false;
       if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
         return nothingToSave();
       }
@@ -544,6 +612,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           updatedAt: new Date(),
         });
 
+        // Issue #285: ignore completion if the editor switched to another note while saving.
+        if (activeNoteIdRef.current !== saveNoteId) {
+          return true;
+        }
+
         committedSnapshotRef.current = draftSnapshot;
         if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
           inFlightSnapshotRef.current = null;
@@ -559,10 +632,17 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
         // Hide indicator after 2 seconds
         hideIndicatorTimeoutRef.current = setTimeout(() => {
-          setSaveStatus('idle');
+          if (activeNoteIdRef.current === saveNoteId) {
+            setSaveStatus('idle');
+          }
         }, 2000);
         return true;
       } catch (error) {
+        // Issue #285: never surface a stale note's failure banner on the note now on screen.
+        if (activeNoteIdRef.current !== saveNoteId) {
+          return false;
+        }
+
         setSaveErrorDetail(error instanceof VaultLockedSaveError ? error.message : '');
         if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
           inFlightSnapshotRef.current = null;
@@ -634,12 +714,14 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
     // Schedule auto-save after 800ms of inactivity (reduced from 1.5s for faster sync)
     autoSaveTimeoutRef.current = setTimeout(() => {
+      autoSaveTimeoutRef.current = null;
       performSave();
     }, 800);
 
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
+        autoSaveTimeoutRef.current = null;
       }
     };
   }, [title, content, note.title, note.content, performSave, releasedElsewhere]);
@@ -800,8 +882,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // Note-specific sync indicator: when this note transitions from 'pending'
   // to 'synced', briefly show the "Saved" status as confirmation.
   // Only fires when the editor is idle to avoid interrupting active save indicators.
-  const prevSyncStatusRef = useRef(noteSyncStatus);
-  const shouldStartSyncedStatusTimerRef = useRef(false);
   const shouldShowSyncedStatus =
     prevSyncStatusRef.current === 'pending' &&
     noteSyncStatus === 'synced' &&
