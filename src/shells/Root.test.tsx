@@ -99,6 +99,15 @@ describe('Root', () => {
     expect(window.location.pathname).toBe('/demo/new');
   });
 
+  it('hands over when the visitor clicks a sample note link on the landing page', async () => {
+    const user = userEvent.setup();
+    visit('/');
+    const sample = await screen.findByRole('link', { name: /open “why i still buy used books”/i });
+    await user.click(sample);
+    expect(await screen.findByTestId('app-shell')).toHaveTextContent('from-public:none');
+    expect(window.location.pathname).toBe('/demo/n/starter-used-books');
+  });
+
   it('hands over when Back or Forward reaches a route the public shell does not render', async () => {
     visit('/');
     await screen.findAllByRole('button', { name: /^try writing$/i });

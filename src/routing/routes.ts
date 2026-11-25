@@ -19,10 +19,10 @@ export type Route =
   | { name: 'faded' }
   /**
    * `newNote` addresses `/demo/new`: open the Practice Space with a fresh, empty note
-   * already in the editor. It is what the mobile "Start writing" button reaches, so
-   * one tap lands on a blinking caret rather than on a library (item 45).
+   * already in the editor. `noteId` addresses `/demo/n/<id>`: open an existing starter
+   * note directly in the Practice Space editor (launch review track D, D6).
    */
-  | { name: 'demo'; newNote?: boolean }
+  | { name: 'demo'; newNote?: boolean; noteId?: string }
   | { name: PublicPageName }
   | { name: 'share'; token: string }
   | { name: 'playground' }
@@ -88,6 +88,14 @@ export function parseRoute(pathname: string, options: ParseRouteOptions = {}): R
     return { name: segments[0] };
   }
 
+  if (segments[0] === 'demo' && segments[1] === 'n') {
+    const noteId = segments[2];
+    if (segments.length === 3 && noteId && NOTE_ID_PATTERN.test(noteId)) {
+      return { name: 'demo', noteId };
+    }
+    return { name: 'notFound', path };
+  }
+
   if (segments[0] === 'n') {
     const noteId = segments[1];
     if (segments.length === 2 && noteId && NOTE_ID_PATTERN.test(noteId)) {
@@ -125,7 +133,9 @@ export function routeToPath(route: Route): string {
     case 'faded':
       return '/faded';
     case 'demo':
-      return route.newNote ? '/demo/new' : '/demo';
+      if (route.newNote) return '/demo/new';
+      if (route.noteId) return `/demo/n/${route.noteId}`;
+      return '/demo';
     case 'playground':
       return '/playground';
     case 'share':
@@ -142,7 +152,7 @@ export function routeToPath(route: Route): string {
  * letter all keep it: a tab title is visible metadata, so a note's title never goes
  * there.
  */
-export const DEFAULT_DOCUMENT_TITLE = 'Yidhan — A notes app built around writing';
+export const DEFAULT_DOCUMENT_TITLE = 'Yidhan — A calm, private place to write';
 
 const PAGE_TITLES: Record<PublicPageName | 'demo' | 'notFound', string> = {
   security: 'Security',
@@ -166,9 +176,11 @@ export function isSameRoute(a: Route, b: Route): boolean {
   if (a.name === 'note' && b.name === 'note') return a.noteId === b.noteId;
   if (a.name === 'share' && b.name === 'share') return a.token === b.token;
   if (a.name === 'notFound' && b.name === 'notFound') return a.path === b.path;
-  // `/demo` and `/demo/new` are the same screen but not the same intent: replacing one
-  // with the other is how the "new note" intent is consumed after it fires.
-  if (a.name === 'demo' && b.name === 'demo') return Boolean(a.newNote) === Boolean(b.newNote);
+  // `/demo`, `/demo/new`, and `/demo/n/<id>` are the same screen with different arrival
+  // intents: replacing with `/demo` is how each arrival intent is consumed after it fires.
+  if (a.name === 'demo' && b.name === 'demo') {
+    return Boolean(a.newNote) === Boolean(b.newNote) && (a.noteId ?? null) === (b.noteId ?? null);
+  }
   return true;
 }
 

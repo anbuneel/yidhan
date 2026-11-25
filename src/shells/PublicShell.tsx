@@ -40,7 +40,7 @@ const noop = () => {};
 export function PublicShell({ onStartApp }: PublicShellProps) {
   const { route, navigate } = useRouter({ allowPlayground: import.meta.env.DEV });
   const { startTransition } = useViewTransition();
-  const { navigateToDemo, navigateToDemoDraft, publicPageNav } = useAppNavigation({
+  const { navigateToDemo, navigateToDemoDraft, navigateToDemoNote, publicPageNav } = useAppNavigation({
     navigate,
     runInTransition: startTransition,
   });
@@ -89,6 +89,7 @@ export function PublicShell({ onStartApp }: PublicShellProps) {
       onThemeToggle={toggleTheme}
       onDemoClick={navigateToDemo}
       onDemoDraftClick={navigateToDemoDraft}
+      onDemoNoteClick={navigateToDemoNote}
       onSecurityClick={publicPageNav.onSecurityClick}
       onChangelogClick={publicPageNav.onChangelogClick}
       onRoadmapClick={publicPageNav.onRoadmapClick}

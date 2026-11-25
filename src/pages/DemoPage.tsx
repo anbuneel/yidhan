@@ -52,6 +52,10 @@ interface DemoPageProps {
   startWithNewNote?: boolean;
   /** Called once the arrival note exists, so the address can drop back to `/demo`. */
   onNewNoteStarted?: () => void;
+  /** Open an existing practice note directly on arrival (`/demo/n/<id>`). */
+  initialNoteId?: string;
+  /** Called once the initial note arrival intent is handled, so the address drops back to `/demo`. */
+  onInitialNoteOpened?: () => void;
   onSignIn: () => void;
   /** Whether the parent auth modal is currently open over the Practice Space. */
   isAuthModalOpen?: boolean;
@@ -69,6 +73,8 @@ export function DemoPage({
   onSignUp,
   startWithNewNote = false,
   onNewNoteStarted,
+  initialNoteId,
+  onInitialNoteOpened,
   onSignIn,
   isAuthModalOpen = false,
   theme,
@@ -249,6 +255,28 @@ export function DemoPage({
     hasStartedArrivalNote.current = true;
     void handleNewNote().then(() => onNewNoteStarted?.());
   }, [startWithNewNote, loading, handleNewNote, onNewNoteStarted]);
+
+  // Open an existing starter note when arriving via a landing sample link (`/demo/n/<id>`).
+  // Never creates a copy: if the visitor already edited the starter, their edited note opens.
+  const handledInitialNoteId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialNoteId) {
+      handledInitialNoteId.current = null;
+      return;
+    }
+    if (loading || handledInitialNoteId.current === initialNoteId) return;
+    handledInitialNoteId.current = initialNoteId;
+    const existing = notes.find((n) => n.id === initialNoteId);
+    if (!existing) {
+      onInitialNoteOpened?.();
+      return;
+    }
+    void warmEditorRoute().then(() => {
+      setSelectedNoteId(existing.id);
+      setView('editor');
+      onInitialNoteOpened?.();
+    });
+  }, [initialNoteId, loading, notes, warmEditorRoute, onInitialNoteOpened]);
 
   const handleNoteClick = useCallback((id: string) => {
     void warmEditorRoute().then(() => {

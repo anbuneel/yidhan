@@ -19,6 +19,7 @@ function renderLanding() {
     onThemeToggle: vi.fn(),
     onDemoClick: vi.fn(),
     onDemoDraftClick: vi.fn(),
+    onDemoNoteClick: vi.fn(),
     onSecurityClick: vi.fn(),
     onChangelogClick: vi.fn(),
     onRoadmapClick: vi.fn(),
@@ -26,8 +27,8 @@ function renderLanding() {
     onTermsClick: vi.fn(),
     onSupportClick: vi.fn(),
   };
-  render(<LandingPage {...props} />);
-  return props;
+  const view = render(<LandingPage {...props} />);
+  return { ...props, container: view.container };
 }
 
 describe('LandingPage', () => {
@@ -35,26 +36,29 @@ describe('LandingPage', () => {
     vi.clearAllMocks();
   });
 
-  it('leads with writing, and says encryption needs an account', () => {
-    renderLanding();
+  it('leads with private writing, and states encryption, offline and open source on the first screen', () => {
+    const { container } = renderLanding();
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/a notes app built around writing/i);
-    expect(screen.getByText(/focus mode/i)).toBeInTheDocument();
-    const line = screen.getByText(/encrypted before they leave this one/i);
-    expect(line).toHaveTextContent(/with an account/i);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^A calm, private place to write\.$/);
+    const sub = container.querySelector('.landing-sub') as HTMLElement;
+    expect(sub).toHaveTextContent(
+      'Notes are encrypted on your device before they sync. Works offline. Free and open source.'
+    );
     expect(screen.getByText(/free to use\. no account needed to try\./i)).toBeInTheDocument();
   });
 
   it('keeps the passphrase, recovery key and visible metadata out of the hero', () => {
-    const { container } = render(<LandingPage {...{
-      onStartWriting: vi.fn(), onSignIn: vi.fn(), theme: 'dark' as const, onThemeToggle: vi.fn(),
-      onDemoClick: vi.fn(), onDemoDraftClick: vi.fn(), onSecurityClick: vi.fn(),
-      onChangelogClick: vi.fn(), onRoadmapClick: vi.fn(), onPrivacyClick: vi.fn(),
-      onTermsClick: vi.fn(), onSupportClick: vi.fn(),
-    }} />);
+    const { container } = renderLanding();
 
     const hero = container.querySelector('.landing-intro') as HTMLElement;
     expect(hero).not.toHaveTextContent(/passphrase|recovery key|tag names/i);
+  });
+
+  it('never uses retired mood phrases or free-forever promises', () => {
+    renderLanding();
+
+    expect(document.body).not.toHaveTextContent(/quiet space|calm space/i);
+    expect(document.body).not.toHaveTextContent(/free forever/i);
   });
 
   it('the privacy section states what stays visible and the recovery limit, not an absolute', () => {
@@ -100,20 +104,17 @@ describe('LandingPage', () => {
     expect(screen.getByText(/this has not had one yet/i)).toBeInTheDocument();
   });
 
-  it('holds the draft, the samples, privacy and the closing action in one sheet', () => {
-    const { container } = render(<LandingPage {...{
-      onStartWriting: vi.fn(), onSignIn: vi.fn(), theme: 'dark' as const, onThemeToggle: vi.fn(),
-      onDemoClick: vi.fn(), onDemoDraftClick: vi.fn(), onSecurityClick: vi.fn(),
-      onChangelogClick: vi.fn(), onRoadmapClick: vi.fn(), onPrivacyClick: vi.fn(),
-      onTermsClick: vi.fn(), onSupportClick: vi.fn(),
-    }} />);
+  it('holds the draft, samples, hidden-features overview, privacy, FAQ and closing action in one sheet', () => {
+    const { container } = renderLanding();
 
     const sheets = container.querySelectorAll('.landing-sheet');
     expect(sheets).toHaveLength(1);
     const sheet = sheets[0] as HTMLElement;
     expect(sheet.querySelector('.landing-manuscript-title')).toHaveTextContent('Opening draft');
     expect(within(sheet).getByRole('heading', { name: /see what writing looks like/i })).toBeInTheDocument();
+    expect(within(sheet).getByRole('heading', { name: /what stays out of the way/i })).toBeInTheDocument();
     expect(within(sheet).getByRole('heading', { name: /your writing is private/i })).toBeInTheDocument();
+    expect(within(sheet).getByRole('heading', { name: /common questions/i })).toBeInTheDocument();
     expect(within(sheet).getByText('Start with one note.')).toBeInTheDocument();
     // The hero stays on the page, outside the sheet.
     expect(sheet.querySelector('.landing-headline')).toBeNull();
@@ -122,9 +123,41 @@ describe('LandingPage', () => {
     expect(sheet).not.toHaveTextContent(/· · ·|•/);
   });
 
+  it('covers chapters, search, Share as Letter, and phone and offline use in the overview section', () => {
+    renderLanding();
+    const section = screen.getByRole('heading', { name: /what stays out of the way/i }).closest('section') as HTMLElement;
+
+    expect(within(section).getByText('Chapters')).toBeInTheDocument();
+    expect(within(section).getByText('Search')).toBeInTheDocument();
+    expect(within(section).getByText('Share as Letter')).toBeInTheDocument();
+    expect(within(section).getByText('Phone and offline')).toBeInTheDocument();
+    expect(section).toHaveTextContent(/expires within 30 days/i);
+    expect(section).toHaveTextContent(/link fragment/i);
+  });
+
+  it('answers the four FAQ questions: browsers/installing, free/funding, importing, and recovery', () => {
+    renderLanding();
+    const section = screen.getByRole('heading', { name: /common questions/i }).closest('section') as HTMLElement;
+
+    expect(within(section).getByText(/which browsers work, and can i install it\?/i)).toBeInTheDocument();
+    expect(section).toHaveTextContent(/add to home screen/i);
+
+    expect(within(section).getByText(/what is free, and how is it paid for\?/i)).toBeInTheDocument();
+    expect(section).toHaveTextContent(/agpl-3\.0/i);
+    expect(section).not.toHaveTextContent(/free forever/i);
+
+    expect(within(section).getByText(/can i import or export my notes\?/i)).toBeInTheDocument();
+    expect(section).toHaveTextContent(/markdown/i);
+    expect(section).toHaveTextContent(/\.yidhan/i);
+
+    expect(within(section).getByText(/what if i forget my passphrase\?/i)).toBeInTheDocument();
+    expect(section).toHaveTextContent(/recovery key/i);
+    expect(section).toHaveTextContent(/lose both/i);
+  });
+
   it('gives each sample a one-line plain-text preview, not markup', () => {
     renderLanding();
-    const openers = screen.getAllByRole('button', { name: /^open “.+” in the practice space$/i });
+    const openers = screen.getAllByRole('link', { name: /^open “.+” in the practice space$/i });
     for (const opener of openers) {
       const preview = opener.querySelector('.landing-sample-preview')!;
       expect(preview.textContent!.length).toBeGreaterThan(0);
@@ -132,18 +165,13 @@ describe('LandingPage', () => {
     }
   });
 
-  it('the index.html shell carries the same hero copy as the page', () => {
+  it('the index.html shell carries the same hero copy and links as the page', () => {
     const html = readFileSync(resolve(__dirname, '../../index.html'), 'utf8');
     const shell = new DOMParser().parseFromString(html, 'text/html');
     const shellIntro = shell.querySelector('.boot-intro') as HTMLElement;
     const normalise = (text: string | null) => (text ?? '').replace(/\s+/g, ' ').trim();
 
-    const { container } = render(<LandingPage {...{
-      onStartWriting: vi.fn(), onSignIn: vi.fn(), theme: 'dark' as const, onThemeToggle: vi.fn(),
-      onDemoClick: vi.fn(), onDemoDraftClick: vi.fn(), onSecurityClick: vi.fn(),
-      onChangelogClick: vi.fn(), onRoadmapClick: vi.fn(), onPrivacyClick: vi.fn(),
-      onTermsClick: vi.fn(), onSupportClick: vi.fn(),
-    }} />);
+    const { container } = renderLanding();
 
     expect(normalise(shellIntro.querySelector('h1')!.textContent)).toBe(
       normalise(container.querySelector('.landing-headline')!.textContent)
@@ -154,25 +182,16 @@ describe('LandingPage', () => {
     expect(normalise(shellIntro.querySelector('.boot-micro')!.textContent)).toBe(
       normalise(container.querySelector('.landing-micro')!.textContent)
     );
-    // The security detail lives in the privacy section now; the proof line still links to it.
-    expect(shellIntro.querySelector('a[href="/security"]')).toBeNull();
-    expect(html).not.toMatch(/not even us/i);
-  });
-
-  it('the proof-facts line still links where it did, in the page and the shell', () => {
-    const props = renderLanding();
-
-    fireEvent.click(screen.getByRole('button', { name: /^encrypted before it syncs$/i }));
-    expect(props.onSecurityClick).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('link', { name: /^free and open source$/i })).toHaveAttribute(
-      'href',
-      'https://github.com/anbuneel/yidhan/blob/main/LICENSE'
-    );
-
-    const html = readFileSync(resolve(__dirname, '../../index.html'), 'utf8');
-    const proof = new DOMParser().parseFromString(html, 'text/html').querySelector('.boot-proof')!;
-    const links = Array.from(proof.querySelectorAll('a')).map((a) => [a.textContent, a.getAttribute('href')]);
-    expect(links).toEqual([['Free and open source', 'https://github.com/anbuneel/yidhan/blob/main/LICENSE']]);
+    const links = Array.from(shellIntro.querySelectorAll('p:not(.boot-micro) a')).map((a) => [
+      a.textContent,
+      a.getAttribute('href'),
+    ]);
+    expect(links).toEqual([
+      ['encrypted on your device', '/security'],
+      ['Free and open source', 'https://github.com/anbuneel/yidhan/blob/main/LICENSE'],
+    ]);
+    expect(html).not.toMatch(/not even us|quiet space|calm space|free forever/i);
+    expect(html).toContain('og-image.png?v=5');
   });
 
   it('every Try writing opens the Practice Space draft and never an in-page editor', () => {
@@ -197,16 +216,26 @@ describe('LandingPage', () => {
     expect(props.onDemoDraftClick).not.toHaveBeenCalled();
   });
 
-  it('shows three sample notes, none of them the welcome or the hero note', () => {
+  it('each sample note links to its own practice route and opens that note on plain click only', () => {
     const props = renderLanding();
 
-    const openers = screen.getAllByRole('button', { name: /^open “.+” in the practice space$/i });
+    const openers = screen.getAllByRole('link', { name: /^open “.+” in the practice space$/i });
     expect(openers).toHaveLength(3);
     expect(screen.queryByText('Welcome to Yidhan')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Opening draft' })).not.toBeInTheDocument();
 
-    fireEvent.click(openers[0]);
-    expect(props.onDemoClick).toHaveBeenCalledTimes(1);
+    const expectedIds = ['starter-used-books', 'starter-revision', 'starter-tuesday'];
+    openers.forEach((opener, index) => {
+      expect(opener).toHaveAttribute('href', `/demo/n/${expectedIds[index]}`);
+    });
+
+    // Modified clicks keep default browser navigation instead of firing the in-app handler.
+    fireEvent.click(openers[0], { metaKey: true });
+    expect(props.onDemoNoteClick).not.toHaveBeenCalled();
+
+    openers.forEach((opener) => fireEvent.click(opener));
+    expect(props.onDemoNoteClick.mock.calls.map((c) => c[0])).toEqual(expectedIds);
+    expect(props.onDemoClick).not.toHaveBeenCalled();
   });
 
   it('routes a plain click on Browse sample notes in-app but leaves a modified click to the browser', () => {
@@ -221,16 +250,16 @@ describe('LandingPage', () => {
     expect(props.onDemoClick).toHaveBeenCalledTimes(1);
   });
 
-  it('the encryption fact and the encryption link both reach the security page', () => {
+  it('the hero encryption link and the privacy link both reach the security page', () => {
     const props = renderLanding();
 
-    fireEvent.click(screen.getByRole('button', { name: /encrypted before it syncs/i }));
+    fireEvent.click(screen.getByRole('link', { name: /encrypted on your device/i }));
     fireEvent.click(screen.getByRole('link', { name: /how encryption works/i }));
 
     expect(props.onSecurityClick).toHaveBeenCalledTimes(2);
   });
 
-  it('the open-source fact links to the licence, not just the repository', () => {
+  it('the open-source link points to the licence, not just the repository', () => {
     renderLanding();
 
     expect(screen.getByRole('link', { name: /free and open source/i })).toHaveAttribute(

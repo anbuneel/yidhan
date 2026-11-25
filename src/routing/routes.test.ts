@@ -52,8 +52,21 @@ describe('parseRoute', () => {
     expect(parseRoute('/demo/new')).toEqual({ name: 'demo', newNote: true });
   });
 
-  it('does not mistake another demo path for the arrival address', () => {
+  it('reads a demo sample note address', () => {
+    expect(parseRoute('/demo/n/starter-used-books')).toEqual({
+      name: 'demo',
+      noteId: 'starter-used-books',
+    });
+  });
+
+  it('does not mistake another demo path for an arrival address', () => {
     expect(parseRoute('/demo/anything')).toEqual({ name: 'notFound', path: '/demo/anything' });
+    expect(parseRoute('/demo/n/')).toEqual({ name: 'notFound', path: '/demo/n' });
+    expect(parseRoute('/demo/n/a/b')).toEqual({ name: 'notFound', path: '/demo/n/a/b' });
+    expect(parseRoute('/demo/n/../../etc/passwd')).toEqual({
+      name: 'notFound',
+      path: '/demo/n/../../etc/passwd',
+    });
   });
 
   it('reads every public page', () => {
@@ -124,6 +137,7 @@ describe('routeToPath', () => {
     [{ name: 'faded' }, '/faded'],
     [{ name: 'demo' }, '/demo'],
     [{ name: 'demo', newNote: true }, '/demo/new'],
+    [{ name: 'demo', noteId: 'starter-used-books' }, '/demo/n/starter-used-books'],
     [{ name: 'changelog' }, '/changelog'],
     [{ name: 'support' }, '/support'],
     [{ name: 'security' }, '/security'],
@@ -154,6 +168,7 @@ describe('routeToDocumentTitle', () => {
     ['/roadmap', 'Roadmap · Yidhan'],
     ['/demo', 'Practice space · Yidhan'],
     ['/demo/new', 'Practice space · Yidhan'],
+    ['/demo/n/starter-used-books', 'Practice space · Yidhan'],
     ['/nowhere', 'Not found · Yidhan'],
   ])('names the page at %s', (path, title) => {
     expect(routeToDocumentTitle(parseRoute(path))).toBe(title);
@@ -192,6 +207,21 @@ describe('isSameRoute', () => {
       true
     );
     expect(isSameRoute({ name: 'demo' }, { name: 'demo', newNote: false })).toBe(true);
+    expect(isSameRoute({ name: 'demo' }, { name: 'demo', noteId: 'starter-used-books' })).toBe(
+      false
+    );
+    expect(
+      isSameRoute(
+        { name: 'demo', noteId: 'starter-used-books' },
+        { name: 'demo', noteId: 'starter-revision' }
+      )
+    ).toBe(false);
+    expect(
+      isSameRoute(
+        { name: 'demo', noteId: 'starter-used-books' },
+        { name: 'demo', noteId: 'starter-used-books' }
+      )
+    ).toBe(true);
   });
 
   it('treats parameterless routes of the same name as one place', () => {

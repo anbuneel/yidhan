@@ -827,3 +827,13 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   `PullToRefresh`, and `SwipeableNoteCard`; fixed the Practice Space sign-up prompt to
   count only notes created or edited by the visitor and never open behind another
   dialog or while typing. (#257, #258, #282)
+- **2026-11-25** — Landing page launch-review update (track D): updated the headline to
+  "A calm, private place to write." with "Notes are encrypted on your device before they
+  sync. Works offline. Free and open source." across `LandingPage.tsx`, `index.html`,
+  `DEFAULT_DOCUMENT_TITLE`, Open Graph metadata, and `og-image.png?v=5`
+  (`DECISIONS.md`, 2026-11-25); tightened hero spacing so the editor sheet starts inside
+  the first screen at 1280×800 and 390×844; routed each sample note link to
+  `/demo/n/<id>` so it opens that existing note in `DemoPage` without duplicating an
+  edited starter; added the "What stays out of the way" overview (chapters, search,
+  Share as Letter, phone and offline) and a four-question FAQ; moved non-tested landing
+  CSS to `src/index.css` to keep JS bundles within budget.

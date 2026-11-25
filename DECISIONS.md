@@ -19,6 +19,37 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-25 — The landing page leads with private writing, editor first
+
+**Status:** Active
+
+**Why:** The 2026-11-24 launch review (Claude, Gemini, Codex) found that leading with
+"A notes app built around writing" left encryption too low in the hierarchy and pushed
+the editor sheet below the fold on laptops and near y=700 on phones. Visitors had to
+scroll before seeing the product or why it differs from unencrypted editors, sample
+notes all opened the Practice Space library instead of the clicked note, and the page
+left out library features (chapters, search, Share as Letter, offline install) and basic
+questions (browsers, cost, import, recovery).
+
+**Decision:** The headline becomes "A calm, private place to write.", paired with
+"Notes are encrypted on your device before they sync. Works offline. Free and open
+source." Because "private" is the softer word, "encrypted" stays in the supporting line
+on the first screen, with links to `/security` and the AGPL-3.0 licence. Tighter hero
+spacing brings the editor sheet's top edge into the first screen on both 1280×800 and
+390×844. Each sample note links directly to `/demo/n/<id>` and opens that existing note
+without duplicating an edited starter. Below the samples sit a short overview of what
+the editor hides (chapters, search, Share as Letter, phone and offline use) and a
+four-question FAQ (browsers/installing, free/funding with no "free forever", importing,
+recovery). `index.html`, `DEFAULT_DOCUMENT_TITLE`, Open Graph metadata and the share
+image (`og-image.png?v=5`) move with the headline.
+
+**Rejected:** Keeping "A notes app built around writing." (dropped during the 2026-11-24
+review). Leading with encryption jargon alone (Standard Notes and Notesnook already own
+pure encryption positioning; Yidhan's claim is private writing). Promising "free forever"
+or adding unverified claims not backed by `/security`.
+
+---
+
 ## 2026-11-24 — The editor glow is marigold, in both themes
 
 **Status:** Active
@@ -192,7 +223,7 @@ matters.
 
 ## 2026-11-10 — The landing page leads with writing, in plain words
 
-**Status:** Active
+**Status:** Superseded (headline) by 2026-11-25 — The landing page leads with private writing, editor first
 
 **Why:** The owner said the landing page did not sound like them and read as artificial,
 and the sample notes were too wistful. The copy leaned on metaphor ("A quiet home for

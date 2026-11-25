@@ -83,7 +83,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
   const view = routeToViewMode(route);
   const isDemo = route.name === 'demo';
 
-  const { navigateToRoute, navigateHome, navigateToDemo, navigateToDemoDraft, publicPageNav } =
+  const { navigateToRoute, navigateHome, navigateToDemo, navigateToDemoDraft, navigateToDemoNote, publicPageNav } =
     useAppNavigation({ navigate, runInTransition: startTransition });
 
   // The note the reader currently has open, read inside realtime handlers so the
@@ -474,6 +474,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     nav: publicPageNav,
     onDemoClick: navigateToDemo,
     onDemoDraftClick: navigateToDemoDraft,
+    onDemoNoteClick: navigateToDemoNote,
     onDemoNoteStarted: () => replaceRoute({ name: 'demo' }),
     onSignIn: () => {
       setAuthModalMode('login');

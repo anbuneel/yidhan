@@ -7,6 +7,11 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.20.10', date: '2026-11-25', changes: [
+    { type: 'improvement', text: 'Updated the landing page to lead with private writing ("A calm, private place to write.") and tightened the hero so the editor sheet is visible above the fold on laptops and phones' },
+    { type: 'improvement', text: 'Clicking a sample note on the landing page now opens that note directly in the Practice Space instead of the library, keeping any edits you already made to it' },
+    { type: 'improvement', text: 'Added a short overview of chapters, search, Share as Letter, and offline phone use, plus a compact four-question FAQ on the landing page' },
+  ] },
   { version: '3.20.9', date: '2026-11-25', changes: [
     { type: 'fix', text: 'Dialogs now keep keyboard focus inside while open, mark the page behind them inert, close on Escape, and return focus to the control that opened them' },
     { type: 'fix', text: 'Touch gestures and bottom sheets using spring physics now skip animations when reduced motion is turned on' },
