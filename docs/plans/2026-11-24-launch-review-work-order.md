@@ -34,7 +34,7 @@ tracker, or unrecorded if they were new ideas. See "Later items with no home" be
 | B · Editor | B1, B7, B8, B12 | Now | A, D. Merge before C |
 | C · Dialogs and motion | B2, B3, B4 | Now | A, D. Rebase onto B |
 | D · Landing page | D2 to D7, D9 | When the headline wording is picked | A, B, C |
-| E · Passkey unlock | E1 | Spike after A, B and C merge; enrollment waits on custom domain (#157) | Nothing; it needs the heavier review |
+| E · Passkey unlock | E1 | **Deferred 2026-11-25.** Not needed for launch | Nothing; it needs the heavier review |
 | F · Quick capture | E5 | Item 44 ready (`/n/new`); item 47 blocked on SW test harness | — |
 
 One track is one branch, one PR and one agent session. Tracks running at the same time
@@ -197,6 +197,11 @@ Should not fire: a signed-in visitor still goes to the app shell, not the landin
 A sample link does not create a second copy of a starter the visitor already edited.
 
 ## Track E · Passkey unlock
+
+**Deferred 2026-11-25.** Not needed for launch. No spike and no code until it is picked
+up again. The design is kept as a proposal in
+`docs/plans/2026-11-25-passkey-unlock-design.md`; its eight open questions are
+unanswered. Start with the spike in that plan when this resumes.
 
 Item E1: roadmap 135. Weeks. Its needs (items 24 and 26) have shipped. Split into two
 steps: the WebAuthn PRF browser-compatibility spike can run after A–C merge, while
