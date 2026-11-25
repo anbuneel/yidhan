@@ -193,4 +193,71 @@ describe('EditorToolbar', () => {
     fireEvent.focusIn(outside);
     expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
   });
+
+  it('resets a prior short-viewport maxHeight before re-measuring when the viewport grows', () => {
+    editor = new Editor({ extensions: [StarterKit, SmartTypography], content: '<p>Words</p>' });
+    const originalWidth = window.innerWidth;
+    const originalHeight = window.innerHeight;
+    let triggerTop = 342;
+    const triggerRectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.getAttribute('aria-label') === 'More editor commands') {
+        return {
+          top: triggerTop,
+          bottom: triggerTop + 36,
+          left: 340,
+          right: 376,
+          width: 36,
+          height: 36,
+          x: 340,
+          y: triggerTop,
+          toJSON: () => ({}),
+        };
+      }
+      if (this.getAttribute('role') === 'menu') {
+        // Simulate browser layout respecting any active inline maxHeight cap.
+        const match = this.style.maxHeight.match(/(\d+(?:\.\d+)?)px/);
+        const height = match ? Math.min(544, Number(match[1])) : 544;
+        return {
+          top: 0,
+          bottom: height,
+          left: 0,
+          right: 336,
+          width: 336,
+          height,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        };
+      }
+      return {
+        top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}),
+      };
+    });
+
+    try {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 390 });
+      render(<EditorToolbar editor={editor as unknown as ReactEditor} variant="bottom" />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'More editor commands' }));
+      const menu = screen.getByRole('menu', { name: 'All editor commands' });
+      expect(menu.style.maxHeight).toBe('326px');
+      expect(menu.style.top).toBe('8px');
+
+      // Viewport grows (e.g., virtual keyboard closes) and bottom toolbar moves down.
+      triggerTop = 796;
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 });
+      fireEvent(window, new Event('resize'));
+
+      // Natural 544px height was measured after resetting maxHeight, placing the menu at 796 - 8 - 544 = 244.
+      expect(menu.style.maxHeight).toBe('544px');
+      expect(Number.parseFloat(menu.style.top)).toBe(244);
+      expect(Number.parseFloat(menu.style.top) + 544).toBeLessThanOrEqual(triggerTop);
+      expect(Number.parseFloat(menu.style.top) + 544).toBeLessThanOrEqual(844);
+    } finally {
+      triggerRectSpy.mockRestore();
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalWidth });
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight });
+    }
+  });
 });

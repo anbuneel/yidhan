@@ -126,19 +126,24 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
     };
     const syncPosition = () => {
       if (!triggerRef.current || !panelRef.current) return;
+      // Reset any prior viewport-capped maxHeight before measuring so a growing viewport
+      // measures the natural menu height instead of a stale short-viewport cap.
+      panelRef.current.style.maxHeight = '34rem';
       const position = getEditorMenuPosition(
         triggerRef.current.getBoundingClientRect(),
         panelRef.current.getBoundingClientRect(),
         { width: window.innerWidth, height: window.innerHeight },
         direction,
       );
+      const rootFontSize = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+      const cappedMaxHeight = Math.min(34 * rootFontSize, position.maxHeight);
       Object.assign(panelRef.current.style, {
         position: 'fixed',
         left: `${position.left}px`,
         top: `${position.top}px`,
         right: 'auto',
         bottom: 'auto',
-        maxHeight: `min(34rem, ${position.maxHeight}px)`,
+        maxHeight: `${cappedMaxHeight}px`,
       });
       panelRef.current.dataset.placement = position.placement;
     };
