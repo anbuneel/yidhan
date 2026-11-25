@@ -67,7 +67,8 @@ need a worktree each, or they overwrite each other.
 ## Open questions
 
 1. **Settled 2026-11-24: encryption goes into the headline (D2).** D1, keeping "A notes
-   app built around writing.", is dropped. The wording is still to pick; see track D.
+   app built around writing.", is dropped. **Wording settled 2026-11-25: "A calm,
+   private place to write."** See track D.
 2. **C2 depends on a fact nobody checked.** The deletion flow exists in code. Whether
    self-serve deletion is switched on in production is unconfirmed.
 3. **E5 is only partly blocked.** Per-note routes (`/n/<id>`) already exist in
@@ -164,12 +165,12 @@ sign-up prompt does not open behind another dialog or while the visitor is typin
 ## Track D · Landing page
 
 PR title: `Landing page: private writing, editor first (launch review track D)`. Weeks.
-Starts when the headline wording is picked.
+Ready to start: the headline was picked on 2026-11-25.
 
-- **D2, D3, D4.** A new headline that names writing and privacy together. Candidates:
-  "A private notes app built around writing." · "Notes built around writing, encrypted
-  before they leave your device." · "Write freely. Only you can read it." Shorter
-  supporting text. The claim is the writing workflow made private, not encryption
+- **D2, D3, D4.** The headline is **"A calm, private place to write."** Supporting
+  text: "Notes are encrypted on your device before they sync. Works offline. Free and
+  open source." "Private" is the softer word, so the supporting text must say
+  "encrypted" on the first screen. The claim is the writing workflow made private, not encryption
   alone: Standard Notes and Notesnook already offer encrypted notes. Claim only what
   the security page backs: titles and content are encrypted; tags, dates and sizes are
   not.
@@ -203,6 +204,15 @@ passkey enrollment waits on the final custom domain / relying-party ID (`#157`) 
 explicit credential-migration design, since WebAuthn credentials do not transfer across
 domains. The passphrase stays as the fallback. It touches encryption and auth, so it
 gets the multi-agent review.
+
+Settled 2026-11-25:
+
+- **Plan before code.** A design plan is written to `docs/plans/` as `Status: PROPOSAL`
+  and approved before any code. Passkey unlock adds a third wrap of `K`, beside the
+  passphrase wrap and `vault.recoveryWrap`.
+- **Lazy-load, do not raise the budget.** App-shell JS had 0.4 KB of headroom after
+  track C (326.6 KB of 327 KB). Passkey code loads only on the unlock and settings
+  screens. `scripts/bundle-budget.json` stays as it is.
 
 ## Track F · Quick capture
 
