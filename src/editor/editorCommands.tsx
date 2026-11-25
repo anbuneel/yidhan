@@ -242,7 +242,13 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     id: 'focusMode', label: 'Focus mode', shortLabel: focusModeIcon,
     description: 'Let the page recede while you write', searchTerms: ['distraction', 'view'], group: 'view', shortcut: 'Ctrl+Shift+F',
     isActive: ({ isFocusMode }) => Boolean(isFocusMode),
-    run: (context, range) => runExternalAction(context, 'focusMode', context.onToggleFocusMode, range),
+    run: (context, range) => {
+      const entering = !context.isFocusMode;
+      runExternalAction(context, 'focusMode', context.onToggleFocusMode, range);
+      // Focus mode hides every toolbar; move focus into the editor without jumping
+      // scroll so keyboard focus is not stranded on a hidden button.
+      if (entering) context.editor.commands.focus(null, { scrollIntoView: false });
+    },
   },
 ];
 

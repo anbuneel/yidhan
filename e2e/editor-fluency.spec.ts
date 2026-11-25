@@ -250,6 +250,53 @@ test.describe('editor fluency', () => {
     await expect(page.getByTestId('note-editor')).toBeVisible();
   });
 
+  test('capped command menu at 1366x650 scrolls without snapping back and reaches the last item by pointer and arrow keys', async ({ page, isMobile }) => {
+    await page.setViewportSize({ width: 1366, height: 650 });
+    await openBlankPracticeNote(page);
+
+    const surface = page.locator(isMobile ? '.editor-toolbar-inline' : '.editor-sidebar');
+    await expect(surface).toBeVisible();
+    await surface.getByRole('button', { name: 'More editor commands' }).click();
+
+    const menu = page.getByRole('menu', { name: 'All editor commands' });
+    await expect(menu).toBeVisible();
+
+    // Verify the menu overflows vertically and can scroll to the bottom without snapping back.
+    const metrics = await menu.evaluate((el) => {
+      const overflow = el.scrollHeight - el.clientHeight;
+      el.scrollTop = el.scrollHeight;
+      return { overflow, targetScrollTop: el.scrollTop };
+    });
+    expect(metrics.overflow).toBeGreaterThan(100);
+    expect(metrics.targetScrollTop).toBeGreaterThan(0);
+
+    // Wait a couple of frames to confirm no capture-scroll handler snaps scrollTop back.
+    await page.waitForTimeout(100);
+    const settledScrollTop = await menu.evaluate((el) => el.scrollTop);
+    expect(settledScrollTop).toBeGreaterThanOrEqual(metrics.targetScrollTop - 2);
+
+    // Last command (focusMode) is reachable by pointer click.
+    const lastItem = menu.locator('[data-command-id="focusMode"]');
+    await expect(lastItem).toBeVisible();
+    await lastItem.click();
+    await expect(menu).not.toBeVisible();
+    await expect(page.getByTestId('note-editor')).toHaveClass(/focus-mode-active/);
+
+    // Exit focus mode, reopen menu, and verify ArrowUp wraps to the last item cleanly.
+    await page.getByRole('button', { name: 'Exit focus mode' }).click();
+    await expect(surface).toBeVisible();
+    await surface.getByRole('button', { name: 'More editor commands' }).click();
+    await expect(menu).toBeVisible();
+
+    // First item receives focus on open; ArrowUp wraps to the last item (focusMode).
+    await expect(menu.locator('[role="menuitem"]').first()).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(lastItem).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(menu).not.toBeVisible();
+    await expect(page.getByTestId('note-editor')).toHaveClass(/focus-mode-active/);
+  });
+
   test('focus mode can be entered and exited without opening a menu on bottom, inline, and sidebar toolbars, and adds nothing to the library', async ({ page, isMobile }) => {
     // Library / note cards must not carry any focus-mode control.
     await page.goto('/demo');

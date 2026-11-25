@@ -260,4 +260,75 @@ describe('EditorToolbar', () => {
       Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight });
     }
   });
+
+  it('ignores scroll events inside the menu panel and preserves scrollTop on external resize', () => {
+    editor = new Editor({ extensions: [StarterKit, SmartTypography], content: '<p>Words</p>' });
+    render(<EditorToolbar editor={editor as unknown as ReactEditor} variant="inline" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More editor commands' }));
+    const menu = screen.getByRole('menu', { name: 'All editor commands' });
+
+    const rectSpy = vi.spyOn(menu, 'getBoundingClientRect');
+    menu.scrollTop = 320;
+    fireEvent.scroll(menu);
+
+    expect(rectSpy).not.toHaveBeenCalled();
+    expect(menu.scrollTop).toBe(320);
+
+    // An external window resize re-measures without wiping menu scrollTop.
+    fireEvent(window, new Event('resize'));
+    expect(rectSpy).toHaveBeenCalled();
+    expect(menu.scrollTop).toBe(320);
+    rectSpy.mockRestore();
+  });
+
+  it('moves focus into the editor when entering focus mode from a toolbar button or when focus mode closes an open menu', async () => {
+    const mount = document.createElement('div');
+    document.body.appendChild(mount);
+    try {
+      editor = new Editor({
+        element: mount,
+        extensions: [StarterKit, SmartTypography],
+        content: '<p>Words</p>',
+      });
+      const onToggleFocusMode = vi.fn();
+      const { rerender } = render(
+        <EditorToolbar
+          editor={editor as unknown as ReactEditor}
+          variant="inline"
+          isFocusMode={false}
+          onToggleFocusMode={onToggleFocusMode}
+        />,
+      );
+
+      // Entering focus mode from the toolbar toggle moves focus into the editor.
+      const toggle = screen.getByRole('button', { name: /focus mode/i });
+      toggle.focus();
+      expect(toggle).toHaveFocus();
+      fireEvent.click(toggle);
+      expect(onToggleFocusMode).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(editor!.view.dom).toHaveFocus());
+
+      // Opening the command menu and activating focus mode via shortcut (prop flip)
+      // closes the menu and moves focus into the editor instead of document.body.
+      const trigger = screen.getByRole('button', { name: 'More editor commands' });
+      fireEvent.click(trigger);
+      const firstItem = within(screen.getByRole('menu', { name: 'All editor commands' })).getAllByRole('menuitem')[0];
+      firstItem.focus();
+      expect(firstItem).toHaveFocus();
+
+      rerender(
+        <EditorToolbar
+          editor={editor as unknown as ReactEditor}
+          variant="inline"
+          isFocusMode={true}
+          onToggleFocusMode={onToggleFocusMode}
+        />,
+      );
+      expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+      await waitFor(() => expect(editor!.view.dom).toHaveFocus());
+    } finally {
+      mount.remove();
+    }
+  });
 });

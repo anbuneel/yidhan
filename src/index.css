@@ -1684,17 +1684,19 @@ textarea:focus,
   width: min(100%, 30rem);
   margin-inline: auto;
   justify-content: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.editor-command-toolbar[data-variant="bottom"]::-webkit-scrollbar {
+  display: none;
 }
 
 @media (max-width: 380px) {
   .editor-command-toolbar[data-variant="bottom"] {
-    padding: 4px;
+    justify-content: flex-start;
+    padding: 6px 4px;
     gap: 1px;
-  }
-
-  .editor-command-toolbar[data-variant="bottom"] .editor-command-button {
-    flex: 0 1 36px;
-    min-width: 28px;
   }
 }
 

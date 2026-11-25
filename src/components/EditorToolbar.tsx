@@ -87,14 +87,22 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const closedByFocusModeRef = useRef(false);
 
   // Close immediately when focus mode hides the toolbars (e.g. Ctrl+Shift+F).
   if (isOpen && context.isFocusMode) {
+    closedByFocusModeRef.current = true;
     setIsOpen(false);
   }
 
   useLayoutEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      if (closedByFocusModeRef.current) {
+        closedByFocusModeRef.current = false;
+        context.editor.commands.focus(null, { scrollIntoView: false });
+      }
+      return;
+    }
 
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null;
@@ -126,18 +134,20 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
     };
     const syncPosition = () => {
       if (!triggerRef.current || !panelRef.current) return;
+      const panel = panelRef.current;
+      const savedScrollTop = panel.scrollTop;
       // Reset any prior viewport-capped maxHeight before measuring so a growing viewport
       // measures the natural menu height instead of a stale short-viewport cap.
-      panelRef.current.style.maxHeight = '34rem';
+      panel.style.maxHeight = '34rem';
       const position = getEditorMenuPosition(
         triggerRef.current.getBoundingClientRect(),
-        panelRef.current.getBoundingClientRect(),
+        panel.getBoundingClientRect(),
         { width: window.innerWidth, height: window.innerHeight },
         direction,
       );
       const rootFontSize = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
       const cappedMaxHeight = Math.min(34 * rootFontSize, position.maxHeight);
-      Object.assign(panelRef.current.style, {
+      Object.assign(panel.style, {
         position: 'fixed',
         left: `${position.left}px`,
         top: `${position.top}px`,
@@ -145,7 +155,10 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
         bottom: 'auto',
         maxHeight: `${cappedMaxHeight}px`,
       });
-      panelRef.current.dataset.placement = position.placement;
+      panel.dataset.placement = position.placement;
+      if (panel.scrollTop !== savedScrollTop) {
+        panel.scrollTop = savedScrollTop;
+      }
     };
     const positionPanel = () => {
       if (!triggerRef.current || !panelRef.current) return;
@@ -155,11 +168,17 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
       }
       syncPosition();
     };
+    const handleScroll = (event: Event) => {
+      const target = event.target as Node | null;
+      // Scrolling inside the menu itself must not re-measure or reset scrollTop.
+      if (target && panelRef.current?.contains(target)) return;
+      positionPanel();
+    };
 
     document.addEventListener('pointerdown', handlePointerDown);
     document.addEventListener('focusin', handleFocusIn);
     document.addEventListener('keydown', handleKeyDown, true);
-    document.addEventListener('scroll', positionPanel, true);
+    document.addEventListener('scroll', handleScroll, true);
     window.addEventListener('resize', positionPanel);
     syncPosition();
     const frame = requestAnimationFrame(() => {
@@ -171,10 +190,10 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
       document.removeEventListener('pointerdown', handlePointerDown);
       document.removeEventListener('focusin', handleFocusIn);
       document.removeEventListener('keydown', handleKeyDown, true);
-      document.removeEventListener('scroll', positionPanel, true);
+      document.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('resize', positionPanel);
     };
-  }, [direction, isOpen]);
+  }, [context.editor, direction, isOpen]);
 
   return (
     <div className="editor-command-overflow" ref={menuRef} data-direction={direction}>
