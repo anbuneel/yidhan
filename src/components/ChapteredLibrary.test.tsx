@@ -124,12 +124,15 @@ describe('ChapteredLibrary', () => {
       render(<ChapteredLibrary {...defaultProps} onNewNote={onNewNote} />);
 
       expect(screen.getByText('Your notes await')).toBeInTheDocument();
-      expect(screen.getByText('Notes you write here are encrypted on your device.')).toBeInTheDocument();
+      expect(screen.getByText('Write a note to get started.')).toBeInTheDocument();
       expect(screen.queryByText(/quiet space/i)).not.toBeInTheDocument();
+      // Shared by /demo (unencrypted Practice Space), so the empty state must never claim encryption.
+      expect(document.body).not.toHaveTextContent(/encrypt/i);
       const createButton = screen.getByRole('button', { name: 'Create your first note' });
       expect(createButton).toBeInTheDocument();
       expect(createButton).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
       expect(createButton.className).not.toMatch(/\brounded-lg\b/);
+      expect(createButton.className).toMatch(/\bfocus-ring\b/);
     });
 
     it('keeps search-empty distinct from library-empty and without a create button', () => {

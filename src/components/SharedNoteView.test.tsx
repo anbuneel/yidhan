@@ -28,6 +28,7 @@ it('opens an anonymous /s/token/slug letter using its fragment and fails closed 
   const startLink = screen.getByRole('link', { name: 'Start writing with Yidhan' });
   expect(startLink).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
   expect(startLink.className).not.toMatch(/\brounded-lg\b/);
+  expect(startLink.className).toMatch(/\bfocus-ring\b/);
   cleanup(); sessionStorage.clear(); vi.mocked(fetchSharedNote).mockClear();
   const incomplete = parseShareRoute('/s/'+token+'/a-private-letter', '')!;
   render(view(incomplete.shareKey));
@@ -36,6 +37,7 @@ it('opens an anonymous /s/token/slug letter using its fragment and fails closed 
   const incompleteButton = screen.getByRole('button', { name: 'Go to Yidhan' });
   expect(incompleteButton).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
   expect(incompleteButton.className).not.toMatch(/\brounded-lg\b/);
+  expect(incompleteButton.className).toMatch(/\bfocus-ring\b/);
   expect(fetchSharedNote).not.toHaveBeenCalled();
 });
 
@@ -49,6 +51,7 @@ it('shows the faded letter message when the token no longer resolves', async () 
   const button = screen.getByRole('button', { name: 'Go to Yidhan' });
   expect(button).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
   expect(button.className).not.toMatch(/\brounded-lg\b/);
+  expect(button.className).toMatch(/\bfocus-ring\b/);
 });
 
 it('reports a failure rather than a fade when the lookup itself errors', async () => {
@@ -60,4 +63,5 @@ it('reports a failure rather than a fade when the lookup itself errors', async (
   const button = screen.getByRole('button', { name: 'Go to Yidhan' });
   expect(button).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
   expect(button.className).not.toMatch(/\brounded-lg\b/);
+  expect(button.className).toMatch(/\bfocus-ring\b/);
 });

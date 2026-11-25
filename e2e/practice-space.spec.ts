@@ -224,3 +224,44 @@ test.describe('Pinned row', () => {
     });
   });
 });
+
+/** Launch review B10: at 375px with three tags, "+ Tag" stays on the tag row rather
+ *  than wrapping onto its own line. */
+test.describe('Tag row at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test('"+ Tag" shares the same row as the three default tags', async ({ page }) => {
+    await page.goto('/demo');
+    await expect(page.getByTestId('library-view')).toBeVisible();
+
+    const allNotes = page.getByRole('button', { name: 'All notes' });
+    const journal = page.getByRole('button', { name: 'Filter by Journal' });
+    const ideas = page.getByRole('button', { name: 'Filter by Ideas' });
+    const reading = page.getByRole('button', { name: 'Filter by Reading' });
+    const addTag = page.getByRole('button', { name: 'Add tag' });
+
+    for (const btn of [allNotes, journal, ideas, reading, addTag]) {
+      await expect(btn).toBeVisible();
+    }
+
+    const boxes = await Promise.all(
+      [allNotes, journal, ideas, reading, addTag].map((btn) => btn.boundingBox())
+    );
+    for (const box of boxes) {
+      expect(box).not.toBeNull();
+    }
+
+    const [allBox, journalBox, ideasBox, readingBox, addBox] = boxes as NonNullable<(typeof boxes)[number]>[];
+    // Every item sits on the same horizontal band — no lone wrapped "+ Tag" line.
+    for (const box of [journalBox, ideasBox, readingBox, addBox]) {
+      expect(Math.abs(box.y - allBox.y)).toBeLessThan(4);
+    }
+    expect(addBox.x).toBeGreaterThan(readingBox.x);
+
+    // No page-level horizontal overflow.
+    const pageScrolls = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    expect(pageScrolls).toBe(false);
+  });
+});

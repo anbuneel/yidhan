@@ -238,6 +238,7 @@ export function SharedNoteView({
                 px-5 py-2.5
                 text-sm font-medium
                 transition-all duration-200
+                focus-ring
               "
               style={{
                 fontFamily: 'var(--font-body)',
@@ -325,6 +326,7 @@ export function SharedNoteView({
                 px-5 py-2.5
                 text-sm font-medium
                 transition-all duration-200
+                focus-ring
               "
               style={{
                 fontFamily: 'var(--font-body)',
@@ -435,6 +437,7 @@ export function SharedNoteView({
                 mt-4 px-5 py-2.5
                 text-sm font-medium
                 transition-all duration-200
+                focus-ring
               "
               style={{
                 fontFamily: 'var(--font-body)',

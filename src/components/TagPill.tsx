@@ -10,15 +10,31 @@ interface TagPillProps {
   onRemove?: () => void;
 }
 
-const iconButtonClass = `
+const editButtonClass = `
   relative z-20
   h-7 w-0 overflow-hidden
   sm:w-7 sm:overflow-visible
+  group-hover:w-7 group-hover:overflow-visible
+  focus:w-7 focus:overflow-visible focus:opacity-100
   focus-visible:w-7 focus-visible:overflow-visible
   flex items-center justify-center
   rounded-full
   opacity-0
   group-hover:opacity-100
+  focus-visible:opacity-100
+  transition-opacity duration-150
+  focus-ring
+  hover:bg-[var(--color-bg-tertiary)]
+`;
+
+const removeButtonClass = `
+  relative z-20
+  size-7
+  flex items-center justify-center
+  rounded-full
+  opacity-0
+  group-hover:opacity-100
+  focus:opacity-100
   focus-visible:opacity-100
   transition-opacity duration-150
   focus-ring
@@ -54,7 +70,7 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
             e.stopPropagation();
             onEdit();
           }}
-          className={iconButtonClass}
+          className={editButtonClass}
           style={{ color: 'var(--color-text-tertiary)' }}
           aria-label="Edit tag"
         >
@@ -71,7 +87,7 @@ export function TagPill({ tag, isActive = false, onClick, onEdit, showRemove, on
             e.stopPropagation();
             onRemove();
           }}
-          className={iconButtonClass}
+          className={removeButtonClass}
           style={{ color: 'var(--color-text-tertiary)' }}
           aria-label="Remove tag"
         >

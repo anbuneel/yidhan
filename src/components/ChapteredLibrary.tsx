@@ -229,12 +229,12 @@ export function ChapteredLibrary({
                   lineHeight: 1.6,
                 }}
               >
-                Notes you write here are encrypted on your device.
+                Write a note to get started.
               </p>
               {onNewNote && (
                 <button type="button"
                   onClick={onNewNote}
-                  className="px-6 py-3 font-medium transition-all duration-300 mb-4 touch-press"
+                  className="px-6 py-3 font-medium transition-all duration-300 mb-4 touch-press focus-ring"
                   style={{
                     fontFamily: 'var(--font-body)',
                     background: 'var(--color-cta-bg)',
