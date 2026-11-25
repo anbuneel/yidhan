@@ -85,7 +85,7 @@ export function HeaderShell({
   useEffect(() => {
     if (!isProfileMenuOpen) return;
     const dismiss = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      if (event.key !== 'Escape' || event.defaultPrevented || profileMenuRef.current?.closest('[inert]')) return;
       event.preventDefault();
       event.stopPropagation();
       setIsProfileMenuOpen(false);

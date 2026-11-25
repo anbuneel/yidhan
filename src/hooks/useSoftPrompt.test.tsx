@@ -210,6 +210,50 @@ describe('Practice Space sign-up prompt count and guards (B4)', () => {
     expect(screen.getByTestId('prompt-open')).toBeInTheDocument();
   });
 
+  it('recovers from stale isTyping when a focused input unmounts without firing focusout', () => {
+    vi.useFakeTimers();
+    const metadata: DemoMetadata = {
+      createdAt: TEN_MINUTES_AGO(),
+      lastVisit: Date.now(),
+      totalNotesCreated: 4,
+      promptDismissedAt: null,
+      ribbonDismissedAt: null,
+    };
+
+    function UnmountInputProbe({ showInput }: { showInput: boolean }) {
+      const { shouldShowPrompt } = useSoftPrompt({
+        metadata,
+        userNoteCount: 4,
+        onDismissPrompt: vi.fn(),
+        onDismissRibbon: vi.fn(),
+      });
+      return (
+        <div>
+          {showInput && <input aria-label="Temporary input" />}
+          {shouldShowPrompt && <div data-testid="prompt-open">Prompt</div>}
+        </div>
+      );
+    }
+
+    const { rerender } = render(<UnmountInputProbe showInput />);
+    const input = screen.getByLabelText('Temporary input');
+    act(() => {
+      input.focus();
+      fireEvent.focusIn(input);
+    });
+    expect(screen.queryByTestId('prompt-open')).toBeNull();
+
+    // Unmount the focused input directly without firing focusout (matches React view switch).
+    rerender(<UnmountInputProbe showInput={false} />);
+    expect(document.activeElement).toBe(document.body);
+
+    // The minute interval (or next keydown/pointerdown) detects activeElement is no longer editable and recovers.
+    act(() => {
+      vi.advanceTimersByTime(60 * 1000);
+    });
+    expect(screen.getByTestId('prompt-open')).toBeInTheDocument();
+  });
+
   it('disables DemoPage keyboard shortcuts (? and Cmd/Ctrl+N) while isAuthModalOpen is true', () => {
     seedDemoState();
     render(

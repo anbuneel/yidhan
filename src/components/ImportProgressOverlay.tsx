@@ -29,9 +29,10 @@ export function ImportProgressOverlay({ progress }: { progress: ImportProgress }
         tabIndex={-1}
         aria-modal="true"
         aria-label="Import progress"
-        className="px-8 py-6 rounded-lg text-center min-w-[280px] border-0"
+        className="relative z-10 px-8 py-6 text-center min-w-[280px] border-0"
         style={{
           background: 'var(--color-bg-primary)',
+          borderRadius: 'var(--radius-plain)',
           border: '1px solid var(--glass-border)',
           margin: 0,
         }}

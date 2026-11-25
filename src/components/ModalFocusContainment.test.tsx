@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Editor as TiptapEditor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { Auth } from './Auth';
@@ -8,6 +9,7 @@ import { BackupPassphraseModal } from './BackupPassphraseModal';
 import { ConflictModal } from './ConflictModal';
 import { EncryptedConflictModal } from './EncryptedConflictModal';
 import { FadedNotesView } from './FadedNotesView';
+import { FindReplacePanel } from './FindReplacePanel';
 import { ImportProgressOverlay } from './ImportProgressOverlay';
 import { InstallPrompt } from './InstallPrompt';
 import { IOSInstallGuide } from './IOSInstallGuide';
@@ -178,29 +180,35 @@ describe('Non-modal surfaces must NOT trap focus or mark background inert (shoul
     vi.clearAllMocks();
   });
 
-  it('TagSelector dropdown does not trap Tab or mark background inert', () => {
+  it('TagSelector dropdown lets Tab leave into the next page control and never marks background inert', async () => {
+    const user = userEvent.setup({ delay: null });
     const tags = [createMockTag({ id: 't1', name: 'Work' })];
     render(
       <>
-        <button type="button">Page control</button>
+        <button type="button">Before surface</button>
         <TagSelector tags={tags} selectedTagIds={[]} onToggleTag={vi.fn()} />
+        <button type="button">After surface</button>
       </>
     );
 
-    const pageControl = screen.getByRole('button', { name: 'Page control' });
-    fireEvent.click(screen.getByRole('button', { name: /add tags/i }));
+    const before = screen.getByRole('button', { name: 'Before surface' });
+    const after = screen.getByRole('button', { name: 'After surface' });
+    await user.click(screen.getByRole('button', { name: /add tags/i }));
     expect(screen.getByTestId('tag-selector-menu')).toBeInTheDocument();
 
-    expect(pageControl.closest('[inert]')).toBeNull();
+    expect(before.closest('[inert]')).toBeNull();
+    expect(before.closest('[aria-hidden="true"]')).toBeNull();
+    expect(after.closest('[inert]')).toBeNull();
 
+    // Real Tab from the last control inside the dropdown leaves into the next page button.
     const tagBtn = screen.getByRole('button', { name: 'Work' });
     tagBtn.focus();
-    const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
-    document.dispatchEvent(tabEvent);
-    expect(tabEvent.defaultPrevented).toBe(false);
+    await user.tab();
+    expect(after).toHaveFocus();
   });
 
-  it('LinkPopover does not trap Tab or mark background inert', () => {
+  it('LinkPopover lets Tab leave into the next page control and never marks background inert', async () => {
+    const user = userEvent.setup({ delay: null });
     const editor = new TiptapEditor({
       extensions: [StarterKit.configure({ link: { openOnClick: false } })],
       content: '<p>Hello world</p>',
@@ -208,25 +216,28 @@ describe('Non-modal surfaces must NOT trap focus or mark background inert (shoul
     try {
       render(
         <>
-          <button type="button">Page control</button>
+          <button type="button">Before surface</button>
           <LinkPopover editor={editor} onClose={vi.fn()} />
+          <button type="button">After surface</button>
         </>
       );
 
-      const pageControl = screen.getByRole('button', { name: 'Page control' });
-      expect(pageControl.closest('[inert]')).toBeNull();
+      const before = screen.getByRole('button', { name: 'Before surface' });
+      const after = screen.getByRole('button', { name: 'After surface' });
+      expect(before.closest('[inert]')).toBeNull();
+      expect(after.closest('[inert]')).toBeNull();
 
       const saveBtn = screen.getByRole('button', { name: 'Save link' });
       saveBtn.focus();
-      const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
-      document.dispatchEvent(tabEvent);
-      expect(tabEvent.defaultPrevented).toBe(false);
+      await user.tab();
+      expect(after).toHaveFocus();
     } finally {
       editor.destroy();
     }
   });
 
-  it('EditorToolbar does not trap Tab or mark background inert', () => {
+  it('EditorToolbar lets Tab leave into the next page control and never marks background inert', async () => {
+    const user = userEvent.setup({ delay: null });
     const editor = new TiptapEditor({
       extensions: [StarterKit],
       content: '<p>Hello world</p>',
@@ -234,77 +245,90 @@ describe('Non-modal surfaces must NOT trap focus or mark background inert (shoul
     try {
       render(
         <>
-          <button type="button">Page control</button>
+          <button type="button">Before surface</button>
           <EditorToolbar editor={editor} variant="inline" />
+          <button type="button">After surface</button>
         </>
       );
 
-      const pageControl = screen.getByRole('button', { name: 'Page control' });
-      expect(pageControl.closest('[inert]')).toBeNull();
+      const before = screen.getByRole('button', { name: 'Before surface' });
+      const after = screen.getByRole('button', { name: 'After surface' });
+      expect(before.closest('[inert]')).toBeNull();
+      expect(after.closest('[inert]')).toBeNull();
 
-      const toolbarButtons = screen.getAllByRole('button');
+      const toolbar = screen.getByRole('toolbar');
+      const toolbarButtons = toolbar.querySelectorAll<HTMLElement>('button:not([disabled])');
       toolbarButtons[toolbarButtons.length - 1].focus();
-      const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
-      document.dispatchEvent(tabEvent);
-      expect(tabEvent.defaultPrevented).toBe(false);
+      await user.tab();
+      expect(after).toHaveFocus();
     } finally {
       editor.destroy();
     }
   });
 
-  it('InstallPrompt floating banner does not trap Tab or mark background inert', () => {
+  it('InstallPrompt floating banner lets Tab leave into the next page control and never marks background inert', async () => {
+    const user = userEvent.setup({ delay: null });
     render(
       <>
-        <button type="button">Page control</button>
+        <button type="button">Before surface</button>
         <InstallPrompt onInstall={vi.fn().mockResolvedValue(true)} onDismiss={vi.fn()} />
+        <button type="button">After surface</button>
       </>
     );
 
-    const pageControl = screen.getByRole('button', { name: 'Page control' });
-    expect(pageControl.closest('[inert]')).toBeNull();
+    const before = screen.getByRole('button', { name: 'Before surface' });
+    const after = screen.getByRole('button', { name: 'After surface' });
+    expect(before.closest('[inert]')).toBeNull();
+    expect(after.closest('[inert]')).toBeNull();
 
     const installBtn = screen.getByRole('button', { name: /install/i });
     installBtn.focus();
-    const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
-    document.dispatchEvent(tabEvent);
-    expect(tabEvent.defaultPrevented).toBe(false);
+    await user.tab();
+    expect(after).toHaveFocus();
   });
 
-  it('Toasts (role="status") do not trap Tab or mark background inert', () => {
+  it('Toasts (role="status") let Tab leave into the next page control and never mark background inert', async () => {
+    const user = userEvent.setup({ delay: null });
     render(
       <>
-        <button type="button">Page control</button>
+        <button type="button">Before surface</button>
         <div role="status">
           <span>Note restored</span>
           <button type="button">Undo</button>
         </div>
+        <button type="button">After surface</button>
       </>
     );
 
-    const pageControl = screen.getByRole('button', { name: 'Page control' });
-    expect(pageControl.closest('[inert]')).toBeNull();
+    const before = screen.getByRole('button', { name: 'Before surface' });
+    const after = screen.getByRole('button', { name: 'After surface' });
+    expect(before.closest('[inert]')).toBeNull();
+    expect(after.closest('[inert]')).toBeNull();
 
     const undoBtn = screen.getByRole('button', { name: 'Undo' });
     undoBtn.focus();
-    const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
-    document.dispatchEvent(tabEvent);
-    expect(tabEvent.defaultPrevented).toBe(false);
+    await user.tab();
+    expect(after).toHaveFocus();
   });
 
-  it('Auth in full-page mode (isModal=false) does not trap Tab or mark siblings inert', () => {
+  it('Auth in full-page mode (isModal=false) lets Tab leave into external controls and never marks siblings inert', async () => {
+    const user = userEvent.setup({ delay: null });
     render(
       <>
-        <button type="button">External control</button>
         <Auth theme="light" onThemeToggle={vi.fn()} isModal={false} />
+        <button type="button">External control</button>
       </>
     );
 
     const external = screen.getByRole('button', { name: 'External control' });
     expect(external.closest('[inert]')).toBeNull();
 
-    const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
-    document.dispatchEvent(tabEvent);
-    expect(tabEvent.defaultPrevented).toBe(false);
+    // Tab from the last button inside Auth moves out to the external sibling button.
+    const allButtons = screen.getAllByRole('button');
+    const lastAuthButton = allButtons[allButtons.length - 2];
+    lastAuthButton.focus();
+    await user.tab();
+    expect(external).toHaveFocus();
   });
 });
 
@@ -726,5 +750,281 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     expect(
       screen.getByRole('button', { name: 'Library button', hidden: true }).closest('[inert]')
     ).not.toBeNull();
+  });
+
+  it('auto-opening dialogs (ConflictModal, EncryptedConflictModal, IOSInstallGuide) do not fire actions on Space/Enter when opening while typing', async () => {
+    const user = userEvent.setup({ delay: null });
+    const conflict = createNoteConflict();
+
+    // 1. ConflictModal
+    const onResolve = vi.fn().mockResolvedValue(undefined);
+    const onDismissConflict = vi.fn();
+    function ConflictHarness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <input aria-label="Note title" />
+          <button type="button" onClick={() => setOpen(true)}>Trigger conflict</button>
+          <ConflictModal conflict={open ? conflict : null} onResolve={onResolve} onDismiss={onDismissConflict} />
+        </>
+      );
+    }
+    const cView = render(<ConflictHarness />);
+    screen.getByLabelText('Note title').focus();
+    fireEvent.click(screen.getByRole('button', { name: 'Trigger conflict' }));
+    expect(document.activeElement).toBe(screen.getByRole('dialog'));
+    await user.keyboard(' ');
+    await user.keyboard('{Enter}');
+    expect(onResolve).not.toHaveBeenCalled();
+    expect(onDismissConflict).not.toHaveBeenCalled();
+    // Accessible in-dialog "Not now" button still dismisses.
+    await user.click(screen.getByRole('button', { name: 'Not now' }));
+    expect(onDismissConflict).toHaveBeenCalledTimes(1);
+    cView.unmount();
+
+    // 2. EncryptedConflictModal loading state
+    const onDismissEnc = vi.fn();
+    const eView = render(
+      <>
+        <input aria-label="Body" />
+        <EncryptedConflictModal conflict={conflict} keys={null} onResolve={vi.fn()} onDismiss={onDismissEnc} />
+      </>
+    );
+    expect(document.activeElement).toBe(screen.getByRole('dialog'));
+    await user.keyboard(' ');
+    await user.keyboard('{Enter}');
+    expect(onDismissEnc).not.toHaveBeenCalled();
+    eView.unmount();
+
+    // 3. IOSInstallGuide (reduced motion so it opens immediately)
+    const origMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    try {
+      const onDismissGuide = vi.fn();
+      render(
+        <>
+          <input aria-label="Search" />
+          <IOSInstallGuide onDismiss={onDismissGuide} />
+        </>
+      );
+      expect(document.activeElement).toBe(screen.getByRole('dialog'));
+      await user.keyboard(' ');
+      await user.keyboard('{Enter}');
+      expect(onDismissGuide).not.toHaveBeenCalled();
+    } finally {
+      window.matchMedia = origMatchMedia;
+    }
+  });
+
+  it('WelcomeBackPrompt and ImportProgressOverlay center their <dialog> with relative z-10 and use --radius-plain', () => {
+    const w = render(<WelcomeBackPrompt daysRemaining={5} onStay={vi.fn()} onContinue={vi.fn()} />);
+    const welcomeDialog = screen.getByRole('dialog');
+    expect(welcomeDialog).toHaveClass('relative', 'z-10');
+    expect(welcomeDialog).toHaveStyle({ borderRadius: 'var(--radius-plain)' });
+    w.unmount();
+
+    render(<ImportProgressOverlay progress={{ phase: 'parsing', current: 0, total: 0 }} />);
+    const importDialog = screen.getByRole('dialog', { name: 'Import progress' });
+    expect(importDialog).toHaveClass('relative', 'z-10');
+    expect(importDialog).toHaveStyle({ borderRadius: 'var(--radius-plain)' });
+  });
+
+  it('does not hijack IME Escape (isComposing=true or keyCode=229) on an open modal', () => {
+    const onClose = vi.fn();
+    render(<TagModal isOpen onClose={onClose} onSave={vi.fn().mockResolvedValue(undefined)} />);
+
+    const composingEsc = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      isComposing: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(composingEsc);
+    expect(composingEsc.defaultPrevented).toBe(false);
+    expect(onClose).not.toHaveBeenCalled();
+
+    const keyCode229Esc = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      keyCode: 229,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(keyCode229Esc);
+    expect(keyCode229Esc.defaultPrevented).toBe(false);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('recovers focus to the original page opener when stacked modals close out of order (A closes before B)', () => {
+    function OutOfOrderHarness() {
+      const [showA, setShowA] = useState(false);
+      const [showB, setShowB] = useState(false);
+      return (
+        <>
+          <main>
+            <button type="button" onClick={() => setShowA(true)}>Open A</button>
+          </main>
+          {showA && (
+            <InvitationModal
+              noteCount={3}
+              onSignUp={() => setShowB(true)}
+              onDismiss={() => setShowA(false)}
+            />
+          )}
+          {showB && (
+            <SessionTimeoutModal
+              isOpen
+              onStay={() => {
+                setShowA(false);
+              }}
+              onSignOut={() => setShowB(false)}
+              minutesRemaining={1}
+            />
+          )}
+        </>
+      );
+    }
+
+    render(<OutOfOrderHarness />);
+    const openA = screen.getByRole('button', { name: 'Open A' });
+    openA.focus();
+    fireEvent.click(openA);
+
+    // Open B from inside A.
+    const openBFromA = screen.getByRole('button', { name: 'Keep my thoughts' });
+    openBFromA.focus();
+    fireEvent.click(openBFromA);
+
+    // Close A FIRST while B is still open.
+    fireEvent.click(screen.getByRole('button', { name: 'Stay' }));
+    expect(screen.queryByText('These words are yours')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'A gentle pause' })).toBeInTheDocument();
+
+    // Now close B: A's button is unmounted, so B falls back to A's original page opener.
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out now' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(openA);
+    expect(document.body).not.toHaveFocus();
+  });
+
+  it('marks background siblings mounted AFTER a modal opens as inert while keeping late toasters exempt', async () => {
+    function LateBackgroundHarness() {
+      const [showLate, setShowLate] = useState(false);
+      return (
+        <>
+          <main>
+            <button type="button" onClick={() => setShowLate(true)}>Mount late</button>
+          </main>
+          {showLate && (
+            <>
+              <section data-testid="late-sibling">
+                <button type="button">Late control</button>
+              </section>
+              <div data-rht-toaster="true" data-testid="late-toaster">Late toast</div>
+            </>
+          )}
+          <InvitationModal noteCount={3} onSignUp={vi.fn()} onDismiss={vi.fn()} />
+        </>
+      );
+    }
+
+    render(<LateBackgroundHarness />);
+    fireEvent.click(screen.getByText('Mount late'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('late-sibling')).toHaveAttribute('inert');
+      expect(screen.getByTestId('late-sibling')).toHaveAttribute('aria-hidden', 'true');
+    });
+    expect(screen.getByTestId('late-toaster')).not.toHaveAttribute('inert');
+    expect(screen.getByTestId('late-toaster')).not.toHaveAttribute('aria-hidden');
+  });
+
+  it('cleans up inert and aria-hidden completely when lock or sign-out unmounts an open modal', () => {
+    function LockHarness() {
+      const [locked, setLocked] = useState(false);
+      if (locked) {
+        return (
+          <main>
+            <label htmlFor="unlock-pass">Passphrase</label>
+            <input id="unlock-pass" type="password" />
+            <button type="button">Unlock</button>
+          </main>
+        );
+      }
+      return (
+        <>
+          <main>
+            <button type="button" onClick={() => setLocked(true)}>Trigger lock</button>
+          </main>
+          <TagModal isOpen onClose={vi.fn()} onSave={vi.fn().mockResolvedValue(undefined)} />
+        </>
+      );
+    }
+
+    render(<LockHarness />);
+    expect(screen.getByText('Trigger lock').closest('[inert]')).not.toBeNull();
+
+    // Vault locks / user signs out while modal is open.
+    fireEvent.click(screen.getByText('Trigger lock'));
+    const passInput = screen.getByLabelText('Passphrase');
+    const unlockBtn = screen.getByRole('button', { name: 'Unlock' });
+    expect(passInput.closest('[inert]')).toBeNull();
+    expect(passInput.closest('[aria-hidden="true"]')).toBeNull();
+    expect(unlockBtn.closest('[inert]')).toBeNull();
+    expect(document.querySelectorAll('[inert]')).toHaveLength(0);
+  });
+
+  it('FindReplacePanel does not steal Escape from an open modal mounted after it', () => {
+    const editor = new TiptapEditor({
+      extensions: [StarterKit],
+      content: '<p>Find me here</p>',
+    });
+    const onCloseFind = vi.fn();
+    const onCloseModal = vi.fn();
+
+    try {
+      function EditorWithModalHarness() {
+        const [showModal, setShowModal] = useState(false);
+        return (
+          <>
+            <main>
+              <FindReplacePanel editor={editor} onClose={onCloseFind} />
+              <button type="button" onClick={() => setShowModal(true)}>Open tag modal</button>
+            </main>
+            <TagModal
+              isOpen={showModal}
+              onClose={() => {
+                onCloseModal();
+                setShowModal(false);
+              }}
+              onSave={vi.fn().mockResolvedValue(undefined)}
+            />
+          </>
+        );
+      }
+
+      render(<EditorWithModalHarness />);
+      fireEvent.click(screen.getByRole('button', { name: 'Open tag modal' }));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      // First Escape closes TagModal ONLY — FindReplacePanel behind it stays open.
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onCloseModal).toHaveBeenCalledTimes(1);
+      expect(onCloseFind).not.toHaveBeenCalled();
+
+      // Second Escape (now that no modal is open) closes FindReplacePanel.
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onCloseFind).toHaveBeenCalledTimes(1);
+    } finally {
+      editor.destroy();
+    }
   });
 });

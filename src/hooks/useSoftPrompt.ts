@@ -74,18 +74,37 @@ export function useSoftPrompt({
   );
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Update current time every minute to re-evaluate time-based conditions
+  // Update current time every minute and re-verify activeElement so a focused
+  // editable unmounted without firing focusout cannot wedge isTyping forever.
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(Date.now());
+      if (typeof document !== 'undefined' && !isEditableElement(document.activeElement)) {
+        setIsTyping(false);
+      }
     }, 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
 
+  // Re-check activeElement when suppression ends (e.g. leaving the editor or closing a dialog).
+  const prevSuppressedRef = useRef(suppressed);
+  useEffect(() => {
+    const wasSuppressed = prevSuppressedRef.current;
+    prevSuppressedRef.current = suppressed;
+    if (!wasSuppressed || suppressed || typeof document === 'undefined') return;
+    if (!isEditableElement(document.activeElement)) {
+      queueMicrotask(() => {
+        if (!isEditableElement(document.activeElement)) {
+          setIsTyping(false);
+        }
+      });
+    }
+  }, [suppressed]);
+
   // Track whether focus is currently inside a text input / editable surface so the
   // prompt never interrupts the visitor mid-thought. Defer clearing on focusout so
-  // an in-flight pointer click (mousedown -> focusout -> click) finishes cleanly
+  // an in-flight pointer click (mousedown -> focusout -> focusin -> click) finishes
   // before InvitationModal can mount and swallow it.
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -121,12 +140,27 @@ export function useSoftPrompt({
       }
       scheduleClearTyping();
     };
+    // Recover from a focused editable unmounting without firing focusout.
+    const handlePointerDown = () => {
+      if (!isEditableElement(document.activeElement)) {
+        scheduleClearTyping();
+      }
+    };
+    const handleKeyDown = () => {
+      if (!isEditableElement(document.activeElement)) {
+        setIsTyping(false);
+      }
+    };
     document.addEventListener('focusin', handleFocusIn);
     document.addEventListener('focusout', handleFocusOut);
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       clearPendingBlur();
       document.removeEventListener('focusin', handleFocusIn);
       document.removeEventListener('focusout', handleFocusOut);
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 

@@ -5,7 +5,7 @@
  * Displays both versions side-by-side with clear resolution options.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import type { ConflictInfo, NoteConflictServerVersion } from '../services/syncEngine';
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
@@ -42,9 +42,14 @@ function formatDate(timestamp: number | string) {
 export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalProps) {
   const [isResolving, setIsResolving] = useState(false);
   const [resolvedChoice, setResolvedChoice] = useState<'local' | 'server' | 'both' | null>(null);
-  const modalRef = useModalFocusTrap({
+  // Sync can open this dialog while the reader is typing, so land initial focus
+  // on the dialog container rather than an action button (Space/Enter do nothing).
+  const modalRef = useRef<HTMLDialogElement>(null);
+  useModalFocusTrap({
     isOpen: Boolean(conflict && conflict.entityType === 'note'),
     onClose: isResolving ? undefined : onDismiss,
+    dialogRef: modalRef,
+    initialFocusRef: modalRef,
   });
 
   // Reset state when conflict changes
@@ -389,6 +394,24 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
           >
             {bothHelperText}
           </p>
+          <button
+            type="button"
+            onClick={onDismiss}
+            disabled={isResolving}
+            className="mt-4 text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              fontFamily: 'var(--font-body)',
+              color: 'var(--color-text-tertiary)',
+              background: 'none',
+              border: 'none',
+              cursor: isResolving ? 'not-allowed' : 'pointer',
+              textDecoration: 'underline',
+              textDecorationStyle: 'dotted',
+              textUnderlineOffset: '3px',
+            }}
+          >
+            Not now
+          </button>
         </div>
       </dialog>
     </div>

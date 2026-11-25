@@ -46,7 +46,7 @@ export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: Welcome
         aria-modal="true"
         aria-labelledby="welcome-back-title"
         className="
-          w-full max-w-sm
+          relative z-10 w-full max-w-sm
           shadow-[var(--shadow-lg)]
           animate-[modal-enter_300ms_ease-out]
           p-0 border-0

@@ -138,9 +138,14 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
     }, SPRING_TRANSITION_DURATION);
   };
 
-  const dialogRef = useModalFocusTrap({
+  // Auto-opens after delay: land focus on the dialog container rather than Close
+  // so typing Space/Enter never dismisses the guide accidentally.
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useModalFocusTrap({
     isOpen: isVisible,
     onClose: handleDismiss,
+    dialogRef,
+    initialFocusRef: dialogRef,
   });
 
   return (

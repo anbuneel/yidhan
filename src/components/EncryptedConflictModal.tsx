@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DerivedKeys } from '../lib/encryption';
 import { decryptNote } from '../lib/encryption';
 import type { ConflictInfo } from '../services/syncEngine';
@@ -17,9 +17,13 @@ export function EncryptedConflictModal({ conflict, keys, onResolve, onDismiss }:
   const [preview, setPreview] = useState<{ source: ConflictInfo; value?: ConflictInfo; error?: boolean } | null>(null);
   const isNoteConflict = Boolean(conflict && conflict.entityType === 'note');
   const resolvedConflict = preview?.source === conflict ? preview.value ?? null : null;
-  const loadingDialogRef = useModalFocusTrap({
+  // Auto-opens on sync conflict: focus the dialog container instead of Close so Space/Enter do not dismiss it.
+  const loadingDialogRef = useRef<HTMLDialogElement>(null);
+  useModalFocusTrap({
     isOpen: isNoteConflict && !resolvedConflict,
     onClose: onDismiss,
+    dialogRef: loadingDialogRef,
+    initialFocusRef: loadingDialogRef,
   });
 
   useEffect(() => {
@@ -49,6 +53,7 @@ export function EncryptedConflictModal({ conflict, keys, onResolve, onDismiss }:
       <dialog
         open
         ref={loadingDialogRef}
+        role="dialog"
         tabIndex={-1}
         aria-modal="true"
         aria-label="Opening conflict"

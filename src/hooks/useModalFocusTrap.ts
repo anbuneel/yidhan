@@ -16,6 +16,8 @@ const IGNORED_TAGS = new Set(['SCRIPT', 'STYLE', 'LINK', 'META', 'TEMPLATE']);
 interface ModalStackEntry {
   id: symbol;
   dialogEl: HTMLElement;
+  opener: HTMLElement | null;
+  fallbackOpener: HTMLElement | null;
   onEscape: () => void;
   canEscape: () => boolean;
 }
@@ -29,10 +31,10 @@ const modalStack: ModalStackEntry[] = [];
 const managedInert = new Map<HTMLElement, SavedInertState>();
 const managedAriaModal = new Map<HTMLElement, string>();
 let listenerAttached = false;
+let backgroundObserver: MutationObserver | null = null;
 
-function isFocusable(el: HTMLElement): boolean {
+function isVisibleAndActive(el: HTMLElement): boolean {
   if (el.hasAttribute('disabled') || el.hasAttribute('hidden')) return false;
-  if (el.tabIndex < 0) return false;
   if (el.closest('[hidden], [inert]')) return false;
 
   if (el.tagName === 'SUMMARY' && el.parentElement?.tagName !== 'DETAILS') return false;
@@ -51,8 +53,16 @@ function isFocusable(el: HTMLElement): boolean {
   return style.display !== 'none' && style.visibility !== 'hidden';
 }
 
+function isTabbable(el: HTMLElement): boolean {
+  return el.tabIndex >= 0 && isVisibleAndActive(el);
+}
+
+function canProgrammaticallyFocus(el: HTMLElement): boolean {
+  return (el.tabIndex >= 0 || el.hasAttribute('tabindex')) && isVisibleAndActive(el);
+}
+
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(isFocusable);
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(isTabbable);
 }
 
 function getTopEntry(): ModalStackEntry | undefined {
@@ -60,7 +70,7 @@ function getTopEntry(): ModalStackEntry | undefined {
 }
 
 function focusInside(dialogEl: HTMLElement, preferred?: HTMLElement | null): void {
-  if (preferred && dialogEl.contains(preferred) && isFocusable(preferred)) {
+  if (preferred && dialogEl.contains(preferred) && canProgrammaticallyFocus(preferred)) {
     preferred.focus();
     return;
   }
@@ -73,6 +83,31 @@ function focusInside(dialogEl: HTMLElement, preferred?: HTMLElement | null): voi
       dialogEl.setAttribute('tabindex', '-1');
     }
     dialogEl.focus();
+  }
+}
+
+function isRestorableOpener(el: HTMLElement | null): el is HTMLElement {
+  return Boolean(el && el !== document.body && el.isConnected && !el.closest('[inert]'));
+}
+
+function restoreFocusAfterClose(entry: ModalStackEntry): void {
+  if (isRestorableOpener(entry.opener)) {
+    entry.opener.focus();
+    return;
+  }
+  if (isRestorableOpener(entry.fallbackOpener)) {
+    entry.fallbackOpener.focus();
+    return;
+  }
+  // If no modal remains open and saved openers unmounted, avoid stranding focus on document.body.
+  if (modalStack.length === 0 && typeof document !== 'undefined') {
+    const landmark = document.querySelector<HTMLElement>('main, [role="main"]');
+    const fallback =
+      (landmark ? getFocusableElements(landmark)[0] : undefined) ??
+      getFocusableElements(document.body)[0];
+    if (fallback) {
+      fallback.focus();
+    }
   }
 }
 
@@ -90,6 +125,27 @@ function restoreElementInert(el: HTMLElement, saved: SavedInertState): void {
   }
 }
 
+function disconnectBackgroundObserver(): void {
+  if (backgroundObserver) {
+    backgroundObserver.disconnect();
+  }
+}
+
+function observeBackgroundAncestors(ancestors: HTMLElement[]): void {
+  disconnectBackgroundObserver();
+  if (ancestors.length === 0 || typeof MutationObserver === 'undefined') return;
+  if (!backgroundObserver) {
+    backgroundObserver = new MutationObserver(() => {
+      if (modalStack.length > 0) {
+        syncModalLayers();
+      }
+    });
+  }
+  for (const parent of ancestors) {
+    backgroundObserver.observe(parent, { childList: true });
+  }
+}
+
 /**
  * Reconcile `inert`, `aria-hidden`, and `aria-modal` so only the topmost open
  * modal is interactive and announced as `aria-modal="true"`.
@@ -97,11 +153,13 @@ function restoreElementInert(el: HTMLElement, saved: SavedInertState): void {
 function syncModalLayers(): void {
   const top = getTopEntry();
   const desiredInert = new Set<HTMLElement>();
+  const ancestorsToObserve: HTMLElement[] = [];
 
   if (top && top.dialogEl.isConnected) {
     let current: HTMLElement | null = top.dialogEl;
     while (current && current !== document.body && current.parentElement) {
       const parent: HTMLElement = current.parentElement;
+      ancestorsToObserve.push(parent);
       for (const child of Array.from(parent.children)) {
         if (child === current || !(child instanceof HTMLElement)) continue;
         if (IGNORED_TAGS.has(child.tagName)) continue;
@@ -156,6 +214,8 @@ function syncModalLayers(): void {
       entry.dialogEl.removeAttribute('aria-modal');
     }
   }
+
+  observeBackgroundAncestors(ancestorsToObserve);
 }
 
 function handleDocumentKeyDown(event: KeyboardEvent): void {
@@ -163,7 +223,8 @@ function handleDocumentKeyDown(event: KeyboardEvent): void {
   if (!top || !top.dialogEl.isConnected) return;
 
   if (event.key === 'Escape') {
-    if (event.defaultPrevented) return;
+    // Do not hijack IME Escape (cancelling composition) or already-handled events.
+    if (event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
     // Always consume Escape while any modal is topmost so it never leaks to
     // background listeners (such as editor exit) during mandatory or busy dialogs.
     event.preventDefault();
@@ -195,7 +256,8 @@ function handleDocumentKeyDown(event: KeyboardEvent): void {
     return;
   }
 
-  if (event.shiftKey && (active === first || active === top.dialogEl)) {
+  const isNonTabbableInside = active instanceof HTMLElement && active.tabIndex < 0;
+  if (event.shiftKey && (active === first || active === top.dialogEl || isNonTabbableInside)) {
     event.preventDefault();
     last.focus();
   } else if (!event.shiftKey && active === last) {
@@ -214,6 +276,7 @@ function detachGlobalListenerIfEmpty(): void {
   if (!listenerAttached || modalStack.length > 0 || typeof document === 'undefined') return;
   document.removeEventListener('keydown', handleDocumentKeyDown);
   listenerAttached = false;
+  disconnectBackgroundObserver();
 }
 
 export interface UseModalFocusTrapOptions {
@@ -261,9 +324,26 @@ export function useModalFocusTrap<T extends HTMLElement = HTMLDialogElement>({
     if (!dialogEl) return;
 
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // If opened from inside an existing modal, inherit that modal's opener chain as a
+    // fallback in case the parent modal closes before this one does.
+    let fallbackOpener: HTMLElement | null = null;
+    if (opener) {
+      for (let i = modalStack.length - 1; i >= 0; i--) {
+        const parent = modalStack[i];
+        if (parent.dialogEl.contains(opener)) {
+          fallbackOpener = isRestorableOpener(parent.opener)
+            ? parent.opener
+            : parent.fallbackOpener;
+          break;
+        }
+      }
+    }
+
     const entry: ModalStackEntry = {
       id: Symbol('modal'),
       dialogEl,
+      opener,
+      fallbackOpener,
       onEscape: () => onEscapeEvent(),
       canEscape: () => canEscapeEvent(),
     };
@@ -275,6 +355,7 @@ export function useModalFocusTrap<T extends HTMLElement = HTMLDialogElement>({
     focusInside(dialogEl, initialFocusRef?.current);
 
     return () => {
+      const wasTop = getTopEntry()?.id === entry.id;
       entryRef.current = null;
       const index = modalStack.findIndex((item) => item.id === entry.id);
       if (index !== -1) {
@@ -283,8 +364,8 @@ export function useModalFocusTrap<T extends HTMLElement = HTMLDialogElement>({
       syncModalLayers();
       detachGlobalListenerIfEmpty();
 
-      if (opener && opener !== document.body && opener.isConnected && !opener.closest('[inert]')) {
-        opener.focus();
+      if (wasTop || modalStack.length === 0) {
+        restoreFocusAfterClose(entry);
       }
     };
   }, [isOpen, activeRef, initialFocusRef]);
