@@ -795,3 +795,8 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   letters show small upright names joined with a middot. The colour picker is gone;
   each tag still stores its `color` key, so no migration. Folders were rejected
   (`DECISIONS.md`, 2026-11-14). (#279)
+- **2026-11-24** — The editor glow is the brand marigold at 8% in both themes. Light
+  had no glow since 2026-11-11; dark drops its neutral 4%. Marigold's jobs are now the
+  logo's sun, the pinned mark and the glow, still never text. Note text at the glow's
+  centre measures 12.61:1 in light and 8.59:1 in dark (`DECISIONS.md`, 2026-11-24).
+  (#280)
