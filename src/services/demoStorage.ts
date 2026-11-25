@@ -193,7 +193,9 @@ export function saveDemoState(state: DemoState): void {
 /**
  * Check if a starter note has been edited from its default state
  */
-function hasStarterNoteBeenEdited(note: DemoNote): boolean {
+function hasStarterNoteBeenEdited(
+  note: Pick<DemoNote, 'localId' | 'title' | 'content' | 'pinned'>
+): boolean {
   const current = STARTER_NOTES.find((s) => s.localId === note.localId);
   if (current) {
     return (
@@ -208,6 +210,39 @@ function hasStarterNoteBeenEdited(note: DemoNote): boolean {
 }
 
 /**
+ * Whether a single Practice Space note was created or edited by the visitor.
+ * Untouched current or legacy starter notes return false.
+ */
+function isPracticeWorkNote(note: {
+  id: string;
+  title: string;
+  content: string;
+  pinned: boolean;
+}): boolean {
+  if (!STARTER_NOTE_IDS.has(note.id)) return true;
+  return hasStarterNoteBeenEdited({
+    localId: note.id,
+    title: note.title,
+    content: note.content,
+    pinned: note.pinned,
+  });
+}
+
+/**
+ * Count only notes the visitor created or starter notes they edited.
+ * Untouched starters are never counted.
+ */
+export function countPracticeWork(
+  notes: readonly { id: string; title: string; content: string; pinned: boolean }[]
+): number {
+  let count = 0;
+  for (const note of notes) {
+    if (isPracticeWorkNote(note)) count++;
+  }
+  return count;
+}
+
+/**
  * Whether a set of practice notes contains anything the reader made — a note they
  * created, or a starter they edited. Unedited starters are not their work.
  *
@@ -216,17 +251,7 @@ function hasStarterNoteBeenEdited(note: DemoNote): boolean {
 export function hasPracticeWork(
   notes: readonly { id: string; title: string; content: string; pinned: boolean }[]
 ): boolean {
-  return notes.some((note) => {
-    if (!STARTER_NOTE_IDS.has(note.id)) return true;
-
-    const original = STARTER_NOTES.find((s) => s.localId === note.id);
-    if (!original) return true;
-    return (
-      note.title !== original.title ||
-      note.content !== original.content ||
-      note.pinned !== original.pinned
-    );
-  });
+  return countPracticeWork(notes) > 0;
 }
 
 /**

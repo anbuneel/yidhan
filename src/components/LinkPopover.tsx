@@ -18,7 +18,7 @@ export function LinkPopover({ editor, onClose }: LinkPopoverProps) {
     input.current?.focus();
     input.current?.select();
     const dismiss = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && !event.defaultPrevented && !panel.current?.closest('[inert]')) {
         event.preventDefault();
         event.stopPropagation();
         onClose();

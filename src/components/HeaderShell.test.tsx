@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HeaderShell } from './HeaderShell';
+import { BottomSheet } from './BottomSheet';
 // HeaderShell reads the optional form: the public shell renders it with no provider.
 import { useOptionalAuth as useAuth } from '../contexts/authState';
 
@@ -267,6 +269,38 @@ describe('HeaderShell', () => {
 
       await user.click(screen.getByText('Settings'));
       expect(onSettingsClick).toHaveBeenCalled();
+    });
+
+    it('returns focus to the profile avatar trigger when Settings opened from the menu closes', async () => {
+      function Harness() {
+        const [showSettings, setShowSettings] = useState(false);
+        return (
+          <>
+            <HeaderShell {...defaultProps} onSettingsClick={() => setShowSettings(true)} />
+            <BottomSheet
+              isOpen={showSettings}
+              onClose={() => setShowSettings(false)}
+              title="Settings"
+            >
+              <button type="button">Inside settings</button>
+            </BottomSheet>
+          </>
+        );
+      }
+
+      const user = userEvent.setup({ delay: null });
+      render(<Harness />);
+      const avatarTrigger = screen.getByLabelText('Profile menu');
+
+      await user.click(avatarTrigger);
+      await user.click(screen.getByRole('menuitem', { name: 'Settings' }));
+
+      const dialog = await screen.findByRole('dialog');
+      await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(avatarTrigger).toHaveFocus();
     });
 
     it('renders custom menu sections', async () => {

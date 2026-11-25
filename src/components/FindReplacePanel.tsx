@@ -26,6 +26,7 @@ export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
   const [replacement, setReplacement] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const findInputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   useEditorTransactions(editor);
 
   const findState = getFindReplaceState(editor);
@@ -54,7 +55,7 @@ export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
    */
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      if (event.key !== 'Escape' || event.defaultPrevented || panelRef.current?.closest('[inert]')) return;
       event.preventDefault();
       close();
     };
@@ -69,6 +70,7 @@ export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
 
   return (
     <section
+      ref={panelRef}
       className="editor-find-panel"
       aria-label="Find and replace"
       data-editor-popover="find-replace"

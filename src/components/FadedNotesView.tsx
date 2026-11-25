@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Masonry from 'react-masonry-css';
 import type { Note, Theme } from '../types';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { FadedNoteCard } from './FadedNoteCard';
 import { HeaderShell } from './HeaderShell';
 import { ModalBackdropButton } from './ModalBackdropButton';
@@ -30,6 +31,10 @@ export function FadedNotesView({
   onSettingsClick,
 }: FadedNotesViewProps) {
   const [showEmptyConfirm, setShowEmptyConfirm] = useState(false);
+  const confirmDialogRef = useModalFocusTrap({
+    isOpen: showEmptyConfirm,
+    onClose: () => setShowEmptyConfirm(false),
+  });
 
   const rightActions = !isLoading && notes.length > 0 ? (
     <button type="button"
@@ -194,6 +199,8 @@ export function FadedNotesView({
           />
           <dialog
             open
+            ref={confirmDialogRef}
+            tabIndex={-1}
             className="
               relative z-10 w-full max-w-sm
               p-6

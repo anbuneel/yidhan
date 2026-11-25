@@ -53,6 +53,8 @@ interface DemoPageProps {
   /** Called once the arrival note exists, so the address can drop back to `/demo`. */
   onNewNoteStarted?: () => void;
   onSignIn: () => void;
+  /** Whether the parent auth modal is currently open over the Practice Space. */
+  isAuthModalOpen?: boolean;
   theme: Theme;
   onThemeToggle: () => void;
   onHomeClick: () => void;
@@ -68,6 +70,7 @@ export function DemoPage({
   startWithNewNote = false,
   onNewNoteStarted,
   onSignIn,
+  isAuthModalOpen = false,
   theme,
   onThemeToggle,
   onHomeClick,
@@ -98,7 +101,18 @@ export function DemoPage({
     userNoteCount,
   } = useDemoState();
 
-  // Soft prompt logic
+  // View state
+  const [view, setView] = useState<'library' | 'editor'>('library');
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+
+  // Tag modal state
+  const [showTagModal, setShowTagModal] = useState(false);
+  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+
+  // Shortcuts modal state
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
+  // Soft prompt logic — never opens while writing in the editor or behind another dialog.
   const {
     shouldShowPrompt,
     shouldShowRibbon,
@@ -106,6 +120,7 @@ export function DemoPage({
   } = useSoftPrompt({
     metadata,
     userNoteCount,
+    suppressed: view === 'editor' || showTagModal || showShortcutsModal || isAuthModalOpen,
     onDismissPrompt: dismissPrompt,
     onDismissRibbon: dismissRibbon,
   });
@@ -116,11 +131,6 @@ export function DemoPage({
   // Anything the reader made — a note of their own, or a starter they edited. It is
   // exactly what a migration would carry, so the CTA never offers to keep nothing.
   const hasPracticeWorkToKeep = useMemo(() => hasPracticeWork(notes), [notes]);
-
-
-  // View state
-  const [view, setView] = useState<'library' | 'editor'>('library');
-  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 
   // Search filters the visible library
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,13 +146,6 @@ export function DemoPage({
 
   // Tag filter state
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-
-  // Tag modal state
-  const [showTagModal, setShowTagModal] = useState(false);
-  const [editingTag, setEditingTag] = useState<Tag | null>(null);
-
-  // Shortcuts modal state
-  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   // Get selected note
   const selectedNote = useMemo(() => {
@@ -337,7 +340,7 @@ export function DemoPage({
   // returning to /demo. Focus the input directly, as App.tsx does; the token stays for
   // the editor-to-library request, which is what it was built for.
   useAppShortcuts({
-    enabled: !showTagModal && !showShortcutsModal && !shouldShowPrompt,
+    enabled: !showTagModal && !showShortcutsModal && !shouldShowPrompt && !isAuthModalOpen,
     view,
     onNewNote: () => { void handleNewNote(); },
     onFocusSearch: () => scheduleSearchFocus(DEMO_SEARCH_INPUT_ID),

@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef } from 'react';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface KeyboardShortcutsModalProps {
@@ -95,28 +95,10 @@ const shortcuts: ShortcutSection[] = [
  * Platform-aware: shows the macOS command symbol on Mac, Ctrl on Windows/Linux.
  */
 export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsModalProps) {
-  const modalRef = useRef<HTMLDialogElement>(null);
-  const handleEscapeKey = useEffectEvent((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      onClose();
-    }
+  const modalRef = useModalFocusTrap({
+    isOpen,
+    onClose,
   });
-
-  // Handle Escape key to close
-  useEffect(() => {
-    if (!isOpen) return;
-
-    window.addEventListener('keydown', handleEscapeKey);
-    return () => window.removeEventListener('keydown', handleEscapeKey);
-  }, [isOpen]);
-
-  // Focus modal on open for accessibility
-  useEffect(() => {
-    if (isOpen && modalRef.current) {
-      modalRef.current.focus();
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 

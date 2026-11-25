@@ -138,6 +138,7 @@ export function renderEntryScreen({
             startWithNewNote={route.newNote === true}
             onNewNoteStarted={onDemoNoteStarted}
             onSignIn={onSignIn}
+            isAuthModalOpen={authModalState.isOpen}
             theme={theme}
             onThemeToggle={onThemeToggle}
             onHomeClick={nav.onLogoClick}

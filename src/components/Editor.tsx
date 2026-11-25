@@ -20,6 +20,7 @@ import { HeaderShell } from './HeaderShell';
 import { Logo } from './Logo';
 import { WhisperBack } from './WhisperBack';
 import { ModalBackdropButton } from './ModalBackdropButton';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 import { useKeyboardHeightCssVariable } from '../hooks/useKeyboardHeight';
 import {
@@ -43,6 +44,8 @@ const RESUME_CHIP_MIN_VISIBLE_MS = 2000; // Keep chip visible for at least 2 sec
 const SCROLL_SAVE_THROTTLE_MS = 1000; // Save scroll position at most every 1 second
 const TRIPLE_TAP_WINDOW_MS = 500; // Time window for triple-tap detection
 const HEADER_TITLE_MIN_WIDTH_PX = 640; // Narrower than this, the header has no room for a title
+const OVERLAY_GUARD_SELECTOR =
+  '[aria-expanded="true"], [role="dialog"], dialog[open], [role="menu"], [data-editor-popover]';
 
 // E2EE sharing re-enabled: shares are encrypted client-side with per-share random keys.
 // The decryption key lives in the URL fragment and never reaches the server.
@@ -126,6 +129,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const keepWritingButtonRef = useRef<HTMLButtonElement>(null);
+  const deleteDialogRef = useModalFocusTrap({
+    isOpen: showDeleteConfirm,
+    onClose: () => setShowDeleteConfirm(false),
+    initialFocusRef: keepWritingButtonRef,
+  });
   const [hasSaveError, setHasSaveError] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const [saveErrorDetail, setSaveErrorDetail] = useState('');
@@ -691,9 +700,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     if (e.key.toLowerCase() === 'f' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
       if (!editor) return;
       e.preventDefault();
-      if (showFindReplace || document.querySelector(
-        '[aria-expanded="true"], [role="dialog"], [role="menu"], [data-editor-popover]',
-      )) return;
+      if (showFindReplace || document.querySelector(OVERLAY_GUARD_SELECTOR)) return;
       setShowFindReplace(true);
       return;
     }
@@ -706,7 +713,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // Escape: exit focus mode first, then save and go back
     if (e.key === 'Escape') {
       if (e.defaultPrevented || showLinkPopover || showFindReplace || showExportMenu || showShareModal || showDeleteConfirm ||
-        document.querySelector('[aria-expanded="true"], [role="dialog"], [role="menu"], [data-editor-popover]')) {
+        document.querySelector(OVERLAY_GUARD_SELECTOR)) {
         return;
       }
       if (isFocusMode) {
@@ -1722,6 +1729,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           />
           <dialog
             open
+            ref={deleteDialogRef}
+            tabIndex={-1}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="delete-dialog-title"
@@ -1765,6 +1774,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             </p>
             <div className="flex gap-3 justify-end">
               <button type="button"
+                ref={keepWritingButtonRef}
                 onClick={() => setShowDeleteConfirm(false)}
                 className="
                   px-5 py-2.5

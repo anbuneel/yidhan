@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Tag, TagColor } from '../types';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface TagModalProps {
@@ -25,14 +26,11 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const isLoading = isSaving || isDeleting;
-
-  // Focus the name input when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      const timer = setTimeout(() => nameInputRef.current?.focus(), 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
+  const dialogRef = useModalFocusTrap({
+    isOpen,
+    onClose: isLoading ? undefined : onClose,
+    initialFocusRef: nameInputRef,
+  });
 
   const openFormKey = isOpen
     ? `${editingTag?.id ?? 'new'}:${editingTag?.name ?? ''}`
@@ -105,6 +103,8 @@ export function TagModal({ isOpen, onClose, onSave, onDelete, editingTag, existi
       <ModalBackdropButton label="Close tag dialog" disabled={isLoading} onClick={onClose} />
       <dialog
         open
+        ref={dialogRef}
+        tabIndex={-1}
         className="
           relative z-10 w-full max-w-[400px] mx-4
           p-8

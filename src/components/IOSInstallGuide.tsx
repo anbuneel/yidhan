@@ -1,9 +1,18 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { ModalBackdropButton } from './ModalBackdropButton';
 
 // Animation timing constants
 const ENTRANCE_DELAY = 300; // Delay before showing guide
 const SPRING_TRANSITION_DURATION = 400; // Must match CSS transition duration
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    Boolean(window.matchMedia('(prefers-reduced-motion: reduce)')?.matches)
+  );
+}
 
 interface IOSInstallGuideProps {
   onDismiss: () => void;
@@ -62,8 +71,12 @@ const INSTALL_STEPS = [
  * - Appears as a gentle guide, not a demand
  */
 export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
-  const [isVisible, setIsVisible] = useState(false);
+  const reducedMotion = prefersReducedMotion();
+  const [isVisible, setIsVisible] = useState(reducedMotion);
   const [currentStep, setCurrentStep] = useState(0);
+  const dismissingRef = useRef(false);
+  const entranceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Detect browser once on mount
   const browser = useMemo(() => detectIOSBrowser(), []);
@@ -79,17 +92,61 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
     }
   }, [browser]);
 
-  // Animate in after short delay
+  // Animate in after short delay (immediately when reduced motion is enabled)
   useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), ENTRANCE_DELAY);
-    return () => clearTimeout(timer);
+    if (reducedMotion) return;
+    entranceTimerRef.current = setTimeout(() => {
+      entranceTimerRef.current = null;
+      if (!dismissingRef.current) {
+        setIsVisible(true);
+      }
+    }, ENTRANCE_DELAY);
+    return () => {
+      if (entranceTimerRef.current !== null) {
+        clearTimeout(entranceTimerRef.current);
+        entranceTimerRef.current = null;
+      }
+    };
+  }, [reducedMotion]);
+
+  // Clear pending dismiss timer on unmount
+  useEffect(() => {
+    return () => {
+      if (dismissTimerRef.current !== null) {
+        clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = null;
+      }
+    };
   }, []);
 
   const handleDismiss = () => {
+    if (dismissingRef.current) return;
+    dismissingRef.current = true;
+    if (entranceTimerRef.current !== null) {
+      clearTimeout(entranceTimerRef.current);
+      entranceTimerRef.current = null;
+    }
     setIsVisible(false);
-    // Wait for spring transition to complete before unmounting
-    setTimeout(onDismiss, SPRING_TRANSITION_DURATION);
+    if (prefersReducedMotion()) {
+      onDismiss();
+      return;
+    }
+    // Wait for transition to complete before unmounting
+    dismissTimerRef.current = setTimeout(() => {
+      dismissTimerRef.current = null;
+      onDismiss();
+    }, SPRING_TRANSITION_DURATION);
   };
+
+  // Auto-opens after delay: land focus on the dialog container rather than Close
+  // so typing Space/Enter never dismisses the guide accidentally.
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useModalFocusTrap({
+    isOpen: isVisible,
+    onClose: handleDismiss,
+    dialogRef,
+    initialFocusRef: dialogRef,
+  });
 
   return (
     <div
@@ -103,6 +160,8 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
       {/* Guide panel */}
       <dialog
         open
+        ref={dialogRef}
+        tabIndex={-1}
         className={`
           relative z-10 w-full max-w-md mx-4 mb-4 p-6 border-0
           ${isVisible ? 'translate-y-0' : 'translate-y-8'}

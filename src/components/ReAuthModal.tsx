@@ -1,5 +1,6 @@
-import { useState, useEffect, useEffectEvent, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface ReAuthModalProps {
@@ -61,25 +62,11 @@ export function ReAuthModal({
     }
   }
 
-  // Focus input when modal opens
-  useEffect(() => {
-    if (!isOpen) return;
-    const focusTimer = setTimeout(() => inputRef.current?.focus(), 100);
-    return () => clearTimeout(focusTimer);
-  }, [isOpen]);
-
-  // Handle Escape key to close modal (accessibility)
-  const handleEscapeKey = useEffectEvent((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onCancel();
-    }
+  const dialogRef = useModalFocusTrap({
+    isOpen,
+    onClose: isLoading ? undefined : onCancel,
+    initialFocusRef: inputRef,
   });
-
-  useEffect(() => {
-    if (!isOpen) return;
-    document.addEventListener('keydown', handleEscapeKey);
-    return () => document.removeEventListener('keydown', handleEscapeKey);
-  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,6 +129,8 @@ export function ReAuthModal({
       <ModalBackdropButton label="Cancel verification" onClick={onCancel} />
       <dialog
         open
+        ref={dialogRef}
+        tabIndex={-1}
         className="
           relative z-10 w-full max-w-sm
           shadow-[var(--shadow-lg)]

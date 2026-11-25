@@ -1,12 +1,11 @@
-import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useDrag } from '@use-gesture/react';
 import { useSpring, animated, config } from '@react-spring/web';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
+import { useSpringReducedMotion } from '../utils/springMotion';
 import { ModalBackdropButton } from './ModalBackdropButton';
-
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -71,9 +70,7 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const isMobile = useMobileDetect();
   const keyboardHeight = useKeyboardHeight();
-  const closeFromEscape = useEffectEvent(() => {
-    onClose();
-  });
+  const reducedMotion = useSpringReducedMotion();
 
   // Track whether component should render (allows animation to complete before unmount)
   const [shouldRender, setShouldRender] = useState(isOpen);
@@ -96,62 +93,29 @@ export function BottomSheet({
     if (isOpen) {
       // Defer to next microtask to avoid synchronous setState in effect
       queueMicrotask(() => setShouldRender(true));
-      api.start({ y: 0 });
-      backdropApi.start({ backdropOpacity: 1 });
+      api.start({ y: 0, immediate: reducedMotion });
+      backdropApi.start({ backdropOpacity: 1, immediate: reducedMotion });
     } else {
       api.start({
         y: window.innerHeight,
+        immediate: reducedMotion,
         onRest: () => setShouldRender(false), // Unmount after close animation
       });
-      backdropApi.start({ backdropOpacity: 0 });
+      backdropApi.start({ backdropOpacity: 0, immediate: reducedMotion });
+      if (reducedMotion) {
+        queueMicrotask(() => setShouldRender(false));
+      }
     }
-  }, [isOpen, api, backdropApi]);
+  }, [isOpen, api, backdropApi, reducedMotion]);
 
-  // Item 160: focus moves into the sheet on open, Tab stays inside it, and focus
-  // returns to whatever opened it on close. Without this, Tab walked the library
-  // behind the open Settings dialog.
   const sheetRef = useRef<HTMLElement | null>(null);
   const isRendered = shouldRender && isOpen;
-  useEffect(() => {
-    if (!isRendered) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const sheet = sheetRef.current;
-    if (sheet && !sheet.contains(document.activeElement)) {
-      (sheet.querySelector<HTMLElement>(FOCUSABLE) ?? sheet).focus();
-    }
-    return () => {
-      if (opener?.isConnected) opener.focus();
-    };
-  }, [isRendered]);
-
-  // Escape closes; Tab wraps within the sheet.
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        closeFromEscape();
-        return;
-      }
-      const sheet = sheetRef.current;
-      if (e.key !== 'Tab' || !sheet) return;
-      const focusable = Array.from(sheet.querySelectorAll<HTMLElement>(FOCUSABLE));
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-      if (e.shiftKey && (active === first || !sheet.contains(active))) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && (active === last || !sheet.contains(active))) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+  useModalFocusTrap({
+    isOpen: isRendered,
+    onClose,
+    dialogRef: sheetRef,
+    nodeKey: isMobile,
+  });
 
   // Drag to dismiss gesture - bound to handle area only
   const bind = useDrag(
@@ -174,15 +138,20 @@ export function BottomSheet({
           // Dismiss with velocity
           api.start({
             y: window.innerHeight,
+            immediate: reducedMotion,
             config: { ...config.stiff, velocity: vy },
           });
-          backdropApi.start({ backdropOpacity: 0 });
-          // Wait for animation then close
-          setTimeout(onClose, 200);
+          backdropApi.start({ backdropOpacity: 0, immediate: reducedMotion });
+          if (reducedMotion) {
+            onClose();
+          } else {
+            // Wait for animation then close
+            setTimeout(onClose, 200);
+          }
           cancel();
         } else {
           // Snap back
-          api.start({ y: 0 });
+          api.start({ y: 0, immediate: reducedMotion });
         }
       }
     },
@@ -260,8 +229,10 @@ export function BottomSheet({
   // Mobile: bottom sheet
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — keeps inline styles instead of .modal-backdrop per DESIGN.md */}
       <animated.div
+        data-modal-backdrop="true"
+        aria-hidden="true"
         className="fixed inset-0 z-50"
         style={{
           background: 'rgba(0, 0, 0, 0.6)',

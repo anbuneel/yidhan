@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 
 interface WelcomeBackPromptProps {
   daysRemaining: number;
@@ -11,6 +12,8 @@ interface WelcomeBackPromptProps {
 export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: WelcomeBackPromptProps) {
   const { cancelOffboarding, signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useModalFocusTrap({ isOpen: true, dialogRef, initialFocusRef: dialogRef });
 
   const handleStay = async () => {
     setIsLoading(true);
@@ -37,22 +40,30 @@ export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: Welcome
     <div
       className="fixed inset-0 z-50 flex items-center justify-center px-4 modal-backdrop"
     >
-      <div
+      <dialog
+        open
+        ref={dialogRef}
+        tabIndex={-1}
+        aria-modal="true"
+        aria-labelledby="welcome-back-title"
         className="
-          w-full max-w-sm
+          relative z-10 w-full max-w-sm
           shadow-[var(--shadow-lg)]
           animate-[modal-enter_300ms_ease-out]
+          p-0 border-0
         "
         style={{
           background: 'var(--color-bg-primary)',
           borderRadius: 'var(--radius-plain)',
           border: '1px solid var(--glass-border)',
+          margin: 0,
         }}
       >
         {/* Content */}
         <div className="p-8 text-center">
           {/* Welcome back header */}
           <h2
+            id="welcome-back-title"
             className="text-2xl mb-6"
             style={{
               fontFamily: 'var(--font-display)',
@@ -139,7 +150,7 @@ export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: Welcome
             </button>
           </div>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }
