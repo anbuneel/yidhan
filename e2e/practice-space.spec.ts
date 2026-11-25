@@ -59,6 +59,13 @@ test.describe('Try writing on a phone', () => {
     await expect(page.getByTestId('note-editor')).toBeVisible();
     await expect(page.getByPlaceholder(/untitled/i)).toBeFocused();
     await expect(page).toHaveURL(/\/demo/);
+    const notice = page.getByTestId('demo-editor-notice');
+    await expect(notice).toBeVisible();
+    await expect(notice).toHaveText('Demo · saved in this browser · not encrypted');
+    const noticeBox = await notice.boundingBox();
+    expect(noticeBox).not.toBeNull();
+    expect(noticeBox!.x).toBeGreaterThanOrEqual(0);
+    expect(noticeBox!.x + noticeBox!.width).toBeLessThanOrEqual(390);
   });
 
   test('the arrival intent is consumed, so a refresh does not open a second draft',
@@ -116,6 +123,9 @@ test.describe('Keeping practice work', () => {
 
     await page.getByRole('button', { name: 'New note', exact: true }).click();
     await expect(page.getByTestId('note-editor')).toBeVisible();
+    await expect(page.getByTestId('demo-editor-notice')).toHaveText(
+      'Demo · saved in this browser · not encrypted',
+    );
     await page.getByPlaceholder(/untitled/i).fill('Something of mine');
     await page.getByRole('button', { name: /yidhan/i }).click();
 

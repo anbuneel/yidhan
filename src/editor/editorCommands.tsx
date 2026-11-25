@@ -61,12 +61,23 @@ function runExternalAction(
   else dispatchEditorAction(context.editor, action);
 }
 
-// The one drawn label: a bullet glyph alone read as a stray dot. Three bullets and three
+// The bullet list icon: a bullet glyph alone read as a stray dot. Three bullets and three
 // lines, on the 1.5 stroke the other inline SVGs use (DESIGN.md).
 const listIcon: ReactNode = (
   <svg className="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden="true">
     <path d="M9 6.5h11M9 12h11M9 17.5h11" />
     <path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" strokeWidth={2.5} />
+  </svg>
+);
+
+// Focus mode frame icon: four corner brackets on the same 1.5 stroke, sized so it fits
+// cleanly in the 36px sidebar rail and narrow phone toolbar without crowding neighbors.
+const focusModeIcon: ReactNode = (
+  <svg className="size-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 9V5a1 1 0 0 1 1-1h4" />
+    <path d="M20 9V5a1 1 0 0 0-1-1h-4" />
+    <path d="M4 15v4a1 1 0 0 0 1 1h4" />
+    <path d="M20 15v4a1 1 0 0 1-1 1h-4" />
   </svg>
 );
 
@@ -228,10 +239,16 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     },
   },
   {
-    id: 'focusMode', label: 'Focus mode', shortLabel: textLabel('Focus', 'text-[12px]'),
+    id: 'focusMode', label: 'Focus mode', shortLabel: focusModeIcon,
     description: 'Let the page recede while you write', searchTerms: ['distraction', 'view'], group: 'view', shortcut: 'Ctrl+Shift+F',
     isActive: ({ isFocusMode }) => Boolean(isFocusMode),
-    run: (context, range) => runExternalAction(context, 'focusMode', context.onToggleFocusMode, range),
+    run: (context, range) => {
+      const entering = !context.isFocusMode;
+      runExternalAction(context, 'focusMode', context.onToggleFocusMode, range);
+      // Focus mode hides every toolbar; move focus into the editor without jumping
+      // scroll so keyboard focus is not stranded on a hidden button.
+      if (entering) context.editor.commands.focus(null, { scrollIntoView: false });
+    },
   },
 ];
 

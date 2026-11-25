@@ -7,6 +7,12 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.20.8', date: '2026-11-25', changes: [
+    { type: 'fix', text: 'On a phone, the "More editor commands" menu now opens inside the screen above the bottom toolbar instead of falling below it' },
+    { type: 'improvement', text: 'Focus mode now has a visible toggle directly on the sidebar, inline, and phone editor toolbars, so you can enter and leave it without opening a menu' },
+    { type: 'fix', text: 'Switching between notes clears the editor undo history so undoing cannot bring back text from the previous note' },
+    { type: 'improvement', text: 'The practice editor now shows "Demo · saved in this browser · not encrypted" while you write' },
+  ] },
   { version: '3.20.7', date: '2026-11-25', changes: [
     { type: 'improvement', text: 'Updated the Support, Privacy, and Roadmap pages so recovery keys, self-serve account deletion, GitHub sign-in, and upcoming exploration items match what is live' },
     { type: 'improvement', text: 'Replaced older "quiet space" copy in the empty library, shared letters, and installed app description with plain wording, and matched button corners to pill radii' },

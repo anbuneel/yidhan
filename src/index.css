@@ -1686,6 +1686,17 @@ textarea:focus,
   justify-content: center;
 }
 
+/* Under 380px (320px–375px phones), nine 36px buttons exceed the bar width and
+   push "More editor commands" past the right edge. Hide Undo/Redo from the bar
+   (both stay inside the portaled overflow menu) so the remaining seven controls
+   stay at full 36px width and fit cleanly inside 320px. */
+@media (max-width: 379px) {
+  .editor-command-toolbar[data-variant="bottom"] [data-command-id="undo"],
+  .editor-command-toolbar[data-variant="bottom"] [data-command-id="redo"] {
+    display: none;
+  }
+}
+
 .editor-command-toolbar[data-variant="sidebar"] {
   min-height: 0;
   flex-direction: column;
@@ -1750,8 +1761,8 @@ textarea:focus,
 }
 
 .editor-command-menu {
-  position: absolute;
-  z-index: 60;
+  position: fixed;
+  z-index: 40;
   width: min(21rem, calc(100vw - 24px));
   max-height: min(34rem, calc(100dvh - 24px));
   overflow-y: auto;
@@ -1762,21 +1773,6 @@ textarea:focus,
   background: var(--color-bg-secondary);
   box-shadow: var(--shadow-lg);
   overscroll-behavior: contain;
-}
-
-.editor-command-overflow[data-direction="down"] .editor-command-menu {
-  top: calc(100% + 8px);
-  right: 0;
-}
-
-.editor-command-overflow[data-direction="up"] .editor-command-menu {
-  right: 0;
-  bottom: calc(100% + 8px);
-}
-
-.editor-command-overflow[data-direction="right"] .editor-command-menu {
-  top: 0;
-  left: calc(100% + 8px);
 }
 
 .editor-command-menu-item {
@@ -1792,6 +1788,7 @@ textarea:focus,
   text-align: start;
   color: var(--color-text-primary);
   background: transparent;
+  cursor: pointer;
 }
 
 .editor-command-menu-item:hover:not(:disabled),
@@ -1868,19 +1865,12 @@ textarea:focus,
 
 /* The sidebar renders EditorToolbar's command buttons; everything else they
    need comes from .editor-command-button.
-   `cursor: pointer` here and on the menu item below replaces the removed
-   `.editor-sidebar button` rule, which gave it to every button in the sidebar.
-   Neither base class sets a cursor, so both need it named explicitly. */
+   `cursor: pointer` here replaces the removed `.editor-sidebar button` rule,
+   which gave it to every button in the sidebar. `.editor-command-button` does
+   not set a cursor, so it needs to be named explicitly. */
 .editor-sidebar .editor-command-button {
   width: 36px;
   height: 36px;
-  cursor: pointer;
-}
-
-.editor-sidebar .editor-command-menu-item {
-  width: 100%;
-  height: auto;
-  display: grid;
   cursor: pointer;
 }
 

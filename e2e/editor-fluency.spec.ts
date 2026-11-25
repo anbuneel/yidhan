@@ -56,7 +56,7 @@ test.describe('editor fluency', () => {
       }
       const surface = surfaces[shown];
       await surface.getByRole('button', { name: 'More editor commands' }).click();
-      const menu = surface.getByRole('menu', { name: 'All editor commands' });
+      const menu = page.getByRole('menu', { name: 'All editor commands' });
       await expect(menu).toBeVisible();
 
       for (const commandId of commandIds) {
@@ -205,5 +205,176 @@ test.describe('editor fluency', () => {
     // A real tap on that tag lands on it, not on the toolbar.
     await lastTag.click();
     await expect(page.getByRole('button', { name: 'Reading', exact: true })).toHaveCount(2);
+  });
+
+  test('phone overflow menu stays inside a 390x844 viewport, runs tapped commands, and closes on outside tap or Escape', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openBlankPracticeNote(page);
+
+    const editor = page.getByTestId('rich-text-editor').locator('.ProseMirror');
+    await editor.click();
+    await page.keyboard.type('Draft line');
+
+    const toolbar = page.locator('.editor-toolbar-bottom');
+    await expect(toolbar).toBeVisible();
+    await toolbar.getByRole('button', { name: 'More editor commands' }).click();
+
+    const menu = page.getByRole('menu', { name: 'All editor commands' });
+    await expect(menu).toBeVisible();
+
+    const box = await menu.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(844);
+
+    // Tapping a command inside the portaled menu runs it instead of closing on pointerdown.
+    const quoteItem = menu.locator('[data-command-id="blockquote"]');
+    await quoteItem.scrollIntoViewIfNeeded();
+    await quoteItem.click();
+    await expect(menu).not.toBeVisible();
+    await expect(editor.locator('blockquote')).toContainText('Draft line');
+
+    // Outside tap closes the menu.
+    await toolbar.getByRole('button', { name: 'More editor commands' }).click();
+    await expect(menu).toBeVisible();
+    await page.getByPlaceholder(/untitled/i).click();
+    await expect(menu).not.toBeVisible();
+
+    // Escape closes the menu without leaving the note.
+    await toolbar.getByRole('button', { name: 'More editor commands' }).click();
+    await expect(menu).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu).not.toBeVisible();
+    await expect(page.getByTestId('note-editor')).toBeVisible();
+  });
+
+  test('narrow phone bottom toolbar at 320px and 360px keeps 36px targets inside the viewport with Undo and Redo in the overflow menu', async ({ page }) => {
+    await openBlankPracticeNote(page);
+
+    for (const width of [320, 360]) {
+      await page.setViewportSize({ width, height: 844 });
+      const toolbar = page.locator('.editor-toolbar-bottom');
+      await expect(toolbar).toBeVisible();
+
+      // Undo and Redo move into the overflow menu below 380px so the remaining 7 buttons fit at full size.
+      await expect(toolbar.locator('[data-command-id="undo"]')).toBeHidden();
+      await expect(toolbar.locator('[data-command-id="redo"]')).toBeHidden();
+
+      const visibleButtons = toolbar.locator('button:visible');
+      await expect(visibleButtons).toHaveCount(7);
+      for (const button of await visibleButtons.all()) {
+        const box = await button.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.width).toBeGreaterThanOrEqual(36);
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+      }
+
+      const moreButton = toolbar.getByRole('button', { name: 'More editor commands' });
+      const moreBox = await moreButton.boundingBox();
+      expect(moreBox).not.toBeNull();
+      expect(moreBox!.x + moreBox!.width).toBeLessThanOrEqual(width);
+
+      await moreButton.click();
+      const menu = page.getByRole('menu', { name: 'All editor commands' });
+      await expect(menu).toBeVisible();
+
+      for (const id of ['undo', 'redo'] as const) {
+        const item = menu.locator(`[data-command-id="${id}"]`);
+        await item.scrollIntoViewIfNeeded();
+        await expect(item).toBeVisible();
+      }
+
+      await page.keyboard.press('Escape');
+      await expect(menu).not.toBeVisible();
+    }
+  });
+
+  test('capped command menu at 1366x650 scrolls without snapping back and reaches the last item by pointer and arrow keys', async ({ page, isMobile }) => {
+    await page.setViewportSize({ width: 1366, height: 650 });
+    await openBlankPracticeNote(page);
+
+    const surface = page.locator(isMobile ? '.editor-toolbar-inline' : '.editor-sidebar');
+    await expect(surface).toBeVisible();
+    await surface.getByRole('button', { name: 'More editor commands' }).click();
+
+    const menu = page.getByRole('menu', { name: 'All editor commands' });
+    await expect(menu).toBeVisible();
+
+    // Verify the menu overflows vertically and can scroll to the bottom without snapping back.
+    const metrics = await menu.evaluate((el) => {
+      const overflow = el.scrollHeight - el.clientHeight;
+      el.scrollTop = el.scrollHeight;
+      return { overflow, targetScrollTop: el.scrollTop };
+    });
+    expect(metrics.overflow).toBeGreaterThan(100);
+    expect(metrics.targetScrollTop).toBeGreaterThan(0);
+
+    // Wait a couple of frames to confirm no capture-scroll handler snaps scrollTop back.
+    await page.waitForTimeout(100);
+    const settledScrollTop = await menu.evaluate((el) => el.scrollTop);
+    expect(settledScrollTop).toBeGreaterThanOrEqual(metrics.targetScrollTop - 2);
+
+    // Last command (focusMode) is reachable by pointer click.
+    const lastItem = menu.locator('[data-command-id="focusMode"]');
+    await expect(lastItem).toBeVisible();
+    await lastItem.click();
+    await expect(menu).not.toBeVisible();
+    await expect(page.getByTestId('note-editor')).toHaveClass(/focus-mode-active/);
+
+    // Exit focus mode, reopen menu, and verify ArrowUp wraps to the last item cleanly.
+    await page.getByRole('button', { name: 'Exit focus mode' }).click();
+    await expect(surface).toBeVisible();
+    await surface.getByRole('button', { name: 'More editor commands' }).click();
+    await expect(menu).toBeVisible();
+
+    // First item receives focus on open; ArrowUp wraps to the last item (focusMode).
+    await expect(menu.locator('[role="menuitem"]').first()).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(lastItem).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(menu).not.toBeVisible();
+    await expect(page.getByTestId('note-editor')).toHaveClass(/focus-mode-active/);
+  });
+
+  test('focus mode can be entered and exited without opening a menu on bottom, inline, and sidebar toolbars, and adds nothing to the library', async ({ page, isMobile }) => {
+    // Library / note cards must not carry any focus-mode control.
+    await page.goto('/demo');
+    await expect(page.getByTestId('library-view')).toBeVisible();
+    await expect(page.locator('[data-command-id="focusMode"]')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /focus mode/i })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'New note', exact: true }).click();
+    await expect(page.getByTestId('note-editor')).toBeVisible();
+
+    const variants: Array<{ width: number; height: number; selector: string }> = [
+      { width: 390, height: 844, selector: '.editor-toolbar-bottom' },
+      { width: 820, height: 900, selector: '.editor-toolbar-inline' },
+      { width: 1280, height: 900, selector: isMobile ? '.editor-toolbar-inline' : '.editor-sidebar' },
+    ];
+
+    for (const { width, height, selector } of variants) {
+      await page.setViewportSize({ width, height });
+      const surface = page.locator(selector);
+      await expect(surface).toBeVisible();
+      await expect(page.getByRole('menu', { name: 'All editor commands' })).toHaveCount(0);
+
+      const toggle = surface.locator('[data-command-id="focusMode"]');
+      await expect(toggle).toBeVisible();
+      await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+      await toggle.click();
+      await expect(page.getByText('Focus mode on')).toBeAttached();
+      await expect(page.getByTestId('note-editor')).toHaveClass(/focus-mode-active/);
+
+      const exitButton = page.getByRole('button', { name: 'Exit focus mode' });
+      await expect(exitButton).toBeVisible();
+      await exitButton.click();
+      await expect(page.getByText('Focus mode off')).toBeAttached();
+      await expect(page.getByTestId('note-editor')).not.toHaveClass(/focus-mode-active/);
+      await expect(surface).toBeVisible();
+    }
   });
 });

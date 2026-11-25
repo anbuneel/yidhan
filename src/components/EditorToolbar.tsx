@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/react';
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   EDITOR_COMMANDS,
   EDITOR_COMMANDS_BY_ID,
@@ -69,61 +70,130 @@ interface OverflowMenuProps {
   direction: EditorMenuDirection;
 }
 
+function isElementVisible(element: HTMLElement): boolean {
+  if (!element.isConnected) return false;
+  if (typeof element.checkVisibility === 'function') {
+    return element.checkVisibility();
+  }
+  for (let node: HTMLElement | null = element; node; node = node.parentElement) {
+    const style = window.getComputedStyle(node);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+  }
+  return true;
+}
+
 function OverflowMenu({ context, direction }: OverflowMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const closedByFocusModeRef = useRef(false);
 
-  useEffect(() => {
-    if (!isOpen) return;
+  // Close immediately when focus mode hides the toolbars (e.g. Ctrl+Shift+F).
+  if (isOpen && context.isFocusMode) {
+    closedByFocusModeRef.current = true;
+    setIsOpen(false);
+  }
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      if (closedByFocusModeRef.current) {
+        closedByFocusModeRef.current = false;
+        context.editor.commands.focus(null, { scrollIntoView: false });
+      }
+      return;
+    }
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) setIsOpen(false);
+      const target = event.target as Node | null;
+      if (target && (menuRef.current?.contains(target) || panelRef.current?.contains(target))) {
+        return;
+      }
+      setIsOpen(false);
+    };
+    const handleFocusIn = (event: FocusEvent) => {
+      const target = event.target as Node | null;
+      if (target && (menuRef.current?.contains(target) || panelRef.current?.contains(target))) {
+        return;
+      }
+      setIsOpen(false);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      event.stopPropagation();
-      setIsOpen(false);
-      triggerRef.current?.focus();
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
     };
-    const positionPanel = () => {
+    const syncPosition = () => {
       if (!triggerRef.current || !panelRef.current) return;
+      const panel = panelRef.current;
+      const savedScrollTop = panel.scrollTop;
+      // Reset any prior viewport-capped maxHeight before measuring so a growing viewport
+      // measures the natural menu height instead of a stale short-viewport cap.
+      panel.style.maxHeight = '34rem';
       const position = getEditorMenuPosition(
         triggerRef.current.getBoundingClientRect(),
-        panelRef.current.getBoundingClientRect(),
+        panel.getBoundingClientRect(),
         { width: window.innerWidth, height: window.innerHeight },
         direction,
       );
-      Object.assign(panelRef.current.style, {
+      const rootFontSize = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+      const cappedMaxHeight = Math.min(34 * rootFontSize, position.maxHeight);
+      Object.assign(panel.style, {
         position: 'fixed',
         left: `${position.left}px`,
         top: `${position.top}px`,
         right: 'auto',
         bottom: 'auto',
-        maxHeight: `${position.maxHeight}px`,
+        maxHeight: `${cappedMaxHeight}px`,
       });
-      panelRef.current.dataset.placement = position.placement;
+      panel.dataset.placement = position.placement;
+      if (panel.scrollTop !== savedScrollTop) {
+        panel.scrollTop = savedScrollTop;
+      }
+    };
+    const positionPanel = () => {
+      if (!triggerRef.current || !panelRef.current) return;
+      if (!isElementVisible(triggerRef.current)) {
+        setIsOpen(false);
+        return;
+      }
+      syncPosition();
+    };
+    const handleScroll = (event: Event) => {
+      const target = event.target as Node | null;
+      // Scrolling inside the menu itself must not re-measure or reset scrollTop.
+      if (target && panelRef.current?.contains(target)) return;
+      positionPanel();
     };
 
     document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('focusin', handleFocusIn);
     document.addEventListener('keydown', handleKeyDown, true);
-    document.addEventListener('scroll', positionPanel, true);
+    document.addEventListener('scroll', handleScroll, true);
     window.addEventListener('resize', positionPanel);
-    positionPanel();
+    syncPosition();
     const frame = requestAnimationFrame(() => {
       positionPanel();
-      menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+      panelRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
     });
     return () => {
       cancelAnimationFrame(frame);
       document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('focusin', handleFocusIn);
       document.removeEventListener('keydown', handleKeyDown, true);
-      document.removeEventListener('scroll', positionPanel, true);
+      document.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('resize', positionPanel);
     };
-  }, [direction, isOpen]);
+  }, [context.editor, direction, isOpen]);
 
   return (
     <div className="editor-command-overflow" ref={menuRef} data-direction={direction}>
@@ -135,7 +205,10 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
         aria-expanded={isOpen}
         aria-haspopup="menu"
         data-active={isOpen || undefined}
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={() => {
+          if (context.isFocusMode) return;
+          setIsOpen((open) => !open);
+        }}
       >
         <svg aria-hidden="true" className="size-4" fill="currentColor" viewBox="0 0 24 24">
           <circle cx="5" cy="12" r="1.6" />
@@ -143,7 +216,7 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
           <circle cx="19" cy="12" r="1.6" />
         </svg>
       </button>
-      {isOpen && (
+      {isOpen && createPortal(
         <div
           ref={panelRef}
           className="editor-command-menu"
@@ -167,7 +240,8 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
               onRun={() => setIsOpen(false)}
             />
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -202,6 +276,7 @@ export function EditorToolbar({
     onLink,
   };
   const visibleIds = variant === 'sidebar' ? SIDEBAR_COMMANDS : PRIMARY_COMMANDS;
+  const focusModeCommand = EDITOR_COMMANDS_BY_ID.get('focusMode');
   const overflowDirection = variant === 'bottom' ? 'up' : variant === 'sidebar' ? 'right' : 'down';
 
   return (
@@ -224,6 +299,7 @@ export function EditorToolbar({
           </span>
         ) : null;
       })}
+      {focusModeCommand && <ToolbarButton command={focusModeCommand} context={context} />}
       <OverflowMenu context={context} direction={overflowDirection} />
     </div>
   );

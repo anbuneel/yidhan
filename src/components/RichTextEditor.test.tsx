@@ -92,4 +92,92 @@ describe('RichTextEditor extensions', () => {
     expect(editor.getText()).toBe('"Hello"--...');
     expect(localStorage.getItem('yidhan:editor:smart-typography')).toBe('false');
   });
+
+  it('clears undo history when switching notes without emitting an update', async () => {
+    const onChange = vi.fn();
+    const ready = vi.fn<(editor: Editor) => void>();
+    const view = render(
+      <RichTextEditor noteId="note-a" content="<p>Alpha</p>" onChange={onChange} onEditorReady={ready} />,
+    );
+    await waitFor(() => expect(ready).toHaveBeenCalled());
+    const editor = ready.mock.calls[0][0];
+
+    editor.commands.focus('end', { scrollIntoView: false });
+    typeThroughEditor(editor, ' edited');
+    expect(editor.getText()).toBe('Alpha edited');
+    expect(editor.can().undo()).toBe(true);
+
+    onChange.mockClear();
+    const onTransaction = vi.fn();
+    editor.on('transaction', onTransaction);
+
+    view.rerender(
+      <RichTextEditor noteId="note-b" content="<p>Beta</p>" onChange={onChange} onEditorReady={ready} />,
+    );
+
+    expect(editor.getText()).toBe('Beta');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(editor.can().undo()).toBe(false);
+    expect(onTransaction).toHaveBeenCalled();
+
+    editor.commands.undo();
+    expect(editor.getText()).toBe('Beta');
+    expect(onChange).not.toHaveBeenCalled();
+
+    // Editing note B and undoing twice must stop at Beta and never leak Alpha.
+    editor.commands.focus('end', { scrollIntoView: false });
+    typeThroughEditor(editor, ' two');
+    expect(editor.getText()).toBe('Beta two');
+    editor.commands.undo();
+    expect(editor.getText()).toBe('Beta');
+    editor.commands.undo();
+    expect(editor.getText()).toBe('Beta');
+  });
+
+  it('keeps undo working inside one note after an autosave updates props', async () => {
+    const onChange = vi.fn();
+    const ready = vi.fn<(editor: Editor) => void>();
+    const view = render(
+      <RichTextEditor noteId="note-a" content="<p>Alpha</p>" onChange={onChange} onEditorReady={ready} />,
+    );
+    await waitFor(() => expect(ready).toHaveBeenCalled());
+    const editor = ready.mock.calls[0][0];
+
+    editor.commands.focus('end', { scrollIntoView: false });
+    typeThroughEditor(editor, ' edited');
+    expect(editor.getText()).toBe('Alpha edited');
+
+    // Simulate autosave echoing the saved HTML back on the same noteId.
+    view.rerender(
+      <RichTextEditor noteId="note-a" content="<p>Alpha edited</p>" onChange={onChange} onEditorReady={ready} />,
+    );
+
+    expect(editor.can().undo()).toBe(true);
+    editor.commands.undo();
+    expect(editor.getText()).toBe('Alpha');
+  });
+
+  it('updates the animated placeholder when switching between empty and populated notes', async () => {
+    const ready = vi.fn<(editor: Editor) => void>();
+    const view = render(
+      <RichTextEditor noteId="note-empty" content="<p></p>" onChange={vi.fn()} onEditorReady={ready} />,
+    );
+    await waitFor(() => expect(ready).toHaveBeenCalled());
+
+    expect(view.container.querySelector('.animated-placeholder')).toBeInTheDocument();
+
+    view.rerender(
+      <RichTextEditor noteId="note-full" content="<p>Populated note</p>" onChange={vi.fn()} onEditorReady={ready} />,
+    );
+    await waitFor(() => {
+      expect(view.container.querySelector('.animated-placeholder')).not.toBeInTheDocument();
+    });
+
+    view.rerender(
+      <RichTextEditor noteId="note-empty-2" content="<p></p>" onChange={vi.fn()} onEditorReady={ready} />,
+    );
+    await waitFor(() => {
+      expect(view.container.querySelector('.animated-placeholder')).toBeInTheDocument();
+    });
+  });
 });

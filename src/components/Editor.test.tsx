@@ -1774,4 +1774,19 @@ describe('Editor', () => {
       expect(screen.queryByTestId('released-draft-banner')).not.toBeInTheDocument();
     });
   });
+
+  describe('practice editor unencrypted label', () => {
+    it('shows the unencrypted browser-local label in demo mode', () => {
+      render(<Editor {...defaultProps} isDemo />);
+      expect(screen.getByTestId('demo-editor-notice')).toHaveTextContent(
+        'Demo · saved in this browser · not encrypted',
+      );
+    });
+
+    it('never shows the unencrypted label for a signed-in note', () => {
+      render(<Editor {...defaultProps} />);
+      expect(screen.queryByTestId('demo-editor-notice')).not.toBeInTheDocument();
+      expect(screen.queryByText(/not encrypted/i)).not.toBeInTheDocument();
+    });
+  });
 });

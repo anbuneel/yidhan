@@ -28,4 +28,19 @@ describe('getEditorMenuPosition', () => {
     expect(position.left).toBeGreaterThanOrEqual(8);
     expect(position.left + 320).toBeLessThanOrEqual(382);
   });
+
+  it('caps maxHeight to the chosen side on a short landscape viewport so the menu clears the bottom toolbar', () => {
+    const position = getEditorMenuPosition(
+      { top: 342, right: 828, bottom: 378, left: 792, width: 36, height: 36 },
+      { width: 336, height: 544 },
+      { width: 844, height: 390 },
+      'up',
+    );
+
+    expect(position.placement).toBe('above');
+    expect(position.top).toBe(8);
+    expect(position.maxHeight).toBe(326);
+    // Bottom edge of the capped menu stays above the bottom toolbar anchor (y = 342).
+    expect(position.top + position.maxHeight).toBeLessThanOrEqual(334);
+  });
 });

@@ -203,7 +203,7 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
   sits clear of the sheet, and fades to 30% while the writer types in the body or the
   title; pointer movement, a selection, a shortcut, hover or focus bring it back.
   Labels are serif glyphs or short words at one of three sizes (15px, 13px, 12px),
-  at weight 500. The bullet list is the one drawn icon.
+  at weight 500. The bullet list and focus mode controls use drawn icons.
 - **One toolbar at a time.** Below 768px the bottom toolbar, in the thumb zone. From
   768px to 1099px the inline toolbar under the title. From 1100px the vertical sidebar
   (`EditorSidebar.tsx`) alone, in the left margin; CSS hides the inline toolbar
