@@ -24,6 +24,13 @@ const PROMPT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 // Cooldown period after dismissing ribbon (7 days)
 const RIBBON_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
+function isEditableElement(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+}
+
 // ============================================================================
 // Hook
 // ============================================================================
@@ -31,6 +38,8 @@ const RIBBON_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 export interface UseSoftPromptOptions {
   metadata: DemoMetadata | null;
   userNoteCount: number;
+  /** Suppress opening the modal prompt (e.g. while another dialog is open or in the editor). */
+  suppressed?: boolean;
   onDismissPrompt: () => void;
   onDismissRibbon: () => void;
 }
@@ -55,10 +64,14 @@ export interface UseSoftPromptReturn {
 export function useSoftPrompt({
   metadata,
   userNoteCount,
+  suppressed = false,
   onDismissPrompt,
   onDismissRibbon,
 }: UseSoftPromptOptions): UseSoftPromptReturn {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [isTyping, setIsTyping] = useState<boolean>(() =>
+    typeof document !== 'undefined' ? isEditableElement(document.activeElement) : false
+  );
 
   // Update current time every minute to re-evaluate time-based conditions
   useEffect(() => {
@@ -67,6 +80,24 @@ export function useSoftPrompt({
     }, 60 * 1000);
 
     return () => clearInterval(interval);
+  }, []);
+
+  // Track whether focus is currently inside a text input / editable surface so the
+  // prompt never interrupts the visitor mid-thought.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const handleFocusIn = (event: FocusEvent) => {
+      setIsTyping(isEditableElement(event.target));
+    };
+    const handleFocusOut = (event: FocusEvent) => {
+      setIsTyping(isEditableElement(event.relatedTarget));
+    };
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+    };
   }, []);
 
   // Calculate all prompt states in a single memo
@@ -93,13 +124,14 @@ export function useSoftPrompt({
 
     return {
       timeSpentMinutes,
-      shouldShowPrompt: meetsMinimumRequirements && !promptRecentlyDismissed,
+      shouldShowPrompt:
+        meetsMinimumRequirements && !promptRecentlyDismissed && !suppressed && !isTyping,
       shouldShowInlineNudge:
         metadata?.promptDismissedAt != null &&
         userNoteCount >= MIN_NOTES_FOR_PROMPT,
       shouldShowRibbon: !ribbonRecentlyDismissed,
     };
-  }, [metadata, userNoteCount, currentTime]);
+  }, [metadata, userNoteCount, currentTime, suppressed, isTyping]);
 
   return {
     shouldShowPrompt: promptState.shouldShowPrompt,

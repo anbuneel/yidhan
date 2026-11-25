@@ -1,3 +1,4 @@
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface SessionTimeoutModalProps {
@@ -19,6 +20,11 @@ export function SessionTimeoutModal({
   onSignOut,
   minutesRemaining,
 }: SessionTimeoutModalProps) {
+  const dialogRef = useModalFocusTrap({
+    isOpen,
+    onClose: onStay,
+  });
+
   if (!isOpen) return null;
 
   const timeText =
@@ -35,6 +41,8 @@ export function SessionTimeoutModal({
       <ModalBackdropButton label="Stay signed in" onClick={onStay} />
       <dialog
         open
+        ref={dialogRef}
+        tabIndex={-1}
         className="
           relative z-10 w-full max-w-sm
           shadow-[var(--shadow-lg)]

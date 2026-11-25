@@ -21,6 +21,7 @@ import {
   dismissDemoPrompt,
   dismissDemoRibbon,
   clearDemoState,
+  countPracticeWork,
   type DemoState,
   type DemoNote,
   type DemoTag,
@@ -119,15 +120,14 @@ export function useDemoState(): UseDemoStateReturn {
     return state.tags.map(demoTagToTag);
   }, [state]);
 
-  // Count user-created notes (excluding welcome note)
+  // Count only notes the visitor created or starter notes they edited.
   const userNoteCount = useMemo(() => {
-    if (!state) return 0;
-    return state.notes.filter((n) => n.localId !== 'welcome-note').length;
-  }, [state]);
+    return countPracticeWork(notes);
+  }, [notes]);
 
-  // Check if a note is the welcome note
+  // Check if a note is the welcome starter note
   const isWelcomeNote = useCallback((noteId: string) => {
-    return noteId === 'welcome-note';
+    return noteId === 'starter-welcome';
   }, []);
 
   // Note operations

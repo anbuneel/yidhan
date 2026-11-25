@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { ModalBackdropButton } from './ModalBackdropButton';
 
 // Animation timing constants
@@ -91,6 +92,11 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
     setTimeout(onDismiss, SPRING_TRANSITION_DURATION);
   };
 
+  const dialogRef = useModalFocusTrap({
+    isOpen: true,
+    onClose: handleDismiss,
+  });
+
   return (
     <div
       className={`
@@ -103,6 +109,8 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
       {/* Guide panel */}
       <dialog
         open
+        ref={dialogRef}
+        tabIndex={-1}
         className={`
           relative z-10 w-full max-w-md mx-4 mb-4 p-6 border-0
           ${isVisible ? 'translate-y-0' : 'translate-y-8'}

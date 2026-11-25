@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, memo } from 'react';
 import { useDrag } from '@use-gesture/react';
 import { useSpring, animated, config } from '@react-spring/web';
 import type { Note, NoteDeleteHandler } from '../types';
+import { useSpringReducedMotion } from '../utils/springMotion';
 import { NoteCard } from './NoteCard';
 
 interface SwipeableNoteCardProps {
@@ -43,6 +44,7 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
 }: SwipeableNoteCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isTriggering, setIsTriggering] = useState(false);
+  const reducedMotion = useSpringReducedMotion();
 
   // Spring animation for the card position
   const [{ x }, api] = useSpring(() => ({
@@ -63,6 +65,13 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
     setIsTriggering(true);
     triggerHaptic('medium');
 
+    if (reducedMotion) {
+      api.start({ x: 0, immediate: true });
+      onTogglePin(note.id, !note.pinned);
+      setIsTriggering(false);
+      return;
+    }
+
     // Bounce animation then toggle pin
     api.start({
       x: 0,
@@ -72,7 +81,7 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
         setIsTriggering(false);
       },
     });
-  }, [api, note.id, note.pinned, onTogglePin, triggerHaptic]);
+  }, [api, note.id, note.pinned, onTogglePin, reducedMotion, triggerHaptic]);
 
   // Gesture binding (right-swipe only for pin/unpin)
   const bind = useDrag(
@@ -120,7 +129,7 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
         }
 
         // Snap back to center
-        api.start({ x: 0, config: config.stiff });
+        api.start({ x: 0, immediate: reducedMotion, config: config.stiff });
       }
 
       return memo;

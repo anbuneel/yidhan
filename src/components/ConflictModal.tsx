@@ -5,9 +5,10 @@
  * Displays both versions side-by-side with clear resolution options.
  */
 
-import { useState, useEffect, useEffectEvent, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 import type { ConflictInfo, NoteConflictServerVersion } from '../services/syncEngine';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { paragraphs, paragraphChanges, wordCount } from '../utils/conflictPreview';
 import { ModalBackdropButton } from './ModalBackdropButton';
 
@@ -41,28 +42,10 @@ function formatDate(timestamp: number | string) {
 export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalProps) {
   const [isResolving, setIsResolving] = useState(false);
   const [resolvedChoice, setResolvedChoice] = useState<'local' | 'server' | 'both' | null>(null);
-  const modalRef = useRef<HTMLDialogElement>(null);
-  const dismissFromEscape = useEffectEvent(() => {
-    if (!isResolving) {
-      onDismiss();
-    }
+  const modalRef = useModalFocusTrap({
+    isOpen: Boolean(conflict && conflict.entityType === 'note'),
+    onClose: isResolving ? undefined : onDismiss,
   });
-
-  // Focus trap and escape key handling
-  useEffect(() => {
-    if (!conflict) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        dismissFromEscape();
-      }
-    };
-
-    // Focus the modal when it opens
-    modalRef.current?.focus();
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [conflict]);
 
   // Reset state when conflict changes
   useEffect(() => {

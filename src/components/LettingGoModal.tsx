@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { REAUTH_FOR_SENSITIVE_ACTIONS } from '../config/featureFlags';
 import { ReAuthModal } from './ReAuthModal';
 import {
@@ -35,6 +36,10 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
   // Re-auth state
   const [showReAuthModal, setShowReAuthModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const dialogRef = useModalFocusTrap({
+    isOpen,
+    onClose: isLoading ? undefined : onClose,
+  });
 
   const handleExportJSON = () => {
     const jsonData = exportNotesToJSON(notes, tags);
@@ -236,6 +241,8 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
       <ModalBackdropButton label="Close letting go dialog" onClick={onClose} />
       <dialog
         open
+        ref={dialogRef}
+        tabIndex={-1}
         className="
           relative z-10 w-full max-w-md
           shadow-[var(--shadow-lg)]

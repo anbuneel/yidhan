@@ -6,6 +6,7 @@
  * Follows Yidhan's calm philosophy - invitation, not demand.
  */
 
+import { useModalFocusTrap } from '../../hooks/useModalFocusTrap';
 import { ModalBackdropButton } from '../ModalBackdropButton';
 
 interface InvitationModalProps {
@@ -15,6 +16,11 @@ interface InvitationModalProps {
 }
 
 export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationModalProps) {
+  const dialogRef = useModalFocusTrap({
+    isOpen: true,
+    onClose: onDismiss,
+  });
+
   return (
     <div
       className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -22,6 +28,8 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
       <ModalBackdropButton label="Dismiss invitation" onClick={onDismiss} />
       <dialog
         open
+        ref={dialogRef}
+        tabIndex={-1}
         className="relative z-10 w-full max-w-[400px] p-8 sm:p-10 text-center border-0"
         style={{
           background: 'var(--color-card-bg)',
@@ -78,7 +86,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
         {/* Primary CTA */}
         <button type="button"
           onClick={onSignUp}
-          className="w-full py-3.5 px-6 rounded-lg text-base font-medium transition-all duration-300"
+          className="w-full py-3.5 px-6 rounded-[var(--radius-pill)] text-base font-medium transition-all duration-300"
           style={{
             fontFamily: 'var(--font-body)',
             background: 'var(--color-cta-bg)',

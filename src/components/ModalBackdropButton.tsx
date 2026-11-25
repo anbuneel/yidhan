@@ -14,6 +14,7 @@ export function ModalBackdropButton({
   return (
     <button
       type="button"
+      data-modal-backdrop="true"
       aria-label={label}
       tabIndex={-1}
       className="absolute inset-0 h-full w-full cursor-default border-0 bg-transparent p-0"

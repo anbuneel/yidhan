@@ -7,6 +7,11 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.20.9', date: '2026-11-25', changes: [
+    { type: 'fix', text: 'Dialogs now keep keyboard focus inside while open, mark the page behind them inert, close on Escape, and return focus to the control that opened them' },
+    { type: 'fix', text: 'Touch gestures and bottom sheets using spring physics now skip animations when reduced motion is turned on' },
+    { type: 'fix', text: 'The Practice Space sign-up prompt now counts only notes you created or edited, and no longer opens behind another dialog or while you are typing' },
+  ] },
   { version: '3.20.8', date: '2026-11-25', changes: [
     { type: 'fix', text: 'On a phone, the "More editor commands" menu now opens inside the screen above the bottom toolbar instead of falling below it' },
     { type: 'improvement', text: 'Focus mode now has a visible toggle directly on the sidebar, inline, and phone editor toolbars, so you can enter and leave it without opening a menu' },

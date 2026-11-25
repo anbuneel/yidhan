@@ -819,3 +819,11 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   sidebar, inline, and bottom toolbars; cleared ProseMirror undo/redo history without
   emitting an update when switching notes; added the "Demo · saved in this browser ·
   not encrypted" notice to the practice editor. (#283)
+- **2026-11-25** — Dialogs and motion launch-review fixes (track C): unified modal
+  focus trapping, `inert` background handling, `Escape` consumption, and focus
+  restoration in `useModalFocusTrap` across every modal (including `Editor.tsx`'s
+  delete confirmation dialog and `dialog[open]` shortcut guards); synced react-spring's
+  `Globals.skipAnimation` with `prefers-reduced-motion: reduce` across `BottomSheet`,
+  `PullToRefresh`, and `SwipeableNoteCard`; fixed the Practice Space sign-up prompt to
+  count only notes created or edited by the visitor and never open behind another
+  dialog or while typing. (#257, #258, #282)

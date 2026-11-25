@@ -1,3 +1,5 @@
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
+
 type ImportPhase = 'parsing' | 'importing' | 'finalizing';
 
 export interface ImportProgress {
@@ -14,17 +16,24 @@ const PHASE_LABELS: Record<ImportPhase, (progress: ImportProgress) => string> = 
 };
 
 export function ImportProgressOverlay({ progress }: { progress: ImportProgress }) {
+  const dialogRef = useModalFocusTrap({ isOpen: true });
   const percent =
     progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
   const showBar = progress.total > 0 && progress.phase !== 'parsing';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
-      <div
-        className="px-8 py-6 rounded-lg text-center min-w-[280px]"
+      <dialog
+        open
+        ref={dialogRef}
+        tabIndex={-1}
+        aria-modal="true"
+        aria-label="Import progress"
+        className="px-8 py-6 rounded-lg text-center min-w-[280px] border-0"
         style={{
           background: 'var(--color-bg-primary)',
           border: '1px solid var(--glass-border)',
+          margin: 0,
         }}
       >
         <div
@@ -53,7 +62,7 @@ export function ImportProgressOverlay({ progress }: { progress: ImportProgress }
             </p>
           </div>
         )}
-      </div>
+      </dialog>
     </div>
   );
 }

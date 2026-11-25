@@ -8,6 +8,7 @@ import {
   updateNoteShareExpiration,
   revokeNoteShare,
 } from '../services/notes';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface ShareModalProps {
@@ -116,6 +117,11 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
   const [showPrivacyTip, setShowPrivacyTip] = useState(false);
   const shareContextKeyRef = useRef<string | null>(null);
   const privacyTipRef = useRef<HTMLDivElement>(null);
+  const isProcessing = isLoading || isCreating || isRevoking;
+  const dialogRef = useModalFocusTrap({
+    isOpen,
+    onClose: isProcessing ? undefined : onClose,
+  });
 
   const openShareContextKey = isOpen ? note.id : null;
   if (shareContextKeyRef.current !== openShareContextKey) {
@@ -233,7 +239,6 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
 
   if (!isOpen) return null;
 
-  const isProcessing = isLoading || isCreating || isRevoking;
   // If a share exists but we don't have the URL (reopened modal), the key is gone
   const existingShareNoKey = share && !shareUrl;
 
@@ -248,6 +253,8 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
       />
       <dialog
         open
+        ref={dialogRef}
+        tabIndex={-1}
         className="
           relative z-10 w-full max-w-[420px] mx-4
           p-8
@@ -461,6 +468,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                     onBlur={() => setShowPrivacyTip(false)}
                     onKeyDown={(e) => {
                       if (e.key === 'Escape' && showPrivacyTip) {
+                        e.preventDefault();
                         e.stopPropagation();
                         setShowPrivacyTip(false);
                       }

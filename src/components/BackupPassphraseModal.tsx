@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { ModalBackdropButton } from './ModalBackdropButton';
 import {
   MIN_PASSPHRASE_LENGTH,
@@ -36,6 +37,10 @@ export function BackupPassphraseModal({
   const [passphrase, setPassphrase] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  const dialogRef = useModalFocusTrap({
+    isOpen,
+    onClose: isBusy ? undefined : onCancel,
+  });
 
   useEffect(() => {
     if (!isOpen) {
@@ -76,22 +81,28 @@ export function BackupPassphraseModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="backup-passphrase-title"
-      data-testid="backup-passphrase-modal"
+      className="fixed inset-0 z-[60] flex items-center justify-center px-4 modal-backdrop"
     >
       <ModalBackdropButton onClick={onCancel} label="Close" disabled={isBusy} />
 
-      <form
-        onSubmit={handleSubmit}
-        className="relative w-full max-w-md rounded-2xl p-8"
-        style={{
-          background: 'var(--color-bg-primary)',
-          border: '1px solid var(--glass-border)',
-        }}
+      <dialog
+        open
+        ref={dialogRef}
+        tabIndex={-1}
+        aria-modal="true"
+        aria-labelledby="backup-passphrase-title"
+        data-testid="backup-passphrase-modal"
+        className="relative z-10 w-full max-w-md border-0 p-0 bg-transparent"
+        style={{ margin: 0 }}
       >
+        <form
+          onSubmit={handleSubmit}
+          className="relative w-full rounded-2xl p-8"
+          style={{
+            background: 'var(--color-bg-primary)',
+            border: '1px solid var(--glass-border)',
+          }}
+        >
         <h2
           id="backup-passphrase-title"
           className="text-2xl mb-3"
@@ -217,7 +228,8 @@ export function BackupPassphraseModal({
                 : 'Open backup'}
           </button>
         </div>
-      </form>
+        </form>
+      </dialog>
     </div>
   );
 }

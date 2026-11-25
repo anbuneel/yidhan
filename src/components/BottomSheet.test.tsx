@@ -67,11 +67,29 @@ describe('BottomSheet focus', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
+  it('marks background content inert while open and restores it on close', async () => {
+    const opener = await openSheet();
+    const behind = screen.getByText('Behind the sheet');
+    expect(behind).toHaveAttribute('inert');
+    expect(behind).toHaveAttribute('aria-hidden', 'true');
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(behind).not.toHaveAttribute('inert');
+    expect(behind).not.toHaveAttribute('aria-hidden');
+    expect(document.activeElement).toBe(opener);
+  });
+
   it('pulls focus back in when it has escaped behind the sheet', async () => {
     await openSheet();
-    screen.getByRole('button', { name: 'Behind the sheet' }).focus();
+    screen.getByText('Behind the sheet').focus();
     tab();
     expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
+  });
+
+  it('still allows clicking the backdrop to dismiss while background is inert', async () => {
+    await openSheet();
+    fireEvent.click(screen.getByLabelText('Close sheet'));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('returns focus to the opener on Escape', async () => {

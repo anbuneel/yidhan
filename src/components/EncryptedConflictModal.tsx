@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import type { DerivedKeys } from '../lib/encryption';
 import { decryptNote } from '../lib/encryption';
 import type { ConflictInfo } from '../services/syncEngine';
+import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { ConflictModal } from './ConflictModal';
+import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface Props {
   conflict: ConflictInfo | null;
@@ -13,6 +15,13 @@ interface Props {
 
 export function EncryptedConflictModal({ conflict, keys, onResolve, onDismiss }: Props) {
   const [preview, setPreview] = useState<{ source: ConflictInfo; value?: ConflictInfo; error?: boolean } | null>(null);
+  const isNoteConflict = Boolean(conflict && conflict.entityType === 'note');
+  const resolvedConflict = preview?.source === conflict ? preview.value ?? null : null;
+  const loadingDialogRef = useModalFocusTrap({
+    isOpen: isNoteConflict && !resolvedConflict,
+    onClose: onDismiss,
+  });
+
   useEffect(() => {
     if (!conflict || conflict.entityType !== 'note') return;
     let cancelled = false;
@@ -32,12 +41,23 @@ export function EncryptedConflictModal({ conflict, keys, onResolve, onDismiss }:
     void open();
     return () => { cancelled = true; };
   }, [conflict, keys]);
-  if (!conflict || conflict.entityType !== 'note') return null;
-  if (preview?.source === conflict && preview.value) return <ConflictModal conflict={preview.value} onResolve={onResolve} onDismiss={onDismiss} />;
-  return <div role="dialog" aria-label="Opening conflict" className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
-    <div className="rounded bg-[var(--color-bg-secondary)] p-6 text-[var(--color-text-primary)]">
-      <p role="status">{preview?.source === conflict && preview.error ? 'Both versions could not be opened. Unlock your vault and try again.' : 'Opening both versions…'}</p>
-      <button type="button" className="mt-4" onClick={onDismiss}>Close</button>
+  if (!isNoteConflict) return null;
+  if (resolvedConflict) return <ConflictModal conflict={resolvedConflict} onResolve={onResolve} onDismiss={onDismiss} />;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
+      <ModalBackdropButton label="Dismiss conflict dialog" onClick={onDismiss} />
+      <dialog
+        open
+        ref={loadingDialogRef}
+        tabIndex={-1}
+        aria-modal="true"
+        aria-label="Opening conflict"
+        className="relative z-10 rounded bg-[var(--color-bg-secondary)] p-6 text-[var(--color-text-primary)] border-0"
+        style={{ margin: 0 }}
+      >
+        <p role="status">{preview?.source === conflict && preview.error ? 'Both versions could not be opened. Unlock your vault and try again.' : 'Opening both versions…'}</p>
+        <button type="button" className="mt-4" onClick={onDismiss}>Close</button>
+      </dialog>
     </div>
-  </div>;
+  );
 }

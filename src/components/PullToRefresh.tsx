@@ -1,6 +1,7 @@
 import { useRef, useCallback, type ReactNode } from 'react';
 import { useDrag } from '@use-gesture/react';
 import { useSpring, animated, config } from '@react-spring/web';
+import { useSpringReducedMotion } from '../utils/springMotion';
 
 interface PullToRefreshProps {
   children: ReactNode;
@@ -31,6 +32,7 @@ export function PullToRefresh({
   const canPullRef = useRef(false);
   // Cache scrollable element to avoid DOM traversal on every touch
   const scrollableElementRef = useRef<Element | null>(null);
+  const reducedMotion = useSpringReducedMotion();
 
   // Spring animation for pull indicator
   const [{ y, opacity, rotate }, api] = useSpring(() => ({
@@ -55,14 +57,24 @@ export function PullToRefresh({
     isRefreshingRef.current = true;
     triggerHaptic('medium');
 
-    // Show refreshing state
-    api.start({
-      y: PULL_THRESHOLD / 2,
-      opacity: 1,
-      rotate: 360,
-      config: { duration: 1000 },
-      loop: true,
-    });
+    // Show refreshing state (no spin loop when reduced motion is enabled)
+    api.start(
+      reducedMotion
+        ? {
+            y: PULL_THRESHOLD / 2,
+            opacity: 1,
+            rotate: 0,
+            loop: false,
+            immediate: true,
+          }
+        : {
+            y: PULL_THRESHOLD / 2,
+            opacity: 1,
+            rotate: 360,
+            config: { duration: 1000 },
+            loop: true,
+          }
+    );
 
     try {
       await onRefresh();
@@ -73,13 +85,17 @@ export function PullToRefresh({
         opacity: 0,
         rotate: 0,
         loop: false,
+        immediate: reducedMotion,
         config: config.stiff,
         onRest: () => {
           isRefreshingRef.current = false;
         },
       });
+      if (reducedMotion) {
+        isRefreshingRef.current = false;
+      }
     }
-  }, [api, onRefresh, triggerHaptic]);
+  }, [api, onRefresh, reducedMotion, triggerHaptic]);
 
   // Helper to check if element is truly scrollable (not just overflow-hidden)
   const isScrollable = useCallback((el: Element): boolean => {
@@ -181,6 +197,7 @@ export function PullToRefresh({
             y: -INDICATOR_SIZE,
             opacity: 0,
             rotate: 0,
+            immediate: reducedMotion,
             config: config.stiff,
           });
         }
