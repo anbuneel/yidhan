@@ -64,7 +64,7 @@ Items C1, C3, C4, C5, C6, C7, C8, B5, and C2 once question 2 is answered. Hours.
 | C6 | Drop "Testing coverage". "Coming soon" holds only committed work. Add encrypted tag names | `src/data/roadmap.ts` |
 | C7 | Replace "quiet space" in the library empty state and the shared-letter footer | `ChapteredLibrary.tsx`, `SharedNoteView.tsx` |
 | C8 | Remove the licence open question | `PRODUCT.md` |
-| B5 | Welcome note stops naming deleted themes (issue #271) | starter notes |
+| B5 | Welcome note stops naming deleted themes (issue #271) | A new migration replacing the trigger function from `create_welcome_note_trigger.sql`. Applied by hand |
 
 Done when: no public page or the README contradicts the product. A grep for "MIT",
 "quiet space", "paused for public launch" and the old theme names returns nothing
