@@ -42,7 +42,7 @@ describe('SupportPage', () => {
     render(<SupportPage {...nav} />);
     const heading = screen.getByRole('heading', { name: /I forgot my passphrase/i });
     const answer = heading.nextElementSibling;
-    expect(answer).toHaveTextContent(/recovery key/i);
+    expect(answer).toHaveTextContent(/recovery key \(created during setup or in Settings\)/i);
     expect(answer).toHaveTextContent(/opens your notes and lets you set a new passphrase/i);
     expect(answer).toHaveTextContent(/lose both your passphrase and your recovery key/i);
     expect(answer).not.toHaveTextContent(/Without it, your encrypted notes cannot be decrypted/i);
@@ -55,6 +55,7 @@ describe('SupportPage', () => {
     expect(answer).toHaveTextContent(/Settings/i);
     expect(answer).toHaveTextContent(/Let go of Yidhan/i);
     expect(answer).toHaveTextContent(/14-day grace period/i);
+    expect(answer).toHaveTextContent(/sign back in and choose "Stay"/i);
     expect(answer).not.toHaveTextContent(/paused for public launch/i);
   });
 });

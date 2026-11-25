@@ -121,17 +121,16 @@ describe('TagFilterBar', () => {
       expect(screen.queryByRole('button', { name: /Show \d+ more tags/i })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Collapse tags' })).toBeNull();
 
-      // Edit controls stay reachable via programmatic focus and click on narrow screens,
-      // and expand on hover, group-focus-within, and focus (not only focus-visible).
+      // Edit controls reveal on hover or keyboard focus-visible, not mouse focus.
       const editButtons = screen.getAllByRole('button', { name: 'Edit tag' });
       expect(editButtons).toHaveLength(3);
       editButtons[0].focus();
       expect(editButtons[0]).toHaveFocus();
       expect(editButtons[0].className).toMatch(/\bgroup-hover:w-7\b/);
-      expect(editButtons[0].className).toMatch(/\bgroup-focus-within:w-7\b/);
-      expect(editButtons[0].className).toMatch(/\bgroup-focus-within:opacity-100\b/);
-      expect(editButtons[0].className).toMatch(/\bfocus:w-7\b/);
-      expect(editButtons[0].className).toMatch(/\bfocus:opacity-100\b/);
+      expect(editButtons[0].className).toMatch(/\bfocus-visible:w-7\b/);
+      expect(editButtons[0].className).toMatch(/\bfocus-visible:opacity-100\b/);
+      expect(editButtons[0].className).not.toMatch(/\bgroup-focus-within:opacity-100\b/);
+      expect(editButtons[0].className).not.toMatch(/(^|\s)focus:opacity-100(\s|$)/);
 
       await user.click(editButtons[2]);
       expect(props.onEditTag).toHaveBeenCalledWith(tags[2]);

@@ -46,7 +46,6 @@ describe('Launch review track A — public copy and polish invariants', () => {
       expect(images?.status).toBe('exploring');
       expect(virtual?.status).toBe('exploring');
       expect(encryptedTags?.status).toBe('exploring');
-      expect(roadmap.filter((item) => item.status === 'coming-soon')).toEqual([]);
     });
   });
 

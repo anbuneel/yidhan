@@ -212,7 +212,7 @@ export function PrivacyPage({
               </h2>
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
-                  You can export all your notes at any time (JSON, Markdown, or an encrypted .yidhan backup). You can also delete your account from Settings ("Let go of Yidhan") after confirming your identity with your password or a one-time email code. Deletion takes effect after a 14-day grace period, during which you can sign back in to cancel; after that, your account and stored data are permanently removed.
+                  You can export all your notes at any time (JSON, Markdown, or an encrypted .yidhan backup). You can also delete your account from Settings ("Let go of Yidhan") after confirming your identity with your password or a one-time email code. Deletion takes effect after a 14-day grace period, during which you can sign back in and choose "Stay" to cancel; after that, your account and stored data are permanently removed.
                 </p>
               </div>
             </section>

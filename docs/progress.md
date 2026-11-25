@@ -807,8 +807,9 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   `src/data/roadmap.ts` (removed live GitHub OAuth from exploring, clarified on-device
   writing stats, removed testing coverage expansion, moved image attachments and
   virtual scrolling to exploring, added encrypted tag names); replaced remaining "quiet
-  space" wording and applied `--radius-pill` to buttons on `ChapteredLibrary.tsx`,
-  `SharedNoteView.tsx`, and the PWA manifest; removed the resolved licence question in
-  `PRODUCT.md`; added absence checks for the obsolete welcome-note trigger and function
-  to `supabase/migrations/verify_migration_state.sql`; kept "+ Tag" on the tag row on
-  phones in `TagFilterBar.tsx` without changing desktop layout. (#281)
+  space" wording on `ChapteredLibrary.tsx`, `SharedNoteView.tsx`, and the PWA manifest,
+  and applied `--radius-pill` to buttons on `ChapteredLibrary.tsx` and
+  `SharedNoteView.tsx`; removed the resolved licence question in `PRODUCT.md`; added
+  absence checks for the obsolete welcome-note trigger and function to
+  `supabase/migrations/verify_migration_state.sql`; kept "+ Tag" on the tag row on
+  phones in `TagFilterBar.tsx` while preserving wrapping and desktop layout. (#281)

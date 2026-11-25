@@ -17,8 +17,6 @@ function editButtonClass(isActive: boolean): string {
     ${isActive ? 'w-7 overflow-visible max-sm:opacity-100' : 'w-0 overflow-hidden'}
     sm:w-7 sm:overflow-visible
     group-hover:w-7 group-hover:overflow-visible
-    group-focus-within:w-7 group-focus-within:overflow-visible group-focus-within:opacity-100
-    focus:w-7 focus:overflow-visible focus:opacity-100
     focus-visible:w-7 focus-visible:overflow-visible
     flex items-center justify-center
     rounded-full
@@ -38,7 +36,6 @@ const removeButtonClass = `
   rounded-full
   opacity-0
   group-hover:opacity-100
-  focus:opacity-100
   focus-visible:opacity-100
   transition-opacity duration-150
   focus-ring
