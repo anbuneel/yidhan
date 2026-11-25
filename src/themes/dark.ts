@@ -31,8 +31,9 @@ const dark: ThemeConfig = {
     accentGlow: 'rgba(143, 199, 154, 0.14)',
     accentMuted: 'rgba(143, 199, 154, 0.55)',
     accentText: '#A0D2A6',
-    // The text colour at 4%: it lifts the dark sheet. Neutral, no accent.
-    editorGlow: 'rgba(230, 227, 220, 0.04)',
+    // Marigold, the logo's sun, at 8%, as in light: one glow in both themes
+    // (DECISIONS.md, 2026-11-24).
+    editorGlow: 'rgba(242, 162, 27, 0.08)',
     onAccent: '#13201A',
 
     ctaBg: '#8FC79A',

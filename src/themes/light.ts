@@ -31,9 +31,10 @@ const light: ThemeConfig = {
     accentGlow: 'rgba(53, 122, 69, 0.12)',
     accentMuted: 'rgba(53, 122, 69, 0.6)',
     accentText: '#2A6638',
-    // No glow in light. Nothing is lighter than the white sheet, and a tint of any
-    // colour reads as a smudge (DECISIONS.md, 2026-11-11).
-    editorGlow: 'rgba(53, 122, 69, 0)',
+    // Marigold, the logo's sun, at 8%. Yellow is the lightest hue, so on the white sheet
+    // it reads as warm light, where green and neutral read as a smudge
+    // (DECISIONS.md, 2026-11-24).
+    editorGlow: 'rgba(242, 162, 27, 0.08)',
     onAccent: '#FFFFFF',
 
     ctaBg: '#357A45',
