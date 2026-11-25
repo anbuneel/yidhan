@@ -1,67 +1,120 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { Globals } from '@react-spring/web';
 
 export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
-/** Read the current OS/browser reduced-motion preference safely. */
-function prefersReducedMotion(): boolean {
+type Subscriber = () => void;
+
+const subscribers = new Set<Subscriber>();
+let currentReduced = false;
+let activeMql: MediaQueryList | null = null;
+let detachMqlListener: (() => void) | null = null;
+
+function readReducedMotion(): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return false;
   }
-  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+  const mql = window.matchMedia(REDUCED_MOTION_QUERY);
+  return Boolean(mql?.matches);
 }
 
-/**
- * Sync react-spring's global `skipAnimation` flag with `prefers-reduced-motion: reduce`.
- * Returns an unsubscribe function that detaches the media query listener.
- */
-export function syncSpringReducedMotion(
-  onChange?: (reduced: boolean) => void
-): () => void {
+function applyReducedMotion(matches: boolean): void {
+  currentReduced = matches;
+  Globals.assign({ skipAnimation: matches });
+}
+
+function attachSharedListener(): void {
+  if (detachMqlListener !== null) return;
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    Globals.assign({ skipAnimation: false });
-    return () => {};
+    applyReducedMotion(false);
+    return;
   }
 
   const mql = window.matchMedia(REDUCED_MOTION_QUERY);
-  const apply = (matches: boolean) => {
-    Globals.assign({ skipAnimation: matches });
-    onChange?.(matches);
-  };
+  if (!mql) {
+    applyReducedMotion(false);
+    return;
+  }
 
-  apply(mql.matches);
+  activeMql = mql;
+  applyReducedMotion(Boolean(mql.matches));
 
   const handleChange = (event: MediaQueryListEvent) => {
-    apply(event.matches);
+    applyReducedMotion(Boolean(event.matches));
+    subscribers.forEach((notify) => notify());
   };
 
   if (typeof mql.addEventListener === 'function') {
     mql.addEventListener('change', handleChange);
-    return () => mql.removeEventListener('change', handleChange);
+    detachMqlListener = () => {
+      mql.removeEventListener('change', handleChange);
+    };
+  } else if (typeof mql.addListener === 'function') {
+    // Fallback for older WebKit implementations
+    mql.addListener(handleChange);
+    detachMqlListener = () => {
+      if (typeof mql.removeListener === 'function') {
+        mql.removeListener(handleChange);
+      }
+    };
+  } else {
+    detachMqlListener = () => {};
   }
+}
 
-  // Fallback for older WebKit implementations
-  mql.addListener(handleChange);
-  return () => mql.removeListener(handleChange);
+function detachSharedListenerIfUnused(): void {
+  if (subscribers.size > 0 || detachMqlListener === null) return;
+  detachMqlListener();
+  detachMqlListener = null;
+  activeMql = null;
+}
+
+function subscribe(notify: Subscriber): () => void {
+  subscribers.add(notify);
+  attachSharedListener();
+  return () => {
+    subscribers.delete(notify);
+    detachSharedListenerIfUnused();
+  };
+}
+
+function getSnapshot(): boolean {
+  if (activeMql) {
+    const matches = Boolean(activeMql.matches);
+    if (matches !== currentReduced || Globals.skipAnimation !== matches) {
+      applyReducedMotion(matches);
+    }
+    return matches;
+  }
+  const matches = readReducedMotion();
+  applyReducedMotion(matches);
+  return matches;
+}
+
+function getServerSnapshot(): boolean {
+  return false;
+}
+
+/**
+ * Sync react-spring's global `skipAnimation` flag with `prefers-reduced-motion: reduce`
+ * through a single shared media query subscription.
+ * Returns an unsubscribe function.
+ */
+export function syncSpringReducedMotion(
+  onChange?: (reduced: boolean) => void
+): () => void {
+  const notify = () => {
+    onChange?.(currentReduced);
+  };
+  return subscribe(notify);
 }
 
 /**
  * Keep react-spring animations disabled whenever `prefers-reduced-motion: reduce` is active,
- * including live OS setting toggles. Only imported by components that already use react-spring,
- * so the landing-page public shell never pulls react-spring into its first-visit bundle.
+ * including live OS setting toggles, via one shared `matchMedia` listener across all callers.
+ * Only imported by components that already use react-spring, so the landing-page public shell
+ * never pulls react-spring into its first-visit bundle.
  */
 export function useSpringReducedMotion(): boolean {
-  const [reduced, setReduced] = useState<boolean>(() => {
-    const initial = prefersReducedMotion();
-    Globals.assign({ skipAnimation: initial });
-    return initial;
-  });
-
-  useEffect(() => {
-    return syncSpringReducedMotion((matches) => {
-      setReduced(matches);
-    });
-  }, []);
-
-  return reduced;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

@@ -5,7 +5,7 @@
  * Follows a non-aggressive pattern aligned with Yidhan's calm philosophy.
  */
 
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react';
 import type { DemoMetadata } from '../services/demoStorage';
 
 // ============================================================================
@@ -72,6 +72,7 @@ export function useSoftPrompt({
   const [isTyping, setIsTyping] = useState<boolean>(() =>
     typeof document !== 'undefined' ? isEditableElement(document.activeElement) : false
   );
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Update current time every minute to re-evaluate time-based conditions
   useEffect(() => {
@@ -83,18 +84,36 @@ export function useSoftPrompt({
   }, []);
 
   // Track whether focus is currently inside a text input / editable surface so the
-  // prompt never interrupts the visitor mid-thought.
+  // prompt never interrupts the visitor mid-thought. Defer clearing on focusout so
+  // an in-flight pointer click (mousedown -> focusout -> click) finishes cleanly
+  // before InvitationModal can mount and swallow it.
   useEffect(() => {
     if (typeof document === 'undefined') return;
+    const clearPendingBlur = () => {
+      if (blurTimerRef.current !== null) {
+        clearTimeout(blurTimerRef.current);
+        blurTimerRef.current = null;
+      }
+    };
     const handleFocusIn = (event: FocusEvent) => {
+      clearPendingBlur();
       setIsTyping(isEditableElement(event.target));
     };
     const handleFocusOut = (event: FocusEvent) => {
-      setIsTyping(isEditableElement(event.relatedTarget));
+      clearPendingBlur();
+      if (isEditableElement(event.relatedTarget)) {
+        setIsTyping(true);
+        return;
+      }
+      blurTimerRef.current = setTimeout(() => {
+        blurTimerRef.current = null;
+        setIsTyping(isEditableElement(document.activeElement));
+      }, 200);
     };
     document.addEventListener('focusin', handleFocusIn);
     document.addEventListener('focusout', handleFocusOut);
     return () => {
+      clearPendingBlur();
       document.removeEventListener('focusin', handleFocusIn);
       document.removeEventListener('focusout', handleFocusOut);
     };

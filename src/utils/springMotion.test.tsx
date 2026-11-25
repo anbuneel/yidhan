@@ -1,11 +1,32 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, act } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
 import { Globals, useSpring, animated } from '@react-spring/web';
 import {
   REDUCED_MOTION_QUERY,
   syncSpringReducedMotion,
   useSpringReducedMotion,
 } from './springMotion';
+import { BottomSheet } from '../components/BottomSheet';
+import { PullToRefresh } from '../components/PullToRefresh';
+import { SwipeableNoteCard } from '../components/SwipeableNoteCard';
+import { createMockNote } from '../test/factories';
+
+type DragCallback = (state: Record<string, unknown>) => unknown;
+
+const { capturedDragHandlers } = vi.hoisted(() => ({
+  capturedDragHandlers: [] as DragCallback[],
+}));
+
+vi.mock('@use-gesture/react', () => ({
+  useDrag: (handler: DragCallback) => {
+    capturedDragHandlers.push(handler);
+    return () => ({});
+  },
+}));
+
+vi.mock('../hooks/useMobileDetect', () => ({
+  useMobileDetect: () => true,
+}));
 
 function createMockMatchMedia(initialMatches: boolean) {
   let matches = initialMatches;
@@ -55,6 +76,7 @@ describe('springMotion reduced motion (B3)', () => {
   const originalMatchMedia = window.matchMedia;
 
   beforeEach(() => {
+    capturedDragHandlers.length = 0;
     Globals.assign({ skipAnimation: false });
   });
 
@@ -100,6 +122,45 @@ describe('springMotion reduced motion (B3)', () => {
     cleanup();
   });
 
+  it('shares a single matchMedia listener across many mounted callers and detaches on last unmount', () => {
+    const { matchMedia, mql } = createMockMatchMedia(true);
+    window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
+
+    function Consumer() {
+      const reduced = useSpringReducedMotion();
+      return <span>{String(reduced)}</span>;
+    }
+
+    const { unmount } = render(
+      <>
+        <Consumer />
+        <Consumer />
+        <Consumer />
+      </>
+    );
+
+    expect(mql.addEventListener).toHaveBeenCalledTimes(1);
+    unmount();
+    expect(mql.removeEventListener).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles older WebKit matchMedia with addListener/removeListener only', () => {
+    const addListener = vi.fn();
+    const removeListener = vi.fn();
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: true,
+      media: REDUCED_MOTION_QUERY,
+      addListener,
+      removeListener,
+    }) as unknown as typeof window.matchMedia;
+
+    const cleanup = syncSpringReducedMotion();
+    expect(Globals.skipAnimation).toBe(true);
+    expect(addListener).toHaveBeenCalledTimes(1);
+    cleanup();
+    expect(removeListener).toHaveBeenCalledTimes(1);
+  });
+
   it('skips react-spring animation frames when reduced motion is enabled', () => {
     const { matchMedia, setMatches } = createMockMatchMedia(true);
     window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
@@ -126,14 +187,97 @@ describe('springMotion reduced motion (B3)', () => {
       triggerMove?.(0);
     });
     rerender(<SpringProbe />);
-    // With reduced motion enabled, the spring jumps straight to the target value without animating.
     expect(springY).toBe(0);
 
-    // Toggling preference off live re-enables spring animations.
     act(() => {
       setMatches(false);
     });
     expect(Globals.skipAnimation).toBe(false);
     expect(latestReduced).toBe(false);
+  });
+
+  it('BottomSheet on mobile dismisses immediately on drag without 200ms delay under reduced motion', async () => {
+    const { matchMedia } = createMockMatchMedia(true);
+    window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
+    const onClose = vi.fn();
+
+    render(
+      <BottomSheet isOpen onClose={onClose} title="Settings">
+        <button type="button">Item</button>
+      </BottomSheet>
+    );
+
+    expect(Globals.skipAnimation).toBe(true);
+    const dragHandler = capturedDragHandlers[capturedDragHandlers.length - 1];
+    const cancel = vi.fn();
+    act(() => {
+      dragHandler({ movement: [0, 150], velocity: [0, 0.2], down: false, cancel });
+    });
+
+    // Under reduced motion, onClose fires synchronously without a 200ms timer.
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('PullToRefresh completes refresh without spinning loop and resets state under reduced motion', async () => {
+    const { matchMedia } = createMockMatchMedia(true);
+    window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
+    const onRefresh = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <PullToRefresh onRefresh={onRefresh}>
+        <div>Library</div>
+      </PullToRefresh>
+    );
+
+    expect(Globals.skipAnimation).toBe(true);
+    const dragHandler = capturedDragHandlers[capturedDragHandlers.length - 1];
+
+    // Pull down past threshold (250 * 0.4 = 100 >= 80) and release.
+    await act(async () => {
+      dragHandler({ movement: [0, 250], down: true, first: true });
+      dragHandler({ movement: [0, 250], down: false, first: false });
+    });
+    await waitFor(() => expect(onRefresh).toHaveBeenCalledTimes(1));
+
+    // Refresh state must reset cleanly under reduced motion so a second pull refreshes again.
+    await act(async () => {
+      dragHandler({ movement: [0, 250], down: true, first: true });
+      dragHandler({ movement: [0, 250], down: false, first: false });
+    });
+    await waitFor(() => expect(onRefresh).toHaveBeenCalledTimes(2));
+  });
+
+  it('SwipeableNoteCard invokes onTogglePin immediately under reduced motion without bounce delay', () => {
+    const { matchMedia } = createMockMatchMedia(true);
+    window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
+    const note = createMockNote({ id: 'n-1', title: 'Draft', pinned: false });
+    const onTogglePin = vi.fn();
+
+    render(
+      <SwipeableNoteCard
+        note={note}
+        onClick={vi.fn()}
+        onDelete={vi.fn()}
+        onTogglePin={onTogglePin}
+      />
+    );
+
+    expect(screen.getByText('Draft')).toBeInTheDocument();
+    expect(Globals.skipAnimation).toBe(true);
+    const dragHandler = capturedDragHandlers[capturedDragHandlers.length - 1];
+
+    act(() => {
+      dragHandler({
+        movement: [160, 0],
+        velocity: [0.5, 0],
+        direction: [1, 0],
+        down: false,
+        cancel: vi.fn(),
+      });
+    });
+
+    // Pin toggles immediately without waiting for wobbly spring onRest.
+    expect(onTogglePin).toHaveBeenCalledWith('n-1', true);
   });
 });

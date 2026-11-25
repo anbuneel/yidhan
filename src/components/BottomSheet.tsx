@@ -114,6 +114,7 @@ export function BottomSheet({
     isOpen: isRendered,
     onClose,
     dialogRef: sheetRef,
+    nodeKey: isMobile,
   });
 
   // Drag to dismiss gesture - bound to handle area only

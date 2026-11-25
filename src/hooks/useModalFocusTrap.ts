@@ -92,6 +92,8 @@ function syncModalLayers(): void {
       for (const child of Array.from(parent.children)) {
         if (child === current || !(child instanceof HTMLElement)) continue;
         if (IGNORED_TAGS.has(child.tagName)) continue;
+        // Keep react-hot-toast live regions announcing to screen readers while a modal is open.
+        if (child.hasAttribute('data-rht-toaster')) continue;
         // Keep the active modal's own click-to-dismiss backdrop interactive.
         if (current === top.dialogEl && child.hasAttribute('data-modal-backdrop')) continue;
         desiredInert.add(child);
@@ -148,9 +150,13 @@ function handleDocumentKeyDown(event: KeyboardEvent): void {
   if (!top || !top.dialogEl.isConnected) return;
 
   if (event.key === 'Escape') {
-    if (event.defaultPrevented || !top.canEscape()) return;
+    if (event.defaultPrevented) return;
+    // Always consume Escape while any modal is topmost so it never leaks to
+    // background listeners (such as editor exit) during mandatory or busy dialogs.
     event.preventDefault();
-    top.onEscape();
+    if (top.canEscape()) {
+      top.onEscape();
+    }
     return;
   }
 
@@ -206,6 +212,12 @@ export interface UseModalFocusTrapOptions {
   initialFocusRef?: RefObject<HTMLElement | null>;
   /** Existing ref to the dialog element, if the caller already owns one. */
   dialogRef?: RefObject<HTMLElement | null>;
+  /**
+   * Optional key that changes when the underlying dialog DOM element swaps while
+   * remaining open (for example, BottomSheet switching between desktop and mobile).
+   * Re-registers the new node without losing the original opener.
+   */
+  nodeKey?: unknown;
 }
 
 /**
@@ -219,21 +231,41 @@ export function useModalFocusTrap<T extends HTMLElement = HTMLDialogElement>({
   onClose,
   initialFocusRef,
   dialogRef: externalRef,
+  nodeKey,
 }: UseModalFocusTrapOptions): RefObject<T | null> {
   const internalRef = useRef<T | null>(null);
   const activeRef = (externalRef as RefObject<T | null> | undefined) ?? internalRef;
+  const openerRef = useRef<HTMLElement | null>(null);
+  const isOpenRef = useRef(isOpen);
+  const wasOpenRef = useRef(false);
+  isOpenRef.current = isOpen;
 
   const onEscapeEvent = useEffectEvent(() => {
     onClose?.();
   });
   const canEscapeEvent = useEffectEvent(() => Boolean(onClose));
 
+  const restoreOpener = () => {
+    const opener = openerRef.current;
+    openerRef.current = null;
+    wasOpenRef.current = false;
+    if (opener && opener !== document.body && opener.isConnected && !opener.closest('[inert]')) {
+      opener.focus();
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
     const dialogEl = activeRef.current;
     if (!dialogEl) return;
 
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // Capture the original opener once per open lifecycle so swapping the dialog
+    // DOM node mid-session (e.g. responsive BottomSheet flip) preserves it.
+    if (!wasOpenRef.current) {
+      wasOpenRef.current = true;
+      openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    }
+
     const entry: ModalStackEntry = {
       id: Symbol('modal'),
       dialogEl,
@@ -245,7 +277,7 @@ export function useModalFocusTrap<T extends HTMLElement = HTMLDialogElement>({
     attachGlobalListener();
     syncModalLayers();
 
-    // Move focus into the dialog on open.
+    // Move focus into the dialog on open (or into the swapped node if focus fell outside).
     const preferred = initialFocusRef?.current;
     if (preferred && dialogEl.contains(preferred) && isFocusable(preferred)) {
       preferred.focus();
@@ -269,12 +301,21 @@ export function useModalFocusTrap<T extends HTMLElement = HTMLDialogElement>({
       syncModalLayers();
       detachGlobalListenerIfEmpty();
 
-      // Return focus to the opener only if it is still connected and not behind another modal.
-      if (opener?.isConnected && !opener.closest('[inert]')) {
-        opener.focus();
+      if (!isOpenRef.current) {
+        restoreOpener();
       }
     };
-  }, [isOpen, activeRef, initialFocusRef]);
+  }, [isOpen, nodeKey, activeRef, initialFocusRef]);
+
+  // If the modal component unmounts while `isOpen` is still true (e.g. conditional render),
+  // restore focus to the opener after the main cleanup above has popped the stack and un-inerted.
+  useEffect(() => {
+    return () => {
+      if (wasOpenRef.current) {
+        restoreOpener();
+      }
+    };
+  }, []);
 
   return activeRef;
 }

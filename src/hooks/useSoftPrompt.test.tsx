@@ -134,7 +134,107 @@ describe('Practice Space sign-up prompt count and guards (B4)', () => {
     expect(result.current.shouldShowPrompt).toBe(true);
   });
 
+  it('counts 0 for untouched legacy starters and 1 when a legacy starter is edited', () => {
+    const untouchedLegacyBooks = {
+      id: 'starter-books',
+      title: 'Book Recommendations',
+      content: `<p>Books people keep telling me to read:</p>
+<ul>
+<li>Atomic Habits</li>
+<li>The Almanack of Naval Ravikant</li>
+<li>Four Thousand Weeks</li>
+</ul>
+<p>Started Four Thousand Weeks last night. The bit about how we'll never "get on top of everything" was oddly freeing.</p>`,
+      pinned: false,
+    };
+
+    expect(countPracticeWork([untouchedLegacyBooks])).toBe(0);
+    expect(
+      countPracticeWork([{ ...untouchedLegacyBooks, content: '<p>My own list.</p>' }])
+    ).toBe(1);
+  });
+
+  it('defers clearing isTyping on focusout so pointer clicks on other controls are not swallowed', () => {
+    vi.useFakeTimers();
+    const metadata: DemoMetadata = {
+      createdAt: TEN_MINUTES_AGO(),
+      lastVisit: Date.now(),
+      totalNotesCreated: 4,
+      promptDismissedAt: null,
+      ribbonDismissedAt: null,
+    };
+    const onCardClick = vi.fn();
+
+    function Probe() {
+      const { shouldShowPrompt } = useSoftPrompt({
+        metadata,
+        userNoteCount: 4,
+        onDismissPrompt: vi.fn(),
+        onDismissRibbon: vi.fn(),
+      });
+      return (
+        <div>
+          <input aria-label="Search notes" />
+          <button type="button" onClick={onCardClick}>Open note</button>
+          {shouldShowPrompt && <div data-testid="prompt-open">Prompt</div>}
+        </div>
+      );
+    }
+
+    render(<Probe />);
+    const input = screen.getByLabelText('Search notes');
+    const cardBtn = screen.getByRole('button', { name: 'Open note' });
+
+    act(() => {
+      input.focus();
+      fireEvent.focusIn(input);
+    });
+    expect(screen.queryByTestId('prompt-open')).toBeNull();
+
+    // Pointer down blurs the input first: prompt must NOT mount synchronously before click fires.
+    act(() => {
+      fireEvent.focusOut(input, { relatedTarget: cardBtn });
+    });
+    expect(screen.queryByTestId('prompt-open')).toBeNull();
+
+    fireEvent.click(cardBtn);
+    expect(onCardClick).toHaveBeenCalledTimes(1);
+
+    // After the short defer window, the prompt can open if focus is not back in an input.
+    act(() => {
+      cardBtn.focus();
+      vi.advanceTimersByTime(250);
+    });
+    expect(screen.getByTestId('prompt-open')).toBeInTheDocument();
+  });
+
+  it('disables DemoPage keyboard shortcuts (? and Cmd/Ctrl+N) while isAuthModalOpen is true', () => {
+    seedDemoState();
+    render(
+      <DemoPage
+        onSignUp={vi.fn()}
+        onSignIn={vi.fn()}
+        isAuthModalOpen
+        theme="light"
+        onThemeToggle={vi.fn()}
+        onHomeClick={vi.fn()}
+        onChangelogClick={vi.fn()}
+        onRoadmapClick={vi.fn()}
+        onPrivacyClick={vi.fn()}
+        onTermsClick={vi.fn()}
+        onSupportClick={vi.fn()}
+      />
+    );
+
+    fireEvent.keyDown(window, { key: '?' });
+    expect(screen.queryByText('Quiet shortcuts')).toBeNull();
+
+    fireEvent.keyDown(window, { key: 'n', ctrlKey: true });
+    expect(screen.queryByTestId('note-editor')).toBeNull();
+  });
+
   it('does not open while the visitor is typing inside an input or editable control', () => {
+    vi.useFakeTimers();
     const metadata: DemoMetadata = {
       createdAt: TEN_MINUTES_AGO(),
       lastVisit: Date.now(),
@@ -172,6 +272,7 @@ describe('Practice Space sign-up prompt count and guards (B4)', () => {
     act(() => {
       fireEvent.focusOut(input, { relatedTarget: doneBtn });
       doneBtn.focus();
+      vi.advanceTimersByTime(250);
     });
     expect(screen.getByTestId('prompt-open')).toBeInTheDocument();
   });

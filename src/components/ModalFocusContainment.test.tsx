@@ -409,9 +409,10 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     ));
   });
 
-  it('IOSInstallGuide holds focus and returns focus on Escape', async () => {
+  it('IOSInstallGuide holds focus after entrance, ignores duplicate Escape, and skips delays under reduced motion', async () => {
     vi.useFakeTimers();
     try {
+      const onDismiss = vi.fn();
       function Harness() {
         const [open, setOpen] = useState(false);
         return (
@@ -420,7 +421,14 @@ describe('Modal focus containment across every modal kind (B2)', () => {
               <button type="button" onClick={() => setOpen(true)}>Open guide</button>
               <button type="button">Background button</button>
             </main>
-            {open && <IOSInstallGuide onDismiss={() => setOpen(false)} />}
+            {open && (
+              <IOSInstallGuide
+                onDismiss={() => {
+                  onDismiss();
+                  setOpen(false);
+                }}
+              />
+            )}
           </>
         );
       }
@@ -431,6 +439,13 @@ describe('Modal focus containment across every modal kind (B2)', () => {
       opener.focus();
       fireEvent.click(opener);
 
+      // During the 300ms invisible entrance delay, it does not trap focus on an invisible panel.
+      expect(background.closest('[inert]')).toBeNull();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350);
+      });
+
       const dialog = screen.getByRole('dialog');
       expect(dialog.contains(document.activeElement)).toBe(true);
       expect(background.closest('[inert]')).not.toBeNull();
@@ -440,16 +455,46 @@ describe('Modal focus containment across every modal kind (B2)', () => {
       tab(false);
       expect(document.activeElement).toBe(focusable[0]);
 
+      // Pressing Escape twice during exit only invokes onDismiss once.
       await act(async () => {
+        fireEvent.keyDown(document, { key: 'Escape' });
         fireEvent.keyDown(document, { key: 'Escape' });
         await vi.advanceTimersByTimeAsync(450);
       });
 
+      expect(onDismiss).toHaveBeenCalledTimes(1);
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(background.closest('[inert]')).toBeNull();
       expect(document.activeElement).toBe(opener);
     } finally {
       vi.useRealTimers();
+    }
+  });
+
+  it('IOSInstallGuide opens and dismisses immediately when prefers-reduced-motion is enabled', () => {
+    const origMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+
+    try {
+      const onDismiss = vi.fn();
+      render(<IOSInstallGuide onDismiss={onDismiss} />);
+      // Immediately traps focus without waiting 300ms.
+      const dialog = screen.getByRole('dialog');
+      expect(dialog.contains(document.activeElement)).toBe(true);
+      // Immediately calls onDismiss on Escape without waiting 400ms.
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+    } finally {
+      window.matchMedia = origMatchMedia;
     }
   });
 
@@ -523,9 +568,69 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     tab(false);
     expect(document.activeElement).toBe(focusable[0]);
 
-    // Mandatory choice: Escape keeps it open.
-    fireEvent.keyDown(document, { key: 'Escape' });
+    // Mandatory choice: Escape keeps it open AND consumes the event so it cannot leak behind.
+    const esc = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    document.dispatchEvent(esc);
+    expect(esc.defaultPrevented).toBe(true);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('consumes Escape on busy/non-dismissible modals so it never leaks to background listeners', () => {
+    const backgroundEscapeSpy = vi.fn((event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        return 'leaked';
+      }
+      return 'blocked';
+    });
+
+    render(
+      <>
+        <main>
+          <button type="button">Editor content</button>
+        </main>
+        <BackupPassphraseModal mode="open" isOpen isBusy onSubmit={vi.fn()} onCancel={vi.fn()} />
+      </>
+    );
+
+    document.addEventListener('keydown', backgroundEscapeSpy);
+    try {
+      const esc = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+      document.dispatchEvent(esc);
+      expect(esc.defaultPrevented).toBe(true);
+      expect(backgroundEscapeSpy).toHaveReturnedWith('blocked');
+    } finally {
+      document.removeEventListener('keydown', backgroundEscapeSpy);
+    }
+  });
+
+  it('exempts [data-rht-toaster] from inert and aria-hidden while a modal is open', () => {
+    render(
+      <>
+        <div data-rht-toaster="true" role="status">Toast region</div>
+        <main>
+          <button type="button">Behind modal</button>
+        </main>
+        <InvitationModal noteCount={3} onSignUp={vi.fn()} onDismiss={vi.fn()} />
+      </>
+    );
+
+    const toaster = screen.getByText('Toast region');
+    const behind = screen.getByText('Behind modal');
+    expect(toaster).not.toHaveAttribute('inert');
+    expect(toaster).not.toHaveAttribute('aria-hidden');
+    expect(behind.closest('[inert]')).not.toBeNull();
+  });
+
+  it('hides ModalBackdropButton from assistive tech while keeping pointer click dismissal', () => {
+    const onDismiss = vi.fn();
+    render(<InvitationModal noteCount={3} onSignUp={vi.fn()} onDismiss={onDismiss} />);
+
+    const backdrop = screen.getByLabelText('Dismiss invitation');
+    expect(backdrop).toHaveAttribute('aria-hidden', 'true');
+    expect(backdrop).toHaveAttribute('tabindex', '-1');
+
+    fireEvent.click(backdrop);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
   it('ImportProgressOverlay holds focus while importing and returns focus when done', () => {

@@ -1,7 +1,15 @@
 import { useState } from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BottomSheet } from './BottomSheet';
+
+const { mobileState } = vi.hoisted(() => ({
+  mobileState: { value: false },
+}));
+
+vi.mock('../hooks/useMobileDetect', () => ({
+  useMobileDetect: () => mobileState.value,
+}));
 
 /**
  * Item 160: the Settings sheet keeps keyboard focus while it is open. Before this,
@@ -38,6 +46,10 @@ async function openSheet() {
 }
 
 describe('BottomSheet focus', () => {
+  beforeEach(() => {
+    mobileState.value = false;
+  });
+
   it('moves focus into the sheet when it opens', async () => {
     await openSheet();
     expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
@@ -106,5 +118,37 @@ describe('BottomSheet focus', () => {
     document.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Behind the sheet' }));
+  });
+
+  it('re-registers the dialog node when isMobile flips while open and still restores the original opener', async () => {
+    const { rerender } = render(<Harness />);
+    const opener = screen.getByRole('button', { name: 'Open settings' });
+    opener.focus();
+    fireEvent.click(opener);
+
+    const desktopDialog = await screen.findByRole('dialog');
+    expect(desktopDialog.tagName).toBe('DIALOG');
+    await waitFor(() => expect(desktopDialog.contains(document.activeElement)).toBe(true));
+
+    // Flip to mobile while open: DOM node swaps from <dialog> to <div role="dialog">.
+    mobileState.value = true;
+    rerender(<Harness />);
+
+    const mobileDialog = await screen.findByRole('dialog');
+    expect(mobileDialog.tagName).toBe('DIV');
+    expect(mobileDialog).not.toBe(desktopDialog);
+    await waitFor(() => expect(mobileDialog.contains(document.activeElement)).toBe(true));
+
+    // Background remains inert, Tab stays trapped in the swapped node, and Escape returns
+    // focus to the original page opener captured before the swap.
+    expect(screen.getByText('Behind the sheet')).toHaveAttribute('inert');
+    const last = screen.getByRole('button', { name: 'Last inside' });
+    last.focus();
+    tab();
+    expect(mobileDialog.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).not.toBe(last);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(document.activeElement).toBe(opener);
   });
 });

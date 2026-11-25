@@ -340,7 +340,7 @@ export function DemoPage({
   // returning to /demo. Focus the input directly, as App.tsx does; the token stays for
   // the editor-to-library request, which is what it was built for.
   useAppShortcuts({
-    enabled: !showTagModal && !showShortcutsModal && !shouldShowPrompt,
+    enabled: !showTagModal && !showShortcutsModal && !shouldShowPrompt && !isAuthModalOpen,
     view,
     onNewNote: () => { void handleNewNote(); },
     onFocusSearch: () => scheduleSearchFocus(DEMO_SEARCH_INPUT_ID),

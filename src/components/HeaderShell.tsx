@@ -244,6 +244,9 @@ export function HeaderShell({
                     role="menuitem"
                     onClick={() => {
                       setIsProfileMenuOpen(false);
+                      // Move focus back to the persistent avatar trigger before opening Settings
+                      // so the modal captures it instead of this unmounting menu item.
+                      profileMenuRef.current?.querySelector<HTMLButtonElement>('button[aria-expanded]')?.focus();
                       onSettingsClick();
                     }}
                     className="
@@ -279,6 +282,9 @@ export function HeaderShell({
                         role="menuitem"
                         onClick={() => {
                           setIsProfileMenuOpen(false);
+                          // Restore focus to the persistent avatar trigger before invoking a
+                          // menu action (which may open a modal) so focus returns here on close.
+                          profileMenuRef.current?.querySelector<HTMLButtonElement>('button[aria-expanded]')?.focus();
                           item.onClick();
                         }}
                         className="
