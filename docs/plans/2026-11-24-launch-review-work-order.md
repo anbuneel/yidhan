@@ -15,7 +15,11 @@ numbers are assigned then, from 164 up; the letter IDs below are the review's ow
 
 All nine launch gates (A1 to A9) were set to Later: domain, SMTP, the two-account
 isolation test, deployed migrations, the three acceptance tests, the real-device pass,
-the Lighthouse run, the cohort and the security review. They stay in the ACTIVE plan.
+the Lighthouse run, the cohort and the security review. Most live in the ACTIVE plan
+(`#157`, `#86`, `#207`, `#153`, `#81`/`#85`, `#61`, `#87`); deployed migrations live in
+`docs/setup/release-checklist.md` (automation on `docs/roadmap.md` #121), and the
+independent security review is still deferred on `docs/roadmap.md` (#104). If all nine
+block public announcement, promote the remaining two into the ACTIVE plan explicitly.
 **A public announcement is still blocked on them.** This work order makes the product
 and its public pages ready; it does not make the launch ready.
 
@@ -30,8 +34,8 @@ tracker, or unrecorded if they were new ideas. See "Later items with no home" be
 | B · Editor | B1, B7, B8, B12 | Now | A, D. Merge before C |
 | C · Dialogs and motion | B2, B3, B4 | Now | A, D. Rebase onto B |
 | D · Landing page | D2 to D7, D9 | When the headline wording is picked | A, B, C |
-| E · Passkey unlock | E1 | After A, B and C merge | Nothing; it needs the heavier review |
-| F · Quick capture | E5 | Blocked on roadmap item 28 | — |
+| E · Passkey unlock | E1 | Spike after A, B and C merge; enrollment waits on custom domain (#157) | Nothing; it needs the heavier review |
+| F · Quick capture | E5 | Item 44 ready (`/n/new`); item 47 blocked on SW test harness | — |
 
 One track is one branch, one PR and one agent session. Tracks running at the same time
 need a worktree each, or they overwrite each other.
@@ -66,10 +70,15 @@ need a worktree each, or they overwrite each other.
    app built around writing.", is dropped. The wording is still to pick; see track D.
 2. **C2 depends on a fact nobody checked.** The deletion flow exists in code. Whether
    self-serve deletion is switched on in production is unconfirmed.
-3. **E5 has an unmet need.** Roadmap item 44 (the "New note" shortcut) needs item 28,
-   per-note routes, and no `/n/` route exists in `src`. Either item 28 ships first, or
-   the shortcut opens the library with a "new note" flag and item 44's "done when" is
-   reworded. Item 47 (share target) also needs the service-worker test harness.
+3. **E5 is only partly blocked.** Per-note routes (`/n/<id>`) already exist in
+   `src/routing/routes.ts` (roadmap item 28 shipped 2026-09-07), so item 44 (the
+   "New note" shortcut) only needs a `/n/new` route alongside `/demo/new`. Item 47
+   (share target) still needs the service-worker test harness.
+4. **E1 enrollment depends on the final domain (`#157`).** WebAuthn credentials are
+   scoped to their relying-party ID; passkeys enrolled on `yidhan.vercel.app` will not
+   follow a move to a custom domain. Run the PRF compatibility spike after A–C, and hold
+   enrollment until the final domain/RP ID is live (or an explicit migration path is
+   designed).
 
 ---
 
@@ -85,17 +94,21 @@ PR title: `Public copy matches the product (launch review track A)`. Hours to a 
 | C4 | "Additional OAuth providers" lists GitHub as exploring. GitHub sign-in is live. Remove GitHub; Apple stays | `src/data/roadmap.ts` |
 | C5 | "Usage analytics" reads like tracking. Say it is computed on the device and nothing leaves it, or remove it | `src/data/roadmap.ts` |
 | C6 | Remove "Testing coverage expansion". Move "Image attachments" and "Virtual scrolling" from coming soon to exploring; neither is committed. Add "Encrypted tag names" under exploring | `src/data/roadmap.ts` |
-| C7 | Replace "quiet space" with plain wording in the current voice. Leave `PlaygroundPage.tsx` unless users can reach it; say which | `ChapteredLibrary.tsx` line 232, `SharedNoteView.tsx` line 455 |
+| C7 | Replace "quiet space" with plain wording in the current voice, including the PWA manifest description. Leave dev-only `PlaygroundPage.tsx` alone (404 in prod) and note that in the PR | `ChapteredLibrary.tsx` line 232, `SharedNoteView.tsx` line 455, `vite.config.ts` line 113 |
 | C8 | Remove the licence "Open question" bullet under "Evidence on hand" | `PRODUCT.md` |
-| B5 | The welcome note still says "light (Kintsugi) and dark (Midnight)" and mentions wabi-sabi (issue #271). Add a **new** migration replacing the trigger function. Do not edit `create_welcome_note_trigger.sql`. List the new migration in `verify_migration_state.sql`. The maintainer applies it by hand; say so in the PR | `supabase/migrations/` |
+| B5 | `disable_welcome_note_trigger.sql` already dropped `on_auth_user_created` and `public.create_welcome_note()` (a server trigger would insert plaintext and violate `chk_notes_e2ee_only`), and `PassphraseSetup.tsx` already creates encrypted welcome notes with clean copy. **Do not** recreate or replace the trigger. Add checks to `verify_migration_state.sql` confirming the obsolete trigger and function are absent in production, and note issue #271 as obsolete in the PR | `supabase/migrations/verify_migration_state.sql` |
 | B10 | "+ Tag" wraps onto its own line on a phone. Keep it on the tag row | `src/components/TagFilterBar.tsx` |
 | B15 | **Unverified.** Buttons on shared letters and empty states should use `--radius-pill` | `SharedNoteView.tsx`, `ChapteredLibrary.tsx` |
 | C2 | **Do not change yet.** Support (line 140) and Privacy (line 215) say self-serve deletion is "paused for public launch". Check whether a flag or guard disables it. Report what you find. Change the copy only if a signed-in user can reach deletion with nothing in the way; then describe the real flow | `SupportPage.tsx`, `PrivacyPage.tsx` |
 
-Done when: `rg -n "quiet space|Kintsugi|Midnight|wabi"` returns nothing outside
-`docs/archive/`, `changelog.ts` and old migrations; `README.md` has no "MIT"; a test
-fails if the public roadmap lists GitHub sign-in as not shipped; no lone "+ Tag" line at
-375px with three tags.
+Done when: a search for `quiet space|Kintsugi|Midnight|wabi` across current user-facing
+copy (`src/`, `vite.config.ts`, `index.html`, `README.md`) returns nothing outside
+`src/data/changelog.ts`, `src/lib/passphraseWords.ts` (the BIP-39 word `midnight`),
+dev-only `src/pages/PlaygroundPage.tsx`, and tests; historical docs (`DECISIONS.md`,
+`docs/progress.md`, retired-direction notes in `DESIGN.md`, old migrations and
+`docs/archive/`) stay untouched; `README.md` has no "MIT"; a test fails if the public
+roadmap lists GitHub sign-in as not shipped; no lone "+ Tag" line at 375px with three
+tags.
 
 Should not change: existing accounts' welcome notes, the demo starter notes, the tag
 row on desktop, any behaviour. Tests that assert the old copy are updated in this PR.
@@ -111,8 +124,8 @@ Days. Owns `Editor.tsx`, `EditorToolbar.tsx`, `EditorSidebar.tsx`,
 
 | ID | Change | Done when |
 |---|---|---|
-| B1 | On a phone the "More editor commands" menu opens below the screen: at 390 by 844 it runs from y=790 to y=1618. It is `position: fixed` inside a `backdrop-filter` ancestor, so it is placed against the bottom toolbar, not the viewport (`EditorToolbar.tsx`, near line 91). Move it out of that ancestor or position it another way | At 390 by 844 the whole menu is inside the viewport and every command can be tapped · E2E |
-| B8 | Focus mode is only inside the command menu. Give it one visible, quiet control: in `EditorSidebar` on desktop and in the bottom toolbar on a phone, using the on-accent tokens when active | A new visitor can enter and leave focus mode without opening a menu · E2E |
+| B1 | On a phone the "More editor commands" menu opens below the screen: at 390 by 844 it runs from y=790 to y=1618. It is `position: fixed` inside a `backdrop-filter` ancestor, so it is placed against the bottom toolbar, not the viewport (`EditorToolbar.tsx`, near line 91). Move it out of that ancestor (e.g. via a portal) or position it another way, and ensure outside-click detection checks both trigger and panel refs so tapping a command fires instead of closing on `pointerdown` | At 390 by 844 the whole menu is inside the viewport and every command can be tapped · E2E |
+| B8 | Focus mode is only inside the command menu. Give it one visible, quiet control on **all three** toolbar variants—`EditorSidebar` (wide desktop), inline toolbar (intermediate desktop widths and touch tablets), and bottom toolbar (phone)—using the on-accent tokens when active | A new visitor can enter and leave focus mode without opening a menu on sidebar, inline, and bottom toolbars · E2E / component tests |
 | B12 | **Unverified.** Undo after switching notes can alter the previous note (roadmap 114). Clear history when the note changes, without emitting an update | Undo after switching notes cannot change the previous note · unit test |
 | B7 | The practice editor does not say drafts are unencrypted. Show "Demo · saved in this browser · not encrypted" while writing there | The label shows in the practice editor and never for a signed-in account · E2E |
 
@@ -134,7 +147,7 @@ Days. Rebase onto track B before merging.
 
 | ID | Change | Done when |
 |---|---|---|
-| B2 | Dialogs do not hold keyboard focus (issue #257). Tab from the sign-up dialog lands on "New note" behind it. Every modal takes focus on open, holds it, makes the page behind inert and returns focus on close. Use one shared hook or component, not a copy per dialog. About 14 files render a dialog: `Auth`, `InvitationModal`, `ConflictModal`, `EncryptedConflictModal`, `BackupPassphraseModal`, `LettingGoModal`, `SessionTimeoutModal`, `KeyboardShortcutsModal`, `BottomSheet`, `IOSInstallGuide`, `InstallPrompt`, `FadedNotesView`, `LinkPopover`, and one inside `Editor.tsx` | Tab and Shift+Tab never leave an open modal; focus returns to the control that opened it · component test per dialog kind and one E2E |
+| B2 | Dialogs do not hold keyboard focus (issue #257). Tab from the sign-up dialog lands on "New note" behind it. Every modal takes focus on open, holds it, makes the page behind inert and returns focus on close. Extract/unify the existing trap in `BottomSheet` into one shared hook or component (do not stack two traps or copy logic per dialog). Audit every `<dialog>`, `role="dialog"`, and `.modal-backdrop` across `src/` rather than relying only on the approximate list—covering `Auth`, `InvitationModal`, `ConflictModal`, `EncryptedConflictModal`, `BackupPassphraseModal`, `LettingGoModal`, `SessionTimeoutModal`, `KeyboardShortcutsModal`, `BottomSheet`, `IOSInstallGuide`, `InstallPrompt`, `TagModal`, `ShareModal`, `ReAuthModal`, any confirm modal inside `FadedNotesView`, `LinkPopover` (if modal), and the one inside `Editor.tsx` | Tab and Shift+Tab never leave an open modal; focus returns to the control that opened it · component test per dialog kind and one E2E |
 | B3 | Spring animations ignore `prefers-reduced-motion` on touch devices (issue #258) | No spring runs with reduced motion on · unit test |
 | B4 | The sign-up prompt says "You've written 5 thoughts here" to a visitor who wrote nothing. It counts the starter notes. Count only notes the visitor created or edited | A visitor who changed nothing is never told they wrote notes · unit test |
 
@@ -175,21 +188,27 @@ Done when: the sheet's top edge is inside the first screen at 1280 by 800 and at
 Constraints: `index.html`'s landing shell mirrors `LandingPage.tsx`, so both change
 together. `public/boot.js` and the first-visit budget still hold; the budget check must
 pass. The headline reverses the 2026-11-10 decision, so this PR appends a
-`DECISIONS.md` entry and changes the page title, the share text and the share image
-(`scripts/brand/flatten.py`, with the `og:image` version bumped) together.
+`DECISIONS.md` entry and changes `DEFAULT_DOCUMENT_TITLE` in `src/routing/routes.ts`,
+the page title, the share text and the share image (`scripts/brand/flatten.py`, with the
+`og:image` version bumped) together.
 
 Should not fire: a signed-in visitor still goes to the app shell, not the landing page.
 A sample link does not create a second copy of a starter the visitor already edited.
 
 ## Track E · Passkey unlock
 
-Item E1: roadmap 135. Weeks. Its needs (items 24 and 26) have shipped. Measure WebAuthn
-PRF support in the target browsers first. The passphrase stays as the fallback. It
-touches encryption and auth, so it gets the multi-agent review.
+Item E1: roadmap 135. Weeks. Its needs (items 24 and 26) have shipped. Split into two
+steps: the WebAuthn PRF browser-compatibility spike can run after A–C merge, while
+passkey enrollment waits on the final custom domain / relying-party ID (`#157`) or an
+explicit credential-migration design, since WebAuthn credentials do not transfer across
+domains. The passphrase stays as the fallback. It touches encryption and auth, so it
+gets the multi-agent review.
 
 ## Track F · Quick capture
 
-Item E5: roadmap 44, then 47. Blocked on open question 3.
+Item E5: roadmap 44, then 47. Item 44 only needs `/n/new` on top of the existing
+`/n/<id>` route in `src/routing/routes.ts`; item 47 (share target) remains blocked on
+the service-worker test harness.
 
 ---
 
@@ -212,5 +231,5 @@ These were new ideas in the review and are marked Later. They are not on
 - On-device voice capture
 - Trusted-person recovery
 - "Keep these notes" previews the steps that follow (B9)
-- Demo header overlap at tablet widths (B6), not reproduced
+- Demo header overlap at tablet widths (B6), confirmed defect (~38px overlap at 916px width), deferred
 - Empty band above "Pinned" on first load (B11), not confirmed
