@@ -1,10 +1,11 @@
 Status: PROPOSAL
-Last verified: 2026-11-24
+Last verified: 2026-11-25
 
 # Launch review work order
 
-The 27 items chosen from the 2026-11-24 launch review, in build order. The review merged
-three passes (Claude, Gemini, Codex) over the live site and the source at `953792b`.
+The 27 items chosen from the 2026-11-24 launch review, grouped into tracks by the files
+they touch. The review merged three passes (Claude, Gemini, Codex) over the live site
+and the source at `953792b`.
 
 This is a proposal. It does not replace `2026-11-07-public-launch-plan.md`, which stays
 ACTIVE. Nothing here is approved until its items move into that plan's **Now**. Ledger
@@ -21,111 +22,148 @@ and its public pages ready; it does not make the launch ready.
 The other 33 Later items stay where they are: on `docs/roadmap.md`, in the issue
 tracker, or unrecorded if they were new ideas. See "Later items with no home" below.
 
+## Tracks at a glance
+
+| Track | Items | Can start | Runs beside |
+|---|---|---|---|
+| A · Copy and small polish | C1 to C8, B5, B10, B15 | Now | Everything |
+| B · Editor | B1, B7, B8, B12 | Now | A, D. Merge before C |
+| C · Dialogs and motion | B2, B3, B4 | Now | A, D. Rebase onto B |
+| D · Landing page | D2 to D7, D9 | When the headline wording is picked | A, B, C |
+| E · Passkey unlock | E1 | After A, B and C merge | Nothing; it needs the heavier review |
+| F · Quick capture | E5 | Blocked on roadmap item 28 | — |
+
+One track is one branch, one PR and one agent session. Tracks running at the same time
+need a worktree each, or they overwrite each other.
+
+**Conflicts to expect when merging:**
+
+- `src/data/changelog.ts` and `docs/progress.md`. Every PR adds an entry in the same
+  place and claims the next version number. The second PR to merge rebases and
+  renumbers.
+- `src/components/Editor.tsx`. Track B owns it. Track C must not edit it; see C.
+- `src/index.css`. B3 edits it, and B8 may.
+
+## Rules for every track
+
+- Read `AGENTS.md` first. Do not edit it; it is generated from `CLAUDE.md`.
+- Plain, direct writing in copy, comments, commits and the PR description. Sentence
+  case. No invented testimonials, counts or press.
+- Never hardcode a colour. Radius, type and colour come from the tokens in `DESIGN.md`.
+- `docs/archive/` is frozen. Do not cite it or edit it.
+- Each "done when" ships as a test in the same PR, with the "should not fire" cases.
+- Add a `src/data/changelog.ts` entry: read the first 40 lines and insert directly
+  after `export const changelog: ChangelogEntry[] = [`. Never read the file whole.
+  Append one entry to `docs/progress.md`.
+- Run only the test file you changed while iterating. Run `npm run check` once before
+  pushing. Do not merge the PR.
+- Several items are marked **unverified**. Confirm the bug exists before fixing it. If
+  it does not, say so in the PR and leave the code alone.
+
 ## Open questions
 
-Two things to settle before the affected step starts. The first was settled on
-2026-11-24.
-
-1. **Settled: encryption goes into the headline (D2).** D1 and D2 were both marked Do
-   and contradicted each other. D1, keeping "A notes app built around writing.", is
-   dropped. The new headline still leads with writing and adds privacy to it; the
-   wording is chosen in step 5. Candidates to start from:
-   - "A private notes app built around writing."
-   - "Notes built around writing, encrypted before they leave your device."
-   - "Write freely. Only you can read it."
-
-   This reverses the 2026-11-10 decision, so step 5 appends a `DECISIONS.md` entry.
-   The headline is also the page title, the share text and the share image, so all
-   four change together.
+1. **Settled 2026-11-24: encryption goes into the headline (D2).** D1, keeping "A notes
+   app built around writing.", is dropped. The wording is still to pick; see track D.
 2. **C2 depends on a fact nobody checked.** The deletion flow exists in code. Whether
-   self-serve deletion is switched on in production is unconfirmed. Check it signed in
-   before changing the Support and Privacy copy.
+   self-serve deletion is switched on in production is unconfirmed.
 3. **E5 has an unmet need.** Roadmap item 44 (the "New note" shortcut) needs item 28,
    per-note routes, and no `/n/` route exists in `src`. Either item 28 ships first, or
    the shortcut opens the library with a "new note" flag and item 44's "done when" is
    reworded. Item 47 (share target) also needs the service-worker test harness.
 
-## Order
+---
 
-One step is one PR and one session. Each step ships its "done when" as tests in the
-same PR. Each also carries the cases where the change should not fire.
+## Track A · Copy and small polish
 
-### Step 1 · Public copy matches the product
-
-Items C1, C3, C4, C5, C6, C7, C8, B5, and C2 once question 2 is answered. Hours.
+Public pages and the README contradict the shipped product. No behaviour changes.
+PR title: `Public copy matches the product (launch review track A)`. Hours to a day.
 
 | ID | Change | Where |
 |---|---|---|
-| C1 | Licence line says AGPL-3.0. Remove coloured tags, the colour picker and old starter notes | `README.md` |
-| C2 | Remove "deletion is paused" if deletion is live; otherwise say how to request it | `SupportPage.tsx`, `PrivacyPage.tsx` |
-| C3 | "I forgot my passphrase" names the recovery key before saying notes are lost | `SupportPage.tsx` |
-| C4 | GitHub sign-in moves to shipped or is removed | `src/data/roadmap.ts` |
-| C5 | "Usage analytics" says "computed on your device", or is removed | `src/data/roadmap.ts` |
-| C6 | Drop "Testing coverage". "Coming soon" holds only committed work. Add encrypted tag names | `src/data/roadmap.ts` |
-| C7 | Replace "quiet space" in the library empty state and the shared-letter footer | `ChapteredLibrary.tsx`, `SharedNoteView.tsx` |
-| C8 | Remove the licence open question | `PRODUCT.md` |
-| B5 | Welcome note stops naming deleted themes (issue #271) | A new migration replacing the trigger function from `create_welcome_note_trigger.sql`. Applied by hand |
+| C1 | The licence section says `MIT` (line 268). The repo is AGPL-3.0. Also remove coloured tags and the colour picker (lines 21-22, 218, the "Tag Colors" section), old starter notes and old theme names | `README.md` |
+| C3 | "I forgot my passphrase" says notes cannot be recovered. New answer: the recovery key opens the notes and lets you set a new passphrase; if both are lost, no one can restore them. Agree with the paragraph higher on the page | `src/components/SupportPage.tsx` line 131 |
+| C4 | "Additional OAuth providers" lists GitHub as exploring. GitHub sign-in is live. Remove GitHub; Apple stays | `src/data/roadmap.ts` |
+| C5 | "Usage analytics" reads like tracking. Say it is computed on the device and nothing leaves it, or remove it | `src/data/roadmap.ts` |
+| C6 | Remove "Testing coverage expansion". Move "Image attachments" and "Virtual scrolling" from coming soon to exploring; neither is committed. Add "Encrypted tag names" under exploring | `src/data/roadmap.ts` |
+| C7 | Replace "quiet space" with plain wording in the current voice. Leave `PlaygroundPage.tsx` unless users can reach it; say which | `ChapteredLibrary.tsx` line 232, `SharedNoteView.tsx` line 455 |
+| C8 | Remove the licence "Open question" bullet under "Evidence on hand" | `PRODUCT.md` |
+| B5 | The welcome note still says "light (Kintsugi) and dark (Midnight)" and mentions wabi-sabi (issue #271). Add a **new** migration replacing the trigger function. Do not edit `create_welcome_note_trigger.sql`. List the new migration in `verify_migration_state.sql`. The maintainer applies it by hand; say so in the PR | `supabase/migrations/` |
+| B10 | "+ Tag" wraps onto its own line on a phone. Keep it on the tag row | `src/components/TagFilterBar.tsx` |
+| B15 | **Unverified.** Buttons on shared letters and empty states should use `--radius-pill` | `SharedNoteView.tsx`, `ChapteredLibrary.tsx` |
+| C2 | **Do not change yet.** Support (line 140) and Privacy (line 215) say self-serve deletion is "paused for public launch". Check whether a flag or guard disables it. Report what you find. Change the copy only if a signed-in user can reach deletion with nothing in the way; then describe the real flow | `SupportPage.tsx`, `PrivacyPage.tsx` |
 
-Done when: no public page or the README contradicts the product. A grep for "MIT",
-"quiet space", "paused for public launch" and the old theme names returns nothing
-outside `docs/archive/` and `changelog.ts`.
+Done when: `rg -n "quiet space|Kintsugi|Midnight|wabi"` returns nothing outside
+`docs/archive/`, `changelog.ts` and old migrations; `README.md` has no "MIT"; a test
+fails if the public roadmap lists GitHub sign-in as not shipped; no lone "+ Tag" line at
+375px with three tags.
 
-Should not change: existing accounts' welcome notes. Returning demo visitors keep any
-starter they edited.
+Should not change: existing accounts' welcome notes, the demo starter notes, the tag
+row on desktop, any behaviour. Tests that assert the old copy are updated in this PR.
 
-### Step 2 · Phone and keyboard blockers
+Do not touch: `index.html`, `LandingPage.tsx`, the hero copy (track D); `Editor.tsx`,
+`EditorToolbar.tsx` (track B); any dialog (track C).
 
-Items B1, B2, B3. Days.
+## Track B · Editor
 
-| ID | Change | Done when |
-|---|---|---|
-| B1 | The "More commands" menu on a phone opens inside the screen. It is `position: fixed` inside a `backdrop-filter` ancestor, so it is placed against the toolbar, not the viewport | At 390 by 844 the whole menu is inside the viewport and every command can be tapped · E2E |
-| B2 | Dialogs take focus, hold it, make the page behind inert, and return focus on close (issue #257) | Tab from the sign-up dialog never reaches "New note" · component test and E2E |
-| B3 | Spring animations honour `prefers-reduced-motion` on touch (issue #258) | No spring runs with reduced motion on · unit test |
-
-Should not fire: the desktop command menu keeps its position. The menu still opens with
-the virtual keyboard up (needs the real-device pass, A6, to confirm). Focus is not
-trapped by non-modal surfaces: the toolbar, the tag picker, toasts. Escape still closes
-each dialog.
-
-### Step 3 · Practice space and small interface fixes
-
-Items B4, B7, B10, B15. Days.
+PR title: `Editor: phone menu, focus mode, undo, demo label (launch review track B)`.
+Days. Owns `Editor.tsx`, `EditorToolbar.tsx`, `EditorSidebar.tsx`,
+`src/editor/editorCommands.tsx`.
 
 | ID | Change | Done when |
 |---|---|---|
-| B4 | The sign-up prompt counts only notes the visitor wrote or edited | A visitor who changed nothing is not told "You've written 5 thoughts" · unit test |
-| B7 | The practice editor shows "Demo · saved in this browser · not encrypted" while writing | The label is visible in the practice editor and absent for a signed-in account · E2E |
-| B10 | "+ Tag" stays on the tag row on a phone | No lone "+ Tag" line at 375px with three tags · visual check |
-| B15 | Buttons on shared letters and empty states use the pill radius | Every button on those surfaces computes `--radius-pill` · check the claim first; it is unverified |
+| B1 | On a phone the "More editor commands" menu opens below the screen: at 390 by 844 it runs from y=790 to y=1618. It is `position: fixed` inside a `backdrop-filter` ancestor, so it is placed against the bottom toolbar, not the viewport (`EditorToolbar.tsx`, near line 91). Move it out of that ancestor or position it another way | At 390 by 844 the whole menu is inside the viewport and every command can be tapped · E2E |
+| B8 | Focus mode is only inside the command menu. Give it one visible, quiet control: in `EditorSidebar` on desktop and in the bottom toolbar on a phone, using the on-accent tokens when active | A new visitor can enter and leave focus mode without opening a menu · E2E |
+| B12 | **Unverified.** Undo after switching notes can alter the previous note (roadmap 114). Clear history when the note changes, without emitting an update | Undo after switching notes cannot change the previous note · unit test |
+| B7 | The practice editor does not say drafts are unencrypted. Show "Demo · saved in this browser · not encrypted" while writing there | The label shows in the practice editor and never for a signed-in account · E2E |
 
-Should not fire: the prompt does not appear behind an open dialog or in the editor
-mid-sentence. The "not encrypted" label never shows on an encrypted note.
+Should not fire: the desktop command menu keeps its position. The menu still closes on
+outside tap and Escape. Undo inside one note still works after an autosave. The
+focus-mode control adds nothing to note cards or the library. The "not encrypted" label
+never shows on an encrypted note. The manuscript glow stays a ref-based
+`requestAnimationFrame` handler with no re-renders. A failed save still keeps the draft.
 
-### Step 4 · Editor
+Not verified by this track: the menu with a real virtual keyboard up. That needs the
+real-device pass (launch gate A6). Say so in the PR.
 
-Items B12, B8. Days.
+Do not touch: dialog focus handling (track C), even for the dialog inside `Editor.tsx`.
+
+## Track C · Dialogs and motion
+
+PR title: `Dialogs hold focus; reduced motion; honest sign-up prompt (launch review track C)`.
+Days. Rebase onto track B before merging.
 
 | ID | Change | Done when |
 |---|---|---|
-| B12 | Undo history is per note (roadmap 114). Check the bug exists first; it is unverified | Undo after switching notes cannot alter the previous note · unit test |
-| B8 | Focus mode has one visible, quiet entry point outside the command menu | A new visitor can enter focus mode without opening a menu · E2E |
+| B2 | Dialogs do not hold keyboard focus (issue #257). Tab from the sign-up dialog lands on "New note" behind it. Every modal takes focus on open, holds it, makes the page behind inert and returns focus on close. Use one shared hook or component, not a copy per dialog. About 14 files render a dialog: `Auth`, `InvitationModal`, `ConflictModal`, `EncryptedConflictModal`, `BackupPassphraseModal`, `LettingGoModal`, `SessionTimeoutModal`, `KeyboardShortcutsModal`, `BottomSheet`, `IOSInstallGuide`, `InstallPrompt`, `FadedNotesView`, `LinkPopover`, and one inside `Editor.tsx` | Tab and Shift+Tab never leave an open modal; focus returns to the control that opened it · component test per dialog kind and one E2E |
+| B3 | Spring animations ignore `prefers-reduced-motion` on touch devices (issue #258) | No spring runs with reduced motion on · unit test |
+| B4 | The sign-up prompt says "You've written 5 thoughts here" to a visitor who wrote nothing. It counts the starter notes. Count only notes the visitor created or edited | A visitor who changed nothing is never told they wrote notes · unit test |
 
-Should not fire: undo within one note still works after an autosave. The focus-mode
-control adds no second control to note cards and does not show in the library.
+`Editor.tsx` belongs to track B. Apply the shared hook to the dialog inside it only
+after track B has merged, as the last commit of this PR. If B has not merged, leave
+that one dialog and list it in the PR.
 
-### Step 5 · Landing page
+Should not fire: focus is not trapped by non-modal surfaces: the toolbar, the tag
+picker, toasts, `LinkPopover` if it is a popover and not a modal. Escape still closes
+each dialog. A dialog opened from another dialog returns focus to the first. The
+sign-up prompt does not open behind another dialog or while the visitor is typing.
+`ReAuthModal` and the passphrase screens keep their current order of fields.
 
-Items D2, D3, D4, D5, D6, D7, D9. Weeks.
+## Track D · Landing page
 
-- **D2, D3, D4.** A new headline that names writing and privacy together. Shorter
+PR title: `Landing page: private writing, editor first (launch review track D)`. Weeks.
+Starts when the headline wording is picked.
+
+- **D2, D3, D4.** A new headline that names writing and privacy together. Candidates:
+  "A private notes app built around writing." · "Notes built around writing, encrypted
+  before they leave your device." · "Write freely. Only you can read it." Shorter
   supporting text. The claim is the writing workflow made private, not encryption
-  alone: Standard Notes and Notesnook already offer encrypted notes. The headline
-  claims only what the security page backs: titles and content are encrypted; tags,
-  dates and sizes are not.
+  alone: Standard Notes and Notesnook already offer encrypted notes. Claim only what
+  the security page backs: titles and content are encrypted; tags, dates and sizes are
+  not.
 - **D5.** The editor sheet is visible without scrolling on a laptop and starts higher
-  on a phone (it starts near y=700 at 390px today).
-- **D6.** Each sample note opens that note in the practice space.
+  on a phone. It starts near y=700 at 390px today.
+- **D6.** Each sample note opens that note in the practice space. Today all three call
+  the same handler and open the library (`LandingPage.tsx` line 188, `App.tsx`).
 - **D7.** One short section for what the page hides: chapters, search, Share as Letter,
   phone and offline use.
 - **D9.** A compact FAQ: browsers and installing, what is free and how it is paid for,
@@ -136,22 +174,24 @@ Done when: the sheet's top edge is inside the first screen at 1280 by 800 and at
 
 Constraints: `index.html`'s landing shell mirrors `LandingPage.tsx`, so both change
 together. `public/boot.js` and the first-visit budget still hold; the budget check must
-pass. No testimonials, counts or press. The headline change ships with its
-`DECISIONS.md` entry, the page title, the share text and a redrawn share image
-(`scripts/brand/flatten.py`, with the `og:image` version bumped).
+pass. The headline reverses the 2026-11-10 decision, so this PR appends a
+`DECISIONS.md` entry and changes the page title, the share text and the share image
+(`scripts/brand/flatten.py`, with the `og:image` version bumped) together.
 
 Should not fire: a signed-in visitor still goes to the app shell, not the landing page.
-The sample links do not create a second copy of a starter the visitor already edited.
+A sample link does not create a second copy of a starter the visitor already edited.
 
-### Step 6 · Quick capture
-
-Item E5: roadmap 44, then 47. Blocked on question 3.
-
-### Step 7 · Passkey unlock
+## Track E · Passkey unlock
 
 Item E1: roadmap 135. Weeks. Its needs (items 24 and 26) have shipped. Measure WebAuthn
-PRF support in the target browsers first. The passphrase stays as the fallback. Touches
-encryption and auth, so it gets the multi-agent review.
+PRF support in the target browsers first. The passphrase stays as the fallback. It
+touches encryption and auth, so it gets the multi-agent review.
+
+## Track F · Quick capture
+
+Item E5: roadmap 44, then 47. Blocked on open question 3.
+
+---
 
 ## Later items with no home
 
