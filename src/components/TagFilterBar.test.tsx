@@ -122,12 +122,14 @@ describe('TagFilterBar', () => {
       expect(screen.queryByRole('button', { name: 'Collapse tags' })).toBeNull();
 
       // Edit controls stay reachable via programmatic focus and click on narrow screens,
-      // and expand on hover and focus (not only focus-visible).
+      // and expand on hover, group-focus-within, and focus (not only focus-visible).
       const editButtons = screen.getAllByRole('button', { name: 'Edit tag' });
       expect(editButtons).toHaveLength(3);
       editButtons[0].focus();
       expect(editButtons[0]).toHaveFocus();
       expect(editButtons[0].className).toMatch(/\bgroup-hover:w-7\b/);
+      expect(editButtons[0].className).toMatch(/\bgroup-focus-within:w-7\b/);
+      expect(editButtons[0].className).toMatch(/\bgroup-focus-within:opacity-100\b/);
       expect(editButtons[0].className).toMatch(/\bfocus:w-7\b/);
       expect(editButtons[0].className).toMatch(/\bfocus:opacity-100\b/);
 
@@ -137,6 +139,28 @@ describe('TagFilterBar', () => {
 
       await user.click(screen.getByRole('button', { name: 'Add tag' }));
       expect(props.onAddTag).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalWidth });
+    }
+  });
+
+  it('expands the active tag edit button at 375px for touch phones while keeping unselected tags compact', () => {
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 375 });
+    try {
+      renderBar(['b']);
+      const editButtons = screen.getAllByRole('button', { name: 'Edit tag' });
+      // Selected tag ("Ideas") reveals its edit button on phones (hover: none).
+      expect(editButtons[1].className).toMatch(/(^|\s)w-7(\s|$)/);
+      expect(editButtons[1].className).toMatch(/(^|\s)overflow-visible(\s|$)/);
+      expect(editButtons[1].className).toMatch(/\bmax-sm:opacity-100\b/);
+      expect(editButtons[1].className).not.toMatch(/(^|\s)w-0(\s|$)/);
+
+      // Unselected tags ("Journal", "Reading") stay compact below sm.
+      for (const inactiveEdit of [editButtons[0], editButtons[2]]) {
+        expect(inactiveEdit.className).toMatch(/(^|\s)w-0(\s|$)/);
+        expect(inactiveEdit.className).not.toMatch(/(^|\s)w-7(\s|$)/);
+      }
     } finally {
       Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalWidth });
     }

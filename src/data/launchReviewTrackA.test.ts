@@ -98,10 +98,10 @@ describe('Launch review track A — public copy and polish invariants', () => {
     it('checks that on_auth_user_created and public.create_welcome_note are absent without recreating them', () => {
       const sql = read('supabase/migrations/verify_migration_state.sql');
       expect(sql).toMatch(
-        /\('no obsolete on_auth_user_created trigger',\s*NOT EXISTS\s*\([\s\S]*?on_auth_user_created[\s\S]*?\)\)/
+        /\('no obsolete on_auth_user_created trigger',\s*NOT EXISTS\s*\([^)]*on_auth_user_created[^)]*\)\)/
       );
       expect(sql).toMatch(
-        /\('no obsolete create_welcome_note function',\s*NOT EXISTS\s*\([\s\S]*?create_welcome_note[\s\S]*?\)\)/
+        /\('no obsolete create_welcome_note function',\s*NOT EXISTS\s*\([^)]*create_welcome_note[^)]*\)\)/
       );
       expect(sql).not.toMatch(/CREATE\s+(OR\s+REPLACE\s+)?(TRIGGER|FUNCTION)/i);
     });

@@ -257,6 +257,9 @@ test.describe('Tag row at 375 px', () => {
       expect(Math.abs(box.y - allBox.y)).toBeLessThan(4);
     }
     expect(addBox.x).toBeGreaterThan(readingBox.x);
+    // All items, including "+ Tag", fit inside the 375px viewport without scrolling.
+    expect(allBox.x).toBeGreaterThanOrEqual(0);
+    expect(addBox.x + addBox.width).toBeLessThanOrEqual(375);
 
     // No page-level horizontal overflow.
     const pageScrolls = await page.evaluate(
