@@ -250,6 +250,48 @@ test.describe('editor fluency', () => {
     await expect(page.getByTestId('note-editor')).toBeVisible();
   });
 
+  test('narrow phone bottom toolbar at 320px and 360px keeps 36px targets inside the viewport with Undo and Redo in the overflow menu', async ({ page }) => {
+    await openBlankPracticeNote(page);
+
+    for (const width of [320, 360]) {
+      await page.setViewportSize({ width, height: 844 });
+      const toolbar = page.locator('.editor-toolbar-bottom');
+      await expect(toolbar).toBeVisible();
+
+      // Undo and Redo move into the overflow menu below 380px so the remaining 7 buttons fit at full size.
+      await expect(toolbar.locator('[data-command-id="undo"]')).toBeHidden();
+      await expect(toolbar.locator('[data-command-id="redo"]')).toBeHidden();
+
+      const visibleButtons = toolbar.locator('button:visible');
+      await expect(visibleButtons).toHaveCount(7);
+      for (const button of await visibleButtons.all()) {
+        const box = await button.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.width).toBeGreaterThanOrEqual(36);
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+      }
+
+      const moreButton = toolbar.getByRole('button', { name: 'More editor commands' });
+      const moreBox = await moreButton.boundingBox();
+      expect(moreBox).not.toBeNull();
+      expect(moreBox!.x + moreBox!.width).toBeLessThanOrEqual(width);
+
+      await moreButton.click();
+      const menu = page.getByRole('menu', { name: 'All editor commands' });
+      await expect(menu).toBeVisible();
+
+      for (const id of ['undo', 'redo'] as const) {
+        const item = menu.locator(`[data-command-id="${id}"]`);
+        await item.scrollIntoViewIfNeeded();
+        await expect(item).toBeVisible();
+      }
+
+      await page.keyboard.press('Escape');
+      await expect(menu).not.toBeVisible();
+    }
+  });
+
   test('capped command menu at 1366x650 scrolls without snapping back and reaches the last item by pointer and arrow keys', async ({ page, isMobile }) => {
     await page.setViewportSize({ width: 1366, height: 650 });
     await openBlankPracticeNote(page);

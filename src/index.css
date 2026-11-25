@@ -1684,19 +1684,16 @@ textarea:focus,
   width: min(100%, 30rem);
   margin-inline: auto;
   justify-content: center;
-  overflow-x: auto;
-  scrollbar-width: none;
 }
 
-.editor-command-toolbar[data-variant="bottom"]::-webkit-scrollbar {
-  display: none;
-}
-
-@media (max-width: 380px) {
-  .editor-command-toolbar[data-variant="bottom"] {
-    justify-content: flex-start;
-    padding: 6px 4px;
-    gap: 1px;
+/* Under 380px (320px–375px phones), nine 36px buttons exceed the bar width and
+   push "More editor commands" past the right edge. Hide Undo/Redo from the bar
+   (both stay inside the portaled overflow menu) so the remaining seven controls
+   stay at full 36px width and fit cleanly inside 320px. */
+@media (max-width: 379px) {
+  .editor-command-toolbar[data-variant="bottom"] [data-command-id="undo"],
+  .editor-command-toolbar[data-variant="bottom"] [data-command-id="redo"] {
+    display: none;
   }
 }
 
