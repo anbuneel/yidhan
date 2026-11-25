@@ -4,7 +4,6 @@ import type { DerivedKeys } from '../lib/encryption';
 import { ErrorBoundary } from './ErrorBoundary';
 import { WelcomeBackPrompt } from './WelcomeBackPrompt';
 import { InstallPrompt } from './InstallPrompt';
-import { IOSInstallGuide } from './IOSInstallGuide';
 import { SessionTimeoutModal } from './SessionTimeoutModal';
 import { EncryptedConflictModal as ConflictModal } from './EncryptedConflictModal';
 import { ImportProgressOverlay, type ImportProgress } from './ImportProgressOverlay';
@@ -15,6 +14,9 @@ import type { useSessionSettings } from '../hooks/useSessionSettings';
 import type { useVaultSettings } from '../hooks/useVaultSettings';
 import type { useSyncEngine } from '../hooks/useSyncEngine';
 
+const IOSInstallGuide = lazyWithRetry(() =>
+  import('./IOSInstallGuide').then((m) => ({ default: m.IOSInstallGuide }))
+);
 const TagModal = lazyWithRetry(() => import('./TagModal').then((m) => ({ default: m.TagModal })));
 const SettingsModal = lazyWithRetry(() =>
   import('./SettingsModal').then((m) => ({ default: m.SettingsModal }))
@@ -184,7 +186,13 @@ export function AppModals(props: AppModalsProps) {
         <InstallPrompt onInstall={props.onInstall} onDismiss={props.onDismissInstall} />
       )}
 
-      {props.shouldShowIOSGuide && <IOSInstallGuide onDismiss={props.onDismissIOSGuide} />}
+      {props.shouldShowIOSGuide && (
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <IOSInstallGuide onDismiss={props.onDismissIOSGuide} />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       <SessionTimeoutModal
         isOpen={props.showSessionTimeoutModal}

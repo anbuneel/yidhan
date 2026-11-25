@@ -191,9 +191,12 @@ describe('Practice Space sign-up prompt count and guards (B4)', () => {
     });
     expect(screen.queryByTestId('prompt-open')).toBeNull();
 
-    // Pointer down blurs the input first: prompt must NOT mount synchronously before click fires.
+    // Pointer down blurs the input and focuses the target button before mouseup/click:
+    // prompt must NOT mount synchronously during focusout or focusin(button).
     act(() => {
       fireEvent.focusOut(input, { relatedTarget: cardBtn });
+      cardBtn.focus();
+      fireEvent.focusIn(cardBtn);
     });
     expect(screen.queryByTestId('prompt-open')).toBeNull();
 
@@ -202,7 +205,6 @@ describe('Practice Space sign-up prompt count and guards (B4)', () => {
 
     // After the short defer window, the prompt can open if focus is not back in an input.
     act(() => {
-      cardBtn.focus();
       vi.advanceTimersByTime(250);
     });
     expect(screen.getByTestId('prompt-open')).toBeInTheDocument();

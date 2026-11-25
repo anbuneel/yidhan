@@ -498,6 +498,31 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     }
   });
 
+  it('IOSInstallGuide cancels its entrance timer if dismissed before 300ms', async () => {
+    vi.useFakeTimers();
+    try {
+      const onDismiss = vi.fn();
+      render(<IOSInstallGuide onDismiss={onDismiss} />);
+
+      // Dismiss before the 300ms entrance delay elapses.
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText('Close guide'));
+        await vi.advanceTimersByTimeAsync(350);
+      });
+
+      // The cancelled entrance timer must not flip it back to visible.
+      const backdrop = screen.getByLabelText('Dismiss iOS install guide').parentElement!;
+      expect(backdrop.className).toContain('opacity-0');
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('TagModal focuses name input, holds focus, and returns focus on Escape', async () => {
     await expectModalContainment((open, close) => (
       <TagModal

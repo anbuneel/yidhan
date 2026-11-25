@@ -95,20 +95,31 @@ export function useSoftPrompt({
         blurTimerRef.current = null;
       }
     };
-    const handleFocusIn = (event: FocusEvent) => {
-      clearPendingBlur();
-      setIsTyping(isEditableElement(event.target));
-    };
-    const handleFocusOut = (event: FocusEvent) => {
-      clearPendingBlur();
-      if (isEditableElement(event.relatedTarget)) {
-        setIsTyping(true);
-        return;
-      }
+    const scheduleClearTyping = () => {
+      if (blurTimerRef.current !== null) return;
       blurTimerRef.current = setTimeout(() => {
         blurTimerRef.current = null;
         setIsTyping(isEditableElement(document.activeElement));
       }, 200);
+    };
+    const handleFocusIn = (event: FocusEvent) => {
+      if (isEditableElement(event.target)) {
+        clearPendingBlur();
+        setIsTyping(true);
+      } else {
+        // Leave an active blur timer running (or start one) so a pointer click
+        // sequence (mousedown -> focusout -> focusin -> mouseup -> click) completes
+        // before InvitationModal can mount and swallow the click.
+        scheduleClearTyping();
+      }
+    };
+    const handleFocusOut = (event: FocusEvent) => {
+      if (isEditableElement(event.relatedTarget)) {
+        clearPendingBlur();
+        setIsTyping(true);
+        return;
+      }
+      scheduleClearTyping();
     };
     document.addEventListener('focusin', handleFocusIn);
     document.addEventListener('focusout', handleFocusOut);

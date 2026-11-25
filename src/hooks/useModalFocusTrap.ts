@@ -35,9 +35,7 @@ function isFocusable(el: HTMLElement): boolean {
   if (el.tabIndex < 0) return false;
   if (el.closest('[hidden], [inert]')) return false;
 
-  if (el.tagName === 'SUMMARY') {
-    if (el.parentElement?.tagName !== 'DETAILS') return false;
-  }
+  if (el.tagName === 'SUMMARY' && el.parentElement?.tagName !== 'DETAILS') return false;
 
   // Elements inside a closed <details> (other than its direct <summary>) cannot take focus.
   let ancestor = el.parentElement;
@@ -50,9 +48,7 @@ function isFocusable(el: HTMLElement): boolean {
   }
 
   const style = window.getComputedStyle(el);
-  if (style.display === 'none' || style.visibility === 'hidden') return false;
-
-  return true;
+  return style.display !== 'none' && style.visibility !== 'hidden';
 }
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
@@ -61,6 +57,23 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
 
 function getTopEntry(): ModalStackEntry | undefined {
   return modalStack[modalStack.length - 1];
+}
+
+function focusInside(dialogEl: HTMLElement, preferred?: HTMLElement | null): void {
+  if (preferred && dialogEl.contains(preferred) && isFocusable(preferred)) {
+    preferred.focus();
+    return;
+  }
+  if (dialogEl.contains(document.activeElement)) return;
+  const firstFocusable = getFocusableElements(dialogEl)[0];
+  if (firstFocusable) {
+    firstFocusable.focus();
+  } else {
+    if (!dialogEl.hasAttribute('tabindex')) {
+      dialogEl.setAttribute('tabindex', '-1');
+    }
+    dialogEl.focus();
+  }
 }
 
 function restoreElementInert(el: HTMLElement, saved: SavedInertState): void {
@@ -215,7 +228,7 @@ export interface UseModalFocusTrapOptions {
   /**
    * Optional key that changes when the underlying dialog DOM element swaps while
    * remaining open (for example, BottomSheet switching between desktop and mobile).
-   * Re-registers the new node without losing the original opener.
+   * Updates the existing stack entry in place without reordering stacked modals.
    */
   nodeKey?: unknown;
 }
@@ -235,37 +248,19 @@ export function useModalFocusTrap<T extends HTMLElement = HTMLDialogElement>({
 }: UseModalFocusTrapOptions): RefObject<T | null> {
   const internalRef = useRef<T | null>(null);
   const activeRef = (externalRef as RefObject<T | null> | undefined) ?? internalRef;
-  const openerRef = useRef<HTMLElement | null>(null);
-  const isOpenRef = useRef(isOpen);
-  const wasOpenRef = useRef(false);
-  isOpenRef.current = isOpen;
+  const entryRef = useRef<ModalStackEntry | null>(null);
 
   const onEscapeEvent = useEffectEvent(() => {
     onClose?.();
   });
   const canEscapeEvent = useEffectEvent(() => Boolean(onClose));
 
-  const restoreOpener = () => {
-    const opener = openerRef.current;
-    openerRef.current = null;
-    wasOpenRef.current = false;
-    if (opener && opener !== document.body && opener.isConnected && !opener.closest('[inert]')) {
-      opener.focus();
-    }
-  };
-
   useEffect(() => {
     if (!isOpen) return;
     const dialogEl = activeRef.current;
     if (!dialogEl) return;
 
-    // Capture the original opener once per open lifecycle so swapping the dialog
-    // DOM node mid-session (e.g. responsive BottomSheet flip) preserves it.
-    if (!wasOpenRef.current) {
-      wasOpenRef.current = true;
-      openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    }
-
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const entry: ModalStackEntry = {
       id: Symbol('modal'),
       dialogEl,
@@ -273,27 +268,14 @@ export function useModalFocusTrap<T extends HTMLElement = HTMLDialogElement>({
       canEscape: () => canEscapeEvent(),
     };
 
+    entryRef.current = entry;
     modalStack.push(entry);
     attachGlobalListener();
     syncModalLayers();
-
-    // Move focus into the dialog on open (or into the swapped node if focus fell outside).
-    const preferred = initialFocusRef?.current;
-    if (preferred && dialogEl.contains(preferred) && isFocusable(preferred)) {
-      preferred.focus();
-    } else if (!dialogEl.contains(document.activeElement)) {
-      const firstFocusable = getFocusableElements(dialogEl)[0];
-      if (firstFocusable) {
-        firstFocusable.focus();
-      } else {
-        if (!dialogEl.hasAttribute('tabindex')) {
-          dialogEl.setAttribute('tabindex', '-1');
-        }
-        dialogEl.focus();
-      }
-    }
+    focusInside(dialogEl, initialFocusRef?.current);
 
     return () => {
+      entryRef.current = null;
       const index = modalStack.findIndex((item) => item.id === entry.id);
       if (index !== -1) {
         modalStack.splice(index, 1);
@@ -301,21 +283,30 @@ export function useModalFocusTrap<T extends HTMLElement = HTMLDialogElement>({
       syncModalLayers();
       detachGlobalListenerIfEmpty();
 
-      if (!isOpenRef.current) {
-        restoreOpener();
+      if (opener && opener !== document.body && opener.isConnected && !opener.closest('[inert]')) {
+        opener.focus();
       }
     };
-  }, [isOpen, nodeKey, activeRef, initialFocusRef]);
+  }, [isOpen, activeRef, initialFocusRef]);
 
-  // If the modal component unmounts while `isOpen` is still true (e.g. conditional render),
-  // restore focus to the opener after the main cleanup above has popped the stack and un-inerted.
+  // Update the existing stack entry in place if the dialog DOM node swaps while open,
+  // preserving stack position when covered by another modal.
   useEffect(() => {
-    return () => {
-      if (wasOpenRef.current) {
-        restoreOpener();
-      }
-    };
-  }, []);
+    const entry = entryRef.current;
+    const dialogEl = activeRef.current;
+    if (!isOpen || !entry || !dialogEl || entry.dialogEl === dialogEl) return;
+
+    const prevEl = entry.dialogEl;
+    if (managedAriaModal.has(prevEl)) {
+      managedAriaModal.delete(prevEl);
+    }
+    entry.dialogEl = dialogEl;
+    syncModalLayers();
+
+    if (getTopEntry() === entry) {
+      focusInside(dialogEl, initialFocusRef?.current);
+    }
+  }, [isOpen, nodeKey, activeRef, initialFocusRef]);
 
   return activeRef;
 }

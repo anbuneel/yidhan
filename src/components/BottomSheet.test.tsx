@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BottomSheet } from './BottomSheet';
+import { SessionTimeoutModal } from './SessionTimeoutModal';
 
 const { mobileState } = vi.hoisted(() => ({
   mobileState: { value: false },
@@ -150,5 +151,41 @@ describe('BottomSheet focus', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(document.activeElement).toBe(opener);
+  });
+
+  it('does not steal focus or reorder the stack when isMobile flips while covered by another modal', async () => {
+    function StackedHarness({ showTop }: { showTop: boolean }) {
+      return (
+        <>
+          <button type="button">Behind all</button>
+          <BottomSheet isOpen onClose={vi.fn()} title="Settings">
+            <button type="button">Inside sheet</button>
+          </BottomSheet>
+          <SessionTimeoutModal
+            isOpen={showTop}
+            onStay={vi.fn()}
+            onSignOut={vi.fn()}
+            minutesRemaining={2}
+          />
+        </>
+      );
+    }
+
+    const { rerender } = render(<StackedHarness showTop={false} />);
+    await screen.findByRole('dialog', { name: 'Settings' });
+
+    // Open a covering modal on top of BottomSheet.
+    rerender(<StackedHarness showTop />);
+    const topDialog = screen.getByRole('dialog', { name: 'A gentle pause' });
+    expect(topDialog.contains(document.activeElement)).toBe(true);
+
+    // Flip isMobile while BottomSheet is covered: top modal must stay active and focused.
+    mobileState.value = true;
+    rerender(<StackedHarness showTop />);
+
+    expect(topDialog.contains(document.activeElement)).toBe(true);
+    expect(topDialog).toHaveAttribute('aria-modal', 'true');
+    expect(topDialog.closest('[inert]')).toBeNull();
+    expect(screen.getByText('Inside sheet').closest('[inert]')).not.toBeNull();
   });
 });

@@ -75,6 +75,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
   const [isVisible, setIsVisible] = useState(reducedMotion);
   const [currentStep, setCurrentStep] = useState(0);
   const dismissingRef = useRef(false);
+  const entranceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Detect browser once on mount
@@ -94,8 +95,18 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
   // Animate in after short delay (immediately when reduced motion is enabled)
   useEffect(() => {
     if (reducedMotion) return;
-    const timer = setTimeout(() => setIsVisible(true), ENTRANCE_DELAY);
-    return () => clearTimeout(timer);
+    entranceTimerRef.current = setTimeout(() => {
+      entranceTimerRef.current = null;
+      if (!dismissingRef.current) {
+        setIsVisible(true);
+      }
+    }, ENTRANCE_DELAY);
+    return () => {
+      if (entranceTimerRef.current !== null) {
+        clearTimeout(entranceTimerRef.current);
+        entranceTimerRef.current = null;
+      }
+    };
   }, [reducedMotion]);
 
   // Clear pending dismiss timer on unmount
@@ -111,6 +122,10 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
   const handleDismiss = () => {
     if (dismissingRef.current) return;
     dismissingRef.current = true;
+    if (entranceTimerRef.current !== null) {
+      clearTimeout(entranceTimerRef.current);
+      entranceTimerRef.current = null;
+    }
     setIsVisible(false);
     if (prefersReducedMotion()) {
       onDismiss();
