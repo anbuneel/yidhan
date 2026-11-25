@@ -130,4 +130,67 @@ describe('EditorToolbar', () => {
       expect(onToggleFocusMode).toHaveBeenCalledTimes(2);
     },
   );
+
+  it('closes the portaled overflow menu when focus mode activates', () => {
+    editor = new Editor({ extensions: [StarterKit, SmartTypography], content: '<p>Words</p>' });
+    const { rerender } = render(
+      <EditorToolbar editor={editor as unknown as ReactEditor} variant="bottom" isFocusMode={false} />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'More editor commands' }));
+    expect(screen.getByRole('menu', { name: 'All editor commands' })).toBeInTheDocument();
+
+    rerender(
+      <EditorToolbar editor={editor as unknown as ReactEditor} variant="bottom" isFocusMode={true} />,
+    );
+    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+
+    // Leaving focus mode does not re-open the menu.
+    rerender(
+      <EditorToolbar editor={editor as unknown as ReactEditor} variant="bottom" isFocusMode={false} />,
+    );
+    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+  });
+
+  it('closes the portaled overflow menu when a resize hides the owning toolbar', () => {
+    editor = new Editor({ extensions: [StarterKit, SmartTypography], content: '<p>Words</p>' });
+    const { container } = render(
+      <div data-testid="toolbar-host">
+        <EditorToolbar editor={editor as unknown as ReactEditor} variant="bottom" />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'More editor commands' }));
+    expect(screen.getByRole('menu', { name: 'All editor commands' })).toBeInTheDocument();
+
+    const host = container.querySelector('[data-testid="toolbar-host"]') as HTMLElement;
+    host.style.display = 'none';
+    fireEvent(window, new Event('resize'));
+    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+  });
+
+  it('closes the portaled overflow menu on Tab and when focus moves outside', () => {
+    editor = new Editor({ extensions: [StarterKit, SmartTypography], content: '<p>Words</p>' });
+    render(
+      <div>
+        <button type="button">Outside target</button>
+        <EditorToolbar editor={editor as unknown as ReactEditor} variant="bottom" />
+      </div>,
+    );
+
+    const trigger = screen.getByRole('button', { name: 'More editor commands' });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('menu', { name: 'All editor commands' })).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+
+    fireEvent.click(trigger);
+    expect(screen.getByRole('menu', { name: 'All editor commands' })).toBeInTheDocument();
+
+    const outside = screen.getByRole('button', { name: 'Outside target' });
+    fireEvent.focusIn(outside);
+    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+  });
 });

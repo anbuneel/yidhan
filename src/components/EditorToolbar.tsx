@@ -70,11 +70,28 @@ interface OverflowMenuProps {
   direction: EditorMenuDirection;
 }
 
+function isElementVisible(element: HTMLElement): boolean {
+  if (!element.isConnected) return false;
+  if (typeof element.checkVisibility === 'function') {
+    return element.checkVisibility();
+  }
+  for (let node: HTMLElement | null = element; node; node = node.parentElement) {
+    const style = window.getComputedStyle(node);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+  }
+  return true;
+}
+
 function OverflowMenu({ context, direction }: OverflowMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Close immediately when focus mode hides the toolbars (e.g. Ctrl+Shift+F).
+  if (isOpen && context.isFocusMode) {
+    setIsOpen(false);
+  }
 
   useLayoutEffect(() => {
     if (!isOpen) return;
@@ -86,14 +103,28 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
       }
       setIsOpen(false);
     };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      event.stopPropagation();
+    const handleFocusIn = (event: FocusEvent) => {
+      const target = event.target as Node | null;
+      if (target && (menuRef.current?.contains(target) || panelRef.current?.contains(target))) {
+        return;
+      }
       setIsOpen(false);
-      triggerRef.current?.focus();
     };
-    const positionPanel = () => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    const syncPosition = () => {
       if (!triggerRef.current || !panelRef.current) return;
       const position = getEditorMenuPosition(
         triggerRef.current.getBoundingClientRect(),
@@ -111,12 +142,21 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
       });
       panelRef.current.dataset.placement = position.placement;
     };
+    const positionPanel = () => {
+      if (!triggerRef.current || !panelRef.current) return;
+      if (!isElementVisible(triggerRef.current)) {
+        setIsOpen(false);
+        return;
+      }
+      syncPosition();
+    };
 
     document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('focusin', handleFocusIn);
     document.addEventListener('keydown', handleKeyDown, true);
     document.addEventListener('scroll', positionPanel, true);
     window.addEventListener('resize', positionPanel);
-    positionPanel();
+    syncPosition();
     const frame = requestAnimationFrame(() => {
       positionPanel();
       panelRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
@@ -124,6 +164,7 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
     return () => {
       cancelAnimationFrame(frame);
       document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('focusin', handleFocusIn);
       document.removeEventListener('keydown', handleKeyDown, true);
       document.removeEventListener('scroll', positionPanel, true);
       window.removeEventListener('resize', positionPanel);
@@ -140,7 +181,10 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
         aria-expanded={isOpen}
         aria-haspopup="menu"
         data-active={isOpen || undefined}
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={() => {
+          if (context.isFocusMode) return;
+          setIsOpen((open) => !open);
+        }}
       >
         <svg aria-hidden="true" className="size-4" fill="currentColor" viewBox="0 0 24 24">
           <circle cx="5" cy="12" r="1.6" />

@@ -156,4 +156,28 @@ describe('RichTextEditor extensions', () => {
     editor.commands.undo();
     expect(editor.getText()).toBe('Alpha');
   });
+
+  it('updates the animated placeholder when switching between empty and populated notes', async () => {
+    const ready = vi.fn<(editor: Editor) => void>();
+    const view = render(
+      <RichTextEditor noteId="note-empty" content="<p></p>" onChange={vi.fn()} onEditorReady={ready} />,
+    );
+    await waitFor(() => expect(ready).toHaveBeenCalled());
+
+    expect(view.container.querySelector('.animated-placeholder')).toBeInTheDocument();
+
+    view.rerender(
+      <RichTextEditor noteId="note-full" content="<p>Populated note</p>" onChange={vi.fn()} onEditorReady={ready} />,
+    );
+    await waitFor(() => {
+      expect(view.container.querySelector('.animated-placeholder')).not.toBeInTheDocument();
+    });
+
+    view.rerender(
+      <RichTextEditor noteId="note-empty-2" content="<p></p>" onChange={vi.fn()} onEditorReady={ready} />,
+    );
+    await waitFor(() => {
+      expect(view.container.querySelector('.animated-placeholder')).toBeInTheDocument();
+    });
+  });
 });

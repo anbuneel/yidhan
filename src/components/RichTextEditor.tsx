@@ -1,4 +1,4 @@
-import { useEditor, EditorContent, type Editor } from '@tiptap/react';
+import { useEditor, useEditorState, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TextAlign from '@tiptap/extension-text-align';
@@ -153,9 +153,13 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
     },
   });
 
-  // Animated placeholder state
+  // Animated placeholder state — subscribe to editor transactions so note switches
+  // (which use setContent with emitUpdate: false) refresh emptiness immediately.
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const isEditorEmpty = editor?.isEmpty ?? true;
+  const isEditorEmpty = useEditorState({
+    editor,
+    selector: ({ editor: instance }) => instance?.isEmpty ?? true,
+  }) ?? true;
 
   // Rotate placeholder message every 30 seconds when editor is empty
   useEffect(() => {

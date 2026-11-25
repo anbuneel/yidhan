@@ -1,5 +1,6 @@
 const VIEWPORT_MARGIN = 8;
 const ANCHOR_GAP = 8;
+const MIN_SIDE_MAX_HEIGHT = 120;
 
 interface Rectangle {
   top: number;
@@ -30,9 +31,10 @@ export function getEditorMenuPosition(
   viewport: { width: number; height: number },
   preferredDirection: EditorMenuDirection,
 ): EditorMenuPosition {
-  const maxHeight = Math.max(0, viewport.height - (VIEWPORT_MARGIN * 2));
+  const viewportMaxHeight = Math.max(0, viewport.height - (VIEWPORT_MARGIN * 2));
   const renderedWidth = Math.min(menu.width, Math.max(0, viewport.width - (VIEWPORT_MARGIN * 2)));
-  const renderedHeight = Math.min(menu.height, maxHeight);
+  let maxHeight = viewportMaxHeight;
+  let renderedHeight = Math.min(menu.height, maxHeight);
   let placement: EditorMenuPlacement;
   let idealLeft: number;
   let idealTop: number;
@@ -46,13 +48,20 @@ export function getEditorMenuPosition(
       : anchor.left - ANCHOR_GAP - renderedWidth;
     idealTop = anchor.top;
   } else {
-    const spaceBelow = viewport.height - anchor.bottom - ANCHOR_GAP - VIEWPORT_MARGIN;
-    const spaceAbove = anchor.top - ANCHOR_GAP - VIEWPORT_MARGIN;
+    const spaceBelow = Math.max(0, viewport.height - anchor.bottom - ANCHOR_GAP - VIEWPORT_MARGIN);
+    const spaceAbove = Math.max(0, anchor.top - ANCHOR_GAP - VIEWPORT_MARGIN);
     const preferBelow = preferredDirection === 'down';
     const useBelow = preferBelow
       ? spaceBelow >= renderedHeight || spaceBelow >= spaceAbove
       : !(spaceAbove >= renderedHeight || spaceAbove >= spaceBelow);
     placement = useBelow ? 'below' : 'above';
+    // Cap height to the chosen side's available space on short viewports so the
+    // menu does not overlap the toolbar it opened from.
+    const availableSpace = placement === 'below' ? spaceBelow : spaceAbove;
+    if (availableSpace >= MIN_SIDE_MAX_HEIGHT) {
+      maxHeight = Math.min(viewportMaxHeight, availableSpace);
+      renderedHeight = Math.min(menu.height, maxHeight);
+    }
     idealLeft = anchor.right - renderedWidth;
     idealTop = placement === 'below'
       ? anchor.bottom + ANCHOR_GAP
