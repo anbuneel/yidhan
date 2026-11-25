@@ -37,4 +37,24 @@ describe('SupportPage', () => {
     render(<SupportPage {...nav} />);
     expect(document.body).not.toHaveTextContent(/donat|sponsor|patreon|fund|tip jar|buy me/i);
   });
+
+  it('explains that the recovery key opens notes and lets you set a new passphrase', () => {
+    render(<SupportPage {...nav} />);
+    const heading = screen.getByRole('heading', { name: /I forgot my passphrase/i });
+    const answer = heading.nextElementSibling;
+    expect(answer).toHaveTextContent(/recovery key/i);
+    expect(answer).toHaveTextContent(/opens your notes and lets you set a new passphrase/i);
+    expect(answer).toHaveTextContent(/lose both your passphrase and your recovery key/i);
+    expect(answer).not.toHaveTextContent(/Without it, your encrypted notes cannot be decrypted/i);
+  });
+
+  it('describes the live self-serve account deletion flow instead of saying it is paused', () => {
+    render(<SupportPage {...nav} />);
+    const heading = screen.getByRole('heading', { name: /How do I delete my account/i });
+    const answer = heading.nextElementSibling;
+    expect(answer).toHaveTextContent(/Settings/i);
+    expect(answer).toHaveTextContent(/Let go of Yidhan/i);
+    expect(answer).toHaveTextContent(/14-day grace period/i);
+    expect(answer).not.toHaveTextContent(/paused for public launch/i);
+  });
 });

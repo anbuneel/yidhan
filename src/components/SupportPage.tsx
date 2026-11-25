@@ -129,7 +129,7 @@ export function SupportPage({
                 {[
                   {
                     q: 'I forgot my passphrase. Can you recover my notes?',
-                    a: 'No. Your passphrase is never sent to our servers — it stays on your device. Without it, your encrypted notes cannot be decrypted. This is by design: real end-to-end encryption means no one (including us) can access your data without your passphrase.',
+                    a: 'Use the recovery key you saved during setup — it opens your notes and lets you set a new passphrase. Your passphrase never leaves your device, so if you lose both your passphrase and your recovery key, no one (including Yidhan) can restore your notes.',
                   },
                   {
                     q: 'How do I export my notes?',
@@ -137,7 +137,7 @@ export function SupportPage({
                   },
                   {
                     q: 'How do I delete my account?',
-                    a: 'Account deletion is paused for public launch until the server-owned deletion workflow is available. Export your notes from Settings first; then contact support if you need account removal before the self-serve flow returns.',
+                    a: 'Open Settings, go to the Profile tab, and select "Let go of Yidhan". You can export your notes first, then confirm with your password (or a one-time email code if you sign in with Google or GitHub). Your account is scheduled for permanent deletion after a 14-day grace period; sign back in before then to cancel.',
                   },
                   {
                     q: 'Does Yidhan work offline?',

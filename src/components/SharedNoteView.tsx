@@ -236,7 +236,6 @@ export function SharedNoteView({
               onClick={onInvalidToken}
               className="
                 px-5 py-2.5
-                rounded-lg
                 text-sm font-medium
                 transition-all duration-200
               "
@@ -244,6 +243,7 @@ export function SharedNoteView({
                 fontFamily: 'var(--font-body)',
                 color: 'var(--color-cta-text)',
                 background: 'var(--color-cta-bg)',
+                borderRadius: 'var(--radius-pill)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
@@ -323,7 +323,6 @@ export function SharedNoteView({
               onClick={onInvalidToken}
               className="
                 px-5 py-2.5
-                rounded-lg
                 text-sm font-medium
                 transition-all duration-200
               "
@@ -331,6 +330,7 @@ export function SharedNoteView({
                 fontFamily: 'var(--font-body)',
                 color: 'var(--color-cta-text)',
                 background: 'var(--color-cta-bg)',
+                borderRadius: 'var(--radius-pill)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
@@ -425,7 +425,7 @@ export function SharedNoteView({
                 fontFamily: 'var(--font-display)',
               }}
             >
-              Shared quietly via Yidhan
+              Shared via Yidhan
             </p>
 
             {/* Create your own CTA */}
@@ -433,7 +433,6 @@ export function SharedNoteView({
               href="/"
               className="
                 mt-4 px-5 py-2.5
-                rounded-lg
                 text-sm font-medium
                 transition-all duration-200
               "
@@ -442,6 +441,7 @@ export function SharedNoteView({
                 color: 'var(--color-text-secondary)',
                 background: 'transparent',
                 border: '1px solid var(--glass-border)',
+                borderRadius: 'var(--radius-pill)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = 'var(--color-accent)';
@@ -452,7 +452,7 @@ export function SharedNoteView({
                 e.currentTarget.style.color = 'var(--color-text-secondary)';
               }}
             >
-              Start your own quiet space
+              Start writing with Yidhan
             </a>
           </footer>
         </div>

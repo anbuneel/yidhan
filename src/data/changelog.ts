@@ -7,6 +7,11 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.20.7', date: '2026-11-25', changes: [
+    { type: 'improvement', text: 'Updated the Support, Privacy, and Roadmap pages so recovery keys, self-serve account deletion, GitHub sign-in, and upcoming exploration items match what is live' },
+    { type: 'improvement', text: 'Replaced older "quiet space" copy in the empty library, shared letters, and installed app description with plain wording, and matched button corners to pill radii' },
+    { type: 'fix', text: 'Kept "+ Tag" on the tag row on phones instead of wrapping onto its own line' },
+  ] },
   { version: '3.20.6', date: '2026-11-24', changes: [
     { type: 'improvement', text: 'The soft glow behind your words in the editor is back in the light theme. It is now a faint marigold, the colour of the sun in the logo, so it shows as warm light on the white page. The dark theme uses the same marigold glow' },
   ] },

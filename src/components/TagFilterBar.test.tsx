@@ -108,4 +108,38 @@ describe('TagFilterBar', () => {
     expect(screen.getByRole('button', { name: 'Add tag' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Filter by/ })).toBeNull();
   });
+
+  it('keeps "+ Tag" on the tag row at 375px with three tags while preserving desktop wrap', () => {
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 375 });
+    try {
+      const { container } = renderBar();
+      const row = container.querySelector('.flex') as HTMLElement;
+      expect(row).not.toBeNull();
+      // Mobile: single non-wrapping row so "+ Tag" never orphans onto a lone second line.
+      expect(row.className).toMatch(/\bflex-nowrap\b/);
+      expect(row.className).toMatch(/\boverflow-x-auto\b/);
+      // Desktop (sm+) keeps the original wrapping row and spacing.
+      expect(row.className).toMatch(/\bsm:flex-wrap\b/);
+      expect(row.className).toMatch(/\bsm:overflow-visible\b/);
+      expect(row.className).toMatch(/\bsm:gap-x-2\b/);
+
+      const allNotes = screen.getByRole('button', { name: 'All notes' });
+      expect(allNotes.className).not.toMatch(/(^|\s)mr-7(\s|$)/);
+      expect(allNotes.className).toMatch(/\bsm:mr-7\b/);
+
+      const addTag = screen.getByRole('button', { name: 'Add tag' });
+      expect(addTag.parentElement).toBe(row);
+      expect(addTag.className).toMatch(/\bshrink-0\b/);
+
+      // Edit controls take zero width on phones until focused, and stay 28px on desktop.
+      for (const editButton of screen.getAllByRole('button', { name: 'Edit tag' })) {
+        expect(editButton.className).toMatch(/\bw-0\b/);
+        expect(editButton.className).toMatch(/\bsm:w-7\b/);
+        expect(editButton.className).toMatch(/\bfocus-visible:w-7\b/);
+      }
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalWidth });
+    }
+  });
 });

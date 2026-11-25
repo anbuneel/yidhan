@@ -103,15 +103,16 @@ export function TagFilterBar({
         } : {}),
       }}
     >
-      {/* Wrap container */}
+      {/* Single horizontally scrollable row on phones; wraps on desktop (sm+) */}
       <div
         ref={contentRef}
         className="
           px-4 sm:px-12
           py-2 sm:py-3
-          flex flex-wrap
+          flex flex-nowrap overflow-x-auto sm:flex-wrap sm:overflow-visible
           items-center
-          gap-x-2 gap-y-1
+          gap-x-3 sm:gap-x-2 gap-y-1
+          [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
         "
       >
         {/* All notes */}

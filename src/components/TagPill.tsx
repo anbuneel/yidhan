@@ -12,7 +12,9 @@ interface TagPillProps {
 
 const iconButtonClass = `
   relative z-20
-  size-7
+  h-7 w-0 overflow-hidden
+  sm:w-7 sm:overflow-visible
+  focus-visible:w-7 focus-visible:overflow-visible
   flex items-center justify-center
   rounded-full
   opacity-0

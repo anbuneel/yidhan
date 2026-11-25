@@ -110,7 +110,7 @@ export default defineConfig({
       manifest: {
         name: 'Yidhan',
         short_name: 'Yidhan',
-        description: 'A quiet space for your mind',
+        description: 'A notes app built around writing, encrypted on your device.',
         theme_color: '#151C18',
         background_color: '#151C18',
         display: 'standalone',

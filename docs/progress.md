@@ -800,3 +800,15 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   logo's sun, the pinned mark and the glow, still never text. Note text at the glow's
   centre measures 12.61:1 in light and 8.59:1 in dark (`DECISIONS.md`, 2026-11-24).
   (#280)
+- **2026-11-25** — Launch review track A (copy and small polish): updated `README.md`
+  to AGPL-3.0 and removed stale tag colours, old starter notes, and three-dot divider
+  claims; updated `SupportPage.tsx` and `PrivacyPage.tsx` for recovery keys and the
+  live self-serve account deletion flow (`ACCOUNT_OFFBOARDING_ENABLED = true`); updated
+  `src/data/roadmap.ts` (removed live GitHub OAuth from exploring, clarified on-device
+  writing stats, removed testing coverage expansion, moved image attachments and
+  virtual scrolling to exploring, added encrypted tag names); replaced remaining "quiet
+  space" wording and applied `--radius-pill` to buttons on `ChapteredLibrary.tsx`,
+  `SharedNoteView.tsx`, and the PWA manifest; removed the resolved licence question in
+  `PRODUCT.md`; added absence checks for the obsolete welcome-note trigger and function
+  to `supabase/migrations/verify_migration_state.sql`; kept "+ Tag" on the tag row on
+  phones in `TagFilterBar.tsx` without changing desktop layout.

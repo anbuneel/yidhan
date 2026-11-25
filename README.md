@@ -18,8 +18,8 @@ A notes app built around writing. Notes are encrypted on your device before they
 - **Real-time Updates** - Changes appear instantly across tabs and devices with self-echo suppression
 - **Calm Design** - A quiet off-white or green-black page with a faint grain, smooth white cards, one green, and the leaf mark
 - **Light & Dark Themes** - Light and Dark, following the device setting until you choose one
-- **Tag Organization** - Organize notes with colorful tags and filter by multiple tags
-- **Tag Management** - Create, edit, and delete tags with a beautiful color picker
+- **Tag Organization** - Organize notes with tags and filter by multiple tags
+- **Tag Management** - Create, edit, and delete tags
 - **Landing Page** - Quiet hero that becomes a lightweight writing surface on desktop, saves the first draft into signup, and leads directly into real note cards and the privacy promise
 - **Practice Space** - Full-featured demo at `/demo` without signup; notes persist in localStorage
 - **Seamless Onboarding** - Demo content auto-saves after signup, email confirmation with resend options
@@ -30,10 +30,10 @@ A notes app built around writing. Notes are encrypted on your device before they
 - **Settings Page** - Update display name, change password, toggle theme
 - **Password Reset** - Forgot password flow with email recovery
 - **Smart Auto-save** - Auto-saves 800ms after you stop typing with "Saving..." → "Saved ✓" → "Synced" indicator
-- **Google Sign-In** - Quick authentication via Google OAuth
+- **OAuth Sign-In** - Sign in with Google or GitHub
 - **Secure** - User authentication with row-level security
 - **Error Boundary** - Graceful error handling with user-friendly recovery UI
-- **Starter Notes** - New users receive 4 starter notes and a Recipes tag to make the library feel alive from the first moment
+- **Starter Notes** - New accounts start with two encrypted starter notes covering encryption, recovery keys, and formatting shortcuts
 - **Security Hardened** - XSS prevention, input validation, sanitized error messages, app-wide security headers, and encrypted-only server note enforcement
 - **Pin Notes** - Pin important notes to the top of your library
 - **Toast Notifications** - Modern, non-intrusive feedback for all actions
@@ -44,7 +44,7 @@ A notes app built around writing. Notes are encrypted on your device before they
 - **CI/CD Pipeline** - Automated testing, coverage enforcement, and builds via GitHub Actions
 - **Code Splitting** - Lazy-loaded editor for faster initial page loads
 - **Sticky Toolbar** - Formatting toolbar stays visible while scrolling long notes; vertical sidebar on wide screens
-- **Manuscript Atmosphere** - Editorial blockquotes, three-dot dividers, ghost-writing placeholder, and viewport-following manuscript glow
+- **Manuscript Atmosphere** - Editorial blockquotes, hairline dividers, ghost-writing placeholder, and viewport-following manuscript glow
 - **Slash Commands** - Type `/` for quick formatting: headings, lists, quotes, code blocks, timestamps, and more
 - **Focus Mode** - Ctrl+Shift+F (desktop) / triple-tap (mobile) hides all editor chrome for distraction-free writing with vignette overlay
 - **Bottom Toolbar** - Mobile formatting toolbar fixed at thumb zone with heading cycle button and keyboard-aware positioning
@@ -214,27 +214,11 @@ here would drift from it.
 Yidhan is a calm page and one serif:
 
 - **Asymmetric corners** on cards (`2px 24px 4px 24px`)
-- **One green** for buttons and links, and marigold only in the logo sun
-- **Curated tag palette** - 8 muted, earthy colors
+- **One green** for buttons and links, and marigold only in the logo sun, pinned mark, and editor glow
 - **One serif** for every word (Newsreader)
 - **Theme-aware logo** - the leaf mark and wordmark are inline SVG; the leaf follows the theme and the sun stays marigold
 - **A faint grain** on the page background only; cards and the editor stay smooth
 - **Gentle animations** that feel natural
-
-## Tag Colors
-
-Tags use eight muted, earthy colours. Each reaches 3:1 on both the light and the dark page, so one value serves both themes:
-
-| Color | Hex |
-|-------|-----|
-| Terracotta | `#B5643F` |
-| Gold | `#9C7A26` |
-| Forest | `#4B8659` |
-| Stone | `#837E72` |
-| Indigo | `#6577A2` |
-| Clay | `#A07253` |
-| Sage | `#71905F` |
-| Plum | `#9A6B86` |
 
 ## Deployment
 
@@ -265,4 +249,4 @@ For security audits, see `supabase/migrations/security_audit_checklist.sql`.
 
 ## License
 
-MIT
+GNU Affero General Public License v3.0 (AGPL-3.0). See [LICENSE](LICENSE) for the full text.

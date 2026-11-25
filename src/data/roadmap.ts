@@ -21,22 +21,16 @@ export const roadmap: RoadmapItem[] = [
     status: 'shipped',
   },
   {
-    id: '3',
-    title: 'Testing coverage expansion',
-    description: 'Comprehensive test coverage across encryption, sync, and authentication layers — ensuring your notes stay safe through every update.',
-    status: 'in-progress',
-  },
-  {
     id: '4',
     title: 'Image attachments',
     description: 'Add images, screenshots, and diagrams directly into your notes.',
-    status: 'coming-soon',
+    status: 'exploring',
   },
   {
     id: '5',
     title: 'Virtual scrolling',
     description: 'Smooth performance with large note collections through optimized rendering.',
-    status: 'coming-soon',
+    status: 'exploring',
   },
   {
     id: '6',
@@ -47,13 +41,13 @@ export const roadmap: RoadmapItem[] = [
   {
     id: '7',
     title: 'Additional OAuth providers',
-    description: 'Sign in with GitHub, Apple, and other popular providers.',
+    description: 'Sign in with Apple and other providers.',
     status: 'exploring',
   },
   {
     id: '8',
-    title: 'Usage analytics',
-    description: 'Insights into your writing habits and note-taking patterns.',
+    title: 'On-device writing stats',
+    description: 'Optional summaries of your writing habits, computed locally on your device. Nothing leaves your browser or reaches our servers.',
     status: 'exploring',
   },
   {
@@ -66,6 +60,12 @@ export const roadmap: RoadmapItem[] = [
     id: '10',
     title: 'Live shared letters',
     description: 'Shared letters that stay in sync with the original note — edits reflect automatically for anyone with the link.',
+    status: 'exploring',
+  },
+  {
+    id: '11',
+    title: 'Encrypted tag names',
+    description: 'Encrypt tag names alongside note titles and content so tags are no longer stored in plaintext on the server.',
     status: 'exploring',
   },
 ];
