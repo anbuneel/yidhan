@@ -22,6 +22,8 @@ test.describe('Notes', () => {
 
       // Editor should open
       await expect(page.getByTestId('note-editor')).toBeVisible();
+      await expect(page.getByTestId('demo-editor-notice')).toHaveCount(0);
+      await expect(page.getByText(/not encrypted/i)).toHaveCount(0);
 
       // Title should be focused
       await expect(page.getByPlaceholder(/untitled/i)).toBeFocused();

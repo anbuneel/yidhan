@@ -6,6 +6,7 @@ import Highlight from '@tiptap/extension-highlight';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { DOMParser as ProseMirrorDOMParser } from '@tiptap/pm/model';
+import { EditorState } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { useEffect, useEffectEvent, useRef, useMemo, useCallback, useState } from 'react';
 import { SlashCommand } from './SlashCommand';
@@ -232,7 +233,17 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
       // Flush any pending cursor save for the previous note
       flushPendingCursorSave();
 
-      editor.commands.setContent(content);
+      // Load the new note without emitting an update, then replace the ProseMirror
+      // state so undo/redo history from the previous note cannot bleed into this one.
+      editor.commands.setContent(content, { emitUpdate: false });
+      const freshState = EditorState.create({
+        doc: editor.state.doc,
+        plugins: editor.state.plugins,
+      });
+      editor.view.updateState(freshState);
+      // Notify transaction listeners (toolbar undo/redo state, metrics) without
+      // mutating the document or adding a history entry.
+      editor.view.dispatch(editor.state.tr.setMeta('addToHistory', false));
       // Clear initial focus flag for previous note so it will focus at end when reopened
       if (prevNoteIdRef.current) {
         initialFocusApplied.delete(prevNoteIdRef.current);

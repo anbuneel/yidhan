@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/react';
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   EDITOR_COMMANDS,
   EDITOR_COMMANDS_BY_ID,
@@ -75,11 +76,15 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isOpen) return;
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) setIsOpen(false);
+      const target = event.target as Node | null;
+      if (target && (menuRef.current?.contains(target) || panelRef.current?.contains(target))) {
+        return;
+      }
+      setIsOpen(false);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
@@ -102,7 +107,7 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
         top: `${position.top}px`,
         right: 'auto',
         bottom: 'auto',
-        maxHeight: `${position.maxHeight}px`,
+        maxHeight: `min(34rem, ${position.maxHeight}px)`,
       });
       panelRef.current.dataset.placement = position.placement;
     };
@@ -114,7 +119,7 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
     positionPanel();
     const frame = requestAnimationFrame(() => {
       positionPanel();
-      menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+      panelRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
     });
     return () => {
       cancelAnimationFrame(frame);
@@ -143,7 +148,7 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
           <circle cx="19" cy="12" r="1.6" />
         </svg>
       </button>
-      {isOpen && (
+      {isOpen && createPortal(
         <div
           ref={panelRef}
           className="editor-command-menu"
@@ -167,7 +172,8 @@ function OverflowMenu({ context, direction }: OverflowMenuProps) {
               onRun={() => setIsOpen(false)}
             />
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -202,6 +208,7 @@ export function EditorToolbar({
     onLink,
   };
   const visibleIds = variant === 'sidebar' ? SIDEBAR_COMMANDS : PRIMARY_COMMANDS;
+  const focusModeCommand = EDITOR_COMMANDS_BY_ID.get('focusMode');
   const overflowDirection = variant === 'bottom' ? 'up' : variant === 'sidebar' ? 'right' : 'down';
 
   return (
@@ -224,6 +231,7 @@ export function EditorToolbar({
           </span>
         ) : null;
       })}
+      {focusModeCommand && <ToolbarButton command={focusModeCommand} context={context} />}
       <OverflowMenu context={context} direction={overflowDirection} />
     </div>
   );

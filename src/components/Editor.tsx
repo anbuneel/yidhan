@@ -1533,6 +1533,19 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             aria-hidden="true"
           />
 
+          {isDemo && (
+            <p
+              className="mb-2 text-xs focus-mode-target"
+              data-testid="demo-editor-notice"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-tertiary)',
+              }}
+            >
+              Demo · saved in this browser · not encrypted
+            </p>
+          )}
+
           {/* Title Zone */}
           <div className="editor-title-zone">
             {/* Title */}

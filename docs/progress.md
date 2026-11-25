@@ -813,3 +813,9 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   absence checks for the obsolete welcome-note trigger and function to
   `supabase/migrations/verify_migration_state.sql`; kept "+ Tag" on the tag row on
   phones in `TagFilterBar.tsx` while preserving wrapping and desktop layout. (#281)
+- **2026-11-25** — Editor launch-review fixes (track B): portaled the editor command
+  overflow menu to `document.body` so the phone bottom toolbar's `backdrop-filter` no
+  longer pushes it off-screen at 390×844; exposed the Focus mode toggle directly on the
+  sidebar, inline, and bottom toolbars; cleared ProseMirror undo/redo history without
+  emitting an update when switching notes; added the "Demo · saved in this browser ·
+  not encrypted" notice to the practice editor. (#283)
