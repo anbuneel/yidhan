@@ -711,7 +711,9 @@ describe('Editor', () => {
           bubbles: true,
           cancelable: true,
         });
-        window.dispatchEvent(event);
+        act(() => {
+          window.dispatchEvent(event);
+        });
         expect(event.defaultPrevented).toBe(true);
         expect(screen.queryByRole('region', { name: 'Find and replace' })).not.toBeInTheDocument();
       } finally {
@@ -719,14 +721,18 @@ describe('Editor', () => {
       }
     });
 
-    it('does not exit the editor on Escape while a native <dialog open> without role="dialog" is open', () => {
+    it('does not exit the editor on Escape while a native <dialog open> without role="dialog" is open', async () => {
       const dialog = document.createElement('dialog');
       dialog.setAttribute('open', '');
       document.body.appendChild(dialog);
       const onBack = vi.fn();
+      const onUpdate = vi.fn().mockResolvedValue(undefined);
       try {
-        render(<Editor {...defaultProps} onBack={onBack} />);
+        render(<Editor {...defaultProps} onBack={onBack} onUpdate={onUpdate} />);
         fireEvent.keyDown(window, { key: 'Escape' });
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        });
         expect(onBack).not.toHaveBeenCalled();
       } finally {
         dialog.remove();

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
@@ -12,7 +12,8 @@ interface WelcomeBackPromptProps {
 export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: WelcomeBackPromptProps) {
   const { cancelOffboarding, signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const dialogRef = useModalFocusTrap({ isOpen: true });
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useModalFocusTrap({ isOpen: true, dialogRef, initialFocusRef: dialogRef });
 
   const handleStay = async () => {
     setIsLoading(true);

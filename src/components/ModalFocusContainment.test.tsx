@@ -609,7 +609,9 @@ describe('Modal focus containment across every modal kind (B2)', () => {
 
     const dialog = screen.getByRole('dialog');
     const background = screen.getByRole('button', { name: 'Background button', hidden: true });
-    expect(dialog.contains(document.activeElement)).toBe(true);
+    const continueBtn = screen.getByRole('button', { name: 'Continue letting go' });
+    expect(document.activeElement).toBe(dialog);
+    expect(document.activeElement).not.toBe(continueBtn);
     expect(background.closest('[inert]')).not.toBeNull();
 
     const focusable = getFocusableIn(dialog);

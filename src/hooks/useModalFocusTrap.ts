@@ -106,7 +106,7 @@ function restoreFocusAfterClose(entry: ModalStackEntry): void {
       (landmark ? getFocusableElements(landmark)[0] : undefined) ??
       getFocusableElements(document.body)[0];
     if (fallback) {
-      fallback.focus();
+      fallback.focus({ preventScroll: true });
     }
   }
 }
