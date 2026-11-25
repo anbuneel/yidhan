@@ -521,6 +521,41 @@ describe('Editor', () => {
 
       expect(screen.queryByText('Let this note fade?')).not.toBeInTheDocument();
     });
+
+    it('focuses Keep writing (never Let it fade), traps Tab/Shift+Tab, makes background inert, and returns focus on Escape', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onBack = vi.fn();
+      const onDelete = vi.fn();
+      render(<Editor {...defaultProps} onBack={onBack} onDelete={onDelete} />);
+
+      const deleteButton = screen.getByLabelText('Delete note');
+      deleteButton.focus();
+      await user.click(deleteButton);
+
+      const keepWriting = screen.getByRole('button', { name: 'Keep writing' });
+      const letItFade = screen.getByRole('button', { name: 'Let it fade' });
+
+      // Safe non-destructive control receives initial focus, never the destructive button.
+      expect(keepWriting).toHaveFocus();
+      expect(letItFade).not.toHaveFocus();
+      expect(deleteButton.closest('[inert]')).not.toBeNull();
+
+      // Tab wraps between Keep writing and Let it fade without escaping to the editor behind.
+      await user.tab();
+      expect(letItFade).toHaveFocus();
+      await user.tab();
+      expect(keepWriting).toHaveFocus();
+      await user.tab({ shift: true });
+      expect(letItFade).toHaveFocus();
+
+      // Escape closes the confirmation without exiting the editor and returns focus to the trigger.
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.queryByText('Let this note fade?')).not.toBeInTheDocument();
+      expect(onBack).not.toHaveBeenCalled();
+      expect(onDelete).not.toHaveBeenCalled();
+      expect(deleteButton.closest('[inert]')).toBeNull();
+      expect(deleteButton).toHaveFocus();
+    });
   });
 
   describe('export menu', () => {
@@ -661,6 +696,40 @@ describe('Editor', () => {
         expect(screen.queryByRole('region', { name: 'Find and replace' })).not.toBeInTheDocument();
       } finally {
         menu.remove();
+      }
+    });
+
+    it('does not overlap find and replace with a native <dialog open> without role="dialog"', () => {
+      const dialog = document.createElement('dialog');
+      dialog.setAttribute('open', '');
+      document.body.appendChild(dialog);
+      try {
+        render(<Editor {...defaultProps} />);
+        const event = new KeyboardEvent('keydown', {
+          key: 'f',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        });
+        window.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(true);
+        expect(screen.queryByRole('region', { name: 'Find and replace' })).not.toBeInTheDocument();
+      } finally {
+        dialog.remove();
+      }
+    });
+
+    it('does not exit the editor on Escape while a native <dialog open> without role="dialog" is open', () => {
+      const dialog = document.createElement('dialog');
+      dialog.setAttribute('open', '');
+      document.body.appendChild(dialog);
+      const onBack = vi.fn();
+      try {
+        render(<Editor {...defaultProps} onBack={onBack} />);
+        fireEvent.keyDown(window, { key: 'Escape' });
+        expect(onBack).not.toHaveBeenCalled();
+      } finally {
+        dialog.remove();
       }
     });
 
