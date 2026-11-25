@@ -124,8 +124,23 @@ describe('ChapteredLibrary', () => {
       render(<ChapteredLibrary {...defaultProps} onNewNote={onNewNote} />);
 
       expect(screen.getByText('Your notes await')).toBeInTheDocument();
-      expect(screen.getByText('A quiet space for your thoughts')).toBeInTheDocument();
-      expect(screen.getByText('Create your first note')).toBeInTheDocument();
+      expect(screen.getByText('Write a note to get started.')).toBeInTheDocument();
+      expect(screen.queryByText(/quiet space/i)).not.toBeInTheDocument();
+      // Shared by /demo (unencrypted Practice Space), so the empty state must never claim encryption.
+      expect(document.body).not.toHaveTextContent(/encrypt/i);
+      const createButton = screen.getByRole('button', { name: 'Create your first note' });
+      expect(createButton).toBeInTheDocument();
+      expect(createButton).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
+      expect(createButton.className).not.toMatch(/\brounded-lg\b/);
+      expect(createButton.className).toMatch(/\bfocus-ring\b/);
+    });
+
+    it('keeps search-empty distinct from library-empty and without a create button', () => {
+      render(<ChapteredLibrary {...defaultProps} isSearching searchQuery="nothing" onNewNote={vi.fn()} />);
+
+      expect(screen.getByText('No thoughts found')).toBeInTheDocument();
+      expect(screen.queryByText('Your notes await')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Create your first note' })).not.toBeInTheDocument();
     });
 
     it('calls onNewNote when create button clicked', async () => {

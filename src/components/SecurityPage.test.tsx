@@ -114,4 +114,18 @@ describe('PrivacyPage links to the threat model', () => {
     await user.click(screen.getByRole('button', { name: /security page/i }));
     expect(onSecurityClick).toHaveBeenCalledTimes(1);
   });
+
+  it('describes the live self-serve account deletion flow and updates its revision date', () => {
+    render(<PrivacyPage {...nav} />);
+
+    expect(screen.getByText(/delete your account from Settings \("Let go of Yidhan"\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/14-day grace period/i)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/paused for public launch/i);
+    expect(screen.getByText('Last updated November 2026')).toBeInTheDocument();
+  });
+
+  it('does not change TermsPage revision date when TermsPage was not edited', () => {
+    render(<TermsPage {...nav} />);
+    expect(screen.getByText('Last updated March 2026')).toBeInTheDocument();
+  });
 });

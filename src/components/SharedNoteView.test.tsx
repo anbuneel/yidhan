@@ -23,11 +23,21 @@ it('opens an anonymous /s/token/slug letter using its fragment and fails closed 
   expect(screen.getByText('letters')).toBeVisible();
   expect(screen.getByRole('heading', { name: 'Heading' })).toBeVisible();
   expect(screen.getByText('Quoted')).toBeVisible();
+  expect(screen.getByText('Shared via Yidhan')).toBeVisible();
+  expect(screen.queryByText(/quiet space|quietly/i)).toBeNull();
+  const startLink = screen.getByRole('link', { name: 'Start writing with Yidhan' });
+  expect(startLink).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
+  expect(startLink.className).not.toMatch(/\brounded-lg\b/);
+  expect(startLink.className).toMatch(/\bfocus-ring\b/);
   cleanup(); sessionStorage.clear(); vi.mocked(fetchSharedNote).mockClear();
   const incomplete = parseShareRoute('/s/'+token+'/a-private-letter', '')!;
   render(view(incomplete.shareKey));
   expect(screen.queryByText('A private letter')).toBeNull();
   expect(screen.getByText(/incomplete/i)).toBeVisible();
+  const incompleteButton = screen.getByRole('button', { name: 'Go to Yidhan' });
+  expect(incompleteButton).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
+  expect(incompleteButton.className).not.toMatch(/\brounded-lg\b/);
+  expect(incompleteButton.className).toMatch(/\bfocus-ring\b/);
   expect(fetchSharedNote).not.toHaveBeenCalled();
 });
 
@@ -38,6 +48,10 @@ it('shows the faded letter message when the token no longer resolves', async () 
   render(<SharedNoteView token={token} shareKey={key} theme="light" onThemeToggle={vi.fn()}
     onInvalidToken={vi.fn()} onChangelogClick={vi.fn()} onRoadmapClick={vi.fn()} />);
   expect(await screen.findByText('This letter has faded')).toBeVisible();
+  const button = screen.getByRole('button', { name: 'Go to Yidhan' });
+  expect(button).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
+  expect(button.className).not.toMatch(/\brounded-lg\b/);
+  expect(button.className).toMatch(/\bfocus-ring\b/);
 });
 
 it('reports a failure rather than a fade when the lookup itself errors', async () => {
@@ -46,4 +60,8 @@ it('reports a failure rather than a fade when the lookup itself errors', async (
   render(<SharedNoteView token={token} shareKey={key} theme="light" onThemeToggle={vi.fn()}
     onInvalidToken={vi.fn()} onChangelogClick={vi.fn()} onRoadmapClick={vi.fn()} />);
   expect(await screen.findByText('Something went wrong')).toBeVisible();
+  const button = screen.getByRole('button', { name: 'Go to Yidhan' });
+  expect(button).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
+  expect(button.className).not.toMatch(/\brounded-lg\b/);
+  expect(button.className).toMatch(/\bfocus-ring\b/);
 });

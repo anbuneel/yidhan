@@ -86,8 +86,6 @@ by preference.
 - Public roadmap: `src/data/roadmap.ts`.
 - **No testimonials, user counts, reviews or press exist.** Do not invent any, and do
   not imply them.
-- Open question: the landing page says "Free and open source", but the repo has no
-  `LICENSE` file. Settle that before the claim is repeated anywhere new.
 
 ## Product principles
 

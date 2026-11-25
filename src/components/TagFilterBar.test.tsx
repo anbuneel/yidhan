@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TagFilterBar } from './TagFilterBar';
+import { TagPill } from './TagPill';
 import { TAG_COLORS, type Tag, type TagColor } from '../types';
 
 const tag = (id: string, name: string, color: TagColor): Tag => ({ id, name, color, createdAt: new Date() });
@@ -107,5 +108,125 @@ describe('TagFilterBar', () => {
     expect(screen.getByRole('button', { name: 'All notes' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add tag' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Filter by/ })).toBeNull();
+  });
+
+  it('keeps the tag row uncollapsed and edit controls interactive at 375px with three tags', async () => {
+    const user = userEvent.setup({ delay: null });
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 375 });
+    try {
+      const { props } = renderBar();
+
+      // Mobile never renders desktop collapse controls, keeping all tags and "+ Tag" on one row.
+      expect(screen.queryByRole('button', { name: /Show \d+ more tags/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Collapse tags' })).toBeNull();
+
+      // Edit controls reveal on hover or keyboard focus-visible, not mouse focus.
+      const editButtons = screen.getAllByRole('button', { name: 'Edit tag' });
+      expect(editButtons).toHaveLength(3);
+      editButtons[0].focus();
+      expect(editButtons[0]).toHaveFocus();
+      expect(editButtons[0].className).toMatch(/\bgroup-hover:w-7\b/);
+      expect(editButtons[0].className).toMatch(/\bfocus-visible:w-7\b/);
+      expect(editButtons[0].className).toMatch(/\bfocus-visible:opacity-100\b/);
+      expect(editButtons[0].className).not.toMatch(/\bgroup-focus-within:opacity-100\b/);
+      expect(editButtons[0].className).not.toMatch(/(^|\s)focus:opacity-100(\s|$)/);
+
+      await user.click(editButtons[2]);
+      expect(props.onEditTag).toHaveBeenCalledWith(tags[2]);
+      expect(props.onTagToggle).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole('button', { name: 'Add tag' }));
+      expect(props.onAddTag).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalWidth });
+    }
+  });
+
+  it('expands the active tag edit button at 375px for touch phones while keeping unselected tags compact', () => {
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 375 });
+    try {
+      renderBar(['b']);
+      const editButtons = screen.getAllByRole('button', { name: 'Edit tag' });
+      // Selected tag ("Ideas") reveals its edit button on phones (hover: none).
+      expect(editButtons[1].className).toMatch(/(^|\s)w-7(\s|$)/);
+      expect(editButtons[1].className).toMatch(/(^|\s)overflow-visible(\s|$)/);
+      expect(editButtons[1].className).toMatch(/\bmax-sm:opacity-100\b/);
+      expect(editButtons[1].className).not.toMatch(/(^|\s)w-0(\s|$)/);
+
+      // Unselected tags ("Journal", "Reading") stay compact below sm.
+      for (const inactiveEdit of [editButtons[0], editButtons[2]]) {
+        expect(inactiveEdit.className).toMatch(/(^|\s)w-0(\s|$)/);
+        expect(inactiveEdit.className).not.toMatch(/(^|\s)w-7(\s|$)/);
+      }
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalWidth });
+    }
+  });
+
+  it('preserves desktop two-row collapse and expand behaviour when tags overflow', async () => {
+    const user = userEvent.setup({ delay: null });
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1024 });
+    const getRectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.hasAttribute('data-tag-pill')) {
+        // Place the third tag beyond the 2-row 108px desktop threshold.
+        const isOverflow = this.textContent?.includes('Reading');
+        return {
+          top: isOverflow ? 116 : 0,
+          bottom: isOverflow ? 148 : 36,
+          left: 0,
+          right: 80,
+          width: 80,
+          height: 36,
+          x: 0,
+          y: isOverflow ? 116 : 0,
+          toJSON: () => ({}),
+        } as DOMRect;
+      }
+      return {
+        top: 0,
+        bottom: 150,
+        left: 0,
+        right: 900,
+        width: 900,
+        height: 150,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      } as DOMRect;
+    });
+
+    try {
+      renderBar();
+      const expandButton = await screen.findByRole('button', { name: 'Show 1 more tags' });
+      expect(expandButton).toHaveAttribute('aria-expanded', 'false');
+
+      await user.click(expandButton);
+      const collapseButton = screen.getByRole('button', { name: 'Collapse tags' });
+      expect(collapseButton).toHaveAttribute('aria-expanded', 'true');
+
+      await user.click(collapseButton);
+      expect(await screen.findByRole('button', { name: 'Show 1 more tags' })).toBeInTheDocument();
+    } finally {
+      getRectSpy.mockRestore();
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalWidth });
+    }
+  });
+
+  it('keeps TagPill remove control full-size and directly interactive below 640px', async () => {
+    const user = userEvent.setup({ delay: null });
+    const onRemove = vi.fn();
+    const onClick = vi.fn();
+    render(<TagPill tag={tags[0]} onClick={onClick} showRemove onRemove={onRemove} />);
+
+    const removeButton = screen.getByRole('button', { name: 'Remove tag' });
+    expect(removeButton.className).toMatch(/\bsize-7\b/);
+    expect(removeButton.className).not.toMatch(/\bw-0\b/);
+
+    await user.click(removeButton);
+    expect(onRemove).toHaveBeenCalledTimes(1);
+    expect(onClick).not.toHaveBeenCalled();
   });
 });

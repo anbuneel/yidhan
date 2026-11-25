@@ -20,7 +20,7 @@ const EXPORT_DIR = path.join(__dirname, '../images/brand/export');
 const OUTPUT_DIR = path.join(__dirname, '../public/splash');
 const ANDROID_RES = path.join(__dirname, '../android/app/src/main/res');
 
-// Midnight theme background color (dark theme default). Matches capacitor.config.ts.
+// Dark theme background color (default). Matches capacitor.config.ts.
 const BACKGROUND_COLOR = '#151C18';
 
 // Logo size as percentage of the smaller dimension

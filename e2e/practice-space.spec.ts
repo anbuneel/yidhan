@@ -224,3 +224,111 @@ test.describe('Pinned row', () => {
     });
   });
 });
+
+/** Launch review B10: at 375px with three tags, "+ Tag" stays on the tag row rather
+ *  than wrapping onto its own line. */
+test.describe('Tag row at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test('"+ Tag" shares the same row as the three default tags', async ({ page }) => {
+    await page.goto('/demo');
+    await expect(page.getByTestId('library-view')).toBeVisible();
+
+    const allNotes = page.getByRole('button', { name: 'All notes' });
+    const journal = page.getByRole('button', { name: 'Filter by Journal' });
+    const ideas = page.getByRole('button', { name: 'Filter by Ideas' });
+    const reading = page.getByRole('button', { name: 'Filter by Reading' });
+    const addTag = page.getByRole('button', { name: 'Add tag' });
+
+    for (const btn of [allNotes, journal, ideas, reading, addTag]) {
+      await expect(btn).toBeVisible();
+    }
+
+    const boxes = await Promise.all(
+      [allNotes, journal, ideas, reading, addTag].map((btn) => btn.boundingBox())
+    );
+    for (const box of boxes) {
+      expect(box).not.toBeNull();
+    }
+
+    const [allBox, journalBox, ideasBox, readingBox, addBox] = boxes as NonNullable<(typeof boxes)[number]>[];
+    // Every item sits on the same horizontal band — no lone wrapped "+ Tag" line.
+    for (const box of [journalBox, ideasBox, readingBox, addBox]) {
+      expect(Math.abs(box.y - allBox.y)).toBeLessThan(4);
+    }
+    expect(addBox.x).toBeGreaterThan(readingBox.x);
+    // All items, including "+ Tag", fit inside the 375px viewport without scrolling.
+    expect(allBox.x).toBeGreaterThanOrEqual(0);
+    expect(addBox.x + addBox.width).toBeLessThanOrEqual(375);
+
+    // No page-level horizontal overflow.
+    const pageScrolls = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    expect(pageScrolls).toBe(false);
+  });
+
+  test('with eight tags, wraps so every tag and "+ Tag" stays inside the 375px viewport without horizontal scrolling', async ({ page }) => {
+    const extraTags = ['Drafts', 'Essays', 'Travel', 'Work', 'Music'];
+    const allTagNames = ['Journal', 'Ideas', 'Reading', ...extraTags];
+
+    await page.addInitScript((names: string[]) => {
+      const now = Date.now();
+      const state = {
+        version: 1,
+        notes: [
+          {
+            localId: 'starter-welcome',
+            title: 'Welcome to Yidhan',
+            content: '<p>Practice note</p>',
+            pinned: true,
+            tagIds: [],
+            createdAt: now,
+            updatedAt: now,
+          },
+        ],
+        tags: names.map((name, index) => ({
+          localId: `tag-${index}`,
+          name,
+          color: 'stone',
+          createdAt: now,
+        })),
+        metadata: {
+          createdAt: now,
+          lastVisit: now,
+          totalNotesCreated: 1,
+          promptDismissedAt: null,
+          ribbonDismissedAt: null,
+        },
+      };
+      window.localStorage.setItem('yidhan-demo-state', JSON.stringify(state));
+    }, allTagNames);
+
+    await page.goto('/demo');
+    await expect(page.getByTestId('library-view')).toBeVisible();
+
+    const buttons = [
+      page.getByRole('button', { name: 'All notes' }),
+      ...allTagNames.map((name) => page.getByRole('button', { name: `Filter by ${name}` })),
+      page.getByRole('button', { name: 'Add tag' }),
+    ];
+
+    for (const btn of buttons) {
+      await expect(btn).toBeVisible();
+      const box = await btn.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(375);
+    }
+
+    // Eight tags must wrap across rows instead of overflowing horizontally off-screen.
+    const firstBox = (await buttons[0].boundingBox())!;
+    const addBox = (await buttons[buttons.length - 1].boundingBox())!;
+    expect(addBox.y).toBeGreaterThan(firstBox.y);
+
+    const pageScrolls = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    expect(pageScrolls).toBe(false);
+  });
+});

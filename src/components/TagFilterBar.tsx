@@ -87,7 +87,7 @@ export function TagFilterBar({
     return () => clearTimeout(timer);
   }, [calculateHiddenCount]);
 
-  // On mobile: always show all tags (no collapse)
+  // On mobile: wrap and show all tags (no collapse)
   // On desktop: use collapse/expand with 2 rows default
   const shouldCollapse = !isMobile && !isExpanded && hiddenCount > 0;
 
@@ -103,7 +103,7 @@ export function TagFilterBar({
         } : {}),
       }}
     >
-      {/* Wrap container */}
+      {/* Wraps on all widths; mobile shows all tags, desktop collapses past 2 rows */}
       <div
         ref={contentRef}
         className="
@@ -111,7 +111,7 @@ export function TagFilterBar({
           py-2 sm:py-3
           flex flex-wrap
           items-center
-          gap-x-2 gap-y-1
+          gap-x-3 sm:gap-x-2 gap-y-1
         "
       >
         {/* All notes */}

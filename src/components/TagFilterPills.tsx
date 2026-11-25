@@ -11,8 +11,8 @@ export function AllNotesPill({ isActive, onClick }: AllNotesPillProps) {
       type="button"
       onClick={onClick}
       aria-pressed={isActive}
-      // mr-7 matches the space each tag keeps for its edit control, so the gaps are even.
-      className={`${tagWordClass} mr-7 rounded-sm hover:text-[var(--color-text-primary)]`}
+      // sm:mr-7 matches the desktop space each tag keeps for its edit control, so the gaps are even.
+      className={`${tagWordClass} sm:mr-7 rounded-sm hover:text-[var(--color-text-primary)]`}
       style={tagWordStyle(isActive)}
     >
       All notes

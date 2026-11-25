@@ -68,6 +68,22 @@ WITH checks(check_name, ok) AS (
       SELECT 1 FROM information_schema.tables
       WHERE table_schema = 'public' AND table_name = 'schema_version')),
 
+    -- disable_welcome_note_trigger.sql
+    -- The obsolete server trigger inserted plaintext notes and would violate
+    -- chk_notes_e2ee_only. Welcome notes are created encrypted on the client
+    -- during passphrase setup. Both the trigger and its function must be absent.
+    ('no obsolete on_auth_user_created trigger', NOT EXISTS (
+      SELECT 1 FROM pg_trigger t
+      JOIN pg_class c ON c.oid = t.tgrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'auth' AND c.relname = 'users'
+        AND t.tgname = 'on_auth_user_created'
+        AND NOT t.tgisinternal)),
+    ('no obsolete create_welcome_note function', NOT EXISTS (
+      SELECT 1 FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = 'create_welcome_note')),
+
     -- add_account_deletion_workflow.sql
     ('account_deletion_requests table', EXISTS (
       SELECT 1 FROM information_schema.tables
