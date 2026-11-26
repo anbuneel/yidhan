@@ -7,7 +7,7 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
-  { version: '3.21.0', date: '2026-11-26', changes: [
+  { version: '3.22.0', date: '2026-11-26', changes: [
     { type: 'fix', text: 'On touch screens, the pin and delete icons on larger note cards are now visible. Before, they were invisible, so tapping near a card’s top-right corner could pin the note instead of opening it' },
     { type: 'improvement', text: 'Plainer wording across the app: "Delete permanently" and "Delete all" in Faded notes, a day count ("Deleted in 12 days") instead of mood words, a clearer dialog when a note changed on two devices, and the account deletion date in the Letting go dialog' },
     { type: 'improvement', text: 'Every sign-up button and link now says "Create an account"' },
@@ -16,6 +16,13 @@ export const changelog: ChangelogEntry[] = [
     { type: 'improvement', text: 'Input placeholders are easier to read in both themes, sync captions are slightly larger, and the search box no longer grows when you focus it' },
     { type: 'improvement', text: 'The Practice Space sign-up invitation now shows at most once per browser' },
     { type: 'improvement', text: 'This page now groups releases by day, with the version numbers in small text' },
+  ] },
+  { version: '3.21.0', date: '2026-11-26', changes: [
+    { type: 'improvement', text: 'The editor toolbar is shorter. Every toolbar now shows Bold, Italic, Heading, Bullet list and Link, then focus mode and the "More editor commands" menu. On a phone, Undo and Redo stay on the bar as icons' },
+    { type: 'improvement', text: 'The "More editor commands" menu now lists only what is not on the toolbar, under the headings Text, Blocks, Insert, Edit and View' },
+    { type: 'improvement', text: 'Align center now turns off when you choose it again. Left, right and justify are no longer in the menus; their keyboard shortcuts still work, and notes you already aligned keep their alignment. Date and Date and time are in the slash menu only, and the separate Time command is gone' },
+    { type: 'feature', text: 'Settings has a new Editor tab with a text size setting (Small, Default, Large) for the editor and note cards. It is saved on this device. The smart typography switch moved there from the editor menu' },
+    { type: 'improvement', text: 'The note menu next to Delete is now called "Share and export" and puts Share as letter first. Downloading a single note as JSON is gone; Export (JSON) in the main menu still exports your whole library' },
   ] },
   { version: '3.20.12', date: '2026-11-26', changes: [
     { type: 'fix', text: 'The session timeout you choose in Settings now always applies. Before, "This is a trusted device" quietly changed every choice except Never to 14 days. A trusted device on the default timeout is now signed out after 1 week of inactivity, not 14 days. Trusted device now only unlocks Never, and still expires after 90 days' },

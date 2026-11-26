@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomSheet } from './BottomSheet';
 import { RecoveryKeySettings } from './RecoveryKeySettings';
+import { EditorSettings } from './EditorSettings';
 import { ACCOUNT_OFFBOARDING_ENABLED } from '../config/featureFlags';
 import { readRecoveryWrap, readVaultMetadata } from '../lib/vaultMetadata';
 import type { UseSessionSettingsResult } from '../hooks/useSessionSettings';
@@ -21,7 +22,7 @@ interface SettingsModalProps {
   onPersistToLocal?: () => boolean;
 }
 
-type SettingsTab = 'profile' | 'password' | 'security';
+type SettingsTab = 'profile' | 'password' | 'security' | 'editor';
 
 export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, sessionSettings, vaultSettings, isVaultUnlocked, onLockVault, onPersistToLocal }: SettingsModalProps) {
   const { user, updateProfile, updatePassword, verifyPassword } = useAuth();
@@ -161,13 +162,13 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
     <BottomSheet isOpen={isOpen} onClose={onClose} title="Settings" maxHeightPercent={85}>
       {/* Tabs - always show Profile & Security, Password only for non-OAuth */}
       <div
-        className="flex gap-1 px-6 py-3 border-b"
+        className="flex flex-wrap gap-1 px-4 sm:px-6 py-3 border-b"
         style={{ borderColor: 'var(--glass-border)' }}
       >
         <button type="button"
           onClick={() => setActiveTab('profile')}
           className="
-            px-4 py-2
+            px-3 sm:px-4 py-2
             text-sm font-medium
             rounded-lg
             transition-colors duration-200
@@ -185,7 +186,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
           <button type="button"
             onClick={() => setActiveTab('password')}
             className="
-              px-4 py-2
+              px-3 sm:px-4 py-2
               text-sm font-medium
               rounded-lg
               transition-colors duration-200
@@ -203,7 +204,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
         <button type="button"
           onClick={() => setActiveTab('security')}
           className="
-            px-4 py-2
+            px-3 sm:px-4 py-2
             text-sm font-medium
             rounded-lg
             transition-colors duration-200
@@ -216,6 +217,23 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
           }}
         >
           Security
+        </button>
+        <button type="button"
+          onClick={() => setActiveTab('editor')}
+          className="
+            px-3 sm:px-4 py-2
+            text-sm font-medium
+            rounded-lg
+            transition-colors duration-200
+            touch-press-light
+          "
+          style={{
+            fontFamily: 'var(--font-body)',
+            color: activeTab === 'editor' ? 'var(--color-accent-text)' : 'var(--color-text-secondary)',
+            background: activeTab === 'editor' ? 'var(--color-accent-glow)' : 'transparent',
+          }}
+        >
+          Editor
         </button>
       </div>
 
@@ -616,6 +634,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
               </button>
             </form>
           )}
+
+          {/* Editor Tab */}
+          {activeTab === 'editor' && <EditorSettings />}
 
           {/* Security Tab */}
           {activeTab === 'security' && (

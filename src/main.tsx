@@ -12,6 +12,7 @@ import {
 } from './utils/serviceWorkerUpdates'
 import { bufferUncaughtErrors, disableReporting, startMonitoring } from './utils/monitoring'
 import { migrateLocalStorageKeys } from './utils/legacyStorageKeys'
+import { applyStoredTextSize } from './editor/textSize'
 
 // Sentry loads after `load` (item 61, step 2). Errors and unhandled rejections
 // thrown before it initialises are queued here and sent once it has, through the
@@ -67,6 +68,10 @@ try {
 } catch (error) {
   console.warn('Could not migrate stored preferences:', error)
 }
+
+// The editor text size (Settings → Editor), before the first render so text does not
+// jump. Only the editor and note cards read it.
+applyStoredTextSize()
 
 // The landing page and the public pages render from a small public shell; the app
 // shell, with Supabase and everything signed-in, loads only when this visit needs it
