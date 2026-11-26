@@ -146,13 +146,13 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
     <BottomSheet isOpen={isOpen} onClose={onClose} title="Settings" maxHeightPercent={85}>
       {/* Tabs - always show Profile & Security, Password only for non-OAuth */}
       <div
-        className="flex gap-1 px-6 py-3 border-b"
+        className="flex flex-wrap gap-1 px-4 sm:px-6 py-3 border-b"
         style={{ borderColor: 'var(--glass-border)' }}
       >
         <button type="button"
           onClick={() => setActiveTab('profile')}
           className="
-            px-4 py-2
+            px-3 sm:px-4 py-2
             text-sm font-medium
             rounded-lg
             transition-colors duration-200
@@ -170,7 +170,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
           <button type="button"
             onClick={() => setActiveTab('password')}
             className="
-              px-4 py-2
+              px-3 sm:px-4 py-2
               text-sm font-medium
               rounded-lg
               transition-colors duration-200
@@ -188,7 +188,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
         <button type="button"
           onClick={() => setActiveTab('security')}
           className="
-            px-4 py-2
+            px-3 sm:px-4 py-2
             text-sm font-medium
             rounded-lg
             transition-colors duration-200
@@ -205,7 +205,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
         <button type="button"
           onClick={() => setActiveTab('editor')}
           className="
-            px-4 py-2
+            px-3 sm:px-4 py-2
             text-sm font-medium
             rounded-lg
             transition-colors duration-200
