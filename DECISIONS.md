@@ -19,6 +19,58 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-26 — Security settings are one choice per device; trusted device goes
+
+**Status:** Active
+
+**Why:** The Security tab had four timers and switches that overlapped: vault
+auto-lock, "Remember this browser", session timeout, and "This is a trusted device".
+The 2026-11-25 design critique found that a non-technical writer could not tell which
+one made a shared computer safe. After PR 1 (#290) the trusted-device switch did only
+one thing: it made a session timeout of Never available, for 90 days.
+
+**Decision:** Settings → Security leads with "On this device": three presets plus Lock
+now. Shared device is auto-lock 15 minutes, not remembered, signed out after 1 hour
+idle. My device is 1 hour, not remembered, 1 week. Stay unlocked is auto-lock off,
+remembered, 1 week. A preset is only a name for a combination of the existing stored
+settings, so nothing new is stored; when the stored values match no preset the tab
+shows Custom. The individual controls sit under Details. New accounts start on My
+device, on the browser where they finish setup; the settings are per browser, so a new
+account's second device starts on the old defaults and shows Custom, like an existing
+account. Existing accounts keep their values and usually show Custom. The trusted-device
+switch and the "Keep me signed in" login checkbox, whose only effect was to set it, are
+removed. Never is offered to everyone and lasts 90 days from when it was chosen, read
+from the same storage keys trust used, so an account on Never keeps its end date.
+
+**Rejected:**
+- A 90-day timeout for Stay unlocked, as drafted. It is not an option, and a browser
+  timer cannot hold more than about 24.8 days: a longer one fires at once.
+- Never for Stay unlocked. It would make a preset that turns itself into Custom when
+  the 90 days end.
+- Changing the stored defaults so existing accounts land on My device. It would turn on
+  a 1-hour auto-lock for every account that never touched the setting.
+
+## 2026-11-26 — Sign-in uses a password; encryption uses a separate passphrase
+
+**Status:** Active
+
+**Why:** The critique asked why a writer has two secrets. The server checks the
+password at sign-in, so whatever the server sees must never be enough to derive the
+encryption key. If the passphrase were the password, Supabase would receive it on
+every sign-in and could decrypt every note.
+
+**Decision:** Keep two secrets. The password signs in through Supabase Auth. The
+passphrase never leaves the device; Argon2id turns it into the key that unwraps the
+vault key. A recovery key is a second wrap of the same vault key.
+
+**Rejected:**
+- One secret with a derived auth hash (the client sends a hash of the passphrase as
+  the password and keeps a separate derivation for the key). It replaces Supabase
+  password auth, and reworks password reset and recovery: a month or more of auth and
+  crypto work near launch.
+- Leading sign-up with Google and GitHub so there is no password to remember. It pushes
+  a privacy-minded audience toward the large accounts many of them want to avoid.
+
 ## 2026-11-26 — Five buttons on every editor toolbar; ⋯ lists the rest
 
 **Status:** Active

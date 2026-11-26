@@ -209,3 +209,60 @@ describe('useVaultSettings', () => {
     expect(result.current.settings.rememberBrowser).toBe(false);
   });
 });
+
+describe('useVaultSettings same-tab sync', () => {
+  const USER_ID = 'user-vault-sync';
+
+  it('shows a change made by another instance, as the unlock screen and Settings do', () => {
+    const unlockScreen = renderHook(() => useVaultSettings(USER_ID));
+    const settings = renderHook(() => useVaultSettings(USER_ID));
+
+    act(() => { unlockScreen.result.current.setRememberBrowser(true); });
+    act(() => { unlockScreen.result.current.setAutoLockMinutes(15); });
+
+    expect(settings.result.current.settings).toEqual({ autoLockMinutes: 15, rememberBrowser: true });
+  });
+
+  it('does not pass a change to another account', () => {
+    const mine = renderHook(() => useVaultSettings(USER_ID));
+    const other = renderHook(() => useVaultSettings('someone-else'));
+
+    act(() => { mine.result.current.setRememberBrowser(true); });
+
+    expect(other.result.current.settings.rememberBrowser).toBe(false);
+  });
+
+  it('passes on a failed "remember" as off, so no instance shows it on', () => {
+    const settings = renderHook(() => useVaultSettings(USER_ID));
+    const unlockScreen = renderHook(() => useVaultSettings(USER_ID));
+
+    act(() => { unlockScreen.result.current.setRememberBrowser(true, { persistKeys: () => false }); });
+
+    expect(settings.result.current.settings.rememberBrowser).toBe(false);
+  });
+
+  it.each([
+    { autoLockMinutes: 5 },
+    { autoLockMinutes: '15' },
+    { rememberBrowser: 'true' },
+    { rememberBrowser: 1, extra: 'x' },
+  ])('ignores a sync event with an invalid change: %o', (change) => {
+    const { result } = renderHook(() => useVaultSettings(USER_ID));
+    const before = result.current.settings;
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('yidhan:vault-settings', { detail: { userId: USER_ID, change } }));
+    });
+
+    expect(result.current.settings).toEqual(before);
+  });
+
+  it('ignores a sync event with no detail', () => {
+    const { result } = renderHook(() => useVaultSettings(USER_ID));
+    const before = result.current.settings;
+
+    act(() => { window.dispatchEvent(new CustomEvent('yidhan:vault-settings')); });
+
+    expect(result.current.settings).toEqual(before);
+  });
+});

@@ -5,7 +5,14 @@ import { RecoveryKeySettings } from './RecoveryKeySettings';
 import { EditorSettings } from './EditorSettings';
 import { ACCOUNT_OFFBOARDING_ENABLED } from '../config/featureFlags';
 import { readRecoveryWrap, readVaultMetadata } from '../lib/vaultMetadata';
-import type { UseSessionSettingsResult } from '../hooks/useSessionSettings';
+import { neverEndsAt, TIMEOUT_OPTIONS, type UseSessionSettingsResult } from '../hooks/useSessionSettings';
+import {
+  applySecurityPreset,
+  presetForSettings,
+  SECURITY_PRESETS,
+  type SecurityPresetChoice,
+  type SecurityPresetId,
+} from '../lib/securityPresets';
 import type { UseVaultSettingsResult } from '../hooks/useVaultSettings';
 import type { Theme } from '../types';
 
@@ -95,6 +102,49 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
       });
     }
   }
+
+  // "On this device" (J1, J2): the preset is read back from the stored settings.
+  const currentPreset: SecurityPresetChoice = vaultSettings
+    ? presetForSettings({
+        autoLockMinutes: vaultSettings.settings.autoLockMinutes,
+        rememberBrowser: vaultSettings.settings.rememberBrowser,
+        timeoutMinutes: sessionSettings.settings.timeoutMinutes,
+      })
+    : 'custom';
+  const presetOptions: { id: SecurityPresetChoice; label: string; description: string }[] = [
+    ...SECURITY_PRESETS.map(({ id, label, description }) => ({ id, label, description })),
+    // Custom shows only while it is the state. It is not something to pick.
+    ...(currentPreset === 'custom'
+      ? [{ id: 'custom' as const, label: 'Custom', description: 'Your own mix of the settings under Details.' }]
+      : []),
+  ];
+
+  function handlePresetChange(id: SecurityPresetId) {
+    if (!vaultSettings) return;
+    setSecurityMessage(null);
+    const result = applySecurityPreset(id, {
+      setAutoLockMinutes: vaultSettings.setAutoLockMinutes,
+      setRememberBrowser: vaultSettings.setRememberBrowser,
+      setTimeoutMinutes: sessionSettings.setTimeoutMinutes,
+      persistKeys: isVaultUnlocked ? onPersistToLocal : undefined,
+    });
+    if (!result.ok) {
+      setSecurityMessage({
+        text: result.failed === 'remember-browser'
+          ? 'Could not remember this browser, so the other settings were not changed. Check available storage or browser privacy settings and try again.'
+          : 'This choice applies now, but part of it could not be saved and may not last after you reload. Check available storage or browser privacy settings.',
+      });
+    }
+  }
+
+  const neverSince = sessionSettings.settings.timeoutMinutes === null ? sessionSettings.settings.neverSince : null;
+  const neverEndsOn = neverSince ? neverEndsAt(neverSince).toLocaleDateString() : null;
+
+  const selectStyle = {
+    background: 'var(--color-bg-secondary)',
+    border: '1px solid var(--glass-border)',
+    color: 'var(--color-text-primary)',
+  } as const;
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -330,6 +380,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 <button
                   type="button"
                   onClick={onThemeToggle}
+                  aria-label={theme === 'light' ? 'Theme: Light. Switch to Dark' : 'Theme: Dark. Switch to Light'}
                   className="
                     w-full px-4 py-3
                     rounded-lg
@@ -360,15 +411,6 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       </svg>
                     )}
                     {theme === 'light' ? 'Light' : 'Dark'}
-                  </span>
-                  <span
-                    className="text-xs px-2 py-1 rounded"
-                    style={{
-                      background: 'var(--color-accent-glow)',
-                      color: 'var(--color-accent-text)',
-                    }}
-                  >
-                    Click to switch
                   </span>
                 </button>
               </div>
@@ -640,70 +682,37 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
 
           {/* Security Tab */}
           {activeTab === 'security' && (
-            <div>
-              <p
-                className="text-sm mb-5"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  color: 'var(--color-text-secondary)',
-                }}
-              >
-                Manage your vault, session, and device trust settings.
+            <div style={{ fontFamily: 'var(--font-body)' }}>
+              <p className="text-sm mb-5" style={{ color: 'var(--color-text-secondary)' }}>
+                Choose how long your notes stay open on this device.
               </p>
 
-              {/* Encryption vault */}
-              {vaultSettings && (
-                <div
-                  className="mb-6 pb-5"
-                  style={{ borderBottom: '1px solid var(--glass-border)' }}
-                >
-                  <h3
-                    className="text-sm font-medium mb-3"
-                    style={{
-                      fontFamily: 'var(--font-body)',
-                      color: 'var(--color-text-primary)',
-                    }}
-                  >
-                    Encryption vault
-                  </h3>
+              {/* On this device (J1, J2, J4) */}
+              <div className="mb-6 pb-5" style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                <h3 id="settings-on-this-device" className="text-sm font-medium mb-3" style={{ color: 'var(--color-text-primary)' }}>
+                  On this device
+                </h3>
 
-                  {/* Vault Status */}
-                  <div className="mb-4 flex items-center justify-between">
+                {vaultSettings && (
+                  <div className="mb-4 flex items-center justify-between gap-4">
                     <div>
-                      <span
-                        className="text-sm"
-                        style={{
-                          fontFamily: 'var(--font-body)',
-                          color: isVaultUnlocked ? 'var(--color-text-secondary)' : 'var(--color-success)',
-                        }}
-                      >
-                        {isVaultUnlocked ? 'Vault is unlocked' : 'Vault is locked'}
+                      <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        {isVaultUnlocked ? 'Your notes are unlocked on this device' : 'Your notes are locked'}
                       </span>
                       {isVaultUnlocked && (
-                        <p
-                          className="text-xs mt-0.5"
-                          style={{
-                            fontFamily: 'var(--font-body)',
-                            color: 'var(--color-text-tertiary)',
-                          }}
-                        >
-                          {vaultSettings?.settings.rememberBrowser
-                            ? 'Keys are remembered on this browser. Lock manually or sign out to clear.'
-                            : 'Keys are held for this browser session and cleared when you close the tab.'}
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
+                          {vaultSettings.settings.rememberBrowser
+                            ? 'They stay unlocked after you close the browser. Lock now or sign out to end that.'
+                            : 'They lock when you close this tab.'}
                         </p>
                       )}
                     </div>
                     {isVaultUnlocked && onLockVault && (
-                      <button type="button"
+                      <button
+                        type="button"
                         onClick={onLockVault}
-                        className="
-                          px-3 py-1.5
-                          rounded-lg
-                          text-xs font-medium
-                          transition-all duration-200
-                        "
+                        className="shrink-0 min-h-11 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 focus-ring"
                         style={{
-                          fontFamily: 'var(--font-body)',
                           background: 'var(--color-bg-secondary)',
                           border: '1px solid var(--glass-border)',
                           color: 'var(--color-text-secondary)',
@@ -715,150 +724,205 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                           e.currentTarget.style.borderColor = 'var(--glass-border)';
                         }}
                       >
-                        Lock vault now
+                        Lock now
                       </button>
                     )}
                   </div>
+                )}
 
-                  {/* Recovery key (item 26) */}
+                {vaultSettings && (
+                  <div role="radiogroup" aria-labelledby="settings-on-this-device" className="flex flex-col gap-2">
+                    {presetOptions.map((option) => {
+                      const selected = option.id === currentPreset;
+                      return (
+                        <label
+                          key={option.id}
+                          className="flex items-start gap-3 px-4 py-3 rounded-lg cursor-pointer transition-colors duration-200"
+                          style={{
+                            background: selected ? 'var(--color-accent-glow)' : 'transparent',
+                            border: `1px solid ${selected ? 'var(--color-accent)' : 'var(--glass-border)'}`,
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="security-preset"
+                            value={option.id}
+                            checked={selected}
+                            onChange={() => {
+                              if (option.id !== 'custom') handlePresetChange(option.id);
+                            }}
+                            className="mt-1 shrink-0 focus-ring"
+                            style={{ accentColor: 'var(--color-accent)' }}
+                          />
+                          <span>
+                            <span className="block text-sm" style={{ color: selected ? 'var(--color-accent-text)' : 'var(--color-text-primary)' }}>
+                              {option.label}
+                            </span>
+                            <span className="block text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
+                              {option.description}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {securityMessage && (
+                  <p className="mt-2 text-xs" role="alert" style={{ color: 'var(--color-destructive)' }}>
+                    {securityMessage.text}
+                  </p>
+                )}
+
+                <details className="mt-4">
+                  <summary className="text-sm cursor-pointer focus-ring" style={{ color: 'var(--color-text-secondary)' }}>
+                    Details
+                  </summary>
+
+                  <div className="mt-3">
+                    {vaultSettings && (
+                      <>
+                        {/* Vault auto-lock */}
+                        <div className="mb-4">
+                          <label htmlFor="vault-auto-lock" className="block text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                            Lock after idle
+                          </label>
+                          <select
+                            id="vault-auto-lock"
+                            value={String(vaultSettings.settings.autoLockMinutes)}
+                            onChange={(e) => {
+                              const parsed = parseInt(e.target.value, 10);
+                              if (parsed === 0 || parsed === 15 || parsed === 60) {
+                                setSecurityMessage(null);
+                                if (!vaultSettings.setAutoLockMinutes(parsed)) {
+                                  setSecurityMessage({ text: 'This applies now, but could not be saved and may not last after you reload. Check available storage or browser privacy settings.' });
+                                }
+                              }
+                            }}
+                            className="w-full px-4 py-2 rounded-lg outline-none transition-all duration-200 cursor-pointer"
+                            style={selectStyle}
+                            onFocus={(e) => {
+                              e.currentTarget.style.borderColor = 'var(--color-accent)';
+                            }}
+                            onBlur={(e) => {
+                              e.currentTarget.style.borderColor = 'var(--glass-border)';
+                            }}
+                          >
+                            <option value="0">Off</option>
+                            <option value="15">15 minutes</option>
+                            <option value="60">1 hour</option>
+                          </select>
+                          <p className="text-xs mt-1.5" style={{ color: 'var(--color-text-tertiary)' }}>
+                            {vaultSettings.settings.rememberBrowser
+                              ? 'Locks your notes when idle. This browser is remembered, so they open again without your passphrase.'
+                              : 'Locks your notes when idle. You’ll need your passphrase to open them again.'}
+                          </p>
+                        </div>
+
+                        {/* Remember this browser */}
+                        <div className="mb-4">
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between text-left cursor-pointer focus-ring"
+                            role="switch"
+                            aria-checked={vaultSettings.settings.rememberBrowser}
+                            aria-label="Remember this browser"
+                            onClick={handleRememberBrowserToggle}
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            <div>
+                              <span className="block text-sm">Remember this browser</span>
+                              <span className="block text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                                Stay unlocked after you close the browser. Only on a device no one else uses.
+                              </span>
+                            </div>
+                            <span
+                              className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer shrink-0 ml-4"
+                              style={{
+                                background: vaultSettings.settings.rememberBrowser
+                                  ? 'var(--color-accent)'
+                                  : 'var(--color-bg-tertiary)',
+                              }}
+                              aria-hidden="true"
+                            >
+                              <span
+                                className="absolute top-0.5 size-5 rounded-full shadow-[var(--shadow-sm)] transition-transform duration-200"
+                                style={{
+                                  background: 'var(--color-text-primary)',
+                                  transform: vaultSettings.settings.rememberBrowser
+                                    ? 'translateX(26px)'
+                                    : 'translateX(2px)',
+                                }}
+                              />
+                            </span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Session timeout */}
+                    <div>
+                      <label htmlFor="session-timeout" className="block text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                        Sign out after idle
+                      </label>
+                      <select
+                        id="session-timeout"
+                        value={sessionSettings.settings.timeoutMinutes === null ? 'null' : String(sessionSettings.settings.timeoutMinutes)}
+                        onChange={(e) => {
+                          const value = e.target.value === 'null' ? null : parseInt(e.target.value, 10);
+                          setSecurityMessage(null);
+                          if (!sessionSettings.setTimeoutMinutes(value)) {
+                            setSecurityMessage({
+                              text: value === null
+                                ? 'Could not save this choice, so it was not changed. Check available storage or browser privacy settings and try again.'
+                                : 'This applies now, but could not be saved and may not last after you reload. Check available storage or browser privacy settings.',
+                            });
+                          }
+                        }}
+                        className="w-full px-4 py-2 rounded-lg outline-none transition-all duration-200 cursor-pointer"
+                        style={selectStyle}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--color-accent)';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--glass-border)';
+                        }}
+                      >
+                        {TIMEOUT_OPTIONS.map((option) => (
+                          <option key={option.value === null ? 'null' : option.value} value={option.value === null ? 'null' : option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs mt-1.5" style={{ color: 'var(--color-text-tertiary)' }}>
+                        {neverEndsOn
+                          ? `Never ends on ${neverEndsOn}. After that you’re signed out after 1 week idle.`
+                          : 'Never lasts 90 days, then goes back to 1 week.'}
+                      </p>
+                    </div>
+                  </div>
+                </details>
+              </div>
+
+              {/* Recovery key (item 26) */}
+              {vaultSettings && (
+                <div>
+                  <h3 className="text-sm font-medium mb-3" style={{ color: 'var(--color-text-primary)' }}>
+                    Recovery key
+                  </h3>
+
                   {isVaultUnlocked && (
                     <div ref={recoveryKeyRowRef}>
                       <RecoveryKeySettings />
                     </div>
                   )}
 
-                  {/* Vault Auto-Lock */}
-                  <div>
-                    <label
-                      htmlFor="vault-auto-lock"
-                      className="block text-sm mb-2"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text-secondary)',
-                      }}
-                    >
-                      Vault auto-lock
-                    </label>
-                    <select
-                      id="vault-auto-lock"
-                      value={String(vaultSettings.settings.autoLockMinutes)}
-                      onChange={(e) => {
-                        const parsed = parseInt(e.target.value, 10);
-                        if (parsed === 0 || parsed === 15 || parsed === 60) {
-                          vaultSettings.setAutoLockMinutes(parsed);
-                        }
-                      }}
-                      className="
-                        w-full px-4 py-2
-                        rounded-lg
-                        outline-none
-                        transition-all duration-200
-                        cursor-pointer
-                      "
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        background: 'var(--color-bg-secondary)',
-                        border: '1px solid var(--glass-border)',
-                        color: 'var(--color-text-primary)',
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--color-accent)';
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--glass-border)';
-                      }}
-                    >
-                      <option value="0">Off</option>
-                      <option value="15">15 minutes</option>
-                      <option value="60">60 minutes</option>
-                    </select>
-                    <p
-                      className="text-xs mt-1.5"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text-tertiary)',
-                      }}
-                    >
-                      {vaultSettings.settings.rememberBrowser
-                        ? 'Locks the vault when idle. Keys stay remembered \u2014 no passphrase needed.'
-                        : 'Locks the vault when idle. You\u2019ll need your passphrase to unlock again.'}
-                    </p>
-                  </div>
-
-                  {/* Remember This Browser Toggle */}
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between text-left cursor-pointer focus-ring"
-                      role="switch"
-                      aria-checked={vaultSettings.settings.rememberBrowser}
-                      aria-label="Remember this browser"
-                      onClick={handleRememberBrowserToggle}
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text-primary)',
-                      }}
-                    >
-                      <div>
-                        <span className="block text-sm">Remember this browser</span>
-                        <span
-                          className="block text-xs mt-1"
-                          style={{ color: 'var(--color-text-tertiary)' }}
-                        >
-                          Stay unlocked across sessions. Only use on personal devices.
-                        </span>
-                      </div>
-                      <span
-                        className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer shrink-0 ml-4 focus-ring"
-                        style={{
-                          background: vaultSettings.settings.rememberBrowser
-                            ? 'var(--color-accent)'
-                            : 'var(--color-bg-tertiary)',
-                        }}
-                        aria-hidden="true"
-                      >
-                        <span
-                          className="absolute top-0.5 size-5 rounded-full shadow-[var(--shadow-sm)] transition-transform duration-200"
-                          style={{
-                            background: 'var(--color-text-primary)',
-                            transform: vaultSettings.settings.rememberBrowser
-                              ? 'translateX(26px)'
-                              : 'translateX(2px)',
-                          }}
-                        />
-                      </span>
-                    </button>
-                    {securityMessage && (
-                      <p
-                        className="mt-2 text-xs"
-                        style={{
-                          fontFamily: 'var(--font-body)',
-                          color: 'var(--color-destructive)',
-                        }}
-                      >
-                        {securityMessage.text}
-                      </p>
-                    )}
-                  </div>
-
                   {/* Change passphrase (I2). No in-app flow yet: roadmap 136. */}
                   <div className="mt-4">
-                    <span
-                      className="block text-sm"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text-primary)',
-                      }}
-                    >
+                    <span className="block text-sm" style={{ color: 'var(--color-text-primary)' }}>
                       Change passphrase
                     </span>
-                    <p
-                      className="block text-xs mt-1"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text-tertiary)',
-                      }}
-                    >
+                    <p className="block text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
                       {hasRecoveryKey
                         ? 'To change your passphrase, lock your notes and choose ‘Use your recovery key’ on the unlock screen. You’ll need your recovery key.'
                         : 'Make a recovery key first. You’ll need it to change your passphrase.'}
@@ -869,10 +933,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         type="button"
                         onClick={goToRecoveryKey}
                         className="mt-1 text-xs underline cursor-pointer focus-ring"
-                        style={{
-                          fontFamily: 'var(--font-body)',
-                          color: 'var(--color-accent-text)',
-                        }}
+                        style={{ color: 'var(--color-accent-text)' }}
                       >
                         Go to Recovery key
                       </button>
@@ -880,133 +941,6 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   </div>
                 </div>
               )}
-
-              {/* Session & trust */}
-              <div>
-                <h3
-                  className="text-sm font-medium mb-3"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-primary)',
-                  }}
-                >
-                  Session & trust
-                </h3>
-
-                {/* Session Timeout */}
-                <div className="mb-5">
-                  <label
-                    htmlFor="session-timeout"
-                    className="block text-sm mb-2"
-                    style={{
-                      fontFamily: 'var(--font-body)',
-                      color: 'var(--color-text-secondary)',
-                    }}
-                  >
-                    Session timeout
-                  </label>
-                  <select
-                    id="session-timeout"
-                    value={sessionSettings.settings.timeoutMinutes === null ? 'null' : String(sessionSettings.settings.timeoutMinutes)}
-                    onChange={(e) => {
-                      const value = e.target.value === 'null' ? null : parseInt(e.target.value, 10);
-                      sessionSettings.setTimeoutMinutes(value);
-                    }}
-                    className="
-                      w-full px-4 py-2
-                      rounded-lg
-                      outline-none
-                      transition-all duration-200
-                      cursor-pointer
-                    "
-                    style={{
-                      fontFamily: 'var(--font-body)',
-                      background: 'var(--color-bg-secondary)',
-                      border: '1px solid var(--glass-border)',
-                      color: 'var(--color-text-primary)',
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-accent)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--glass-border)';
-                    }}
-                  >
-                    {sessionSettings.availableTimeoutOptions.map((option) => (
-                      <option key={option.value === null ? 'null' : option.value} value={option.value === null ? 'null' : option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p
-                    className="text-xs mt-1.5"
-                    style={{
-                      fontFamily: 'var(--font-body)',
-                      color: 'var(--color-text-tertiary)',
-                    }}
-                  >
-                    How long before you're signed out when inactive
-                  </p>
-                </div>
-
-                {/* Trusted Device Toggle */}
-                <div className="mb-5">
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between text-left cursor-pointer focus-ring"
-                    role="switch"
-                    aria-checked={sessionSettings.settings.isTrustedDevice}
-                    aria-label="This is a trusted device"
-                    onClick={sessionSettings.toggleTrustedDevice}
-                    style={{
-                      fontFamily: 'var(--font-body)',
-                      color: 'var(--color-text-primary)',
-                    }}
-                  >
-                    <div>
-                      <span className="block text-sm">This is a trusted device</span>
-                      <span
-                        className="block text-xs mt-1"
-                        style={{ color: 'var(--color-text-tertiary)' }}
-                      >
-                        Allows a session timeout of Never. Only use on personal devices.
-                      </span>
-                    </div>
-                    <span
-                      className="relative w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer shrink-0 ml-4 focus-ring"
-                      style={{
-                        background: sessionSettings.settings.isTrustedDevice
-                          ? 'var(--color-accent)'
-                          : 'var(--color-bg-tertiary)',
-                      }}
-                      aria-hidden="true"
-                    >
-                      <span
-                        className="absolute top-0.5 size-5 rounded-full shadow-[var(--shadow-sm)] transition-transform duration-200"
-                        style={{
-                          background: 'var(--color-bg-primary)',
-                          transform: sessionSettings.settings.isTrustedDevice
-                            ? 'translateX(26px)'
-                            : 'translateX(2px)',
-                        }}
-                      />
-                    </span>
-                  </button>
-                  {sessionSettings.settings.isTrustedDevice && sessionSettings.settings.trustedAt && (
-                    <p
-                      className="text-xs mt-2"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text-tertiary)',
-                      }}
-                    >
-                      Trusted since {new Date(sessionSettings.settings.trustedAt).toLocaleDateString()}
-                      {' '}(expires after 90 days)
-                    </p>
-                  )}
-                </div>
-              </div>
-
             </div>
           )}
 

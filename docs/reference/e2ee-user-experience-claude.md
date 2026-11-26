@@ -95,15 +95,15 @@ see the three-step setup.
 ## 3. Vault Locking (Active Session)
 
 ### Manual Lock
-- Location: Settings → Security → "Lock vault now"
+- Location: Settings → Security → "Lock now"
 - Keys zeroed out from memory + sessionStorage
 - Immediately returns to unlock screen
 - Toast: "Vault locked"
 
 ### Auto-Lock (Configurable)
-- Location: Settings → Security → "Vault auto-lock after inactivity"
-- Options: Off / 15 minutes / 60 minutes
-- Default: Off
+- Location: Settings → Security → a preset, or Details → "Lock after idle"
+- Options: Off / 15 minutes / 1 hour
+- Default: 1 hour for new accounts (My device). Accounts that never chose keep Off
 - Tracks: mouse, keyboard, touch, scroll activity
 - When triggered: same as manual lock + toast "Vault locked after inactivity"
 
@@ -113,15 +113,15 @@ see the three-step setup.
 
 | Layer | What it does | Configured where |
 |-------|-------------|-----------------|
-| **Vault auto-lock** | Locks encryption keys, keeps you logged in | Security → "Vault auto-lock after inactivity" |
-| **Session timeout** | Signs you out of the entire app | Security → "Auto-lock after inactivity" (auth-level) |
+| **Vault auto-lock** | Locks encryption keys, keeps you logged in | Security → preset, or Details → "Lock after idle" |
+| **Session timeout** | Signs you out of the entire app | Security → preset, or Details → "Sign out after idle" |
 
 Session timeout shows a zen-styled warning modal: "Your session is about to fade" with options to **Stay** or **Sign out now**.
 
 ### Session timeout options
-- Options: 30 minutes / 1 hour / 24 hours / 1 week (default) / Never
-- The chosen timeout always applies. Trusted device only unlocks Never.
-- Trust expires after 90 days, with a notice. Never then falls back to 1 week.
+- Options: 30 minutes / 1 hour / 24 hours / 1 week (default) / Never (for 90 days)
+- The chosen timeout always applies. There is no trusted-device switch.
+- Never lasts 90 days from when it was chosen, then falls back to 1 week with a notice.
 
 ---
 
@@ -218,14 +218,26 @@ Keys are securely zeroed out (overwritten with 0s) when the vault locks.
 
 ### Security Tab Layout
 
-**Encryption Vault** (visible when E2EE is set up)
-- Status indicator: Locked / Unlocked
-- "Lock vault now" button
-- Auto-lock dropdown: Off / 15 min / 60 min
+**On this device**
+- Status: "Your notes are unlocked on this device" / "Your notes are locked"
+- "Lock now" button (manual lock)
+- One choice of three presets, read back from the stored settings:
 
-**Session Timeout** (auth-level)
-- Auto-lock dropdown with time options
-- Trusted device toggle (unlocks Never; expires after 90 days)
+| Preset | Lock after idle | Remember this browser | Sign out after idle |
+|---|---|---|---|
+| Shared device | 15 minutes | Off | 1 hour |
+| My device (new accounts) | 1 hour | Off | 1 week |
+| Stay unlocked | Off | On | 1 week |
+
+- Any other combination shows "Custom". Opening the tab never changes a setting.
+- Picking a preset sets "Remember this browser" first. If it cannot be stored, nothing
+  else changes and the tab says so.
+- **Details** holds the individual controls: Lock after idle, Remember this browser,
+  Sign out after idle.
+
+**Recovery key**
+- Make or replace a recovery key (while unlocked)
+- "Change passphrase" row: points to "Use your recovery key" on the unlock screen
 
 **E2EE Migration** (visible if plaintext notes exist)
 - "Encrypt existing notes" button → navigates to `/migrate`

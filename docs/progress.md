@@ -869,3 +869,14 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   seconds; new `--color-text-placeholder` token on `::placeholder`; the Practice Space
   invitation shows once per browser; the changelog page groups releases by day; small
   demo, landing and sync-caption polish.
+- **2026-11-26** — Design critique PR 4, security presets (J1–J4, K10). Settings →
+  Security leads with "On this device": Shared device, My device and Stay unlocked,
+  plus Lock now. Presets are read back from the stored auto-lock, Remember and timeout
+  values (`src/lib/securityPresets.ts`); no match shows Custom, and the individual
+  controls sit under Details. New accounts start on My device at setup; existing
+  accounts keep their values. The trusted-device switch and the "Keep me signed in"
+  login box are removed; Never is open to all and lasts 90 days, read from the old
+  trust keys so existing Never choices keep their end date. Applying a preset sets
+  Remember first and stops if it cannot be stored. Vault-settings hook instances now
+  sync in the same tab. Theme row drops "Click to switch". `DECISIONS.md` records the
+  presets and why sign-in and encryption use separate secrets.

@@ -1,19 +1,16 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 
 export interface SessionSettings {
-  /** Session timeout in minutes (null = never, only available when trusted device is on) */
+  /** Session timeout in minutes. null is "Never", which lasts 90 days from `neverSince`. */
   timeoutMinutes: number | null;
-  /** Whether this device is marked as trusted */
-  isTrustedDevice: boolean;
-  /** Timestamp when device was trusted (for 90-day TTL) */
-  trustedAt: string | null;
+  /** When "Never" was chosen. Set only while the timeout is "Never". */
+  neverSince: string | null;
 }
 
 export interface TimeoutOption {
   label: string;
   value: number | null;
-  requiresTrustedDevice?: boolean;
 }
 
 /** Available timeout options */
@@ -22,38 +19,50 @@ export const TIMEOUT_OPTIONS: TimeoutOption[] = [
   { label: '1 hour', value: 60 },
   { label: '24 hours', value: 1440 },
   { label: '1 week', value: 10080 },
-  { label: 'Never', value: null, requiresTrustedDevice: true },
+  { label: 'Never (for 90 days)', value: null },
 ];
 
 /** Default timeout: 1 week */
 const DEFAULT_TIMEOUT_MINUTES = 10080;
 
-/** Trusted device TTL: 90 days */
-const TRUST_TTL_DAYS = 90;
+/** "Never" lasts 90 days, then falls back to the default. */
+const NEVER_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
-/** Storage key suffixes (prefixed with userId) */
+/** When a "Never" chosen at neverSince ends. */
+export function neverEndsAt(neverSince: string): Date {
+  return new Date(new Date(neverSince).getTime() + NEVER_TTL_MS);
+}
+
+/**
+ * Storage key suffixes (prefixed with userId).
+ *
+ * `trusted-device` and `trusted-at` are the names from when "Never" needed a separate
+ * "trusted device" switch (removed in design critique PR 4, J3). They now record only
+ * that "Never" was chosen, and when. The names are kept so an account that chose Never
+ * before the upgrade keeps it, with the same 90-day end date, and nobody is signed out.
+ */
 const STORAGE_KEYS = {
   timeout: 'session-timeout',
-  trustedDevice: 'trusted-device',
-  trustedAt: 'trusted-at',
+  neverChosen: 'trusted-device',
+  neverSince: 'trusted-at',
 };
 
 /** Generate storage key for a user */
 const getStorageKey = (userId: string, key: string) => `yidhan-${userId}-${key}`;
 
 /**
- * Check if trust has expired (> 90 days old). Fails closed: a missing, unreadable
- * or future timestamp counts as expired, so trust can never outlive its 90 days.
+ * Check if "Never" has run out (> 90 days old). Fails closed: a missing, unreadable
+ * or future timestamp counts as expired, so "Never" can never outlive its 90 days.
  * A few minutes of future skew is allowed, so a small clock correction does not
- * drop trust that was just turned on.
+ * end a "Never" that was just chosen.
  */
-const TRUST_CLOCK_SKEW_MS = 5 * 60 * 1000;
-const isTrustExpired = (trustedAt: string | null): boolean => {
-  if (!trustedAt) return true;
-  const trustedTime = new Date(trustedAt).getTime();
+const CLOCK_SKEW_MS = 5 * 60 * 1000;
+const isNeverExpired = (neverSince: string | null): boolean => {
+  if (!neverSince) return true;
+  const since = new Date(neverSince).getTime();
   const now = Date.now();
-  if (Number.isNaN(trustedTime) || trustedTime > now + TRUST_CLOCK_SKEW_MS) return true;
-  return now > trustedTime + TRUST_TTL_DAYS * 24 * 60 * 60 * 1000;
+  if (Number.isNaN(since) || since > now + CLOCK_SKEW_MS) return true;
+  return now > since + NEVER_TTL_MS;
 };
 
 /** Only the listed options are enforced. Anything else stored falls back to the default. */
@@ -61,67 +70,87 @@ const ALLOWED_FINITE_TIMEOUTS = new Set(
   TIMEOUT_OPTIONS.flatMap((option) => (option.value === null ? [] : [option.value]))
 );
 
+/** True when this user has a session timeout stored on this browser. Unreadable storage counts as none. */
+export function hasStoredSessionTimeout(userId: string): boolean {
+  try {
+    return localStorage.getItem(getStorageKey(userId, STORAGE_KEYS.timeout)) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export interface UseSessionSettingsResult {
   /** Current session settings */
   settings: SessionSettings;
-  /** Update session timeout preference */
-  setTimeoutMinutes: (minutes: number | null) => void;
-  /** Enable trusted device (starts 90-day TTL) */
-  enableTrustedDevice: () => void;
-  /** Disable trusted device */
-  disableTrustedDevice: () => void;
-  /** Toggle trusted device status */
-  toggleTrustedDevice: () => void;
-  /** Get the timeout to enforce: the chosen one. "Never" applies only on a trusted device. */
+  /**
+   * Choose a session timeout. Choosing "Never" starts its 90 days. Returns false when
+   * the value is not an option or cannot be stored. A finite timeout that cannot be
+   * stored still applies for this session; Never then changes nothing.
+   */
+  setTimeoutMinutes: (minutes: number | null) => boolean;
+  /** The timeout to enforce: always the chosen one. */
   getEffectiveTimeout: () => number | null;
-  /** Available timeout options (filtered by trusted device status) */
-  availableTimeoutOptions: TimeoutOption[];
 }
 
-/**
- * Hook for managing session timeout and trusted device settings.
- *
- * Settings are stored per-user in localStorage to prevent cross-account leakage.
- * Trusted device status expires after 90 days.
- *
- * @param userId - Current user's ID (null if not logged in)
- */
 interface LoadSettingsResult {
   settings: SessionSettings;
-  /** True if trusted device status had expired in storage */
-  trustExpired: boolean;
+  /** True if a stored "Never" had run out */
+  neverExpired: boolean;
   /** True if storage holds values the settings above corrected */
   needsRepair: boolean;
+}
+
+function readStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch (err) {
+    console.warn('[useSessionSettings] Failed to read session settings:', err);
+    return null;
+  }
 }
 
 /**
  * Read settings from localStorage for a given user. Pure: it never writes, so it is
  * safe to call during render. `repairStorage` writes the corrections afterwards.
+ *
+ * Upgrade from the trusted-device version: a timeout of Never needed trust, and trust
+ * expired after 90 days. Here Never needs a "Never chosen" record that expires after
+ * 90 days, read from the same keys, so every old combination enforces exactly what it
+ * did before. With a finite timeout the old trust flag did nothing, so it is dropped.
  */
 function loadSettingsFromStorage(userId: string | null): LoadSettingsResult {
+  const defaults: SessionSettings = { timeoutMinutes: DEFAULT_TIMEOUT_MINUTES, neverSince: null };
   if (!userId) {
+    return { settings: defaults, neverExpired: false, needsRepair: false };
+  }
+
+  const storedTimeout = readStorage(getStorageKey(userId, STORAGE_KEYS.timeout));
+  const storedNeverChosen = readStorage(getStorageKey(userId, STORAGE_KEYS.neverChosen));
+  const storedNeverSince = readStorage(getStorageKey(userId, STORAGE_KEYS.neverSince));
+  const hasNeverRecord = storedNeverChosen !== null || storedNeverSince !== null;
+
+  if (storedTimeout === 'null') {
+    const neverValid = storedNeverChosen === 'true' && !isNeverExpired(storedNeverSince);
+    if (neverValid) {
+      return {
+        settings: { timeoutMinutes: null, neverSince: storedNeverSince },
+        neverExpired: false,
+        needsRepair: false,
+      };
+    }
+    // Never without a live record falls back to the default. Only an expired
+    // record gets the notice: it is the one the reader chose and lost.
     return {
-      settings: {
-        timeoutMinutes: DEFAULT_TIMEOUT_MINUTES,
-        isTrustedDevice: false,
-        trustedAt: null,
-      },
-      trustExpired: false,
-      needsRepair: false,
+      settings: defaults,
+      neverExpired: storedNeverChosen === 'true',
+      needsRepair: true,
     };
   }
 
-  // Load stored settings
-  const storedTimeout = localStorage.getItem(getStorageKey(userId, STORAGE_KEYS.timeout));
-  const storedTrusted = localStorage.getItem(getStorageKey(userId, STORAGE_KEYS.trustedDevice));
-  const storedTrustedAt = localStorage.getItem(getStorageKey(userId, STORAGE_KEYS.trustedAt));
-
-  // Parse timeout: 'null' for "never", or exactly one of the listed options
-  let timeoutMinutes: number | null = DEFAULT_TIMEOUT_MINUTES;
-  let needsRepair = false;
-  if (storedTimeout === 'null') {
-    timeoutMinutes = null;
-  } else if (storedTimeout !== null) {
+  // Parse timeout: exactly one of the listed options
+  let timeoutMinutes = DEFAULT_TIMEOUT_MINUTES;
+  let needsRepair = hasNeverRecord;
+  if (storedTimeout !== null) {
     const parsed = Number(storedTimeout);
     if (ALLOWED_FINITE_TIMEOUTS.has(parsed)) {
       timeoutMinutes = parsed;
@@ -130,32 +159,9 @@ function loadSettingsFromStorage(userId: string | null): LoadSettingsResult {
     }
   }
 
-  // Parse trusted device status
-  let isTrustedDevice = storedTrusted === 'true';
-  let trustedAt = storedTrustedAt;
-  let trustExpired = false;
-
-  // Check if trust has expired (90-day TTL)
-  if (isTrustedDevice && isTrustExpired(trustedAt)) {
-    trustExpired = true;
-    needsRepair = true;
-    isTrustedDevice = false;
-    trustedAt = null;
-  }
-
-  // "Never" needs a trusted device. Without one, fall back to the default.
-  if (timeoutMinutes === null && !isTrustedDevice) {
-    timeoutMinutes = DEFAULT_TIMEOUT_MINUTES;
-    needsRepair = true;
-  }
-
   return {
-    settings: {
-      timeoutMinutes,
-      isTrustedDevice,
-      trustedAt,
-    },
-    trustExpired,
+    settings: { timeoutMinutes, neverSince: null },
+    neverExpired: false,
     needsRepair,
   };
 }
@@ -167,9 +173,9 @@ function loadSettingsFromStorage(userId: string | null): LoadSettingsResult {
  */
 function repairStorage(userId: string, settings: SessionSettings) {
   try {
-    if (!settings.isTrustedDevice) {
-      localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.trustedDevice));
-      localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.trustedAt));
+    if (settings.timeoutMinutes !== null) {
+      localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.neverChosen));
+      localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.neverSince));
     }
     const timeoutKey = getStorageKey(userId, STORAGE_KEYS.timeout);
     const timeoutValue = settings.timeoutMinutes === null ? 'null' : String(settings.timeoutMinutes);
@@ -181,6 +187,14 @@ function repairStorage(userId: string, settings: SessionSettings) {
   }
 }
 
+/**
+ * Hook for the session timeout: how long the app waits, idle, before signing out.
+ *
+ * Settings are stored per-user in localStorage to prevent cross-account leakage.
+ * "Never" lasts 90 days, then falls back to 1 week with a notice.
+ *
+ * @param userId - Current user's ID (null if not logged in)
+ */
 export function useSessionSettings(userId: string | null): UseSessionSettingsResult {
   // Load once, on first render. Loading is pure; the effect below writes repairs.
   const [initialResult] = useState(() => loadSettingsFromStorage(userId));
@@ -208,8 +222,8 @@ export function useSessionSettings(userId: string | null): UseSessionSettingsRes
 
     if (userId && result.needsRepair) repairStorage(userId, result.settings);
 
-    if (result.trustExpired) {
-      toast('Your trusted device status has expired. Please re-enable in Settings if this is still your personal device.', {
+    if (result.neverExpired) {
+      toast('“Never sign out” has ended after 90 days. You’ll now be signed out after 1 week idle. You can choose Never again in Settings.', {
         duration: 6000,
         style: {
           background: 'var(--color-bg-secondary)',
@@ -222,101 +236,59 @@ export function useSessionSettings(userId: string | null): UseSessionSettingsRes
     if (nextSettings) setSettings(nextSettings);
   }, [userId]);
 
-  const setTimeoutMinutes = useCallback((minutes: number | null) => {
-    if (!userId) return;
+  const setTimeoutMinutes = useCallback((minutes: number | null): boolean => {
+    if (!userId) return false;
 
-    // "Never" requires trusted device
-    if (minutes === null && !settings.isTrustedDevice) {
-      console.warn('Cannot set timeout to "never" without trusted device enabled');
-      return;
-    }
     if (minutes !== null && !ALLOWED_FINITE_TIMEOUTS.has(minutes)) {
       console.warn(`Ignoring session timeout that is not an option: ${minutes}`);
-      return;
+      return false;
     }
 
-    localStorage.setItem(
-      getStorageKey(userId, STORAGE_KEYS.timeout),
-      minutes === null ? 'null' : String(minutes)
-    );
+    const timeoutKey = getStorageKey(userId, STORAGE_KEYS.timeout);
+    const neverChosenKey = getStorageKey(userId, STORAGE_KEYS.neverChosen);
+    const neverSinceKey = getStorageKey(userId, STORAGE_KEYS.neverSince);
+    const neverSince = minutes === null ? new Date().toISOString() : null;
 
-    setSettings((prev) => ({ ...prev, timeoutMinutes: minutes }));
-  }, [userId, settings.isTrustedDevice]);
+    try {
+      if (minutes === null) {
+        // The record goes first: a "null" timeout without it reads back as 1 week.
+        localStorage.setItem(neverChosenKey, 'true');
+        localStorage.setItem(neverSinceKey, neverSince as string);
+        localStorage.setItem(timeoutKey, 'null');
+      } else {
+        localStorage.setItem(timeoutKey, String(minutes));
+      }
+    } catch (err) {
+      console.warn('[useSessionSettings] Failed to store session timeout:', err);
+      // A finite timeout still applies for this session, as auto-lock does. Never does
+      // not: turning the timeout off must not happen on a write that did not land.
+      if (minutes !== null) setSettings({ timeoutMinutes: minutes, neverSince: null });
+      return false;
+    }
 
-  const enableTrustedDevice = useCallback(() => {
-    if (!userId) return;
-
-    const now = new Date().toISOString();
-    localStorage.setItem(getStorageKey(userId, STORAGE_KEYS.trustedDevice), 'true');
-    localStorage.setItem(getStorageKey(userId, STORAGE_KEYS.trustedAt), now);
-
-    setSettings((prev) => ({
-      ...prev,
-      isTrustedDevice: true,
-      trustedAt: now,
-    }));
+    // The new timeout is stored, so it applies now. A leftover Never record next to a
+    // finite timeout does nothing, and the next load removes it.
+    setSettings({ timeoutMinutes: minutes, neverSince });
+    if (minutes !== null) {
+      try {
+        localStorage.removeItem(neverChosenKey);
+        localStorage.removeItem(neverSinceKey);
+      } catch (err) {
+        console.warn('[useSessionSettings] Failed to clear the Never record:', err);
+      }
+    }
+    return true;
   }, [userId]);
 
-  const disableTrustedDevice = useCallback(() => {
-    if (!userId) return;
-
-    localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.trustedDevice));
-    localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.trustedAt));
-
-    // If timeout was "never", revert to default
-    const revertTimeout = settings.timeoutMinutes === null;
-    if (revertTimeout) {
-      localStorage.setItem(getStorageKey(userId, STORAGE_KEYS.timeout), String(DEFAULT_TIMEOUT_MINUTES));
-    }
-
-    setSettings((prev) => ({
-      ...prev,
-      isTrustedDevice: false,
-      trustedAt: null,
-      timeoutMinutes: revertTimeout ? DEFAULT_TIMEOUT_MINUTES : prev.timeoutMinutes,
-    }));
-  }, [userId, settings.timeoutMinutes]);
-
-  const toggleTrustedDevice = useCallback(() => {
-    if (settings.isTrustedDevice) {
-      disableTrustedDevice();
-    } else {
-      enableTrustedDevice();
-    }
-  }, [settings.isTrustedDevice, enableTrustedDevice, disableTrustedDevice]);
-
   const getEffectiveTimeout = useCallback((): number | null => {
-    // The chosen timeout always applies. Trusted device only unlocks "Never".
-    if (settings.timeoutMinutes === null) {
-      return settings.isTrustedDevice ? null : DEFAULT_TIMEOUT_MINUTES;
-    }
+    // Never applies only with its start date; the loader guarantees one.
+    if (settings.timeoutMinutes === null && !settings.neverSince) return DEFAULT_TIMEOUT_MINUTES;
     return settings.timeoutMinutes;
-  }, [settings.isTrustedDevice, settings.timeoutMinutes]);
-
-  // Filter timeout options based on trusted device status
-  const availableTimeoutOptions = useMemo(
-    () => TIMEOUT_OPTIONS.filter(
-      (option) => !option.requiresTrustedDevice || settings.isTrustedDevice
-    ),
-    [settings.isTrustedDevice]
-  );
+  }, [settings.neverSince, settings.timeoutMinutes]);
 
   return {
     settings,
     setTimeoutMinutes,
-    enableTrustedDevice,
-    disableTrustedDevice,
-    toggleTrustedDevice,
     getEffectiveTimeout,
-    availableTimeoutOptions,
   };
-}
-
-/**
- * Utility to set trusted device during login (before hook is fully initialized)
- */
-export function setTrustedDeviceOnLogin(userId: string) {
-  const now = new Date().toISOString();
-  localStorage.setItem(getStorageKey(userId, STORAGE_KEYS.trustedDevice), 'true');
-  localStorage.setItem(getStorageKey(userId, STORAGE_KEYS.trustedAt), now);
 }

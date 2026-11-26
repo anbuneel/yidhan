@@ -7,6 +7,12 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.23.0', date: '2026-11-26', changes: [
+    { type: 'improvement', text: 'Settings → Security now asks one question: how is this device used? Choose Shared device, My device or Stay unlocked, and the lock and sign-out times are set for you. "Lock now" is next to it. The separate controls are still there under Details' },
+    { type: 'improvement', text: 'Your current settings are kept. If they match none of the three choices, Settings shows Custom' },
+    { type: 'improvement', text: 'The "This is a trusted device" switch and the "Keep me signed in" box on the sign-in screen are gone. Their only effect was to allow a sign-out time of Never. Anyone can now choose Never under Details; it lasts 90 days, as before. If you already had Never, it keeps its end date' },
+    { type: 'improvement', text: 'The Settings theme row now just shows the current theme, Light or Dark' },
+  ] },
   { version: '3.22.0', date: '2026-11-26', changes: [
     { type: 'fix', text: 'On touch screens, the pin and delete icons on larger note cards are now visible. Before, they were invisible, so tapping near a card’s top-right corner could pin the note instead of opening it' },
     { type: 'improvement', text: 'Plainer wording across the app: "Delete permanently" and "Delete all" in Faded notes, a day count ("Deleted in 12 days") instead of mood words, a clearer dialog when a note changed on two devices, and the account deletion date in the Letting go dialog' },

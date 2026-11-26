@@ -137,6 +137,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     userId: user?.id,
     isEncryptionSetup,
     isUnlocked,
+    isAccountSetup: setupScreen,
     lockVault,
     signOut,
   });

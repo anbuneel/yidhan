@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import type { UseSessionSettingsResult } from '../hooks/useSessionSettings';
 import type { UseVaultSettingsResult } from '../hooks/useVaultSettings';
 
-// Copy tests for the Security tab. The recovery key status comes from the
+// Tests for the Security tab. The recovery key status comes from the
 // account's vault metadata; the parsers are mocked so each case sets it directly.
 const mockUser: { user_metadata: Record<string, unknown>; app_metadata: Record<string, unknown>; email: string } = {
   user_metadata: { vault: {} },
@@ -30,21 +30,24 @@ vi.mock('./RecoveryKeySettings', () => ({
 
 import { SettingsModal } from './SettingsModal';
 
-const sessionSettings = {
-  settings: { timeoutMinutes: 10080, isTrustedDevice: false, trustedAt: null },
-  setTimeoutMinutes: vi.fn(),
-  enableTrustedDevice: vi.fn(),
-  disableTrustedDevice: vi.fn(),
-  toggleTrustedDevice: vi.fn(),
-  getEffectiveTimeout: () => 10080,
-  availableTimeoutOptions: [{ label: '1 week', value: 10080 }],
-} as UseSessionSettingsResult;
+type VaultState = UseVaultSettingsResult['settings'];
+let sessionSettings: UseSessionSettingsResult;
+let vaultSettings: UseVaultSettingsResult;
+let onPersistToLocal: () => boolean;
+let onLockVault: () => void;
 
-const vaultSettings = {
-  settings: { autoLockMinutes: 15, rememberBrowser: false },
-  setAutoLockMinutes: vi.fn(),
-  setRememberBrowser: vi.fn(),
-} as unknown as UseVaultSettingsResult;
+function makeSettings(vault: VaultState, timeoutMinutes: number | null, neverSince: string | null = null) {
+  sessionSettings = {
+    settings: { timeoutMinutes, neverSince },
+    setTimeoutMinutes: vi.fn(() => true),
+    getEffectiveTimeout: () => timeoutMinutes,
+  };
+  vaultSettings = {
+    settings: vault,
+    setAutoLockMinutes: vi.fn(() => true),
+    setRememberBrowser: vi.fn(() => true),
+  };
+}
 
 function openSecurityTab({ unlocked = true } = {}) {
   render(
@@ -57,20 +60,166 @@ function openSecurityTab({ unlocked = true } = {}) {
       sessionSettings={sessionSettings}
       vaultSettings={vaultSettings}
       isVaultUnlocked={unlocked}
-      onLockVault={vi.fn()}
+      onLockVault={onLockVault}
+      onPersistToLocal={onPersistToLocal}
     />,
   );
   fireEvent.click(screen.getByRole('button', { name: 'Security' }));
 }
 
-describe('SettingsModal Security tab', () => {
-  beforeEach(() => { recoveryStatus = 'absent'; });
+const radio = (label: string) => screen.getByRole('radio', { name: new RegExp('^' + label) });
 
-  it('does not claim the trusted device extends the session', () => {
+describe('SettingsModal theme row', () => {
+  beforeEach(() => makeSettings({ autoLockMinutes: 60, rememberBrowser: false }, 10080));
+
+  it.each([['dark', 'Dark'], ['light', 'Light']] as const)('names the current theme (%s) and drops "Click to switch"', (theme, name) => {
+    render(
+      <SettingsModal
+        isOpen
+        onClose={vi.fn()}
+        theme={theme}
+        onThemeToggle={vi.fn()}
+        onLetGoClick={vi.fn()}
+        sessionSettings={sessionSettings}
+      />,
+    );
+
+    expect(screen.queryByText('Click to switch')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: new RegExp('^Theme: ' + name) })).toHaveTextContent(name);
+  });
+});
+
+describe('SettingsModal Security tab', () => {
+  beforeEach(() => {
+    recoveryStatus = 'absent';
+    onPersistToLocal = vi.fn(() => true);
+    onLockVault = vi.fn();
+    // My device
+    makeSettings({ autoLockMinutes: 60, rememberBrowser: false }, 10080);
+  });
+
+  it('has the J4 headings and no trusted-device switch', () => {
     openSecurityTab();
 
+    expect(screen.getByRole('heading', { name: 'On this device' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Recovery key' })).toBeInTheDocument();
+    expect(screen.queryByText('Session & trust')).not.toBeInTheDocument();
+    expect(screen.queryByText(/trusted device/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/14 days/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Allows a session timeout of Never/)).toBeInTheDocument();
+  });
+
+  it.each([
+    [true, 'Your notes are unlocked on this device'],
+    [false, 'Your notes are locked'],
+  ])('shows the status in the secondary colour, never green (unlocked: %s)', (unlocked, text) => {
+    openSecurityTab({ unlocked });
+
+    expect(screen.getByText(text)).toHaveStyle({ color: 'var(--color-text-secondary)' });
+  });
+
+  it('locks with "Lock now"', () => {
+    openSecurityTab();
+    fireEvent.click(screen.getByRole('button', { name: 'Lock now' }));
+    expect(onLockVault).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows no "Lock now" while locked', () => {
+    openSecurityTab({ unlocked: false });
+    expect(screen.queryByRole('button', { name: 'Lock now' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [{ autoLockMinutes: 15, rememberBrowser: false }, 60, 'Shared device'],
+    [{ autoLockMinutes: 60, rememberBrowser: false }, 10080, 'My device'],
+    [{ autoLockMinutes: 0, rememberBrowser: true }, 10080, 'Stay unlocked'],
+  ] as const)('selects the preset the stored settings match: %o, %s -> %s', (vault, timeout, label) => {
+    makeSettings({ ...vault }, timeout);
+    openSecurityTab();
+
+    expect(radio(label)).toBeChecked();
+    expect(screen.queryByRole('radio', { name: /^Custom/ })).not.toBeInTheDocument();
+  });
+
+  it('shows Custom, selected, when the stored settings match no preset', () => {
+    // The old defaults: auto-lock off, not remembered, 1 week.
+    makeSettings({ autoLockMinutes: 0, rememberBrowser: false }, 10080);
+    openSecurityTab();
+
+    expect(radio('Custom')).toBeChecked();
+    for (const label of ['Shared device', 'My device', 'Stay unlocked']) {
+      expect(radio(label)).not.toBeChecked();
+    }
+  });
+
+  it('does not change any setting just by opening the tab, Custom included', () => {
+    makeSettings({ autoLockMinutes: 0, rememberBrowser: false }, 30);
+    openSecurityTab();
+
+    expect(vaultSettings.setAutoLockMinutes).not.toHaveBeenCalled();
+    expect(vaultSettings.setRememberBrowser).not.toHaveBeenCalled();
+    expect(sessionSettings.setTimeoutMinutes).not.toHaveBeenCalled();
+  });
+
+  it('applies "Shared device" when picked', () => {
+    openSecurityTab();
+    fireEvent.click(radio('Shared device'));
+
+    expect(vaultSettings.setRememberBrowser).toHaveBeenCalledWith(false, { persistKeys: undefined });
+    expect(vaultSettings.setAutoLockMinutes).toHaveBeenCalledWith(15);
+    expect(sessionSettings.setTimeoutMinutes).toHaveBeenCalledWith(60);
+  });
+
+  it('persists the unlocked keys when "Stay unlocked" is picked while unlocked', () => {
+    openSecurityTab();
+    fireEvent.click(radio('Stay unlocked'));
+
+    expect(vaultSettings.setRememberBrowser).toHaveBeenCalledWith(true, { persistKeys: onPersistToLocal });
+    expect(vaultSettings.setAutoLockMinutes).toHaveBeenCalledWith(0);
+    expect(sessionSettings.setTimeoutMinutes).toHaveBeenCalledWith(10080);
+  });
+
+  it('does not pass key persistence while locked', () => {
+    openSecurityTab({ unlocked: false });
+    fireEvent.click(radio('Stay unlocked'));
+
+    expect(vaultSettings.setRememberBrowser).toHaveBeenCalledWith(true, { persistKeys: undefined });
+  });
+
+  it('changes nothing else and says so when this browser cannot be remembered', () => {
+    vaultSettings.setRememberBrowser = vi.fn(() => false);
+    openSecurityTab();
+    fireEvent.click(radio('Stay unlocked'));
+
+    expect(vaultSettings.setAutoLockMinutes).not.toHaveBeenCalled();
+    expect(sessionSettings.setTimeoutMinutes).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not remember this browser, so the other settings were not changed.');
+  });
+
+  it('keeps the individual controls behind Details', () => {
+    openSecurityTab();
+
+    const details = screen.getByText('Details').closest('details');
+    expect(details).not.toHaveAttribute('open');
+    expect(details).toContainElement(screen.getByLabelText('Lock after idle'));
+    expect(details).toContainElement(screen.getByRole('switch', { name: 'Remember this browser', hidden: true }));
+    expect(details).toContainElement(screen.getByLabelText('Sign out after idle'));
+  });
+
+  it('offers Never to everyone, and shows when a chosen Never ends', () => {
+    makeSettings({ autoLockMinutes: 60, rememberBrowser: false }, null, '2026-11-01T00:00:00.000Z');
+    openSecurityTab();
+
+    expect(screen.getByRole('option', { name: 'Never (for 90 days)', hidden: true })).toBeInTheDocument();
+    expect(screen.getByText(/^Never ends on /)).toBeInTheDocument();
+  });
+
+  it('says when the timeout could not be saved', () => {
+    sessionSettings.setTimeoutMinutes = vi.fn(() => false);
+    openSecurityTab();
+    fireEvent.change(screen.getByLabelText('Sign out after idle'), { target: { value: 'null' } });
+
+    expect(sessionSettings.setTimeoutMinutes).toHaveBeenCalledWith(null);
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not save this choice, so it was not changed.');
   });
 
   it.each([true, false])('tells an account with a recovery key how to change the passphrase (unlocked: %s)', (unlocked) => {

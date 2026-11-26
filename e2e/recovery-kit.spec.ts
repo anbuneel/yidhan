@@ -81,7 +81,7 @@ test.describe('Recovery kit', () => {
     expect(before?.recoveryWrap).toBeDefined();
 
     // 2. Forget the passphrase: lock the vault.
-    await page.getByRole('button', { name: 'Lock vault now' }).click();
+    await page.getByRole('button', { name: 'Lock now' }).click();
     await expect(page.getByRole('heading', { name: 'Unlock your notes', exact: true })).toBeVisible();
 
     // 3. Unlock with the recovery key.
@@ -112,7 +112,7 @@ test.describe('Recovery kit', () => {
 
     // 7. The new wrap opens with the passphrase.
     await openSecuritySettings(page);
-    await page.getByRole('button', { name: 'Lock vault now' }).click();
+    await page.getByRole('button', { name: 'Lock now' }).click();
     await page.getByLabel('Passphrase', { exact: true }).fill(TEST_USER.passphrase);
     await page.getByRole('button', { name: 'Unlock', exact: true }).click();
     await expect(page.getByTestId('library-view')).toBeVisible({ timeout: 30000 });

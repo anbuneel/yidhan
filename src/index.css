@@ -256,45 +256,6 @@ body {
 }
 
 /* ============================================
-   FORM CHECKBOX
-   Custom styled checkbox matching task list design
-   ============================================ */
-.form-checkbox {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid var(--color-text-tertiary);
-  border-radius: 4px;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.form-checkbox:hover {
-  border-color: var(--color-accent);
-}
-
-.form-checkbox:checked {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-}
-
-.form-checkbox:checked::after {
-  content: '';
-  position: absolute;
-  left: 2.5px;
-  top: 0px;
-  width: 6px;
-  height: 10px;
-  border: solid var(--color-on-accent);
-  border-width: 0 2.5px 2.5px 0;
-  transform: rotate(45deg);
-}
-
-/* ============================================
    PWA TOUCH FEEL
    Prevent text selection on interactive elements
    ============================================ */
