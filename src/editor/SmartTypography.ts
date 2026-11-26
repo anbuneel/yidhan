@@ -19,7 +19,10 @@ declare module '@tiptap/core' {
   }
 }
 
-function loadSmartTypographyPreference(): boolean {
+/** Fired on window when Settings changes the preference, so an open editor follows. */
+const SMART_TYPOGRAPHY_CHANGE_EVENT = 'yidhan:smart-typography-change';
+
+export function loadSmartTypographyPreference(): boolean {
   try {
     return localStorage.getItem(SMART_TYPOGRAPHY_STORAGE_KEY) !== 'false';
   } catch {
@@ -35,6 +38,12 @@ function persistSmartTypographyPreference(enabled: boolean): void {
   }
 }
 
+/** Settings → Editor writes the preference here. Every open editor picks it up. */
+export function setSmartTypographyPreference(enabled: boolean): void {
+  persistSmartTypographyPreference(enabled);
+  window.dispatchEvent(new CustomEvent<boolean>(SMART_TYPOGRAPHY_CHANGE_EVENT, { detail: enabled }));
+}
+
 type SmartReplacement = { match: RegExp; replace: string };
 
 const replacements: SmartReplacement[] = [
@@ -46,11 +55,23 @@ const replacements: SmartReplacement[] = [
   { match: /'$/, replace: '’' },
 ];
 
-export const SmartTypography = Extension.create<Record<string, never>, SmartTypographyStorage>({
+export const SmartTypography = Extension.create<Record<string, never>, SmartTypographyStorage & { unsubscribe?: () => void }>({
   name: 'smartTypography',
 
   addStorage() {
     return { enabled: loadSmartTypographyPreference() };
+  },
+
+  onBeforeCreate() {
+    const onChange = (event: Event) => {
+      this.storage.enabled = (event as CustomEvent<boolean>).detail;
+    };
+    window.addEventListener(SMART_TYPOGRAPHY_CHANGE_EVENT, onChange);
+    this.storage.unsubscribe = () => window.removeEventListener(SMART_TYPOGRAPHY_CHANGE_EVENT, onChange);
+  },
+
+  onDestroy() {
+    this.storage.unsubscribe?.();
   },
 
   addCommands() {

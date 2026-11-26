@@ -567,6 +567,17 @@ nav,
   background: var(--color-text-tertiary);
 }
 
+/* Text size (Settings → Editor, src/editor/textSize.ts). Only the editor body and
+   note card previews read --reading-scale, so the landing shell and public pages
+   stay as they are. Shared notes reset it below. */
+:root[data-text-size="small"] {
+  --reading-scale: 0.9;
+}
+
+:root[data-text-size="large"] {
+  --reading-scale: 1.15;
+}
+
 /* Tiptap Rich Text Editor Styles */
 .rich-text-editor {
   width: 100%;
@@ -574,7 +585,7 @@ nav,
 
 .rich-text-editor .ProseMirror {
   font-family: var(--font-body);
-  font-size: 1.2rem;
+  font-size: calc(1.2rem * var(--reading-scale, 1));
   font-weight: var(--note-weight);
   line-height: 1.75;
   color: var(--color-text-note);
@@ -600,7 +611,7 @@ nav,
 /* Headings */
 .rich-text-editor .ProseMirror h1 {
   font-family: var(--font-display);
-  font-size: 2.25rem;
+  font-size: calc(2.25rem * var(--reading-scale, 1));
   font-weight: 600;
   line-height: 1.3;
   letter-spacing: -0.02em;
@@ -611,7 +622,7 @@ nav,
 
 .rich-text-editor .ProseMirror h2 {
   font-family: var(--font-display);
-  font-size: 1.75rem;
+  font-size: calc(1.75rem * var(--reading-scale, 1));
   font-weight: 600;
   line-height: 1.35;
   letter-spacing: -0.01em;
@@ -622,7 +633,7 @@ nav,
 
 .rich-text-editor .ProseMirror h3 {
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: calc(1.35rem * var(--reading-scale, 1));
   font-weight: 600;
   line-height: 1.4;
   color: var(--color-text-primary);
@@ -702,7 +713,7 @@ nav,
   padding-left: 1.5rem;
   margin: 1.75rem 0;
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: calc(1.35rem * var(--reading-scale, 1));
   font-style: italic;
   line-height: 1.6;
   letter-spacing: -0.01em;
@@ -842,6 +853,8 @@ nav,
 
 /* Shared Note View - Override editor-only properties for read-only display */
 .rich-text-editor .ProseMirror.shared-note-content {
+  /* A public page: the reader's text size setting does not apply. */
+  --reading-scale: 1;
   min-height: auto;
   caret-color: transparent;
 }
@@ -860,7 +873,7 @@ nav,
 /* Note Card Preview - Scaled down rich text */
 .note-card-preview {
   font-family: var(--font-body);
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * var(--reading-scale, 1));
   font-weight: 400;
   line-height: 1.6;
   color: var(--color-text-secondary);
@@ -895,7 +908,7 @@ nav,
 .note-card-preview h2,
 .note-card-preview h3 {
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: calc(1rem * var(--reading-scale, 1));
   font-weight: 600;
   color: var(--color-text-primary);
   margin: 0;
@@ -1693,13 +1706,15 @@ nav,
   }
 }
 
-/* Sticky toolbar (scroll-triggered) */
+/* Sticky toolbar (scroll-triggered). It wears the page itself, grain included, with
+   no border: text scrolls under it, but no strip shows behind the buttons. The grain
+   is fixed to the viewport, as the scroll container's is, so the two line up. */
 .editor-toolbar-sticky {
   position: sticky;
   top: 60px; /* Below the header */
   z-index: 10;
-  background: var(--color-bg-primary);
-  border-bottom: 1px solid var(--glass-border);
+  background: var(--page-background);
+  background-attachment: fixed;
   margin-left: -1rem;
   margin-right: -1rem;
   padding: 0.375rem 1rem;
@@ -1977,6 +1992,19 @@ textarea:focus,
   box-shadow: var(--shadow-sm);
 }
 
+/* The inline toolbar has no box: it sits on the page. Focus mode and ⋯ go to the
+   right edge. */
+.editor-command-toolbar[data-variant="inline"] {
+  padding-inline: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.editor-command-toolbar[data-variant="inline"] > [data-command-id="focusMode"] {
+  margin-inline-start: auto;
+}
+
 .editor-command-toolbar[data-variant="bottom"] {
   width: min(100%, 30rem);
   margin-inline: auto;
@@ -1985,11 +2013,18 @@ textarea:focus,
 
 /* Under 380px (320px–375px phones), nine 36px buttons exceed the bar width and
    push "More editor commands" past the right edge. Hide Undo/Redo from the bar
-   (both stay inside the portaled overflow menu) so the remaining seven controls
-   stay at full 36px width and fit cleanly inside 320px. */
+   so the remaining seven controls stay at full 36px width and fit inside 320px.
+   The phone bar's ⋯ menu carries both, marked data-narrow-only, and shows them
+   only at this width, so they are never in the row and the menu at once. */
 @media (max-width: 379px) {
   .editor-command-toolbar[data-variant="bottom"] [data-command-id="undo"],
   .editor-command-toolbar[data-variant="bottom"] [data-command-id="redo"] {
+    display: none;
+  }
+}
+
+@media (min-width: 380px) {
+  .editor-command-menu [data-narrow-only] {
     display: none;
   }
 }
@@ -2048,10 +2083,6 @@ textarea:focus,
   white-space: nowrap;
 }
 
-.editor-command-wide {
-  display: none;
-}
-
 .editor-command-overflow {
   position: relative;
   display: inline-flex;
@@ -2070,6 +2101,20 @@ textarea:focus,
   background: var(--color-bg-secondary);
   box-shadow: var(--shadow-lg);
   overscroll-behavior: contain;
+}
+
+.editor-command-menu-group + .editor-command-menu-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.editor-command-menu-heading {
+  padding: 6px 8px 2px;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .editor-command-menu-item {
@@ -2131,12 +2176,6 @@ textarea:focus,
   }
 }
 
-@media (min-width: 900px) {
-  .editor-command-wide {
-    display: inline-flex;
-  }
-}
-
 @media (max-width: 767px) {
   .editor-toolbar-bottom {
     display: block;
@@ -2152,8 +2191,9 @@ textarea:focus,
 /* One toolbar at a time: from 1100px the vertical sidebar replaces the inline
    toolbar wherever the sidebar renders — `data-has-sidebar` is set on pointer
    devices, where `isMobile` is false. Touch tablets get no sidebar, so they keep
-   the inline toolbar at every width. The sidebar's overflow menu lists every
-   command, so nothing becomes unreachable (DECISIONS.md, 2026-09-10). */
+   the inline toolbar at every width. All three toolbars share one row, and each
+   ⋯ menu lists every other command, so nothing becomes unreachable (DECISIONS.md,
+   2026-09-10 and 2026-11-26). */
 @media (min-width: 1100px) {
   .editor-toolbar-inline[data-has-sidebar] {
     display: none;

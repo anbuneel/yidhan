@@ -29,26 +29,70 @@ describe('EditorToolbar', () => {
     await waitFor(() => expect(bold).toHaveAttribute('aria-pressed', 'true'));
   });
 
-  it('makes the complete command model mouse-reachable from overflow', async () => {
+  it.each(['inline', 'bottom', 'sidebar'] as const)('shows the five-button row, then focus mode and ⋯, on the %s toolbar', (variant) => {
+    editor = new Editor({ extensions: [StarterKit, SmartTypography], content: '<p>Words</p>' });
+    const { container } = render(<EditorToolbar editor={editor as unknown as ReactEditor} variant={variant} />);
+    const ids = [...container.querySelectorAll('[role="toolbar"] > [data-command-id]')].map((el) => el.getAttribute('data-command-id'));
+    const row = ['bold', 'italic', 'heading1', 'bulletList', 'link'];
+    expect(ids).toEqual(variant === 'bottom' ? [...row, 'undo', 'redo', 'focusMode'] : [...row, 'focusMode']);
+    expect(screen.getByRole('toolbar').lastElementChild?.querySelector('[aria-label="More editor commands"]')).not.toBeNull();
+    // Inline code, code block and the old wide-screen commands are not on any row.
+    for (const gone of ['inlineCode', 'codeBlock', 'underline', 'blockquote', 'heading2']) {
+      expect(container.querySelector(`[role="toolbar"] [data-command-id="${gone}"]`)).toBeNull();
+    }
+  });
+
+  it('gives Link an icon, not a word', () => {
+    editor = new Editor({ extensions: [StarterKit, SmartTypography], content: '<p>Words</p>' });
+    render(<EditorToolbar editor={editor as unknown as ReactEditor} />);
+    const link = screen.getByRole('button', { name: /^link/i });
+    expect(link.querySelector('svg')).not.toBeNull();
+    expect(link.textContent).toBe('');
+  });
+
+  it('groups ⋯ under Text, Blocks, Insert, Edit and View, listing only commands not in the row', () => {
     editor = new Editor({ extensions: [StarterKit, SmartTypography], content: '<p>Words</p>' });
     render(<EditorToolbar editor={editor as unknown as ReactEditor} />);
     fireEvent.click(screen.getByRole('button', { name: 'More editor commands' }));
-    const menu = screen.getByRole('menu', { name: 'All editor commands' });
-    expect(within(menu).getAllByRole('menuitem')).toHaveLength(EDITOR_COMMANDS.length);
-    expect(within(menu).getByRole('menuitem', { name: /inline code/i })).toBeInTheDocument();
-    expect(within(menu).getByRole('menuitem', { name: /align center/i })).toBeInTheDocument();
-    expect(within(menu).getByRole('menuitem', { name: /smart typography/i })).toHaveAttribute('aria-pressed', 'true');
+    const menu = screen.getByRole('menu', { name: 'Editor commands' });
+    const groups = within(menu).getAllByRole('group');
+    expect(groups.map((group) => group.getAttribute('aria-labelledby') && document.getElementById(group.getAttribute('aria-labelledby')!)?.textContent))
+      .toEqual(['Text', 'Blocks', 'Insert', 'Edit', 'View']);
+    const ids = within(menu).getAllByRole('menuitem').map((item) => item.getAttribute('data-command-id'));
+    expect(ids).toEqual([
+      'underline', 'strike', 'inlineCode', 'highlight',
+      'paragraph', 'heading2', 'heading3', 'orderedList', 'taskList', 'blockquote', 'codeBlock', 'alignCenter',
+      'horizontalRule',
+      'undo', 'redo',
+      'findReplace',
+    ]);
+    // Not in ⋯: the row, focus mode (own button), smart typography (Settings), the
+    // slash-only date inserts, and the dropped alignments and time.
+    for (const gone of ['bold', 'italic', 'heading1', 'bulletList', 'link', 'focusMode', 'smartTypography', 'date', 'now', 'time', 'alignLeft', 'alignRight', 'alignJustify']) {
+      expect(menu.querySelector(`[data-command-id="${gone}"]`)).toBeNull();
+    }
+  });
+
+  it('keeps Undo and Redo in the phone bar ⋯ only as a narrow-screen fallback', () => {
+    editor = new Editor({ extensions: [StarterKit, SmartTypography], content: '<p>Words</p>' });
+    render(<EditorToolbar editor={editor as unknown as ReactEditor} variant="bottom" />);
+    fireEvent.click(screen.getByRole('button', { name: 'More editor commands' }));
+    const menu = screen.getByRole('menu', { name: 'Editor commands' });
+    const undo = menu.querySelector('[data-command-id="undo"]');
+    expect(undo).toHaveAttribute('data-narrow-only');
+    expect(undo?.closest('[role="group"]')).toHaveAttribute('data-narrow-only');
+    expect(menu.querySelector('[data-command-id="findReplace"]')).not.toHaveAttribute('data-narrow-only');
   });
 
   it('portals the overflow menu to document.body and runs commands on pointerdown + click without closing prematurely', () => {
     editor = new Editor({ extensions: [StarterKit, SmartTypography], content: '<p>Words</p>' });
-    const onToggleFocusMode = vi.fn();
+    const onFindReplace = vi.fn();
     render(
       <div className="editor-toolbar-bottom">
         <EditorToolbar
           editor={editor as unknown as ReactEditor}
           variant="bottom"
-          onToggleFocusMode={onToggleFocusMode}
+          onFindReplace={onFindReplace}
         />
       </div>,
     );
@@ -56,17 +100,17 @@ describe('EditorToolbar', () => {
     const trigger = screen.getByRole('button', { name: 'More editor commands' });
     fireEvent.click(trigger);
 
-    const menu = screen.getByRole('menu', { name: 'All editor commands' });
+    const menu = screen.getByRole('menu', { name: 'Editor commands' });
     // Portaled outside the toolbar container so backdrop-filter does not trap fixed positioning.
     expect(menu.parentElement).toBe(document.body);
     expect(trigger.closest('.editor-toolbar-bottom')?.contains(menu)).toBe(false);
 
-    const focusItem = within(menu).getByRole('menuitem', { name: /focus mode/i });
-    fireEvent.pointerDown(focusItem);
-    expect(screen.getByRole('menu', { name: 'All editor commands' })).toBeInTheDocument();
-    fireEvent.click(focusItem);
-    expect(onToggleFocusMode).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+    const findItem = within(menu).getByRole('menuitem', { name: /find and replace/i });
+    fireEvent.pointerDown(findItem);
+    expect(screen.getByRole('menu', { name: 'Editor commands' })).toBeInTheDocument();
+    fireEvent.click(findItem);
+    expect(onFindReplace).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu', { name: 'Editor commands' })).not.toBeInTheDocument();
   });
 
   it('closes the portaled overflow menu on outside pointerdown and on Escape', () => {
@@ -80,15 +124,15 @@ describe('EditorToolbar', () => {
 
     const trigger = screen.getByRole('button', { name: 'More editor commands' });
     fireEvent.click(trigger);
-    expect(screen.getByRole('menu', { name: 'All editor commands' })).toBeInTheDocument();
+    expect(screen.getByRole('menu', { name: 'Editor commands' })).toBeInTheDocument();
 
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Outside' }));
-    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu', { name: 'Editor commands' })).not.toBeInTheDocument();
 
     fireEvent.click(trigger);
-    expect(screen.getByRole('menu', { name: 'All editor commands' })).toBeInTheDocument();
+    expect(screen.getByRole('menu', { name: 'Editor commands' })).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu', { name: 'Editor commands' })).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
   });
 
@@ -106,7 +150,7 @@ describe('EditorToolbar', () => {
         />,
       );
 
-      expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('menu', { name: 'Editor commands' })).not.toBeInTheDocument();
       const toggle = screen.getByRole('button', { name: /focus mode/i });
       expect(toggle).toHaveAttribute('data-command-id', 'focusMode');
       expect(toggle).toHaveAttribute('aria-pressed', 'false');
@@ -138,18 +182,18 @@ describe('EditorToolbar', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'More editor commands' }));
-    expect(screen.getByRole('menu', { name: 'All editor commands' })).toBeInTheDocument();
+    expect(screen.getByRole('menu', { name: 'Editor commands' })).toBeInTheDocument();
 
     rerender(
       <EditorToolbar editor={editor as unknown as ReactEditor} variant="bottom" isFocusMode={true} />,
     );
-    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu', { name: 'Editor commands' })).not.toBeInTheDocument();
 
     // Leaving focus mode does not re-open the menu.
     rerender(
       <EditorToolbar editor={editor as unknown as ReactEditor} variant="bottom" isFocusMode={false} />,
     );
-    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu', { name: 'Editor commands' })).not.toBeInTheDocument();
   });
 
   it('closes the portaled overflow menu when a resize hides the owning toolbar', () => {
@@ -161,12 +205,12 @@ describe('EditorToolbar', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'More editor commands' }));
-    expect(screen.getByRole('menu', { name: 'All editor commands' })).toBeInTheDocument();
+    expect(screen.getByRole('menu', { name: 'Editor commands' })).toBeInTheDocument();
 
     const host = container.querySelector('[data-testid="toolbar-host"]') as HTMLElement;
     host.style.display = 'none';
     fireEvent(window, new Event('resize'));
-    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu', { name: 'Editor commands' })).not.toBeInTheDocument();
   });
 
   it('closes the portaled overflow menu on Tab and when focus moves outside', () => {
@@ -180,18 +224,18 @@ describe('EditorToolbar', () => {
 
     const trigger = screen.getByRole('button', { name: 'More editor commands' });
     fireEvent.click(trigger);
-    expect(screen.getByRole('menu', { name: 'All editor commands' })).toBeInTheDocument();
+    expect(screen.getByRole('menu', { name: 'Editor commands' })).toBeInTheDocument();
 
     fireEvent.keyDown(document, { key: 'Tab' });
-    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu', { name: 'Editor commands' })).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
 
     fireEvent.click(trigger);
-    expect(screen.getByRole('menu', { name: 'All editor commands' })).toBeInTheDocument();
+    expect(screen.getByRole('menu', { name: 'Editor commands' })).toBeInTheDocument();
 
     const outside = screen.getByRole('button', { name: 'Outside target' });
     fireEvent.focusIn(outside);
-    expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu', { name: 'Editor commands' })).not.toBeInTheDocument();
   });
 
   it('resets a prior short-viewport maxHeight before re-measuring when the viewport grows', () => {
@@ -240,7 +284,7 @@ describe('EditorToolbar', () => {
       render(<EditorToolbar editor={editor as unknown as ReactEditor} variant="bottom" />);
 
       fireEvent.click(screen.getByRole('button', { name: 'More editor commands' }));
-      const menu = screen.getByRole('menu', { name: 'All editor commands' });
+      const menu = screen.getByRole('menu', { name: 'Editor commands' });
       expect(menu.style.maxHeight).toBe('326px');
       expect(menu.style.top).toBe('8px');
 
@@ -266,7 +310,7 @@ describe('EditorToolbar', () => {
     render(<EditorToolbar editor={editor as unknown as ReactEditor} variant="inline" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'More editor commands' }));
-    const menu = screen.getByRole('menu', { name: 'All editor commands' });
+    const menu = screen.getByRole('menu', { name: 'Editor commands' });
 
     const rectSpy = vi.spyOn(menu, 'getBoundingClientRect');
     menu.scrollTop = 320;
@@ -313,7 +357,7 @@ describe('EditorToolbar', () => {
       // closes the menu and moves focus into the editor instead of document.body.
       const trigger = screen.getByRole('button', { name: 'More editor commands' });
       fireEvent.click(trigger);
-      const firstItem = within(screen.getByRole('menu', { name: 'All editor commands' })).getAllByRole('menuitem')[0];
+      const firstItem = within(screen.getByRole('menu', { name: 'Editor commands' })).getAllByRole('menuitem')[0];
       firstItem.focus();
       expect(firstItem).toHaveFocus();
 
@@ -325,7 +369,7 @@ describe('EditorToolbar', () => {
           onToggleFocusMode={onToggleFocusMode}
         />,
       );
-      expect(screen.queryByRole('menu', { name: 'All editor commands' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('menu', { name: 'Editor commands' })).not.toBeInTheDocument();
       await waitFor(() => expect(editor!.view.dom).toHaveFocus());
     } finally {
       mount.remove();

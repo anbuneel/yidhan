@@ -25,7 +25,6 @@ import { useMobileDetect } from '../hooks/useMobileDetect';
 import { useKeyboardHeightCssVariable } from '../hooks/useKeyboardHeight';
 import {
   exportNoteToMarkdown,
-  exportNoteToJSON,
   getSanitizedFilename,
   downloadFile,
   copyNoteToClipboard,
@@ -981,14 +980,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     setShowExportMenu(false);
   };
 
-  const handleExportJSON = () => {
-    const currentNote = { ...note, title, content };
-    const json = exportNoteToJSON(currentNote);
-    const filename = `${getSanitizedFilename(title)}.json`;
-    downloadFile(json, filename, 'application/json');
-    setShowExportMenu(false);
-  };
-
   // Copy handlers
   const handleCopyPlainText = async () => {
     const currentNote = { ...note, title, content };
@@ -1197,8 +1188,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               e.currentTarget.style.background = 'transparent';
             }
           }}
-          aria-label="Export note"
-          title="Export note"
+          aria-label="Share and export"
+          title="Share and export"
         >
           <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -1214,6 +1205,41 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               border: '1px solid var(--glass-border)',
             }}
           >
+            {/* Share option first - hidden in demo mode and when sharing is off */}
+            {sharingEnabled && !isDemo && (
+              <>
+                <button type="button"
+                  onClick={async () => {
+                    setShowExportMenu(false);
+                    // Flush any unsaved edits so ShareModal encrypts the latest content
+                    cancelPendingAutoSave();
+                    if (await performSave()) setShowShareModal(true);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    color: 'var(--color-text-primary)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--color-bg-secondary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <svg className="size-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                  Share as letter
+                </button>
+                {/* Divider */}
+                <div
+                  className="my-1 mx-3"
+                  style={{ borderTop: '1px solid var(--glass-border)' }}
+                />
+              </>
+            )}
+
             {/* Copy options */}
             <button type="button"
               onClick={handleCopyPlainText}
@@ -1254,42 +1280,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               Copy with formatting
             </button>
 
-            {/* Share option - hidden in demo mode and when E2EE is active */}
-            {sharingEnabled && !isDemo && (
-              <>
-                {/* Divider */}
-                <div
-                  className="my-1 mx-3"
-                  style={{ borderTop: '1px solid var(--glass-border)' }}
-                />
-
-                <button type="button"
-                  onClick={async () => {
-                    setShowExportMenu(false);
-                    // Flush any unsaved edits so ShareModal encrypts the latest content
-                    cancelPendingAutoSave();
-                    if (await performSave()) setShowShareModal(true);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    color: 'var(--color-text-primary)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--color-bg-secondary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <svg className="size-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
-                  Share as letter
-                </button>
-              </>
-            )}
-
             {/* Divider */}
             <div
               className="my-1 mx-3"
@@ -1315,25 +1305,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               Download (.md)
-            </button>
-            <button type="button"
-              onClick={handleExportJSON}
-              className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-primary)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--color-bg-secondary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <svg className="size-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Download (.json)
             </button>
           </div>
         )}
