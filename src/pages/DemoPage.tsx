@@ -607,6 +607,22 @@ export function DemoPage({
           onEditTag={handleEditTag}
         />
 
+        {/* Phones: the header has no room for the sign-up link, and the ribbon that
+            carries it can be dismissed. Then the link sits here instead. */}
+        {hasPracticeWorkToKeep && !shouldShowRibbon && (
+          <div className="sm:hidden px-4 pt-2 text-center">
+            <button
+              type="button"
+              onClick={onSignUp}
+              data-testid="demo-keep-cta-phone"
+              className="text-sm font-medium underline decoration-1 underline-offset-4 decoration-[var(--color-accent-muted)] rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              style={{ background: 'none', border: 'none', color: 'var(--color-accent-text)', fontFamily: 'var(--font-body)' }}
+            >
+              Create an account to keep your notes
+            </button>
+          </div>
+        )}
+
         {/* First-run welcome — disappears once user creates a note */}
         {hasOnlyStarterNotes && (
           <div
@@ -829,7 +845,8 @@ function DemoHeader({
         {showKeepCta && (
           // Accent as text, not a CTA: "New note" stays the one filled button
           // (DESIGN.md, Button and accent taxonomy). Hidden on phones: "Create an
-          // account" does not fit beside Sign in there, and the ribbon above carries it.
+          // account" does not fit beside Sign in there. The ribbon carries it, or the
+          // line under the tag row once the ribbon is dismissed.
           <button
             type="button"
             onClick={onKeep}

@@ -34,8 +34,8 @@ function formatDate(dateString: string): string {
   if (isNaN(date.getTime())) {
     return dateString;
   }
-  // Dates are calendar days ("2026-11-25"), parsed as UTC midnight. Format them in
-  // UTC too, or a reader west of UTC sees the day before.
+  // Dates are calendar days ("2026-11-25"), which Date parses as the start of the day
+  // in UTC. Format them in UTC too, or a reader west of UTC sees the day before.
   return date.toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -157,7 +157,6 @@ export function ChangelogPage({
                     border: '1px solid var(--glass-border)',
                     borderRadius: 'var(--radius-plain)',
                     boxShadow: isRecent ? 'var(--shadow-sm)' : 'none',
-                    opacity: isRecent ? 1 : 0.85,
                   }}
                 >
                   {/* Day header: the date, with the day's versions in small text */}

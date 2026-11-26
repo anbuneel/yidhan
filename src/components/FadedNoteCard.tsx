@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Note } from '../types';
 import { TagBadgeList } from './TagBadge';
 import { sanitizeHtml, sanitizeText } from '../utils/sanitize';
+import { getDeletionCountdown } from '../utils/deletionCopy';
 
 interface FadedNoteCardProps {
   note: Note;
@@ -12,19 +13,17 @@ interface FadedNoteCardProps {
 /**
  * Calculate days remaining before permanent deletion (30 day limit)
  */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 function getDaysRemaining(deletedAt: Date): number {
-  const now = new Date();
-  const diffMs = now.getTime() - deletedAt.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  return Math.max(0, 30 - diffDays);
+  // Calendar days from today to the deletion day (deletedAt + 30 days), so "today"
+  // and "tomorrow" mean the reader's own calendar days.
+  const deadline = new Date(deletedAt.getTime() + 30 * DAY_MS);
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  return Math.max(0, Math.round((startOf(deadline) - startOf(new Date())) / DAY_MS));
 }
 
-/** When the note will be deleted, as a day count. */
-export function getDeletionCountdown(daysRemaining: number): string {
-  if (daysRemaining <= 0) return 'Deleted today';
-  if (daysRemaining === 1) return 'Deleted tomorrow';
-  return `Deleted in ${daysRemaining} days`;
-}
+
 
 export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteCardProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -178,6 +177,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
             opacity-0
             group-hover:opacity-100
             [@media(hover:none)]:opacity-100
+            [@media(any-pointer:coarse)]:opacity-100
             transition-all duration-200
             focus:outline-none
             focus:ring-2
@@ -232,6 +232,11 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
           >
             Delete permanently?
           </p>
+          <p
+            className="text-center text-sm -mt-2"
+            style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-primary)' }}
+            dangerouslySetInnerHTML={{ __html: sanitizeText(note.title) || 'Untitled' }}
+          />
           <p
             className="text-center text-xs"
             style={{

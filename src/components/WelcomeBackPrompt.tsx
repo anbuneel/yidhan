@@ -92,7 +92,7 @@ export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: Welcome
               color: 'var(--color-text-tertiary)',
             }}
           >
-            Deleted in {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'}, unless you choose Stay.
+            {daysRemaining <= 0 ? 'Deleted today' : `Deleted in ${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'}`}, unless you choose Stay.
           </p>
 
           {/* Action buttons */}

@@ -78,6 +78,18 @@ describe('N creates a note (design critique K2)', () => {
     expect(onNewNote).not.toHaveBeenCalled();
   });
 
+  it('does nothing behind an open modal that did not turn shortcuts off', () => {
+    const onNewNote = setup();
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    const button = document.createElement('button');
+    dialog.appendChild(button);
+    document.body.appendChild(dialog);
+    press(button, { key: 'n' });
+    expect(onNewNote).not.toHaveBeenCalled();
+  });
+
   it('ignores Shift+N, Alt+N, key repeat and composition', () => {
     const onNewNote = setup();
     press(document.body, { key: 'N', shiftKey: true });

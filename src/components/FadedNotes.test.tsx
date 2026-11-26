@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { createMockNote } from '../test/factories';
-import { FadedNoteCard, getDeletionCountdown } from './FadedNoteCard';
+import { FadedNoteCard } from './FadedNoteCard';
+import { getDeletionCountdown } from '../utils/deletionCopy';
 import { FadedNotesView } from './FadedNotesView';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -21,6 +22,28 @@ describe('Faded notes wording (design critique G1, G2, G4)', () => {
     expect(screen.queryByText(/remaining|Resting|Fading|Nearly gone|Just arrived/)).toBeNull();
   });
 
+  it('says "today" and "tomorrow" by calendar day', () => {
+    vi.useFakeTimers();
+    try {
+      // 23:00 local; the note's 30 days end at 03:00 tomorrow.
+      vi.setSystemTime(new Date(2026, 10, 26, 23, 0));
+      const deletedAt = new Date(new Date(2026, 10, 27, 3, 0).getTime() - 30 * DAY);
+      const { unmount } = render(
+        <FadedNoteCard note={createMockNote({ deletedAt })} onRestore={vi.fn()} onPermanentDelete={vi.fn()} />
+      );
+      expect(screen.getByText('Deleted tomorrow')).toBeInTheDocument();
+      unmount();
+
+      // 01:00; the 30 days end at 22:00 today.
+      vi.setSystemTime(new Date(2026, 10, 26, 1, 0));
+      const today = new Date(new Date(2026, 10, 26, 22, 0).getTime() - 30 * DAY);
+      render(<FadedNoteCard note={createMockNote({ deletedAt: today })} onRestore={vi.fn()} onPermanentDelete={vi.fn()} />);
+      expect(screen.getByText('Deleted today')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('asks plainly before deleting one note permanently', () => {
     const onPermanentDelete = vi.fn();
     const note = createMockNote({ id: 'n1', deletedAt: new Date() });
@@ -29,6 +52,8 @@ describe('Faded notes wording (design critique G1, G2, G4)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
     expect(screen.getByText('Delete permanently?')).toBeInTheDocument();
     expect(screen.getByText("This can't be undone.")).toBeInTheDocument();
+    // The overlay still says which note.
+    expect(screen.getAllByText(note.title).length).toBeGreaterThan(1);
     expect(screen.queryByText(/release|goodbye/i)).toBeNull();
 
     // The icon and the confirm button share the label; the confirm is the last.

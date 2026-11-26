@@ -29,8 +29,8 @@ export function groupChangelogByDay(entries: readonly ChangelogEntry[]): Changel
   return days;
 }
 
-/** "3.20.6", or "3.20.7 to 3.20.11" for a day with several releases. */
+/** The day's versions, oldest first: "3.20.6", or "3.20.9, 3.20.10, 3.20.11". Every
+ *  version is listed, so a version number from a bug report can be found on the page. */
 export function formatDayVersions(versions: readonly string[]): string {
-  if (versions.length <= 1) return versions[0] ?? '';
-  return `${versions[versions.length - 1]} to ${versions[0]}`;
+  return [...versions].reverse().join(', ');
 }

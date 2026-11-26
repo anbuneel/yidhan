@@ -14,8 +14,8 @@ describe('groupChangelogByDay', () => {
     expect(days[1].versions).toEqual(['1.0.0']);
   });
 
-  it('formats one version alone and several as a range', () => {
+  it('lists one version alone and several oldest first', () => {
     expect(formatDayVersions(['1.0.0'])).toBe('1.0.0');
-    expect(formatDayVersions(['1.0.2', '1.0.1', '1.0.0'])).toBe('1.0.0 to 1.0.2');
+    expect(formatDayVersions(['1.0.2', '1.0.1', '1.0.0'])).toBe('1.0.0, 1.0.1, 1.0.2');
   });
 });

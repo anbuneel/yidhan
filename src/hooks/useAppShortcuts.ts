@@ -53,6 +53,9 @@ export function useAppShortcuts({
     // Plain N works in a browser tab too. Never while typing, and never on a repeat.
     const isPlainN = e.key === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey;
     if (!isPlainN || e.repeat || e.isComposing || isTypingTarget(e.target)) return;
+    // Not every dialog turns `enabled` off (conflict, share, import, backup), so a
+    // single letter checks for an open modal itself.
+    if (document.querySelector('[aria-modal="true"], dialog[open]')) return;
     e.preventDefault();
     onNewNote();
   });

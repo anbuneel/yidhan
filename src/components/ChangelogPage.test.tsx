@@ -54,7 +54,7 @@ describe('ChangelogPage', () => {
     const days = screen.getAllByRole('article');
     expect(days).toHaveLength(2);
     expect(within(days[0]).getByRole('heading', { level: 2 })).toHaveTextContent('March 14, 2026');
-    expect(within(days[0]).getByTestId('changelog-versions')).toHaveTextContent('9.9.9 to 9.9.10');
+    expect(within(days[0]).getByTestId('changelog-versions')).toHaveTextContent('9.9.9, 9.9.10');
     // Newest release first, each in its own order.
     expect(within(days[0]).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       expect.stringContaining('A later fix the same day'),
@@ -63,7 +63,7 @@ describe('ChangelogPage', () => {
     ]);
   });
 
-  it('keeps a day with one release as one version, not a range', () => {
+  it('keeps a day with one release as one version', () => {
     render(<ChangelogPage {...defaultProps} />);
 
     const days = screen.getAllByRole('article');

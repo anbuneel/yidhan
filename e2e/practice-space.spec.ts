@@ -452,6 +452,20 @@ test.describe('Sign-up link at 375 px', () => {
     if (!signIn) throw new Error('Sign in has no box');
     expect(signIn.x + signIn.width).toBeLessThanOrEqual(375);
   });
+
+  test('with the ribbon dismissed, the link sits under the tag row', async ({ page }) => {
+    await page.goto('/demo');
+    await page.getByRole('button', { name: 'New note', exact: true }).click();
+    await page.getByPlaceholder(/untitled/i).fill('Something of mine');
+    await page.getByRole('button', { name: /yidhan/i }).click();
+    await expect(page.getByTestId('library-view')).toBeVisible();
+    await expect(page.getByTestId('demo-keep-cta-phone')).toBeHidden();
+
+    await page.getByRole('button', { name: 'Dismiss' }).click();
+    const phoneCta = page.getByTestId('demo-keep-cta-phone');
+    await expect(phoneCta).toBeVisible();
+    await expect(phoneCta).toHaveText('Create an account to keep your notes');
+  });
 });
 
 test.describe('Sign-up link at 1280 px', () => {
