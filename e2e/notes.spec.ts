@@ -289,4 +289,26 @@ test.describe('Notes', () => {
       await expect(page.getByRole('heading', { name: /faded/i })).toBeVisible();
     });
   });
+
+  /** Phones use compact cards, which had no delete button, and left swipe is off
+   *  (#162). The delete button now shows on compact cards on touch screens. */
+  test.describe('Delete from the library on a 375px phone', () => {
+    test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+    test('moves a note to Faded notes', async ({ authenticatedPage: page }) => {
+      const noteTitle = `Phone delete ${Date.now()}`;
+      await createNote(page, noteTitle, 'Delete me from the phone library');
+      await goToLibrary(page);
+      const card = page.locator('article.note-card-compact').filter({ hasText: noteTitle });
+      await expect(card).toBeVisible();
+      const del = card.getByRole('button', { name: 'Delete note' });
+      await expect(del).toBeVisible();
+      await del.tap();
+      await expect(card).toHaveCount(0, { timeout: 5000 });
+
+      await page.goto('/faded');
+      await expect(page.getByRole('heading', { name: /faded/i })).toBeVisible();
+      await expect(page.getByText(noteTitle)).toBeVisible();
+    });
+  });
 });

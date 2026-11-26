@@ -133,7 +133,7 @@ export function SupportPage({
                   },
                   {
                     q: 'How do I export my notes?',
-                    a: 'Open Settings and use the Export option. You can export as JSON (full fidelity, re-importable) or Markdown (human-readable). Both formats include your note titles, content, and tags.',
+                    a: 'Open the profile menu and choose Export (JSON) or Export (Markdown). JSON keeps everything and can be imported again. Markdown is easy to read anywhere. Both include your note titles, content, and tags. An encrypted .yidhan backup is offered only when you delete your account, and import cannot read it.',
                   },
                   {
                     q: 'How do I delete my account?',

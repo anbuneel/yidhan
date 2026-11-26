@@ -257,8 +257,9 @@ export function LandingPage({
             <div className="landing-faq-item">
               <dt>Can I import or export my notes?</dt>
               <dd>
-                Yes. From Settings you can import Markdown files, JSON exports, or an encrypted
-                .yidhan backup, and export all your notes in the same formats any time.
+                Yes. The profile menu exports all your notes as JSON or Markdown, any time, and
+                imports Markdown files or a JSON export. An encrypted .yidhan backup is offered
+                when you delete your account. Import cannot read .yidhan files.
               </dd>
             </div>
             <div className="landing-faq-item">

@@ -59,3 +59,24 @@ for (const width of [360, 390]) {
     await context.close();
   });
 }
+
+/** The scroll-to-top button sat under the phone bottom toolbar. It now sits above it. */
+test('on a 375px phone scroll-to-top sits above the bottom toolbar', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 375, height: 700 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await page.goto('/demo/new');
+  await page.locator('.ProseMirror').first().click();
+  for (let i = 0; i < 40; i++) await page.keyboard.press('Enter');
+  await page.keyboard.type('The end.');
+  await page.getByTestId('note-editor').evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+    el.dispatchEvent(new Event('scroll'));
+  });
+  const back = page.getByRole('button', { name: 'Scroll to top' });
+  await expect(back).toBeVisible();
+  const toolbar = page.locator('.editor-toolbar-bottom');
+  await expect(toolbar).toBeVisible();
+  const [b, t] = await Promise.all([back.boundingBox(), toolbar.boundingBox()]);
+  expect(b!.y + b!.height, 'button bottom vs toolbar top, px').toBeLessThanOrEqual(t!.y);
+  await context.close();
+});
