@@ -237,6 +237,39 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
     }
   };
 
+  // Revoke the old link, make a new one, and stay open to show it. The old key is
+  // gone, so this is the only way to get a link you can copy again.
+  const handleRevokeAndRecreate = async () => {
+    setIsRevoking(true);
+    try {
+      await revokeNoteShare(note.id);
+    } catch (error) {
+      console.error('Failed to revoke share:', error);
+      toast.error('Failed to revoke share link');
+      setIsRevoking(false);
+      return;
+    }
+    setShare(null);
+    setShareUrl(null);
+    try {
+      const { share: newShare, shareKey } = await createNoteShare(
+        note.id,
+        userId,
+        note,
+        selectedExpiration
+      );
+      setShare(newShare);
+      setShareUrl(buildShareUrl(newShare.shareToken, shareKey));
+      toast.success('Old link revoked. Here is the new one.');
+    } catch (error) {
+      // The old link is revoked either way. The create view is now showing.
+      console.error('Failed to create share:', error);
+      toast.error('Old link revoked, but a new one could not be made');
+    } finally {
+      setIsRevoking(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   // If a share exists but we don't have the URL (reopened modal), the key is gone
@@ -623,7 +656,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
             <ShareActionBar
               revokeLabel="Revoke & Re-create"
               isRevoking={isRevoking}
-              onRevoke={handleRevoke}
+              onRevoke={handleRevokeAndRecreate}
               onClose={onClose}
             />
           </div>

@@ -217,12 +217,16 @@ describe('ShareModal', () => {
   });
 
   describe('revoking share', () => {
-    it('revokes existing share from key-not-recoverable view', async () => {
+    it('Revoke & Re-create revokes, makes a new link, and stays open showing it', async () => {
       const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       const existingShare = createMockNoteShare({ noteId: mockNote.id, shareToken: 'to-revoke' });
       vi.mocked(notesService.getNoteShare).mockResolvedValue(existingShare);
       vi.mocked(notesService.revokeNoteShare).mockResolvedValue(undefined);
+      vi.mocked(notesService.createNoteShare).mockResolvedValue({
+        share: createMockNoteShare({ noteId: mockNote.id, shareToken: 'fresh-token' }),
+        shareKey: new Uint8Array(32),
+      });
 
       render(<ShareModal {...defaultProps} onClose={onClose} />);
 
@@ -233,10 +237,49 @@ describe('ShareModal', () => {
       await user.click(screen.getByText('Revoke & Re-create'));
 
       await waitFor(() => {
-        expect(notesService.revokeNoteShare).toHaveBeenCalledWith(mockNote.id);
-        expect(toast.success).toHaveBeenCalledWith('Share link revoked');
-        expect(onClose).toHaveBeenCalled();
+        expect(screen.getByDisplayValue(/\/s\/fresh-token.*#k=/)).toBeInTheDocument();
       });
+      expect(notesService.revokeNoteShare).toHaveBeenCalledWith(mockNote.id);
+      expect(notesService.createNoteShare).toHaveBeenCalledTimes(1);
+      // Revoke runs before create.
+      expect(vi.mocked(notesService.revokeNoteShare).mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(notesService.createNoteShare).mock.invocationCallOrder[0]
+      );
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.queryByText('Revoke & Re-create')).toBeNull();
+      expect(screen.getByText('Revoke link')).toBeInTheDocument();
+    });
+
+    it('Revoke & Re-create does not create a link when the revoke fails', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onClose = vi.fn();
+      vi.mocked(notesService.getNoteShare).mockResolvedValue(createMockNoteShare({ noteId: mockNote.id }));
+      vi.mocked(notesService.revokeNoteShare).mockRejectedValue(new Error('nope'));
+
+      render(<ShareModal {...defaultProps} onClose={onClose} />);
+      await waitFor(() => expect(screen.getByText('Revoke & Re-create')).toBeInTheDocument());
+      await user.click(screen.getByText('Revoke & Re-create'));
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Failed to revoke share link'));
+      expect(notesService.createNoteShare).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByText('Revoke & Re-create')).toBeInTheDocument();
+    });
+
+    it('Revoke & Re-create says so, and offers a fresh create, when the new link fails', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onClose = vi.fn();
+      vi.mocked(notesService.getNoteShare).mockResolvedValue(createMockNoteShare({ noteId: mockNote.id }));
+      vi.mocked(notesService.revokeNoteShare).mockResolvedValue(undefined);
+      vi.mocked(notesService.createNoteShare).mockRejectedValue(new Error('down'));
+
+      render(<ShareModal {...defaultProps} onClose={onClose} />);
+      await waitFor(() => expect(screen.getByText('Revoke & Re-create')).toBeInTheDocument());
+      await user.click(screen.getByText('Revoke & Re-create'));
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Old link revoked, but a new one could not be made'));
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByText('Create share link')).toBeInTheDocument();
     });
 
     it('revokes share from just-created view', async () => {
