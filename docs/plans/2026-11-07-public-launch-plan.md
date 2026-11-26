@@ -63,6 +63,18 @@ who runs Yidhan (`docs/progress.md`).
 | 85 | Testing | Real-device testing checklist per release (keyboards, installed PWA, gestures) | days | Needs #81 | A release cannot merge without a recorded device pass · checklist in repo, referenced from the release PR template |
 | 153 | Testing | Verify the "done when" tests for items 6, 8, and 18 (killed-tab recovery, cross-device latency, authenticated backup restore); closes #210 | days | Item 37 shipped the fixture and the CI job. Still needs the maintainer to provision the test account and add the five repository secrets, or the authenticated tests skip. | Each of the three tests runs in CI and passes; a later `docs/progress.md` entry corrects the #201, #202, #204 entries · CI log |
 
+### Lane 3 · Design critique
+
+Promoted 2026-11-26 from `2026-11-26-design-critique-decisions.md`, which holds each
+PR's items, "done when" and "should not fire" cases. PR 4 (security presets) is not
+promoted; whether it ships before launch is open.
+
+| PR | Area | Item | Effort | Needs / start when |
+|---|------|------|--------|--------------------|
+| 1 | Auth | Honest session timeout: the chosen timeout always applies; a "Change passphrase" row points to the recovery route | hours | — |
+| 2 | Copy | Plain wording for deletion, conflicts and sign-up; touch pin fix; contrast and small polish | days | Runs beside PR 3 |
+| 3 | Editor | Five-button toolbar, grouped overflow menu, centre-only alignment, text size (roadmap 109, narrowed) | days | Runs beside PR 2 |
+
 ### Maintainer
 
 Blocked on the maintainer, not on code.
