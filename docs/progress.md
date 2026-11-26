@@ -842,3 +842,11 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   and reset `saveStatus`, timers, and `prevSyncStatusRef` when the note changes, without
   touching autosave timing. Background flush and failed-after-switch recovery are tracked
   separately in #288. (#285)
+- **2026-11-26** — Design critique PR 2, plain wording and polish: deletion, conflict,
+  account-deletion, sign-up and passphrase copy rewritten to the `DESIGN.md` Voice rules
+  ("Delete permanently", "Deleted in N days", "Create an account"); faded-note countdown
+  shows a day count; touch screens show the unpinned pin and delete icons on full-size
+  cards (they were invisible tap targets); plain N creates a note; delete undo stays 8
+  seconds; new `--color-text-placeholder` token on `::placeholder`; the Practice Space
+  invitation shows once per browser; the changelog page groups releases by day; small
+  demo, landing and sync-caption polish.

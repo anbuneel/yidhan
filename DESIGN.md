@@ -50,6 +50,9 @@ Rules the contrast numbers force (`src/themes/contrast.test.ts` checks them):
   borders use `--color-input-border`, at 3:1 or better.
 - **Note text has its own colour and weight**: `--color-text-note` and `--note-weight`
   (400 in light, 430 in dark, because light strokes fade on a dark page).
+- **Placeholders use `--color-text-placeholder`**, at 4.5:1 on every surface, set once
+  on `::placeholder` at full opacity. Never fade a placeholder or a line of text with
+  `opacity`; pick the text token that passes.
 
 The logo greens are `--color-brand-leaf` (the theme accent) and
 `--color-brand-leaf-deep` (`#163026`, the icon tile and the pinned mark's bookmark).

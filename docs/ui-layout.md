@@ -236,7 +236,8 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
 
 | Shortcut | Action | Context |
 |----------|--------|---------|
-| `Cmd/Ctrl + N` | Create new note | Library |
+| `N` | Create new note | Library, not while typing in a field |
+| `Cmd/Ctrl + N` | Create new note | Library, installed app (a browser tab keeps it for a new window) |
 | `Cmd/Ctrl + K` | Focus search | Library |
 | `Cmd/Ctrl + K` | Insert or edit a link | Editor, cursor in the note |
 | `Cmd/Ctrl + K` | Focus search | Editor, cursor elsewhere |
