@@ -2,7 +2,7 @@ import { VaultLockedSaveError } from '../utils/saveErrors';
 import type { OpenDraftState } from '../hooks/useReleasedDraft';
 import type { DerivedKeys } from '../lib/encryption';
 import { keepReleasedDraft } from '../utils/keepReleasedDraft';
-import { Suspense, useState, useEffect, useEffectEvent, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { getSaveLabel } from '../utils/saveStatus';
 import { SyncStateIcon, type SyncStateKind } from './SyncStateIcon';
@@ -14,7 +14,7 @@ import { EditorSidebar } from './EditorSidebar';
 import { EditorMetrics } from './EditorMetrics';
 import { FindReplacePanel } from './FindReplacePanel';
 import { TagSelector } from './TagSelector';
-import { lazyWithRetry } from '../utils/lazyWithRetry';
+import { ShareModal } from './ShareModal';
 import { formatShortDate, formatRelativeTime } from '../utils/formatTime';
 import { HeaderShell } from './HeaderShell';
 import { Logo } from './Logo';
@@ -48,9 +48,6 @@ const OVERLAY_GUARD_SELECTOR =
   '[aria-expanded="true"], [role="dialog"], dialog[open], [role="menu"], [data-editor-popover]';
 
 // E2EE sharing re-enabled: shares are encrypted client-side with per-share random keys.
-const ShareModal = lazyWithRetry(() =>
-  import('./ShareModal').then((m) => ({ default: m.ShareModal }))
-);
 // The decryption key lives in the URL fragment and never reaches the server.
 const sharingEnabled = true;
 
@@ -222,55 +219,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // Track in-flight save promise to await on navigation
   const inFlightSaveRef = useRef<Promise<boolean> | null>(null);
   const currentNoteIdRef = useRef(note.id);
+  const activeSwitchTokenRef = useRef(1);
+  const lastCommittedNoteIdRef = useRef(note.id);
   const prevSyncStatusRef = useRef(noteSyncStatus);
   const shouldStartSyncedStatusTimerRef = useRef(false);
-
-  // Issue #285: per-switch token and commit-phase snapshots/flushes.
-  // Written only in effects and async handlers, never during render.
-  const isMountedRef = useRef(true);
-  const activeSwitchTokenRef = useRef(1);
-  const onUpdateRef = useRef(onUpdate);
-  const hasPendingAutosaveRef = useRef(false);
-  const committedDraftRef = useRef<{
-    note: Note;
-    title: string;
-    content: string;
-    releasedElsewhere: boolean;
-    hasSaveError: boolean;
-    committedSnapshot: NoteSnapshot;
-  } | null>(null);
-  const activeInFlightMetaRef = useRef<{
-    noteId: string;
-    token: number;
-    snapshot: NoteSnapshot;
-    payload: Note;
-    promise: Promise<boolean>;
-  } | null>(null);
-  const pendingFlushesRef = useRef<
-    Map<
-      string,
-      {
-        note: Note;
-        snapshot: NoteSnapshot;
-        promise: Promise<boolean>;
-        attachedToken: number | null;
-      }
-    >
-  >(new Map());
-  const ownPendingSnapshotsRef = useRef<Map<string, NoteSnapshot[]>>(new Map());
-  const releasedOnLeaveRef = useRef<Set<string>>(new Set());
-  const [failedBackgroundSaves, setFailedBackgroundSaves] = useState<
-    Array<{ note: Note; detail: string; copied?: boolean; copyFailed?: boolean; retrying?: boolean }>
-  >([]);
-  const failedBackgroundSavesRef = useRef(failedBackgroundSaves);
-
-  const recordFailedBackgroundSave = useCallback((failedNote: Note, detail: string) => {
-    if (!isMountedRef.current) return;
-    setFailedBackgroundSaves((prev) => [
-      ...prev.filter((item) => item.note.id !== failedNote.id),
-      { note: failedNote, detail },
-    ]);
-  }, []);
 
   // Remote update tracking (2B): detect when the note prop changes from
   // another device's sync, distinguish from our own save echoing back
@@ -317,236 +269,25 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     pendingScrollSaveRef.current = null; // Clear pending data for old note
   }
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    onUpdateRef.current = onUpdate;
-  }, [onUpdate]);
-
-  useEffect(() => {
-    failedBackgroundSavesRef.current = failedBackgroundSaves;
-  }, [failedBackgroundSaves]);
-
-  // Issue #285: decide switch flushes and reopens in the commit phase using the
-  // atomic snapshot captured on the previous commit (safe under startTransition
-  // and StrictMode). Never discards unsaved words on failure.
-  useEffect(() => {
-    const prev = committedDraftRef.current;
-    if (prev && prev.note.id !== note.id) {
-      const switchToken = ++activeSwitchTokenRef.current;
-      const hadPendingAutosave = hasPendingAutosaveRef.current;
-      hasPendingAutosaveRef.current = false;
-
-      if (savePhaseTimeoutRef.current) {
-        clearTimeout(savePhaseTimeoutRef.current);
-        savePhaseTimeoutRef.current = null;
-      }
-      if (hideIndicatorTimeoutRef.current) {
-        clearTimeout(hideIndicatorTimeoutRef.current);
-        hideIndicatorTimeoutRef.current = null;
-      }
-      prevSyncStatusRef.current = noteSyncStatus;
-      shouldStartSyncedStatusTimerRef.current = false;
-
-      const leavingInFlight = activeInFlightMetaRef.current;
-      activeInFlightMetaRef.current = null;
-      inFlightSaveRef.current = null;
-
-      if (prev.releasedElsewhere) {
-        releasedOnLeaveRef.current.add(prev.note.id);
-      } else {
-        releasedOnLeaveRef.current.delete(prev.note.id);
-        const prevDraft = buildSnapshot(prev.title, prev.content, prev.note.tags);
-        const existingPending = pendingFlushesRef.current.get(prev.note.id);
-        const differsFromCommitted = !sameTitleAndContent(prevDraft, prev.committedSnapshot);
-        const differsFromInFlight =
-          (leavingInFlight === null ||
-            leavingInFlight.noteId !== prev.note.id ||
-            !sameTitleAndContent(prevDraft, leavingInFlight.snapshot)) &&
-          (!existingPending || !sameTitleAndContent(prevDraft, existingPending.snapshot));
-
-        if (
-          differsFromCommitted &&
-          differsFromInFlight &&
-          (!prev.hasSaveError || hadPendingAutosave)
-        ) {
-          const flushNote: Note = {
-            ...prev.note,
-            title: prevDraft.title,
-            content: prevDraft.content,
-            updatedAt: new Date(),
-          };
-          const waitFor =
-            leavingInFlight && leavingInFlight.noteId === prev.note.id
-              ? leavingInFlight.promise
-              : existingPending?.promise ?? null;
-
-          const ownList = ownPendingSnapshotsRef.current.get(prev.note.id) ?? [];
-          ownList.push(prevDraft);
-          ownPendingSnapshotsRef.current.set(prev.note.id, ownList);
-
-          const flushEntry: {
-            note: Note;
-            snapshot: NoteSnapshot;
-            promise: Promise<boolean>;
-            attachedToken: number | null;
-          } = {
-            note: flushNote,
-            snapshot: prevDraft,
-            promise: Promise.resolve(true),
-            attachedToken: null,
-          };
-
-          flushEntry.promise = (async () => {
-            if (waitFor) {
-              await waitFor.catch(() => {});
-            }
-            try {
-              await onUpdateRef.current(flushNote);
-              if (pendingFlushesRef.current.get(flushNote.id) === flushEntry) {
-                pendingFlushesRef.current.delete(flushNote.id);
-              }
-              const remainingOwn = ownPendingSnapshotsRef.current
-                .get(flushNote.id)
-                ?.filter((s) => s !== prevDraft);
-              if (remainingOwn && remainingOwn.length > 0) {
-                ownPendingSnapshotsRef.current.set(flushNote.id, remainingOwn);
-              } else {
-                ownPendingSnapshotsRef.current.delete(flushNote.id);
-              }
-              if (isMountedRef.current) {
-                setFailedBackgroundSaves((list) => list.filter((e) => e.note.id !== flushNote.id));
-              }
-              if (
-                isMountedRef.current &&
-                flushEntry.attachedToken !== null &&
-                activeSwitchTokenRef.current === flushEntry.attachedToken
-              ) {
-                committedSnapshotRef.current = prevDraft;
-                if (sameSnapshot(inFlightSnapshotRef.current, prevDraft)) {
-                  inFlightSnapshotRef.current = null;
-                }
-                if (inFlightSaveRef.current === flushEntry.promise) {
-                  inFlightSaveRef.current = null;
-                }
-                setRemoteUpdate(null);
-                setCopyFailed(false);
-                setHasSaveError(false);
-                setSaveStatus('saved');
-                const attached = flushEntry.attachedToken;
-                hideIndicatorTimeoutRef.current = setTimeout(() => {
-                  if (activeSwitchTokenRef.current === attached) {
-                    setSaveStatus('idle');
-                  }
-                }, 2000);
-              }
-              return true;
-            } catch (error) {
-              const detail = error instanceof VaultLockedSaveError ? error.message : '';
-              if (pendingFlushesRef.current.get(flushNote.id) === flushEntry) {
-                pendingFlushesRef.current.delete(flushNote.id);
-              }
-              const remainingOwn = ownPendingSnapshotsRef.current
-                .get(flushNote.id)
-                ?.filter((s) => s !== prevDraft);
-              if (remainingOwn && remainingOwn.length > 0) {
-                ownPendingSnapshotsRef.current.set(flushNote.id, remainingOwn);
-              } else {
-                ownPendingSnapshotsRef.current.delete(flushNote.id);
-              }
-              if (
-                isMountedRef.current &&
-                flushEntry.attachedToken !== null &&
-                activeSwitchTokenRef.current === flushEntry.attachedToken
-              ) {
-                if (sameSnapshot(inFlightSnapshotRef.current, prevDraft)) {
-                  inFlightSnapshotRef.current = null;
-                }
-                if (inFlightSaveRef.current === flushEntry.promise) {
-                  inFlightSaveRef.current = null;
-                }
-                setSaveErrorDetail(detail);
-                setHasSaveError(true);
-                setSaveStatus('idle');
-              } else {
-                recordFailedBackgroundSave(flushNote, detail);
-              }
-              return false;
-            }
-          })();
-
-          pendingFlushesRef.current.set(flushNote.id, flushEntry);
-        }
-      }
-
-      // Reopen the incoming note from its pending flush or failed background snapshot so
-      // A -> B -> A never shows older text, swaps back, or loses unsaved words.
-      releasedOnLeaveRef.current.delete(note.id);
-      const pendingForNew = pendingFlushesRef.current.get(note.id);
-      if (pendingForNew) {
-        pendingForNew.attachedToken = switchToken;
-        inFlightSaveRef.current = pendingForNew.promise;
-        inFlightSnapshotRef.current = pendingForNew.snapshot;
-        setTitle(pendingForNew.note.title);
-        setContent(pendingForNew.note.content);
-        if (editor) {
-          editor.commands.setContent(pendingForNew.note.content, { emitUpdate: false });
-        } else {
-          pendingEditorContentRef.current = pendingForNew.note.content;
-        }
-        setRemoteUpdate(null);
-        setSaveStatus('saving');
-        committedDraftRef.current = {
-          note,
-          title: pendingForNew.note.title,
-          content: pendingForNew.note.content,
-          releasedElsewhere,
-          hasSaveError: false,
-          committedSnapshot: committedSnapshotRef.current!,
-        };
-        return;
-      }
-
-      const failedForNew = failedBackgroundSavesRef.current.find((e) => e.note.id === note.id);
-      if (failedForNew) {
-        setFailedBackgroundSaves((list) => list.filter((e) => e.note.id !== note.id));
-        setTitle(failedForNew.note.title);
-        setContent(failedForNew.note.content);
-        if (editor) {
-          editor.commands.setContent(failedForNew.note.content, { emitUpdate: false });
-        } else {
-          pendingEditorContentRef.current = failedForNew.note.content;
-        }
-        setRemoteUpdate(null);
-        setHasSaveError(true);
-        setSaveErrorDetail(failedForNew.detail);
-        setSaveStatus('idle');
-        committedDraftRef.current = {
-          note,
-          title: failedForNew.note.title,
-          content: failedForNew.note.content,
-          releasedElsewhere,
-          hasSaveError: true,
-          committedSnapshot: committedSnapshotRef.current!,
-        };
-        return;
-      }
+  // Issue #285: bump a per-switch token synchronously on commit when the note changes,
+  // and clear stale indicator timers and sync-status tracking so an earlier save never
+  // reports its status or error banner on another note (including A -> B -> A).
+  useLayoutEffect(() => {
+    if (lastCommittedNoteIdRef.current === note.id) return;
+    lastCommittedNoteIdRef.current = note.id;
+    activeSwitchTokenRef.current += 1;
+    if (savePhaseTimeoutRef.current) {
+      clearTimeout(savePhaseTimeoutRef.current);
+      savePhaseTimeoutRef.current = null;
     }
-
-    committedDraftRef.current = {
-      note,
-      title,
-      content,
-      releasedElsewhere,
-      hasSaveError,
-      committedSnapshot: committedSnapshotRef.current!,
-    };
-  }, [note, title, content, releasedElsewhere, hasSaveError, noteSyncStatus, editor, recordFailedBackgroundSave]);
+    if (hideIndicatorTimeoutRef.current) {
+      clearTimeout(hideIndicatorTimeoutRef.current);
+      hideIndicatorTimeoutRef.current = null;
+    }
+    inFlightSaveRef.current = null;
+    prevSyncStatusRef.current = noteSyncStatus;
+    shouldStartSyncedStatusTimerRef.current = false;
+  }, [note.id, noteSyncStatus]);
 
   // Detect remote updates to the currently open note (2B)
   // When the note prop changes (from sync rehydration) while the same note is open:
@@ -557,15 +298,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     const incomingSnapshot = buildSnapshot(note.title, note.content, note.tags);
     const committedSnapshot = committedSnapshotRef.current;
     const activeInFlightSnapshot = inFlightSnapshotRef.current;
-    const ownPending = ownPendingSnapshotsRef.current.get(note.id);
-    const matchesOwnPending =
-      ownPending?.some((snapshot) => sameTitleAndContent(incomingSnapshot, snapshot)) ?? false;
 
     const titleOrContentChangedAgainstCommitted =
       !sameTitleAndContent(incomingSnapshot, committedSnapshot);
     const titleOrContentChangedAgainstInFlight =
-      (activeInFlightSnapshot === null || !sameTitleAndContent(incomingSnapshot, activeInFlightSnapshot)) &&
-      !matchesOwnPending;
+      activeInFlightSnapshot === null || !sameTitleAndContent(incomingSnapshot, activeInFlightSnapshot);
 
     if (!titleOrContentChangedAgainstCommitted) {
       if (!sameSnapshot(committedSnapshot, incomingSnapshot)) {
@@ -774,7 +511,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   }, []);
 
   const cancelPendingAutoSave = useCallback(() => {
-    hasPendingAutosaveRef.current = false;
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);
       autoSaveTimeoutRef.current = null;
@@ -788,7 +524,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // Escape keep the writer here; the released banner offers the ways out.
     if (releasedElsewhere) return false;
 
-    const saveNoteId = note.id;
     const saveToken = activeSwitchTokenRef.current;
     const draftSnapshot = buildSnapshot(title, content, note.tags);
 
@@ -825,25 +560,20 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
     setSaveStatus('saving');
     inFlightSnapshotRef.current = draftSnapshot;
-    const ownList = ownPendingSnapshotsRef.current.get(saveNoteId) ?? [];
-    ownList.push(draftSnapshot);
-    ownPendingSnapshotsRef.current.set(saveNoteId, ownList);
-
-    const savePayload: Note = {
-      ...note,
-      title: draftSnapshot.title,
-      content: draftSnapshot.content,
-      updatedAt: new Date(),
-    };
 
     // Create and track the save promise
     let savePromise: Promise<boolean> | null = null;
     savePromise = (async () => {
       try {
-        await onUpdate(savePayload);
+        await onUpdate({
+          ...note,
+          title: draftSnapshot.title,
+          content: draftSnapshot.content,
+          updatedAt: new Date(),
+        });
 
-        // Issue #285: guard with per-switch token so switching away (including A -> B -> A)
-        // never lets an older save report "Saved" or clobber the active note.
+        // Issue #285: guard with per-switch token so switching notes (including A -> B -> A)
+        // never lets an earlier save report "Saved" or clobber the active note.
         if (activeSwitchTokenRef.current !== saveToken) {
           return true;
         }
@@ -869,20 +599,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         }, 2000);
         return true;
       } catch (error) {
-        const detail = error instanceof VaultLockedSaveError ? error.message : '';
+        // Issue #285: do not show a previous note's failure banner on the note now on screen.
         if (activeSwitchTokenRef.current !== saveToken) {
-          // Never discard words on failure: surface a separate notice naming the note,
-          // unless it was released elsewhere or superseded by a newer pending flush.
-          if (
-            !releasedOnLeaveRef.current.has(saveNoteId) &&
-            !pendingFlushesRef.current.has(saveNoteId)
-          ) {
-            recordFailedBackgroundSave(savePayload, detail);
-          }
           return false;
         }
 
-        setSaveErrorDetail(detail);
+        setSaveErrorDetail(error instanceof VaultLockedSaveError ? error.message : '');
         if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
           inFlightSnapshotRef.current = null;
         }
@@ -896,17 +618,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
         return false;
       } finally {
-        if (!pendingFlushesRef.current.has(saveNoteId)) {
-          const list = ownPendingSnapshotsRef.current.get(saveNoteId);
-          if (list) {
-            const next = list.filter((s) => s !== draftSnapshot);
-            if (next.length > 0) ownPendingSnapshotsRef.current.set(saveNoteId, next);
-            else ownPendingSnapshotsRef.current.delete(saveNoteId);
-          }
-        }
-        if (activeInFlightMetaRef.current?.promise === savePromise) {
-          activeInFlightMetaRef.current = null;
-        }
         // Clear the in-flight ref when done
         if (inFlightSaveRef.current === savePromise) {
           inFlightSaveRef.current = null;
@@ -914,16 +625,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       }
     })();
 
-    activeInFlightMetaRef.current = {
-      noteId: saveNoteId,
-      token: saveToken,
-      snapshot: draftSnapshot,
-      payload: savePayload,
-      promise: savePromise,
-    };
     inFlightSaveRef.current = savePromise;
     return await savePromise;
-  }, [title, content, note, onUpdate, releasedElsewhere, recordFailedBackgroundSave]);
+  }, [title, content, note, onUpdate, releasedElsewhere]);
 
   // Tell the app whether this screen holds words the stored note does not, so a
   // delete from another device does not close the editor over them (issue #205).
@@ -961,28 +665,22 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // Auto-save when content changes (debounced)
   useEffect(() => {
     // Don't auto-save if nothing changed, or if the note was released elsewhere
-    if (releasedElsewhere || (title === note.title && content === note.content)) {
-      hasPendingAutosaveRef.current = false;
-      return;
-    }
+    if (releasedElsewhere) return;
+    if (title === note.title && content === note.content) return;
 
     // Clear any existing auto-save timeout
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);
     }
 
-    hasPendingAutosaveRef.current = true;
     // Schedule auto-save after 800ms of inactivity (reduced from 1.5s for faster sync)
     autoSaveTimeoutRef.current = setTimeout(() => {
-      autoSaveTimeoutRef.current = null;
-      hasPendingAutosaveRef.current = false;
       performSave();
     }, 800);
 
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
-        autoSaveTimeoutRef.current = null;
       }
     };
   }, [title, content, note.title, note.content, performSave, releasedElsewhere]);
@@ -1699,91 +1397,23 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-destructive-text)', background: 'var(--color-destructive)' }}>Let go</button>
         </div>
       )}
-      {((hasSaveError && !releasedElsewhere) || failedBackgroundSaves.length > 0) && (
-        <div className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md flex-col gap-2">
-          {failedBackgroundSaves.map((entry) => (
-            <div
-              key={entry.note.id}
-              role="alert"
-              data-testid="background-save-error"
-              className="flex items-center gap-3 rounded-[var(--radius-plain)] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]"
-            >
-              <span className="mr-auto">
-                Could not save “{entry.note.title.trim() || 'Untitled'}”
-                {entry.detail && <span className="block">{entry.detail}</span>}
-                {entry.copied && <span className="block">Copied</span>}
-                {entry.copyFailed && <span className="block">Could not copy — try again.</span>}
-              </span>
-              <button
-                type="button"
-                disabled={entry.retrying}
-                onClick={async () => {
-                  setFailedBackgroundSaves((list) =>
-                    list.map((e) => (e.note.id === entry.note.id ? { ...e, retrying: true, copyFailed: false } : e))
-                  );
-                  try {
-                    await onUpdateRef.current({ ...entry.note, updatedAt: new Date() });
-                    if (isMountedRef.current) {
-                      setFailedBackgroundSaves((list) => list.filter((e) => e.note.id !== entry.note.id));
-                    }
-                  } catch (error) {
-                    const detail = error instanceof VaultLockedSaveError ? error.message : '';
-                    if (isMountedRef.current) {
-                      setFailedBackgroundSaves((list) =>
-                        list.map((e) => (e.note.id === entry.note.id ? { ...e, retrying: false, detail } : e))
-                      );
-                    }
-                  }
-                }}
-                className="rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200"
-                style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}
-              >
-                Retry
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    await copyNoteToClipboard(entry.note);
-                    if (isMountedRef.current) {
-                      setFailedBackgroundSaves((list) =>
-                        list.map((e) => (e.note.id === entry.note.id ? { ...e, copied: true, copyFailed: false } : e))
-                      );
-                    }
-                  } catch {
-                    if (isMountedRef.current) {
-                      setFailedBackgroundSaves((list) =>
-                        list.map((e) => (e.note.id === entry.note.id ? { ...e, copyFailed: true } : e))
-                      );
-                    }
-                  }
-                }}
-                className="rounded-full border px-3 py-1.5 text-sm font-medium transition-all duration-200"
-                style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', background: 'transparent', borderColor: 'var(--glass-border)' }}
-              >
-                Copy
-              </button>
-            </div>
-          ))}
-          {hasSaveError && !releasedElsewhere && (
-            <div role="alert" className="flex items-center gap-3 rounded-[var(--radius-plain)] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
-              <span className="mr-auto">Not saved{saveErrorDetail && <span className="block">{saveErrorDetail}</span>}
-                {copyFailed && <span className="block">Could not copy — select the text and copy it by hand.</span>}</span>
-              <button type="button" onClick={() => { setCopyFailed(false); void performSave(); }}
-                className="rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200"
-                style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}>Retry</button>
-              <button type="button" onClick={async () => {
-                try {
-                  await copyNoteToClipboard({ ...note, title, content });
-                  setCopyFailed(false);
-                  setHasSaveError(false);
-                  showCopiedIndicator();
-                } catch { setCopyFailed(true); }
-              }}
-                className="rounded-full border px-3 py-1.5 text-sm font-medium transition-all duration-200"
-                style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', background: 'transparent', borderColor: 'var(--glass-border)' }}>Copy</button>
-            </div>
-          )}
+      {hasSaveError && !releasedElsewhere && (
+        <div role="alert" className="fixed bottom-20 left-4 right-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-[var(--radius-plain)] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
+          <span className="mr-auto">Not saved{saveErrorDetail && <span className="block">{saveErrorDetail}</span>}
+            {copyFailed && <span className="block">Could not copy — select the text and copy it by hand.</span>}</span>
+          <button type="button" onClick={() => { setCopyFailed(false); void performSave(); }}
+            className="rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}>Retry</button>
+          <button type="button" onClick={async () => {
+            try {
+              await copyNoteToClipboard({ ...note, title, content });
+              setCopyFailed(false);
+              setHasSaveError(false);
+              showCopiedIndicator();
+            } catch { setCopyFailed(true); }
+          }}
+            className="rounded-full border px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', background: 'transparent', borderColor: 'var(--glass-border)' }}>Copy</button>
         </div>
       )}
       {/* Sticky Zone: Header only */}
@@ -2235,15 +1865,13 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       )}
 
       {/* Share Modal - only rendered in authenticated mode when sharing is enabled */}
-      {sharingEnabled && !isDemo && showShareModal && (
-        <Suspense fallback={null}>
-          <ShareModal
-            isOpen={showShareModal}
-            onClose={() => setShowShareModal(false)}
-            note={note}
-            userId={userId}
-          />
-        </Suspense>
+      {sharingEnabled && !isDemo && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          note={note}
+          userId={userId}
+        />
       )}
     </div>
   );

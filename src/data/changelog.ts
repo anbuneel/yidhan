@@ -8,7 +8,7 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   { version: '3.20.11', date: '2026-11-25', changes: [
-    { type: 'fix', text: 'Switching notes while a save is running no longer shows the previous note’s save status or error banner on the next note, and unsaved edits typed inside the autosave window are now saved before leaving' },
+    { type: 'fix', text: 'Switching notes while a save is running no longer shows the previous note’s save status or error banner on the next note' },
   ] },
   { version: '3.20.10', date: '2026-11-25', changes: [
     { type: 'improvement', text: 'Updated the landing page to lead with private writing and tightened the hero so the editor sheet is visible above the fold on laptops and phones' },
