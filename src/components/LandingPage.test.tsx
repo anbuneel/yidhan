@@ -140,11 +140,14 @@ describe('LandingPage', () => {
     const section = screen.getByRole('heading', { name: /common questions/i }).closest('section') as HTMLElement;
 
     expect(within(section).getByText(/which browsers work, and can i install it\?/i)).toBeInTheDocument();
+    expect(section).toHaveTextContent(/most browsers/i);
     expect(section).toHaveTextContent(/add to home screen/i);
+    expect(section).not.toHaveTextContent(/firefox/i);
 
     expect(within(section).getByText(/what is free, and how is it paid for\?/i)).toBeInTheDocument();
     expect(section).toHaveTextContent(/agpl-3\.0/i);
-    expect(section).not.toHaveTextContent(/free forever/i);
+    expect(section).toHaveTextContent(/maintained by one person/i);
+    expect(section).not.toHaveTextContent(/free forever|low-cost hosting/i);
 
     expect(within(section).getByText(/can i import or export my notes\?/i)).toBeInTheDocument();
     expect(section).toHaveTextContent(/markdown/i);

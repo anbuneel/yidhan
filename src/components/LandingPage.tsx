@@ -241,17 +241,17 @@ export function LandingPage({
             <div className="landing-faq-item">
               <dt>Which browsers work, and can I install it?</dt>
               <dd>
-                Yidhan works in modern Chrome, Firefox, Safari, and Edge on desktop and phones.
-                Install it as a web app from your browser’s install prompt, or on iPhone and
-                iPad Safari via Share → Add to Home Screen.
+                Yidhan is a Progressive Web App that runs in modern desktop and mobile browsers.
+                On most browsers you can install it from the browser’s install prompt; on iOS
+                Safari, use Share → Add to Home Screen.
               </dd>
             </div>
             <div className="landing-faq-item">
               <dt>What is free, and how is it paid for?</dt>
               <dd>
                 Everything in Yidhan is free and open source under AGPL-3.0, with no ads, paid
-                tiers, or feature gates. It is built and paid for by one person on low-cost
-                hosting, with no company behind it.
+                tiers, or feature gates. It is maintained by one person, with no company behind
+                it.
               </dd>
             </div>
             <div className="landing-faq-item">

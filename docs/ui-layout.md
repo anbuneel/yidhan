@@ -5,20 +5,18 @@ Detailed ASCII diagrams for UI components. Referenced from CLAUDE.md for detaile
 ## Landing Page (One Sheet)
 
 The headline sits on the page. One leaf-corner sheet below it holds everything else at
-reading width (`DECISIONS.md`, 2026-11-11). The copy is not final.
+reading width (`DECISIONS.md`, 2026-11-11, 2026-11-25).
 
 **Desktop (>=1024px):**
 ```
 +--------------------------------------------------------------------------+
 | Yidhan                                               [theme] [Sign in]   |
 |                                                                          |
-|                 A notes app built around writing.                        |
-|          Write a first draft, work through an idea ... focus mode ...    |
-|          Works offline. With an account, your notes sync ...             |
+|                 A calm, private place to write.                          |
+|      Notes are encrypted on your device before they sync. Works          |
+|                 offline. Free and open source.                           |
 |                 [ Try writing ]  Browse sample notes ->                  |
 |                  Free to use. No account needed to try.                  |
-|    Encrypted before it syncs . Works offline . Free and open source .    |
-|                              Export any time                             |
 |      +--------------------------------------------------------------+    |
 |      |  Opening draft                                               |    |
 |      |  + Add tag                                        Just now   |    |
@@ -29,14 +27,19 @@ reading width (`DECISIONS.md`, 2026-11-11). The copy is not final.
 |      |  (Saved here)  Demo notes are ...  [Create an account ...]   |    |
 |      |                                                              |    |
 |      |  See what writing looks like in Yidhan.                      |    |
-|      |  Browse the sample notes, edit them, or start your own.      |    |
-|      |  | Why I still buy used books                                |    |
-|      |  | Start with the cookbook ...                               |    |
-|      |  | Revision notes / Tuesday ...                              |    |
+|      |  Open a sample note, edit it, or start your own.             |    |
+|      |  | Why I still buy used books      -> /demo/n/starter-...    |    |
+|      |  | Revision notes / Tuesday                                  |    |
+|      |                                                              |    |
+|      |  What stays out of the way.                                  |    |
+|      |  Chapters | Search | Share as Letter | Phone and offline     |    |
 |      |                                                              |    |
 |      |  Your writing is private.                                    |    |
 |      |  With an account, ... / When you sign up, ... / Export ...   |    |
 |      |  How encryption works ->                                     |    |
+|      |                                                              |    |
+|      |  Common questions.                                           |    |
+|      |  Browsers/install | Free/maintained | Import/export | Recov. |    |
 |      |  ------------------------------------------------------      |    |
 |      |  Start with one note.                      [ Try writing ]   |    |
 |      +--------------------------------------------------------------+    |
@@ -44,14 +47,16 @@ reading width (`DECISIONS.md`, 2026-11-11). The copy is not final.
 +--------------------------------------------------------------------------+
 ```
 
-**Mobile:** the same order. The sheet keeps a 16px gutter, the proof facts wrap, and
-below 768px the hero and closing buttons span the width. A sample preview is one line
-with an ellipsis.
+**Mobile:** the same order. The sheet keeps a 16px gutter and starts inside the first
+screen on both desktop (1280x800) and phone (390x844); below 768px the hero and closing
+buttons span the width. A sample preview is one line with an ellipsis.
 
 - The sheet's parts are separated by their headings and space. No divider and no
   ornament; the closing row has a hairline above it.
-- The hero leads with writing. Its one privacy clause says encryption comes with an
-  account. The passphrase, recovery key and visible metadata are not in the hero.
+- The hero leads with private writing ("A calm, private place to write."), with
+  "encrypted on your device" linking to `/security` and "Free and open source" linking
+  to the LICENSE file on GitHub (in the `index.html` shell too). The passphrase,
+  recovery key and visible metadata stay in the privacy section.
 - The privacy section claims only what `/security` backs: titles and content
   encrypted on the device before they sync; dates, note sizes and tag names not
   encrypted; losing both passphrase and recovery key loses the notes. Its "How
@@ -68,11 +73,13 @@ with an ellipsis.
 - "Browse sample notes" is a real link to `/demo`; a plain click is routed in-app,
   a modified click is left to the browser.
 - The samples are the practice space starters minus the pinned welcome and the hero
-  note. Each is a button with a 2px accent rule on its left, the title, and the first
-  paragraph as a one-line plain-text preview. It opens the practice space.
-- Proof facts: "Encrypted before it syncs" opens the security page, as does the
-  privacy section's "How encryption works"; "Free and open source" opens the LICENSE file on GitHub
-  (in the `index.html` shell too); the other two are plain text.
+  note. Each is a link to `/demo/n/<id>` with a 2px accent rule on its left, the title,
+  and the first paragraph as a one-line plain-text preview. Opening a sample opens that
+  existing note (restoring that one starter if deleted or missing from older storage,
+  never duplicating an edited starter).
+- Below the samples: "What stays out of the way." (chapters, search, Share as Letter,
+  phone and offline) and "Common questions." (browsers/installing, free/maintained,
+  importing/exporting, passphrase recovery).
 - Before the bundle arrives, `index.html` carries a static copy of the first screen
   (the centred intro, the proof line and the top of the sheet with the draft) styled
   by an inline

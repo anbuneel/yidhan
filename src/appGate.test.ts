@@ -46,6 +46,7 @@ describe('shouldStartApp', () => {
   it('starts the app for a stored Supabase session, so a signed-in visitor on / reaches the library', () => {
     expect(gate({ storage: storageWith({ [SESSION_KEY]: '{}' }) })).toBe(true);
     expect(gate({ pathname: '/privacy', storage: storageWith({ [SESSION_KEY]: '{}' }) })).toBe(true);
+    expect(gate({ pathname: '/demo/n/starter-used-books', storage: storageWith({ [SESSION_KEY]: '{}' }) })).toBe(true);
   });
 
   it('ignores other storage keys, including ones that look close', () => {

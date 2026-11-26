@@ -97,6 +97,7 @@ export function DemoPage({
     updateNote,
     deleteNote,
     restoreNote,
+    ensureStarterNote,
     createTag,
     updateTag,
     deleteTag,
@@ -234,8 +235,21 @@ export function DemoPage({
 
   const isSearching = debouncedSearchQuery.trim().length > 0;
 
+  // Monotonic token so a late async editor-chunk load (e.g. from `/demo/n/<id>`)
+  // never overrides a note the visitor opened or left in the meantime.
+  const openIntentRef = useRef(0);
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      openIntentRef.current += 1;
+    };
+  }, []);
+
   // Handlers - defined before effects that use them
   const handleNewNote = useCallback(async () => {
+    const openToken = ++openIntentRef.current;
     const newNote = createNote({
       title: '',
       content: '',
@@ -243,6 +257,7 @@ export function DemoPage({
       tagIds: [],
     });
     await warmEditorRoute();
+    if (openIntentRef.current !== openToken) return;
     setSelectedNoteId(newNote.id);
     setView('editor');
   }, [createNote, warmEditorRoute]);
@@ -256,8 +271,10 @@ export function DemoPage({
     void handleNewNote().then(() => onNewNoteStarted?.());
   }, [startWithNewNote, loading, handleNewNote, onNewNoteStarted]);
 
-  // Open an existing starter note when arriving via a landing sample link (`/demo/n/<id>`).
-  // Never creates a copy: if the visitor already edited the starter, their edited note opens.
+  // Open a sample note when arriving via `/demo/n/<id>`. If it is already in storage
+  // (untouched or edited), open it as-is. If it is a current starter missing from storage
+  // (deleted or pre-2026-11-10 storage), add just that one starter and open it. Ignore a
+  // late chunk load if the visitor opened or left another note while the editor loaded.
   const handledInitialNoteId = useRef<string | null>(null);
   useEffect(() => {
     if (!initialNoteId) {
@@ -266,31 +283,38 @@ export function DemoPage({
     }
     if (loading || handledInitialNoteId.current === initialNoteId) return;
     handledInitialNoteId.current = initialNoteId;
-    const existing = notes.find((n) => n.id === initialNoteId);
-    if (!existing) {
+    const target = notes.find((n) => n.id === initialNoteId) ?? ensureStarterNote(initialNoteId);
+    if (!target) {
       onInitialNoteOpened?.();
       return;
     }
+    const openToken = ++openIntentRef.current;
     void warmEditorRoute().then(() => {
-      setSelectedNoteId(existing.id);
-      setView('editor');
+      if (!isMountedRef.current) return;
       onInitialNoteOpened?.();
+      if (openIntentRef.current !== openToken) return;
+      setSelectedNoteId(target.id);
+      setView('editor');
     });
-  }, [initialNoteId, loading, notes, warmEditorRoute, onInitialNoteOpened]);
+  }, [initialNoteId, loading, notes, ensureStarterNote, warmEditorRoute, onInitialNoteOpened]);
 
   const handleNoteClick = useCallback((id: string) => {
+    const openToken = ++openIntentRef.current;
     void warmEditorRoute().then(() => {
+      if (openIntentRef.current !== openToken) return;
       setSelectedNoteId(id);
       setView('editor');
     });
   }, [warmEditorRoute]);
 
   const handleBack = () => {
+    openIntentRef.current += 1;
     setView('library');
     setSelectedNoteId(null);
   };
 
   const handleRequestSearch = useCallback(() => {
+    openIntentRef.current += 1;
     setView('library');
     setSelectedNoteId(null);
     setSearchFocusToken((prev) => prev + 1);

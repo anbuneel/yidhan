@@ -23,7 +23,7 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 **Status:** Active
 
-**Why:** The 2026-11-24 launch review (Claude, Gemini, Codex) found that leading with
+**Why:** Three reviews on 2026-11-24 found that leading with
 "A notes app built around writing" left encryption too low in the hierarchy and pushed
 the editor sheet below the fold on laptops and near y=700 on phones. Visitors had to
 scroll before seeing the product or why it differs from unencrypted editors, sample

@@ -72,7 +72,8 @@ test.describe('Landing shell', () => {
     const box = await page.locator('.landing-sheet').boundingBox();
     expect(box).not.toBeNull();
     expect(box!.y).toBeGreaterThan(0);
-    expect(box!.y).toBeLessThan(800);
+    // Old hero pushed the sheet to ~y=719; keep a tight bound so regressions fail here.
+    expect(box!.y).toBeLessThan(550);
   });
 
   test('the editor sheet top edge is inside the first screen on phone (390x844)', async ({ page }) => {
@@ -83,7 +84,15 @@ test.describe('Landing shell', () => {
     const box = await page.locator('.landing-sheet').boundingBox();
     expect(box).not.toBeNull();
     expect(box!.y).toBeGreaterThan(0);
-    expect(box!.y).toBeLessThan(844);
+    // Old hero pushed the sheet to ~y=715; keep a tight bound so regressions fail here.
+    expect(box!.y).toBeLessThan(550);
+  });
+
+  test('hard-loading /demo/n/<id> opens that starter note directly in the practice space', async ({ page }) => {
+    await page.goto('/demo/n/starter-revision');
+    await expect(page.getByTestId('note-editor')).toBeVisible();
+    await expect(page.getByLabel('Note title')).toHaveValue('Revision notes');
+    await expect(page).toHaveURL(/\/demo$/);
   });
 
   test('each sample link opens its own note and does not duplicate an edited starter', async ({ page }) => {

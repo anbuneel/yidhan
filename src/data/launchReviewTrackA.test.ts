@@ -82,7 +82,9 @@ describe('Launch review track A — public copy and polish invariants', () => {
     it('uses plain wording in the PWA manifest description', () => {
       const viteConfig = read('vite.config.ts');
       expect(viteConfig).not.toMatch(/quiet space/i);
-      expect(viteConfig).toMatch(/description:\s*'A notes app built around writing, encrypted on your device\.'/);
+      expect(viteConfig).toMatch(
+        /description:\s*'A calm, private place to write\. Notes are encrypted on your device before they sync\.'/
+      );
     });
   });
 
