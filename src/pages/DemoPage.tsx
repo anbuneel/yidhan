@@ -243,7 +243,6 @@ export function DemoPage({
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      openIntentRef.current += 1;
     };
   }, []);
 
@@ -257,7 +256,7 @@ export function DemoPage({
       tagIds: [],
     });
     await warmEditorRoute();
-    if (openIntentRef.current !== openToken) return;
+    if (!isMountedRef.current || openIntentRef.current !== openToken) return;
     setSelectedNoteId(newNote.id);
     setView('editor');
   }, [createNote, warmEditorRoute]);
@@ -268,7 +267,9 @@ export function DemoPage({
   useEffect(() => {
     if (!startWithNewNote || loading || hasStartedArrivalNote.current) return;
     hasStartedArrivalNote.current = true;
-    void handleNewNote().then(() => onNewNoteStarted?.());
+    void handleNewNote().then(() => {
+      if (isMountedRef.current) onNewNoteStarted?.();
+    });
   }, [startWithNewNote, loading, handleNewNote, onNewNoteStarted]);
 
   // Open a sample note when arriving via `/demo/n/<id>`. If it is already in storage
@@ -301,7 +302,7 @@ export function DemoPage({
   const handleNoteClick = useCallback((id: string) => {
     const openToken = ++openIntentRef.current;
     void warmEditorRoute().then(() => {
-      if (openIntentRef.current !== openToken) return;
+      if (!isMountedRef.current || openIntentRef.current !== openToken) return;
       setSelectedNoteId(id);
       setView('editor');
     });

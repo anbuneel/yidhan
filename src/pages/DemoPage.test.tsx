@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -258,6 +259,63 @@ describe('DemoPage initialNoteId (sample links)', () => {
       await Promise.resolve();
       await Promise.resolve();
     });
+
+    const editor = await screen.findByTestId('mock-demo-editor');
+    expect(editor).toHaveAttribute('data-note-id', 'starter-welcome');
+    expect(editor).toHaveTextContent('Welcome to Yidhan');
+  });
+});
+
+describe('DemoPage under StrictMode', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    editorLoaderControl.pendingPromise = null;
+  });
+
+  function renderDemoStrict(overrides: Partial<React.ComponentProps<typeof DemoPage>> = {}) {
+    return render(
+      <StrictMode>
+        <DemoPage
+          onSignUp={vi.fn()}
+          onSignIn={vi.fn()}
+          theme="light"
+          onThemeToggle={vi.fn()}
+          onHomeClick={vi.fn()}
+          onChangelogClick={vi.fn()}
+          onRoadmapClick={vi.fn()}
+          onPrivacyClick={vi.fn()}
+          onTermsClick={vi.fn()}
+          onSupportClick={vi.fn()}
+          {...overrides}
+        />
+      </StrictMode>
+    );
+  }
+
+  it('reaches the editor for startWithNewNote under StrictMode', async () => {
+    const onNewNoteStarted = vi.fn();
+    renderDemoStrict({ startWithNewNote: true, onNewNoteStarted });
+
+    const editor = await screen.findByTestId('mock-demo-editor');
+    expect(editor).toBeInTheDocument();
+    expect(onNewNoteStarted).toHaveBeenCalledTimes(1);
+  });
+
+  it('reaches the editor for initialNoteId under StrictMode', async () => {
+    const onInitialNoteOpened = vi.fn();
+    renderDemoStrict({ initialNoteId: 'starter-revision', onInitialNoteOpened });
+
+    const editor = await screen.findByTestId('mock-demo-editor');
+    expect(editor).toHaveAttribute('data-note-id', 'starter-revision');
+    expect(editor).toHaveTextContent('Revision notes');
+    expect(onInitialNoteOpened).toHaveBeenCalledTimes(1);
+  });
+
+  it('reaches the editor on a card click under StrictMode', async () => {
+    renderDemoStrict();
+
+    await screen.findByTestId('library-view');
+    fireEvent.click(screen.getByRole('button', { name: /^Open note: Welcome to Yidhan$/i }));
 
     const editor = await screen.findByTestId('mock-demo-editor');
     expect(editor).toHaveAttribute('data-note-id', 'starter-welcome');
