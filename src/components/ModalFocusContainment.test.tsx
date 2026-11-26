@@ -564,7 +564,7 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     ));
   });
 
-  it('FadedNotesView release-all confirmation dialog holds focus and returns focus to opener', async () => {
+  it('FadedNotesView delete-all confirmation dialog holds focus and returns focus to opener', async () => {
     const note = createMockNote({ deletedAt: new Date() });
     render(
       <FadedNotesView
