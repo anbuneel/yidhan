@@ -24,7 +24,9 @@ vi.mock('../lib/vaultMetadata', () => ({
   readVaultMetadata: () => ({ status: 'valid' }),
   readRecoveryWrap: () => ({ status: recoveryStatus }),
 }));
-vi.mock('./RecoveryKeySettings', () => ({ RecoveryKeySettings: () => null }));
+vi.mock('./RecoveryKeySettings', () => ({
+  RecoveryKeySettings: () => <button type="button">Make a recovery key</button>,
+}));
 
 import { SettingsModal } from './SettingsModal';
 
@@ -44,7 +46,7 @@ const vaultSettings = {
   setRememberBrowser: vi.fn(),
 } as unknown as UseVaultSettingsResult;
 
-function openSecurityTab() {
+function openSecurityTab({ unlocked = true } = {}) {
   render(
     <SettingsModal
       isOpen
@@ -54,7 +56,7 @@ function openSecurityTab() {
       onLetGoClick={vi.fn()}
       sessionSettings={sessionSettings}
       vaultSettings={vaultSettings}
-      isVaultUnlocked
+      isVaultUnlocked={unlocked}
       onLockVault={vi.fn()}
     />,
   );
@@ -71,19 +73,45 @@ describe('SettingsModal Security tab', () => {
     expect(screen.getByText(/Allows a session timeout of Never/)).toBeInTheDocument();
   });
 
-  it('tells an account with a recovery key how to change the passphrase', () => {
+  it.each([true, false])('tells an account with a recovery key how to change the passphrase (unlocked: %s)', (unlocked) => {
     recoveryStatus = 'valid';
-    openSecurityTab();
+    openSecurityTab({ unlocked });
 
     expect(screen.getByText('Change passphrase')).toBeInTheDocument();
     expect(screen.getByText(/lock your notes and choose ‘Use your recovery key’ on the unlock screen/)).toBeInTheDocument();
-    expect(screen.queryByText(/you need a recovery key first/)).not.toBeInTheDocument();
+    // The no-key text and its button never show when a key exists.
+    expect(screen.queryByText(/Make a recovery key first/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Go to Recovery key' })).not.toBeInTheDocument();
   });
 
   it('tells an account without a recovery key to make one first', () => {
     openSecurityTab();
 
-    expect(screen.getByText(/you need a recovery key first/)).toBeInTheDocument();
-    expect(screen.getByText(/choose ‘Use your recovery key’ on the unlock screen/)).toBeInTheDocument();
+    expect(screen.getByText('Make a recovery key first. You’ll need it to change your passphrase.')).toBeInTheDocument();
+    expect(screen.queryByText(/lock your notes and choose/)).not.toBeInTheDocument();
+  });
+
+  it('moves focus to the Recovery key row from the Change passphrase row', () => {
+    const original = Element.prototype.scrollIntoView;
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      openSecurityTab();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Go to Recovery key' }));
+
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: 'Make a recovery key' })).toHaveFocus();
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
+  it('shows no Go to Recovery key button while the notes are locked', () => {
+    // The Recovery key row is not rendered while locked, so there is nowhere to go.
+    openSecurityTab({ unlocked: false });
+
+    expect(screen.getByText(/Make a recovery key first/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Go to Recovery key' })).not.toBeInTheDocument();
   });
 });

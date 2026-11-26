@@ -32,6 +32,16 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
   const hasRecoveryKey = readVaultMetadata(vaultMeta).status === 'valid'
     && readRecoveryWrap((vaultMeta as Record<string, unknown> | undefined)?.recoveryWrap).status === 'valid';
 
+  // "Go to Recovery key": scroll to the row and move focus to its button.
+  const recoveryKeyRowRef = useRef<HTMLDivElement>(null);
+  const goToRecoveryKey = () => {
+    const row = recoveryKeyRowRef.current;
+    if (!row) return;
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    row.scrollIntoView?.({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    row.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+  };
+
   // Check if user signed up with OAuth (Google, GitHub, etc.)
   const provider = user?.app_metadata?.provider;
   const isOAuthUser =
@@ -690,7 +700,11 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   </div>
 
                   {/* Recovery key (item 26) */}
-                  {isVaultUnlocked && <RecoveryKeySettings />}
+                  {isVaultUnlocked && (
+                    <div ref={recoveryKeyRowRef}>
+                      <RecoveryKeySettings />
+                    </div>
+                  )}
 
                   {/* Vault Auto-Lock */}
                   <div>
@@ -826,8 +840,22 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                     >
                       {hasRecoveryKey
                         ? 'To change your passphrase, lock your notes and choose ‘Use your recovery key’ on the unlock screen. You’ll need your recovery key.'
-                        : 'To change your passphrase, you need a recovery key first. Make one in this section while your notes are unlocked. Then lock your notes and choose ‘Use your recovery key’ on the unlock screen.'}
+                        : 'Make a recovery key first. You’ll need it to change your passphrase.'}
                     </p>
+                    {/* The Recovery key row only renders while the vault is unlocked. */}
+                    {!hasRecoveryKey && isVaultUnlocked && (
+                      <button
+                        type="button"
+                        onClick={goToRecoveryKey}
+                        className="mt-1 text-xs underline cursor-pointer focus-ring"
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          color: 'var(--color-accent-text)',
+                        }}
+                      >
+                        Go to Recovery key
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
