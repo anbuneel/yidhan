@@ -842,6 +842,15 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   and reset `saveStatus`, timers, and `prevSyncStatusRef` when the note changes, without
   touching autosave timing. Background flush and failed-after-switch recovery are tracked
   separately in #288. (#285)
+- **2026-11-26** — Session timeout always does what Settings shows (design critique PR 1,
+  I1 and I2). `getEffectiveTimeout` returns the chosen timeout; trusted device only
+  unlocks "Never" and keeps its 90-day expiry. Removed `TRUSTED_DEVICE_TIMEOUT_MINUTES`
+  (14 days) and its Settings helper line. Loading is now pure and repairs storage in an
+  effect: only listed timeout values are enforced, a stored "never" without trust falls
+  back to 1 week, and an unreadable or future `trustedAt` counts as expired. This also
+  fixes the trust-expiry toast, which never fired because the expired keys were cleared
+  during render before the effect checked them. Added a "Change passphrase" row to the
+  Security tab pointing to "Use your recovery key" on the unlock screen.
 - **2026-11-26** — Design critique PR 2, plain wording and polish: deletion, conflict,
   account-deletion, sign-up and passphrase copy rewritten to the `DESIGN.md` Voice rules
   ("Delete permanently", "Deleted in N days", "Create an account"); faded-note countdown

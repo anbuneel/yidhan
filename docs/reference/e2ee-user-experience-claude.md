@@ -119,8 +119,9 @@ see the three-step setup.
 Session timeout shows a zen-styled warning modal: "Your session is about to fade" with options to **Stay** or **Sign out now**.
 
 ### Session timeout options
-- Without trusted device: Never / 5 min / 15 min / 30 min / 1 hr / 4 hr / 8 hr
-- With trusted device enabled: extends to 14 days (expires after 90 days)
+- Options: 30 minutes / 1 hour / 24 hours / 1 week (default) / Never
+- The chosen timeout always applies. Trusted device only unlocks Never.
+- Trust expires after 90 days, with a notice. Never then falls back to 1 week.
 
 ---
 
@@ -224,7 +225,7 @@ Keys are securely zeroed out (overwritten with 0s) when the vault locks.
 
 **Session Timeout** (auth-level)
 - Auto-lock dropdown with time options
-- Trusted device toggle (extends to 14 days)
+- Trusted device toggle (unlocks Never; expires after 90 days)
 
 **E2EE Migration** (visible if plaintext notes exist)
 - "Encrypt existing notes" button → navigates to `/migrate`
