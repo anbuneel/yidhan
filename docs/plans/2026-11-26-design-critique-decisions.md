@@ -18,18 +18,15 @@ The work is grouped into as few PRs as the review rules allow. Security work sta
 because it needs the multi-agent review. The toolbar stays apart from the copy so a red
 E2E run points at one cause.
 
-| PR | Contains | Review | Size |
-|---|---|---|---|
-| 1 · Honest session timeout | I1, I2 | Multi-agent | Hours |
-| 2 · Wording and polish | G1 to G12, K1 to K9, K11, K12, roadmap #146 line | `/code-review` | Days |
-| 3 · Editor | H1 to H12, L1 | `/code-review` | Days |
-| 4 · Security presets | J1 to J4, K10, two-secrets `DECISIONS.md` entry | Multi-agent | Days |
+| PR | Contains | Review |
+|---|---|---|
+| 1 · Honest session timeout | I1, I2 | Multi-agent |
+| 2 · Wording and polish | G1 to G12, K1 to K9, K11, K12, roadmap #146 line | `/code-review` |
+| 3 · Editor | H1 to H12, L1 | `/code-review` |
+| 4 · Security presets | J1 to J4, K10, two-secrets `DECISIONS.md` entry | Multi-agent |
 
 Order: PR 1 first. PRs 2 and 3 can run at the same time, each in its own worktree. PR 4
 starts after 2 and 3 merge. Whether PR 4 ships before launch is open.
-
-PRs 2 and 3 are each likely to take more than one session on the same branch (`CLAUDE.md`,
-one lane per session).
 
 After all four merge: one VoiceOver or NVDA pass over sign-up, unlock, library, editor
 and Settings (roadmap 68). Log findings as issues. Not a PR.
@@ -58,7 +55,7 @@ PR 3 edits `index.css` (toolbar strip). PRs 1 and 4 both edit `SettingsModal.tsx
 
 ## PR 1 · Honest session timeout
 
-PR title: `Session timeout always does what Settings shows`. Hours. Touches auth.
+PR title: `Session timeout always does what Settings shows`. Touches auth.
 
 | ID | Change |
 |---|---|
@@ -78,7 +75,7 @@ days, with its toast. Vault auto-lock and "Remember this browser" are unaffected
 
 ## PR 2 · Wording and polish
 
-PR title: `Plain wording, touch pin fix and small polish`. Days. Do not touch
+PR title: `Plain wording, touch pin fix and small polish`. Do not touch
 `SettingsModal.tsx` (PRs 1 and 4) or the toolbar files (PR 3).
 
 ### Wording
@@ -138,7 +135,7 @@ in the editor. Swipe to pin still works.
 
 ## PR 3 · Editor
 
-PR title: `Editor: five-button toolbar, grouped menu, text size`. Days. Owns
+PR title: `Editor: five-button toolbar, grouped menu, text size`. Owns
 `EditorToolbar.tsx`, `src/editor/editorCommands.tsx`, `RichTextEditor.tsx`,
 `EditorSidebar.tsx`, and the per-note export menu in `Editor.tsx`.
 
@@ -176,7 +173,7 @@ public pages. The manuscript glow still tracks the scroll at each size.
 
 ## PR 4 · Security presets
 
-PR title: `Security settings: one choice per device`. Days. Starts after PRs 2 and 3
+PR title: `Security settings: one choice per device`. Starts after PRs 2 and 3
 merge. Touches key storage and auth.
 
 | ID | Change |
