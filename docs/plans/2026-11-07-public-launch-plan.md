@@ -65,15 +65,14 @@ who runs Yidhan (`docs/progress.md`).
 
 ### Lane 3 · Design critique
 
-Promoted 2026-11-26 from `2026-11-26-design-critique-decisions.md`, which holds each
-PR's items, "done when" and "should not fire" cases. PR 4 (security presets) is not
-promoted; whether it ships before launch is open.
+Closed. All four PRs from the 2026-11-26 design critique shipped on 2026-11-26: #290
+(session timeout), #291 (editor toolbar and text size), #292 (wording and polish) and
+#293 (security presets). The plan is archived at
+`docs/archive/2026-11-26-design-critique-decisions.md`.
 
-| PR | Area | Item | Needs / start when |
-|---|------|------|--------------------|
-| 1 | Auth | Honest session timeout: the chosen timeout always applies; a "Change passphrase" row points to the recovery route | — |
-| 2 | Copy | Plain wording for deletion, conflicts and sign-up; touch pin fix; contrast and small polish | Runs beside PR 3 |
-| 3 | Editor | Five-button toolbar, grouped overflow menu, centre-only alignment, text size (roadmap 109, narrowed) | Runs beside PR 2 |
+Still open from it: the screen-reader pass (roadmap 68), with findings logged as issues.
+Not yet checked by anyone: the Security tab presets and the "Change passphrase" row in a
+signed-in session.
 
 ### Maintainer
 
