@@ -384,7 +384,7 @@ test.describe('Card corner on a touch phone at 375 px', () => {
     await page.goto('/demo');
     await expect(page.getByTestId('library-view')).toBeVisible();
     await page.waitForTimeout(600);
-    const card = page.locator('#chapter-thisWeek article.note-card-compact').first();
+    const card = page.locator('#chapter-thisWeek .note-card-compact').first();
     const title = (await card.getByRole('button', { name: /^Open note:/ }).getAttribute('aria-label'))!;
     const del = card.getByRole('button', { name: 'Delete note' });
     await expect(del).toBeVisible();

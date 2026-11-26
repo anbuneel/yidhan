@@ -6,6 +6,7 @@ import {
   evaluatePassphraseStrength,
   validatePassphrasePolicy,
 } from '../utils/passphrasePolicy';
+import { PasswordInput } from './PasswordInput';
 
 /**
  * The passphrase for a `.yidhan` backup — asked for when one is made, and again when
@@ -131,12 +132,13 @@ export function BackupPassphraseModal({
         >
           Backup passphrase
         </label>
-        <input
+        <PasswordInput
           id="backup-passphrase"
-          type="password"
+          revealLabel="passphrase"
           value={passphrase}
           onChange={(e) => setPassphrase(e.target.value)}
-          className="w-full px-4 py-2.5 rounded-lg mb-2 focus-ring"
+          className="w-full px-4 py-2.5 rounded-lg focus-ring"
+          wrapperClassName="mb-2"
           style={{
             background: 'var(--color-bg-secondary)',
             border: '1px solid var(--color-input-border)',
@@ -165,12 +167,13 @@ export function BackupPassphraseModal({
             >
               Type it again
             </label>
-            <input
+            <PasswordInput
               id="backup-passphrase-confirm"
-              type="password"
+              revealLabel="passphrase"
               value={confirmation}
               onChange={(e) => setConfirmation(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg mb-2 focus-ring"
+              className="w-full px-4 py-2.5 rounded-lg focus-ring"
+          wrapperClassName="mb-2"
               style={{
                 background: 'var(--color-bg-secondary)',
                 border: '1px solid var(--color-input-border)',

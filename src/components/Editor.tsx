@@ -1116,7 +1116,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   );
 
   // Right actions: Save status + Export button + Delete button. Under 400px the gap
-  // tightens so the save pill clears the wordmark (a 30px logo leaves no room).
+  // and the pill's own padding tighten so the save pill clears the wordmark (a 30px
+  // logo leaves no room) while the separator before the theme toggle stays.
   const rightActions = (
     <div className="flex items-center gap-2 max-[399px]:gap-1" data-testid="editor-header-actions">
       {/* Save/Copy Status Indicator. The status region is always mounted, so a screen
@@ -1126,7 +1127,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {saveStatus !== 'idle' && (
         <span
           data-save-status={saveStatus}
-          className="shrink-0 text-sm px-2 py-1 rounded-full flex items-center gap-1.5"
+          className="shrink-0 text-sm px-2 max-[399px]:px-1 py-1 rounded-full flex items-center gap-1.5"
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-secondary)',

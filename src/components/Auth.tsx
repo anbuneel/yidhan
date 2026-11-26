@@ -4,6 +4,7 @@ import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import type { Theme } from '../types';
 import { Logo } from './Logo';
 import { ModalBackdropButton } from './ModalBackdropButton';
+import { PasswordInput } from './PasswordInput';
 
 type AuthMode = 'login' | 'signup' | 'forgot' | 'reset';
 
@@ -456,9 +457,9 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               >
                 {mode === 'reset' ? 'New password' : 'Password'}
               </label>
-              <input
+              <PasswordInput
                 id="auth-password"
-                type="password"
+                revealLabel="password"
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -485,9 +486,9 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               >
                 Confirm password
               </label>
-              <input
+              <PasswordInput
                 id="auth-confirm-password"
-                type="password"
+                revealLabel="password"
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

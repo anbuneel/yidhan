@@ -15,6 +15,7 @@ import {
 } from '../lib/securityPresets';
 import type { UseVaultSettingsResult } from '../hooks/useVaultSettings';
 import type { Theme } from '../types';
+import { PasswordInput } from './PasswordInput';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -522,9 +523,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 >
                   Current password
                 </label>
-                <input
+                <PasswordInput
                   id="settings-current-password"
-                  type="password"
+                  revealLabel="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="Enter current password"
@@ -563,9 +564,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 >
                   New password
                 </label>
-                <input
+                <PasswordInput
                   id="settings-new-password"
-                  type="password"
+                  revealLabel="password"
                   autoComplete="new-password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -605,9 +606,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 >
                   Confirm new password
                 </label>
-                <input
+                <PasswordInput
                   id="settings-confirm-password"
-                  type="password"
+                  revealLabel="password"
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}

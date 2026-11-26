@@ -19,6 +19,7 @@ import {
   vaultQuietButtonStyle,
   vaultSecondaryButtonStyle,
 } from './vaultScreenStyles';
+import { PasswordInput } from './PasswordInput';
 
 /**
  * Item 27: first-time setup in three steps — passphrase, recovery key, done.
@@ -349,9 +350,9 @@ export function PassphraseSetup() {
               <label htmlFor="passphrase" className="block text-xs mb-1" style={bodyStyle}>
                 Passphrase
               </label>
-              <input
+              <PasswordInput
                 id="passphrase"
-                type="password"
+                revealLabel="passphrase"
                 autoComplete="new-password"
                 value={own}
                 onChange={(e) => setOwn(e.target.value)}
@@ -386,9 +387,9 @@ export function PassphraseSetup() {
               <label htmlFor="confirm" className="block text-xs mb-1" style={bodyStyle}>
                 Confirm passphrase
               </label>
-              <input
+              <PasswordInput
                 id="confirm"
-                type="password"
+                revealLabel="passphrase"
                 autoComplete="new-password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}

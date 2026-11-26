@@ -3,6 +3,7 @@ import { useEncryption } from '../contexts/EncryptionContext';
 import { MIN_PASSPHRASE_LENGTH, validatePassphrasePolicy } from '../utils/passphrasePolicy';
 import { VaultScreenCard } from './VaultScreenCard';
 import { vaultInputStyle, vaultPrimaryButtonStyle, vaultQuietButtonStyle } from './vaultScreenStyles';
+import { PasswordInput } from './PasswordInput';
 
 /**
  * Item 26: after a recovery-key unlock, a new passphrase is required before the
@@ -75,9 +76,9 @@ export function RecoveryPassphraseReset() {
           <label htmlFor="new-passphrase" className="block text-xs mb-1" style={labelStyle}>
             New passphrase
           </label>
-          <input
+          <PasswordInput
             id="new-passphrase"
-            type="password"
+            revealLabel="passphrase"
             autoComplete="new-password"
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}
@@ -92,9 +93,9 @@ export function RecoveryPassphraseReset() {
           <label htmlFor="confirm-new-passphrase" className="block text-xs mb-1" style={labelStyle}>
             Confirm new passphrase
           </label>
-          <input
+          <PasswordInput
             id="confirm-new-passphrase"
-            type="password"
+            revealLabel="passphrase"
             autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}

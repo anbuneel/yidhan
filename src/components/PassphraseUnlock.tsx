@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useVaultSettings } from '../hooks/useVaultSettings';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { vaultQuietButtonStyle } from './vaultScreenStyles';
+import { PasswordInput } from './PasswordInput';
 
 // Item 26. Loaded only when the writer asks for it, to keep the entry chunk small.
 const RecoveryKeyUnlockForm = lazyWithRetry(() =>
@@ -229,9 +230,9 @@ export function PassphraseUnlock() {
             >
               Passphrase
             </label>
-            <input
+            <PasswordInput
               id="passphrase"
-              type="password"
+              revealLabel="passphrase"
               autoComplete="current-password"
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}

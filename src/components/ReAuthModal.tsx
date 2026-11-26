@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { ModalBackdropButton } from './ModalBackdropButton';
+import { PasswordInput } from './PasswordInput';
 
 interface ReAuthModalProps {
   isOpen: boolean;
@@ -122,6 +123,28 @@ export function ReAuthModal({
 
   if (!isOpen) return null;
 
+
+  // Shared by the code field and the password field; only the password gets a toggle.
+  const reauthFieldProps = {
+    id: 'reauth-input',
+    ref: inputRef,
+    value: input,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value),
+    className: 'w-full px-4 py-3 rounded-lg outline-none transition-all duration-200',
+    style: {
+      fontFamily: 'var(--font-body)',
+      background: 'var(--color-bg-secondary)',
+      border: '1px solid var(--color-input-border)',
+      color: 'var(--color-text-primary)',
+    },
+    onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
+      e.currentTarget.style.borderColor = 'var(--color-accent)';
+    },
+    onBlur: (e: React.FocusEvent<HTMLInputElement>) => {
+      e.currentTarget.style.borderColor = 'var(--color-input-border)';
+    },
+  };
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center px-4 modal-backdrop"
@@ -228,33 +251,21 @@ export function ReAuthModal({
             >
               {usesEmailOtp ? 'Verification code' : 'Your password'}
             </label>
-            <input
-              id="reauth-input"
-              ref={inputRef}
-              type={usesEmailOtp ? 'text' : 'password'}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={usesEmailOtp ? 'Enter the code from your email' : 'Enter your password'}
-              autoComplete={usesEmailOtp ? 'one-time-code' : 'current-password'}
-              className="
-                w-full px-4 py-3
-                rounded-lg
-                outline-none
-                transition-all duration-200
-              "
-              style={{
-                fontFamily: 'var(--font-body)',
-                background: 'var(--color-bg-secondary)',
-                border: '1px solid var(--color-input-border)',
-                color: 'var(--color-text-primary)',
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-accent)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-input-border)';
-              }}
-            />
+            {usesEmailOtp ? (
+              <input
+                {...reauthFieldProps}
+                type="text"
+                placeholder="Enter the code from your email"
+                autoComplete="one-time-code"
+              />
+            ) : (
+              <PasswordInput
+                {...reauthFieldProps}
+                revealLabel="password"
+                placeholder="Enter your password"
+                autoComplete="current-password"
+              />
+            )}
           </div>
           )}
 

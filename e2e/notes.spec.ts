@@ -299,7 +299,7 @@ test.describe('Notes', () => {
       const noteTitle = `Phone delete ${Date.now()}`;
       await createNote(page, noteTitle, 'Delete me from the phone library');
       await goToLibrary(page);
-      const card = page.locator('article.note-card-compact').filter({ hasText: noteTitle });
+      const card = page.locator('.note-card-compact').filter({ hasText: noteTitle });
       await expect(card).toBeVisible();
       const del = card.getByRole('button', { name: 'Delete note' });
       await expect(del).toBeVisible();
