@@ -1,7 +1,7 @@
 /**
  * Conflict Modal - "Two Paths"
  *
- * Zen-styled modal for resolving sync conflicts between local and server versions.
+ * Modal for resolving sync conflicts between local and server versions.
  * Displays both versions side-by-side with clear resolution options.
  */
 
@@ -72,10 +72,10 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
   const diff = paragraphChanges(paragraphs(localNote.content), paragraphs(serverNote.content));
   const isHardDeletedConflict = serverNote.hard_deleted === true;
   const headerText = isHardDeletedConflict
-    ? 'This note was edited here, but deleted on another device. Which path should remain?'
-    : 'This note was changed in two places. Which feels truer?';
+    ? 'You edited this note here, but it was deleted on another device.'
+    : 'Choose which version to keep. You can also keep both.';
   const localActionLabel = isHardDeletedConflict ? 'Restore this note' : 'Keep this';
-  const localActionAriaLabel = isHardDeletedConflict ? 'Restore local note' : 'Keep local version';
+  const localActionAriaLabel = isHardDeletedConflict ? 'Restore local note' : "Keep this device's version";
   const localResolvingLabel = isHardDeletedConflict ? 'Restoring...' : 'Keeping...';
   const serverHeading = isHardDeletedConflict
     ? 'Deleted on another device'
@@ -84,7 +84,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
     ? 'Choosing this accepts the deletion and removes the original note from this device.'
     : getPlainTextPreview(serverNote.content);
   const serverActionLabel = isHardDeletedConflict ? 'Accept deletion' : 'Keep this';
-  const serverActionAriaLabel = isHardDeletedConflict ? 'Accept note deletion' : 'Keep server version';
+  const serverActionAriaLabel = isHardDeletedConflict ? 'Accept note deletion' : "Keep other device's version";
   const serverResolvingLabel = isHardDeletedConflict ? 'Accepting...' : 'Keeping...';
   const bothActionLabel = isHardDeletedConflict
     ? 'Keep a copy instead'
@@ -150,7 +150,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               color: 'var(--color-text-primary)',
             }}
           >
-            Two paths have formed
+            This note changed on two devices
           </h2>
           <p
             className="text-sm md:text-base"
@@ -181,7 +181,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                 className="text-sm"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
-                Your device
+                This device
               </span>
               <span
                 className="text-xs italic"
@@ -268,7 +268,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
                 className="text-sm"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
-                {isHardDeletedConflict ? 'Deleted elsewhere' : 'Another device'}
+                Other device
               </span>
               <span
                 className="text-xs italic"

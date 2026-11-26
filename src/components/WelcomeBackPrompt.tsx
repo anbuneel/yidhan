@@ -81,7 +81,7 @@ export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: Welcome
               color: 'var(--color-text-secondary)',
             }}
           >
-            Your account is fading quietly.
+            Your account is set to be deleted.
           </p>
 
           {/* Days remaining */}
@@ -92,7 +92,7 @@ export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: Welcome
               color: 'var(--color-text-tertiary)',
             }}
           >
-            Releasing in {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'}.
+            Deleted in {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'}, unless you choose Stay.
           </p>
 
           {/* Action buttons */}

@@ -14,6 +14,15 @@ import { buildBackupFilename, createEncryptedBackup } from '../utils/encryptedBa
 import { BackupPassphraseModal } from './BackupPassphraseModal';
 import { fetchAllNoteShares } from '../services/notes';
 import type { Note, Tag } from '../types';
+
+/** Days between choosing "Let go" and permanent deletion (`initiate_offboarding`). */
+const OFFBOARDING_GRACE_DAYS = 14;
+
+/** The date an account deleted now would be removed, e.g. "10 December 2026". */
+export function formatDeletionDate(from: Date = new Date()): string {
+  const date = new Date(from.getTime() + OFFBOARDING_GRACE_DAYS * 24 * 60 * 60 * 1000);
+  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+}
 import { ModalBackdropButton } from './ModalBackdropButton';
 
 type PendingAction = 'fullBackup' | 'encryptedBackup' | 'letGo' | null;
@@ -162,7 +171,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
       }
 
       // Show farewell toast
-      toast('Your account is fading quietly. See you if you return.', {
+      toast(`Your account will be deleted on ${formatDeletionDate()}. Sign in before then to cancel.`, {
         duration: 5000,
         style: {
           background: 'var(--color-bg-secondary)',
@@ -300,7 +309,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
 
         {/* Content */}
         <div className="px-8 py-6">
-          {/* Gratitude message */}
+          {/* What happens */}
           <p
             className="text-center text-lg mb-2"
             style={{
@@ -308,7 +317,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               color: 'var(--color-text-primary)',
             }}
           >
-            Thank you for the quiet moments.
+            Your account and notes will be deleted on {formatDeletionDate()}.
           </p>
 
           {/* Explanation */}
@@ -320,7 +329,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               lineHeight: 1.6,
             }}
           >
-            Your account will fade for 14 days, then release. You may return anytime before then.
+            Until then, you can sign back in and choose "Stay" to cancel. After that date, your account and notes are permanently deleted.
           </p>
 
           {/* Keepsakes section */}
@@ -338,7 +347,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 color: 'var(--color-text-primary)',
               }}
             >
-              Take your keepsakes{' '}
+              Download your notes first{' '}
               <span style={{ color: 'var(--color-text-tertiary)' }}>(optional)</span>
             </p>
             <p
@@ -348,7 +357,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 color: 'var(--color-text-tertiary)',
               }}
             >
-              Your words belong to you.
+              Your notes are yours to keep.
             </p>
             <div className="flex gap-2 mb-2">
               <button type="button"
@@ -488,7 +497,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 e.currentTarget.style.color = 'var(--color-text-secondary)';
               }}
             >
-              Stay a while
+              Cancel
             </button>
             <button type="button"
               onClick={handleLetGo}

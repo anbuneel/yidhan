@@ -579,13 +579,13 @@ describe('Modal focus containment across every modal kind (B2)', () => {
       />
     );
 
-    const releaseAllBtn = screen.getByRole('button', { name: 'Release all' });
-    releaseAllBtn.focus();
-    fireEvent.click(releaseAllBtn);
+    const deleteAllBtn = screen.getByRole('button', { name: 'Delete all' });
+    deleteAllBtn.focus();
+    fireEvent.click(deleteAllBtn);
 
     const dialog = screen.getByRole('dialog');
     expect(dialog.contains(document.activeElement)).toBe(true);
-    expect(releaseAllBtn.closest('[inert]')).not.toBeNull();
+    expect(deleteAllBtn.closest('[inert]')).not.toBeNull();
 
     const focusable = getFocusableIn(dialog);
     focusable[focusable.length - 1].focus();
@@ -594,7 +594,7 @@ describe('Modal focus containment across every modal kind (B2)', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(document.activeElement).toBe(releaseAllBtn);
+    expect(document.activeElement).toBe(deleteAllBtn);
   });
 
   it('WelcomeBackPrompt holds focus and marks background inert without Escape dismissal', () => {

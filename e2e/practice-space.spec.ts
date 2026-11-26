@@ -342,3 +342,65 @@ test.describe('Tag row at 375 px', () => {
     expect(pageScrolls).toBe(false);
   });
 });
+
+/** Design critique K1: touch screens have no hover, so an unpinned card's pin and
+ *  delete buttons used to sit at opacity 0 — an invisible pin target in the corner. */
+async function firstUnpinnedCard(page: Page) {
+  await page.goto('/demo');
+  await expect(page.getByTestId('library-view')).toBeVisible();
+  const card = page
+    .locator('.note-card:not(.note-card-compact)')
+    .filter({ has: page.getByRole('button', { name: 'Pin note' }) })
+    .first();
+  await expect(card).toBeVisible();
+  await page.waitForTimeout(600);
+  return card;
+}
+
+async function opacityOf(locator: import('@playwright/test').Locator) {
+  return locator.evaluate((el) => Number(getComputedStyle(el).opacity));
+}
+
+test.describe('Card corner on a touch phone at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+  test('the unpinned pin and delete icons are visible', async ({ page }) => {
+    const card = await firstUnpinnedCard(page);
+    expect(await opacityOf(card.getByRole('button', { name: 'Pin note' }))).toBeCloseTo(0.4);
+    expect(await opacityOf(card.getByRole('button', { name: 'Delete note' }))).toBeCloseTo(0.4);
+  });
+
+  test('tapping the card corner outside the pin opens the note, not a pin', async ({ page }) => {
+    const card = await firstUnpinnedCard(page);
+    const box = await card.boundingBox();
+    if (!box) throw new Error('card has no box');
+    // The pin button sits 8px in from the corner; 4px in is the card itself.
+    await page.touchscreen.tap(box.x + box.width - 4, box.y + 4);
+    await expect(page.getByTestId('note-editor')).toBeVisible();
+  });
+
+  test('tapping the visible pin pins the note', async ({ page }) => {
+    const card = await firstUnpinnedCard(page);
+    const title = (await card.getByRole('button', { name: /^Open note:/ }).getAttribute('aria-label'))!;
+    await card.getByRole('button', { name: 'Pin note' }).tap();
+    await expect(
+      page.locator('#chapter-pinned').getByRole('button', { name: title })
+    ).toBeVisible();
+    await expect(page.getByTestId('note-editor')).toHaveCount(0);
+  });
+});
+
+test.describe('Card icons on desktop', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('the unpinned pin and delete icons stay hidden until hover', async ({ page }) => {
+    const card = await firstUnpinnedCard(page);
+    await page.mouse.move(0, 0);
+    const pin = card.getByRole('button', { name: 'Pin note' });
+    const del = card.getByRole('button', { name: 'Delete note' });
+    expect(await opacityOf(pin)).toBe(0);
+    expect(await opacityOf(del)).toBe(0);
+    await card.hover();
+    await expect.poll(() => opacityOf(pin)).toBeCloseTo(0.4);
+  });
+});

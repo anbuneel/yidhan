@@ -67,8 +67,8 @@ describe('ConflictModal', () => {
   it('should render the conflict modal with zen header', () => {
     render(<ConflictModal {...defaultProps} />);
 
-    expect(screen.getByText('Two paths have formed')).toBeInTheDocument();
-    expect(screen.getByText(/which feels truer/i)).toBeInTheDocument();
+    expect(screen.getByText('This note changed on two devices')).toBeInTheDocument();
+    expect(screen.getByText(/choose which version to keep/i)).toBeInTheDocument();
   });
 
   it('should render null when conflict is null', () => {
@@ -123,8 +123,8 @@ describe('ConflictModal', () => {
   it('should display version labels', () => {
     render(<ConflictModal {...defaultProps} />);
 
-    expect(screen.getByText('Your device')).toBeInTheDocument();
-    expect(screen.getByText('Another device')).toBeInTheDocument();
+    expect(screen.getByText('This device')).toBeInTheDocument();
+    expect(screen.getByText('Other device')).toBeInTheDocument();
   });
 
   it('should display content previews as plain text', () => {
@@ -137,8 +137,8 @@ describe('ConflictModal', () => {
   it('should show three resolution buttons', () => {
     render(<ConflictModal {...defaultProps} />);
 
-    expect(screen.getByRole('button', { name: 'Keep local version' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Keep server version' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Keep this device's version" })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Keep other device's version" })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /keep both/i })).toBeInTheDocument();
   });
 
@@ -148,7 +148,7 @@ describe('ConflictModal', () => {
 
     render(<ConflictModal {...defaultProps} onResolve={onResolve} />);
 
-    const localButton = screen.getByRole('button', { name: 'Keep local version' });
+    const localButton = screen.getByRole('button', { name: "Keep this device's version" });
     await user.click(localButton);
 
     await waitFor(() => {
@@ -162,7 +162,7 @@ describe('ConflictModal', () => {
 
     render(<ConflictModal {...defaultProps} onResolve={onResolve} />);
 
-    const serverButton = screen.getByRole('button', { name: 'Keep server version' });
+    const serverButton = screen.getByRole('button', { name: "Keep other device's version" });
     await user.click(serverButton);
 
     await waitFor(() => {
@@ -200,7 +200,7 @@ describe('ConflictModal', () => {
     render(<ConflictModal {...defaultProps} onResolve={onResolve} onDismiss={onDismiss} />);
 
     // Start resolving
-    const localButton = screen.getByRole('button', { name: 'Keep local version' });
+    const localButton = screen.getByRole('button', { name: "Keep this device's version" });
     await user.click(localButton);
 
     // Try to escape during resolving
@@ -223,7 +223,7 @@ describe('ConflictModal', () => {
     render(<ConflictModal {...defaultProps} onDismiss={onDismiss} />);
 
     // Click on text inside the modal
-    fireEvent.click(screen.getByText('Two paths have formed'));
+    fireEvent.click(screen.getByText('This note changed on two devices'));
 
     expect(onDismiss).not.toHaveBeenCalled();
   });
@@ -234,7 +234,7 @@ describe('ConflictModal', () => {
 
     render(<ConflictModal {...defaultProps} onResolve={onResolve} />);
 
-    const localButton = screen.getByRole('button', { name: 'Keep local version' });
+    const localButton = screen.getByRole('button', { name: "Keep this device's version" });
     await user.click(localButton);
 
     // All buttons should now be disabled
@@ -266,11 +266,11 @@ describe('ConflictModal', () => {
 
     render(<ConflictModal {...defaultProps} onResolve={onResolve} />);
 
-    await user.click(screen.getByRole('button', { name: 'Keep local version' }));
+    await user.click(screen.getByRole('button', { name: "Keep this device's version" }));
 
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to resolve conflict:', expect.any(Error));
-      expect(screen.getByRole('button', { name: 'Keep local version' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: "Keep this device's version" })).not.toBeDisabled();
     });
 
     consoleSpy.mockRestore();
@@ -294,6 +294,10 @@ describe('ConflictModal', () => {
     );
 
     expect(screen.getByText('Deleted on another device')).toBeInTheDocument();
+    expect(
+      screen.getByText('You edited this note here, but it was deleted on another device.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/you can also keep both/i)).not.toBeInTheDocument();
     expect(screen.getByText('Restore this note')).toBeInTheDocument();
     expect(screen.getByText('Accept deletion')).toBeInTheDocument();
     expect(screen.getByText('Keep a copy instead')).toBeInTheDocument();

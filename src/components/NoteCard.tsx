@@ -217,7 +217,9 @@ export const NoteCard = memo(function NoteCard({
         />
       )}
 
-      {/* Pin button - top-right corner (full mode, or the compact pinned row) */}
+      {/* Pin button - top-right corner (full mode, or the compact pinned row).
+          Touch screens have no hover, so an unpinned pin shows at its hover opacity
+          there; otherwise the corner is an invisible pin target. */}
       {(!isCompact || keepPin) && !isDecorative && (
         <button type="button"
           onClick={handlePinClick}
@@ -232,7 +234,7 @@ export const NoteCard = memo(function NoteCard({
             focus:ring-2
             focus:ring-[var(--color-accent)]
             focus-visible:opacity-100
-            ${note.pinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-40 hover:!opacity-85'}
+            ${note.pinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-40 hover:!opacity-85 [@media(hover:none)]:opacity-40'}
           `}
           style={{ color: 'var(--color-text-tertiary)' }}
           aria-label={note.pinned ? 'Unpin note' : 'Pin note'}
@@ -338,7 +340,8 @@ export const NoteCard = memo(function NoteCard({
           {formatRelativeTime(note.updatedAt)}
         </time>
 
-        {/* Delete button - hidden in compact mode (use swipe instead) */}
+        {/* Delete button - hidden in compact mode (use swipe instead). Shown at hover
+            opacity on touch screens, for the same reason as the pin button. */}
         {!isCompact && !isDecorative && (
           <button type="button"
             onClick={handleDeleteClick}
@@ -351,6 +354,7 @@ export const NoteCard = memo(function NoteCard({
               opacity-0
               group-hover:opacity-40
               hover:!opacity-85
+              [@media(hover:none)]:opacity-40
               transition-opacity duration-200
               focus:outline-none
               focus:ring-2

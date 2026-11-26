@@ -153,7 +153,7 @@ test.describe('Settings', () => {
       await page.getByText(/letting go|leave|depart/i).click();
 
       // Offboarding modal should open
-      await expect(page.getByText(/keepsakes|departure|leaving/i)).toBeVisible();
+      await expect(page.getByText(/deleted on|download your notes first/i)).toBeVisible();
     });
 
     // Note: We don't actually complete offboarding in E2E tests to avoid data loss
