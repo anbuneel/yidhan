@@ -4,6 +4,7 @@ import { BottomSheet } from './BottomSheet';
 import { RecoveryKeySettings } from './RecoveryKeySettings';
 import { EditorSettings } from './EditorSettings';
 import { ACCOUNT_OFFBOARDING_ENABLED } from '../config/featureFlags';
+import { readRecoveryWrap, readVaultMetadata } from '../lib/vaultMetadata';
 import type { UseSessionSettingsResult } from '../hooks/useSessionSettings';
 import type { UseVaultSettingsResult } from '../hooks/useVaultSettings';
 import type { Theme } from '../types';
@@ -26,6 +27,21 @@ type SettingsTab = 'profile' | 'password' | 'security' | 'editor';
 export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, sessionSettings, vaultSettings, isVaultUnlocked, onLockVault, onPersistToLocal }: SettingsModalProps) {
   const { user, updateProfile, updatePassword, verifyPassword } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+
+  // Same check as RecoveryKeySettings. Only changes the Change passphrase wording.
+  const vaultMeta = (user?.user_metadata as Record<string, unknown> | undefined)?.vault;
+  const hasRecoveryKey = readVaultMetadata(vaultMeta).status === 'valid'
+    && readRecoveryWrap((vaultMeta as Record<string, unknown> | undefined)?.recoveryWrap).status === 'valid';
+
+  // "Go to Recovery key": scroll to the row and move focus to its button.
+  const recoveryKeyRowRef = useRef<HTMLDivElement>(null);
+  const goToRecoveryKey = () => {
+    const row = recoveryKeyRowRef.current;
+    if (!row) return;
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    row.scrollIntoView?.({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    row.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+  };
 
   // Check if user signed up with OAuth (Google, GitHub, etc.)
   const provider = user?.app_metadata?.provider;
@@ -705,7 +721,11 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   </div>
 
                   {/* Recovery key (item 26) */}
-                  {isVaultUnlocked && <RecoveryKeySettings />}
+                  {isVaultUnlocked && (
+                    <div ref={recoveryKeyRowRef}>
+                      <RecoveryKeySettings />
+                    </div>
+                  )}
 
                   {/* Vault Auto-Lock */}
                   <div>
@@ -820,6 +840,44 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       </p>
                     )}
                   </div>
+
+                  {/* Change passphrase (I2). No in-app flow yet: roadmap 136. */}
+                  <div className="mt-4">
+                    <span
+                      className="block text-sm"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                    >
+                      Change passphrase
+                    </span>
+                    <p
+                      className="block text-xs mt-1"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--color-text-tertiary)',
+                      }}
+                    >
+                      {hasRecoveryKey
+                        ? 'To change your passphrase, lock your notes and choose ‘Use your recovery key’ on the unlock screen. You’ll need your recovery key.'
+                        : 'Make a recovery key first. You’ll need it to change your passphrase.'}
+                    </p>
+                    {/* The Recovery key row only renders while the vault is unlocked. */}
+                    {!hasRecoveryKey && isVaultUnlocked && (
+                      <button
+                        type="button"
+                        onClick={goToRecoveryKey}
+                        className="mt-1 text-xs underline cursor-pointer focus-ring"
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          color: 'var(--color-accent-text)',
+                        }}
+                      >
+                        Go to Recovery key
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -911,7 +969,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         className="block text-xs mt-1"
                         style={{ color: 'var(--color-text-tertiary)' }}
                       >
-                        Extends session to 14 days. Only use on personal devices.
+                        Allows a session timeout of Never. Only use on personal devices.
                       </span>
                     </div>
                     <span

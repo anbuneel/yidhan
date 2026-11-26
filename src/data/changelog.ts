@@ -14,6 +14,11 @@ export const changelog: ChangelogEntry[] = [
     { type: 'feature', text: 'Settings has a new Editor tab with a text size setting (Small, Default, Large) for the editor and note cards. It is saved on this device. The smart typography switch moved there from the editor menu' },
     { type: 'improvement', text: 'The note menu next to Delete is now called "Share and export" and puts Share as letter first. Downloading a single note as JSON is gone; Export (JSON) in the main menu still exports your whole library' },
   ] },
+  { version: '3.20.12', date: '2026-11-26', changes: [
+    { type: 'fix', text: 'The session timeout you choose in Settings now always applies. Before, "This is a trusted device" quietly changed every choice except Never to 14 days. A trusted device on the default timeout is now signed out after 1 week of inactivity, not 14 days. Trusted device now only unlocks Never, and still expires after 90 days' },
+    { type: 'fix', text: 'The notice that your trusted device status has expired now shows again' },
+    { type: 'improvement', text: 'Settings now explains how to change your passphrase: lock your notes and use your recovery key on the unlock screen. If you have no recovery key yet, it takes you to the place to make one' },
+  ] },
   { version: '3.20.11', date: '2026-11-25', changes: [
     { type: 'fix', text: 'Switching notes while a save is running no longer shows the previous note’s save status or error banner on the next note' },
   ] },
