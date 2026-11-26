@@ -838,7 +838,10 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   Share as Letter, phone and offline) and a four-question FAQ; moved non-tested landing
   CSS to `src/index.css` to keep JS bundles within budget.
 - **2026-11-25** — Fixed stale save status and dropped autosave on in-place note switch
-  in `Editor.tsx`: guarded `performSave` completion and failure paths against
-  `activeNoteIdRef.current !== saveNoteId`, reset save status and timers on note switch,
-  and flushed pending unsaved edits for the leaving note after commit without touching
-  autosave timing. (#285)
+  in `Editor.tsx`: guarded `performSave` with a per-switch token, moved leaving-note
+  snapshot capture and switch-flush decisions to commit-phase effects (no render-time ref
+  writes), surfaced failed post-switch saves and flushes in a persistent background notice
+  naming the note with Retry and Copy instead of discarding words or touching the active
+  note's status, reopened notes from their pending flush/failed snapshot across `A -> B -> A`
+  switches without touching autosave timing, and lazy-loaded `ShareModal` to keep the
+  Editor chunk under budget. (#285)
