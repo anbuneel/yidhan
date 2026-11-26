@@ -221,6 +221,8 @@ describe('applySecurityPreset', () => {
       expect(outcome).toEqual({ ok: false, failed: 'partial' });
       expect(result.current.vault.settings.rememberBrowser).toBe(false);
       expect(result.current.vault.settings.autoLockMinutes).toBe(15);
+      // "Applies now" is true for the sign-out time too.
+      expect(result.current.session.getEffectiveTimeout()).toBe(60);
     });
 
     it('reports a partial save when only the auto-lock write fails', () => {

@@ -164,6 +164,24 @@ describe('useSessionSettings', () => {
     });
   });
 
+  describe('when a finite timeout cannot be stored', () => {
+    it('applies it for this session and returns false', () => {
+      localStorage.setItem(key('session-timeout'), '10080');
+      const { result } = renderHook(() => useSessionSettings(USER_ID));
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+        throw new DOMException('full', 'QuotaExceededError');
+      });
+
+      let ok = true;
+      act(() => { ok = result.current.setTimeoutMinutes(60); });
+
+      expect(ok).toBe(false);
+      expect(result.current.getEffectiveTimeout()).toBe(60);
+      warn.mockRestore();
+    });
+  });
+
   describe('getEffectiveTimeout', () => {
     const FINITE_OPTIONS = TIMEOUT_OPTIONS.filter((o) => o.value !== null);
 

@@ -96,7 +96,10 @@ export type ApplyPresetResult =
   | { ok: true }
   /** "Remember this browser" could not be turned on. Nothing else was changed. */
   | { ok: false; failed: 'remember-browser' }
-  /** The preset applies now, but part of it was not stored and may not survive a reload. */
+  /**
+   * The preset applies for this session, but part of it was not stored and may not
+   * last after a reload. Every preset timeout is finite, so it applies in memory too.
+   */
   | { ok: false; failed: 'partial' };
 
 /**

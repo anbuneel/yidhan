@@ -872,7 +872,11 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                           const value = e.target.value === 'null' ? null : parseInt(e.target.value, 10);
                           setSecurityMessage(null);
                           if (!sessionSettings.setTimeoutMinutes(value)) {
-                            setSecurityMessage({ text: 'Could not save this choice. Check available storage or browser privacy settings and try again.' });
+                            setSecurityMessage({
+                              text: value === null
+                                ? 'Could not save this choice, so it was not changed. Check available storage or browser privacy settings and try again.'
+                                : 'This applies now, but could not be saved and may not last after you reload. Check available storage or browser privacy settings.',
+                            });
                           }
                         }}
                         className="w-full px-4 py-2 rounded-lg outline-none transition-all duration-200 cursor-pointer"

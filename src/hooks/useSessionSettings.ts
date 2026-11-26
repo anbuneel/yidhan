@@ -83,8 +83,9 @@ export interface UseSessionSettingsResult {
   /** Current session settings */
   settings: SessionSettings;
   /**
-   * Choose a session timeout. Choosing "Never" starts its 90 days. Returns false,
-   * and changes nothing, when the value is not an option or cannot be stored.
+   * Choose a session timeout. Choosing "Never" starts its 90 days. Returns false when
+   * the value is not an option or cannot be stored. A finite timeout that cannot be
+   * stored still applies for this session; Never then changes nothing.
    */
   setTimeoutMinutes: (minutes: number | null) => boolean;
   /** The timeout to enforce: always the chosen one. */
@@ -259,6 +260,9 @@ export function useSessionSettings(userId: string | null): UseSessionSettingsRes
       }
     } catch (err) {
       console.warn('[useSessionSettings] Failed to store session timeout:', err);
+      // A finite timeout still applies for this session, as auto-lock does. Never does
+      // not: turning the timeout off must not happen on a write that did not land.
+      if (minutes !== null) setSettings({ timeoutMinutes: minutes, neverSince: null });
       return false;
     }
 

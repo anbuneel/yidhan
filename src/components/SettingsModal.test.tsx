@@ -219,7 +219,7 @@ describe('SettingsModal Security tab', () => {
     fireEvent.change(screen.getByLabelText('Sign out after idle'), { target: { value: 'null' } });
 
     expect(sessionSettings.setTimeoutMinutes).toHaveBeenCalledWith(null);
-    expect(screen.getByRole('alert')).toHaveTextContent('Could not save this choice.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not save this choice, so it was not changed.');
   });
 
   it.each([true, false])('tells an account with a recovery key how to change the passphrase (unlocked: %s)', (unlocked) => {
