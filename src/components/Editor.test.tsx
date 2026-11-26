@@ -2062,5 +2062,128 @@ describe('Editor', () => {
       expect(within(alert).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
       expect(within(alert).getByRole('button', { name: 'Copy' })).toBeInTheDocument();
     });
+
+    it('still writes a queued second save for A after switching to B, without showing status on B', async () => {
+      let resolveV1!: () => void;
+      let resolveV2!: () => void;
+      const onUpdate = vi
+        .fn()
+        .mockImplementationOnce(
+          () => new Promise<void>((resolve) => { resolveV1 = resolve; })
+        )
+        .mockImplementationOnce(
+          () => new Promise<void>((resolve) => { resolveV2 = resolve; })
+        );
+
+      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      // Type v1 on A and start a slow save.
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v1' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+      expect(onUpdate).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: 'note-123', title: 'v1' }));
+
+      // Type v2 on A and let its debounce queue behind v1.
+      fireEvent.change(screen.getByDisplayValue('v1'), { target: { value: 'v2' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Switch to B before v1 resolves.
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+
+      // Resolve v1: the queued v2 save must still write, with no status shown on B.
+      await act(async () => {
+        resolveV1();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(onUpdate).toHaveBeenCalledTimes(2);
+      expect(onUpdate).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'note-123', title: 'v2' }));
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+
+      // Resolve v2: B must still show no save status or alert.
+      await act(async () => {
+        resolveV2();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('keeps saves serialized across A -> B -> A while A’s first save is in flight', async () => {
+      let resolveFirst!: () => void;
+      const onUpdate = vi
+        .fn()
+        .mockImplementationOnce(
+          () => new Promise<void>((resolve) => { resolveFirst = resolve; })
+        )
+        .mockResolvedValueOnce(undefined);
+
+      const { rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v1' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Switch A -> B -> A while the first save is still in flight.
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      rerender(<Editor {...defaultProps} note={mockNote} onUpdate={onUpdate} />);
+
+      // Type on A: the second save must wait for the first to settle.
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v2' } });
+      await act(async () => {
+        vi.advanceTimersByTime(800);
+        await Promise.resolve();
+      });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Once the first settles, the second runs.
+      await act(async () => {
+        resolveFirst();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(onUpdate).toHaveBeenCalledTimes(2);
+      expect(onUpdate).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'note-123', title: 'v2' }));
+    });
+
+    it('waits for A’s in-flight save when navigating Back from B', async () => {
+      let resolveFirst!: () => void;
+      const onBack = vi.fn();
+      const onUpdate = vi.fn().mockImplementation(
+        () => new Promise<void>((resolve) => { resolveFirst = resolve; })
+      );
+
+      const { rerender } = render(
+        <Editor {...defaultProps} onBack={onBack} onUpdate={onUpdate} />
+      );
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v1' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Switch to B while A's save is still running, then click Back.
+      rerender(<Editor {...defaultProps} note={noteB} onBack={onBack} onUpdate={onUpdate} />);
+      fireEvent.click(screen.getByText('Return to notes'));
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(onBack).not.toHaveBeenCalled();
+
+      // Once A's save settles, Back completes.
+      await act(async () => {
+        resolveFirst();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(onBack).toHaveBeenCalledTimes(1);
+    });
   });
 });

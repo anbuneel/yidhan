@@ -284,7 +284,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       clearTimeout(hideIndicatorTimeoutRef.current);
       hideIndicatorTimeoutRef.current = null;
     }
-    inFlightSaveRef.current = null;
     prevSyncStatusRef.current = noteSyncStatus;
     shouldStartSyncedStatusTimerRef.current = false;
   }, [note.id, noteSyncStatus]);
@@ -544,22 +543,26 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
     if (inFlightSaveRef.current) {
       await inFlightSaveRef.current;
-      if (activeSwitchTokenRef.current !== saveToken) return false;
-      if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
+      if (
+        activeSwitchTokenRef.current === saveToken &&
+        sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)
+      ) {
         return nothingToSave();
       }
     }
 
-    // Clear any existing indicator timeouts
-    if (savePhaseTimeoutRef.current) {
-      clearTimeout(savePhaseTimeoutRef.current);
-    }
-    if (hideIndicatorTimeoutRef.current) {
-      clearTimeout(hideIndicatorTimeoutRef.current);
-    }
+    if (activeSwitchTokenRef.current === saveToken) {
+      // Clear any existing indicator timeouts
+      if (savePhaseTimeoutRef.current) {
+        clearTimeout(savePhaseTimeoutRef.current);
+      }
+      if (hideIndicatorTimeoutRef.current) {
+        clearTimeout(hideIndicatorTimeoutRef.current);
+      }
 
-    setSaveStatus('saving');
-    inFlightSnapshotRef.current = draftSnapshot;
+      setSaveStatus('saving');
+      inFlightSnapshotRef.current = draftSnapshot;
+    }
 
     // Create and track the save promise
     let savePromise: Promise<boolean> | null = null;
