@@ -19,6 +19,23 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-26 — App-shell JS limit 327 → 329 KB for the password toggle
+
+**Status:** Active
+
+**Why:** The touch, trust and button-shape PR added a show/hide toggle to every password
+and passphrase field (one shared component, two icons) and a Revoke & Re-create flow
+that makes the new link. Those screens are part of the signed-in app shell. The shell
+measured 327.7 KB gzip against a 327 KB limit.
+
+**Decision:** Raise `appShellJs.limitKB` to 329: the measurement rounded up plus 1 KB, as
+the budget file's rule says. It stays under the 330 KB target, so the promise holds.
+
+**Rejected:** Lazy-loading the toggle (it renders on the unlock screen, the first thing a
+returning user sees, so a lazy chunk would flash the field without it).
+
+---
+
 ## 2026-11-26 — One button shape: 8px, not pills
 
 **Status:** Active

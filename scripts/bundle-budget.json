@@ -22,7 +22,7 @@
     "reachesTargetWith": "step 5 (reached: 290.9 KB in the browser); raised for the display cut on 2026-11-09 (measured: 307.8 KB)"
   },
   "appShellJs": {
-    "limitKB": 327,
+    "limitKB": 329,
     "targetKB": 330,
     "measures": "JS to render the unlocked library, Editor excluded (gzip): the entry path, the app shell (lazy since step 5) and what it imports, and Sentry, which loads after load since step 2; Replay is not counted",
     "reachesTargetWith": "step 7 (reached: 325.4 KB)"
