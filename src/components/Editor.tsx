@@ -2,7 +2,7 @@ import { VaultLockedSaveError } from '../utils/saveErrors';
 import type { OpenDraftState } from '../hooks/useReleasedDraft';
 import type { DerivedKeys } from '../lib/encryption';
 import { keepReleasedDraft } from '../utils/keepReleasedDraft';
-import { useState, useEffect, useEffectEvent, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { getSaveLabel } from '../utils/saveStatus';
 import { SyncStateIcon, type SyncStateKind } from './SyncStateIcon';
@@ -219,6 +219,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // Track in-flight save promise to await on navigation
   const inFlightSaveRef = useRef<Promise<boolean> | null>(null);
   const currentNoteIdRef = useRef(note.id);
+  const activeSwitchTokenRef = useRef(1);
+  const lastCommittedNoteIdRef = useRef(note.id);
+  const prevSyncStatusRef = useRef(noteSyncStatus);
+  const shouldStartSyncedStatusTimerRef = useRef(false);
 
   // Remote update tracking (2B): detect when the note prop changes from
   // another device's sync, distinguish from our own save echoing back
@@ -232,7 +236,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // doesn't re-show the banner after the next sync rehydration
   const dismissedRemoteRef = useRef<NoteSnapshot | null>(null);
 
-  if (currentNoteIdRef.current !== note.id) {
+  const switchedDuringRender = currentNoteIdRef.current !== note.id;
+  if (switchedDuringRender) {
     // Flush any pending scroll save for the previous note before switching
     throttledScrollSaveRef.current?.flush();
 
@@ -246,6 +251,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       setTitle(note.title);
       setContent(note.content);
     }
+    setSaveStatus('idle');
     setKeepFailed(false);
     setCopyFailed(false);
     setHasSaveError(false);
@@ -262,6 +268,25 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     throttledScrollSaveRef.current = null;
     pendingScrollSaveRef.current = null; // Clear pending data for old note
   }
+
+  // Issue #285: bump a per-switch token synchronously on commit when the note changes,
+  // and clear stale indicator timers and sync-status tracking so an earlier save never
+  // reports its status or error banner on another note (including A -> B -> A).
+  useLayoutEffect(() => {
+    if (lastCommittedNoteIdRef.current === note.id) return;
+    lastCommittedNoteIdRef.current = note.id;
+    activeSwitchTokenRef.current += 1;
+    if (savePhaseTimeoutRef.current) {
+      clearTimeout(savePhaseTimeoutRef.current);
+      savePhaseTimeoutRef.current = null;
+    }
+    if (hideIndicatorTimeoutRef.current) {
+      clearTimeout(hideIndicatorTimeoutRef.current);
+      hideIndicatorTimeoutRef.current = null;
+    }
+    prevSyncStatusRef.current = noteSyncStatus;
+    shouldStartSyncedStatusTimerRef.current = false;
+  }, [note.id, noteSyncStatus]);
 
   // Detect remote updates to the currently open note (2B)
   // When the note prop changes (from sync rehydration) while the same note is open:
@@ -498,6 +523,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // Escape keep the writer here; the released banner offers the ways out.
     if (releasedElsewhere) return false;
 
+    const saveToken = activeSwitchTokenRef.current;
     const draftSnapshot = buildSnapshot(title, content, note.tags);
 
     // Nothing to write means nothing is unsaved, so any banner left by an
@@ -517,21 +543,26 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
     if (inFlightSaveRef.current) {
       await inFlightSaveRef.current;
-      if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
+      if (
+        activeSwitchTokenRef.current === saveToken &&
+        sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)
+      ) {
         return nothingToSave();
       }
     }
 
-    // Clear any existing indicator timeouts
-    if (savePhaseTimeoutRef.current) {
-      clearTimeout(savePhaseTimeoutRef.current);
-    }
-    if (hideIndicatorTimeoutRef.current) {
-      clearTimeout(hideIndicatorTimeoutRef.current);
-    }
+    if (activeSwitchTokenRef.current === saveToken) {
+      // Clear any existing indicator timeouts
+      if (savePhaseTimeoutRef.current) {
+        clearTimeout(savePhaseTimeoutRef.current);
+      }
+      if (hideIndicatorTimeoutRef.current) {
+        clearTimeout(hideIndicatorTimeoutRef.current);
+      }
 
-    setSaveStatus('saving');
-    inFlightSnapshotRef.current = draftSnapshot;
+      setSaveStatus('saving');
+      inFlightSnapshotRef.current = draftSnapshot;
+    }
 
     // Create and track the save promise
     let savePromise: Promise<boolean> | null = null;
@@ -543,6 +574,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           content: draftSnapshot.content,
           updatedAt: new Date(),
         });
+
+        // Issue #285: guard with per-switch token so switching notes (including A -> B -> A)
+        // never lets an earlier save report "Saved" or clobber the active note.
+        if (activeSwitchTokenRef.current !== saveToken) {
+          return true;
+        }
 
         committedSnapshotRef.current = draftSnapshot;
         if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
@@ -559,10 +596,17 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
         // Hide indicator after 2 seconds
         hideIndicatorTimeoutRef.current = setTimeout(() => {
-          setSaveStatus('idle');
+          if (activeSwitchTokenRef.current === saveToken) {
+            setSaveStatus('idle');
+          }
         }, 2000);
         return true;
       } catch (error) {
+        // Issue #285: do not show a previous note's failure banner on the note now on screen.
+        if (activeSwitchTokenRef.current !== saveToken) {
+          return false;
+        }
+
         setSaveErrorDetail(error instanceof VaultLockedSaveError ? error.message : '');
         if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
           inFlightSnapshotRef.current = null;
@@ -800,9 +844,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // Note-specific sync indicator: when this note transitions from 'pending'
   // to 'synced', briefly show the "Saved" status as confirmation.
   // Only fires when the editor is idle to avoid interrupting active save indicators.
-  const prevSyncStatusRef = useRef(noteSyncStatus);
-  const shouldStartSyncedStatusTimerRef = useRef(false);
   const shouldShowSyncedStatus =
+    !switchedDuringRender &&
     prevSyncStatusRef.current === 'pending' &&
     noteSyncStatus === 'synced' &&
     saveStatus === 'idle';

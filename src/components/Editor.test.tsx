@@ -1864,4 +1864,326 @@ describe('Editor', () => {
       expect(screen.queryByText(/not encrypted/i)).not.toBeInTheDocument();
     });
   });
+
+  describe('note switch while saving (issue #285)', () => {
+    const noteB = createMockNote({
+      id: 'note-456',
+      title: 'Second Note',
+      content: '<p>Second content</p>',
+      tags: [],
+    });
+
+    it('does not show the first note’s saved status on the next note when switched mid-save', async () => {
+      let resolveFirstSave!: () => void;
+      const onUpdate = vi.fn().mockImplementation(
+        () => new Promise<void>((resolve) => { resolveFirstSave = resolve; })
+      );
+
+      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Edited A' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+      expect(container.querySelector('[data-save-status="saving"]')).not.toBeNull();
+
+      // Switch to note B while note A's save is still in flight.
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      expect(screen.getByDisplayValue('Second Note')).toBeInTheDocument();
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+
+      // Note A's save resolves after the switch.
+      await act(async () => {
+        resolveFirstSave();
+        await Promise.resolve();
+      });
+
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('does not show the first note’s failed-save banner on the next note when switched mid-save', async () => {
+      let rejectFirstSave!: (err: Error) => void;
+      const onUpdate = vi.fn().mockImplementation(
+        () => new Promise<void>((_, reject) => { rejectFirstSave = reject; })
+      );
+
+      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Edited A' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Switch to note B while note A's save is still in flight.
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+
+      // Note A's save fails after the switch: must not appear as note B's error banner or status.
+      await act(async () => {
+        rejectFirstSave(new Error('offline'));
+        await Promise.resolve();
+      });
+
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('does not flash Saved when switching from a pending note to a synced note', () => {
+      const { container, rerender } = render(
+        <Editor {...defaultProps} note={mockNote} noteSyncStatus="pending" />
+      );
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+
+      rerender(<Editor {...defaultProps} note={noteB} noteSyncStatus="synced" />);
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+    });
+
+    it('ignores an older in-flight save for note A after switching A -> B -> A', async () => {
+      let resolveOldSave!: () => void;
+      const onUpdate = vi.fn().mockImplementation(
+        () => new Promise<void>((resolve) => { resolveOldSave = resolve; })
+      );
+
+      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Older edit' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Switch A -> B -> A while the older save is still in flight.
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      rerender(<Editor {...defaultProps} note={mockNote} onUpdate={onUpdate} />);
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+
+      // The older save settles after returning to A: the per-switch token must reject it.
+      await act(async () => {
+        resolveOldSave();
+        await Promise.resolve();
+      });
+
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('keeps the kept note clean when a pre-release in-flight save settles after Keep as new note switches notes', async () => {
+      let rejectOldSave!: (err: Error) => void;
+      const onUpdate = vi.fn().mockImplementation(
+        () => new Promise<void>((_, reject) => { rejectOldSave = reject; })
+      );
+      const kept = createMockNote({ id: 'kept-note', title: 'Draft before release', content: '<p>Test content</p>' });
+      keepMock.keepReleasedDraft.mockReset().mockResolvedValue(kept);
+
+      function Parent() {
+        const [current, setCurrent] = useState<{ note: typeof mockNote; released: boolean }>({
+          note: mockNote,
+          released: false,
+        });
+        return (
+          <>
+            <button
+              type="button"
+              data-testid="trigger-release"
+              onClick={() => setCurrent((s) => ({ ...s, released: true }))}
+            >
+              Release
+            </button>
+            <Editor
+              {...defaultProps}
+              note={current.note}
+              releasedElsewhere={current.released}
+              onUpdate={onUpdate}
+              onKeptReleasedDraft={(next) => setCurrent({ note: next, released: false })}
+            />
+          </>
+        );
+      }
+
+      const { container } = render(<Parent />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Draft before release' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByTestId('trigger-release'));
+      expect(screen.getByTestId('released-draft-banner')).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Keep as new note' }));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(screen.queryByTestId('released-draft-banner')).not.toBeInTheDocument();
+
+      await act(async () => {
+        rejectOldSave(new Error('note deleted'));
+        await Promise.resolve();
+      });
+
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('still shows saving, saved, and error for the active note after switching away and back', async () => {
+      let resolveActiveSave!: () => void;
+      const onUpdate = vi
+        .fn()
+        .mockImplementationOnce(
+          () => new Promise<void>((resolve) => { resolveActiveSave = resolve; })
+        )
+        .mockRejectedValueOnce(new Error('offline'));
+
+      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      // Switch away to B and back to A.
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      rerender(<Editor {...defaultProps} note={mockNote} onUpdate={onUpdate} />);
+
+      // Active note save shows "saving" while in flight, then "saved" on resolve.
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Back and saved' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(container.querySelector('[data-save-status="saving"]')).not.toBeNull();
+
+      await act(async () => {
+        resolveActiveSave();
+        await Promise.resolve();
+      });
+      expect(container.querySelector('[data-save-status="saved"]')).not.toBeNull();
+
+      // Parent echoes the saved note back (as App.tsx does after onUpdate resolves).
+      const echoedA = { ...mockNote, title: 'Back and saved' };
+      rerender(<Editor {...defaultProps} note={echoedA} onUpdate={onUpdate} />);
+
+      // A failed save for the active note still keeps the draft with Retry and Copy.
+      fireEvent.change(screen.getByDisplayValue('Back and saved'), { target: { value: 'Back and unsaved' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      await act(async () => { await Promise.resolve(); });
+
+      expect(screen.getByDisplayValue('Back and unsaved')).toBeInTheDocument();
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent('Not saved');
+      expect(within(alert).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+      expect(within(alert).getByRole('button', { name: 'Copy' })).toBeInTheDocument();
+    });
+
+    it('still writes a queued second save for A after switching to B, without showing status on B', async () => {
+      let resolveV1!: () => void;
+      let resolveV2!: () => void;
+      const onUpdate = vi
+        .fn()
+        .mockImplementationOnce(
+          () => new Promise<void>((resolve) => { resolveV1 = resolve; })
+        )
+        .mockImplementationOnce(
+          () => new Promise<void>((resolve) => { resolveV2 = resolve; })
+        );
+
+      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      // Type v1 on A and start a slow save.
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v1' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+      expect(onUpdate).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: 'note-123', title: 'v1' }));
+
+      // Type v2 on A and let its debounce queue behind v1.
+      fireEvent.change(screen.getByDisplayValue('v1'), { target: { value: 'v2' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Switch to B before v1 resolves.
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+
+      // Resolve v1: the queued v2 save must still write, with no status shown on B.
+      await act(async () => {
+        resolveV1();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(onUpdate).toHaveBeenCalledTimes(2);
+      expect(onUpdate).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'note-123', title: 'v2' }));
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+
+      // Resolve v2: B must still show no save status or alert.
+      await act(async () => {
+        resolveV2();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(container.querySelector('[data-save-status]')).toBeNull();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('keeps saves serialized across A -> B -> A while A’s first save is in flight', async () => {
+      let resolveFirst!: () => void;
+      const onUpdate = vi
+        .fn()
+        .mockImplementationOnce(
+          () => new Promise<void>((resolve) => { resolveFirst = resolve; })
+        )
+        .mockResolvedValueOnce(undefined);
+
+      const { rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v1' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Switch A -> B -> A while the first save is still in flight.
+      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      rerender(<Editor {...defaultProps} note={mockNote} onUpdate={onUpdate} />);
+
+      // Type on A: the second save must wait for the first to settle.
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v2' } });
+      await act(async () => {
+        vi.advanceTimersByTime(800);
+        await Promise.resolve();
+      });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Once the first settles, the second runs.
+      await act(async () => {
+        resolveFirst();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(onUpdate).toHaveBeenCalledTimes(2);
+      expect(onUpdate).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'note-123', title: 'v2' }));
+    });
+
+    it('waits for A’s in-flight save when navigating Back from B', async () => {
+      let resolveFirst!: () => void;
+      const onBack = vi.fn();
+      const onUpdate = vi.fn().mockImplementation(
+        () => new Promise<void>((resolve) => { resolveFirst = resolve; })
+      );
+
+      const { rerender } = render(
+        <Editor {...defaultProps} onBack={onBack} onUpdate={onUpdate} />
+      );
+
+      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v1' } });
+      await act(async () => { vi.advanceTimersByTime(800); });
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Switch to B while A's save is still running, then click Back.
+      rerender(<Editor {...defaultProps} note={noteB} onBack={onBack} onUpdate={onUpdate} />);
+      fireEvent.click(screen.getByText('Return to notes'));
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(onBack).not.toHaveBeenCalled();
+
+      // Once A's save settles, Back completes.
+      await act(async () => {
+        resolveFirst();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(onBack).toHaveBeenCalledTimes(1);
+    });
+  });
 });
