@@ -799,6 +799,28 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       </p>
                     )}
                   </div>
+
+                  {/* Change passphrase (I2). No in-app flow yet: roadmap 136. */}
+                  <div className="mt-4">
+                    <span
+                      className="block text-sm"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                    >
+                      Change passphrase
+                    </span>
+                    <p
+                      className="block text-xs mt-1"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--color-text-tertiary)',
+                      }}
+                    >
+                      To change your passphrase, lock your notes and choose &lsquo;Use your recovery key&rsquo; on the unlock screen. You&rsquo;ll need your recovery key.
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -890,7 +912,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         className="block text-xs mt-1"
                         style={{ color: 'var(--color-text-tertiary)' }}
                       >
-                        Extends session to 14 days. Only use on personal devices.
+                        Allows a session timeout of Never. Only use on personal devices.
                       </span>
                     </div>
                     <span

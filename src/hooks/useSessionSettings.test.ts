@@ -6,9 +6,12 @@
  * timeout options filtering, and effective timeout calculation.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import toast from 'react-hot-toast';
 import { useSessionSettings, TIMEOUT_OPTIONS, setTrustedDeviceOnLogin } from './useSessionSettings';
+import { useSessionTimeout } from './useSessionTimeout';
+import { useVaultSettings } from './useVaultSettings';
 
 // Mock react-hot-toast
 vi.mock('react-hot-toast', () => ({
@@ -198,27 +201,61 @@ describe('useSessionSettings', () => {
   });
 
   describe('getEffectiveTimeout', () => {
-    it('should return user setting for non-trusted device', () => {
-      localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, '60');
+    const trustDevice = (trustedAt = new Date()) => {
+      localStorage.setItem(`yidhan-${USER_ID}-trusted-device`, 'true');
+      localStorage.setItem(`yidhan-${USER_ID}-trusted-at`, trustedAt.toISOString());
+    };
+    const expiredTrust = () => new Date(Date.now() - 91 * 24 * 60 * 60 * 1000);
+
+    const FINITE_OPTIONS = TIMEOUT_OPTIONS.filter((o) => o.value !== null);
+
+    it.each(FINITE_OPTIONS)('applies "$label" on a non-trusted device', ({ value }) => {
+      localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, String(value));
 
       const { result } = renderHook(() => useSessionSettings(USER_ID));
+
+      expect(result.current.getEffectiveTimeout()).toBe(value);
+    });
+
+    // I1: a trusted device used to replace every choice with 14 days.
+    it.each(FINITE_OPTIONS)('applies "$label" on a trusted device', ({ value }) => {
+      trustDevice();
+      localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, String(value));
+
+      const { result } = renderHook(() => useSessionSettings(USER_ID));
+
+      expect(result.current.settings.isTrustedDevice).toBe(true);
+      expect(result.current.getEffectiveTimeout()).toBe(value);
+    });
+
+    it('applies a choice made after trusting the device', () => {
+      const { result } = renderHook(() => useSessionSettings(USER_ID));
+
+      act(() => { result.current.enableTrustedDevice(); });
+      act(() => { result.current.setTimeoutMinutes(30); });
+
+      expect(result.current.getEffectiveTimeout()).toBe(30);
+    });
+
+    it('keeps the chosen timeout when trust is turned on', () => {
+      localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, '60');
+      const { result } = renderHook(() => useSessionSettings(USER_ID));
+
+      act(() => { result.current.enableTrustedDevice(); });
 
       expect(result.current.getEffectiveTimeout()).toBe(60);
     });
 
-    it('should return 14-day extension for trusted device', () => {
-      localStorage.setItem(`yidhan-${USER_ID}-trusted-device`, 'true');
-      localStorage.setItem(`yidhan-${USER_ID}-trusted-at`, new Date().toISOString());
+    it('returns the 1-week default on a trusted device with no choice saved', () => {
+      trustDevice();
 
       const { result } = renderHook(() => useSessionSettings(USER_ID));
 
-      // 14 days = 20160 minutes
-      expect(result.current.getEffectiveTimeout()).toBe(20160);
+      expect(result.current.getEffectiveTimeout()).toBe(10080);
     });
 
     it('should return null for "never" on trusted device', () => {
-      localStorage.setItem(`yidhan-${USER_ID}-trusted-device`, 'true');
-      localStorage.setItem(`yidhan-${USER_ID}-trusted-at`, new Date().toISOString());
+      trustDevice();
       localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, 'null');
 
       const { result } = renderHook(() => useSessionSettings(USER_ID));
@@ -226,10 +263,118 @@ describe('useSessionSettings', () => {
       expect(result.current.getEffectiveTimeout()).toBeNull();
     });
 
+    it('does not apply a stored "never" without a trusted device', () => {
+      // A stray 'null' with no trust flag must not turn the timeout off.
+      localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, 'null');
+
+      const { result } = renderHook(() => useSessionSettings(USER_ID));
+
+      expect(result.current.settings.isTrustedDevice).toBe(false);
+      expect(result.current.getEffectiveTimeout()).toBe(10080);
+    });
+
+    it('does not apply "never" once trust has expired', () => {
+      trustDevice(expiredTrust());
+      localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, 'null');
+
+      const { result } = renderHook(() => useSessionSettings(USER_ID));
+
+      expect(result.current.settings.isTrustedDevice).toBe(false);
+      expect(result.current.getEffectiveTimeout()).toBe(10080);
+    });
+
+    it('keeps a finite choice when trust expires', () => {
+      trustDevice(expiredTrust());
+      localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, '30');
+
+      const { result } = renderHook(() => useSessionSettings(USER_ID));
+
+      expect(result.current.settings.isTrustedDevice).toBe(false);
+      expect(result.current.getEffectiveTimeout()).toBe(30);
+    });
+
+    it('shows the expiry toast when the user signs in after trust expired', () => {
+      trustDevice(expiredTrust());
+
+      const { rerender } = renderHook(({ id }) => useSessionSettings(id), {
+        initialProps: { id: null as string | null },
+      });
+      rerender({ id: USER_ID });
+
+      expect(toast).toHaveBeenCalledTimes(1);
+      expect(toast).toHaveBeenCalledWith(
+        expect.stringContaining('trusted device status has expired'),
+        expect.anything(),
+      );
+    });
+
+    it('shows the expiry toast when trust expired before first mount', () => {
+      trustDevice(expiredTrust());
+
+      const { rerender } = renderHook(() => useSessionSettings(USER_ID));
+      rerender();
+
+      expect(toast).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not show the expiry toast while trust is valid', () => {
+      trustDevice();
+
+      const { rerender } = renderHook(({ id }) => useSessionSettings(id), {
+        initialProps: { id: null as string | null },
+      });
+      rerender({ id: USER_ID });
+
+      expect(toast).not.toHaveBeenCalled();
+    });
+
+    it('leaves vault auto-lock and "Remember this browser" alone', () => {
+      localStorage.setItem(`yidhan-${USER_ID}-vault-auto-lock-minutes`, '15');
+      localStorage.setItem(`yidhan-${USER_ID}-vault-remember-browser`, 'true');
+
+      const { result } = renderHook(() => ({
+        session: useSessionSettings(USER_ID),
+        vault: useVaultSettings(USER_ID),
+      }));
+      const vaultBefore = result.current.vault.settings;
+
+      act(() => { result.current.session.enableTrustedDevice(); });
+      act(() => { result.current.session.setTimeoutMinutes(null); });
+      act(() => { result.current.session.disableTrustedDevice(); });
+
+      expect(result.current.vault.settings).toEqual(vaultBefore);
+      expect(localStorage.getItem(`yidhan-${USER_ID}-vault-auto-lock-minutes`)).toBe('15');
+      expect(localStorage.getItem(`yidhan-${USER_ID}-vault-remember-browser`)).toBe('true');
+    });
+
     it('should return default when no custom timeout set', () => {
       const { result } = renderHook(() => useSessionSettings(USER_ID));
 
       expect(result.current.getEffectiveTimeout()).toBe(10080);
+    });
+  });
+
+  describe('trusted device with 30 minutes chosen', () => {
+    beforeEach(() => { vi.useFakeTimers(); });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('ends the session after 30 minutes of inactivity', async () => {
+      localStorage.setItem(`yidhan-${USER_ID}-trusted-device`, 'true');
+      localStorage.setItem(`yidhan-${USER_ID}-trusted-at`, new Date().toISOString());
+      localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, '30');
+      const onTimeout = vi.fn();
+
+      renderHook(() => {
+        const timeoutMinutes = useSessionSettings(USER_ID).getEffectiveTimeout();
+        return useSessionTimeout({ timeoutMinutes, warningMinutes: 5, onTimeout, enabled: true });
+      });
+      await act(async () => { await Promise.resolve(); });
+
+      act(() => { vi.advanceTimersByTime(29 * 60 * 1000); });
+      expect(onTimeout).not.toHaveBeenCalled();
+
+      act(() => { vi.advanceTimersByTime(60 * 1000); });
+      expect(onTimeout).toHaveBeenCalledTimes(1);
     });
   });
 

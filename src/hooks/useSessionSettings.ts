@@ -28,9 +28,6 @@ export const TIMEOUT_OPTIONS: TimeoutOption[] = [
 /** Default timeout: 1 week */
 const DEFAULT_TIMEOUT_MINUTES = 10080;
 
-/** Trusted device extends timeout to 14 days */
-const TRUSTED_DEVICE_TIMEOUT_MINUTES = 20160;
-
 /** Trusted device TTL: 90 days */
 const TRUST_TTL_DAYS = 90;
 
@@ -63,7 +60,7 @@ export interface UseSessionSettingsResult {
   disableTrustedDevice: () => void;
   /** Toggle trusted device status */
   toggleTrustedDevice: () => void;
-  /** Get effective timeout (considering trusted device extends to 14 days) */
+  /** Get the timeout to enforce: the chosen one. "Never" applies only on a trusted device. */
   getEffectiveTimeout: () => number | null;
   /** Available timeout options (filtered by trusted device status) */
   availableTimeoutOptions: TimeoutOption[];
@@ -143,36 +140,44 @@ function loadSettingsFromStorage(userId: string | null): LoadSettingsResult {
 }
 
 export function useSessionSettings(userId: string | null): UseSessionSettingsResult {
-  // Use useMemo to compute initial settings synchronously
-  const initialResult = useMemo(() => loadSettingsFromStorage(userId), [userId]);
+  // Load once, on first render. Loading clears expired trust keys, so it must not
+  // run again during render: a second load would hide the expiry from the effect.
+  const [initialResult] = useState(() => loadSettingsFromStorage(userId));
 
   const [settings, setSettings] = useState<SessionSettings>(initialResult.settings);
 
   // Track previous userId to detect changes
   const prevUserIdRef = useRef(userId);
+  // Trust that expired on the first load still owes its toast.
+  const initialExpiryPendingRef = useRef(initialResult.trustExpired);
 
   // Sync settings when userId changes
   // This is intentional: syncing state with an external store (localStorage)
   // The pattern follows React docs for syncing with external systems
   useEffect(() => {
+    let trustExpired = initialExpiryPendingRef.current;
+    initialExpiryPendingRef.current = false;
+    let nextSettings: SessionSettings | null = null;
     if (prevUserIdRef.current !== userId) {
       prevUserIdRef.current = userId;
       const result = loadSettingsFromStorage(userId);
-
-      // Show toast if trust expired (detected before keys were cleared)
-      if (result.trustExpired) {
-        toast('Your trusted device status has expired. Please re-enable in Settings if this is still your personal device.', {
-          duration: 6000,
-          style: {
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)',
-            border: '1px solid var(--glass-border)',
-          },
-        });
-      }
-
-      setSettings(result.settings);
+      trustExpired = result.trustExpired;
+      nextSettings = result.settings;
     }
+
+    // Show toast if trust expired (detected before keys were cleared)
+    if (trustExpired) {
+      toast('Your trusted device status has expired. Please re-enable in Settings if this is still your personal device.', {
+        duration: 6000,
+        style: {
+          background: 'var(--color-bg-secondary)',
+          color: 'var(--color-text-primary)',
+          border: '1px solid var(--glass-border)',
+        },
+      });
+    }
+
+    if (nextSettings) setSettings(nextSettings);
   }, [userId]);
 
   const setTimeoutMinutes = useCallback((minutes: number | null) => {
@@ -235,18 +240,11 @@ export function useSessionSettings(userId: string | null): UseSessionSettingsRes
   }, [settings.isTrustedDevice, enableTrustedDevice, disableTrustedDevice]);
 
   const getEffectiveTimeout = useCallback((): number | null => {
-    // Trusted device extends timeout to 14 days (unless user explicitly set "never")
-    if (settings.isTrustedDevice) {
-      // If user set "never", respect that
-      if (settings.timeoutMinutes === null) {
-        return null;
-      }
-      // Otherwise, extend to 14 days
-      return TRUSTED_DEVICE_TIMEOUT_MINUTES;
+    // The chosen timeout always applies. Trusted device only unlocks "Never".
+    if (settings.timeoutMinutes === null) {
+      return settings.isTrustedDevice ? null : DEFAULT_TIMEOUT_MINUTES;
     }
-
-    // Non-trusted device uses user setting (or default)
-    return settings.timeoutMinutes ?? DEFAULT_TIMEOUT_MINUTES;
+    return settings.timeoutMinutes;
   }, [settings.isTrustedDevice, settings.timeoutMinutes]);
 
   // Filter timeout options based on trusted device status
