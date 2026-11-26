@@ -317,6 +317,16 @@ describe('useSessionSettings', () => {
       expect(localStorage.getItem(`yidhan-${USER_ID}-trusted-device`)).toBeNull();
     });
 
+    it('keeps trust when trustedAt is a minute ahead of the clock', () => {
+      trustDevice(new Date(Date.now() + 60 * 1000));
+      localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, 'null');
+
+      const { result } = renderHook(() => useSessionSettings(USER_ID));
+
+      expect(result.current.settings.isTrustedDevice).toBe(true);
+      expect(result.current.getEffectiveTimeout()).toBeNull();
+    });
+
     it('does not apply "never" once trust has expired', () => {
       trustDevice(expiredTrust());
       localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, 'null');

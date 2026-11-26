@@ -44,12 +44,15 @@ const getStorageKey = (userId: string, key: string) => `yidhan-${userId}-${key}`
 /**
  * Check if trust has expired (> 90 days old). Fails closed: a missing, unreadable
  * or future timestamp counts as expired, so trust can never outlive its 90 days.
+ * A few minutes of future skew is allowed, so a small clock correction does not
+ * drop trust that was just turned on.
  */
+const TRUST_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const isTrustExpired = (trustedAt: string | null): boolean => {
   if (!trustedAt) return true;
   const trustedTime = new Date(trustedAt).getTime();
   const now = Date.now();
-  if (Number.isNaN(trustedTime) || trustedTime > now) return true;
+  if (Number.isNaN(trustedTime) || trustedTime > now + TRUST_CLOCK_SKEW_MS) return true;
   return now > trustedTime + TRUST_TTL_DAYS * 24 * 60 * 60 * 1000;
 };
 
