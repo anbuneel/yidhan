@@ -41,13 +41,22 @@ const STORAGE_KEYS = {
 /** Generate storage key for a user */
 const getStorageKey = (userId: string, key: string) => `yidhan-${userId}-${key}`;
 
-/** Check if trust has expired (> 90 days old) */
+/**
+ * Check if trust has expired (> 90 days old). Fails closed: a missing, unreadable
+ * or future timestamp counts as expired, so trust can never outlive its 90 days.
+ */
 const isTrustExpired = (trustedAt: string | null): boolean => {
   if (!trustedAt) return true;
-  const trustedDate = new Date(trustedAt);
-  const expiryDate = new Date(trustedDate.getTime() + TRUST_TTL_DAYS * 24 * 60 * 60 * 1000);
-  return new Date() > expiryDate;
+  const trustedTime = new Date(trustedAt).getTime();
+  const now = Date.now();
+  if (Number.isNaN(trustedTime) || trustedTime > now) return true;
+  return now > trustedTime + TRUST_TTL_DAYS * 24 * 60 * 60 * 1000;
 };
+
+/** Only the listed options are enforced. Anything else stored falls back to the default. */
+const ALLOWED_FINITE_TIMEOUTS = new Set(
+  TIMEOUT_OPTIONS.flatMap((option) => (option.value === null ? [] : [option.value]))
+);
 
 export interface UseSessionSettingsResult {
   /** Current session settings */
@@ -76,11 +85,16 @@ export interface UseSessionSettingsResult {
  */
 interface LoadSettingsResult {
   settings: SessionSettings;
-  /** True if trusted device status was expired and cleared during load */
+  /** True if trusted device status had expired in storage */
   trustExpired: boolean;
+  /** True if storage holds values the settings above corrected */
+  needsRepair: boolean;
 }
 
-/** Load settings from localStorage for a given user */
+/**
+ * Read settings from localStorage for a given user. Pure: it never writes, so it is
+ * safe to call during render. `repairStorage` writes the corrections afterwards.
+ */
 function loadSettingsFromStorage(userId: string | null): LoadSettingsResult {
   if (!userId) {
     return {
@@ -90,6 +104,7 @@ function loadSettingsFromStorage(userId: string | null): LoadSettingsResult {
         trustedAt: null,
       },
       trustExpired: false,
+      needsRepair: false,
     };
   }
 
@@ -98,13 +113,17 @@ function loadSettingsFromStorage(userId: string | null): LoadSettingsResult {
   const storedTrusted = localStorage.getItem(getStorageKey(userId, STORAGE_KEYS.trustedDevice));
   const storedTrustedAt = localStorage.getItem(getStorageKey(userId, STORAGE_KEYS.trustedAt));
 
-  // Parse timeout (could be number or 'null' string for "never")
+  // Parse timeout: 'null' for "never", or exactly one of the listed options
   let timeoutMinutes: number | null = DEFAULT_TIMEOUT_MINUTES;
-  if (storedTimeout !== null) {
-    timeoutMinutes = storedTimeout === 'null' ? null : parseInt(storedTimeout, 10);
-    // Fix: proper null guard for NaN check
-    if (timeoutMinutes !== null && isNaN(timeoutMinutes)) {
-      timeoutMinutes = DEFAULT_TIMEOUT_MINUTES;
+  let needsRepair = false;
+  if (storedTimeout === 'null') {
+    timeoutMinutes = null;
+  } else if (storedTimeout !== null) {
+    const parsed = Number(storedTimeout);
+    if (ALLOWED_FINITE_TIMEOUTS.has(parsed)) {
+      timeoutMinutes = parsed;
+    } else {
+      needsRepair = true;
     }
   }
 
@@ -113,20 +132,18 @@ function loadSettingsFromStorage(userId: string | null): LoadSettingsResult {
   let trustedAt = storedTrustedAt;
   let trustExpired = false;
 
-  // Check if trust has expired (90-day TTL) - detect BEFORE clearing
+  // Check if trust has expired (90-day TTL)
   if (isTrustedDevice && isTrustExpired(trustedAt)) {
     trustExpired = true;
-    // Trust has expired - clear it
+    needsRepair = true;
     isTrustedDevice = false;
     trustedAt = null;
-    localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.trustedDevice));
-    localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.trustedAt));
+  }
 
-    // If timeout was "never", revert to default
-    if (timeoutMinutes === null) {
-      timeoutMinutes = DEFAULT_TIMEOUT_MINUTES;
-      localStorage.setItem(getStorageKey(userId, STORAGE_KEYS.timeout), String(timeoutMinutes));
-    }
+  // "Never" needs a trusted device. Without one, fall back to the default.
+  if (timeoutMinutes === null && !isTrustedDevice) {
+    timeoutMinutes = DEFAULT_TIMEOUT_MINUTES;
+    needsRepair = true;
   }
 
   return {
@@ -136,37 +153,50 @@ function loadSettingsFromStorage(userId: string | null): LoadSettingsResult {
       trustedAt,
     },
     trustExpired,
+    needsRepair,
   };
 }
 
+/** Write the corrected settings back, so storage matches what the hook enforces. */
+function repairStorage(userId: string, settings: SessionSettings) {
+  localStorage.setItem(
+    getStorageKey(userId, STORAGE_KEYS.timeout),
+    settings.timeoutMinutes === null ? 'null' : String(settings.timeoutMinutes)
+  );
+  if (!settings.isTrustedDevice) {
+    localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.trustedDevice));
+    localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.trustedAt));
+  }
+}
+
 export function useSessionSettings(userId: string | null): UseSessionSettingsResult {
-  // Load once, on first render. Loading clears expired trust keys, so it must not
-  // run again during render: a second load would hide the expiry from the effect.
+  // Load once, on first render. Loading is pure; the effect below writes repairs.
   const [initialResult] = useState(() => loadSettingsFromStorage(userId));
 
   const [settings, setSettings] = useState<SessionSettings>(initialResult.settings);
 
   // Track previous userId to detect changes
   const prevUserIdRef = useRef(userId);
-  // Trust that expired on the first load still owes its toast.
-  const initialExpiryPendingRef = useRef(initialResult.trustExpired);
+  // The first load's repair and expiry toast are still owed to the first effect.
+  const initialPendingRef = useRef<LoadSettingsResult | null>(initialResult);
 
   // Sync settings when userId changes
   // This is intentional: syncing state with an external store (localStorage)
   // The pattern follows React docs for syncing with external systems
   useEffect(() => {
-    let trustExpired = initialExpiryPendingRef.current;
-    initialExpiryPendingRef.current = false;
+    let result = initialPendingRef.current;
+    initialPendingRef.current = null;
     let nextSettings: SessionSettings | null = null;
     if (prevUserIdRef.current !== userId) {
       prevUserIdRef.current = userId;
-      const result = loadSettingsFromStorage(userId);
-      trustExpired = result.trustExpired;
+      result = loadSettingsFromStorage(userId);
       nextSettings = result.settings;
     }
+    if (!result) return;
 
-    // Show toast if trust expired (detected before keys were cleared)
-    if (trustExpired) {
+    if (userId && result.needsRepair) repairStorage(userId, result.settings);
+
+    if (result.trustExpired) {
       toast('Your trusted device status has expired. Please re-enable in Settings if this is still your personal device.', {
         duration: 6000,
         style: {
@@ -186,6 +216,10 @@ export function useSessionSettings(userId: string | null): UseSessionSettingsRes
     // "Never" requires trusted device
     if (minutes === null && !settings.isTrustedDevice) {
       console.warn('Cannot set timeout to "never" without trusted device enabled');
+      return;
+    }
+    if (minutes !== null && !ALLOWED_FINITE_TIMEOUTS.has(minutes)) {
+      console.warn(`Ignoring session timeout that is not an option: ${minutes}`);
       return;
     }
 

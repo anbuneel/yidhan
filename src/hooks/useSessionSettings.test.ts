@@ -8,6 +8,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { StrictMode } from 'react';
 import toast from 'react-hot-toast';
 import { useSessionSettings, TIMEOUT_OPTIONS, setTrustedDeviceOnLogin } from './useSessionSettings';
 import { useSessionTimeout } from './useSessionTimeout';
@@ -271,6 +272,49 @@ describe('useSessionSettings', () => {
 
       expect(result.current.settings.isTrustedDevice).toBe(false);
       expect(result.current.getEffectiveTimeout()).toBe(10080);
+      // The dropdown shows what is enforced, and storage is repaired to match.
+      expect(result.current.settings.timeoutMinutes).toBe(10080);
+      expect(localStorage.getItem(`yidhan-${USER_ID}-session-timeout`)).toBe('10080');
+    });
+
+    it.each(['0', '-5', '45', '30abc', '1e9', '20160'])(
+      'does not enforce stored value %s that is not an option',
+      (stored) => {
+        trustDevice();
+        localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, stored);
+
+        const { result } = renderHook(() => useSessionSettings(USER_ID));
+
+        expect(result.current.settings.timeoutMinutes).toBe(10080);
+        expect(result.current.getEffectiveTimeout()).toBe(10080);
+        expect(localStorage.getItem(`yidhan-${USER_ID}-session-timeout`)).toBe('10080');
+      },
+    );
+
+    it('ignores setTimeoutMinutes with a value that is not an option', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { result } = renderHook(() => useSessionSettings(USER_ID));
+
+      act(() => { result.current.setTimeoutMinutes(45); });
+
+      expect(result.current.getEffectiveTimeout()).toBe(10080);
+      expect(localStorage.getItem(`yidhan-${USER_ID}-session-timeout`)).toBeNull();
+      warn.mockRestore();
+    });
+
+    it.each([
+      ['unreadable', 'not-a-date'],
+      ['future', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()],
+    ])('treats an %s trustedAt as expired, so "never" does not apply', (_kind, trustedAt) => {
+      localStorage.setItem(`yidhan-${USER_ID}-trusted-device`, 'true');
+      localStorage.setItem(`yidhan-${USER_ID}-trusted-at`, trustedAt);
+      localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, 'null');
+
+      const { result } = renderHook(() => useSessionSettings(USER_ID));
+
+      expect(result.current.settings.isTrustedDevice).toBe(false);
+      expect(result.current.getEffectiveTimeout()).toBe(10080);
+      expect(localStorage.getItem(`yidhan-${USER_ID}-trusted-device`)).toBeNull();
     });
 
     it('does not apply "never" once trust has expired', () => {
@@ -315,6 +359,15 @@ describe('useSessionSettings', () => {
       rerender();
 
       expect(toast).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the expiry toast once under StrictMode', () => {
+      trustDevice(expiredTrust());
+
+      renderHook(() => useSessionSettings(USER_ID), { wrapper: StrictMode });
+
+      expect(toast).toHaveBeenCalledTimes(1);
+      expect(localStorage.getItem(`yidhan-${USER_ID}-trusted-device`)).toBeNull();
     });
 
     it('does not show the expiry toast while trust is valid', () => {
