@@ -1622,7 +1622,6 @@ nav,
 }
 
 .editor-metadata-row .editor-timestamps {
-  opacity: 0.8;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -2149,6 +2148,16 @@ textarea:focus,
 @media (max-width: 767px) {
   .editor-toolbar-bottom {
     display: block;
+  }
+
+  /* Scroll-to-top sits above the bottom toolbar, which rides on the keyboard and
+     pads the safe area. --editor-toolbar-bottom-height is the toolbar's row plus
+     its 12px of vertical padding, without the safe area. */
+  .whisper-back-above-toolbar {
+    bottom: calc(
+      var(--keyboard-height, 0px) + env(safe-area-inset-bottom, 0px) +
+        var(--editor-toolbar-bottom-height, 60px) + 16px
+    );
   }
 }
 

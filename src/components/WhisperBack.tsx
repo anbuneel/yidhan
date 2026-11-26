@@ -2,9 +2,12 @@ import { useState, useEffect, type RefObject } from 'react';
 
 interface WhisperBackProps {
   scrollContainerRef?: RefObject<HTMLElement | null>;
+  /** The phone bottom toolbar is showing. Under 768px the button then sits above the
+   *  toolbar, the keyboard and the safe area (`.whisper-back-above-toolbar` in index.css). */
+  aboveBottomToolbar?: boolean;
 }
 
-export function WhisperBack({ scrollContainerRef }: WhisperBackProps) {
+export function WhisperBack({ scrollContainerRef, aboveBottomToolbar = false }: WhisperBackProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -57,6 +60,7 @@ export function WhisperBack({ scrollContainerRef }: WhisperBackProps) {
       onClick={handleScrollToTop}
       className={`
         fixed z-20
+        ${aboveBottomToolbar ? 'whisper-back-above-toolbar' : ''}
         transition-all duration-300 ease-out
         focus:outline-none
         focus:ring-2

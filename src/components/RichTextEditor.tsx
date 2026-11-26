@@ -326,9 +326,8 @@ export function RichTextEditor({ content, onChange, onBlur, noteId, autoFocus, o
             fontSize: '1.4rem',
             fontWeight: 400,
             fontStyle: 'italic',
-            color: 'var(--color-text-tertiary)',
-            opacity: 0.35,
-            transition: 'opacity 0.8s ease-in-out',
+            // Full strength: the placeholder token already reads 4.5:1 in both themes.
+            color: 'var(--color-text-placeholder)',
           }}
         >
           {PLACEHOLDER_MESSAGES[placeholderIndex]}

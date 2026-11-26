@@ -1713,7 +1713,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       )}
 
       {/* Floating scroll-to-top button — hidden in focus mode */}
-      {!isFocusMode && <WhisperBack scrollContainerRef={scrollContainerRef} />}
+      {!isFocusMode && <WhisperBack scrollContainerRef={scrollContainerRef} aboveBottomToolbar />}
 
       {/* Focus Mode indicator pill + screen reader announcement */}
       <output aria-live="polite" className="sr-only">

@@ -130,6 +130,46 @@ describe('placeholders', () => {
   });
 });
 
+describe('text that used to fade through opacity', () => {
+  // Opacity on text multiplies down its contrast: the tertiary token at 0.55 fell to
+  // about 2.4:1. These surfaces now use a text token at full strength.
+  const read = (path: string) => readFileSync(resolve(root, path), 'utf8').replace(/\r\n/g, '\n');
+
+  it('the roadmap cards keep full opacity for every status', () => {
+    const roadmap = read('src/components/RoadmapPage.tsx');
+    const block = roadmap.slice(roadmap.indexOf('const statusMateriality'), roadmap.indexOf('const sectionLabelStyle'));
+    const opacities = [...block.matchAll(/opacity:\s*([\d.]+)/g)].map((m) => Number(m[1]));
+    expect(opacities).toHaveLength(4);
+    expect(opacities.every((o) => o === 1)).toBe(true);
+  });
+
+  it('the editor timestamps have no opacity of their own', () => {
+    const rule = indexCss.slice(indexCss.indexOf('.editor-metadata-row .editor-timestamps {'));
+    expect(rule.slice(0, rule.indexOf('}'))).not.toMatch(/opacity/);
+  });
+
+  it('the empty-note placeholder uses the placeholder token with no opacity', () => {
+    const rte = read('src/components/RichTextEditor.tsx');
+    const block = rte.slice(rte.indexOf('className="animated-placeholder"'), rte.indexOf('{PLACEHOLDER_MESSAGES[placeholderIndex]}'));
+    expect(block).toContain("color: 'var(--color-text-placeholder)'");
+    expect(block).not.toMatch(/opacity/);
+  });
+
+  it.each(themes)('%s: the tokens those surfaces use pass 4.5:1 at full strength', (_name, c) => {
+    for (const token of ['textTertiary', 'textPlaceholder'] as const) {
+      for (const surface of [c.bgPrimary, c.cardBg, grainedPage(c), blend(c.editorGlow, c.cardBg)]) {
+        expect(contrast(c[token], surface), token).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it('would have failed with the old opacity, so the test can tell', () => {
+    const c = ACTIVE_LIGHT_THEME.colors;
+    const faded = blend(`rgba(${parseColor(c.textTertiary).slice(0, 3).join(', ')}, 0.55)`, c.bgPrimary);
+    expect(contrast(faded, c.bgPrimary)).toBeLessThan(4.5);
+  });
+});
+
 describe('marigold and the accent are not text colours where they fail', () => {
   const light = ACTIVE_LIGHT_THEME.colors;
 

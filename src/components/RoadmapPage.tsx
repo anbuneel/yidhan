@@ -21,6 +21,8 @@ const statusOrder: RoadmapStatus[] = ['shipped', 'in-progress', 'coming-soon', '
 /**
  * Per-status visual materiality — cards feel progressively lighter
  * from Shipped (solid, settled) to Exploring (mist, whisper).
+ * Lightness comes from the fill, border and shadow, never from opacity: an opacity
+ * under 1 drags the text below 4.5:1.
  */
 const statusMateriality: Record<RoadmapStatus, React.CSSProperties> = {
   shipped: {
@@ -42,14 +44,14 @@ const statusMateriality: Record<RoadmapStatus, React.CSSProperties> = {
     border: '1px dashed var(--glass-border)',
     borderRadius: 'var(--radius-plain)',
     boxShadow: 'none',
-    opacity: 0.8,
+    opacity: 1,
   },
   exploring: {
     background: 'transparent',
     border: '1px solid transparent',
     borderRadius: 'var(--radius-plain)',
     boxShadow: 'none',
-    opacity: 0.55,
+    opacity: 1,
   },
 };
 
@@ -135,7 +137,7 @@ export function RoadmapPage({
 
       {/* Content */}
       <main className="flex-1">
-        <div className="max-w-[800px] mx-auto px-6 sm:px-10 pb-20">
+        <div className="max-w-[calc(68ch+5rem)] mx-auto px-6 sm:px-10 pb-20" data-measure="public-page">
           {/* Title */}
           <h1
             className="font-semibold mb-3"

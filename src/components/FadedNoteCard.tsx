@@ -90,6 +90,8 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
           focus:ring-[var(--color-accent)]
           focus:opacity-100
           opacity-0 group-hover:opacity-100
+          [@media(hover:none)]:opacity-100
+          [@media(any-pointer:coarse)]:opacity-100
         "
         style={{
           background: 'var(--color-bg-secondary)',

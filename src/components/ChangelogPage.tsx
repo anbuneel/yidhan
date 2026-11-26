@@ -106,7 +106,7 @@ export function ChangelogPage({
 
       {/* Content */}
       <main className="flex-1">
-        <div className="max-w-[800px] mx-auto px-6 sm:px-10 pb-20">
+        <div className="max-w-[calc(68ch+5rem)] mx-auto px-6 sm:px-10 pb-20" data-measure="public-page">
           {/* Title */}
           <h1
             className="font-semibold mb-3"
