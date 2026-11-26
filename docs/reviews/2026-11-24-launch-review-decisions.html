@@ -85,11 +85,17 @@ h2 { font-size: 1.6rem; line-height: 1.2; }
 .title { font-weight: 500; }
 .note { color: var(--text-2); font-size: 0.95rem; margin-top: 0.15rem; }
 .meta { color: var(--text-3); font-size: 0.82rem; margin-top: 0.3rem; }
+.row.shipped .title { color: var(--text-2); }
+.empty { color: var(--text-3); padding: 0.9rem 0; border-top: 1px solid var(--hairline); }
+a { color: var(--accent-text); text-underline-offset: 3px; }
+.progress { display: flex; flex-direction: column; gap: 1rem; }
+.progress p { color: var(--text-2); max-width: 38rem; }
+.bugs { margin: 0; padding-left: 1.2rem; color: var(--text-2); display: flex; flex-direction: column; gap: 0.25rem; }
 .seg { display: flex; gap: 0.3rem; }
 .choice { font: inherit; font-size: 0.85rem; font-weight: 500; line-height: 1; padding: 0.45rem 0.8rem; border-radius: var(--radius-pill); border: 1px solid var(--input-border); background: transparent; color: var(--text-2); cursor: pointer; }
 .choice:hover { color: var(--text); border-color: var(--text-3); }
 .choice[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+button:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 
 .panel { background: var(--card); border: 1px solid var(--hairline); border-radius: var(--radius-plain); padding: clamp(1.25rem, 4vw, 2rem); display: flex; flex-direction: column; gap: 1rem; }
 .tally { display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; }
@@ -131,9 +137,29 @@ textarea { font: inherit; font-size: 0.9rem; line-height: 1.5; width: 100%; box-
     <div class="overall"><b>6.7</b><span>out of 10. The scores are my judgment, not a measurement.</span></div>
   </div>
 
+  <section class="progress" aria-labelledby="progress-head">
+    <div class="group-head">
+      <h2 id="progress-head">Progress</h2>
+      <span class="when">Nov 26, 2026</span>
+    </div>
+    <div class="tally">
+      <div><b id="p-shipped">25</b><span>of <span id="p-chosen">27</span> chosen items shipped</span></div>
+      <div><b id="p-deferred">1</b><span>deferred</span></div>
+      <div><b id="p-open">1</b><span>not started</span></div>
+    </div>
+    <div class="score"><span>Chosen items shipped</span><b id="p-pct">93%</b><div class="bar"><i id="p-bar" style="width:93%"></i></div></div>
+    <p>The verdict has not changed. The launch gates in the public launch plan are still open.</p>
+    <p>Bugs found during the reviews, outside the 70 items:</p>
+    <ul class="bugs">
+      <li><a href="https://github.com/anbuneel/yidhan/issues/285">#285</a> A running save could report its status on the next note. Fixed in <a href="https://github.com/anbuneel/yidhan/pull/287">#287</a>.</li>
+      <li><a href="https://github.com/anbuneel/yidhan/issues/284">#284</a> Undo can overwrite another device’s edit. Open.</li>
+      <li><a href="https://github.com/anbuneel/yidhan/issues/288">#288</a> Unsaved words can be lost when leaving a note. Open.</li>
+    </ul>
+  </section>
+
   <div>
     <p class="lede" style="margin:0 0 0.9rem">70 items from Claude, Gemini and Codex. Each shows the decision recorded on Nov 24, 2026. Hover a choice to see my recommendation.</p>
-    <nav class="filters" id="filters" aria-label="Filter by group"></nav>
+    <nav class="filters" id="filters" aria-label="Filter items"></nav>
   </div>
 
   <div id="list"></div>
@@ -154,7 +180,7 @@ textarea { font: inherit; font-size: 0.9rem; line-height: 1.5; width: 100%; box-
     <textarea id="out" readonly aria-label="Decisions as text"></textarea>
   </div>
 
-  <p class="foot">Checked on the live site and in the source at commit 953792b. Not verified by any reviewer: production email, real-device keyboards, signed-in sync and restore, measured performance. Your choices are saved in this browser only.</p>
+  <p class="foot">The review was checked on the live site and in the source at commit 953792b. Progress was checked against main at commit 909c11b on <em>Nov 26, 2026</em>. Not verified by any reviewer: production email, real-device keyboards, signed-in sync and restore, measured performance. Your choices are saved in this browser only.</p>
 </main>
 
 <script>
@@ -261,6 +287,53 @@ const el = (tag, cls, text) => {
 const DECIDED = { A1: 'later', A2: 'later', A3: 'later', A4: 'later', A5: 'later', A6: 'later', A7: 'later', A8: 'later', B15: 'do', D1: 'drop', D2: 'do', E3: 'later', E4: 'later' };
 const pick = (id) => state[id] || DECIDED[id] || ITEMS.find((i) => i[0] === id)[6];
 
+// Progress on the 27 items recorded as "do", checked on 2026-11-26 at commit 909c11b.
+// Keyed by item, separate from the decisions, so the record of Nov 24 stays as it was.
+const PROGRESS_DATE = 'Nov 26, 2026';
+const SHIPPED_IN = {
+  281: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'B5', 'B10', 'B15'],
+  283: ['B1', 'B7', 'B8', 'B12'],
+  282: ['B2', 'B3', 'B4'],
+  286: ['D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D9'],
+};
+const PROGRESS = { E1: { state: 'deferred' }, E5: { state: 'not started' } };
+Object.entries(SHIPPED_IN).forEach(([pr, ids]) => ids.forEach((id) => { PROGRESS[id] = { state: 'shipped', pr }; }));
+const PR_URL = 'https://github.com/anbuneel/yidhan/pull/';
+const isShipped = (id) => PROGRESS[id] && PROGRESS[id].state === 'shipped';
+const isPending = (id) => PROGRESS[id] && PROGRESS[id].state !== 'shipped';
+
+function progressLine(id) {
+  const p = PROGRESS[id];
+  if (!p) return null;
+  const line = el('p', 'meta');
+  if (p.state === 'shipped') {
+    line.appendChild(document.createTextNode('Shipped · '));
+    const a = el('a', '', '#' + p.pr);
+    a.href = PR_URL + p.pr;
+    line.appendChild(a);
+  } else if (p.state === 'deferred') {
+    line.appendChild(document.createTextNode('Deferred '));
+    line.appendChild(el('em', '', 'Nov 25, 2026'));
+    line.appendChild(document.createTextNode(' · not needed for launch'));
+  } else {
+    line.textContent = 'Not started';
+  }
+  return line;
+}
+
+function renderProgress() {
+  const ids = Object.keys(PROGRESS);
+  const shipped = ids.filter(isShipped).length;
+  const count = (s) => ids.filter((id) => PROGRESS[id].state === s).length;
+  const pct = Math.round((shipped / ids.length) * 100) + '%';
+  document.getElementById('p-shipped').textContent = shipped;
+  document.getElementById('p-chosen').textContent = ids.length;
+  document.getElementById('p-deferred').textContent = count('deferred');
+  document.getElementById('p-open').textContent = count('not started');
+  document.getElementById('p-pct').textContent = pct;
+  document.getElementById('p-bar').style.width = pct;
+}
+
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage is optional */ }
 }
@@ -268,7 +341,7 @@ function save() {
 function renderFilters() {
   const nav = document.getElementById('filters');
   nav.textContent = '';
-  [['all', 'All items']].concat(GROUPS.map((g) => [g[0], g[1]])).forEach(([key, label]) => {
+  [['all', 'All items']].concat(GROUPS.map((g) => [g[0], g[1]]), [['shipped', 'Shipped'], ['pending', 'Not shipped']]).forEach(([key, label]) => {
     const b = el('button', 'filter', label);
     b.type = 'button';
     b.setAttribute('aria-pressed', String(filter === key));
@@ -280,22 +353,26 @@ function renderFilters() {
 function renderList() {
   const root = document.getElementById('list');
   root.textContent = '';
-  GROUPS.filter((g) => filter === 'all' || filter === g[0]).forEach(([key, title, lede]) => {
-    const items = ITEMS.filter((i) => i[1] === key);
+  const byStatus = filter === 'shipped' ? isShipped : filter === 'pending' ? isPending : null;
+  GROUPS.filter((g) => filter === 'all' || byStatus || filter === g[0]).forEach(([key, title, lede]) => {
+    const items = ITEMS.filter((i) => i[1] === key && (!byStatus || byStatus(i[0])));
+    if (byStatus && items.length === 0) return;
     const sec = el('section', 'group');
     const head = el('div', 'group-head');
     head.appendChild(el('h2', '', title));
-    head.appendChild(el('span', 'count', items.length + ' items'));
+    head.appendChild(el('span', 'count', items.length + (items.length === 1 ? ' item' : ' items')));
     sec.appendChild(head);
     sec.appendChild(el('p', 'lede', lede));
     items.forEach(([id, , text, note, src, status, rec]) => {
-      const row = el('div', 'row');
+      const row = el('div', isShipped(id) ? 'row shipped' : 'row');
       row.appendChild(el('span', 'id', id));
       const body = el('div', 'body');
       body.appendChild(el('p', 'title', text));
       if (note) body.appendChild(el('p', 'note', note));
       const meta = src.join(' · ') + (status ? ' · ' + status : '');
       body.appendChild(el('p', 'meta', meta));
+      const progress = progressLine(id);
+      if (progress) body.appendChild(progress);
       row.appendChild(body);
       const seg = el('div', 'seg');
       seg.setAttribute('role', 'group');
@@ -328,6 +405,11 @@ function summaryText() {
     lines.push('', label + ' (' + picked.length + ')');
     picked.forEach((i) => lines.push(i[0] + '  ' + i[2]));
   });
+  lines.push('', 'Progress as of ' + PROGRESS_DATE);
+  Object.keys(PROGRESS).sort((a, b) => ITEMS.findIndex((i) => i[0] === a) - ITEMS.findIndex((i) => i[0] === b)).forEach((id) => {
+    const p = PROGRESS[id];
+    lines.push(id + '  ' + (p.state === 'shipped' ? 'shipped, PR #' + p.pr : p.state));
+  });
   return lines.join('\n');
 }
 
@@ -359,6 +441,7 @@ document.getElementById('reset').addEventListener('click', () => {
   renderSummary();
 });
 
+renderProgress();
 renderFilters();
 renderList();
 renderSummary();

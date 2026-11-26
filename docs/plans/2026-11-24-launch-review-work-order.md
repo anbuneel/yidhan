@@ -1,7 +1,38 @@
 Status: PROPOSAL
-Last verified: 2026-11-25
+Last verified: 2026-11-26
 
 # Launch review work order
+
+## Progress
+
+As of 2026-11-26, checked against `main` at `909c11b`. 25 of the 27 items have shipped.
+
+| Track | Items | State | PR | Commit | Date |
+|---|---|---|---|---|---|
+| A · Copy and small polish | C1 to C8, B5, B10, B15 | Shipped | #281 | `a114069` | 2026-11-25 |
+| B · Editor | B1, B7, B8, B12 | Shipped | #283 | `5c4ac08` | 2026-11-25 |
+| C · Dialogs and motion | B2, B3, B4 | Shipped | #282 | `218d767` | 2026-11-25 |
+| D · Landing page | D2 to D7, D9 | Shipped | #286 | `2c8cf8b` | 2026-11-25 |
+| E · Passkey unlock | E1 | Deferred 2026-11-25 | — | — | — |
+| F · Quick capture | E5 | Not started | — | — | — |
+
+Bugs found during the reviews, outside the 70 items:
+
+- Issue #285, a running save reported its status on the next note. Fixed by PR #287,
+  `909c11b`, 2026-11-26.
+- Issue #284, undo can overwrite another device's edit. Open.
+- Issue #288, unsaved words can be lost when leaving a note. Open. Needs a plan and the
+  multi-agent review.
+
+Issue #271 was closed as obsolete (B5). The launch gates in the ACTIVE plan are still
+open, so the review's verdict stands: hold the public launch, open a private beta. Not
+verified by anyone: the new landing page and share image on real devices.
+
+Left to do, in order:
+
+1. Issue #288.
+2. Issue #284.
+3. Track F.
 
 The 27 items chosen from the 2026-11-24 launch review, grouped into tracks by the files
 they touch. The review merged three passes (Claude, Gemini, Codex) over the live site
@@ -30,23 +61,25 @@ tracker, or unrecorded if they were new ideas. See "Later items with no home" be
 
 | Track | Items | Can start | Runs beside |
 |---|---|---|---|
-| A · Copy and small polish | C1 to C8, B5, B10, B15 | Now | Everything |
-| B · Editor | B1, B7, B8, B12 | Now | A, D. Merge before C |
-| C · Dialogs and motion | B2, B3, B4 | Now | A, D. Rebase onto B |
-| D · Landing page | D2 to D7, D9 | When the headline wording is picked | A, B, C |
+| A · Copy and small polish | C1 to C8, B5, B10, B15 | **Shipped 2026-11-25, PR #281** | Everything |
+| B · Editor | B1, B7, B8, B12 | **Shipped 2026-11-25, PR #283** | A, D. Merge before C |
+| C · Dialogs and motion | B2, B3, B4 | **Shipped 2026-11-25, PR #282** | A, D. Rebase onto B |
+| D · Landing page | D2 to D7, D9 | **Shipped 2026-11-25, PR #286** | A, B, C |
 | E · Passkey unlock | E1 | **Deferred 2026-11-25.** Not needed for launch | Nothing; it needs the heavier review |
-| F · Quick capture | E5 | Item 44 ready (`/n/new`); item 47 blocked on SW test harness | — |
+| F · Quick capture | E5 | Not started. Item 44 ready (`/n/new`); item 47 blocked on SW test harness | — |
 
 One track is one branch, one PR and one agent session. Tracks running at the same time
 need a worktree each, or they overwrite each other.
 
-**Conflicts to expect when merging:**
+**Conflicts to expect when merging:** (A to D have merged, so these now apply only to
+track F and the fixes for #284 and #288.)
 
 - `src/data/changelog.ts` and `docs/progress.md`. Every PR adds an entry in the same
   place and claims the next version number. The second PR to merge rebases and
   renumbers.
-- `src/components/Editor.tsx`. Track B owns it. Track C must not edit it; see C.
-- `src/index.css`. B3 edits it, and B8 may.
+- `src/components/Editor.tsx`. Track B owns it. Track C must not edit it; see C. Both
+  have merged; #288 and #284 will likely touch it next.
+- `src/index.css`. B3 edits it, and B8 may. Both have merged.
 
 ## Rules for every track
 
@@ -70,20 +103,25 @@ need a worktree each, or they overwrite each other.
    app built around writing.", is dropped. **Wording settled 2026-11-25: "A calm,
    private place to write."** See track D.
 2. **C2 depends on a fact nobody checked.** The deletion flow exists in code. Whether
-   self-serve deletion is switched on in production is unconfirmed.
+   self-serve deletion is switched on in production is unconfirmed. **Settled
+   2026-11-25 in PR #281:** `ACCOUNT_OFFBOARDING_ENABLED` is `true`, so the Support and
+   Privacy copy now describes the real flow.
 3. **E5 is only partly blocked.** Per-note routes (`/n/<id>`) already exist in
    `src/routing/routes.ts` (roadmap item 28 shipped 2026-09-07), so item 44 (the
    "New note" shortcut) only needs a `/n/new` route alongside `/demo/new`. Item 47
    (share target) still needs the service-worker test harness.
-4. **E1 enrollment depends on the final domain (`#157`).** WebAuthn credentials are
+4. **E1 enrollment depends on the final domain (launch plan item 157, not a GitHub
+   issue).** WebAuthn credentials are
    scoped to their relying-party ID; passkeys enrolled on `yidhan.vercel.app` will not
    follow a move to a custom domain. Run the PRF compatibility spike after A–C, and hold
    enrollment until the final domain/RP ID is live (or an explicit migration path is
-   designed).
+   designed). E1 is deferred as of 2026-11-25, so this waits until it resumes.
 
 ---
 
 ## Track A · Copy and small polish
+
+Shipped: PR #281, commit `a114069`, 2026-11-25.
 
 Public pages and the README contradict the shipped product. No behaviour changes.
 PR title: `Public copy matches the product (launch review track A)`. Hours to a day.
@@ -119,6 +157,8 @@ Do not touch: `index.html`, `LandingPage.tsx`, the hero copy (track D); `Editor.
 
 ## Track B · Editor
 
+Shipped: PR #283, commit `5c4ac08`, 2026-11-25.
+
 PR title: `Editor: phone menu, focus mode, undo, demo label (launch review track B)`.
 Days. Owns `Editor.tsx`, `EditorToolbar.tsx`, `EditorSidebar.tsx`,
 `src/editor/editorCommands.tsx`.
@@ -143,6 +183,8 @@ Do not touch: dialog focus handling (track C), even for the dialog inside `Edito
 
 ## Track C · Dialogs and motion
 
+Shipped: PR #282, commit `218d767`, 2026-11-25.
+
 PR title: `Dialogs hold focus; reduced motion; honest sign-up prompt (launch review track C)`.
 Days. Rebase onto track B before merging.
 
@@ -164,8 +206,10 @@ sign-up prompt does not open behind another dialog or while the visitor is typin
 
 ## Track D · Landing page
 
+Shipped: PR #286, commit `2c8cf8b`, 2026-11-25.
+
 PR title: `Landing page: private writing, editor first (launch review track D)`. Weeks.
-Ready to start: the headline was picked on 2026-11-25.
+The headline was picked on 2026-11-25.
 
 - **D2, D3, D4.** The headline is **"A calm, private place to write."** Supporting
   text: "Notes are encrypted on your device before they sync. Works offline. Free and
@@ -205,7 +249,8 @@ unanswered. Start with the spike in that plan when this resumes.
 
 Item E1: roadmap 135. Weeks. Its needs (items 24 and 26) have shipped. Split into two
 steps: the WebAuthn PRF browser-compatibility spike can run after A–C merge, while
-passkey enrollment waits on the final custom domain / relying-party ID (`#157`) or an
+passkey enrollment waits on the final custom domain / relying-party ID (launch plan
+item 157) or an
 explicit credential-migration design, since WebAuthn credentials do not transfer across
 domains. The passphrase stays as the fallback. It touches encryption and auth, so it
 gets the multi-agent review.
