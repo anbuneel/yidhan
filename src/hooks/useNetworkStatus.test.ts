@@ -107,7 +107,7 @@ describe('useNetworkStatus', () => {
     window.dispatchEvent(new Event('offline'));
 
     expect(toast).toHaveBeenCalledWith(
-      'Offline. Your notes are safe locally.',
+      'Offline. Your notes are saved on this device.',
       expect.objectContaining({
         icon: '雲',
         duration: 4000,
@@ -132,7 +132,7 @@ describe('useNetworkStatus', () => {
     window.dispatchEvent(new Event('online'));
 
     expect(toast).toHaveBeenCalledWith(
-      'The path has cleared.',
+      'Back online.',
       expect.objectContaining({
         icon: '〇',
         duration: 3000,
@@ -161,7 +161,7 @@ describe('useNetworkStatus', () => {
     // Go offline
     window.dispatchEvent(new Event('offline'));
     expect(toast).toHaveBeenCalledWith(
-      'Offline. Your notes are safe locally.',
+      'Offline. Your notes are saved on this device.',
       expect.anything()
     );
 
@@ -170,7 +170,7 @@ describe('useNetworkStatus', () => {
     // Come back online
     window.dispatchEvent(new Event('online'));
     expect(toast).toHaveBeenCalledWith(
-      'The path has cleared.',
+      'Back online.',
       expect.anything()
     );
 
@@ -183,7 +183,7 @@ describe('useNetworkStatus', () => {
     // Go offline again
     window.dispatchEvent(new Event('offline'));
     expect(toast).toHaveBeenCalledWith(
-      'Offline. Your notes are safe locally.',
+      'Offline. Your notes are saved on this device.',
       expect.anything()
     );
   });

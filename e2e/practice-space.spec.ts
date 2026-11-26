@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 
 /**
  * The Practice Space — items 45, 46 and 152.
@@ -114,11 +114,15 @@ test.describe('Try writing on a phone', () => {
 });
 
 test.describe('Keeping practice work', () => {
+  // The header link shows from sm up. Phones get it from the ribbon instead; the
+  // 'Sign-up link at 375 px' tests cover that. Desktop in every project.
+  test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false, isMobile: false });
+
   test('the keep CTA appears only once there is something to keep', async ({ page }) => {
     await page.goto('/demo');
     await expect(page.getByTestId('library-view')).toBeVisible();
 
-    const keep = page.getByRole('button', { name: /keep these notes/i });
+    const keep = page.getByTestId('demo-keep-cta');
     await expect(keep).toBeHidden();
 
     await page.getByRole('button', { name: 'New note', exact: true }).click();
@@ -139,12 +143,12 @@ test.describe('Keeping practice work', () => {
     await page.getByPlaceholder(/untitled/i).fill('Something of mine');
     await page.getByRole('button', { name: /yidhan/i }).click();
 
-    await page.getByRole('button', { name: /keep these notes/i }).click();
+    await page.getByTestId('demo-keep-cta').click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     // Sign-up, not sign-in: the practice work is carried by creating an account.
-    await expect(dialog.getByRole('button', { name: /create account|sign up/i })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /^create an account$/i })).toBeVisible();
   });
 });
 
@@ -176,7 +180,7 @@ test.describe('Starter copy', () => {
     await expect(page.getByTestId('library-view')).toBeVisible();
 
     // Nothing to keep: the only note is a starter the reader never touched.
-    await expect(page.getByRole('button', { name: /keep these notes/i })).toBeHidden();
+    await expect(page.getByTestId('demo-keep-cta')).toBeHidden();
   });
 });
 
@@ -340,5 +344,144 @@ test.describe('Tag row at 375 px', () => {
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
     );
     expect(pageScrolls).toBe(false);
+  });
+});
+
+/** Design critique K1: touch screens have no hover, so an unpinned card's pin and
+ *  delete buttons used to sit at opacity 0 — an invisible pin target in the corner.
+ *  Below 700px the library uses compact cards, which have no pin or delete button, so
+ *  the trap was on touch screens 700px and wider: tablets and touch laptops. */
+async function firstUnpinnedCard(page: Page) {
+  await page.goto('/demo');
+  await expect(page.getByTestId('library-view')).toBeVisible();
+  const card = page
+    .locator('.note-card:not(.note-card-compact)')
+    .filter({ has: page.getByRole('button', { name: 'Pin note' }) })
+    .first();
+  await expect(card).toBeVisible();
+  await page.waitForTimeout(600);
+  return card;
+}
+
+async function opacityOf(locator: Locator) {
+  return locator.evaluate((el) => Number(getComputedStyle(el).opacity));
+}
+
+test.describe('Card corner on a touch phone at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+  test('no card carries an invisible pin or delete target', async ({ page }) => {
+    await page.goto('/demo');
+    await expect(page.getByTestId('library-view')).toBeVisible();
+    await page.waitForTimeout(600);
+    const targets = page.locator('.note-card').getByRole('button', { name: /^(Pin note|Delete note)$/ });
+    for (const target of await targets.all()) {
+      expect(await opacityOf(target)).toBeGreaterThan(0);
+    }
+  });
+
+  test('tapping the top-right corner of an unpinned card opens the note', async ({ page }) => {
+    await page.goto('/demo');
+    const card = page.locator('#chapter-thisWeek .note-card').first();
+    await expect(card).toBeVisible();
+    await page.waitForTimeout(600);
+    const box = await card.boundingBox();
+    if (!box) throw new Error('card has no box');
+    await page.touchscreen.tap(box.x + box.width - 20, box.y + 20);
+    await expect(page.getByTestId('note-editor')).toBeVisible();
+  });
+});
+
+test.describe('Card corner on a touch tablet at 820 px', () => {
+  test.use({ viewport: { width: 820, height: 1180 }, hasTouch: true, isMobile: true });
+
+  test('the unpinned pin and delete icons are visible', async ({ page }) => {
+    const card = await firstUnpinnedCard(page);
+    expect(await opacityOf(card.getByRole('button', { name: 'Pin note' }))).toBeCloseTo(0.4);
+    expect(await opacityOf(card.getByRole('button', { name: 'Delete note' }))).toBeCloseTo(0.4);
+  });
+
+  test('tapping the card corner outside the pin opens the note, not a pin', async ({ page }) => {
+    const card = await firstUnpinnedCard(page);
+    const box = await card.boundingBox();
+    if (!box) throw new Error('card has no box');
+    // The pin button spans 8-48px in from the top-right corner, and the corner itself
+    // is rounded. 4px in from the right edge, 30px down, is the card beside the pin.
+    await page.touchscreen.tap(box.x + box.width - 4, box.y + 30);
+    await expect(page.getByTestId('note-editor')).toBeVisible();
+  });
+
+  test('tapping the visible pin pins the note', async ({ page }) => {
+    const card = await firstUnpinnedCard(page);
+    const title = (await card.getByRole('button', { name: /^Open note:/ }).getAttribute('aria-label'))!;
+    await card.getByRole('button', { name: 'Pin note' }).tap();
+    await expect(
+      page.locator('#chapter-pinned').getByRole('button', { name: title })
+    ).toBeVisible();
+    await expect(page.getByTestId('note-editor')).toHaveCount(0);
+  });
+});
+
+test.describe('Card icons on desktop', () => {
+  // A mouse, not touch, in every project: under (hover: none) the icons show at 40%.
+  test.use({ viewport: { width: 1440, height: 900 }, hasTouch: false, isMobile: false });
+
+  test('the unpinned pin and delete icons stay hidden until hover', async ({ page }) => {
+    const card = await firstUnpinnedCard(page);
+    await page.mouse.move(0, 0);
+    const pin = card.getByRole('button', { name: 'Pin note' });
+    const del = card.getByRole('button', { name: 'Delete note' });
+    expect(await opacityOf(pin)).toBe(0);
+    expect(await opacityOf(del)).toBe(0);
+    await card.hover();
+    await expect.poll(() => opacityOf(pin)).toBeCloseTo(0.4);
+  });
+});
+
+/** Design critique G6: every sign-up control says "Create an account". On a phone that
+ *  does not fit in the header beside Sign in, so the header link hides and the ribbon
+ *  carries it. */
+test.describe('Sign-up link at 375 px', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test('the ribbon carries "Create an account" and Sign in stays on screen', async ({ page }) => {
+    await page.goto('/demo');
+    await page.getByRole('button', { name: 'New note', exact: true }).click();
+    await page.getByPlaceholder(/untitled/i).fill('Something of mine');
+    await page.getByRole('button', { name: /yidhan/i }).click();
+    await expect(page.getByTestId('library-view')).toBeVisible();
+
+    await expect(page.getByTestId('demo-keep-cta')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Create an account', exact: true })).toBeVisible();
+    const signIn = await page.getByRole('button', { name: 'Sign in', exact: true }).boundingBox();
+    if (!signIn) throw new Error('Sign in has no box');
+    expect(signIn.x + signIn.width).toBeLessThanOrEqual(375);
+  });
+
+  test('with the ribbon dismissed, the link sits under the tag row', async ({ page }) => {
+    await page.goto('/demo');
+    await page.getByRole('button', { name: 'New note', exact: true }).click();
+    await page.getByPlaceholder(/untitled/i).fill('Something of mine');
+    await page.getByRole('button', { name: /yidhan/i }).click();
+    await expect(page.getByTestId('library-view')).toBeVisible();
+    await expect(page.getByTestId('demo-keep-cta-phone')).toBeHidden();
+
+    await page.getByRole('button', { name: 'Dismiss' }).click();
+    const phoneCta = page.getByTestId('demo-keep-cta-phone');
+    await expect(phoneCta).toBeVisible();
+    await expect(phoneCta).toHaveText('Create an account to keep your notes');
+  });
+});
+
+test.describe('Sign-up link at 1280 px', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('the header link says "Create an account"', async ({ page }) => {
+    await page.goto('/demo');
+    await page.getByRole('button', { name: 'New note', exact: true }).click();
+    await page.getByPlaceholder(/untitled/i).fill('Something of mine');
+    await page.getByRole('button', { name: /yidhan/i }).click();
+    await expect(page.getByTestId('demo-keep-cta')).toHaveText('Create an account');
+    await expect(page.getByRole('button', { name: 'Create an account to keep your notes' }).first()).toBeVisible();
   });
 });

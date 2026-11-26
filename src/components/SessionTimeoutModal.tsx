@@ -29,7 +29,7 @@ export function SessionTimeoutModal({
 
   const timeText =
     minutesRemaining === null || minutesRemaining <= 0
-      ? 'moments'
+      ? 'a moment'
       : minutesRemaining === 1
         ? '1 minute'
         : `${minutesRemaining} minutes`;
@@ -72,7 +72,7 @@ export function SessionTimeoutModal({
                 color: 'var(--color-text-primary)',
               }}
             >
-              A gentle pause
+              Still there?
             </h2>
             <button type="button"
               onClick={onStay}
@@ -108,7 +108,7 @@ export function SessionTimeoutModal({
               color: 'var(--color-text-primary)',
             }}
           >
-            Your session is about to fade.
+            Your session is about to end.
           </p>
 
           {/* Time remaining */}

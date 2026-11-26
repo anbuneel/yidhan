@@ -376,7 +376,7 @@ describe('Editor', () => {
       fireEvent.keyDown(window, { key: 'F', ctrlKey: true, shiftKey: true });
       await act(async () => { vi.advanceTimersByTime(6000); });
       expect(screen.getByRole('alert')).toHaveTextContent('Not saved');
-      expect(screen.getByRole('alert')).toHaveTextContent('Unlock your vault before retrying');
+      expect(screen.getByRole('alert')).toHaveTextContent('Unlock your notes before retrying');
       expect(screen.getByRole('alert').closest('.focus-mode-target')).toBeNull();
       expect(screen.getByDisplayValue('Keep these words')).toBeInTheDocument();
       update.mockResolvedValue(undefined);

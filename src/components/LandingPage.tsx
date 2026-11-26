@@ -5,7 +5,7 @@ import { createDemoStarterPreviewState, HERO_STARTER_NOTE_ID } from '../services
 import type { Theme } from '../types';
 
 interface LandingPageProps {
-  /** Opens sign-up. Reached from the preview's "keep and sync" link; the primary
+  /** Opens sign-up. Reached from the preview's "keep your notes" link; the primary
    *  action goes to the Practice Space instead, and the account comes from there. */
   onStartWriting: () => void;
   onSignIn: () => void;
@@ -162,7 +162,7 @@ export function LandingPage({
               Demo notes are saved in this browser and are not encrypted.
             </span>
             <button type="button" onClick={onStartWriting} className="landing-keep focus-ring">
-              Create an account to keep and sync →
+              Create an account to keep your notes →
             </button>
           </div>
         </div>
@@ -249,9 +249,9 @@ export function LandingPage({
             <div className="landing-faq-item">
               <dt>What is free, and how is it paid for?</dt>
               <dd>
-                Everything in Yidhan is free and open source under AGPL-3.0, with no ads, paid
-                tiers, or feature gates. It is maintained by one person, with no company behind
-                it.
+                Yidhan is free and open source under AGPL-3.0, with no ads. If paid storage for
+                attachments is ever added, everything that is free today stays free. It is
+                maintained by one person, with no company behind it.
               </dd>
             </div>
             <div className="landing-faq-item">

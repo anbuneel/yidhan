@@ -209,7 +209,7 @@ the "done when" below is the summary, that document is the detail.
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
 | 126 | Test willingness to pay before promising unlimited attachments and backups; model storage, transfer, retention, support, and review costs; Bloom tier | days | Needs #87 | Pricing decision and cost model recorded · doc |
-| 146 | Re-validate Quiet Intelligence against the privacy and writing goals; keep publishing, collaboration, databases, graph view, and cloud AI deferred until demand is observed | days | Start when #87 findings available | Decision recorded per idea · doc |
+| 146 | Re-validate Quiet Intelligence against the privacy and writing goals; keep publishing, collaboration, databases, graph view, and cloud AI deferred until demand is observed. Feature names (Daily Whisper, The Unsaid and the rest) must also pass the `DESIGN.md` Voice rules: no metaphor, no mood words | days | Start when #87 findings available | Decision recorded per idea · doc |
 | 147 | Keep `docs/prd.md`, `docs/roadmap.md`, and `src/data/roadmap.ts` in step with each shipped phase; mark ledger items done with their PR | days | Start when every phase exit | Docs match shipped behaviour · review at phase exit |
 | — | Privacy-respecting usage insights for the writer, computed client-side | weeks |  |
 | — | Quiet Intelligence suite (Daily Whisper, Weekly Digest, Resonance Threads, Seasonal Echo, Quiet Questions, The Convergence, Gentle Grounding, The Unsaid) — each must clear the client-side-only bar in PRODUCT.md before it becomes a candidate | a month or more | Needs #146 |

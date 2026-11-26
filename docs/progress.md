@@ -861,3 +861,11 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   three-step text size (`--reading-scale`, editor and card previews only). Per-note
   export drops JSON and is labelled "Share and export". Reachability spec now checks
   row plus ⋯. Design critique PR 3 (H1–H12, L1).
+- **2026-11-26** — Design critique PR 2, plain wording and polish: deletion, conflict,
+  account-deletion, sign-up and passphrase copy rewritten to the `DESIGN.md` Voice rules
+  ("Delete permanently", "Deleted in N days", "Create an account"); faded-note countdown
+  shows a day count; touch screens show the unpinned pin and delete icons on full-size
+  cards (they were invisible tap targets); plain N creates a note; delete undo stays 8
+  seconds; new `--color-text-placeholder` token on `::placeholder`; the Practice Space
+  invitation shows once per browser; the changelog page groups releases by day; small
+  demo, landing and sync-caption polish.

@@ -322,3 +322,43 @@ describe('DemoPage under StrictMode', () => {
     expect(editor).toHaveTextContent('Welcome to Yidhan');
   });
 });
+
+describe('DemoPage polish (design critique K5, K7, K8)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('shows the starter line in the secondary text colour, not faded primary', () => {
+    renderDemo();
+    const line = screen.getByText(/These starter notes are yours/);
+    expect(line.style.color).toBe('var(--color-text-secondary)');
+    expect(line.style.opacity).toBe('');
+  });
+
+  it('has no radial glow over the library', () => {
+    const { container } = renderDemo();
+    const glows = [...container.querySelectorAll<HTMLElement>('[style]')].filter((el) =>
+      el.style.background.includes('radial-gradient')
+    );
+    expect(glows).toEqual([]);
+  });
+
+  it('does not scale the search box on focus, and keeps the focus border', () => {
+    renderDemo();
+    const input = document.getElementById(DEMO_SEARCH_INPUT_ID) as HTMLInputElement;
+    fireEvent.focus(input);
+    // The input, its pill and the box around the pill.
+    let el: HTMLElement | null = input;
+    for (let i = 0; i < 3 && el; i++, el = el.parentElement) {
+      expect(el.style.transform).not.toContain('scale');
+    }
+    expect((input.parentElement as HTMLElement).style.border).toContain('var(--color-accent)');
+  });
+
+  it('sets "Practice space" in roman', () => {
+    renderDemo();
+    const label = screen.getByText('Practice space');
+    expect(label.className).not.toMatch(/\bitalic\b/);
+    expect(label.style.fontStyle).not.toBe('italic');
+  });
+});

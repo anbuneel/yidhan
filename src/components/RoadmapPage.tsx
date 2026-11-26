@@ -157,7 +157,7 @@ export function RoadmapPage({
               fontStyle: 'italic',
             }}
           >
-            Some thoughts have settled. Others are still forming.
+            What has shipped, and what is planned.
           </p>
 
           {/* Roadmap sections with left-margin thread */}

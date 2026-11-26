@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Note } from '../types';
 import { TagBadgeList } from './TagBadge';
 import { sanitizeHtml, sanitizeText } from '../utils/sanitize';
+import { getDeletionCountdown } from '../utils/deletionCopy';
 
 interface FadedNoteCardProps {
   note: Note;
@@ -12,24 +13,17 @@ interface FadedNoteCardProps {
 /**
  * Calculate days remaining before permanent deletion (30 day limit)
  */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 function getDaysRemaining(deletedAt: Date): number {
-  const now = new Date();
-  const diffMs = now.getTime() - deletedAt.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  return Math.max(0, 30 - diffDays);
+  // Calendar days from today to the deletion day (deletedAt + 30 days), so "today"
+  // and "tomorrow" mean the reader's own calendar days.
+  const deadline = new Date(deletedAt.getTime() + 30 * DAY_MS);
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  return Math.max(0, Math.round((startOf(deadline) - startOf(new Date())) / DAY_MS));
 }
 
-/**
- * Get organic phrase based on days remaining
- * Gives a gentle sense of the note's lifecycle
- */
-function getOrganicPhrase(daysRemaining: number): string {
-  if (daysRemaining >= 25) return 'Just arrived';
-  if (daysRemaining >= 15) return 'Resting quietly';
-  if (daysRemaining >= 7) return 'Fading gently';
-  if (daysRemaining >= 1) return 'Nearly gone';
-  return 'Releasing today';
-}
+
 
 export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteCardProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -56,7 +50,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
   };
 
   const daysRemaining = note.deletedAt ? getDaysRemaining(note.deletedAt) : 30;
-  const organicPhrase = getOrganicPhrase(daysRemaining);
+  const countdown = getDeletionCountdown(daysRemaining);
 
   return (
     <article
@@ -169,10 +163,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
           <div style={{
             color: daysRemaining <= 6 ? 'var(--color-destructive)' : 'var(--color-text-secondary)',
           }}>
-            {organicPhrase}
-          </div>
-          <div style={{ color: daysRemaining <= 6 ? 'var(--color-destructive)' : 'var(--color-text-tertiary)' }}>
-            {daysRemaining === 0 ? 'Today' : `${daysRemaining}d remaining`}
+            {countdown}
           </div>
         </div>
 
@@ -185,6 +176,8 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
             flex items-center justify-center
             opacity-0
             group-hover:opacity-100
+            [@media(hover:none)]:opacity-100
+            [@media(any-pointer:coarse)]:opacity-100
             transition-all duration-200
             focus:outline-none
             focus:ring-2
@@ -206,8 +199,8 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
             e.currentTarget.style.color = 'var(--color-text-tertiary)';
             e.currentTarget.style.background = 'var(--color-bg-secondary)';
           }}
-          aria-label="Release note"
-          title="Release note"
+          aria-label="Delete permanently"
+          title="Delete permanently"
         >
           <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
@@ -237,11 +230,13 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
               color: 'var(--color-text-secondary)',
             }}
           >
-            Release "<span
-              style={{ color: 'var(--color-text-primary)' }}
-              dangerouslySetInnerHTML={{ __html: sanitizeText(note.title) || 'Untitled' }}
-            />"?
+            Delete permanently?
           </p>
+          <p
+            className="text-center text-sm -mt-2"
+            style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-primary)' }}
+            dangerouslySetInnerHTML={{ __html: sanitizeText(note.title) || 'Untitled' }}
+          />
           <p
             className="text-center text-xs"
             style={{
@@ -249,7 +244,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
               color: 'var(--color-text-tertiary)',
             }}
           >
-            This is a gentle goodbye.
+            This can't be undone.
           </p>
           <div className="flex gap-2">
             <button type="button"
@@ -273,7 +268,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
                 e.currentTarget.style.borderColor = 'var(--glass-border)';
               }}
             >
-              Keep resting
+              Cancel
             </button>
             <button type="button"
               onClick={handleConfirmDelete}
@@ -295,7 +290,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
                 e.currentTarget.style.opacity = '1';
               }}
             >
-              Release
+              Delete permanently
             </button>
           </div>
         </div>

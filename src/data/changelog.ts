@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.22.0', date: '2026-11-26', changes: [
+    { type: 'fix', text: 'On touch screens, the pin and delete icons on larger note cards are now visible. Before, they were invisible, so tapping near a card’s top-right corner could pin the note instead of opening it' },
+    { type: 'improvement', text: 'Plainer wording across the app: "Delete permanently" and "Delete all" in Faded notes, a day count ("Deleted in 12 days") instead of mood words, a clearer dialog when a note changed on two devices, and the account deletion date in the Letting go dialog' },
+    { type: 'improvement', text: 'Every sign-up button and link now says "Create an account"' },
+    { type: 'feature', text: 'Press N in the library to start a new note. Ctrl+N or Cmd+N still works in the installed app' },
+    { type: 'improvement', text: 'The undo button after deleting a note stays for 8 seconds, and says where the note is if undo fails' },
+    { type: 'improvement', text: 'Input placeholders are easier to read in both themes, sync captions are slightly larger, and the search box no longer grows when you focus it' },
+    { type: 'improvement', text: 'The Practice Space sign-up invitation now shows at most once per browser' },
+    { type: 'improvement', text: 'This page now groups releases by day, with the version numbers in small text' },
+  ] },
   { version: '3.21.0', date: '2026-11-26', changes: [
     { type: 'improvement', text: 'The editor toolbar is shorter. Every toolbar now shows Bold, Italic, Heading, Bullet list and Link, then focus mode and the "More editor commands" menu. On a phone, Undo and Redo stay on the bar as icons' },
     { type: 'improvement', text: 'The "More editor commands" menu now lists only what is not on the toolbar, under the headings Text, Blocks, Insert, Edit and View' },

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Header } from './Header';
 
@@ -38,6 +38,19 @@ describe('Header', () => {
     onFadedNotesClick: vi.fn(),
     fadedNotesCount: 0,
   };
+
+  // Design critique K9.
+  it('does not scale the search box on focus, and keeps the focus border', () => {
+    render(<Header {...defaultProps} />);
+    const input = screen.getByRole('textbox', { name: /search notes/i });
+    fireEvent.focus(input);
+    // The input, its pill and the box around the pill.
+    let el: HTMLElement | null = input;
+    for (let i = 0; i < 3 && el; i++, el = el.parentElement) {
+      expect(el.style.transform).not.toContain('scale');
+    }
+    expect((input.parentElement as HTMLElement).style.border).toContain('var(--color-accent)');
+  });
 
   it('shows the updated search shortcut hint', () => {
     render(<Header {...defaultProps} />);

@@ -145,7 +145,7 @@ export function SupportPage({
                   },
                   {
                     q: 'Is Yidhan free?',
-                    a: 'Yes. Yidhan is free and open source. There are no premium tiers, no feature gates, and no ads.',
+                    a: 'Yes. Yidhan is free and open source, with no ads. If paid storage for attachments is ever added, everything that is free today stays free.',
                   },
                   {
                     q: 'Can I install Yidhan as an app?',

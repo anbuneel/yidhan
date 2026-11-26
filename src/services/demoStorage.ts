@@ -85,7 +85,8 @@ const STARTER_NOTE_IDS = new Set([
  * the source above left every existing Practice Space still showing the old words. The
  * first welcome note claimed practice drafts were end-to-end encrypted; they are not, and
  * they never were — a practice draft lives in localStorage in the clear. The second was
- * accurate, and was replaced when the landing copy changed on 2026-11-10.
+ * accurate, and was replaced when the landing copy changed on 2026-11-10. The third
+ * said "Sign up"; it became "Create an account" on 2026-11-26 (design critique G6).
  *
  * A stored note is corrected only when its content matches one of these *exactly*. Any
  * edit at all, however small, means the words are the reader's and are left alone.
@@ -96,7 +97,7 @@ const STARTER_NOTE_IDS = new Set([
  * Correcting the content at read time fixes that too.
  */
 const SUPERSEDED_STARTER_CONTENT: Readonly<Record<string, readonly string[]>> = {
-  'starter-welcome': ['1p2h2uug9xg', 'axmeffbsbu'],
+  'starter-welcome': ['1p2h2uug9xg', 'axmeffbsbu', '1r0dh2m6w67'],
 };
 
 /**

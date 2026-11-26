@@ -11,6 +11,7 @@
 
 import { useNoteSearchResults } from '../hooks/useNoteSearch';
 import toast from 'react-hot-toast';
+import { UNDO_TOAST_MS } from '../utils/undoToast';
 import { useAppShortcuts } from '../hooks/useAppShortcuts';
 import { useLibraryCardNavigation } from '../hooks/useLibraryCardNavigation';
 import { useState, useCallback, useEffect, useMemo, Suspense, useRef } from 'react';
@@ -131,6 +132,17 @@ export function DemoPage({
     onDismissPrompt: dismissPrompt,
     onDismissRibbon: dismissRibbon,
   });
+
+  // The invitation shows at most once per browser (design critique K11). Once it
+  // opens it stays open until answered, and the dismissal is stored straight away,
+  // so a reload or a later visit never brings it back.
+  const [isInvitationOpen, setIsInvitationOpen] = useState(false);
+  if (shouldShowPrompt && !isInvitationOpen) {
+    setIsInvitationOpen(true);
+  }
+  useEffect(() => {
+    if (isInvitationOpen) dismissPrompt();
+  }, [isInvitationOpen, dismissPrompt]);
 
   // First-run: show welcome intro until user creates their first note
   const hasOnlyStarterNotes = notes.length > 0 && notes.every((n) => n.id.startsWith('starter-'));
@@ -352,7 +364,7 @@ export function DemoPage({
                 if (restoreNote(deletedNote)) {
                   toast.success('Note restored');
                 } else {
-                  toast.error('Could not restore note');
+                  toast.error("Couldn't restore the note.");
                 }
               }}
               className="px-2 py-1 text-sm font-medium rounded transition-colors"
@@ -365,7 +377,7 @@ export function DemoPage({
             </button>
           </div>
         ),
-        { duration: 5000 }
+        { duration: UNDO_TOAST_MS }
       );
       return true;
     },
@@ -393,7 +405,7 @@ export function DemoPage({
   // returning to /demo. Focus the input directly, as App.tsx does; the token stays for
   // the editor-to-library request, which is what it was built for.
   useAppShortcuts({
-    enabled: !showTagModal && !showShortcutsModal && !shouldShowPrompt && !isAuthModalOpen,
+    enabled: !showTagModal && !showShortcutsModal && !isInvitationOpen && !isAuthModalOpen,
     view,
     onNewNote: () => { void handleNewNote(); },
     onFocusSearch: () => scheduleSearchFocus(DEMO_SEARCH_INPUT_ID),
@@ -488,11 +500,14 @@ export function DemoPage({
       )}
 
       {/* Invitation Modal */}
-      {shouldShowPrompt && (
+      {isInvitationOpen && (
         <InvitationModal
           noteCount={noteCount}
-          onSignUp={onSignUp}
-          onDismiss={dismissPrompt}
+          onSignUp={() => {
+            setIsInvitationOpen(false);
+            onSignUp();
+          }}
+          onDismiss={() => setIsInvitationOpen(false)}
         />
       )}
 
@@ -582,15 +597,6 @@ export function DemoPage({
           className="w-full flex-1 flex flex-col relative"
           style={{ maxWidth: '1400px', margin: '0 auto' }}
         >
-        {/* Ambient warmth — subtle radial glow unique to practice space */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: 'radial-gradient(ellipse 60% 40% at 50% 20%, var(--color-accent-glow), transparent 70%)',
-            opacity: 0.4,
-          }}
-        />
-
         {/* Tag Filter Bar */}
         <TagFilterBar
           tags={tags}
@@ -600,6 +606,22 @@ export function DemoPage({
           onAddTag={handleAddTag}
           onEditTag={handleEditTag}
         />
+
+        {/* Phones: the header has no room for the sign-up link, and the ribbon that
+            carries it can be dismissed. Then the link sits here instead. */}
+        {hasPracticeWorkToKeep && !shouldShowRibbon && (
+          <div className="sm:hidden px-4 pt-2 text-center">
+            <button
+              type="button"
+              onClick={onSignUp}
+              data-testid="demo-keep-cta-phone"
+              className="text-sm font-medium underline decoration-1 underline-offset-4 decoration-[var(--color-accent-muted)] rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              style={{ background: 'none', border: 'none', color: 'var(--color-accent-text)', fontFamily: 'var(--font-body)' }}
+            >
+              Create an account to keep your notes
+            </button>
+          </div>
+        )}
 
         {/* First-run welcome — disappears once user creates a note */}
         {hasOnlyStarterNotes && (
@@ -625,8 +647,7 @@ export function DemoPage({
               className="text-sm mt-1.5"
               style={{
                 fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-primary)',
-                opacity: 0.6,
+                color: 'var(--color-text-secondary)',
               }}
             >
               These starter notes are yours to edit, delete, or ignore
@@ -733,7 +754,7 @@ function DemoHeader({
         >
           <Logo onClick={onHomeClick} />
           <span
-            className="hidden sm:inline text-base italic"
+            className="hidden sm:inline text-base"
             style={{
               fontFamily: 'var(--font-display)',
               color: 'var(--color-accent-text)',
@@ -746,19 +767,14 @@ function DemoHeader({
       }
       center={
         <div className="flex items-center w-full sm:justify-center">
-          <div
-            className="flex-1 sm:max-w-[420px] relative transition-all duration-300"
-            style={{
-              transform: isSearchFocused ? 'scale(1.02)' : 'scale(1)',
-            }}
-          >
+          <div className="flex-1 sm:max-w-[420px] relative">
             <div
               className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-full transition-all duration-300"
               style={{
                 background: 'var(--color-bg-secondary)',
                 border: isSearchFocused
                   ? '1px solid var(--color-accent)'
-                  : '1px solid var(--glass-border)',
+                  : '1px solid var(--color-input-border)',
               }}
             >
               <svg
@@ -828,13 +844,17 @@ function DemoHeader({
         <div className="flex items-center gap-2">
         {showKeepCta && (
           // Accent as text, not a CTA: "New note" stays the one filled button
-          // (DESIGN.md, Button and accent taxonomy).
+          // (DESIGN.md, Button and accent taxonomy). Hidden on phones: "Create an
+          // account" does not fit beside Sign in there. The ribbon carries it, or the
+          // line under the tag row once the ribbon is dismissed.
           <button
             type="button"
             onClick={onKeep}
-            aria-label="Keep these notes"
+            aria-label="Create an account to keep your notes"
+            data-testid="demo-keep-cta"
             className="
-              px-1.5 sm:px-2 py-2
+              hidden sm:inline-block
+              px-2 py-2
               shrink-0
               text-sm font-medium whitespace-nowrap
               underline decoration-1 underline-offset-4
@@ -853,9 +873,7 @@ function DemoHeader({
               fontFamily: 'var(--font-body)',
             }}
           >
-            {/* "Keep" on a phone, so Sign in still fits beside it. */}
-            <span className="sm:hidden">Keep</span>
-            <span className="hidden sm:inline">Keep these notes</span>
+            Create an account
           </button>
         )}
         <button type="button"

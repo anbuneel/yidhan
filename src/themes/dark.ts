@@ -24,6 +24,7 @@ const dark: ThemeConfig = {
     textNote: '#D3D2CA',
     textSecondary: '#B9BFB8',
     textTertiary: '#9AA69F',
+    textPlaceholder: '#9AA69F',
     noteWeight: '430',
 
     accent: '#8FC79A',

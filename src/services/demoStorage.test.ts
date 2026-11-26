@@ -43,6 +43,30 @@ describe('starter copy correction (item 152)', () => {
     expect(content).toContain('not encrypted');
   });
 
+  it('replaces the "Sign up" wording in an untouched starter', () => {
+    const signUpWording = `<p>This is the Practice Space. Write, edit and tag notes to see how it works.</p>
+<p>Notes here are saved in this browser and are not encrypted. Sign up to encrypt and sync them.</p>`;
+    seedState((state) => {
+      welcomeNote(state).content = signUpWording;
+    });
+
+    const state = getDemoState();
+    expect(welcomeNote(state).content).toContain('Create an account');
+    expect(welcomeNote(state).content).not.toContain('Sign up');
+    // Corrected, so it is still an untouched starter and not practice work.
+    expect(hasDemoState()).toBe(false);
+  });
+
+  it('leaves an edited copy of the "Sign up" wording alone', () => {
+    const edited = `<p>Notes here are saved in this browser and are not encrypted. Sign up to encrypt and sync them.</p>
+<p>Mine.</p>`;
+    seedState((state) => {
+      welcomeNote(state).content = edited;
+    });
+
+    expect(welcomeNote(getDemoState()).content).toBe(edited);
+  });
+
   it('persists the correction, so it happens once rather than on every read', () => {
     seedState((state) => {
       welcomeNote(state).content = OLD_WELCOME_CONTENT;

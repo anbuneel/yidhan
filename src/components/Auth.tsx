@@ -17,7 +17,7 @@ const AUTH_TITLES: Record<AuthMode, string> = {
 
 const AUTH_BUTTON_TEXTS: Record<AuthMode, string> = {
   login: 'Sign in',
-  signup: 'Sign up',
+  signup: 'Create an account',
   forgot: 'Send reset link',
   reset: 'Update password',
 };

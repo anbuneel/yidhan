@@ -26,7 +26,7 @@ function handleStatusChange(isOnline: boolean) {
   currentOnlineStatus = isOnline;
 
   if (isOnline && wasOffline) {
-    toast('The path has cleared.', {
+    toast('Back online.', {
       icon: '〇',
       duration: 3000,
       style: {
@@ -38,7 +38,7 @@ function handleStatusChange(isOnline: boolean) {
     // Trigger all reconnect callbacks (for sync engine)
     reconnectCallbacks.forEach((cb) => cb());
   } else if (!isOnline && previousStatus) {
-    toast('Offline. Your notes are safe locally.', {
+    toast('Offline. Your notes are saved on this device.', {
       icon: '雲',
       duration: 4000,
       style: {

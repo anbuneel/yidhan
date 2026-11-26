@@ -60,7 +60,7 @@ export const STARTER_NOTES: DemoNote[] = [
     localId: 'starter-welcome',
     title: 'Welcome to Yidhan',
     content: `<p>This is the Practice Space. Write, edit and tag notes to see how it works.</p>
-<p>Notes here are saved in this browser and are not encrypted. Sign up to encrypt and sync them.</p>`,
+<p>Notes here are saved in this browser and are not encrypted. Create an account to encrypt and sync them.</p>`,
     pinned: true,
     tagIds: [],
     createdAt: Date.now(),

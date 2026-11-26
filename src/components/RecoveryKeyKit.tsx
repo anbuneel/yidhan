@@ -53,7 +53,7 @@ function errorMessage(err: unknown): string {
     return 'You already have a recovery key, made on another device. You can replace it in Settings, under Security.';
   }
   if (code === 'changed') {
-    return 'Your vault changed on another device. Unlock again, then make a new recovery key.';
+    return 'Your recovery key or encryption key was changed on another device. Unlock again, then make a new recovery key.';
   }
   return 'The recovery key didn’t save. Try again.';
 }

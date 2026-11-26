@@ -16,6 +16,8 @@ export interface ThemeColors {
   textPrimary: string;
   textSecondary: string;
   textTertiary: string;
+  /** Input placeholders. 4.5:1 on every surface an input sits on. */
+  textPlaceholder: string;
   /** Running note text: the editor body and card previews. */
   textNote: string;
   /** Font weight of note text. Light text on a dark page needs a little more. */
@@ -88,6 +90,7 @@ function themeToCssVariables(theme: ThemeColors): Record<string, string> {
     '--color-text-primary': theme.textPrimary,
     '--color-text-secondary': theme.textSecondary,
     '--color-text-tertiary': theme.textTertiary,
+    '--color-text-placeholder': theme.textPlaceholder,
     '--color-text-note': theme.textNote,
     '--note-weight': theme.noteWeight,
     '--color-accent': theme.accent,

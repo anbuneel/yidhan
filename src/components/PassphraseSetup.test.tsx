@@ -128,7 +128,8 @@ describe('PassphraseSetup — step 1, passphrase', () => {
     expect(words).toHaveLength(6);
     for (const word of words) expect(PASSPHRASE_WORDS).toContain(word);
     expect(validatePassphrasePolicy(suggested)).toBeNull();
-    expect(screen.getByText(/about 65 bits of entropy/)).toBeInTheDocument();
+    expect(screen.getByText(/6 words, very hard to\s+guess/)).toBeInTheDocument();
+    expect(screen.queryByText(/entropy/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled();
   });
 
@@ -336,7 +337,7 @@ describe('PassphraseSetup — step 3, done', () => {
 
     expect(await screen.findByRole('heading', { name: 'Your notes are ready' })).toBeInTheDocument();
     expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
-    expect(screen.getByText(/Devices already open\s+keep working; the next time one asks for your passphrase, enter the new one/)).toBeInTheDocument();
+    expect(screen.getByText(/If you forget it, use your recovery\s+key to choose a new one\. A few starter notes are waiting\./)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
     await waitFor(() => expect(mockCreateEncryptedNote).toHaveBeenCalledTimes(2));
     expect(mockCreateEncryptedNote).toHaveBeenCalledWith('user-setup-1', 'Welcome to Yidhan', expect.any(String), KEYS, true);

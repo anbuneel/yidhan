@@ -15,6 +15,7 @@
   --color-text-primary: #14241C;
   --color-text-secondary: #46544C;
   --color-text-tertiary: #5A665F;
+  --color-text-placeholder: #5A665F;
   --color-text-note: #22332A;
   --note-weight: 400;
   --color-accent: #357A45;
@@ -55,6 +56,7 @@
   --color-text-primary: #E6E3DC;
   --color-text-secondary: #B9BFB8;
   --color-text-tertiary: #9AA69F;
+  --color-text-placeholder: #9AA69F;
   --color-text-note: #D3D2CA;
   --note-weight: 430;
   --color-accent: #8FC79A;
@@ -86,6 +88,13 @@
   --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.05'/%3E%3C/svg%3E");
 }
 /* THEME-END */
+
+/* Input placeholders. The browser default is a grey that can fall below 4.5:1, and some
+   browsers also lower its opacity. The token passes in every theme (contrast.test.ts). */
+::placeholder {
+  color: var(--color-text-placeholder);
+  opacity: 1;
+}
 
 /* Logo (src/components/Logo.tsx). The page shows through the gap and the lines, so only
    the leaf takes a theme colour; the sun is a fixed marigold. The leaf is the theme's
@@ -1463,6 +1472,7 @@ nav,
   font-weight: var(--note-weight);
   color: var(--color-text-note);
   margin: 0 0 1.1em;
+  text-wrap: pretty;
 }
 .landing-samples {
   list-style: none;

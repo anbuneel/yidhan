@@ -120,8 +120,8 @@ export function BackupPassphraseModal({
           style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)' }}
         >
           {isCreating
-            ? 'Your backup is encrypted with this passphrase before it leaves the app. It is separate from your vault passphrase on purpose, so the backup keeps opening even if you change or rotate that one. We cannot recover it — if you lose it, the backup cannot be opened.'
-            : 'Enter the passphrase you chose when this backup was made. It is not your vault passphrase.'}
+            ? 'Your backup is encrypted with this passphrase before it leaves the app. It is separate from your account passphrase on purpose, so the backup keeps opening even if you change or rotate that one. We cannot recover it — if you lose it, the backup cannot be opened.'
+            : 'Enter the passphrase you chose when this backup was made. It is not your account passphrase.'}
         </p>
 
         <label

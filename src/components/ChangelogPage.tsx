@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { changelog, type ChangeType } from '../data/changelog';
+import { formatDayVersions, groupChangelogByDay } from '../utils/changelogDays';
 import { HeaderShell } from './HeaderShell';
 import { Footer } from './Footer';
 import type { Theme } from '../types';
@@ -33,14 +34,17 @@ function formatDate(dateString: string): string {
   if (isNaN(date.getTime())) {
     return dateString;
   }
+  // Dates are calendar days ("2026-11-25"), which Date parses as the start of the day
+  // in UTC. Format them in UTC too, or a reader west of UTC sees the day before.
   return date.toLocaleDateString('en-US', {
-    month: 'short',
+    month: 'long',
     day: 'numeric',
     year: 'numeric',
+    timeZone: 'UTC',
   });
 }
 
-/** Number of recent entries that get full visual treatment */
+/** Number of recent days that get full visual treatment */
 const FULL_ENTRIES = 3;
 
 /**
@@ -124,7 +128,7 @@ export function ChangelogPage({
               fontStyle: 'italic',
             }}
           >
-            What we remember.
+            Every release, newest first.
           </p>
 
           {/* Changelog entries with left-margin thread */}
@@ -136,12 +140,12 @@ export function ChangelogPage({
               marginLeft: '8px',
             }}
           >
-            {changelog.map((entry, index) => {
+            {groupChangelogByDay(changelog).map((day, index) => {
               const isRecent = index < FULL_ENTRIES;
 
               return (
                 <article
-                  key={entry.version}
+                  key={day.date}
                   ref={observe}
                   className="changelog-item transition-all duration-500"
                   style={{
@@ -153,11 +157,10 @@ export function ChangelogPage({
                     border: '1px solid var(--glass-border)',
                     borderRadius: 'var(--radius-plain)',
                     boxShadow: isRecent ? 'var(--shadow-sm)' : 'none',
-                    opacity: isRecent ? 1 : 0.85,
                   }}
                 >
-                  {/* Version header */}
-                  <div className={`flex items-baseline gap-3 ${isRecent ? 'mb-5' : 'mb-3'}`}>
+                  {/* Day header: the date, with the day's versions in small text */}
+                  <div className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 ${isRecent ? 'mb-5' : 'mb-3'}`}>
                     <h2
                       style={{
                         fontFamily: 'var(--font-display)',
@@ -166,9 +169,10 @@ export function ChangelogPage({
                         color: 'var(--color-text-primary)',
                       }}
                     >
-                      {entry.version}
+                      <time dateTime={day.date}>{formatDate(day.date)}</time>
                     </h2>
                     <span
+                      data-testid="changelog-versions"
                       style={{
                         fontFamily: 'var(--font-body)',
                         fontSize: '0.75rem',
@@ -176,15 +180,15 @@ export function ChangelogPage({
                         fontWeight: 400,
                       }}
                     >
-                      {formatDate(entry.date)}
+                      {formatDayVersions(day.versions)}
                     </span>
                   </div>
 
                   {/* Changes list */}
                   <ul className={isRecent ? 'space-y-3' : 'space-y-1.5'}>
-                    {entry.changes.map((change) => (
+                    {day.changes.map((change, changeIndex) => (
                       <li
-                        key={`${entry.version}-${change.type}-${change.text.slice(0, 30)}`}
+                        key={`${changeIndex}-${change.type}-${change.text.slice(0, 30)}`}
                         className="flex items-start gap-3"
                         style={{
                           fontFamily: 'var(--font-body)',

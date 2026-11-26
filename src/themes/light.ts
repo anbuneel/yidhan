@@ -24,6 +24,7 @@ const light: ThemeConfig = {
     textNote: '#22332A',
     textSecondary: '#46544C',
     textTertiary: '#5A665F',
+    textPlaceholder: '#5A665F',
     noteWeight: '400',
 
     accent: '#357A45',

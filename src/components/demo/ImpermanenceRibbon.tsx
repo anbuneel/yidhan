@@ -88,7 +88,7 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
                 e.currentTarget.style.borderBottomStyle = 'dotted';
               }}
             >
-              Sign up to keep them
+              Create an account to keep your notes
             </button>
           </span>
         </span>
@@ -106,7 +106,7 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
             borderBottom: '1px dotted var(--color-accent)',
           }}
         >
-          Keep them
+          Create an account
         </button>
 
         {/* Dismiss button */}

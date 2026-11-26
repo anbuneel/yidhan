@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { SecurityPage } from './SecurityPage';
 import { PrivacyPage } from './PrivacyPage';
 import { TermsPage } from './TermsPage';
+import { GENERATED_PASSPHRASE_BITS, GENERATED_PASSPHRASE_WORDS } from '../lib/passphraseGenerator';
+import { PASSPHRASE_WORDS } from '../data/passphraseWords';
 
 const nav = {
   theme: 'dark' as const,
@@ -23,6 +25,17 @@ describe('SecurityPage', () => {
    * that quietly loses the "what is visible even so" section becomes marketing, and
    * nothing else in the test suite would notice.
    */
+  // The page hardcodes these so the public shell does not load the word list.
+  it('states the generated passphrase strength the generator really has', () => {
+    render(<SecurityPage {...nav} />);
+    const count = PASSPHRASE_WORDS.length.toLocaleString('en-US');
+    expect(
+      screen.getByText(
+        new RegExp(`${GENERATED_PASSPHRASE_WORDS} words picked at\\s+random on your device from a list of ${count}, which is about ${GENERATED_PASSPHRASE_BITS} bits`)
+      )
+    ).toBeInTheDocument();
+  });
+
   it('names the metadata that stays visible', () => {
     render(<SecurityPage {...nav} />);
 

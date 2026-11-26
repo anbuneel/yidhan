@@ -56,7 +56,7 @@ export function FadedNotesView({
         border: '1px solid var(--color-destructive)',
       }}
     >
-      Release all
+      Delete all
     </button>
   ) : undefined;
 
@@ -96,7 +96,7 @@ export function FadedNotesView({
             fontSize: '0.875rem',
           }}
         >
-          Notes rest here before releasing.
+          Deleted notes stay here for 30 days. Restore one to move it back to your library.
         </p>
       </div>
 
@@ -144,7 +144,7 @@ export function FadedNotesView({
                 color: 'var(--color-text-secondary)',
               }}
             >
-              Nothing fading away
+              No faded notes
             </p>
             <p
               className="text-sm"
@@ -153,7 +153,7 @@ export function FadedNotesView({
                 color: 'var(--color-text-tertiary)',
               }}
             >
-              All your notes are still with you in the library
+              Notes you delete stay here for 30 days.
             </p>
           </div>
         </div>
@@ -194,7 +194,7 @@ export function FadedNotesView({
           "
         >
           <ModalBackdropButton
-            label="Cancel releasing all notes"
+            label="Cancel deleting all faded notes"
             onClick={() => setShowEmptyConfirm(false)}
           />
           <dialog
@@ -225,7 +225,7 @@ export function FadedNotesView({
                 color: 'var(--color-text-primary)',
               }}
             >
-              Release all notes?
+              Delete all faded notes?
             </h3>
             <p
               className="text-sm mb-6"
@@ -234,7 +234,7 @@ export function FadedNotesView({
                 color: 'var(--color-text-secondary)',
               }}
             >
-              {notes.length} note{notes.length === 1 ? '' : 's'} will be gone. This is a gentle goodbye.
+              {notes.length} note{notes.length === 1 ? '' : 's'} will be deleted. This can't be undone.
             </p>
             <div className="flex justify-center gap-3">
               <button type="button"
@@ -252,7 +252,7 @@ export function FadedNotesView({
                   border: '1px solid var(--glass-border)',
                 }}
               >
-                Keep resting
+                Cancel
               </button>
               <button type="button"
                 onClick={handleEmptyAll}
@@ -268,7 +268,7 @@ export function FadedNotesView({
                   background: 'var(--color-destructive)',
                 }}
               >
-                Release all
+                Delete all
               </button>
             </div>
           </dialog>

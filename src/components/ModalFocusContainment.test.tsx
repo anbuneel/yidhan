@@ -349,7 +349,7 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     );
 
     render(<InvitationModal noteCount={3} onSignUp={vi.fn()} onDismiss={vi.fn()} />);
-    const cta = screen.getByRole('button', { name: 'Keep my thoughts' });
+    const cta = screen.getByRole('button', { name: 'Create an account' });
     expect(cta.className).toContain('rounded-[var(--radius-pill)]');
   });
 
@@ -564,7 +564,7 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     ));
   });
 
-  it('FadedNotesView release-all confirmation dialog holds focus and returns focus to opener', async () => {
+  it('FadedNotesView delete-all confirmation dialog holds focus and returns focus to opener', async () => {
     const note = createMockNote({ deletedAt: new Date() });
     render(
       <FadedNotesView
@@ -579,13 +579,13 @@ describe('Modal focus containment across every modal kind (B2)', () => {
       />
     );
 
-    const releaseAllBtn = screen.getByRole('button', { name: 'Release all' });
-    releaseAllBtn.focus();
-    fireEvent.click(releaseAllBtn);
+    const deleteAllBtn = screen.getByRole('button', { name: 'Delete all' });
+    deleteAllBtn.focus();
+    fireEvent.click(deleteAllBtn);
 
     const dialog = screen.getByRole('dialog');
     expect(dialog.contains(document.activeElement)).toBe(true);
-    expect(releaseAllBtn.closest('[inert]')).not.toBeNull();
+    expect(deleteAllBtn.closest('[inert]')).not.toBeNull();
 
     const focusable = getFocusableIn(dialog);
     focusable[focusable.length - 1].focus();
@@ -594,7 +594,7 @@ describe('Modal focus containment across every modal kind (B2)', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(document.activeElement).toBe(releaseAllBtn);
+    expect(document.activeElement).toBe(deleteAllBtn);
   });
 
   it('WelcomeBackPrompt holds focus and marks background inert without Escape dismissal', () => {
@@ -738,14 +738,14 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     fireEvent.click(letGoTrigger);
 
     // ReAuthModal is now topmost; LettingGoModal behind it is inert.
-    const reauthDialog = screen.getByRole('dialog', { name: 'A moment of verification' });
+    const reauthDialog = screen.getByRole('dialog', { name: "Confirm it's you" });
     expect(reauthDialog.contains(document.activeElement)).toBe(true);
     expect(letGoTrigger.closest('[inert]')).not.toBeNull();
 
     // Escape closes ONLY ReAuthModal, un-inerts LettingGoModal, and returns focus to "Let go".
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.queryByRole('dialog', { name: 'A moment of verification' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: "Confirm it's you" })).toBeNull();
     expect(letGoTrigger.closest('[inert]')).toBeNull();
     expect(document.activeElement).toBe(letGoTrigger);
     // Page behind LettingGoModal stays inert.
@@ -901,14 +901,14 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     fireEvent.click(openA);
 
     // Open B from inside A.
-    const openBFromA = screen.getByRole('button', { name: 'Keep my thoughts' });
+    const openBFromA = screen.getByRole('button', { name: 'Create an account' });
     openBFromA.focus();
     fireEvent.click(openBFromA);
 
     // Close A FIRST while B is still open.
     fireEvent.click(screen.getByRole('button', { name: 'Stay' }));
-    expect(screen.queryByText('These words are yours')).toBeNull();
-    expect(screen.getByRole('dialog', { name: 'A gentle pause' })).toBeInTheDocument();
+    expect(screen.queryByText('Keep your notes')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Still there?' })).toBeInTheDocument();
 
     // Now close B: A's button is unmounted, so B falls back to A's original page opener.
     fireEvent.click(screen.getByRole('button', { name: 'Sign out now' }));

@@ -35,7 +35,7 @@ export const roadmap: RoadmapItem[] = [
   {
     id: '6',
     title: 'Public garden',
-    description: 'Toggle notes as public to create a minimal blog at your own URL. No analytics, no comments — just your words, quietly visible.',
+    description: 'Toggle notes as public to create a minimal blog at your own URL. No analytics and no comments.',
     status: 'exploring',
   },
   {
