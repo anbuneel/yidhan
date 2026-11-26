@@ -23,10 +23,15 @@ export const TIMEOUT_OPTIONS: TimeoutOption[] = [
 ];
 
 /** Default timeout: 1 week */
-export const DEFAULT_TIMEOUT_MINUTES = 10080;
+const DEFAULT_TIMEOUT_MINUTES = 10080;
 
 /** "Never" lasts 90 days, then falls back to the default. */
-const NEVER_TTL_DAYS = 90;
+const NEVER_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+
+/** When a "Never" chosen at neverSince ends. */
+export function neverEndsAt(neverSince: string): Date {
+  return new Date(new Date(neverSince).getTime() + NEVER_TTL_MS);
+}
 
 /**
  * Storage key suffixes (prefixed with userId).
@@ -57,7 +62,7 @@ const isNeverExpired = (neverSince: string | null): boolean => {
   const since = new Date(neverSince).getTime();
   const now = Date.now();
   if (Number.isNaN(since) || since > now + CLOCK_SKEW_MS) return true;
-  return now > since + NEVER_TTL_DAYS * 24 * 60 * 60 * 1000;
+  return now > since + NEVER_TTL_MS;
 };
 
 /** Only the listed options are enforced. Anything else stored falls back to the default. */
@@ -65,12 +70,12 @@ const ALLOWED_FINITE_TIMEOUTS = new Set(
   TIMEOUT_OPTIONS.flatMap((option) => (option.value === null ? [] : [option.value]))
 );
 
-/** True when this user has stored a session timeout on this browser. Fails closed to true. */
+/** True when this user has a session timeout stored on this browser. Unreadable storage counts as none. */
 export function hasStoredSessionTimeout(userId: string): boolean {
   try {
     return localStorage.getItem(getStorageKey(userId, STORAGE_KEYS.timeout)) !== null;
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -250,17 +255,24 @@ export function useSessionSettings(userId: string | null): UseSessionSettingsRes
         localStorage.setItem(neverSinceKey, neverSince as string);
         localStorage.setItem(timeoutKey, 'null');
       } else {
-        // The timeout goes first: a failed write leaves the old choice whole.
         localStorage.setItem(timeoutKey, String(minutes));
-        localStorage.removeItem(neverChosenKey);
-        localStorage.removeItem(neverSinceKey);
       }
     } catch (err) {
       console.warn('[useSessionSettings] Failed to store session timeout:', err);
       return false;
     }
 
+    // The new timeout is stored, so it applies now. A leftover Never record next to a
+    // finite timeout does nothing, and the next load removes it.
     setSettings({ timeoutMinutes: minutes, neverSince });
+    if (minutes !== null) {
+      try {
+        localStorage.removeItem(neverChosenKey);
+        localStorage.removeItem(neverSinceKey);
+      } catch (err) {
+        console.warn('[useSessionSettings] Failed to clear the Never record:', err);
+      }
+    }
     return true;
   }, [userId]);
 

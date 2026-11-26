@@ -217,10 +217,29 @@ describe('applySecurityPreset', () => {
       let outcome: ReturnType<typeof applySecurityPreset> | undefined;
       act(() => { outcome = applySecurityPreset('shared', targets(result)); });
 
-      // The timeout cannot be stored, so the caller is told; the vault side applies in memory.
-      expect(outcome).toEqual({ ok: false, failed: 'timeout' });
+      // Nothing could be stored, so the caller is told; the vault side applies in memory.
+      expect(outcome).toEqual({ ok: false, failed: 'partial' });
       expect(result.current.vault.settings.rememberBrowser).toBe(false);
       expect(result.current.vault.settings.autoLockMinutes).toBe(15);
+    });
+
+    it('reports a partial save when only the auto-lock write fails', () => {
+      localStorage.setItem(key('vault-auto-lock-minutes'), '0');
+      const { result } = renderSettings();
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const real = vi.mocked(localStorage.setItem).getMockImplementation();
+      vi.mocked(localStorage.setItem).mockImplementation((k: string, v: string) => {
+        if (k === key('vault-auto-lock-minutes')) throw new DOMException('full', 'QuotaExceededError');
+        real?.(k, v);
+      });
+
+      let outcome: ReturnType<typeof applySecurityPreset> | undefined;
+      act(() => { outcome = applySecurityPreset('shared', targets(result)); });
+
+      expect(outcome).toEqual({ ok: false, failed: 'partial' });
+      // The rest still lands, and the stricter lock applies for this session.
+      expect(result.current.vault.settings.autoLockMinutes).toBe(15);
+      expect(localStorage.getItem(key('session-timeout'))).toBe('60');
     });
   });
 });

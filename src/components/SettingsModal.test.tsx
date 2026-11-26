@@ -44,7 +44,7 @@ function makeSettings(vault: VaultState, timeoutMinutes: number | null, neverSin
   };
   vaultSettings = {
     settings: vault,
-    setAutoLockMinutes: vi.fn(),
+    setAutoLockMinutes: vi.fn(() => true),
     setRememberBrowser: vi.fn(() => true),
   };
 }
@@ -192,7 +192,7 @@ describe('SettingsModal Security tab', () => {
 
     expect(vaultSettings.setAutoLockMinutes).not.toHaveBeenCalled();
     expect(sessionSettings.setTimeoutMinutes).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent('Could not remember this browser, so nothing was changed.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not remember this browser, so the other settings were not changed.');
   });
 
   it('keeps the individual controls behind Details', () => {

@@ -35,7 +35,9 @@ idle. My device is 1 hour, not remembered, 1 week. Stay unlocked is auto-lock of
 remembered, 1 week. A preset is only a name for a combination of the existing stored
 settings, so nothing new is stored; when the stored values match no preset the tab
 shows Custom. The individual controls sit under Details. New accounts start on My
-device; existing accounts keep their values and usually show Custom. The trusted-device
+device, on the browser where they finish setup; the settings are per browser, so a new
+account's second device starts on the old defaults and shows Custom, like an existing
+account. Existing accounts keep their values and usually show Custom. The trusted-device
 switch and the "Keep me signed in" login checkbox, whose only effect was to set it, are
 removed. Never is offered to everyone and lasts 90 days from when it was chosen, read
 from the same storage keys trust used, so an account on Never keeps its end date.

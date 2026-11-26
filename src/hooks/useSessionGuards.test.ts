@@ -78,6 +78,24 @@ describe('useSessionGuards new-account default', () => {
     expect(localStorage.getItem(key('vault-auto-lock-minutes'))).toBe('15');
   });
 
+  it('still tightens auto-lock in memory when storage cannot be read', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const realGet = vi.mocked(localStorage.getItem).getMockImplementation();
+    const realSet = vi.mocked(localStorage.setItem).getMockImplementation();
+    const blocked = () => { throw new DOMException('blocked', 'SecurityError'); };
+    vi.mocked(localStorage.getItem).mockImplementation(blocked);
+    vi.mocked(localStorage.setItem).mockImplementation(blocked);
+    try {
+      const { result } = render({ isAccountSetup: true });
+
+      expect(result.current.vaultSettings.settings.autoLockMinutes).toBe(60);
+      expect(result.current.vaultSettings.settings.rememberBrowser).toBe(false);
+    } finally {
+      if (realGet) vi.mocked(localStorage.getItem).mockImplementation(realGet);
+      if (realSet) vi.mocked(localStorage.setItem).mockImplementation(realSet);
+    }
+  });
+
   it('does nothing while signed out', () => {
     render({ userId: undefined, isAccountSetup: true });
 

@@ -5,7 +5,7 @@ import { RecoveryKeySettings } from './RecoveryKeySettings';
 import { EditorSettings } from './EditorSettings';
 import { ACCOUNT_OFFBOARDING_ENABLED } from '../config/featureFlags';
 import { readRecoveryWrap, readVaultMetadata } from '../lib/vaultMetadata';
-import { TIMEOUT_OPTIONS, type UseSessionSettingsResult } from '../hooks/useSessionSettings';
+import { neverEndsAt, TIMEOUT_OPTIONS, type UseSessionSettingsResult } from '../hooks/useSessionSettings';
 import {
   applySecurityPreset,
   presetForSettings,
@@ -131,16 +131,14 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
     if (!result.ok) {
       setSecurityMessage({
         text: result.failed === 'remember-browser'
-          ? 'Could not remember this browser, so nothing was changed. Check available storage or browser privacy settings and try again.'
-          : 'Could not save this choice. Check available storage or browser privacy settings and try again.',
+          ? 'Could not remember this browser, so the other settings were not changed. Check available storage or browser privacy settings and try again.'
+          : 'This choice applies now, but part of it could not be saved and may not last after you reload. Check available storage or browser privacy settings.',
       });
     }
   }
 
   const neverSince = sessionSettings.settings.timeoutMinutes === null ? sessionSettings.settings.neverSince : null;
-  const neverEndsOn = neverSince
-    ? new Date(new Date(neverSince).getTime() + 90 * 24 * 60 * 60 * 1000).toLocaleDateString()
-    : null;
+  const neverEndsOn = neverSince ? neverEndsAt(neverSince).toLocaleDateString() : null;
 
   const selectStyle = {
     background: 'var(--color-bg-secondary)',
@@ -796,7 +794,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                               const parsed = parseInt(e.target.value, 10);
                               if (parsed === 0 || parsed === 15 || parsed === 60) {
                                 setSecurityMessage(null);
-                                vaultSettings.setAutoLockMinutes(parsed);
+                                if (!vaultSettings.setAutoLockMinutes(parsed)) {
+                                  setSecurityMessage({ text: 'This applies now, but could not be saved and may not last after you reload. Check available storage or browser privacy settings.' });
+                                }
                               }
                             }}
                             className="w-full px-4 py-2 rounded-lg outline-none transition-all duration-200 cursor-pointer"

@@ -38,7 +38,9 @@ export const SECURITY_PRESETS: readonly SecurityPreset[] = [
   {
     id: 'shared',
     label: 'Shared device',
-    description: 'Locks after 15 minutes idle. Signs you out after 1 hour idle. Nothing stays after you close the tab.',
+    // Closing the tab locks the notes but does not sign out: the sign-in session stays
+    // in the browser, and the sign-out timer only runs while the app is open.
+    description: 'Locks after 15 minutes idle. Signs you out after 1 hour idle while Yidhan is open. Sign out before you leave the device.',
     settings: { autoLockMinutes: 15, rememberBrowser: false, timeoutMinutes: 60 },
   },
   {
@@ -58,7 +60,7 @@ export const SECURITY_PRESETS: readonly SecurityPreset[] = [
 /** The preset new accounts start on. */
 export const DEFAULT_SECURITY_PRESET: SecurityPresetId = 'personal';
 
-export function getSecurityPreset(id: SecurityPresetId): SecurityPreset {
+function getSecurityPreset(id: SecurityPresetId): SecurityPreset {
   const preset = SECURITY_PRESETS.find((p) => p.id === id);
   if (!preset) throw new Error(`Unknown security preset: ${id}`);
   return preset;
@@ -80,7 +82,8 @@ export function settingsForPreset(id: SecurityPresetId): DeviceSecuritySettings 
 }
 
 export interface SecurityPresetTargets {
-  setAutoLockMinutes: (minutes: AutoLockMinutes) => void;
+  /** Returns false when the choice could not be stored. */
+  setAutoLockMinutes: (minutes: AutoLockMinutes) => boolean;
   /** Returns false when the choice could not be stored. Must fail closed. */
   setRememberBrowser: (enabled: boolean, options?: { persistKeys?: () => boolean }) => boolean;
   /** Returns false when the choice could not be stored. */
@@ -91,13 +94,19 @@ export interface SecurityPresetTargets {
 
 export type ApplyPresetResult =
   | { ok: true }
-  | { ok: false; failed: 'remember-browser' | 'timeout' };
+  /** "Remember this browser" could not be turned on. Nothing else was changed. */
+  | { ok: false; failed: 'remember-browser' }
+  /** The preset applies now, but part of it was not stored and may not survive a reload. */
+  | { ok: false; failed: 'partial' };
 
 /**
  * Apply a preset. "Remember this browser" goes first: when it cannot be turned on
  * (localStorage blocked or full), nothing else changes, so the reader is never left
- * on a looser auto-lock with nothing remembered. Turning it off always lands, because
- * `setRememberBrowser(false)` drops the setting in memory even when storage fails.
+ * on a looser auto-lock with nothing remembered. Turning it off always lands in
+ * memory, because setRememberBrowser(false) drops it even when storage fails.
+ *
+ * After that every write runs even when one fails, so the reader gets as much of the
+ * preset as possible, and the result says when any of it was not stored.
  */
 export function applySecurityPreset(id: SecurityPresetId, targets: SecurityPresetTargets): ApplyPresetResult {
   const next = settingsForPreset(id);
@@ -109,9 +118,7 @@ export function applySecurityPreset(id: SecurityPresetId, targets: SecurityPrese
     return { ok: false, failed: 'remember-browser' };
   }
 
-  targets.setAutoLockMinutes(next.autoLockMinutes);
-  if (!targets.setTimeoutMinutes(next.timeoutMinutes)) {
-    return { ok: false, failed: 'timeout' };
-  }
-  return { ok: true };
+  const autoLockStored = targets.setAutoLockMinutes(next.autoLockMinutes);
+  const timeoutStored = targets.setTimeoutMinutes(next.timeoutMinutes);
+  return remembered && autoLockStored && timeoutStored ? { ok: true } : { ok: false, failed: 'partial' };
 }

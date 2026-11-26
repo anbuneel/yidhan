@@ -385,11 +385,36 @@ describe('hasStoredSessionTimeout', () => {
     expect(hasStoredSessionTimeout(USER_ID)).toBe(true);
   });
 
-  it('fails closed to true when storage cannot be read', () => {
-    const getItem = vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
+  it('counts unreadable storage as nothing stored', () => {
+    vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
       throw new DOMException('blocked', 'SecurityError');
     });
-    expect(hasStoredSessionTimeout(USER_ID)).toBe(true);
-    getItem.mockRestore();
+    expect(hasStoredSessionTimeout(USER_ID)).toBe(false);
+  });
+});
+
+describe('setTimeoutMinutes when the Never record cannot be cleared', () => {
+  it('still applies the stored finite timeout, and the next load cleans up', () => {
+    storeNeverRecord();
+    localStorage.setItem(key('session-timeout'), 'null');
+    const { result, unmount } = renderHook(() => useSessionSettings(USER_ID));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const realRemove = vi.mocked(localStorage.removeItem).getMockImplementation();
+    vi.mocked(localStorage.removeItem).mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError');
+    });
+
+    let ok = false;
+    act(() => { ok = result.current.setTimeoutMinutes(60); });
+
+    expect(ok).toBe(true);
+    expect(result.current.getEffectiveTimeout()).toBe(60);
+    if (realRemove) vi.mocked(localStorage.removeItem).mockImplementation(realRemove);
+    warn.mockRestore();
+    unmount();
+
+    const again = renderHook(() => useSessionSettings(USER_ID));
+    expect(again.result.current.getEffectiveTimeout()).toBe(60);
+    expect(localStorage.getItem(key('trusted-device'))).toBeNull();
   });
 });

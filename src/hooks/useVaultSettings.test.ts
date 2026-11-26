@@ -240,4 +240,29 @@ describe('useVaultSettings same-tab sync', () => {
 
     expect(settings.result.current.settings.rememberBrowser).toBe(false);
   });
+
+  it.each([
+    { autoLockMinutes: 5 },
+    { autoLockMinutes: '15' },
+    { rememberBrowser: 'true' },
+    { rememberBrowser: 1, extra: 'x' },
+  ])('ignores a sync event with an invalid change: %o', (change) => {
+    const { result } = renderHook(() => useVaultSettings(USER_ID));
+    const before = result.current.settings;
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('yidhan:vault-settings', { detail: { userId: USER_ID, change } }));
+    });
+
+    expect(result.current.settings).toEqual(before);
+  });
+
+  it('ignores a sync event with no detail', () => {
+    const { result } = renderHook(() => useVaultSettings(USER_ID));
+    const before = result.current.settings;
+
+    act(() => { window.dispatchEvent(new CustomEvent('yidhan:vault-settings')); });
+
+    expect(result.current.settings).toEqual(before);
+  });
 });
