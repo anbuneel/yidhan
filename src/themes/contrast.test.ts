@@ -18,6 +18,7 @@ const TEXT_TOKENS = [
   'textNote',
   'textSecondary',
   'textTertiary',
+  'textPlaceholder',
   'accentText',
   'success',
   'error',
@@ -109,6 +110,23 @@ describe.each(themes)('%s theme contrast', (_name, c) => {
     // The hairline is for dividers. If it ever reached 3:1 it could stand in for the
     // input border, and this split would be pointless.
     expect(contrast(c.glassBorder, c.bgPrimary)).toBeLessThan(3);
+  });
+});
+
+describe.each(themes)('%s theme: the two /demo welcome lines', (_name, c) => {
+  // "Write and edit notes without an account" is textPrimary; "These starter notes are
+  // yours…" is textSecondary at full opacity (design critique K5). Both sit on the page.
+  it('pass 4.5:1 on the page, grain included', () => {
+    for (const token of ['textPrimary', 'textSecondary'] as const) {
+      expect(contrast(c[token], c.bgPrimary), `${token} on the page`).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(c[token], grainedPage(c)), `${token} on grain`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});
+
+describe('placeholders', () => {
+  it('use the placeholder token at full opacity', () => {
+    expect(indexCss).toMatch(/\n::placeholder \{\s*color: var\(--color-text-placeholder\);\s*opacity: 1;\s*\}/);
   });
 });
 

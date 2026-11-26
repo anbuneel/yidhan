@@ -48,11 +48,11 @@ interface AtRiskCaptionProps {
 function AtRiskCaption({ installable, iosHint, onInstall }: AtRiskCaptionProps) {
   return (
     <span className="flex items-center gap-1.5" title={AT_RISK_EXPLANATION}>
-      <span className="text-[11px]" style={captionStyle}>
+      <span className="text-xs" style={captionStyle}>
         · on this device only
       </span>
       {!installable && iosHint && (
-        <span className="text-[11px] font-medium" style={{ ...captionStyle, color: 'var(--color-accent-text)' }}>
+        <span className="text-xs font-medium" style={{ ...captionStyle, color: 'var(--color-accent-text)' }}>
           Add to Home Screen to protect
         </span>
       )}
@@ -60,7 +60,7 @@ function AtRiskCaption({ installable, iosHint, onInstall }: AtRiskCaptionProps) 
         <button
           type="button"
           onClick={onInstall}
-          className="text-[11px] font-medium"
+          className="text-xs font-medium"
           style={{
             color: 'var(--color-accent-text)',
             fontFamily: 'var(--font-body)',
@@ -179,7 +179,7 @@ export function SyncIndicator({
             {isRetrying ? 'Retrying...' : 'Retry blocked changes'}
           </button>
         ) : (
-          <span className="text-[11px]" style={captionStyle}>
+          <span className="text-xs" style={captionStyle}>
             Reconnect to retry
           </span>
         )}

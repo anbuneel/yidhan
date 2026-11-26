@@ -583,15 +583,6 @@ export function DemoPage({
           className="w-full flex-1 flex flex-col relative"
           style={{ maxWidth: '1400px', margin: '0 auto' }}
         >
-        {/* Ambient warmth — subtle radial glow unique to practice space */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: 'radial-gradient(ellipse 60% 40% at 50% 20%, var(--color-accent-glow), transparent 70%)',
-            opacity: 0.4,
-          }}
-        />
-
         {/* Tag Filter Bar */}
         <TagFilterBar
           tags={tags}
@@ -626,8 +617,7 @@ export function DemoPage({
               className="text-sm mt-1.5"
               style={{
                 fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-primary)',
-                opacity: 0.6,
+                color: 'var(--color-text-secondary)',
               }}
             >
               These starter notes are yours to edit, delete, or ignore
@@ -734,7 +724,7 @@ function DemoHeader({
         >
           <Logo onClick={onHomeClick} />
           <span
-            className="hidden sm:inline text-base italic"
+            className="hidden sm:inline text-base"
             style={{
               fontFamily: 'var(--font-display)',
               color: 'var(--color-accent-text)',
@@ -747,19 +737,14 @@ function DemoHeader({
       }
       center={
         <div className="flex items-center w-full sm:justify-center">
-          <div
-            className="flex-1 sm:max-w-[420px] relative transition-all duration-300"
-            style={{
-              transform: isSearchFocused ? 'scale(1.02)' : 'scale(1)',
-            }}
-          >
+          <div className="flex-1 sm:max-w-[420px] relative">
             <div
               className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-full transition-all duration-300"
               style={{
                 background: 'var(--color-bg-secondary)',
                 border: isSearchFocused
                   ? '1px solid var(--color-accent)'
-                  : '1px solid var(--glass-border)',
+                  : '1px solid var(--color-input-border)',
               }}
             >
               <svg

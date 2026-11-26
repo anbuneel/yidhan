@@ -119,12 +119,7 @@ export function Header({
   const centerContent = (
     <div className="flex items-center w-full sm:justify-center">
       {/* Search Bar */}
-      <div
-        className="flex-1 sm:max-w-[420px] relative transition-all duration-300"
-        style={{
-          transform: isSearchFocused ? 'scale(1.02)' : 'scale(1)',
-        }}
-      >
+      <div className="flex-1 sm:max-w-[420px] relative">
         <div
           className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-full transition-all duration-300"
           style={{
