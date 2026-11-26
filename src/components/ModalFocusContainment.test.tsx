@@ -343,14 +343,14 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     );
   });
 
-  it('InvitationModal holds focus, uses --radius-pill CTA, and returns focus on Escape', async () => {
+  it('InvitationModal holds focus, uses the --radius-button CTA, and returns focus on Escape', async () => {
     await expectModalContainment((open, close) =>
       open ? <InvitationModal noteCount={3} onSignUp={vi.fn()} onDismiss={close} /> : null
     );
 
     render(<InvitationModal noteCount={3} onSignUp={vi.fn()} onDismiss={vi.fn()} />);
     const cta = screen.getByRole('button', { name: 'Create an account' });
-    expect(cta.className).toContain('rounded-[var(--radius-pill)]');
+    expect(cta.className).toContain('rounded-[var(--radius-button)]');
   });
 
   it('ConflictModal holds focus and returns focus on Escape', async () => {
@@ -413,7 +413,7 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     const controls = Array.from(
       screen.getByRole('dialog').querySelectorAll<HTMLElement>('input, button')
     ).map((el) => el.getAttribute('aria-label') || el.id || el.textContent?.trim());
-    expect(controls).toEqual(['Cancel', 'reauth-input', 'Cancel', 'Confirm']);
+    expect(controls).toEqual(['Cancel', 'reauth-input', 'Show password', 'Cancel', 'Confirm']);
   });
 
   it('SessionTimeoutModal holds focus and Escape calls onStay', async () => {

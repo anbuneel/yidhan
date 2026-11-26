@@ -357,7 +357,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 className="
                   flex-1 py-2 px-3
                   text-sm
-                  rounded-lg
+                  rounded-[var(--radius-button)]
                   transition-all duration-200
                 "
                 style={{
@@ -380,7 +380,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
                 className="
                   flex-1 py-2 px-3
                   text-sm
-                  rounded-lg
+                  rounded-[var(--radius-button)]
                   transition-all duration-200
                 "
                 style={{
@@ -405,7 +405,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               className="
                 w-full py-2 px-3
                 text-sm
-                rounded-lg
+                rounded-[var(--radius-button)]
                 transition-all duration-200
                 disabled:opacity-50
               "
@@ -431,7 +431,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               className="
                 w-full mt-2 py-2 px-3
                 text-sm
-                rounded-lg
+                rounded-[var(--radius-button)]
                 transition-all duration-200
                 disabled:opacity-50
               "
@@ -470,7 +470,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               onClick={onClose}
               className="
                 flex-1 py-3
-                rounded-lg
+                rounded-[var(--radius-button)]
                 font-medium
                 transition-all duration-200
               "
@@ -496,7 +496,7 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
               disabled={isLoading}
               className="
                 flex-1 py-3
-                rounded-lg
+                rounded-[var(--radius-button)]
                 font-medium
                 transition-all duration-200
                 disabled:opacity-50

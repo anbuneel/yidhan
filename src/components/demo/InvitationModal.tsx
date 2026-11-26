@@ -85,7 +85,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
         {/* Primary CTA */}
         <button type="button"
           onClick={onSignUp}
-          className="w-full py-3.5 px-6 rounded-[var(--radius-pill)] text-base font-medium transition-all duration-300"
+          className="w-full py-3.5 px-6 rounded-[var(--radius-button)] text-base font-medium transition-all duration-300"
           style={{
             fontFamily: 'var(--font-body)',
             background: 'var(--color-cta-bg)',

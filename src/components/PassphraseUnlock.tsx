@@ -289,7 +289,7 @@ export function PassphraseUnlock() {
             style={{
               background: 'var(--color-cta-bg)',
               color: 'var(--color-cta-text)',
-              borderRadius: 'var(--radius-pill)',
+              borderRadius: 'var(--radius-button)',
               fontFamily: 'var(--font-body)',
               fontWeight: 500,
               opacity: passphrase && !isSubmitting && !isLockedOut ? 1 : 0.5,

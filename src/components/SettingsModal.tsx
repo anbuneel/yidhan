@@ -221,7 +221,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
           className="
             px-3 sm:px-4 py-2
             text-sm font-medium
-            rounded-lg
+            rounded-[var(--radius-button)]
             transition-colors duration-200
             touch-press-light
           "
@@ -239,7 +239,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
             className="
               px-3 sm:px-4 py-2
               text-sm font-medium
-              rounded-lg
+              rounded-[var(--radius-button)]
               transition-colors duration-200
               touch-press-light
             "
@@ -257,7 +257,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
           className="
             px-3 sm:px-4 py-2
             text-sm font-medium
-            rounded-lg
+            rounded-[var(--radius-button)]
             transition-colors duration-200
             touch-press-light
           "
@@ -274,7 +274,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
           className="
             px-3 sm:px-4 py-2
             text-sm font-medium
-            rounded-lg
+            rounded-[var(--radius-button)]
             transition-colors duration-200
             touch-press-light
           "
@@ -384,7 +384,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                   aria-label={theme === 'light' ? 'Theme: Light. Switch to Dark' : 'Theme: Dark. Switch to Light'}
                   className="
                     w-full px-4 py-3
-                    rounded-lg
+                    rounded-[var(--radius-button)]
                     flex items-center justify-between
                     transition-all duration-200
                   "
@@ -434,7 +434,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 disabled={profileLoading}
                 className="
                   w-full py-3
-                  rounded-lg
+                  rounded-[var(--radius-button)]
                   font-medium
                   transition-all duration-200
                   disabled:opacity-50
@@ -654,7 +654,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                 disabled={passwordLoading}
                 className="
                   w-full py-3
-                  rounded-lg
+                  rounded-[var(--radius-button)]
                   font-medium
                   transition-all duration-200
                   disabled:opacity-50
@@ -712,7 +712,7 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                       <button
                         type="button"
                         onClick={onLockVault}
-                        className="shrink-0 min-h-11 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 focus-ring"
+                        className="shrink-0 min-h-11 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition-all duration-200 focus-ring"
                         style={{
                           background: 'var(--color-bg-secondary)',
                           border: '1px solid var(--glass-border)',

@@ -7,6 +7,18 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.24.0', date: '2026-11-26', changes: [
+    { type: 'fix', text: 'On a phone you can now delete a note from the library. Each card shows a delete button on touch screens' },
+    { type: 'fix', text: 'On touch screens, Restore in Faded notes is now visible. Before, it was invisible but still tappable' },
+    { type: 'fix', text: 'On narrow phones, Delete and the theme switch in the editor header are clearly apart again, with a divider between them' },
+    { type: 'fix', text: 'On a phone, the scroll-to-top button now sits above the editor toolbar instead of under it' },
+    { type: 'fix', text: '"Revoke & Re-create" on a shared letter now makes the new link and shows it. Before, it only revoked the old link and closed the dialog' },
+    { type: 'feature', text: 'Every password and passphrase field has a show/hide button. Fields start hidden and hide again when you submit' },
+    { type: 'improvement', text: 'Buttons now have one shape: softly rounded corners instead of pills. Icon buttons stay round' },
+    { type: 'improvement', text: 'The library Arrange row is plain text, with the current choice underlined' },
+    { type: 'improvement', text: 'Roadmap items, editor dates and the empty-note prompt are easier to read in both themes. Privacy, Terms, Support, Security, Changelog and Roadmap have shorter lines' },
+    { type: 'fix', text: 'The FAQ and the Privacy and Support pages now say where import and export really are: in the profile menu. Import reads Markdown and JSON. The encrypted .yidhan backup is offered when you delete your account, and import cannot read it' },
+  ] },
   { version: '3.23.0', date: '2026-11-26', changes: [
     { type: 'improvement', text: 'Settings → Security now asks one question: how is this device used? Choose Shared device, My device or Stay unlocked, and the lock and sign-out times are set for you. "Lock now" is next to it. The separate controls are still there under Details' },
     { type: 'improvement', text: 'Your current settings are kept. If they match none of the three choices, Settings shows Custom' },

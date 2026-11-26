@@ -62,11 +62,18 @@ The logo greens are `--color-brand-leaf` (the theme accent) and
 | Token | Value | Use |
 |---|---|---|
 | `--radius-card` | `2px 24px 4px 24px` | The leaf corner. Note cards, the editor sheet and the landing sheet only |
-| `--radius-pill` | `9999px` | Buttons and chips |
+| `--radius-button` | `8px` | Every text button: Sign in, New note, Try writing, dialog and Settings actions |
 | `--radius-input` | `8px` | Inputs |
 | `--radius-plain` | `12px` | Modals, menus, toolbars, popovers, panels |
+| `rounded-full` + `size-*` | circle | Icon-only buttons |
 
-Nothing else takes the leaf corner. A modal, a button, a pill or a tag never does.
+Text buttons use `rounded-[var(--radius-button)]` or `var(--radius-button)`. Never
+`rounded-lg`: the app sets `--radius-lg` to 12px, so it is a panel corner, not a button
+one. There is no pill. Filters (the tag bar, the library Arrange row) are plain text with
+an underline on the active option, not chips. `src/test/buttonShape.test.ts` fails on a
+pill or 12px text button and on `--radius-pill` anywhere.
+
+Nothing else takes the leaf corner. A modal, a button or a tag never does.
 
 ## Themes
 

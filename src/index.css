@@ -158,13 +158,14 @@
   --color-brand-marigold: #F2A21B;
 
   /* Radii. The leaf corner is for note cards and the editor sheet only.
-     Buttons and chips are full pills, inputs 8px, and every other surface
-     (modals, menus, toolbars, panels) one plain 12px. */
+     Text buttons and inputs are 8px, icon-only buttons are circles, and every
+     other surface (modals, menus, toolbars, panels) one plain 12px. There is no
+     pill (DECISIONS.md, 2026-11-26); src/test/buttonShape.test.ts guards it. */
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-card: 2px 24px 4px 24px;
-  --radius-pill: 9999px;
+  --radius-button: 8px;
   --radius-input: 8px;
   --radius-plain: 12px;
 
@@ -1417,7 +1418,7 @@ nav,
   color: var(--color-text-secondary);
   background: none;
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-button);
   padding: 0.45rem 1rem;
   cursor: pointer;
   white-space: nowrap;
@@ -2151,12 +2152,13 @@ textarea:focus,
   }
 
   /* Scroll-to-top sits above the bottom toolbar, which rides on the keyboard and
-     pads the safe area. --editor-toolbar-bottom-height is the toolbar's row plus
-     its 12px of vertical padding, without the safe area. */
+     pads the safe area. WhisperBack sets --whisper-toolbar-offset to the toolbar's
+     measured height, safe area included; before it measures, assume 64px plus the
+     safe area. */
   .whisper-back-above-toolbar {
     bottom: calc(
-      var(--keyboard-height, 0px) + env(safe-area-inset-bottom, 0px) +
-        var(--editor-toolbar-bottom-height, 60px) + 16px
+      var(--keyboard-height, 0px) +
+        var(--whisper-toolbar-offset, calc(64px + env(safe-area-inset-bottom, 0px))) + 16px
     );
   }
 }

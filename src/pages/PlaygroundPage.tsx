@@ -347,7 +347,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           color: var(--color-accent);
           background: color-mix(in srgb, var(--color-accent) 6%, transparent);
           border: 1px solid color-mix(in srgb, var(--color-accent) 28%, transparent);
-          border-radius: var(--radius-pill);
+          border-radius: var(--radius-button);
           padding: 0.7rem 1.5rem;
           cursor: pointer;
           letter-spacing: 0.005em;
@@ -492,7 +492,7 @@ export function PlaygroundPage({ theme, onThemeToggle }: PlaygroundPageProps) {
           font-family: var(--font-body);
           font-size: 0.78rem;
           padding: 0.35rem 0.75rem;
-          border-radius: 999px;
+          border-radius: var(--radius-button);
           cursor: pointer;
           opacity: 0.7;
           transition: opacity 200ms ease;

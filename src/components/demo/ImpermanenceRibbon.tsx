@@ -112,7 +112,7 @@ export function ImpermanenceRibbon({ onSignUp, onDismiss }: ImpermanenceRibbonPr
         {/* Dismiss button */}
         <button type="button"
           onClick={handleDismiss}
-          className="absolute right-3 sm:right-4 p-0.5 rounded opacity-30 hover:opacity-100 transition-opacity duration-200"
+          className="absolute right-3 sm:right-4 size-4 flex items-center justify-center rounded-full opacity-30 hover:opacity-100 transition-opacity duration-200"
           style={{ color: 'var(--color-text-tertiary)' }}
           aria-label="Dismiss"
         >

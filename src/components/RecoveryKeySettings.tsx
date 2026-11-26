@@ -57,7 +57,7 @@ export function RecoveryKeySettings() {
             <button
               type="button"
               onClick={() => { setSaved(false); setIsOpen(true); }}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium"
+              className="px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium"
               style={{
                 fontFamily: 'var(--font-body)',
                 background: 'var(--color-bg-secondary)',

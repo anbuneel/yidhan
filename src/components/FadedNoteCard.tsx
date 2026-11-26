@@ -253,7 +253,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
               onClick={handleCancelDelete}
               className="
                 px-4 py-2
-                rounded-lg
+                rounded-[var(--radius-button)]
                 text-sm font-medium
                 transition-all duration-200
               "
@@ -276,7 +276,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
               onClick={handleConfirmDelete}
               className="
                 px-4 py-2
-                rounded-lg
+                rounded-[var(--radius-button)]
                 text-sm font-medium
                 transition-all duration-200
               "

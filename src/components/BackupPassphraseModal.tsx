@@ -201,7 +201,7 @@ export function BackupPassphraseModal({
             type="button"
             onClick={onCancel}
             disabled={isBusy}
-            className="px-4 py-2 rounded-lg focus-ring"
+            className="px-4 py-2 rounded-[var(--radius-button)] focus-ring"
             style={{
               background: 'transparent',
               border: '1px solid var(--glass-border)',
@@ -214,7 +214,7 @@ export function BackupPassphraseModal({
           <button
             type="submit"
             disabled={isBusy}
-            className="px-4 py-2 rounded-lg focus-ring"
+            className="px-4 py-2 rounded-[var(--radius-button)] focus-ring"
             style={{
               background: 'var(--color-cta-bg)',
               color: 'var(--color-cta-text)',

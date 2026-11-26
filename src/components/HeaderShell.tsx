@@ -343,7 +343,7 @@ export function HeaderShell({
           onSignIn && (
             <button type="button"
               onClick={onSignIn}
-              className="h-9 px-3 md:px-4 inline-flex items-center rounded-lg text-sm font-medium transition-all duration-200"
+              className="h-9 px-3 md:px-4 inline-flex items-center rounded-[var(--radius-button)] text-sm font-medium transition-all duration-200"
               style={{
                 fontFamily: 'var(--font-body)',
                 color: 'var(--color-accent-text)',

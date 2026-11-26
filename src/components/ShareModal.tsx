@@ -43,7 +43,7 @@ function ShareActionBar({ revokeLabel, isRevoking, onRevoke, onClose }: ShareAct
           px-4 py-2
           text-sm font-medium
           transition-colors duration-200
-          rounded-lg
+          rounded-[var(--radius-button)]
           disabled:opacity-50
           flex items-center gap-2
         "
@@ -72,7 +72,7 @@ function ShareActionBar({ revokeLabel, isRevoking, onRevoke, onClose }: ShareAct
         onClick={onClose}
         className="
           px-5 py-2.5
-          rounded-lg
+          rounded-[var(--radius-button)]
           text-sm font-medium
           transition-all duration-200
         "
@@ -387,7 +387,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                     className="
                       px-3 py-1.5
                       text-sm
-                      rounded-lg
+                      rounded-[var(--radius-button)]
                       transition-all duration-200
                     "
                     style={{
@@ -444,7 +444,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
               className="
                 w-full
                 px-5 py-3
-                rounded-lg
+                rounded-[var(--radius-button)]
                 text-sm font-medium
                 transition-all duration-200
                 disabled:opacity-50
@@ -557,7 +557,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                   className="
                     px-3 py-1.5
                     text-sm font-medium
-                    rounded-lg
+                    rounded-[var(--radius-button)]
                     transition-all duration-200
                     shrink-0
                   "
@@ -591,7 +591,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                     className="
                       px-3 py-1.5
                       text-sm
-                      rounded-lg
+                      rounded-[var(--radius-button)]
                       transition-all duration-200
                     "
                     style={{

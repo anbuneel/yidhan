@@ -101,7 +101,7 @@ export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: Welcome
               onClick={handleContinue}
               className="
                 flex-1 py-3
-                rounded-lg
+                rounded-[var(--radius-button)]
                 font-medium
                 transition-all duration-200
               "
@@ -127,7 +127,7 @@ export function WelcomeBackPrompt({ daysRemaining, onStay, onContinue }: Welcome
               disabled={isLoading}
               className="
                 flex-1 py-3
-                rounded-lg
+                rounded-[var(--radius-button)]
                 font-medium
                 transition-all duration-200
                 disabled:opacity-50

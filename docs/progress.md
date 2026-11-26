@@ -880,3 +880,15 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   Remember first and stops if it cannot be stored. Vault-settings hook instances now
   sync in the same tab. Theme row drops "Click to switch". `DECISIONS.md` records the
   presets and why sign-in and encryption use separate secrets.
+- **2026-11-26** — Touch fixes, honest FAQ and one button shape. Restore on faded
+  cards shows on touch screens. Compact library cards show delete on touch screens
+  (left swipe stays off, #162). The editor header keeps its separator under 400px; the
+  save pill loses padding there instead. Scroll-to-top sits above the phone toolbar,
+  keyboard and safe area. Roadmap cards, editor timestamps and the empty-note
+  placeholder drop their opacity stacks. Public pages cap at a 68ch measure. The FAQ,
+  Privacy and Support copy says import and export are in the profile menu, import
+  reads Markdown and JSON only, and the `.yidhan` backup is in the account-deletion
+  dialog. "Revoke & Re-create" makes and shows the new link. New `PasswordInput` with a
+  show/hide toggle on every password and passphrase field. `--radius-button: 8px` for
+  every text button; `--radius-pill` removed; the Arrange row is underlined text;
+  `src/test/buttonShape.test.ts` guards the shape.

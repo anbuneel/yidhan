@@ -286,7 +286,7 @@ export function ReAuthModal({
               onClick={onCancel}
               className="
                 flex-1 py-3
-                rounded-lg
+                rounded-[var(--radius-button)]
                 font-medium
                 transition-all duration-200
               "
@@ -313,7 +313,7 @@ export function ReAuthModal({
               disabled={isLoading}
               className="
                 flex-1 py-3
-                rounded-lg
+                rounded-[var(--radius-button)]
                 font-medium
                 transition-all duration-200
                 disabled:opacity-50

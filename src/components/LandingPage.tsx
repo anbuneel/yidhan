@@ -359,7 +359,7 @@ export function LandingPage({
           background: var(--color-cta-bg);
           color: var(--color-cta-text);
           border: none;
-          border-radius: var(--radius-pill);
+          border-radius: var(--radius-button);
           padding: 0.8rem 2.2rem;
           line-height: 1.5;
           cursor: pointer;

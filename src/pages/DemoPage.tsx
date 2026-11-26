@@ -367,7 +367,7 @@ export function DemoPage({
                   toast.error("Couldn't restore the note.");
                 }
               }}
-              className="px-2 py-1 text-sm font-medium rounded transition-colors"
+              className="px-2 py-1 text-sm font-medium rounded-[var(--radius-button)] transition-colors"
               style={{
                 background: 'var(--color-cta-bg)',
                 color: 'var(--color-cta-text)',
@@ -615,7 +615,7 @@ export function DemoPage({
               type="button"
               onClick={onSignUp}
               data-testid="demo-keep-cta-phone"
-              className="text-sm font-medium underline decoration-1 underline-offset-4 decoration-[var(--color-accent-muted)] rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              className="text-sm font-medium underline decoration-1 underline-offset-4 decoration-[var(--color-accent-muted)] rounded-[var(--radius-button)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
               style={{ background: 'none', border: 'none', color: 'var(--color-accent-text)', fontFamily: 'var(--font-body)' }}
             >
               Create an account to keep your notes
@@ -864,7 +864,7 @@ function DemoHeader({
               focus:outline-none
               focus-visible:ring-2
               focus-visible:ring-[var(--color-accent)]
-              rounded
+              rounded-[var(--radius-button)]
             "
             style={{
               background: 'none',
@@ -880,7 +880,7 @@ function DemoHeader({
           onClick={onNewNote}
           className="
             p-2 sm:px-4 sm:py-2
-            rounded-full
+            rounded-[var(--radius-button)]
             flex items-center gap-2
             transition-all duration-300
             focus:outline-none

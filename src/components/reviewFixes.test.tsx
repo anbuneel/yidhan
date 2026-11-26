@@ -79,15 +79,16 @@ describe('the leaf corner', () => {
     expect((container.querySelector('.note-card') as HTMLElement).style.borderRadius).toBe('var(--radius-card)');
   });
 
-  it('is on the shell manuscript only, and the shell CTA is a pill', () => {
+  it('is on the shell manuscript only, and the shell CTA is an 8px button', () => {
     expect(indexHtml.match(LEAF_GLOBAL)).toHaveLength(1);
     expect(rule(indexHtml, '.boot-manuscript')).toContain('border-radius: 2px 24px 4px 24px');
-    expect(rule(indexHtml, '.boot-cta')).toContain('border-radius: 9999px');
-    expect(rule(landing, '.landing-cta')).toContain('border-radius: var(--radius-pill)');
+    expect(rule(indexHtml, '.boot-cta')).toContain('border-radius: 8px');
+    expect(rule(landing, '.landing-cta')).toContain('border-radius: var(--radius-button)');
   });
 
   it('leaves the plain radii at one value each', () => {
-    expect(indexCss).toMatch(/--radius-pill: 9999px;/);
+    expect(indexCss).toMatch(/--radius-button: 8px;/);
+    expect(indexCss).not.toMatch(/--radius-pill/);
     expect(indexCss).toMatch(/--radius-input: 8px;/);
     expect(indexCss).toMatch(/--radius-plain: 12px;/);
   });
