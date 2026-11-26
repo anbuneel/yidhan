@@ -114,6 +114,10 @@ test.describe('Try writing on a phone', () => {
 });
 
 test.describe('Keeping practice work', () => {
+  // The header link shows from sm up. Phones get it from the ribbon instead; the
+  // 'Sign-up link at 375 px' tests cover that. Desktop in every project.
+  test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false, isMobile: false });
+
   test('the keep CTA appears only once there is something to keep', async ({ page }) => {
     await page.goto('/demo');
     await expect(page.getByTestId('library-view')).toBeVisible();
@@ -419,7 +423,8 @@ test.describe('Card corner on a touch tablet at 820 px', () => {
 });
 
 test.describe('Card icons on desktop', () => {
-  test.use({ viewport: { width: 1440, height: 900 } });
+  // A mouse, not touch, in every project: under (hover: none) the icons show at 40%.
+  test.use({ viewport: { width: 1440, height: 900 }, hasTouch: false, isMobile: false });
 
   test('the unpinned pin and delete icons stay hidden until hover', async ({ page }) => {
     const card = await firstUnpinnedCard(page);
