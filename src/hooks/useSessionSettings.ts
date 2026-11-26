@@ -160,15 +160,24 @@ function loadSettingsFromStorage(userId: string | null): LoadSettingsResult {
   };
 }
 
-/** Write the corrected settings back, so storage matches what the hook enforces. */
+/**
+ * Write the corrected settings back, so storage matches what the hook enforces.
+ * Best effort: the corrected settings apply in memory either way, so a full or
+ * blocked localStorage must not throw here. Removals run first to free space.
+ */
 function repairStorage(userId: string, settings: SessionSettings) {
-  localStorage.setItem(
-    getStorageKey(userId, STORAGE_KEYS.timeout),
-    settings.timeoutMinutes === null ? 'null' : String(settings.timeoutMinutes)
-  );
-  if (!settings.isTrustedDevice) {
-    localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.trustedDevice));
-    localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.trustedAt));
+  try {
+    if (!settings.isTrustedDevice) {
+      localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.trustedDevice));
+      localStorage.removeItem(getStorageKey(userId, STORAGE_KEYS.trustedAt));
+    }
+    const timeoutKey = getStorageKey(userId, STORAGE_KEYS.timeout);
+    const timeoutValue = settings.timeoutMinutes === null ? 'null' : String(settings.timeoutMinutes);
+    if (localStorage.getItem(timeoutKey) !== timeoutValue) {
+      localStorage.setItem(timeoutKey, timeoutValue);
+    }
+  } catch (err) {
+    console.warn('[useSessionSettings] Failed to repair stored session settings:', err);
   }
 }
 

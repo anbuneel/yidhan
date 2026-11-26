@@ -317,6 +317,24 @@ describe('useSessionSettings', () => {
       expect(localStorage.getItem(`yidhan-${USER_ID}-trusted-device`)).toBeNull();
     });
 
+    it('still applies corrected settings when storage is full', () => {
+      trustDevice(expiredTrust());
+      localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, 'null');
+      const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('full', 'QuotaExceededError');
+      });
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const { result } = renderHook(() => useSessionSettings(USER_ID));
+
+      expect(result.current.settings.isTrustedDevice).toBe(false);
+      expect(result.current.getEffectiveTimeout()).toBe(10080);
+      expect(localStorage.getItem(`yidhan-${USER_ID}-trusted-device`)).toBeNull();
+      expect(toast).toHaveBeenCalledTimes(1);
+      setItem.mockRestore();
+      warn.mockRestore();
+    });
+
     it('keeps trust when trustedAt is a minute ahead of the clock', () => {
       trustDevice(new Date(Date.now() + 60 * 1000));
       localStorage.setItem(`yidhan-${USER_ID}-session-timeout`, 'null');
