@@ -69,11 +69,11 @@ Promoted 2026-11-26 from `2026-11-26-design-critique-decisions.md`, which holds 
 PR's items, "done when" and "should not fire" cases. PR 4 (security presets) is not
 promoted; whether it ships before launch is open.
 
-| PR | Area | Item | Effort | Needs / start when |
-|---|------|------|--------|--------------------|
-| 1 | Auth | Honest session timeout: the chosen timeout always applies; a "Change passphrase" row points to the recovery route | hours | — |
-| 2 | Copy | Plain wording for deletion, conflicts and sign-up; touch pin fix; contrast and small polish | days | Runs beside PR 3 |
-| 3 | Editor | Five-button toolbar, grouped overflow menu, centre-only alignment, text size (roadmap 109, narrowed) | days | Runs beside PR 2 |
+| PR | Area | Item | Needs / start when |
+|---|------|------|--------------------|
+| 1 | Auth | Honest session timeout: the chosen timeout always applies; a "Change passphrase" row points to the recovery route | — |
+| 2 | Copy | Plain wording for deletion, conflicts and sign-up; touch pin fix; contrast and small polish | Runs beside PR 3 |
+| 3 | Editor | Five-button toolbar, grouped overflow menu, centre-only alignment, text size (roadmap 109, narrowed) | Runs beside PR 2 |
 
 ### Maintainer
 
