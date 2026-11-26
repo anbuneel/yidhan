@@ -7,6 +7,13 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.21.0', date: '2026-11-26', changes: [
+    { type: 'improvement', text: 'The editor toolbar is shorter. Every toolbar now shows Bold, Italic, Heading, Bullet list and Link, then focus mode and the "More editor commands" menu. On a phone, Undo and Redo stay on the bar as icons' },
+    { type: 'improvement', text: 'The "More editor commands" menu now lists only what is not on the toolbar, under the headings Text, Blocks, Insert, Edit and View' },
+    { type: 'improvement', text: 'Align center now turns off when you choose it again. Left, right and justify are no longer in the menus; their keyboard shortcuts still work, and notes you already aligned keep their alignment. Date and Date and time are in the slash menu only, and the separate Time command is gone' },
+    { type: 'feature', text: 'Settings has a new Editor tab with a text size setting (Small, Default, Large) for the editor and note cards. It is saved on this device. The smart typography switch moved there from the editor menu' },
+    { type: 'improvement', text: 'The note menu next to Delete is now called "Share and export" and puts Share as letter first. Downloading a single note as JSON is gone; Export (JSON) in the main menu still exports your whole library' },
+  ] },
   { version: '3.20.11', date: '2026-11-25', changes: [
     { type: 'fix', text: 'Switching notes while a save is running no longer shows the previous note’s save status or error banner on the next note' },
   ] },

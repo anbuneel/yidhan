@@ -19,6 +19,35 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-26 — Five buttons on every editor toolbar; ⋯ lists the rest
+
+**Status:** Active
+
+**Why:** The 2026-11-25 design critique counted up to 18 visible controls on the inline
+toolbar at 900px and up, a different set on each of the three surfaces, and an overflow
+menu that repeated every command in one flat list of about 29 items. `PRODUCT.md` says
+restraint is the product; a writer opening a note saw a word processor. The 2026-09-10
+entry "One toolbar per width" rested on the overflow menu listing every command, so any
+toolbar could show any subset without making a command unreachable.
+
+**Decision:** Every toolbar (inline, phone bar, sidebar rail) shows the same row at
+every width: Bold, Italic, H1, Bullet list, Link, then focus mode and ⋯. The phone bar
+also keeps Undo and Redo. ⋯ lists only the commands that are not in the row, under
+Text, Blocks, Insert, Edit and View. The reachability rule changes from "⋯ lists every
+command" to "every command is reachable from the row plus ⋯"; one toolbar surface per
+width still holds, and the Playwright check asserts both. Left, right and justify
+alignment leave the menus and the slash menu but keep their shortcuts, and the
+`TextAlign` extension and the sanitizer rule stay: removing the extension would strip
+alignment from existing notes on their next autosave. Centre stays, as a toggle. Time
+is removed; Date and Now are slash-only. Smart typography moves to Settings → Editor,
+beside a new three-step text size.
+
+**Rejected:** Keeping the wide-screen extra buttons from 900px — a toolbar that changes
+with the window is harder to learn than one that does not. Removing the `TextAlign`
+extension with the menu items — it silently rewrites old notes. A menu that still lists
+every command, row included — it doubles the menu for nothing. Hiding Undo and Redo on
+the phone bar too — touch has no reliable Ctrl+Z, so they stay as icons there.
+
 ## 2026-11-25 — The landing page leads with private writing, editor first
 
 **Status:** Active

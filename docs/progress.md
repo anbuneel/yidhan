@@ -842,3 +842,13 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   and reset `saveStatus`, timers, and `prevSyncStatusRef` when the note changes, without
   touching autosave timing. Background flush and failed-after-switch recovery are tracked
   separately in #288. (#285)
+- **2026-11-26** — Editor toolbar cut to one row on all three variants (Bold, Italic,
+  H1, Bullet list, Link, then focus mode and ⋯; the phone bar adds Undo and Redo as
+  icons). `WIDE_COMMANDS` removed. ⋯ lists only commands not in the row, grouped as
+  Text, Blocks, Insert, Edit, View. Align left/right/justify and Time removed from the
+  menus; `TextAlign`, its shortcuts and the sanitizer rule kept; Centre toggles. Date
+  and Now are slash-only. Inline toolbar lost its box and the sticky strip; focus and ⋯
+  sit at the right edge. New Settings → Editor tab with smart typography and a
+  three-step text size (`--reading-scale`, editor and card previews only). Per-note
+  export drops JSON and is labelled "Share and export". Reachability spec now checks
+  row plus ⋯. Design critique PR 3 (H1–H12, L1).

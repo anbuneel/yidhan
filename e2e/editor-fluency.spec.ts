@@ -432,8 +432,14 @@ test.describe('editor toolbar, alignment and text size', () => {
       return { bg: s.backgroundColor, border: s.borderTopWidth, shadow: s.boxShadow };
     });
     expect(style).toEqual({ bg: 'rgba(0, 0, 0, 0)', border: '0px', shadow: 'none' });
-    const strip = await page.locator('.editor-toolbar-sticky').evaluate((el) => getComputedStyle(el).borderBottomWidth);
-    expect(strip).toBe('0px');
+    // No strip: the sticky wrapper has no border and the sheet's own colour.
+    const strip = await page.locator('.editor-toolbar-sticky').evaluate((el) => ({
+      border: getComputedStyle(el).borderBottomWidth,
+      bg: getComputedStyle(el).backgroundColor,
+      sheet: getComputedStyle(el.closest('.editor-writing-area')!).backgroundColor,
+    }));
+    expect(strip.border).toBe('0px');
+    expect(strip.bg).toBe(strip.sheet);
 
     const bar = (await toolbar.boundingBox())!;
     const more = (await toolbar.getByRole('button', { name: 'More editor commands' }).boundingBox())!;

@@ -204,13 +204,31 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
 ## Editor Chrome
 
 - **Toolbar** — `EditorToolbar.tsx`, with `variant: 'inline' | 'bottom' | 'sidebar'`.
-  Every variant ends in an overflow menu that lists every command, so each surface
-  reaches everything on its own.
-  All three are the sheet's material: card colour, hairline, soft shadow. The sidebar
-  sits clear of the sheet, and fades to 30% while the writer types in the body or the
-  title; pointer movement, a selection, a shortcut, hover or focus bring it back.
-  Labels are serif glyphs or short words at one of three sizes (15px, 13px, 12px),
-  at weight 500. The bullet list and focus mode controls use drawn icons.
+  The row lives in `src/editor/toolbarCommands.ts`. Every variant shows the same row at
+  every width: Bold, Italic, H1, Bullet list, Link, then focus mode and ⋯. The phone
+  bar also shows Undo and Redo, as icons; under 380px CSS hides them from the bar and
+  the phone bar's ⋯ shows them instead.
+- **⋯ menu** — lists only the commands not in that toolbar's row, under five headings:
+
+  | Heading | Commands |
+  |---------|----------|
+  | Text | Underline, Strikethrough, Inline code, Highlight |
+  | Blocks | Paragraph, Heading 2, Heading 3, Numbered list, Task list, Quote, Code block, Align center |
+  | Insert | Divider |
+  | Edit | Undo, Redo (not on the phone bar from 380px, where they are in the row) |
+  | View | Find and replace |
+
+  Focus mode is not in ⋯; it has its own button. Every command is reachable from the
+  row plus ⋯ (`DECISIONS.md`, 2026-11-26). Align center is a toggle: on centred text it
+  removes the alignment. Left, right and justify have no menu item; their shortcuts
+  (below) still work and old notes keep their alignment.
+- **Toolbar look** — the inline toolbar has no box: no fill, border or shadow, on the
+  page itself, with focus mode and ⋯ at the right edge. The phone bar and the sidebar
+  rail are the sheet's material (card colour, hairline, soft shadow); the phone bar
+  stays centred. The sidebar sits clear of the sheet, and fades to 30% while the
+  writer types in the body or the title; pointer movement, a selection, a shortcut,
+  hover or focus bring it back. Labels are serif glyphs at 15px or 13px, weight 500.
+  Bullet list, Link, Undo, Redo and focus mode use drawn icons.
 - **One toolbar at a time.** Below 768px the bottom toolbar, in the thumb zone. From
   768px to 1099px the inline toolbar under the title. From 1100px the vertical sidebar
   (`EditorSidebar.tsx`) alone, in the left margin; CSS hides the inline toolbar
@@ -248,6 +266,8 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
 | `Cmd/Ctrl + B` | Bold | Editor |
 | `Cmd/Ctrl + I` | Italic | Editor |
 | `Cmd/Ctrl + U` | Underline | Editor |
+| `Cmd/Ctrl + E` | Inline code | Editor |
+| `Cmd/Ctrl + Shift + L` / `E` / `R` / `J` | Align left, center, right, justify | Editor |
 
 ## Slash Commands (type `/` in editor)
 
@@ -261,24 +281,45 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
 | `/code` | Code block |
 | `/highlight` | Highlighted text |
 | `/divider` | Horizontal line |
-| `/date` | Current date (e.g., "Dec 16, 2024") |
-| `/time` | Current time (e.g., "3:30 PM") |
-| `/now` | Date and time (e.g., "Dec 16, 2024 at 3:30 PM") |
+| `/date` | Current date (e.g., "Dec 16, 2024"). Slash menu only |
+| `/now` | Date and time (e.g., "Dec 16, 2024 at 3:30 PM"). Slash menu only |
+
+The slash menu also offers the other formatting commands, Align center, Find and
+replace and focus mode. It leaves out Undo and Redo: typing the slash is itself the
+newest change.
+
+## Settings → Editor
+
+Saved per device (localStorage), applied before the first render.
+
+- **Text size** — Small, Default, Large (0.9×, 1×, 1.15×). Scales the editor body,
+  its headings and quotes, and note card previews, through `--reading-scale`
+  (`src/editor/textSize.ts`). The landing page, public pages and shared notes do not
+  change.
+- **Smart typography** — curly quotes, dashes and ellipses as you type. On by default.
+
+## Note export menu
+
+The icon next to Delete is "Share and export". In order: Share as letter (signed in,
+sharing on), Copy as text, Copy with formatting, Download (.md). A full-library JSON
+export stays in the header menu.
 
 ## Tag Filter Bar (below header)
 
 **Desktop (2 rows collapsed, expandable):**
 ```
-[All notes]  |  [Tag 1 ✏]  [Tag 2 ✏]  [Tag 3 ✏]  [Tag 4 ✏]  [Tag 5 ✏]
-              [Tag 6 ✏]  [Tag 7 ✏]  [+]  [+3 ▼]
+All notes  |  Tag 1 ✏   Tag 2 ✏   Tag 3 ✏   Tag 4 ✏   Tag 5 ✏
+              Tag 6 ✏   Tag 7 ✏   + Tag   +3 ▼
                                           ↑ Expand button (if >2 rows)
 ```
 
 **Mobile (all tags visible, wrapped):**
 ```
-[All notes]  |  [Tag 1]  [Tag 2]
-              [Tag 3]  [Tag 4]  [+]
+All notes  |  Tag 1   Tag 2
+              Tag 3   Tag 4   + Tag
 ```
+- Tags are plain words, not chips: no border or fill (`DESIGN.md`, Tags). The active
+  filter is the only coloured item, underlined
 - Mobile shows all tags in wrapping layout (no collapse)
 - Desktop shows 2 rows by default with expand/collapse if more tags exist
 - Edit button appears on hover (desktop only)
@@ -342,7 +383,7 @@ The `?` modal lists these under Library.
 │ Rich content preview with       │
 │ formatting (4-line clamp)...    │
 │                                 │
-│ [tag] [tag]    JUST NOW    [🗑] │  ← Delete button (appears on hover)
+│ tag · tag      Just now    [🗑] │  ← Delete button (appears on hover)
 └─────────────────────────────────┘
 
 Card design: Compact "editorial index card" style
