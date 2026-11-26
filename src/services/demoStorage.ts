@@ -359,6 +359,48 @@ export function getDemoNote(localId: string): DemoNote | null {
   return state.notes.find((n) => n.localId === localId) ?? null;
 }
 
+/**
+ * Ensure a specific current starter note exists in demo storage and return it.
+ * - If a note with this localId already exists (untouched or edited), return it untouched.
+ * - If it is a current starter missing from storage (deleted or pre-2026-11-10 storage),
+ *   add just that one starter (and any default tags it references) without disturbing
+ *   existing notes.
+ * - If the id is not a current starter, return null without modifying storage.
+ */
+export function ensureDemoStarterNote(starterId: string): DemoNote | null {
+  const state = getDemoState();
+  const existing = state.notes.find((n) => n.localId === starterId);
+  if (existing) return existing;
+
+  const starter = STARTER_NOTES.find((s) => s.localId === starterId);
+  if (!starter) return null;
+
+  const now = Date.now();
+  const added: DemoNote = {
+    ...starter,
+    tagIds: [...starter.tagIds],
+    createdAt: now,
+    updatedAt: now,
+  };
+  state.notes.unshift(added);
+
+  if (added.tagIds.length > 0) {
+    const knownTagIds = new Set(state.tags.map((t) => t.localId));
+    const defaultTags = createDefaultState().tags;
+    for (const tagId of added.tagIds) {
+      if (knownTagIds.has(tagId)) continue;
+      const defaultTag = defaultTags.find((t) => t.localId === tagId);
+      if (defaultTag) {
+        state.tags.push(defaultTag);
+        knownTagIds.add(tagId);
+      }
+    }
+  }
+
+  saveDemoState(state);
+  return added;
+}
+
 // ============================================================================
 // Tag Operations
 // ============================================================================

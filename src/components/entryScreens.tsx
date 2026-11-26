@@ -41,7 +41,8 @@ export interface EntryScreenProps {
   nav: PublicPageNav;
   onDemoClick: () => void;
   onDemoDraftClick: () => void;
-  /** Drop the `/demo/new` intent once the arrival note exists. */
+  onDemoNoteClick: (noteId: string) => void;
+  /** Drop the `/demo/new` or `/demo/n/<id>` intent once handled. */
   onDemoNoteStarted: () => void;
   onSignIn: () => void;
   onSignUp: () => void;
@@ -63,6 +64,7 @@ export function renderEntryScreen({
   nav,
   onDemoClick,
   onDemoDraftClick,
+  onDemoNoteClick,
   onDemoNoteStarted,
   onSignIn,
   onSignUp,
@@ -137,6 +139,8 @@ export function renderEntryScreen({
             onSignUp={onSignUp}
             startWithNewNote={route.newNote === true}
             onNewNoteStarted={onDemoNoteStarted}
+            initialNoteId={route.noteId}
+            onInitialNoteOpened={onDemoNoteStarted}
             onSignIn={onSignIn}
             isAuthModalOpen={authModalState.isOpen}
             theme={theme}
@@ -178,6 +182,7 @@ export function renderEntryScreen({
           onThemeToggle={onThemeToggle}
           onDemoClick={onDemoClick}
           onDemoDraftClick={onDemoDraftClick}
+          onDemoNoteClick={onDemoNoteClick}
           onSecurityClick={nav.onSecurityClick}
           onChangelogClick={nav.onChangelogClick}
           onRoadmapClick={nav.onRoadmapClick}

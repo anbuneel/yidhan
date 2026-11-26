@@ -52,6 +52,10 @@ interface DemoPageProps {
   startWithNewNote?: boolean;
   /** Called once the arrival note exists, so the address can drop back to `/demo`. */
   onNewNoteStarted?: () => void;
+  /** Open an existing practice note directly on arrival (`/demo/n/<id>`). */
+  initialNoteId?: string;
+  /** Called once the initial note arrival intent is handled, so the address drops back to `/demo`. */
+  onInitialNoteOpened?: () => void;
   onSignIn: () => void;
   /** Whether the parent auth modal is currently open over the Practice Space. */
   isAuthModalOpen?: boolean;
@@ -69,6 +73,8 @@ export function DemoPage({
   onSignUp,
   startWithNewNote = false,
   onNewNoteStarted,
+  initialNoteId,
+  onInitialNoteOpened,
   onSignIn,
   isAuthModalOpen = false,
   theme,
@@ -91,6 +97,7 @@ export function DemoPage({
     updateNote,
     deleteNote,
     restoreNote,
+    ensureStarterNote,
     createTag,
     updateTag,
     deleteTag,
@@ -228,8 +235,20 @@ export function DemoPage({
 
   const isSearching = debouncedSearchQuery.trim().length > 0;
 
+  // Monotonic token so a late async editor-chunk load (e.g. from `/demo/n/<id>`)
+  // never overrides a note the visitor opened or left in the meantime.
+  const openIntentRef = useRef(0);
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Handlers - defined before effects that use them
   const handleNewNote = useCallback(async () => {
+    const openToken = ++openIntentRef.current;
     const newNote = createNote({
       title: '',
       content: '',
@@ -237,6 +256,7 @@ export function DemoPage({
       tagIds: [],
     });
     await warmEditorRoute();
+    if (!isMountedRef.current || openIntentRef.current !== openToken) return;
     setSelectedNoteId(newNote.id);
     setView('editor');
   }, [createNote, warmEditorRoute]);
@@ -247,22 +267,55 @@ export function DemoPage({
   useEffect(() => {
     if (!startWithNewNote || loading || hasStartedArrivalNote.current) return;
     hasStartedArrivalNote.current = true;
-    void handleNewNote().then(() => onNewNoteStarted?.());
+    void handleNewNote().then(() => {
+      if (isMountedRef.current) onNewNoteStarted?.();
+    });
   }, [startWithNewNote, loading, handleNewNote, onNewNoteStarted]);
 
-  const handleNoteClick = useCallback((id: string) => {
+  // Open a sample note when arriving via `/demo/n/<id>`. If it is already in storage
+  // (untouched or edited), open it as-is. If it is a current starter missing from storage
+  // (deleted or pre-2026-11-10 storage), add just that one starter and open it. Ignore a
+  // late chunk load if the visitor opened or left another note while the editor loaded.
+  const handledInitialNoteId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialNoteId) {
+      handledInitialNoteId.current = null;
+      return;
+    }
+    if (loading || handledInitialNoteId.current === initialNoteId) return;
+    handledInitialNoteId.current = initialNoteId;
+    const target = notes.find((n) => n.id === initialNoteId) ?? ensureStarterNote(initialNoteId);
+    if (!target) {
+      onInitialNoteOpened?.();
+      return;
+    }
+    const openToken = ++openIntentRef.current;
     void warmEditorRoute().then(() => {
+      if (!isMountedRef.current) return;
+      onInitialNoteOpened?.();
+      if (openIntentRef.current !== openToken) return;
+      setSelectedNoteId(target.id);
+      setView('editor');
+    });
+  }, [initialNoteId, loading, notes, ensureStarterNote, warmEditorRoute, onInitialNoteOpened]);
+
+  const handleNoteClick = useCallback((id: string) => {
+    const openToken = ++openIntentRef.current;
+    void warmEditorRoute().then(() => {
+      if (!isMountedRef.current || openIntentRef.current !== openToken) return;
       setSelectedNoteId(id);
       setView('editor');
     });
   }, [warmEditorRoute]);
 
   const handleBack = () => {
+    openIntentRef.current += 1;
     setView('library');
     setSelectedNoteId(null);
   };
 
   const handleRequestSearch = useCallback(() => {
+    openIntentRef.current += 1;
     setView('library');
     setSelectedNoteId(null);
     setSearchFocusToken((prev) => prev + 1);

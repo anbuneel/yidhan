@@ -19,6 +19,8 @@ interface LandingPageProps {
    * shows the editor, it no longer imitates one.
    */
   onDemoDraftClick: () => void;
+  /** Opens a specific sample note directly in the Practice Space editor. */
+  onDemoNoteClick: (noteId: string) => void;
   onSecurityClick: () => void;
   onChangelogClick: () => void;
   onRoadmapClick: () => void;
@@ -54,6 +56,7 @@ export function LandingPage({
   onThemeToggle,
   onDemoClick,
   onDemoDraftClick,
+  onDemoNoteClick,
   onSecurityClick,
   onChangelogClick,
   onRoadmapClick,
@@ -88,18 +91,20 @@ export function LandingPage({
     <div className="landing-canvas">
       <HeaderShell theme={theme} onThemeToggle={onThemeToggle} onSignIn={onSignIn} />
 
-      {/* ─── On the page: the product named, the promise stated ─── */}
+      {/* ─── On the page: the promise stated, compact so the sheet shows above the fold ─── */}
       <section className="landing-hero">
         <div className="landing-intro">
-          <h1 className="landing-headline">A notes app built around writing.</h1>
+          <h1 className="landing-headline">A calm, private place to write.</h1>
           <p className="landing-sub">
-            Write a first draft, work through an idea, or make notes for something longer.
-            Use focus mode when you’re writing, and tags and search when you need to find
-            something.
-          </p>
-          <p className="landing-sub">
-            Works offline. With an account, your notes sync across your devices and are
-            encrypted before they leave this one.
+            Notes are{' '}
+            <a href="/security" onClick={handleSecurityLinkClick} className="landing-inline-link focus-ring">
+              encrypted on your device
+            </a>{' '}
+            before they sync. Works offline.{' '}
+            <a href={LICENSE_URL} target="_blank" rel="noopener noreferrer" className="landing-inline-link focus-ring">
+              Free and open source
+            </a>
+            .
           </p>
           <div className="landing-actions">
             <button type="button" onClick={onDemoDraftClick} className="landing-cta focus-ring">
@@ -111,20 +116,6 @@ export function LandingPage({
             </a>
           </div>
           <p className="landing-micro">Free to use. No account needed to try.</p>
-        </div>
-
-        <div className="landing-proof">
-          <button type="button" onClick={onSecurityClick} className="landing-fact focus-ring">
-            Encrypted before it syncs
-          </button>
-          <span className="landing-proof-dot" aria-hidden="true">·</span>
-          <span className="landing-fact-plain">Works offline</span>
-          <span className="landing-proof-dot" aria-hidden="true">·</span>
-          <a href={LICENSE_URL} target="_blank" rel="noopener noreferrer" className="landing-fact focus-ring">
-            Free and open source
-          </a>
-          <span className="landing-proof-dot" aria-hidden="true">·</span>
-          <span className="landing-fact-plain">Export any time</span>
         </div>
       </section>
 
@@ -176,27 +167,54 @@ export function LandingPage({
           </div>
         </div>
 
-        {/* ─── Sample notes: each opens in the practice space ─── */}
+        {/* ─── Sample notes: each opens its own note in the practice space ─── */}
         <section className="landing-part" aria-labelledby="landing-samples-title">
           <h2 id="landing-samples-title" className="landing-h2">See what writing looks like in Yidhan.</h2>
           <p className="landing-section-body">
-            Browse the sample notes, edit them, or start your own.
+            Open a sample note, edit it, or start your own.
           </p>
           <ul className="landing-samples">
             {sampleNotes.map((note) => (
               <li key={note.id}>
-                <button
-                  type="button"
-                  onClick={onDemoClick}
+                <a
+                  href={`/demo/n/${note.id}`}
+                  onClick={(event) => {
+                    if (!isPlainClick(event)) return;
+                    event.preventDefault();
+                    onDemoNoteClick(note.id);
+                  }}
                   className="landing-sample focus-ring"
                   aria-label={`Open “${note.title}” in the practice space`}
                 >
                   <span className="landing-sample-title">{note.title}</span>
                   <span className="landing-sample-preview">{note.preview}</span>
-                </button>
+                </a>
               </li>
             ))}
           </ul>
+        </section>
+
+        {/* ─── What the blank page hides ─── */}
+        <section className="landing-part" aria-labelledby="landing-features-title">
+          <h2 id="landing-features-title" className="landing-h2">What stays out of the way.</h2>
+          <dl className="landing-features">
+            <div className="landing-feature">
+              <dt>Chapters</dt>
+              <dd>Notes group by time — Pinned, This week, This month, and earlier — with no folders to maintain.</dd>
+            </div>
+            <div className="landing-feature">
+              <dt>Search</dt>
+              <dd>Full-text search runs locally in your browser while your notes are unlocked, with tag and date filters.</dd>
+            </div>
+            <div className="landing-feature">
+              <dt>Share as Letter</dt>
+              <dd>Send a read-only link to one note. The key stays in the link fragment, expires within 30 days, and can be revoked any time.</dd>
+            </div>
+            <div className="landing-feature">
+              <dt>Phone and offline</dt>
+              <dd>Install Yidhan to your home screen. Write, edit, and read without a connection; changes sync when you are back online.</dd>
+            </div>
+          </dl>
         </section>
 
         {/* ─── Privacy: the promise once, then the exit ─── */}
@@ -214,6 +232,44 @@ export function LandingPage({
           <a href="/security" onClick={handleSecurityLinkClick} className="landing-link focus-ring">
             How encryption works →
           </a>
+        </section>
+
+        {/* ─── Compact FAQ ─── */}
+        <section className="landing-part" aria-labelledby="landing-faq-title">
+          <h2 id="landing-faq-title" className="landing-h2">Common questions.</h2>
+          <dl className="landing-faq">
+            <div className="landing-faq-item">
+              <dt>Which browsers work, and can I install it?</dt>
+              <dd>
+                Yidhan is a Progressive Web App that runs in modern desktop and mobile browsers.
+                On most browsers you can install it from the browser’s install prompt; on iOS
+                Safari, use Share → Add to Home Screen.
+              </dd>
+            </div>
+            <div className="landing-faq-item">
+              <dt>What is free, and how is it paid for?</dt>
+              <dd>
+                Everything in Yidhan is free and open source under AGPL-3.0, with no ads, paid
+                tiers, or feature gates. It is maintained by one person, with no company behind
+                it.
+              </dd>
+            </div>
+            <div className="landing-faq-item">
+              <dt>Can I import or export my notes?</dt>
+              <dd>
+                Yes. From Settings you can import Markdown files, JSON exports, or an encrypted
+                .yidhan backup, and export all your notes in the same formats any time.
+              </dd>
+            </div>
+            <div className="landing-faq-item">
+              <dt>What if I forget my passphrase?</dt>
+              <dd>
+                Your recovery key — created during setup or in Settings — opens your notes and
+                lets you set a new passphrase. If you lose both, no one, Yidhan included, can
+                restore them.
+              </dd>
+            </div>
+          </dl>
         </section>
 
         {/* ─── Closing action ─── */}
@@ -272,6 +328,9 @@ export function LandingPage({
         )}
       </nav>
 
+      {/* The remaining landing styles live in src/index.css so they do not weigh on the
+          JS entry and app-shell budgets. Rules checked by fonts.test.ts, themeCss.test.ts
+          and reviewFixes.test.tsx stay here. */}
       <style>{`
         .landing-canvas {
           position: relative;
@@ -282,44 +341,15 @@ export function LandingPage({
           background: var(--page-background);
           overflow-x: hidden;
         }
-
-        /* ─── On the page ─── */
-        .landing-hero {
-          width: 100%;
-          max-width: 1100px;
-          margin: 0 auto;
-          padding: 2.5rem clamp(1.25rem, 3.5vw, 3rem) 0;
-          text-align: center;
-          animation: landing-fade-up 0.7s var(--ease-out-quint, ease-out) backwards;
-        }
-        @media (min-width: 1024px) {
-          .landing-hero { padding-top: 4rem; }
-        }
-        .landing-intro { display: flex; flex-direction: column; align-items: center; }
         .landing-headline {
           font-family: var(--font-title);
           font-weight: 500;
-          font-size: clamp(2.75rem, 7vw, 6.5rem);
-          line-height: 1;
+          font-size: clamp(2.25rem, 5.2vw, 4.5rem);
+          line-height: 1.04;
           letter-spacing: -0.02em;
-          margin: 0 0 1.5rem;
+          margin: 0 0 1rem;
           text-wrap: balance;
           color: var(--color-text-primary);
-        }
-        .landing-sub {
-          font-family: var(--font-body);
-          font-weight: 400;
-          font-size: clamp(1.05rem, 1.3vw, 1.25rem);
-          line-height: 1.65;
-          color: var(--color-text-secondary);
-          max-width: 36rem;
-          margin: 0 0 0.85rem;
-          text-wrap: pretty;
-        }
-        .landing-actions {
-          display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
-          gap: 1rem 1.5rem;
-          margin-top: 1.4rem;
         }
         .landing-cta {
           font-family: var(--font-body);
@@ -329,7 +359,7 @@ export function LandingPage({
           color: var(--color-cta-text);
           border: none;
           border-radius: var(--radius-pill);
-          padding: 0.9rem 2.4rem;
+          padding: 0.8rem 2.2rem;
           line-height: 1.5;
           cursor: pointer;
           transition: transform 0.3s ease, background-color 0.3s ease;
@@ -338,71 +368,23 @@ export function LandingPage({
           transform: translateY(-1px);
           background: var(--color-cta-bg-hover);
         }
-        .landing-micro {
-          margin: 1.1rem 0 0;
-          font-family: var(--font-body);
-          font-size: 0.875rem;
-          line-height: 1.5;
-          color: var(--color-text-tertiary);
-        }
-        .landing-demo-link {
-          display: inline-flex; align-items: center; gap: 0.3rem;
-          font-family: var(--font-body);
-          font-size: 0.92rem; font-weight: 500; line-height: 1.5;
-          color: var(--color-text-tertiary);
-          text-decoration: none;
-          border-bottom: 1px dotted var(--color-text-tertiary);
-          transition: color 0.2s ease, border-bottom-color 0.2s ease;
-        }
-        .landing-demo-link:hover { color: var(--color-accent-text); border-bottom-color: var(--color-accent); }
-        .landing-demo-arrow { display: inline-block; transition: transform 0.2s ease; }
-        .landing-demo-link:hover .landing-demo-arrow { transform: translateX(4px); }
-
-        .landing-proof {
-          display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
-          gap: 0.5rem 0.9rem;
-          padding-top: 1.75rem;
-          font-size: 0.95rem; line-height: 1.5;
-        }
-        .landing-fact, .landing-fact-plain {
-          font-family: var(--font-body);
-          font-size: 0.95rem; line-height: 1.5;
-          color: var(--color-text-secondary);
-          background: none; border: 0; padding: 0 0 1px; cursor: pointer;
-          text-decoration: none;
-        }
-        .landing-fact { border-bottom: 1px dotted var(--color-text-tertiary); transition: color 0.2s ease, border-bottom-color 0.2s ease; }
-        .landing-fact:hover { color: var(--color-accent-text); border-bottom-color: var(--color-accent); }
-        .landing-fact-plain { cursor: default; }
-        .landing-proof-dot { color: var(--color-text-tertiary); }
-
-        /* ─── The sheet: everything below the hero, at reading width ─── */
         .landing-sheet {
           position: relative;
           box-sizing: border-box;
           width: calc(100% - 2 * clamp(1rem, 3.5vw, 3rem));
           max-width: 1000px;
-          margin: clamp(2.5rem, 5vw, 3.5rem) auto 0;
-          padding: clamp(1.75rem, 5vw, 3.5rem) clamp(1.25rem, 8vw, 5.5rem) clamp(2rem, 5vw, 4rem);
+          margin: clamp(1.5rem, 3vw, 2.25rem) auto 0;
+          padding: clamp(1.5rem, 4vw, 3rem) clamp(1.25rem, 7vw, 5rem) clamp(2rem, 5vw, 3.5rem);
           background: var(--color-manuscript-bg);
           border: 1px solid var(--glass-border);
           border-radius: var(--radius-card);
           box-shadow: var(--shadow-manuscript);
           overflow: hidden;
         }
-        .landing-sheet > * { max-width: 46rem; }
-        .landing-draft { position: relative; }
         .landing-manuscript-glow {
           position: absolute; inset: -2rem -3rem; pointer-events: none;
           background: radial-gradient(ellipse 80% 50% at 50% 42%, var(--color-editor-glow) 0%, transparent 70%);
         }
-        .landing-manuscript-open {
-          position: absolute; inset: -0.75rem; z-index: 2;
-          background: transparent; border: 0; padding: 0; margin: 0;
-          border-radius: var(--radius-input);
-          cursor: text;
-        }
-        .landing-manuscript-page { position: relative; z-index: 1; pointer-events: none; }
         .landing-manuscript-title {
           font-family: var(--font-title);
           font-weight: 500;
@@ -412,140 +394,22 @@ export function LandingPage({
           color: var(--color-text-primary);
           margin: 0;
         }
-        .landing-manuscript-meta {
-          display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
-          margin: 0.35rem 0 1.5rem; min-height: 1.5rem;
-          font-family: var(--font-body);
-          font-size: 0.8rem;
-          color: var(--color-text-tertiary);
-        }
-        .landing-manuscript-time { font-style: italic; }
-        .landing-manuscript-tag { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.875rem; font-weight: 500; }
-        .landing-manuscript-text {
-          font-family: var(--font-body);
-          font-size: clamp(1.05rem, 1.35vw, 1.25rem);
-          line-height: 1.75;
-        }
-        .landing-manuscript-text p { margin: 0; }
-        .landing-manuscript-text p + p { margin-top: 1.1em; }
-        .landing-manuscript-text .landing-revision { color: var(--color-text-tertiary); }
-        .landing-caret {
-          display: inline-block; width: 2px; height: 1.15em;
-          margin-left: 2px; vertical-align: -0.2em;
-          background: var(--color-accent);
-          animation: landing-blink 1.1s steps(2, start) infinite;
-        }
-        .landing-manuscript-foot {
-          position: relative; z-index: 3;
-          display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 0.75rem;
-          margin-top: 2rem; padding-top: 1rem;
-          border-top: 1px solid var(--glass-border);
-        }
         .landing-saved {
           display: inline-flex; align-items: center; gap: 0.35rem;
           padding: 0.25rem 0;
           color: var(--color-text-secondary);
           font-family: var(--font-body); font-size: 0.875rem; white-space: nowrap;
         }
-        .landing-manuscript-note {
-          flex: 1 1 14rem;
-          font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.4;
-          color: var(--color-text-tertiary);
-        }
-        .landing-keep {
-          font-family: var(--font-body);
-          font-size: 0.8125rem; font-weight: 500;
-          color: var(--color-text-secondary);
-          background: none;
-          border: 1px solid var(--glass-border);
-          border-radius: var(--radius-pill);
-          padding: 0.45rem 1rem;
-          cursor: pointer;
-          white-space: nowrap;
-          transition: color 0.25s ease, border-color 0.25s ease;
-        }
-        .landing-keep:hover { color: var(--color-accent-text); border-color: var(--color-accent); }
-
-        /* ─── Parts of the sheet: a heading and space, no divider ─── */
-        .landing-part { margin-top: clamp(3.5rem, 7vw, 4.5rem); }
         .landing-h2 {
           font-family: var(--font-title); font-weight: 500;
           font-size: clamp(1.9rem, 3vw, 2.6rem); line-height: 1.1; letter-spacing: -0.02em;
           margin: 0 0 0.85rem; color: var(--color-text-primary);
-        }
-        .landing-section-body {
-          font-family: var(--font-body);
-          font-size: clamp(1.05rem, 1.35vw, 1.25rem); line-height: 1.75;
-          font-weight: var(--note-weight);
-          color: var(--color-text-note); margin: 0 0 1.1em;
-        }
-        .landing-samples { list-style: none; margin: 1.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; }
-        .landing-sample {
-          display: flex; flex-direction: column; gap: 0.15rem; width: 100%;
-          padding: 0.35rem 0 0.35rem 1.25rem;
-          background: none; border: 0; border-left: 2px solid var(--color-accent);
-          text-align: left; cursor: pointer;
-          font-family: var(--font-body);
-          transition: border-left-color 0.2s ease;
-        }
-        .landing-sample-title { font-size: 1.05rem; font-weight: 600; color: var(--color-text-primary); transition: color 0.2s ease; }
-        .landing-sample-preview {
-          font-size: 0.95rem; color: var(--color-text-secondary);
-          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-        .landing-sample:hover .landing-sample-title { color: var(--color-accent-text); }
-        .landing-link {
-          font-family: var(--font-body); font-size: 1rem; font-weight: 500;
-          color: var(--color-accent-text); background: none; border: 0; padding: 0; cursor: pointer;
-          text-decoration: none;
-        }
-        .landing-link:hover { text-decoration: underline; }
-
-        .landing-close {
-          display: flex; flex-wrap: wrap; align-items: center; gap: 1.1rem 1.75rem;
-          padding-top: 1.5rem;
-          border-top: 1px solid var(--glass-border);
         }
         .landing-close-line {
           font-family: var(--font-title); font-weight: 500;
           font-size: clamp(1.75rem, 2.6vw, 2.25rem); letter-spacing: -0.02em;
           color: var(--color-text-primary); margin: 0;
           flex: 1 1 auto;
-        }
-
-        /* ─── Footer ─── */
-        .landing-footer {
-          display: flex; align-items: center; justify-content: center;
-          gap: 0.5rem; flex-wrap: wrap;
-          padding: 2.5rem clamp(1rem, 4vw, 4rem) 3rem;
-          margin-top: auto;
-          font-family: var(--font-body); font-size: 0.875rem;
-          color: var(--color-text-tertiary);
-        }
-        .landing-nav-link {
-          color: inherit; background: none; border: none; cursor: pointer;
-          font-family: inherit; font-size: inherit; padding: 0;
-          transition: color 0.2s ease; text-decoration: none;
-        }
-        .landing-nav-link:hover { color: var(--color-accent-text); }
-
-        @media (max-width: 767px) {
-          .landing-actions .landing-cta, .landing-close .landing-cta { width: 100%; }
-          .landing-actions { width: 100%; }
-          .landing-manuscript-foot .landing-keep { white-space: normal; text-align: left; }
-        }
-
-        /* The app shell remounts this page when the visitor opens sign-in from the
-           public shell (src/shells/Root.tsx). The hero has already entered once. */
-        .landing-handoff .landing-hero { animation: none; }
-
-        @keyframes landing-fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes landing-blink { to { visibility: hidden; } }
-
-        @media (prefers-reduced-motion: reduce) {
-          .landing-hero { animation: none !important; }
-          .landing-caret { animation: none !important; }
-          .landing-cta, .landing-demo-arrow, .landing-sample, .landing-sample-title { transition: none !important; }
         }
       `}</style>
     </div>

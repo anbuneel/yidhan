@@ -19,6 +19,8 @@ export interface AppNavigation {
   navigateToDemo: () => void;
   /** `/demo/new`: the Practice Space already in an empty note (item 45). */
   navigateToDemoDraft: () => void;
+  /** `/demo/n/<noteId>`: the Practice Space opened directly to a sample note. */
+  navigateToDemoNote: (noteId: string) => void;
   publicPageNav: PublicPageNav;
 }
 
@@ -40,6 +42,7 @@ export function useAppNavigation({
     navigateHome: () => navigateToRoute({ name: 'library' }),
     navigateToDemo: () => navigateToRoute({ name: 'demo' }),
     navigateToDemoDraft: () => navigateToRoute({ name: 'demo', newNote: true }),
+    navigateToDemoNote: (noteId: string) => navigateToRoute({ name: 'demo', noteId }),
     publicPageNav: {
       onLogoClick: () => navigateToRoute({ name: 'library' }),
       onChangelogClick: () => navigateToRoute({ name: 'changelog' }),

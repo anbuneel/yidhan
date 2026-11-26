@@ -13,6 +13,7 @@ import {
   deleteDemoNote,
   restoreDemoNote,
   getDemoNote,
+  ensureDemoStarterNote,
   createDemoTag,
   updateDemoTag,
   deleteDemoTag,
@@ -75,6 +76,7 @@ export interface UseDemoStateReturn {
   deleteNote: (id: string) => boolean;
   restoreNote: (note: Note) => boolean;
   getNote: (id: string) => Note | null;
+  ensureStarterNote: (starterId: string) => Note | null;
 
   // Tag operations
   createTag: (tag: { name: string; color: TagColor }) => Tag;
@@ -193,6 +195,17 @@ export function useDemoState(): UseDemoStateReturn {
     []
   );
 
+  const ensureStarterNoteHandler = useCallback(
+    (starterId: string): Note | null => {
+      const ensured = ensureDemoStarterNote(starterId);
+      if (!ensured) return null;
+      refreshState();
+      const currentState = getDemoState();
+      return demoNoteToNote(ensured, currentState.tags);
+    },
+    [refreshState]
+  );
+
   // Tag operations
   const createTagHandler = useCallback(
     (tag: { name: string; color: TagColor }): Tag => {
@@ -268,6 +281,7 @@ export function useDemoState(): UseDemoStateReturn {
     deleteNote: deleteNoteHandler,
     restoreNote: restoreNoteHandler,
     getNote: getNoteHandler,
+    ensureStarterNote: ensureStarterNoteHandler,
 
     createTag: createTagHandler,
     updateTag: updateTagHandler,

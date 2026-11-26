@@ -1,6 +1,6 @@
 # Yidhan
 
-A notes app built around writing. Notes are encrypted on your device before they sync.
+A calm, private place to write. Notes are encrypted on your device before they sync.
 
 **Live Demo:** [https://yidhan.vercel.app](https://yidhan.vercel.app)
 
