@@ -194,7 +194,7 @@ export function FadedNotesView({
           "
         >
           <ModalBackdropButton
-            label="Cancel releasing all notes"
+            label="Cancel deleting all faded notes"
             onClick={() => setShowEmptyConfirm(false)}
           />
           <dialog

@@ -738,14 +738,14 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     fireEvent.click(letGoTrigger);
 
     // ReAuthModal is now topmost; LettingGoModal behind it is inert.
-    const reauthDialog = screen.getByRole('dialog', { name: 'A moment of verification' });
+    const reauthDialog = screen.getByRole('dialog', { name: "Confirm it's you" });
     expect(reauthDialog.contains(document.activeElement)).toBe(true);
     expect(letGoTrigger.closest('[inert]')).not.toBeNull();
 
     // Escape closes ONLY ReAuthModal, un-inerts LettingGoModal, and returns focus to "Let go".
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.queryByRole('dialog', { name: 'A moment of verification' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: "Confirm it's you" })).toBeNull();
     expect(letGoTrigger.closest('[inert]')).toBeNull();
     expect(document.activeElement).toBe(letGoTrigger);
     // Page behind LettingGoModal stays inert.
@@ -908,7 +908,7 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     // Close A FIRST while B is still open.
     fireEvent.click(screen.getByRole('button', { name: 'Stay' }));
     expect(screen.queryByText('Keep your notes')).toBeNull();
-    expect(screen.getByRole('dialog', { name: 'A gentle pause' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Still there?' })).toBeInTheDocument();
 
     // Now close B: A's button is unmounted, so B falls back to A's original page opener.
     fireEvent.click(screen.getByRole('button', { name: 'Sign out now' }));

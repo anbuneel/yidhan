@@ -176,7 +176,7 @@ describe('BottomSheet focus', () => {
 
     // Open a covering modal on top of BottomSheet.
     rerender(<StackedHarness showTop />);
-    const topDialog = screen.getByRole('dialog', { name: 'A gentle pause' });
+    const topDialog = screen.getByRole('dialog', { name: 'Still there?' });
     expect(topDialog.contains(document.activeElement)).toBe(true);
 
     // Flip isMobile while BottomSheet is covered: top modal must stay active and focused.

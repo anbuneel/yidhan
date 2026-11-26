@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import type { Note } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
 import { VaultLockedSaveError } from '../utils/saveErrors';
+import { UNDO_TOAST_MS } from '../utils/undoToast';
 import { applySavedNote } from '../utils/applySavedNote';
 import { updateEncryptedNote } from '../services/encryptedNotes';
 import {
@@ -134,7 +135,7 @@ export function useNoteActions({
                   await refreshFadedNotesCount();
                   toast.success('Note restored');
                 } catch {
-                  toast.error('Failed to undo');
+                  toast.error("Couldn't restore the note. It's still in Faded notes.");
                 }
               }}
               className="px-2 py-1 text-sm font-medium rounded transition-colors"
@@ -147,7 +148,7 @@ export function useNoteActions({
             </button>
           </div>
         ),
-        { duration: 5000 }
+        { duration: UNDO_TOAST_MS }
       );
       return true;
     } catch (error) {

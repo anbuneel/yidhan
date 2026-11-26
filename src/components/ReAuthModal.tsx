@@ -160,7 +160,7 @@ export function ReAuthModal({
                 color: 'var(--color-text-primary)',
               }}
             >
-              A moment of verification
+              Confirm it's you
             </h2>
             <button type="button"
               onClick={onCancel}

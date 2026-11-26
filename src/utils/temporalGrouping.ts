@@ -56,8 +56,8 @@ export const WATERLINE_TEXT: Record<LibrarySectionKey, (count: number) => string
   thisWeek: (n) => `${n} more from this week...`,
   lastWeek: (n) => `${n} more from last week...`,
   thisMonth: (n) => `${n} more this month...`,
-  earlier: (n) => `${n} quieter thoughts...`,
-  archive: (n) => `${n} resting here...`,
+  earlier: (n) => `${n} more from earlier...`,
+  archive: (n) => `${n} more in the archive...`,
 };
 
 export interface ChapterGroup {

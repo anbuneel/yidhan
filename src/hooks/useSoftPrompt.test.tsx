@@ -273,7 +273,7 @@ describe('Practice Space sign-up prompt count and guards (B4)', () => {
     );
 
     fireEvent.keyDown(window, { key: '?' });
-    expect(screen.queryByText('Quiet shortcuts')).toBeNull();
+    expect(screen.queryByText('Keyboard shortcuts')).toBeNull();
 
     fireEvent.keyDown(window, { key: 'n', ctrlKey: true });
     expect(screen.queryByTestId('note-editor')).toBeNull();

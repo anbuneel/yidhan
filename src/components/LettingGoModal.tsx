@@ -54,12 +54,12 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
     const jsonData = exportNotesToJSON(notes, tags);
     const date = new Date().toISOString().split('T')[0];
     downloadFile(jsonData, `yidhan-keepsakes-${date}.json`, 'application/json');
-    toast.success('Keepsakes saved (JSON)');
+    toast.success('Notes downloaded (JSON)');
   };
 
   const handleExportMarkdown = async () => {
     await downloadMarkdownZip(notes);
-    toast.success('Keepsakes saved (Markdown)');
+    toast.success('Notes downloaded (Markdown)');
   };
 
   // Initiate full backup - may require re-auth

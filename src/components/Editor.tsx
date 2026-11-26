@@ -1813,7 +1813,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             >
               {isDemo
                 ? 'This note will be permanently removed from your practice space.'
-                : 'It will rest in Faded notes for 30 days, then quietly disappear.'}
+                : 'It stays in Faded notes for 30 days, then is deleted permanently.'}
             </p>
             <div className="flex gap-3 justify-end">
               <button type="button"

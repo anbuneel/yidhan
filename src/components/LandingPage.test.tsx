@@ -147,6 +147,9 @@ describe('LandingPage', () => {
     expect(within(section).getByText(/what is free, and how is it paid for\?/i)).toBeInTheDocument();
     expect(section).toHaveTextContent(/agpl-3\.0/i);
     expect(section).toHaveTextContent(/maintained by one person/i);
+    expect(section).toHaveTextContent(/everything that is free today stays free/i);
+    // A future paid add-on would make "no paid tiers" untrue.
+    expect(section).not.toHaveTextContent(/no ads, paid tiers|feature gates/i);
     expect(section).not.toHaveTextContent(/free forever|low-cost hosting/i);
 
     expect(within(section).getByText(/can i import or export my notes\?/i)).toBeInTheDocument();

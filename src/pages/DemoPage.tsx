@@ -11,6 +11,7 @@
 
 import { useNoteSearchResults } from '../hooks/useNoteSearch';
 import toast from 'react-hot-toast';
+import { UNDO_TOAST_MS } from '../utils/undoToast';
 import { useAppShortcuts } from '../hooks/useAppShortcuts';
 import { useLibraryCardNavigation } from '../hooks/useLibraryCardNavigation';
 import { useState, useCallback, useEffect, useMemo, Suspense, useRef } from 'react';
@@ -352,7 +353,7 @@ export function DemoPage({
                 if (restoreNote(deletedNote)) {
                   toast.success('Note restored');
                 } else {
-                  toast.error('Could not restore note');
+                  toast.error("Couldn't restore the note.");
                 }
               }}
               className="px-2 py-1 text-sm font-medium rounded transition-colors"
@@ -365,7 +366,7 @@ export function DemoPage({
             </button>
           </div>
         ),
-        { duration: 5000 }
+        { duration: UNDO_TOAST_MS }
       );
       return true;
     },
@@ -828,13 +829,16 @@ function DemoHeader({
         <div className="flex items-center gap-2">
         {showKeepCta && (
           // Accent as text, not a CTA: "New note" stays the one filled button
-          // (DESIGN.md, Button and accent taxonomy).
+          // (DESIGN.md, Button and accent taxonomy). Hidden on phones: "Create an
+          // account" does not fit beside Sign in there, and the ribbon above carries it.
           <button
             type="button"
             onClick={onKeep}
             aria-label="Create an account to keep your notes"
+            data-testid="demo-keep-cta"
             className="
-              px-1.5 sm:px-2 py-2
+              hidden sm:inline-block
+              px-2 py-2
               shrink-0
               text-sm font-medium whitespace-nowrap
               underline decoration-1 underline-offset-4

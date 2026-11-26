@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { LettingGoModal } from './LettingGoModal';
+import { LettingGoModal, formatDeletionDate } from './LettingGoModal';
 import type { Note, Tag } from '../types';
 
 const {
@@ -128,7 +128,7 @@ describe('LettingGoModal re-auth feature switch', () => {
       expect(mockFetchAllNoteShares).toHaveBeenCalledOnce();
     });
 
-    expect(screen.queryByText('A moment of verification')).not.toBeInTheDocument();
+    expect(screen.queryByText("Confirm it's you")).not.toBeInTheDocument();
     expect(mockIsRecentlyReauthed).not.toHaveBeenCalled();
     expect(mockExportFullAccountData).toHaveBeenCalledWith(
       notes,
@@ -150,7 +150,7 @@ describe('LettingGoModal re-auth feature switch', () => {
 
     await user.click(screen.getByRole('button', { name: 'Full backup' }));
 
-    expect(await screen.findByText('A moment of verification')).toBeInTheDocument();
+    expect(await screen.findByText("Confirm it's you")).toBeInTheDocument();
     expect(screen.getByText(/download your full backup/)).toBeInTheDocument();
     expect(mockIsRecentlyReauthed).toHaveBeenCalledOnce();
     expect(mockFetchAllNoteShares).not.toHaveBeenCalled();
@@ -162,7 +162,7 @@ describe('LettingGoModal re-auth feature switch', () => {
     renderLettingGoModal();
 
     await user.click(screen.getByRole('button', { name: 'Let go' }));
-    expect(await screen.findByText('A moment of verification')).toBeInTheDocument();
+    expect(await screen.findByText("Confirm it's you")).toBeInTheDocument();
     expect(screen.getByText(/begin your departure/)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText('Your password'), 'correct horse battery staple');
@@ -184,10 +184,29 @@ describe('LettingGoModal re-auth feature switch', () => {
 
     await user.click(screen.getByRole('button', { name: 'Let go' }));
 
-    expect(await screen.findByText('A moment of verification')).toBeInTheDocument();
+    expect(await screen.findByText("Confirm it's you")).toBeInTheDocument();
     expect(screen.getByText(/begin your departure/)).toBeInTheDocument();
     expect(mockIsRecentlyReauthed).not.toHaveBeenCalled();
     expect(mockInitiateOffboarding).not.toHaveBeenCalled();
     expect(mockSignOut).not.toHaveBeenCalled();
+  });
+});
+
+describe('LettingGoModal copy (design critique G3)', () => {
+  it('names the deletion date, 14 days out', () => {
+    const from = new Date(2026, 10, 26, 12);
+    expect(formatDeletionDate(from)).toBe(
+      new Date(2026, 11, 10, 12).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+    );
+  });
+
+  it('says when the account and notes are deleted, and how to cancel', () => {
+    renderLettingGoModal();
+    expect(
+      screen.getByText(`Your account and notes will be deleted on ${formatDeletionDate()}.`)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/sign back in and choose "Stay" to cancel/)).toBeInTheDocument();
+    expect(screen.queryByText(/quiet moments/i)).toBeNull();
+    expect(screen.queryByText(/fade|release/i)).toBeNull();
   });
 });

@@ -1,4 +1,5 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockNote } from '../test/factories';
 
@@ -76,6 +77,70 @@ describe('note deletion feedback', () => {
     expect(mocks.toastError).not.toHaveBeenCalled();
     expect(consoleError).toHaveBeenCalledWith('Failed to delete note:', failure);
     consoleError.mockRestore();
+  });
+
+  function renderDeleteHook(note: ReturnType<typeof createMockNote>) {
+    return renderHook(() => useNoteActions({
+      userId: 'user-1',
+      keys: null,
+      notes: [note],
+      notesRef: { current: [note] },
+      setNotes: vi.fn(),
+      refreshFadedNotesCount: vi.fn(),
+      openNoteIdRef: { current: null },
+      onOpenNoteClosed: vi.fn(),
+      triggerCoalescedSync: vi.fn(),
+    }));
+  }
+
+  /** Render the undo toast the hook passed to `toast()` and click Undo. */
+  async function clickUndo() {
+    const [renderToast, options] = mocks.toast.mock.calls[0] as [
+      (t: { id: string }) => ReactElement,
+      { duration: number },
+    ];
+    render(renderToast({ id: 'toast-1' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    });
+    return options;
+  }
+
+  it('keeps the undo toast up for 8 seconds', async () => {
+    const note = createMockNote({ id: 'note-to-fade' });
+    mocks.softDeleteNoteOffline.mockResolvedValue(undefined);
+    const { result } = renderDeleteHook(note);
+    await act(async () => {
+      await result.current.handleNoteDelete(note.id);
+    });
+    expect(mocks.toast.mock.calls[0][1]).toEqual({ duration: 8000 });
+  });
+
+  it('says the note is still in Faded notes when undo fails', async () => {
+    const note = createMockNote({ id: 'note-to-fade' });
+    mocks.softDeleteNoteOffline.mockResolvedValue(undefined);
+    mocks.restoreNoteOffline.mockRejectedValue(new Error('IndexedDB write failed'));
+    const { result } = renderDeleteHook(note);
+    await act(async () => {
+      await result.current.handleNoteDelete(note.id);
+    });
+    await clickUndo();
+    expect(mocks.toastError).toHaveBeenCalledWith("Couldn't restore the note. It's still in Faded notes.");
+    expect(mocks.toastSuccess).not.toHaveBeenCalled();
+  });
+
+  it('still restores on undo, with no error', async () => {
+    const note = createMockNote({ id: 'note-to-fade' });
+    mocks.softDeleteNoteOffline.mockResolvedValue(undefined);
+    mocks.restoreNoteOffline.mockResolvedValue(undefined);
+    const { result } = renderDeleteHook(note);
+    await act(async () => {
+      await result.current.handleNoteDelete(note.id);
+    });
+    await clickUndo();
+    expect(mocks.restoreNoteOffline).toHaveBeenCalledWith('user-1', note.id);
+    expect(mocks.toastSuccess).toHaveBeenCalledWith('Note restored');
+    expect(mocks.toastError).not.toHaveBeenCalled();
   });
 
   it('keeps the permanent-delete failure toast in Faded Notes', async () => {

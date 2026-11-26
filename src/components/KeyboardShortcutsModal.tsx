@@ -25,7 +25,8 @@ const shortcuts: ShortcutSection[] = [
     title: 'Global',
     items: [
       { keys: [modKey, 'K'], description: 'Focus search' },
-      { keys: [modKey, 'N'], description: 'Create new note' },
+      { keys: ['N'], description: 'Create new note' },
+      { keys: [modKey, 'N'], description: 'Create new note (installed app)' },
       { keys: ['?'], description: 'Show this help' },
     ],
   },
@@ -143,7 +144,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                 color: 'var(--color-text-primary)',
               }}
             >
-              Quiet shortcuts
+              Keyboard shortcuts
             </h2>
             <button type="button"
               onClick={onClose}

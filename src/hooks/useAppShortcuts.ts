@@ -43,10 +43,18 @@ export function useAppShortcuts({
   const handleCreateNoteShortcut = useEffectEvent((e: KeyboardEvent) => {
     if (!enabled || view !== 'library') return;
 
+    // Ctrl/Cmd+N works in the installed app; a browser tab keeps it for a new window.
     if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
       e.preventDefault();
       onNewNote();
+      return;
     }
+
+    // Plain N works in a browser tab too. Never while typing, and never on a repeat.
+    const isPlainN = e.key === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey;
+    if (!isPlainN || e.repeat || e.isComposing || isTypingTarget(e.target)) return;
+    e.preventDefault();
+    onNewNote();
   });
 
   const handleLibrarySearchShortcut = useEffectEvent((e: KeyboardEvent) => {

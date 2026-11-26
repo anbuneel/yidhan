@@ -249,9 +249,9 @@ export function LandingPage({
             <div className="landing-faq-item">
               <dt>What is free, and how is it paid for?</dt>
               <dd>
-                Everything in Yidhan is free and open source under AGPL-3.0, with no ads, paid
-                tiers, or feature gates. It is maintained by one person, with no company behind
-                it.
+                Yidhan is free and open source under AGPL-3.0, with no ads. If paid storage for
+                attachments is ever added, everything that is free today stays free. It is
+                maintained by one person, with no company behind it.
               </dd>
             </div>
             <div className="landing-faq-item">

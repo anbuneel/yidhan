@@ -20,7 +20,7 @@ const PAGES = [
     title: 'Security · Yidhan',
   },
   { path: '/changelog', heading: "What's new", text: /what we remember/i, title: 'Changelog · Yidhan' },
-  { path: '/roadmap', heading: 'Roadmap', text: /some thoughts have settled/i, title: 'Roadmap · Yidhan' },
+  { path: '/roadmap', heading: 'Roadmap', text: /what has shipped, and what is planned/i, title: 'Roadmap · Yidhan' },
 ];
 
 const APP_SHELL_MODULE = '**/src/shells/AppShell.tsx*';
