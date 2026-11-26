@@ -6,17 +6,20 @@
  * can unlock silently; a sign-out clears it — see the lock-reason rule in `CLAUDE.md`.
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useSessionSettings } from './useSessionSettings';
+import { hasStoredSessionTimeout, useSessionSettings } from './useSessionSettings';
 import { useSessionTimeout } from './useSessionTimeout';
-import { useVaultSettings } from './useVaultSettings';
+import { hasStoredVaultSettings, useVaultSettings } from './useVaultSettings';
 import { useIdleTimer } from './useIdleTimer';
+import { applySecurityPreset, DEFAULT_SECURITY_PRESET } from '../lib/securityPresets';
 
 export interface UseSessionGuardsOptions {
   userId: string | undefined;
   isEncryptionSetup: boolean;
   isUnlocked: boolean;
+  /** The new-account setup screen is open. A new account starts on the default preset. */
+  isAccountSetup?: boolean;
   lockVault: (reason: 'auto-lock' | 'manual' | 'sign-out') => void;
   signOut: () => Promise<void>;
 }
@@ -34,6 +37,7 @@ export function useSessionGuards({
   userId,
   isEncryptionSetup,
   isUnlocked,
+  isAccountSetup = false,
   lockVault,
   signOut,
 }: UseSessionGuardsOptions): SessionGuards {
@@ -85,6 +89,18 @@ export function useSessionGuards({
     },
     enabled: Boolean(userId) && isEncryptionSetup && isUnlocked,
   });
+
+  // A new account starts on "My device" (J1). Only when nothing is stored on this
+  // browser for the account, so an existing reader's choices never change, and once.
+  const defaultAppliedForRef = useRef<string | null>(null);
+  const { setAutoLockMinutes, setRememberBrowser } = vaultSettings;
+  const { setTimeoutMinutes } = sessionSettings;
+  useEffect(() => {
+    if (!isAccountSetup || !userId || defaultAppliedForRef.current === userId) return;
+    defaultAppliedForRef.current = userId;
+    if (hasStoredVaultSettings(userId) || hasStoredSessionTimeout(userId)) return;
+    applySecurityPreset(DEFAULT_SECURITY_PRESET, { setAutoLockMinutes, setRememberBrowser, setTimeoutMinutes });
+  }, [isAccountSetup, userId, setAutoLockMinutes, setRememberBrowser, setTimeoutMinutes]);
 
   // Handle session timeout modal actions
   const handleSessionStay = () => {

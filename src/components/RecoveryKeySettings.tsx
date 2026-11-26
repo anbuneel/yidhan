@@ -27,9 +27,7 @@ export function RecoveryKeySettings() {
 
   return (
     <div>
-      <span className="block text-sm mb-1" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-primary)' }}>
-        Recovery key
-      </span>
+      {/* The "Recovery key" heading is the Settings section's. */}
       {isOpen ? (
         <div className="mt-2 p-4" style={{ border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-plain)' }}>
           {hasKey && (

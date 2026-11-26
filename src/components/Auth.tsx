@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { setTrustedDeviceOnLogin } from '../hooks/useSessionSettings';
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import type { Theme } from '../types';
 import { Logo } from './Logo';
@@ -138,7 +137,6 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
-  const [keepSignedIn, setKeepSignedIn] = useState(false);
 
   const { signIn, signUp, signInWithGoogle, signInWithGitHub, resetPassword, updatePassword } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -195,12 +193,9 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
 
     try {
       if (mode === 'login') {
-        const { data, error } = await signIn(email, password);
+        const { error } = await signIn(email, password);
         if (error) {
           setError(sanitizeErrorMessage(error.message));
-        } else if (keepSignedIn && data?.user?.id) {
-          // Mark this device as trusted for extended session timeout
-          setTrustedDeviceOnLogin(data.user.id);
         }
       } else if (mode === 'signup') {
         const { error } = await signUp(email, password);
@@ -503,22 +498,9 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             </div>
           )}
 
-          {/* Remember me + Forgot Password - only for login */}
+          {/* Forgot Password - only for login */}
           {mode === 'login' && (
-            <div className="mb-4 md:mb-6 flex items-center justify-between">
-              {/* Keep me signed in checkbox */}
-              <label
-                className="auth-text-secondary flex items-center gap-2 cursor-pointer select-none"
-              >
-                <input
-                  type="checkbox"
-                  checked={keepSignedIn}
-                  onChange={(e) => setKeepSignedIn(e.target.checked)}
-                  className="form-checkbox"
-                />
-                <span className="text-sm">Keep me signed in</span>
-              </label>
-
+            <div className="mb-4 md:mb-6 flex items-center justify-end">
               {/* Forgot password link */}
               <button
                 type="button"

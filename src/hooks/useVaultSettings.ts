@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 const VALID_AUTO_LOCK = [0, 15, 60] as const;
-type AutoLockMinutes = (typeof VALID_AUTO_LOCK)[number];
+export type AutoLockMinutes = (typeof VALID_AUTO_LOCK)[number];
 
 export interface VaultSettings {
   autoLockMinutes: AutoLockMinutes;
@@ -46,6 +46,29 @@ function loadSettings(userId: string): VaultSettings {
   }
 }
 
+/** True when this user has stored either vault setting on this browser. Fails closed to true. */
+export function hasStoredVaultSettings(userId: string): boolean {
+  try {
+    return localStorage.getItem(storageKey(userId, 'auto-lock-minutes')) !== null
+      || localStorage.getItem(storageKey(userId, 'remember-browser')) !== null;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Same-tab sync. The unlock screen and Settings each hold an instance of this hook,
+ * and a localStorage write fires no `storage` event in the tab that made it. Without
+ * this, "Remember this browser" ticked on the unlock screen would leave Settings
+ * showing the wrong preset, and picking that preset would not turn it off.
+ */
+const SYNC_EVENT = 'yidhan:vault-settings';
+interface SyncDetail { userId: string; change: Partial<VaultSettings> }
+
+function broadcast(userId: string, change: Partial<VaultSettings>) {
+  window.dispatchEvent(new CustomEvent<SyncDetail>(SYNC_EVENT, { detail: { userId, change } }));
+}
+
 /**
  * Per-user vault settings stored in localStorage.
  * Separate from auth session settings (useSessionSettings).
@@ -62,12 +85,23 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
     setSettings(userId ? loadSettings(userId) : DEFAULTS);
   }
 
+  useEffect(() => {
+    if (!userId) return;
+    const onSync = (event: Event) => {
+      const { detail } = event as CustomEvent<SyncDetail>;
+      if (detail?.userId === userId) setSettings((prev) => ({ ...prev, ...detail.change }));
+    };
+    window.addEventListener(SYNC_EVENT, onSync);
+    return () => window.removeEventListener(SYNC_EVENT, onSync);
+  }, [userId]);
+
   const setAutoLockMinutes = useCallback((minutes: AutoLockMinutes) => {
     setSettings((prev) => ({ ...prev, autoLockMinutes: minutes }));
     if (userId) {
       try {
         localStorage.setItem(storageKey(userId, 'auto-lock-minutes'), String(minutes));
       } catch (err) { console.warn('[useVaultSettings] Failed to persist auto-lock setting:', err); }
+      broadcast(userId, { autoLockMinutes: minutes });
     }
   }, [userId]);
 
@@ -97,6 +131,7 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
 
       localStorage.setItem(rememberKey, String(enabled));
       setSettings((prev) => ({ ...prev, rememberBrowser: enabled }));
+      broadcast(userId, { rememberBrowser: enabled });
       return true;
     } catch (err) {
       console.warn('[useVaultSettings] Failed to persist remember-browser setting:', err);
@@ -109,6 +144,7 @@ export function useVaultSettings(userId: string | null): UseVaultSettingsResult 
       }
 
       setSettings((prev) => ({ ...prev, rememberBrowser: false }));
+      broadcast(userId, { rememberBrowser: false });
       return false;
     }
   }, [userId]);
