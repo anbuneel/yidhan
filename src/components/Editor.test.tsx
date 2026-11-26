@@ -100,7 +100,6 @@ vi.mock('./HeaderShell', () => ({
 // Mock export/import utilities
 vi.mock('../utils/exportImport', () => ({
   exportNoteToMarkdown: vi.fn().mockReturnValue('# Test'),
-  exportNoteToJSON: vi.fn().mockReturnValue('{}'),
   getSanitizedFilename: vi.fn().mockReturnValue('test'),
   downloadFile: vi.fn(),
   copyNoteToClipboard: vi.fn().mockResolvedValue(undefined),
@@ -563,21 +562,25 @@ describe('Editor', () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Editor {...defaultProps} />);
 
-      await user.click(screen.getByLabelText('Export note'));
+      await user.click(screen.getByLabelText('Share and export'));
 
       expect(screen.getByText('Copy as text')).toBeInTheDocument();
       expect(screen.getByText('Copy with formatting')).toBeInTheDocument();
       // E2EE sharing re-enabled — share option should be visible
       expect(screen.getByText('Share as letter')).toBeInTheDocument();
       expect(screen.getByText('Download (.md)')).toBeInTheDocument();
-      expect(screen.getByText('Download (.json)')).toBeInTheDocument();
+      // Per-note JSON was dropped; the full-library JSON export lives in the header.
+      expect(screen.queryByText('Download (.json)')).not.toBeInTheDocument();
+      // Share as letter comes first.
+      const labels = [...document.querySelectorAll('button')].map((b) => b.textContent?.trim());
+      expect(labels.indexOf('Share as letter')).toBeLessThan(labels.indexOf('Copy as text'));
     });
 
     it('copies note as text', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Editor {...defaultProps} />);
 
-      await user.click(screen.getByLabelText('Export note'));
+      await user.click(screen.getByLabelText('Share and export'));
       await user.click(screen.getByText('Copy as text'));
 
       expect(exportImport.copyNoteToClipboard).toHaveBeenCalled();
@@ -587,7 +590,7 @@ describe('Editor', () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Editor {...defaultProps} />);
 
-      await user.click(screen.getByLabelText('Export note'));
+      await user.click(screen.getByLabelText('Share and export'));
       await user.click(screen.getByText('Copy with formatting'));
 
       expect(exportImport.copyNoteWithFormatting).toHaveBeenCalled();
@@ -597,21 +600,10 @@ describe('Editor', () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Editor {...defaultProps} />);
 
-      await user.click(screen.getByLabelText('Export note'));
+      await user.click(screen.getByLabelText('Share and export'));
       await user.click(screen.getByText('Download (.md)'));
 
       expect(exportImport.exportNoteToMarkdown).toHaveBeenCalled();
-      expect(exportImport.downloadFile).toHaveBeenCalled();
-    });
-
-    it('downloads JSON', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      render(<Editor {...defaultProps} />);
-
-      await user.click(screen.getByLabelText('Export note'));
-      await user.click(screen.getByText('Download (.json)'));
-
-      expect(exportImport.exportNoteToJSON).toHaveBeenCalled();
       expect(exportImport.downloadFile).toHaveBeenCalled();
     });
 
@@ -619,7 +611,7 @@ describe('Editor', () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Editor {...defaultProps} />);
 
-      await user.click(screen.getByLabelText('Export note'));
+      await user.click(screen.getByLabelText('Share and export'));
 
       // E2EE sharing re-enabled — share option should be visible
       expect(screen.getByText('Share as letter')).toBeInTheDocument();
@@ -629,7 +621,7 @@ describe('Editor', () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Editor {...defaultProps} />);
 
-      await user.click(screen.getByLabelText('Export note'));
+      await user.click(screen.getByLabelText('Share and export'));
       expect(screen.getByText('Copy as text')).toBeInTheDocument();
 
       // Click outside

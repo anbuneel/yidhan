@@ -7,11 +7,20 @@ export type EditorCommandId =
   | 'paragraph' | 'heading1' | 'heading2' | 'heading3'
   | 'bulletList' | 'orderedList' | 'taskList'
   | 'blockquote' | 'codeBlock' | 'horizontalRule'
-  | 'alignLeft' | 'alignCenter' | 'alignRight' | 'alignJustify'
-  | 'date' | 'time' | 'now'
-  | 'undo' | 'redo' | 'findReplace' | 'smartTypography' | 'focusMode';
+  | 'alignCenter'
+  | 'date' | 'now'
+  | 'undo' | 'redo' | 'findReplace' | 'focusMode';
 
-type EditorCommandGroup = 'text' | 'structure' | 'insert' | 'history' | 'view';
+export type EditorCommandGroup = 'text' | 'structure' | 'insert' | 'history' | 'view';
+
+/** The ⋯ menu's headings, in order. */
+export const EDITOR_COMMAND_GROUPS: readonly { id: EditorCommandGroup; label: string }[] = [
+  { id: 'text', label: 'Text' },
+  { id: 'structure', label: 'Blocks' },
+  { id: 'insert', label: 'Insert' },
+  { id: 'history', label: 'Edit' },
+  { id: 'view', label: 'View' },
+];
 
 export interface EditorCommandContext {
   editor: Editor;
@@ -33,6 +42,8 @@ export interface EditorCommandDefinition {
    *  a button's accessible name must include what it shows, or voice control misses it. */
   visibleLabel?: string;
   availableInSlash?: boolean;
+  /** False keeps a command out of the ⋯ menu. It stays in the slash menu. */
+  availableInMenu?: boolean;
   isActive?: (context: EditorCommandContext) => boolean;
   canRun?: (context: EditorCommandContext) => boolean;
   run: (context: EditorCommandContext, slashRange?: Range) => void;
@@ -81,6 +92,29 @@ const focusModeIcon: ReactNode = (
   </svg>
 );
 
+// Link icon: two chain links on the same 1.5 stroke.
+const linkIcon: ReactNode = (
+  <svg className="size-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
+    <path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+  </svg>
+);
+
+// Undo and redo: a curved arrow and its mirror, for the phone bar where words do not fit.
+const undoIcon: ReactNode = (
+  <svg className="size-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M9 14 4 9l5-5" />
+    <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+  </svg>
+);
+
+const redoIcon: ReactNode = (
+  <svg className="size-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m15 14 5-5-5-5" />
+    <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
+  </svg>
+);
+
 function textLabel(text: string, className?: string): ReactNode {
   return <span className={className}>{text}</span>;
 }
@@ -122,7 +156,7 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     run: ({ editor }, range) => { startChain(editor, range).toggleCode().run(); },
   },
   {
-    id: 'link', label: 'Link', shortLabel: textLabel('Link', 'text-[12px]'),
+    id: 'link', label: 'Link', shortLabel: linkIcon,
     description: 'Insert or edit a link', searchTerms: ['url', 'href'], group: 'text', shortcut: 'Ctrl+K',
     isActive: ({ editor }) => editor.isActive('link'),
     run: (context, range) => runExternalAction(context, 'link', context.onLink, range),
@@ -185,40 +219,39 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     description: 'Insert a horizontal divider', searchTerms: ['rule', 'line', 'separator'], group: 'insert',
     run: ({ editor }, range) => { startChain(editor, range).setHorizontalRule().run(); },
   },
-  ...(['left', 'center', 'right', 'justify'] as const).map((alignment): EditorCommandDefinition => ({
-    id: `align${alignment[0].toUpperCase()}${alignment.slice(1)}` as EditorCommandId,
-    label: `Align ${alignment}`,
-    shortLabel: textLabel(alignment === 'justify' ? 'Justify' : alignment[0].toUpperCase(), 'text-[12px]'),
-    description: `${alignment[0].toUpperCase()}${alignment.slice(1)} align this block`,
-    searchTerms: ['align', 'text', alignment],
-    group: 'structure',
-    isActive: ({ editor }) => editor.isActive({ textAlign: alignment }),
-    run: ({ editor }, range) => { startChain(editor, range).setTextAlign(alignment).run(); },
-  })),
+  {
+    // Centre is the only alignment left in the menus. Left, right and justify stay
+    // reachable by the TextAlign shortcuts, and old notes keep their alignment.
+    id: 'alignCenter', label: 'Align center', shortLabel: textLabel('C', 'text-[12px]'),
+    description: 'Center this block, or undo centering', searchTerms: ['align', 'text', 'center', 'centre'], group: 'structure',
+    isActive: ({ editor }) => editor.isActive({ textAlign: 'center' }),
+    run: ({ editor }, range) => {
+      const chain = startChain(editor, range);
+      if (editor.isActive({ textAlign: 'center' })) chain.unsetTextAlign().run();
+      else chain.setTextAlign('center').run();
+    },
+  },
   {
     id: 'date', label: 'Date', shortLabel: textLabel('Date', 'text-[12px]'),
     description: 'Insert the current date', searchTerms: ['today', 'day'], group: 'insert',
+    availableInMenu: false,
     run: ({ editor }, range) => { startChain(editor, range).insertContent(new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })).run(); },
   },
   {
-    id: 'time', label: 'Time', shortLabel: textLabel('Time', 'text-[12px]'),
-    description: 'Insert the current time', searchTerms: ['clock', 'hour'], group: 'insert',
-    run: ({ editor }, range) => { startChain(editor, range).insertContent(new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })).run(); },
-  },
-  {
     id: 'now', label: 'Date and time', shortLabel: textLabel('Now', 'text-[12px]'),
-    description: 'Insert the current date and time', searchTerms: ['now', 'timestamp'], group: 'insert',
+    description: 'Insert the current date and time', searchTerms: ['now', 'timestamp', 'time'], group: 'insert',
+    availableInMenu: false,
     run: ({ editor }, range) => { startChain(editor, range).insertContent(new Date().toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })).run(); },
   },
   {
-    id: 'undo', label: 'Undo', shortLabel: textLabel('Undo', 'text-[12px]'),
+    id: 'undo', label: 'Undo', shortLabel: undoIcon,
     description: 'Undo the last change', searchTerms: ['history', 'back'], group: 'history', shortcut: 'Ctrl+Z',
     availableInSlash: false,
     canRun: ({ editor }) => editor.can().undo(),
     run: ({ editor }) => { editor.chain().focus().undo().run(); },
   },
   {
-    id: 'redo', label: 'Redo', shortLabel: textLabel('Redo', 'text-[12px]'),
+    id: 'redo', label: 'Redo', shortLabel: redoIcon,
     description: 'Redo the last undone change', searchTerms: ['history', 'forward'], group: 'history', shortcut: 'Ctrl+Shift+Z',
     availableInSlash: false,
     canRun: ({ editor }) => editor.can().redo(),
@@ -230,17 +263,10 @@ export const EDITOR_COMMANDS: readonly EditorCommandDefinition[] = [
     run: (context, range) => runExternalAction(context, 'findReplace', context.onFindReplace, range),
   },
   {
-    id: 'smartTypography', label: 'Smart typography', shortLabel: textLabel('“ ”', 'text-xs'),
-    description: 'Shape quotes, dashes, and ellipses as you type', searchTerms: ['quotes', 'dash', 'ellipsis'], group: 'view',
-    isActive: ({ editor }) => editor.storage.smartTypography?.enabled ?? true,
-    run: ({ editor }, range) => {
-      if (range) editor.chain().focus().deleteRange(range).run();
-      editor.commands.toggleSmartTypography();
-    },
-  },
-  {
     id: 'focusMode', label: 'Focus mode', shortLabel: focusModeIcon,
     description: 'Let the page recede while you write', searchTerms: ['distraction', 'view'], group: 'view', shortcut: 'Ctrl+Shift+F',
+    // It has its own toolbar button.
+    availableInMenu: false,
     isActive: ({ isFocusMode }) => Boolean(isFocusMode),
     run: (context, range) => {
       const entering = !context.isFocusMode;
@@ -256,8 +282,10 @@ export const EDITOR_COMMANDS_BY_ID = new Map(EDITOR_COMMANDS.map((command) => [c
 
 // Typing a slash invocation is itself the newest undo event and clears any
 // redo branch. History commands therefore cannot have truthful slash-menu
-// semantics; they remain available in every mouse toolbar and by shortcut.
+// semantics; they remain available in the phone bar, the ⋯ menu and by shortcut.
 export const SLASH_EDITOR_COMMANDS = EDITOR_COMMANDS.filter((command) => command.availableInSlash !== false);
+
+export const MENU_EDITOR_COMMANDS = EDITOR_COMMANDS.filter((command) => command.availableInMenu !== false);
 
 export function editorCommandTitle(command: EditorCommandDefinition): string {
   // A comma, not brackets: name-matching ignores parentheticals, as axe does.
