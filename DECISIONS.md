@@ -23,8 +23,8 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 **Status:** Active
 
-**Why:** The 2026-11-25 design critique counted up to 18 visible controls on the inline
-toolbar at 900px and up, a different set on each of the three surfaces, and an overflow
+**Why:** From 900px the inline toolbar showed 19 controls, flagged by the 2026-11-25
+design critique, with a different set on each of the three surfaces, and an overflow
 menu that repeated every command in one flat list of about 29 items. `PRODUCT.md` says
 restraint is the product; a writer opening a note saw a word processor. The 2026-09-10
 entry "One toolbar per width" rested on the overflow menu listing every command, so any

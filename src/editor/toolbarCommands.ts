@@ -8,7 +8,7 @@ import {
 export type ToolbarVariant = 'inline' | 'bottom' | 'sidebar';
 
 /** The row on every toolbar, at every width. Focus mode and ⋯ follow it. */
-export const ROW_COMMANDS: readonly EditorCommandId[] = [
+const ROW_COMMANDS: readonly EditorCommandId[] = [
   'bold', 'italic', 'heading1', 'bulletList', 'link',
 ];
 

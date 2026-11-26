@@ -77,15 +77,14 @@ export const SmartTypography = Extension.create<Record<string, never>, SmartTypo
   addCommands() {
     return {
       setSmartTypography: (enabled: boolean) => ({ tr, dispatch }) => {
-        this.storage.enabled = enabled;
-        persistSmartTypographyPreference(enabled);
+        // Through the shared preference, so other open editors and Settings follow.
+        setSmartTypographyPreference(enabled);
         if (dispatch) dispatch(tr.setMeta('smartTypographyChanged', enabled));
         return true;
       },
       toggleSmartTypography: () => ({ tr, dispatch }) => {
         const enabled = !this.storage.enabled;
-        this.storage.enabled = enabled;
-        persistSmartTypographyPreference(enabled);
+        setSmartTypographyPreference(enabled);
         if (dispatch) dispatch(tr.setMeta('smartTypographyChanged', enabled));
         return true;
       },

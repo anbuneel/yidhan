@@ -4,7 +4,6 @@ import StarterKit from '@tiptap/starter-kit';
 import { TextSelection } from '@tiptap/pm/state';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { EDITOR_COMMANDS } from '../editor/editorCommands';
 import { SmartTypography } from '../editor/SmartTypography';
 import { EditorToolbar } from './EditorToolbar';
 
