@@ -19,7 +19,7 @@ const PAGES = [
     text: /what is protected, what is visible, and what we have not solved yet/i,
     title: 'Security · Yidhan',
   },
-  { path: '/changelog', heading: "What's new", text: /what we remember/i, title: 'Changelog · Yidhan' },
+  { path: '/changelog', heading: "What's new", text: /every release, newest first/i, title: 'Changelog · Yidhan' },
   { path: '/roadmap', heading: 'Roadmap', text: /what has shipped, and what is planned/i, title: 'Roadmap · Yidhan' },
 ];
 
@@ -55,12 +55,13 @@ test.describe('Public pages without JavaScript', () => {
     await page.goto('/changelog');
 
     const [latest] = changelog;
-    await expect(page.getByText(latest.version, { exact: true })).toBeVisible();
+    // Releases are grouped by day; a day's versions show in small text beside its date.
+    await expect(page.getByTestId('changelog-versions').filter({ hasText: latest.version }).first()).toBeVisible();
     await expect(page.getByText(latest.changes[0].text, { exact: true })).toBeVisible();
     // Items fade in from an IntersectionObserver in the app; here nothing runs it.
     await expect(page.locator('.changelog-item').first()).not.toHaveCSS('opacity', '0');
     const oldest = changelog[changelog.length - 1];
-    await expect(page.getByText(oldest.version, { exact: true })).toHaveCount(1);
+    await expect(page.getByTestId('changelog-versions').filter({ hasText: oldest.version })).toHaveCount(1);
   });
 
   test('/roadmap shows the current roadmap, not faded out', async ({ page }) => {

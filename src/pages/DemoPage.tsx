@@ -133,6 +133,17 @@ export function DemoPage({
     onDismissRibbon: dismissRibbon,
   });
 
+  // The invitation shows at most once per browser (design critique K11). Once it
+  // opens it stays open until answered, and the dismissal is stored straight away,
+  // so a reload or a later visit never brings it back.
+  const [isInvitationOpen, setIsInvitationOpen] = useState(false);
+  if (shouldShowPrompt && !isInvitationOpen) {
+    setIsInvitationOpen(true);
+  }
+  useEffect(() => {
+    if (isInvitationOpen) dismissPrompt();
+  }, [isInvitationOpen, dismissPrompt]);
+
   // First-run: show welcome intro until user creates their first note
   const hasOnlyStarterNotes = notes.length > 0 && notes.every((n) => n.id.startsWith('starter-'));
 
@@ -394,7 +405,7 @@ export function DemoPage({
   // returning to /demo. Focus the input directly, as App.tsx does; the token stays for
   // the editor-to-library request, which is what it was built for.
   useAppShortcuts({
-    enabled: !showTagModal && !showShortcutsModal && !shouldShowPrompt && !isAuthModalOpen,
+    enabled: !showTagModal && !showShortcutsModal && !isInvitationOpen && !isAuthModalOpen,
     view,
     onNewNote: () => { void handleNewNote(); },
     onFocusSearch: () => scheduleSearchFocus(DEMO_SEARCH_INPUT_ID),
@@ -489,11 +500,14 @@ export function DemoPage({
       )}
 
       {/* Invitation Modal */}
-      {shouldShowPrompt && (
+      {isInvitationOpen && (
         <InvitationModal
           noteCount={noteCount}
-          onSignUp={onSignUp}
-          onDismiss={dismissPrompt}
+          onSignUp={() => {
+            setIsInvitationOpen(false);
+            onSignUp();
+          }}
+          onDismiss={() => setIsInvitationOpen(false)}
         />
       )}
 

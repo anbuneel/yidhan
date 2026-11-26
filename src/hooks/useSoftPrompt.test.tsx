@@ -360,3 +360,68 @@ describe('Practice Space sign-up prompt count and guards (B4)', () => {
     expect(screen.queryByText('8 notes')).toBeNull();
   });
 });
+
+describe('Practice Space invitation shows once per browser (design critique K11)', () => {
+  const demoProps = () => ({
+    onSignUp: vi.fn(),
+    onSignIn: vi.fn(),
+    theme: 'light' as const,
+    onThemeToggle: vi.fn(),
+    onHomeClick: vi.fn(),
+    onChangelogClick: vi.fn(),
+    onRoadmapClick: vi.fn(),
+    onPrivacyClick: vi.fn(),
+    onTermsClick: vi.fn(),
+    onSupportClick: vi.fn(),
+  });
+  const heading = () => screen.queryByRole('heading', { name: 'Keep your notes' });
+
+  beforeEach(() => {
+    localStorage.clear();
+    seedDemoState((state) => {
+      state.metadata.createdAt = TEN_MINUTES_AGO();
+    });
+    createDemoNote({ title: 'A', content: '<p>A</p>', pinned: false, tagIds: [] });
+    createDemoNote({ title: 'B', content: '<p>B</p>', pinned: false, tagIds: [] });
+    createDemoNote({ title: 'C', content: '<p>C</p>', pinned: false, tagIds: [] });
+  });
+
+  it('does not come back after "Not yet", even days later', () => {
+    const first = render(<DemoPage {...demoProps()} />);
+    expect(heading()).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Not yet' }));
+    expect(heading()).toBeNull();
+    first.unmount();
+
+    const stored = JSON.parse(localStorage.getItem(DEMO_STORAGE_KEY)!) as DemoState;
+    stored.metadata.promptDismissedAt = Date.now() - 3 * 24 * 60 * 60 * 1000;
+    localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(stored));
+    render(<DemoPage {...demoProps()} />);
+    expect(heading()).toBeNull();
+  });
+
+  it('does not come back after a reload that left it unanswered', () => {
+    const first = render(<DemoPage {...demoProps()} />);
+    expect(heading()).toBeInTheDocument();
+    first.unmount();
+    render(<DemoPage {...demoProps()} />);
+    expect(heading()).toBeNull();
+  });
+
+  it('closes and does not come back after "Create an account"', () => {
+    const props = demoProps();
+    const { rerender } = render(<DemoPage {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Create an account' }));
+    expect(props.onSignUp).toHaveBeenCalledOnce();
+    rerender(<DemoPage {...props} isAuthModalOpen />);
+    rerender(<DemoPage {...props} isAuthModalOpen={false} />);
+    expect(heading()).toBeNull();
+  });
+
+  it('stays open while unanswered, though the dismissal is already stored', () => {
+    render(<DemoPage {...demoProps()} />);
+    const stored = JSON.parse(localStorage.getItem(DEMO_STORAGE_KEY)!) as DemoState;
+    expect(stored.metadata.promptDismissedAt).not.toBeNull();
+    expect(heading()).toBeInTheDocument();
+  });
+});

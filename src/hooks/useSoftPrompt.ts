@@ -18,9 +18,6 @@ const MIN_NOTES_FOR_PROMPT = 3;
 // Minimum time spent in demo before showing prompt (5 minutes)
 const MIN_TIME_FOR_PROMPT_MS = 5 * 60 * 1000;
 
-// Cooldown period after dismissing prompt (24 hours)
-const PROMPT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-
 // Cooldown period after dismissing ribbon (7 days)
 const RIBBON_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -177,10 +174,8 @@ export function useSoftPrompt({
       userNoteCount >= MIN_NOTES_FOR_PROMPT &&
       currentTime - metadata.createdAt >= MIN_TIME_FOR_PROMPT_MS;
 
-    // Check cooldown periods
-    const promptRecentlyDismissed =
-      metadata?.promptDismissedAt != null &&
-      currentTime - metadata.promptDismissedAt < PROMPT_COOLDOWN_MS;
+    // The prompt shows once per browser: a stored dismissal is permanent.
+    const promptDismissed = metadata?.promptDismissedAt != null;
 
     const ribbonRecentlyDismissed =
       metadata?.ribbonDismissedAt != null &&
@@ -189,7 +184,7 @@ export function useSoftPrompt({
     return {
       timeSpentMinutes,
       shouldShowPrompt:
-        meetsMinimumRequirements && !promptRecentlyDismissed && !suppressed && !isTyping,
+        meetsMinimumRequirements && !promptDismissed && !suppressed && !isTyping,
       shouldShowInlineNudge:
         metadata?.promptDismissedAt != null &&
         userNoteCount >= MIN_NOTES_FOR_PROMPT,
