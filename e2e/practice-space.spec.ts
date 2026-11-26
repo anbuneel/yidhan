@@ -118,7 +118,7 @@ test.describe('Keeping practice work', () => {
     await page.goto('/demo');
     await expect(page.getByTestId('library-view')).toBeVisible();
 
-    const keep = page.getByRole('button', { name: /keep these notes/i });
+    const keep = page.getByRole('button', { name: /create an account to keep your notes/i });
     await expect(keep).toBeHidden();
 
     await page.getByRole('button', { name: 'New note', exact: true }).click();
@@ -139,12 +139,12 @@ test.describe('Keeping practice work', () => {
     await page.getByPlaceholder(/untitled/i).fill('Something of mine');
     await page.getByRole('button', { name: /yidhan/i }).click();
 
-    await page.getByRole('button', { name: /keep these notes/i }).click();
+    await page.getByRole('button', { name: /create an account to keep your notes/i }).click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     // Sign-up, not sign-in: the practice work is carried by creating an account.
-    await expect(dialog.getByRole('button', { name: /create account|sign up/i })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /^create an account$/i })).toBeVisible();
   });
 });
 
@@ -176,7 +176,7 @@ test.describe('Starter copy', () => {
     await expect(page.getByTestId('library-view')).toBeVisible();
 
     // Nothing to keep: the only note is a starter the reader never touched.
-    await expect(page.getByRole('button', { name: /keep these notes/i })).toBeHidden();
+    await expect(page.getByRole('button', { name: /create an account to keep your notes/i })).toBeHidden();
   });
 });
 

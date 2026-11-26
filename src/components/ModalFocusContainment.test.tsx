@@ -349,7 +349,7 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     );
 
     render(<InvitationModal noteCount={3} onSignUp={vi.fn()} onDismiss={vi.fn()} />);
-    const cta = screen.getByRole('button', { name: 'Keep my thoughts' });
+    const cta = screen.getByRole('button', { name: 'Create an account' });
     expect(cta.className).toContain('rounded-[var(--radius-pill)]');
   });
 
@@ -901,13 +901,13 @@ describe('Modal focus containment across every modal kind (B2)', () => {
     fireEvent.click(openA);
 
     // Open B from inside A.
-    const openBFromA = screen.getByRole('button', { name: 'Keep my thoughts' });
+    const openBFromA = screen.getByRole('button', { name: 'Create an account' });
     openBFromA.focus();
     fireEvent.click(openBFromA);
 
     // Close A FIRST while B is still open.
     fireEvent.click(screen.getByRole('button', { name: 'Stay' }));
-    expect(screen.queryByText('These words are yours')).toBeNull();
+    expect(screen.queryByText('Keep your notes')).toBeNull();
     expect(screen.getByRole('dialog', { name: 'A gentle pause' })).toBeInTheDocument();
 
     // Now close B: A's button is unmounted, so B falls back to A's original page opener.

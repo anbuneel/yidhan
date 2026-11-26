@@ -66,7 +66,8 @@ export function RecoveryPassphraseReset() {
       </h1>
       <p className="mb-6 text-sm" style={labelStyle}>
         Your recovery key opened your notes. Choose a new passphrase to finish. Your old
-        passphrase stops working, and your recovery key keeps working.
+        passphrase stops working, and your recovery key keeps working. Devices already open
+        keep working; the next time one asks for your passphrase, enter the new one.
       </p>
 
       <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">

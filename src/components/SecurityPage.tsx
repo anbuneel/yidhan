@@ -120,6 +120,10 @@ export function SecurityPage({
                 anything is sent. Each note is bound to its own identity and yours, so a
                 note cannot be swapped for another one on the way back.
               </p>
+              <p>
+                If you use the passphrase Yidhan suggests at setup, it is 6 words picked at
+                random on your device from a list of 1,831, which is about 65 bits.
+              </p>
             </Section>
 
             <Section title="What is visible to us, even so">

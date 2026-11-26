@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useEncryption } from '../contexts/EncryptionContext';
 import type { AccountSetup } from '../contexts/EncryptionContext';
 import type { DerivedKeys } from '../lib/encryption';
-import { GENERATED_PASSPHRASE_BITS, GENERATED_PASSPHRASE_WORDS, generatePassphrase } from '../lib/passphraseGenerator';
+import { GENERATED_PASSPHRASE_WORDS, generatePassphrase } from '../lib/passphraseGenerator';
 import { createEncryptedNote } from '../services/encryptedNotes';
 import {
   evaluatePassphraseStrength,
@@ -262,10 +262,8 @@ export function PassphraseSetup() {
         <StepLabel step={3} />
         <h1 className="text-2xl mb-2" style={titleStyle}>Your notes are ready</h1>
         <p className="mb-6 text-sm" style={bodyStyle}>
-          Your passphrase opens your notes on any device. If you ever forget it, your
-          recovery key opens them instead, and you choose a new passphrase. Devices already open
-          keep working; the next time one asks for your passphrase, enter the new one. A few
-          starter notes are waiting for you.
+          Your passphrase opens your notes on any device. If you forget it, use your recovery
+          key to choose a new one. A few starter notes are waiting.
         </p>
         <button
           type="button"
@@ -312,8 +310,8 @@ export function PassphraseSetup() {
               {suggested}
             </p>
             <p className="mt-1 text-xs" style={quietStyle}>
-              Picked at random on this device: {GENERATED_PASSPHRASE_WORDS} words, about{' '}
-              {GENERATED_PASSPHRASE_BITS} bits of entropy. Keep it in a password manager or write it down.
+              Picked at random on this device: {GENERATED_PASSPHRASE_WORDS} words, very hard to
+              guess. Keep it in a password manager or write it down.
             </p>
             <div className="flex gap-2 mt-3">
               <button

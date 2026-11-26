@@ -17,11 +17,11 @@ describe('BackupPassphraseModal — creating a backup', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('says the backup passphrase is not the vault passphrase', async () => {
+  it('says the backup passphrase is not the account passphrase', async () => {
     // A reader offered a second passphrase will otherwise reasonably assume it is the
     // one they already have — and then be unable to open the file later.
     render(<BackupPassphraseModal {...base} mode="create" />);
-    expect(screen.getByText(/separate from your vault passphrase/i)).toBeInTheDocument();
+    expect(screen.getByText(/separate from your account passphrase/i)).toBeInTheDocument();
   });
 
   it('warns that a lost passphrase cannot be recovered', () => {

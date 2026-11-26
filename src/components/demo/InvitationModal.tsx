@@ -1,9 +1,8 @@
 /**
  * InvitationModal
  *
- * A gentle, non-aggressive signup prompt that appears after users
- * have engaged with the demo (3+ notes, 5+ minutes).
- * Follows Yidhan's calm philosophy - invitation, not demand.
+ * A sign-up prompt shown after someone has used the demo for a while
+ * (3+ notes, 5+ minutes). "Not yet" dismisses it.
  */
 
 import { useModalFocusTrap } from '../../hooks/useModalFocusTrap';
@@ -60,7 +59,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
             fontWeight: 500,
           }}
         >
-          These words are yours
+          Keep your notes
         </h2>
 
         {/* Body */}
@@ -75,9 +74,9 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
         >
           You've written{' '}
           <strong style={{ color: 'var(--color-accent-text)', fontWeight: 500 }}>
-            {noteCount} {noteCount === 1 ? 'thought' : 'thoughts'}
+            {noteCount} {noteCount === 1 ? 'note' : 'notes'}
           </strong>{' '}
-          here. We'd hate for them to disappear.
+          here. They are saved only in this browser.
           <br />
           <br />
           A free account encrypts and syncs everything — your notes stay yours, on every device.
@@ -104,7 +103,7 @@ export function InvitationModal({ noteCount, onSignUp, onDismiss }: InvitationMo
             e.currentTarget.style.boxShadow = 'none';
           }}
         >
-          Keep my thoughts
+          Create an account
         </button>
 
         {/* Dismiss link */}

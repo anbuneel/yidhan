@@ -35,5 +35,5 @@ it('hides the ribbon for small libraries and when the footer approaches', () => 
 it('plainly labels fresh Practice Space drafts as unencrypted', () => {
   const welcome = createDemoStarterPreviewState().notes.find(n => n.localId === 'starter-welcome')!;
   expect(welcome.content).toContain('not encrypted');
-  expect(welcome.content).toContain('Sign up');
+  expect(welcome.content).toContain('Create an account');
 });

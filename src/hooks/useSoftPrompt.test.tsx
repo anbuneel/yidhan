@@ -342,7 +342,7 @@ describe('Practice Space sign-up prompt count and guards (B4)', () => {
       state.metadata.createdAt = TEN_MINUTES_AGO();
     });
     const first = render(<DemoPage {...baseProps} />);
-    expect(screen.queryByText(/These words are yours/i)).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Keep your notes' })).toBeNull();
     first.unmount();
 
     // 3 created notes + 10 minutes elapsed, but Auth modal is open: no prompt behind Auth.
@@ -351,12 +351,12 @@ describe('Practice Space sign-up prompt count and guards (B4)', () => {
     createDemoNote({ title: 'C', content: '<p>C</p>', pinned: false, tagIds: [] });
 
     const { rerender } = render(<DemoPage {...baseProps} isAuthModalOpen />);
-    expect(screen.queryByText(/These words are yours/i)).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Keep your notes' })).toBeNull();
 
     // Auth modal closes: prompt shows with the honest count (3, not 8).
     rerender(<DemoPage {...baseProps} isAuthModalOpen={false} />);
-    expect(screen.getByText('These words are yours')).toBeInTheDocument();
-    expect(screen.getByText('3 thoughts')).toBeInTheDocument();
-    expect(screen.queryByText('8 thoughts')).toBeNull();
+    expect(screen.getByText('Keep your notes')).toBeInTheDocument();
+    expect(screen.getByText('3 notes')).toBeInTheDocument();
+    expect(screen.queryByText('8 notes')).toBeNull();
   });
 });

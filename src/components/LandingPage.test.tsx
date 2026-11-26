@@ -213,7 +213,7 @@ describe('LandingPage', () => {
   it('the keep-and-sync link opens sign-up without also opening the draft', () => {
     const props = renderLanding();
 
-    fireEvent.click(screen.getByRole('button', { name: /create an account to keep and sync/i }));
+    fireEvent.click(screen.getByRole('button', { name: /create an account to keep your notes/i }));
 
     expect(props.onStartWriting).toHaveBeenCalledTimes(1);
     expect(props.onDemoDraftClick).not.toHaveBeenCalled();

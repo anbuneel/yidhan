@@ -60,7 +60,7 @@ export function EncryptedConflictModal({ conflict, keys, onResolve, onDismiss }:
         className="relative z-10 rounded bg-[var(--color-bg-secondary)] p-6 text-[var(--color-text-primary)] border-0"
         style={{ margin: 0 }}
       >
-        <p role="status">{preview?.source === conflict && preview.error ? 'Both versions could not be opened. Unlock your vault and try again.' : 'Opening both versions…'}</p>
+        <p role="status">{preview?.source === conflict && preview.error ? 'Both versions could not be opened. Unlock your notes and try again.' : 'Opening both versions…'}</p>
         <button type="button" className="mt-4" onClick={onDismiss}>Close</button>
       </dialog>
     </div>

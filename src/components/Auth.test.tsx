@@ -52,7 +52,7 @@ describe('Auth', () => {
       render(<Auth {...defaultProps} initialMode="signup" />);
 
       expect(screen.getByText('Create your account')).toBeInTheDocument();
-      expect(screen.getByText('Sign up')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Create an account' })).toBeInTheDocument();
     });
 
     it('renders forgot password mode', () => {
@@ -215,7 +215,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign up' }));
+      await user.click(screen.getByRole('button', { name: 'Create an account' }));
 
       await waitFor(() => {
         expect(mockAuthContext.signUp).toHaveBeenCalledWith(
@@ -231,7 +231,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign up' }));
+      await user.click(screen.getByRole('button', { name: 'Create an account' }));
 
       await waitFor(() => {
         expect(screen.getByText('Check your inbox')).toBeInTheDocument();
@@ -246,7 +246,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign up' }));
+      await user.click(screen.getByRole('button', { name: 'Create an account' }));
 
       await waitFor(() => {
         expect(screen.getByText('Use a different email')).toBeInTheDocument();
@@ -669,7 +669,7 @@ describe('Auth', () => {
 
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
-      await user.click(screen.getByRole('button', { name: 'Sign up' }));
+      await user.click(screen.getByRole('button', { name: 'Create an account' }));
 
       await waitFor(() => {
         expect(screen.getByText('An account with this email already exists')).toBeInTheDocument();

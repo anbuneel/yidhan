@@ -832,7 +832,7 @@ function DemoHeader({
           <button
             type="button"
             onClick={onKeep}
-            aria-label="Keep these notes"
+            aria-label="Create an account to keep your notes"
             className="
               px-1.5 sm:px-2 py-2
               shrink-0
@@ -853,9 +853,7 @@ function DemoHeader({
               fontFamily: 'var(--font-body)',
             }}
           >
-            {/* "Keep" on a phone, so Sign in still fits beside it. */}
-            <span className="sm:hidden">Keep</span>
-            <span className="hidden sm:inline">Keep these notes</span>
+            Create an account
           </button>
         )}
         <button type="button"
