@@ -251,6 +251,8 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
     }
     setShare(null);
     setShareUrl(null);
+    // Disables "Create share link" in the view that shows while this runs.
+    setIsCreating(true);
     try {
       const { share: newShare, shareKey } = await createNoteShare(
         note.id,
@@ -266,6 +268,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
       console.error('Failed to create share:', error);
       toast.error('Old link revoked, but a new one could not be made');
     } finally {
+      setIsCreating(false);
       setIsRevoking(false);
     }
   };

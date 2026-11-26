@@ -123,7 +123,6 @@ export function ReAuthModal({
 
   if (!isOpen) return null;
 
-
   // Shared by the code field and the password field; only the password gets a toggle.
   const reauthFieldProps = {
     id: 'reauth-input',

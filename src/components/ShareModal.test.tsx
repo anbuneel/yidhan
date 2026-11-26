@@ -250,6 +250,28 @@ describe('ShareModal', () => {
       expect(screen.getByText('Revoke link')).toBeInTheDocument();
     });
 
+    it('Revoke & Re-create keeps Create share link disabled while the new link is made', async () => {
+      const user = userEvent.setup({ delay: null });
+      vi.mocked(notesService.getNoteShare).mockResolvedValue(createMockNoteShare({ noteId: mockNote.id }));
+      vi.mocked(notesService.revokeNoteShare).mockResolvedValue(undefined);
+      let finish: (v: Awaited<ReturnType<typeof notesService.createNoteShare>>) => void = () => {};
+      vi.mocked(notesService.createNoteShare).mockReturnValue(new Promise((r) => { finish = r; }));
+
+      render(<ShareModal {...defaultProps} />);
+      await waitFor(() => expect(screen.getByText('Revoke & Re-create')).toBeInTheDocument());
+      await user.click(screen.getByText('Revoke & Re-create'));
+
+      await waitFor(() => expect(notesService.createNoteShare).toHaveBeenCalledTimes(1));
+      const create = screen.queryByRole('button', { name: /create share link|creating/i });
+      if (create) {
+        expect(create).toBeDisabled();
+        await user.click(create);
+      }
+      expect(notesService.createNoteShare).toHaveBeenCalledTimes(1);
+      finish({ share: createMockNoteShare({ noteId: mockNote.id, shareToken: 'later' }), shareKey: new Uint8Array(32) });
+      await waitFor(() => expect(screen.getByDisplayValue(/\/s\/later/)).toBeInTheDocument());
+    });
+
     it('Revoke & Re-create does not create a link when the revoke fails', async () => {
       const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();

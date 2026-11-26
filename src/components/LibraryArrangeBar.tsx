@@ -56,6 +56,7 @@ function ArrangeGroup<T extends string>({
               focus-ring
               rounded-sm
               shrink-0
+              touch-press
             "
             style={{
               fontFamily: 'var(--font-body)',
