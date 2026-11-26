@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { BottomSheet } from './BottomSheet';
 import { RecoveryKeySettings } from './RecoveryKeySettings';
 import { ACCOUNT_OFFBOARDING_ENABLED } from '../config/featureFlags';
+import { readRecoveryWrap, readVaultMetadata } from '../lib/vaultMetadata';
 import type { UseSessionSettingsResult } from '../hooks/useSessionSettings';
 import type { UseVaultSettingsResult } from '../hooks/useVaultSettings';
 import type { Theme } from '../types';
@@ -25,6 +26,11 @@ type SettingsTab = 'profile' | 'password' | 'security';
 export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, sessionSettings, vaultSettings, isVaultUnlocked, onLockVault, onPersistToLocal }: SettingsModalProps) {
   const { user, updateProfile, updatePassword, verifyPassword } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+
+  // Same check as RecoveryKeySettings. Only changes the Change passphrase wording.
+  const vaultMeta = (user?.user_metadata as Record<string, unknown> | undefined)?.vault;
+  const hasRecoveryKey = readVaultMetadata(vaultMeta).status === 'valid'
+    && readRecoveryWrap((vaultMeta as Record<string, unknown> | undefined)?.recoveryWrap).status === 'valid';
 
   // Check if user signed up with OAuth (Google, GitHub, etc.)
   const provider = user?.app_metadata?.provider;
@@ -818,7 +824,9 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
                         color: 'var(--color-text-tertiary)',
                       }}
                     >
-                      To change your passphrase, lock your notes and choose &lsquo;Use your recovery key&rsquo; on the unlock screen. You&rsquo;ll need your recovery key.
+                      {hasRecoveryKey
+                        ? 'To change your passphrase, lock your notes and choose ‘Use your recovery key’ on the unlock screen. You’ll need your recovery key.'
+                        : 'To change your passphrase, you need a recovery key first. Make one in this section while your notes are unlocked. Then lock your notes and choose ‘Use your recovery key’ on the unlock screen.'}
                     </p>
                   </div>
                 </div>
