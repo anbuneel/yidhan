@@ -364,8 +364,7 @@ describe('useNotesSync refresh after a sync', () => {
     const write = new Promise<void>((r) => { finishWrite = r; });
     let tracked!: Promise<void>;
     act(() => {
-      result.current.setNotes((prev) => prev.map((n) => ({ ...n, pinned: true })));
-      tracked = result.current.trackLocalWrite(() => write);
+      tracked = result.current.applyOptimistic((prev) => prev.map((n) => ({ ...n, pinned: true })), () => write);
     });
     const pinnedFrom = renders.length - 1;
 

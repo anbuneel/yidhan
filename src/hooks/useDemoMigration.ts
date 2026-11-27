@@ -8,8 +8,10 @@
  */
 
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import type { UpdateNotes } from './useNotesSync';
+import { withNotesFirst } from '../utils/notesFirst';
 import toast from 'react-hot-toast';
-import type { Note, Tag } from '../types';
+import type { Tag } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
 import { DEMO_CONTENT_STORAGE_KEY, hasDemoState } from '../services/demoStorage';
 import { migrateDemoToAccount } from '../services/demoMigration';
@@ -20,7 +22,7 @@ export interface UseDemoMigrationOptions {
   userId: string | undefined;
   keys: DerivedKeys | null;
   isHydrating: boolean;
-  setNotes: Dispatch<SetStateAction<Note[]>>;
+  setNotes: UpdateNotes;
   setTags: Dispatch<SetStateAction<Tag[]>>;
   /** Open the note the migration created. */
   onNoteCreated: (noteId: string) => void;
@@ -72,7 +74,7 @@ export function useDemoMigration({
         // Show toast notification
         toast.success('Your first note has been saved!');
         // Add to notes list
-        setNotes((prev) => [newNote, ...prev]);
+        setNotes((prev) => withNotesFirst(prev, [newNote]));
         // Open the note in editor
         onNoteCreatedRef.current(newNote.id);
       })
@@ -118,7 +120,7 @@ export function useDemoMigration({
         if (newTags.length > 0) {
           setTags((prev) => [...prev, ...newTags].sort((a, b) => a.name.localeCompare(b.name)));
         }
-        setNotes((prev) => [...migratedNotes, ...prev]);
+        setNotes((prev) => withNotesFirst(prev, migratedNotes));
 
         toast.success(
           noteCount === 1

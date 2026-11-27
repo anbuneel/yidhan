@@ -3,7 +3,7 @@
  * save failed. The rule for Retry is in `utils/retryHeldSave`; this hook gives it the
  * app's notes, the save path and the way to keep words as a new note.
  */
-import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useRef } from 'react';
 import type { DerivedKeys } from '../lib/encryption';
 import type { Note, Tag } from '../types';
 import { heldSaves } from '../stores/heldSaves';
@@ -12,17 +12,18 @@ import { retryHeldSave } from '../utils/retryHeldSave';
 import { VaultLockedSaveError } from '../utils/saveErrors';
 import { keepReleasedDraft } from '../utils/keepReleasedDraft';
 import { copyNoteToClipboard } from '../utils/exportImport';
+import { withNotesFirst } from '../utils/notesFirst';
+import type { UpdateNotes } from './useNotesSync';
 
 export interface UseHeldSaveActionsOptions {
   userId: string | undefined;
   keys: DerivedKeys | null;
   notesRef: React.RefObject<Note[]>;
   tags: Tag[];
-  setNotes: Dispatch<SetStateAction<Note[]>>;
+  /** Called after the write lands, which the list refresh's version check covers. */
+  setNotes: UpdateNotes;
   saveNote: (note: Note) => Promise<void>;
   triggerCoalescedSync: () => void;
-  /** Marks a write a list refresh must wait for (`useNotesSync`). */
-  trackLocalWrite: <T>(write: () => Promise<T>) => Promise<T>;
   /** True when an open Editor on this note holds words its stored copy does not. */
   hasOpenDraft: (noteId: string) => boolean;
 }
@@ -50,7 +51,6 @@ export function useHeldSaveActions({
   setNotes,
   saveNote,
   triggerCoalescedSync,
-  trackLocalWrite,
   hasOpenDraft,
 }: UseHeldSaveActionsOptions): HeldSaveActions {
   // One retry per entry at a time: a click and a lock's retry share it, so the words
@@ -87,13 +87,11 @@ export function useHeldSaveActions({
         }),
         keepAsCopy: async (held, original) => {
           if (!heldSaves.isCurrent(fromSession)) throw new VaultLockedSaveError();
-          const kept = await trackLocalWrite(() =>
-            keepReleasedDraft(userId, keys, held.title, held.content, original, tags)
-          );
+          const kept = await keepReleasedDraft(userId, keys, held.title, held.content, original, tags);
           // The vault locked during the write: the note is stored, encrypted, and
           // loads with the list next time. Decrypted text stays out of app state.
           if (!heldSaves.isCurrent(fromSession)) return;
-          setNotes((prev) => [kept, ...prev]);
+          setNotes((prev) => withNotesFirst(prev, [kept]));
           triggerCoalescedSync();
         },
       });
@@ -111,7 +109,7 @@ export function useHeldSaveActions({
       }
       return false;
     }
-  }, [userId, keys, notesRef, tags, setNotes, saveNote, triggerCoalescedSync, trackLocalWrite, hasOpenDraft]);
+  }, [userId, keys, notesRef, tags, setNotes, saveNote, triggerCoalescedSync, hasOpenDraft]);
 
   const retry = useCallback((key: string): Promise<boolean> => {
     const running = retriesRef.current.get(key);

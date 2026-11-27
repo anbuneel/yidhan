@@ -6,7 +6,9 @@
  * it from another device; this hook owns only what the view shows.
  */
 
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { UpdateNotes } from './useNotesSync';
+import { withNotesFirst } from '../utils/notesFirst';
 import toast from 'react-hot-toast';
 import type { Note } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
@@ -23,7 +25,7 @@ export interface UseFadedNotesOptions {
   keys: DerivedKeys | null;
   /** True while the faded route is showing, which is what triggers the load. */
   isViewingFaded: boolean;
-  setNotes: Dispatch<SetStateAction<Note[]>>;
+  setNotes: UpdateNotes;
   refreshFadedNotesCount: () => Promise<void>;
 }
 
@@ -61,7 +63,7 @@ export function useFadedNotes({
       const restoredNote = fadedNotes.find((n) => n.id === id);
       if (restoredNote) {
         setFadedNotes((prev) => prev.filter((n) => n.id !== id));
-        setNotes((prev) => [{ ...restoredNote, deletedAt: null }, ...prev]);
+        setNotes((prev) => withNotesFirst(prev, [{ ...restoredNote, deletedAt: null }]));
       }
       await refreshFadedNotesCount();
       toast.success('Note restored');

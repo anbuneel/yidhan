@@ -5,9 +5,10 @@
  * path would write a plaintext note before the passphrase gate had even rendered.
  */
 
-import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef } from 'react';
+import type { UpdateNotes } from './useNotesSync';
+import { withNotesFirst } from '../utils/notesFirst';
 import toast from 'react-hot-toast';
-import type { Note } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
 import { createEncryptedNote } from '../services/encryptedNotes';
 import { formatSharedContent, type SharedData } from './useShareTarget';
@@ -17,7 +18,7 @@ export interface UseShareTargetNoteOptions {
   keys: DerivedKeys | null;
   sharedData: SharedData | null;
   clearSharedData: () => void;
-  setNotes: Dispatch<SetStateAction<Note[]>>;
+  setNotes: UpdateNotes;
   onNoteCreated: (noteId: string) => void;
   onNoteTracked: () => void;
   runInTransition: (fn: () => void) => void;
@@ -58,7 +59,7 @@ export function useShareTargetNote({
         onNoteTracked();
         toast.success('Note created from share');
         runInTransition(() => {
-          setNotes((prev) => [newNote, ...prev]);
+          setNotes((prev) => withNotesFirst(prev, [newNote]));
           onNoteCreatedRef.current(newNote.id);
         });
       })
