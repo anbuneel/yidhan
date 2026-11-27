@@ -118,6 +118,17 @@ export function useImport({
   }, [notes, reportOmittedFromExport]);
 
   // Import file (JSON, Markdown, or a decrypted `.yidhan` payload)
+  // The notes are already written when this runs. A failed re-read must not say the
+  // file was bad: the reader would import it again and get every note twice.
+  const reloadAfterImport = useCallback(async () => {
+    try {
+      await reloadFromStorage();
+    } catch (error) {
+      console.error('Failed to re-read notes after import:', error);
+      toast.error('Imported, but the list could not refresh. Pull to refresh.');
+    }
+  }, [reloadFromStorage]);
+
   const handleImportFile = useCallback(async (file: File, decryptedBackup?: string) => {
     if (!userId) return;
     if (!keys) {
@@ -203,7 +214,7 @@ export function useImport({
         toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
 
         // Refresh notes from IndexedDB
-        await reloadFromStorage();
+        await reloadAfterImport();
 
       } else if (isMarkdown) {
         // Try to parse as combined multi-note export first
@@ -267,7 +278,7 @@ export function useImport({
           }
 
           // Refresh notes from IndexedDB
-          await reloadFromStorage();
+          await reloadAfterImport();
 
           toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
         } else {
@@ -328,7 +339,7 @@ export function useImport({
           }
 
           // Refresh from IndexedDB to get the note with tags
-          await reloadFromStorage();
+          await reloadAfterImport();
 
           toast.success(`Imported "${title}"`);
         }
@@ -345,7 +356,7 @@ export function useImport({
     } finally {
       setImportProgress(null);
     }
-  }, [userId, tags, keys, setTags, reloadFromStorage]);
+  }, [userId, tags, keys, setTags, reloadAfterImport]);
 
   // Declared after `handleImportFile` so it can call it directly. In App this needed a
   // ref, because the import handler sat two hundred lines below the backup one; here

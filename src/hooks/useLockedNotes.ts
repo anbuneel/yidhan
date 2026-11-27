@@ -43,6 +43,7 @@ export function useLockedNotes({
   const retryLockedNotes = useCallback(async () => {
     if (!userId || !keys) return;
     try {
+      // Deferred or superseded: a later refresh applies the list, so no notice here.
       await reloadFromStorage();
     } catch (error) {
       console.error('Failed to re-read notes:', error);

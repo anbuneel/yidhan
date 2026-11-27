@@ -97,14 +97,18 @@ export type UpdateNotes = (update: (prev: Note[]) => Note[]) => void;
 export type ApplyOptimistic = <T>(update: (prev: Note[]) => Note[], write: () => Promise<T>) => Promise<T>;
 
 /**
- * What a reload did. `applied` carries the list now on screen. `deferred`: local
- * changes kept landing, and a later refresh will apply. `stale`: superseded by a newer
- * reload, or the vault locked, the user changed or the hook unmounted.
+ * What a reload did.
+ * - `applied`: carries the list now on screen.
+ * - `deferred`: local changes kept landing; a later refresh will apply.
+ * - `superseded`: a newer reload took over and will apply.
+ * - `ended`: the vault locked, the user changed or the app unmounted. Nothing was
+ *   applied and nothing should be said.
  */
 export type ReloadResult =
   | { status: 'applied'; notes: Note[] }
   | { status: 'deferred' }
-  | { status: 'stale' };
+  | { status: 'superseded' }
+  | { status: 'ended' };
 
 export interface NotesSync {
   notes: Note[];
@@ -132,7 +136,7 @@ export interface NotesSync {
    * Re-read notes and tags from IndexedDB and replace the list, with the same guard
    * as the sync refresh: it waits for optimistic writes, re-reads if the list changed
    * during its read, and never applies after a lock, a user change or a newer reload.
-   * Throws if the read fails.
+   * Throws if the notes read fails. A failed tags read is logged, not thrown.
    */
   reloadFromStorage: () => Promise<ReloadResult>;
   /**
@@ -300,25 +304,29 @@ export function useNotesSync({
   const appliedRefreshesRef = useRef(0);
 
   const reloadFromStorage = useCallback(async (): Promise<ReloadResult> => {
-    if (!userId || !keys) return { status: 'stale' };
+    const ENDED = { status: 'ended' } as const;
+    if (!userId || !keys) return ENDED;
     // A timer or handler from before a lock or user switch holds an old closure. It
     // must not claim a refresh id, or it would cancel the refresh for the current keys.
-    if (currentUserIdRef.current !== userId || keysRef.current !== keys) return { status: 'stale' };
+    if (currentUserIdRef.current !== userId || keysRef.current !== keys) return ENDED;
     const refreshId = ++refreshIdRef.current;
-    // Superseded, unmounted, signed out, or the vault locked or changed keys. A lock in
-    // particular: a read with the old keys must not put plaintext back on screen.
-    const abandoned = () =>
-      !mountedRef.current ||
-      refreshId !== refreshIdRef.current ||
-      currentUserIdRef.current !== userId ||
-      keysRef.current !== keys;
+    // Unmounted, signed out, or the vault locked or changed keys. A lock in particular:
+    // a read with the old keys must not put plaintext back on screen.
+    const ended = () =>
+      !mountedRef.current || currentUserIdRef.current !== userId || keysRef.current !== keys;
+    const stopped = (): ReloadResult | null => {
+      if (ended()) return ENDED;
+      if (refreshId !== refreshIdRef.current) return { status: 'superseded' };
+      return null;
+    };
 
     let result: ReloadResult = { status: 'deferred' };
     for (let read = 1; ; read++) {
       // Wait for a write in flight instead of reading the copy it is replacing.
       if (pendingLocalWritesRef.current.size > 0) {
         const settled = await waitForLocalWrites();
-        if (abandoned()) return { status: 'stale' };
+        const stop = stopped();
+        if (stop) return stop;
         if (!settled) {
           deferRefreshRef.current();
           break;
@@ -326,7 +334,8 @@ export function useNotesSync({
       }
       const versionAtRead = listVersionRef.current;
       const snapshot = await fetchDecryptedNotes(userId, keys);
-      if (abandoned()) return { status: 'stale' };
+      const stop = stopped();
+      if (stop) return stop;
       if (versionAtRead === listVersionRef.current && pendingLocalWritesRef.current.size === 0) {
         setNotesState(snapshot);
         appliedRefreshesRef.current += 1;
@@ -342,9 +351,14 @@ export function useNotesSync({
       }
     }
     // Tags do not race with the list, so they refresh even when the notes deferred.
-    const refreshedTags = await fetchTagsOffline(userId);
-    if (abandoned()) return { status: 'stale' };
-    setTags(refreshedTags);
+    // A failed tags read does not undo the notes that applied, so it is not thrown.
+    try {
+      const refreshedTags = await fetchTagsOffline(userId);
+      if (ended()) return ENDED;
+      if (refreshId === refreshIdRef.current) setTags(refreshedTags);
+    } catch (error) {
+      console.error('Failed to re-read tags:', error);
+    }
     return result;
   }, [userId, keys, waitForLocalWrites]);
 
@@ -557,7 +571,12 @@ export function useNotesSync({
       .catch((error) => {
         if (!current) return;
         if (refreshedMeanwhile()) {
-          console.error('First read of notes failed after a refresh loaded them:', error);
+          // The refresh's list is newer and on screen, so keep it, but record the failure.
+          reportReliabilityIssue({
+            category: 'sync',
+            message: 'First read of notes failed after a refresh loaded them',
+            level: 'warning',
+          }, error);
           return;
         }
         console.error('Failed to decrypt notes:', error);

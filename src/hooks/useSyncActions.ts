@@ -75,9 +75,20 @@ export function useSyncActions({
       await resolveConflict(userId, conflictToResolve, choice, keys);
       removeConflict(conflictToResolve.entityId);
       setActiveConflict(null);
+    } catch (error) {
+      console.error('Failed to resolve conflict:', error);
+      toast.error('Failed to resolve conflict. Please try again.');
+      // Still remove the conflict to prevent infinite retry loops
+      // User can trigger a sync to re-detect conflicts if needed
+      removeConflict(conflictToResolve.entityId);
+      setActiveConflict(null);
+      return;
+    }
 
-      // Refresh notes from IndexedDB after conflict resolution. If this reload did
-      // not apply, a later one does, and App closes a note that is gone then.
+    // Refresh notes from IndexedDB after conflict resolution. If this reload did not
+    // apply, a later one does. A note gone by then is closed by App, with its "no
+    // longer here" notice, rather than silently here.
+    try {
       const reload = await reloadFromStorage();
       if (reload.status !== 'applied') return;
 
@@ -91,12 +102,8 @@ export function useSyncActions({
         onOpenNoteClosed();
       }
     } catch (error) {
-      console.error('Failed to resolve conflict:', error);
-      toast.error('Failed to resolve conflict. Please try again.');
-      // Still remove the conflict to prevent infinite retry loops
-      // User can trigger a sync to re-detect conflicts if needed
-      removeConflict(conflictToResolve.entityId);
-      setActiveConflict(null);
+      console.error('Failed to re-read notes after resolving a conflict:', error);
+      toast.error('Conflict resolved, but the list could not refresh. Pull to refresh.');
     }
   };
 
@@ -121,8 +128,9 @@ export function useSyncActions({
 
       // Rehydrate React state from IndexedDB (now has fresh server data). The vault
       // may have locked during the sync: then nothing is shown and nothing is said.
+      // A reload superseded or deferred still applies later, so the outcome is shown.
       const reload = await reloadFromStorage();
-      if (reload.status === 'stale') return;
+      if (reload.status === 'ended') return;
 
       // Show outcome-specific feedback
       switch (outcome) {
