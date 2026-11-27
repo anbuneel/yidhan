@@ -938,3 +938,12 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   `aria-haspopup="listbox"` and is a disclosure of toggle buttons. Time ribbon dots
   get a focus ring; the chapter nav shows on `focus-within`. A J/K-selected note card
   is one tab stop. A human VoiceOver/NVDA pass is still needed.
+- **2026-11-27** — Remote updates to the open note go into the editor outside undo
+  history (#284). `Editor.tsx` applied them with `setContent`, which recorded an undo
+  step, so undo restored the replaced text and autosave wrote it over the other
+  device's edit. Both paths (the silent update on a clean editor and "Load changes")
+  now use `applyRemoteContent`, a `setContent` with `addToHistory: false`. Earlier undo
+  steps map through the full-document replacement and become no-ops; typing after the
+  update undoes normally. After "Load changes", undo no longer recovers the unsaved
+  words the writer chose to drop. Tests in `Editor.remoteUndo.test.tsx` run the real
+  Tiptap editor.
