@@ -328,6 +328,34 @@ describe('undo after a remote update (issue #284)', () => {
     expect(screen.getByText('Updated on another device')).toBeInTheDocument();
   });
 
+  it('"Load changes" lets no save of the replaced words reach the open note', async () => {
+    let finishKeep!: (note: Note) => void;
+    keep.keepReleasedDraft.mockReturnValue(new Promise<Note>((resolve) => { finishKeep = resolve; }));
+    await mount();
+
+    typeText(' unsaved');
+    api.current!.remote('<p>Remote words</p>');
+    // An autosave of the typing is pending when the writer chooses.
+    await act(async () => { vi.advanceTimersByTime(500); });
+    const loadButton = screen.getByText('Load changes');
+    // Pressing the button does not blur the editor, which would start a save.
+    expect(fireEvent.mouseDown(loadButton)).toBe(false);
+    expect(fireEvent.mouseDown(screen.getByText('Keep mine'))).toBe(false);
+    fireEvent.click(loadButton);
+    await waitFor(() => expect(keep.keepReleasedDraft).toHaveBeenCalled());
+    // Keep mine cannot undo the choice halfway.
+    expect(screen.getByText('Keep mine')).toBeDisabled();
+
+    // The copy takes a while; no save of the old words lands meanwhile.
+    await act(async () => { vi.advanceTimersByTime(5_000); });
+    expect(savedContents(save)).not.toContain('<p>Alpha unsaved</p>');
+
+    await act(async () => { finishKeep(keptCopy); await Promise.resolve(); });
+    await waitFor(() => expect(editor().getText()).toBe('Remote words'));
+    await autosave();
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it('"Keep mine" leaves the writer\'s text and its undo history alone', async () => {
     await mount();
 

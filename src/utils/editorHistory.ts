@@ -14,6 +14,8 @@ import { EditorState } from '@tiptap/pm/state';
  * Never use it for the writer's own edits: it removes their undo history.
  */
 export function replaceContentWithFreshHistory(editor: Editor, content: string): void {
+  // setContent fails only when Tiptap's enableContentCheck rejects the content, and
+  // this app does not turn it on. Callers then mark the content as on screen.
   editor.commands.setContent(content, { emitUpdate: false });
   const { doc, plugins, selection } = editor.state;
   editor.view.updateState(EditorState.create({ doc, plugins, selection }));
