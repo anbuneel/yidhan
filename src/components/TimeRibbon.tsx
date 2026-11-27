@@ -151,7 +151,7 @@ export function TimeRibbon({
         md:hidden
         transition-all duration-300
         z-40
-        ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-30 translate-y-2'}
+        ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-30 translate-y-2 focus-within:opacity-100 focus-within:translate-y-0'}
       `}
       style={{
         background: 'var(--color-card-bg)',
@@ -175,7 +175,7 @@ export function TimeRibbon({
                 md:min-w-0 md:min-h-0
                 rounded-[var(--radius-button)]
                 transition-all duration-300
-                focus:outline-none
+                focus-ring
               "
               aria-label={`Jump to ${chapter.label}`}
               aria-current={isActive ? 'true' : undefined}

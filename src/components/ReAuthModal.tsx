@@ -271,6 +271,7 @@ export function ReAuthModal({
           {/* Error message */}
           {error && (
             <p
+              role="alert"
               className="mb-4 text-sm text-center"
               style={{ color: 'var(--color-error)' }}
             >

@@ -342,6 +342,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             {/* Success/Error Messages */}
             {error && (
               <p
+                role="alert"
                 className="auth-text-destructive mb-4 text-sm"
               >
                 {error}
@@ -349,6 +350,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             )}
             {message && (
               <p
+                role="status"
                 className="auth-text-accent mb-4 text-sm"
               >
                 {message}
@@ -516,6 +518,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           {/* Error Message */}
           {error && (
             <p
+              role="alert"
               className="auth-text-destructive mb-4 text-sm text-center"
             >
               {error}
@@ -525,6 +528,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
           {/* Success Message */}
           {message && (
             <p
+              role="status"
               className="auth-text-accent mb-4 text-sm text-center"
             >
               {message}

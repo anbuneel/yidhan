@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import type { Tag } from '../types';
 
 interface TagSelectorProps {
@@ -18,6 +18,9 @@ export function TagSelector({
 }: TagSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  // A disclosure, not a listbox: the panel holds toggle buttons (aria-pressed).
+  const panelId = useId();
+  const panelControls = isOpen ? panelId : undefined;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -49,6 +52,9 @@ export function TagSelector({
 
   const dropdownJSX = isOpen ? (
         <div
+          id={panelId}
+          role="group"
+          aria-label="Tags"
           data-testid="tag-selector-menu"
           className="
             absolute left-0 top-full mt-2
@@ -161,7 +167,7 @@ export function TagSelector({
               background: 'transparent',
             }}
             onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-            aria-haspopup="listbox"
+            aria-controls={panelControls}
             aria-expanded={isOpen}
           >
             {index > 0 && <span aria-hidden="true" style={{ color: 'var(--color-text-tertiary)' }}>·</span>}
@@ -172,7 +178,7 @@ export function TagSelector({
           type="button"
           onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
           aria-expanded={isOpen}
-          aria-haspopup="listbox"
+          aria-controls={panelControls}
           aria-label="Add tag"
           className="inline-flex items-center gap-1 px-2 py-0.5 text-sm font-medium transition-colors duration-200 rounded-[var(--radius-button)] hover:bg-[var(--color-bg-tertiary)]"
           style={{
@@ -197,7 +203,7 @@ export function TagSelector({
       <button type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
-        aria-haspopup="listbox"
+        aria-controls={panelControls}
         className="
           flex items-center gap-2
           px-3 py-2

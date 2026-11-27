@@ -213,6 +213,9 @@ export const NoteCard = memo(function NoteCard({
           type="button"
           className="absolute inset-0 z-10 h-full w-full rounded-[inherit] border-0 bg-transparent p-0 focus-ring"
           aria-label={`Open note: ${note.title || 'Untitled'}`}
+          // One tab stop per card: while the card holds the J/K roving focus, the
+          // card is the stop (Enter opens it) and this button leaves the tab order.
+          tabIndex={isFocused ? -1 : undefined}
           onClick={() => onClick(note.id)}
         />
       )}

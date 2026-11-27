@@ -122,12 +122,13 @@ describe('PassphraseUnlock', () => {
     const user = userEvent.setup({ delay: null });
 
     render(<PassphraseUnlock />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText('Passphrase'), 'wrong-passphrase');
     await user.click(screen.getByRole('button', { name: 'Unlock' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Incorrect passphrase. 4 attempts remaining before a short lockout.')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Incorrect passphrase. 4 attempts remaining before a short lockout.');
     });
   });
 

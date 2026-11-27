@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { BottomSheet } from './BottomSheet';
 import { RecoveryKeySettings } from './RecoveryKeySettings';
@@ -32,6 +32,13 @@ interface SettingsModalProps {
 
 type SettingsTab = 'profile' | 'password' | 'security' | 'editor';
 
+const SETTINGS_TABS: ReadonlyArray<{ id: SettingsTab; label: string }> = [
+  { id: 'profile', label: 'Profile' },
+  { id: 'password', label: 'Password' },
+  { id: 'security', label: 'Security' },
+  { id: 'editor', label: 'Editor' },
+];
+
 export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoClick, sessionSettings, vaultSettings, isVaultUnlocked, onLockVault, onPersistToLocal }: SettingsModalProps) {
   const { user, updateProfile, updatePassword, verifyPassword } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
@@ -57,6 +64,25 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
     provider === 'google' ||
     provider === 'github' ||
     user?.identities?.some((identity) => identity.provider !== 'email');
+
+  const visibleTabs = SETTINGS_TABS.filter((tab) => tab.id !== 'password' || !isOAuthUser);
+
+  // Arrow keys, Home and End move between tabs and select them (automatic activation).
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const current = visibleTabs.findIndex((tab) => tab.id === activeTab);
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight': next = (current + 1) % visibleTabs.length; break;
+      case 'ArrowLeft': next = (current - 1 + visibleTabs.length) % visibleTabs.length; break;
+      case 'Home': next = 0; break;
+      case 'End': next = visibleTabs.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    const nextTab = visibleTabs[next];
+    setActiveTab(nextTab.id);
+    event.currentTarget.querySelector<HTMLButtonElement>(`#settings-tab-${nextTab.id}`)?.focus();
+  };
 
   // Profile state
   const [fullName, setFullName] = useState('');
@@ -211,85 +237,52 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeToggle, onLetGoCl
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title="Settings" maxHeightPercent={85}>
-      {/* Tabs - always show Profile & Security, Password only for non-OAuth */}
+      {/* Tabs (WAI-ARIA tabs pattern) - Password only for non-OAuth */}
       <div
+        role="tablist"
+        aria-label="Settings sections"
+        onKeyDown={handleTabKeyDown}
         className="flex flex-wrap gap-1 px-4 sm:px-6 py-3 border-b"
         style={{ borderColor: 'var(--glass-border)' }}
       >
-        <button type="button"
-          onClick={() => setActiveTab('profile')}
-          className="
-            px-3 sm:px-4 py-2
-            text-sm font-medium
-            rounded-[var(--radius-button)]
-            transition-colors duration-200
-            touch-press-light
-          "
-          style={{
-            fontFamily: 'var(--font-body)',
-            color: activeTab === 'profile' ? 'var(--color-accent-text)' : 'var(--color-text-secondary)',
-            background: activeTab === 'profile' ? 'var(--color-accent-glow)' : 'transparent',
-          }}
-        >
-          Profile
-        </button>
-        {!isOAuthUser && (
-          <button type="button"
-            onClick={() => setActiveTab('password')}
-            className="
-              px-3 sm:px-4 py-2
-              text-sm font-medium
-              rounded-[var(--radius-button)]
-              transition-colors duration-200
-              touch-press-light
-            "
-            style={{
-              fontFamily: 'var(--font-body)',
-              color: activeTab === 'password' ? 'var(--color-accent-text)' : 'var(--color-text-secondary)',
-              background: activeTab === 'password' ? 'var(--color-accent-glow)' : 'transparent',
-            }}
-          >
-            Password
-          </button>
-        )}
-        <button type="button"
-          onClick={() => setActiveTab('security')}
-          className="
-            px-3 sm:px-4 py-2
-            text-sm font-medium
-            rounded-[var(--radius-button)]
-            transition-colors duration-200
-            touch-press-light
-          "
-          style={{
-            fontFamily: 'var(--font-body)',
-            color: activeTab === 'security' ? 'var(--color-accent-text)' : 'var(--color-text-secondary)',
-            background: activeTab === 'security' ? 'var(--color-accent-glow)' : 'transparent',
-          }}
-        >
-          Security
-        </button>
-        <button type="button"
-          onClick={() => setActiveTab('editor')}
-          className="
-            px-3 sm:px-4 py-2
-            text-sm font-medium
-            rounded-[var(--radius-button)]
-            transition-colors duration-200
-            touch-press-light
-          "
-          style={{
-            fontFamily: 'var(--font-body)',
-            color: activeTab === 'editor' ? 'var(--color-accent-text)' : 'var(--color-text-secondary)',
-            background: activeTab === 'editor' ? 'var(--color-accent-glow)' : 'transparent',
-          }}
-        >
-          Editor
-        </button>
+        {visibleTabs.map((tab) => {
+          const selected = activeTab === tab.id;
+          return (
+            <button
+              type="button"
+              key={tab.id}
+              role="tab"
+              id={`settings-tab-${tab.id}`}
+              aria-selected={selected}
+              aria-controls={selected ? 'settings-tabpanel' : undefined}
+              tabIndex={selected ? 0 : -1}
+              onClick={() => setActiveTab(tab.id)}
+              className="
+                px-3 sm:px-4 py-2
+                text-sm font-medium
+                rounded-[var(--radius-button)]
+                transition-colors duration-200
+                touch-press-light focus-ring
+              "
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: selected ? 'var(--color-accent-text)' : 'var(--color-text-secondary)',
+                background: selected ? 'var(--color-accent-glow)' : 'transparent',
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
         {/* Content */}
-        <div className="px-8 py-6">
+        <div
+          className="px-8 py-6"
+          role="tabpanel"
+          id="settings-tabpanel"
+          aria-labelledby={`settings-tab-${activeTab}`}
+        >
           {/* Profile Tab */}
           {activeTab === 'profile' && (
             <form onSubmit={handleProfileSubmit}>

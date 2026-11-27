@@ -197,13 +197,15 @@ describe('Auth', () => {
       });
 
       render(<Auth {...defaultProps} />);
+      // No alert before anything has gone wrong.
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
       await user.type(screen.getByRole('textbox'), 'test@example.com');
       await user.type(getPasswordInput(), 'password123');
       await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
       await waitFor(() => {
-        expect(screen.getByText('Invalid email or password')).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent('Invalid email or password');
       });
     });
   });
@@ -319,7 +321,7 @@ describe('Auth', () => {
       await user.click(screen.getByRole('button', { name: 'Update password' }));
 
       await waitFor(() => {
-        expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent('Passwords do not match');
       });
       expect(mockAuthContext.updatePassword).not.toHaveBeenCalled();
     });
