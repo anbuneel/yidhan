@@ -119,7 +119,6 @@ the "done when" below is the summary, that document is the detail.
 | # | Item | Effort | Needs | Done when |
 |---|------|--------|-------|-----------|
 | 42 | Quick switcher and command palette: `Cmd+K` focuses it in the library, `Cmd+P` opens it anywhere, `>` lists actions, arrow keys and Enter | weeks | Needs #28 | Any note reachable in three keystrokes from anywhere · E2E |
-| 44 | Quick capture: PWA `shortcuts` "New note" to `/n/new`; `Cmd+N` inside the editor | days | Needs #28 | Two capture paths work on Android and desktop · E2E |
 | 96 | Append-to-existing-note capture (append to today's page from the share target) | days | Needs #47, #94 | Shared text lands at the end of today's page, encrypted · service-worker E2E |
 | 145 | Browser clipper with encrypted staging | a month or more | Start when #47 shipped and cohort demand | A clipped page becomes an encrypted note without plaintext leaving the browser · extension test |
 

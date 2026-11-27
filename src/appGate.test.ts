@@ -38,7 +38,7 @@ describe('shouldStartApp', () => {
   });
 
   it('starts the app on every route the public shell does not render', () => {
-    for (const pathname of ['/demo', '/demo/new', '/demo/n/starter-used-books', '/faded', '/n/abc', '/s/abcdefghijklmnopqrstuv', '/nowhere']) {
+    for (const pathname of ['/demo', '/demo/new', '/demo/n/starter-used-books', '/faded', '/n/abc', '/n/new', '/s/abcdefghijklmnopqrstuv', '/nowhere']) {
       expect(gate({ pathname }), pathname).toBe(true);
     }
   });

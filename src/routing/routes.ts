@@ -16,6 +16,11 @@ export type PublicPageName = (typeof PUBLIC_PAGE_ROUTES)[number];
 export type Route =
   | { name: 'library' }
   | { name: 'note'; noteId: string }
+  /**
+   * `/n/new` (item 44): create a note and open it. The PWA "New note" shortcut opens
+   * it. App consumes it once, then replaces it with `/n/<id>`.
+   */
+  | { name: 'newNote' }
   | { name: 'faded' }
   /**
    * `newNote` addresses `/demo/new`: open the Practice Space with a fresh, empty note
@@ -78,6 +83,8 @@ export function parseRoute(pathname: string, options: ParseRouteOptions = {}): R
   if (path === '/faded') return { name: 'faded' };
   if (path === '/demo') return { name: 'demo' };
   if (path === '/demo/new') return { name: 'demo', newNote: true };
+  // Before the `/n/<id>` match: `new` is a well-formed id. Real ids are UUIDs.
+  if (path === '/n/new') return { name: 'newNote' };
   if (path === '/playground') {
     return options.allowPlayground ? { name: 'playground' } : { name: 'notFound', path };
   }
@@ -130,6 +137,8 @@ export function routeToPath(route: Route): string {
       return '/';
     case 'note':
       return `/n/${route.noteId}`;
+    case 'newNote':
+      return '/n/new';
     case 'faded':
       return '/faded';
     case 'demo':

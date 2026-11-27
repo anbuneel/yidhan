@@ -99,3 +99,14 @@ describe('N creates a note (design critique K2)', () => {
     expect(onNewNote).not.toHaveBeenCalled();
   });
 });
+
+describe('Ctrl+Alt+N in the library (item 44)', () => {
+  it('meets the library Ctrl+N match; the editor view leaves it to the editor', () => {
+    const onNewNote = setup();
+    press(document.body, { key: 'n', code: 'KeyN', ctrlKey: true, altKey: true });
+    expect(onNewNote).toHaveBeenCalledOnce();
+    const inEditor = setup('editor');
+    press(document.body, { key: 'n', code: 'KeyN', ctrlKey: true, altKey: true });
+    expect(inEditor).not.toHaveBeenCalled();
+  });
+});

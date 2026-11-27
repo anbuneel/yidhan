@@ -9,6 +9,7 @@ interface KeyboardShortcutsModalProps {
 // Detect platform for displaying correct modifier key
 const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 const modKey = isMac ? '\u2318' : 'Ctrl';
+const altKey = isMac ? '⌥' : 'Alt';
 
 interface ShortcutItem {
   keys: string[];
@@ -43,6 +44,7 @@ const shortcuts: ShortcutSection[] = [
       { keys: [modKey, 'Shift', 'C'], description: 'Copy note to clipboard' },
       { keys: ['Esc'], description: 'Close find / Exit focus mode / Save and return' },
       { keys: ['/'], description: 'Open slash commands menu' },
+      { keys: [modKey, altKey, 'N'], description: 'Save and start a new note' },
     ],
   },
   {

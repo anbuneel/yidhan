@@ -117,6 +117,17 @@ export default defineConfig({
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        // Item 44: long-press the installed icon for "New note". `/n/new` creates the
+        // note once and replaces itself with `/n/<id>`; signed out or locked, it asks
+        // for sign-in or the passphrase first.
+        shortcuts: [
+          {
+            name: 'New note',
+            short_name: 'New note',
+            url: '/n/new',
+            icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+        ],
         icons: [
           {
             src: '/icons/icon-192.png',

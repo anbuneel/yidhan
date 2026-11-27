@@ -31,6 +31,8 @@ import { useImport } from './hooks/useImport';
 import { useDemoMigration } from './hooks/useDemoMigration';
 import { useShareTargetNote } from './hooks/useShareTargetNote';
 import { useNoteActions } from './hooks/useNoteActions';
+import { useNewNoteRoute } from './hooks/useNewNoteRoute';
+import { blocksWrites } from './services/schemaVersion';
 import { holdsUnsavedDraft, useReleasedOpenNote, type OpenDraftState } from './hooks/useReleasedDraft';
 import { useLockedNotes } from './hooks/useLockedNotes';
 import { useFadedNotes } from './hooks/useFadedNotes';
@@ -311,11 +313,13 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     scheduleSearchFocus(LIBRARY_SEARCH_INPUT_ID);
   }, [navigateToRoute, requestSearchFocus, startTransition]);
 
-  const handleNewNote = useCallback(async () => {
-    if (!user) return;
+  // The note is in IndexedDB before it reaches the list, and `setNotes` moves the list
+  // version, so a refresh read meanwhile cannot drop it (PR #297).
+  const createNote = useCallback(async (open: (noteId: string) => void): Promise<boolean> => {
+    if (!user) return false;
     if (!keys) {
       toast.error('Please unlock your vault first');
-      return;
+      return false;
     }
     try {
       const newNote = await createEncryptedNote(user.id, '', '', keys);
@@ -323,12 +327,37 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
       await warmEditorRoute();
       startTransition(() => {
         setNotes((prev) => withNotesFirst(prev, [newNote]));
-        navigate({ name: 'note', noteId: newNote.id });
+        open(newNote.id);
       });
+      return true;
     } catch (error) {
       console.error('Failed to create note:', error);
+      toast.error('Could not start a new note. Try again.');
+      return false;
     }
-  }, [user, keys, navigate, setNotes, startTransition, trackNoteCreated, warmEditorRoute]);
+  }, [user, keys, setNotes, startTransition, trackNoteCreated, warmEditorRoute]);
+
+  const handleNewNote = useCallback(async () => {
+    await createNote((noteId) => navigate({ name: 'note', noteId }));
+  }, [createNote, navigate]);
+
+  // Item 44: `/n/new`. Signed out, the landing page and sign-in show first; locked, the
+  // unlock screen. Both are rendered below, and the create waits for them.
+  useNewNoteRoute({
+    requested: route.name === 'newNote',
+    ready: Boolean(user && keys) && isUnlocked && isEncryptionSetup && !setupScreen && !recoveryScreen
+      && !loading && !blocksWrites(schemaCompatibility),
+    create: createNote,
+    open: (noteId) => replaceRoute({ name: 'note', noteId }),
+    // `createNote` has already said why.
+    onFailed: () => replaceRoute({ name: 'library' }),
+  });
+  const opensSignInForNewNote = route.name === 'newNote' && !authLoading && !user;
+  useEffect(() => {
+    if (!opensSignInForNewNote) return;
+    setAuthModalMode('login');
+    setShowAuthModal(true);
+  }, [opensSignInForNewNote]);
 
 
   const { handleNoteUpdate, handleNoteDelete, handleTogglePin } = useNoteActions({
@@ -499,7 +528,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     showTagModal;
 
   useAppShortcuts({
-    enabled: Boolean(user) && !isAnyModalOpen,
+    enabled: Boolean(user) && !isAnyModalOpen && route.name !== 'newNote',
     view,
     onNewNote: () => { void handleNewNote(); },
     onFocusSearch: () => {
@@ -584,6 +613,11 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     setupScreen,
   });
   if (accountGate) return accountGate;
+
+  // `/n/new` while the create runs; it replaces itself with `/n/<id>` or the library.
+  if (route.name === 'newNote') {
+    return <LoadingFallback message="Opening a new note..." />;
+  }
 
   if (view === 'faded') {
     return (
@@ -725,6 +759,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
         theme={theme}
         onBack={handleBack}
         onRequestSearch={requestLibrarySearch}
+        onNewNote={() => { void handleNewNote(); }}
         onUpdate={handleNoteUpdate}
         onDelete={handleNoteDeleteWithToast}
         onToggleTag={handleNoteTagToggle}

@@ -973,6 +973,110 @@ describe('Editor', () => {
 
       expect(onRequestSearch).not.toHaveBeenCalled();
     });
+
+    describe('new note (item 44)', () => {
+      it('saves, then starts a new note on Ctrl+Alt+N from the title', async () => {
+        const onNewNote = vi.fn();
+        const onUpdate = vi.fn().mockResolvedValue(undefined);
+        render(<Editor {...defaultProps} onUpdate={onUpdate} onNewNote={onNewNote} />);
+        const titleInput = screen.getByDisplayValue('Test Note');
+        fireEvent.change(titleInput, { target: { value: 'Changed' } });
+
+        const notPrevented = fireEvent.keyDown(titleInput, { key: 'n', code: 'KeyN', ctrlKey: true, altKey: true });
+
+        expect(notPrevented).toBe(false);
+        await waitFor(() => expect(onNewNote).toHaveBeenCalledOnce());
+        expect(onUpdate).toHaveBeenCalled();
+      });
+
+      it('reads the key code for Cmd+Option+N, where Option changes the key', async () => {
+        const onNewNote = vi.fn();
+        render(<Editor {...defaultProps} onNewNote={onNewNote} />);
+        fireEvent.keyDown(window, { key: '˜', code: 'KeyN', metaKey: true, altKey: true });
+        await waitFor(() => expect(onNewNote).toHaveBeenCalledOnce());
+      });
+
+      it('accepts Cmd/Ctrl+N, which reaches the page in the installed app', async () => {
+        const onNewNote = vi.fn();
+        render(<Editor {...defaultProps} onNewNote={onNewNote} />);
+        fireEvent.keyDown(window, { key: 'n', code: 'KeyN', ctrlKey: true });
+        await waitFor(() => expect(onNewNote).toHaveBeenCalledOnce());
+      });
+
+      it('starts one note for two quick presses while the save runs', async () => {
+        const onNewNote = vi.fn();
+        let finishSave: () => void = () => {};
+        const onUpdate = vi.fn(() => new Promise<void>((resolve) => { finishSave = resolve; }));
+        render(<Editor {...defaultProps} onUpdate={onUpdate} onNewNote={onNewNote} />);
+        fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Changed' } });
+
+        fireEvent.keyDown(window, { key: 'n', code: 'KeyN', ctrlKey: true, altKey: true });
+        fireEvent.keyDown(window, { key: 'n', code: 'KeyN', ctrlKey: true, altKey: true });
+        await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+        await act(async () => { finishSave(); });
+
+        await waitFor(() => expect(onNewNote).toHaveBeenCalledOnce());
+      });
+
+      it('keeps the note open when the save fails', async () => {
+        const onNewNote = vi.fn();
+        const onUpdate = vi.fn().mockRejectedValue(new Error('save failed'));
+        render(<Editor {...defaultProps} onUpdate={onUpdate} onNewNote={onNewNote} />);
+        fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Changed' } });
+
+        fireEvent.keyDown(window, { key: 'n', code: 'KeyN', ctrlKey: true, altKey: true });
+
+        await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+        expect(onNewNote).not.toHaveBeenCalled();
+        expect(screen.getByDisplayValue('Changed')).toBeInTheDocument();
+      });
+
+      it('does nothing from a field outside the note', async () => {
+        const onNewNote = vi.fn();
+        render(<Editor {...defaultProps} onNewNote={onNewNote} />);
+        const field = document.createElement('input');
+        document.body.appendChild(field);
+        try {
+          const notPrevented = fireEvent.keyDown(field, { key: 'n', code: 'KeyN', ctrlKey: true, altKey: true });
+          await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+          expect(notPrevented).toBe(true);
+          expect(onNewNote).not.toHaveBeenCalled();
+        } finally {
+          field.remove();
+        }
+      });
+
+      it('does nothing behind an open dialog', async () => {
+        const onNewNote = vi.fn();
+        const dialog = document.createElement('div');
+        dialog.setAttribute('role', 'dialog');
+        document.body.appendChild(dialog);
+        try {
+          render(<Editor {...defaultProps} onNewNote={onNewNote} />);
+          fireEvent.keyDown(window, { key: 'n', code: 'KeyN', ctrlKey: true, altKey: true });
+          await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+          expect(onNewNote).not.toHaveBeenCalled();
+        } finally {
+          dialog.remove();
+        }
+      });
+
+      it('lets AltGr letters through, and does nothing without onNewNote', async () => {
+        const onNewNote = vi.fn();
+        const { unmount } = render(<Editor {...defaultProps} onNewNote={onNewNote} />);
+        // Polish AltGr+N types n with an acute accent, and reports Ctrl+Alt.
+        const altGr = fireEvent.keyDown(window, { key: 'ń', code: 'KeyN', ctrlKey: true, altKey: true });
+        await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+        expect(altGr).toBe(true);
+        expect(onNewNote).not.toHaveBeenCalled();
+        unmount();
+
+        // The practice space passes no onNewNote.
+        render(<Editor {...defaultProps} />);
+        const demo = fireEvent.keyDown(window, { key: 'n', code: 'KeyN', ctrlKey: true, altKey: true });
+        expect(demo).toBe(true);
+      });
+    });
   });
 
   it('copies a failed draft without discarding its words and clears the copied indicator', async () => {

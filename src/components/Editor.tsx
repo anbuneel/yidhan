@@ -11,6 +11,7 @@ import { noteSaveQueue } from '../stores/noteSaveQueue';
 import { useState, useEffect, useLayoutEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { getSaveLabel } from '../utils/saveStatus';
+import { isFieldOutsideNote, isModAltN, isModN } from '../utils/newNoteShortcut';
 import { SyncStateIcon, type SyncStateKind } from './SyncStateIcon';
 import type { Note, NoteDeleteHandler, Tag, Theme } from '../types';
 import { LinkPopover } from './LinkPopover';
@@ -62,6 +63,8 @@ interface EditorProps {
   userId: string;
   onBack: () => void;
   onRequestSearch: () => void;
+  /** Ctrl+Alt+N or Cmd/Ctrl+N (item 44): start a new note once this one is saved. */
+  onNewNote?: () => void;
   onUpdate: (note: Note) => Promise<void>;
   onDelete: NoteDeleteHandler;
   onToggleTag: (noteId: string, tagId: string) => void;
@@ -149,7 +152,7 @@ const SAVE_LABEL_ICON: Record<ReturnType<typeof getSaveLabel>, SyncStateKind> = 
  * switch is an unmount and a mount and every ref here belongs to one note. On unmount
  * the Editor saves what it had on screen under its own note's id.
  */
-export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus, releasedElsewhere = false, onKeptReleasedDraft, onKeptReplacedDraft, vaultKeys = null, onLetGoReleasedDraft, onDraftStateChange }: EditorProps) {
+export function Editor({ note, tags, userId, onBack, onRequestSearch, onNewNote, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus, releasedElsewhere = false, onKeptReleasedDraft, onKeptReplacedDraft, vaultKeys = null, onLetGoReleasedDraft, onDraftStateChange }: EditorProps) {
   // Words for this note still waiting to be written by an Editor the writer left
   // (issue #288). They are newer than the list's copy, so this Editor starts from them.
   const [startingDraft] = useState(() => noteSaveQueue.pendingDraft(note.id));
@@ -869,7 +872,33 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     };
   }, [cancelPendingAutoSave, title, content, note.title, note.content, performSave]);
 
+  const newNotePendingRef = useRef(false);
   const handleEditorShortcut = useEffectEvent(async (e: KeyboardEvent) => {
+    // Ctrl+Alt+N (Cmd+Option+N), or Cmd/Ctrl+N in the installed app: save, then start a
+    // new note. Like Escape, a failed save keeps this note open with its words. Not
+    // from a field outside the note, and not behind a dialog or menu.
+    if (onNewNote && (isModAltN(e) || isModN(e))) {
+      if (e.repeat || e.isComposing) return;
+      if (isFieldOutsideNote(e.target)) return;
+      if (showLinkPopover || showFindReplace || showExportMenu || showShareModal || showDeleteConfirm ||
+        document.querySelector(OVERLAY_GUARD_SELECTOR)) {
+        return;
+      }
+      e.preventDefault();
+      // A second press while this one saves would create a second note.
+      if (newNotePendingRef.current) return;
+      newNotePendingRef.current = true;
+      try {
+        cancelPendingAutoSave();
+        if (inFlightSaveRef.current) {
+          await inFlightSaveRef.current;
+        }
+        if (await performSave()) onNewNote();
+      } finally {
+        newNotePendingRef.current = false;
+      }
+      return;
+    }
     // Cmd/Ctrl+F: find within the current note, including in focus mode.
     if (e.key.toLowerCase() === 'f' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
       if (!editor) return;
