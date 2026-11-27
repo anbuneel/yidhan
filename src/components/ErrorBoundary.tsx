@@ -171,7 +171,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <button type="button"
               onClick={this.handleReload}
-              className="px-6 py-3 rounded-lg font-medium transition-all duration-200"
+              className="px-6 py-3 rounded-[var(--radius-button)] font-medium transition-all duration-200"
               style={{
                 fontFamily: 'var(--font-body, Inter, sans-serif)',
                 background: 'var(--color-cta-bg, #8FC79A)',

@@ -239,7 +239,7 @@ export function ChapteredLibrary({
                     fontFamily: 'var(--font-body)',
                     background: 'var(--color-cta-bg)',
                     color: 'var(--color-cta-text)',
-                    borderRadius: 'var(--radius-pill)',
+                    borderRadius: 'var(--radius-button)',
                     boxShadow: 'none',
                   }}
                   onMouseEnter={(e) => {

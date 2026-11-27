@@ -41,7 +41,7 @@ export function EditorSettings() {
                 role="radio"
                 aria-checked={selected}
                 onClick={() => chooseTextSize(size)}
-                className="min-h-11 px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 touch-press-light focus-ring"
+                className="min-h-11 px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] transition-colors duration-200 touch-press-light focus-ring"
                 style={{
                   color: selected ? 'var(--color-accent-text)' : 'var(--color-text-secondary)',
                   background: selected ? 'var(--color-accent-glow)' : 'transparent',

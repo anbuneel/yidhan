@@ -41,7 +41,7 @@ export function FadedNotesView({
       onClick={() => setShowEmptyConfirm(true)}
       className="
         px-4 py-2
-        rounded-full
+        rounded-[var(--radius-button)]
         text-sm font-medium
         transition-all duration-200
         focus:outline-none
@@ -241,7 +241,7 @@ export function FadedNotesView({
                 onClick={() => setShowEmptyConfirm(false)}
                 className="
                   px-4 py-2
-                  rounded-lg
+                  rounded-[var(--radius-button)]
                   text-sm font-medium
                   transition-all duration-200
                 "
@@ -258,7 +258,7 @@ export function FadedNotesView({
                 onClick={handleEmptyAll}
                 className="
                   px-4 py-2
-                  rounded-lg
+                  rounded-[var(--radius-button)]
                   text-sm font-medium
                   transition-all duration-200
                 "

@@ -214,7 +214,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               disabled={isResolving}
               className="
                 mt-4 w-full py-2.5 px-4
-                rounded-lg text-sm font-medium
+                rounded-[var(--radius-button)] text-sm font-medium
                 transition-all duration-200
                 disabled:opacity-50 disabled:cursor-not-allowed
               "
@@ -301,7 +301,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
               disabled={isResolving}
               className="
                 mt-4 w-full py-2.5 px-4
-                rounded-lg text-sm font-medium
+                rounded-[var(--radius-button)] text-sm font-medium
                 transition-all duration-200
                 disabled:opacity-50 disabled:cursor-not-allowed
               "
@@ -354,7 +354,7 @@ export function ConflictModal({ conflict, onResolve, onDismiss }: ConflictModalP
             disabled={isResolving}
             className="
               py-3 px-6
-              rounded-lg text-sm font-medium
+              rounded-[var(--radius-button)] text-sm font-medium
               transition-all duration-200
               disabled:opacity-50 disabled:cursor-not-allowed
             "

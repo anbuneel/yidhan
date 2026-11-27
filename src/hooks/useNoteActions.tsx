@@ -138,7 +138,7 @@ export function useNoteActions({
                   toast.error("Couldn't restore the note. It's still in Faded notes.");
                 }
               }}
-              className="px-2 py-1 text-sm font-medium rounded transition-colors"
+              className="px-2 py-1 text-sm font-medium rounded-[var(--radius-button)] transition-colors"
               style={{
                 background: 'var(--color-cta-bg)',
                 color: 'var(--color-cta-text)',

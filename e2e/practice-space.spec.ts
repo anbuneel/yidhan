@@ -349,8 +349,8 @@ test.describe('Tag row at 375 px', () => {
 
 /** Design critique K1: touch screens have no hover, so an unpinned card's pin and
  *  delete buttons used to sit at opacity 0 — an invisible pin target in the corner.
- *  Below 700px the library uses compact cards, which have no pin or delete button, so
- *  the trap was on touch screens 700px and wider: tablets and touch laptops. */
+ *  Below 700px the library uses compact cards, which show delete only on touch screens,
+ *  so the trap was on touch screens 700px and wider: tablets and touch laptops. */
 async function firstUnpinnedCard(page: Page) {
   await page.goto('/demo');
   await expect(page.getByTestId('library-view')).toBeVisible();
@@ -378,6 +378,18 @@ test.describe('Card corner on a touch phone at 375 px', () => {
     for (const target of await targets.all()) {
       expect(await opacityOf(target)).toBeGreaterThan(0);
     }
+  });
+
+  test('every compact card shows a delete button, and tapping it takes the note out of the library', async ({ page }) => {
+    await page.goto('/demo');
+    await expect(page.getByTestId('library-view')).toBeVisible();
+    await page.waitForTimeout(600);
+    const card = page.locator('#chapter-thisWeek .note-card-compact').first();
+    const title = (await card.getByRole('button', { name: /^Open note:/ }).getAttribute('aria-label'))!;
+    const del = card.getByRole('button', { name: 'Delete note' });
+    await expect(del).toBeVisible();
+    await del.tap();
+    await expect(page.getByRole('button', { name: title, exact: true })).toHaveCount(0, { timeout: 5000 });
   });
 
   test('tapping the top-right corner of an unpinned card opens the note', async ({ page }) => {

@@ -19,6 +19,48 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-26 — App-shell JS limit 327 → 329 KB for the password toggle
+
+**Status:** Active
+
+**Why:** The touch, trust and button-shape PR added a show/hide toggle to every password
+and passphrase field (one shared component, two icons) and a Revoke & Re-create flow
+that makes the new link. Those screens are part of the signed-in app shell. The shell
+measured 327.7 KB gzip against a 327 KB limit.
+
+**Decision:** Raise `appShellJs.limitKB` to 329: the measurement rounded up plus 1 KB, as
+the budget file's rule says. It stays under the 330 KB target, so the promise holds.
+
+**Rejected:** Lazy-loading the toggle (it renders on the unlock screen, the first thing a
+returning user sees, so a lazy chunk would flash the field without it).
+
+---
+
+## 2026-11-26 — One button shape: 8px, not pills
+
+**Status:** Active
+
+**Why:** Pill buttons looked too bouncy next to the serif type and the 8px inputs. Two
+shapes also sat side by side in the header: "Sign in" was `rounded-lg`, which this app
+resolves to 12px, next to a pill "New note". Dialogs mixed 12px and pill actions.
+
+**Decision:** Every text button uses `--radius-button: 8px`, the same as inputs.
+Icon-only buttons stay circles. Modals, menus, popovers and toolbars stay 12px
+(`--radius-plain`); the leaf corner is unchanged. The tag filter bar and the library
+Arrange row are plain text with an underline on the active option. `--radius-pill` is
+removed, and `src/test/buttonShape.test.ts` fails on `rounded-full` or `rounded-lg` on a
+text button and on `--radius-pill` anywhere.
+
+This reverses the pill rule in `DESIGN.md` and B15 of the 2026-11-24 launch review work
+order, which moved shared-letter and empty-state buttons to `--radius-pill`.
+
+**Rejected:** Keeping pills and only fixing "Sign in" (the bounce was the complaint, not
+only the mismatch). A 12px button (it would match panels, so a button inside a dialog
+would echo the dialog's own corner). An ESLint rule (the repo has no JSX class-name rule
+to build on, and telling an icon-only button from a text one needs the whole tag).
+
+---
+
 ## 2026-11-26 — Security settings are one choice per device; trusted device goes
 
 **Status:** Active

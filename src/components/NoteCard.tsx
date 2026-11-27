@@ -341,17 +341,20 @@ export const NoteCard = memo(function NoteCard({
           {formatRelativeTime(note.updatedAt)}
         </time>
 
-        {/* Delete button - hidden in compact mode (use swipe instead). Shown at hover
-            opacity on touch screens, for the same reason as the pin button. */}
-        {!isCompact && !isDecorative && (
+        {/* Delete button. Shown at hover opacity on touch screens, for the same reason
+            as the pin button. Compact cards are the phone library and desktop pinned
+            rows: they show it on touch screens only, because there is no swipe to delete
+            (removed in #162 as too easy to trigger). */}
+        {!isDecorative && (
           <button type="button"
             onClick={handleDeleteClick}
             disabled={isDeleting}
-            className="
+            className={`
               relative z-20
               size-10
               rounded-full
-              flex items-center justify-center
+              ${isCompact ? 'hidden [@media(hover:none)]:flex [@media(any-pointer:coarse)]:flex' : 'flex'}
+              items-center justify-center
               opacity-0
               group-hover:opacity-40
               hover:!opacity-85
@@ -362,9 +365,9 @@ export const NoteCard = memo(function NoteCard({
               focus:ring-[var(--color-accent)]
               focus-visible:opacity-100
               ml-2
-              -mr-4
+              ${isCompact ? '-mr-2' : '-mr-4'}
               shrink-0
-            "
+            `}
             style={{
               background: 'transparent',
               color: 'var(--color-text-tertiary)',

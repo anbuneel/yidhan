@@ -191,6 +191,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const bottomToolbarRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const headerTitleRef = useRef<HTMLSpanElement>(null);
   const stickyZoneRef = useRef<HTMLDivElement>(null);
@@ -1116,7 +1117,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   );
 
   // Right actions: Save status + Export button + Delete button. Under 400px the gap
-  // tightens so the save pill clears the wordmark (a 30px logo leaves no room).
+  // and the pill's own padding tighten so the save pill clears the wordmark (a 30px
+  // logo leaves no room) while the separator before the theme toggle stays.
   const rightActions = (
     <div className="flex items-center gap-2 max-[399px]:gap-1" data-testid="editor-header-actions">
       {/* Save/Copy Status Indicator. The status region is always mounted, so a screen
@@ -1126,7 +1128,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {saveStatus !== 'idle' && (
         <span
           data-save-status={saveStatus}
-          className="shrink-0 text-sm px-2 py-1 rounded-full flex items-center gap-1.5"
+          className="shrink-0 text-sm px-2 max-[399px]:px-1 py-1 rounded-full flex items-center gap-1.5"
           style={{
             fontFamily: 'var(--font-body)',
             color: 'var(--color-text-secondary)',
@@ -1355,7 +1357,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             {keepFailed && <span className="block">Could not keep them as a new note. Copy them instead.</span>}
             {copyFailed && <span className="block">Could not copy — select the text and copy it by hand.</span>}</span>
           <button type="button" onClick={() => { void handleKeepReleasedDraft(); }} disabled={isKeeping}
-            className="rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            className="rounded-[var(--radius-button)] px-3 py-1.5 text-sm font-medium transition-all duration-200"
             style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}>Keep as new note</button>
           <button type="button" onClick={async () => {
             try {
@@ -1364,10 +1366,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               showCopiedIndicator();
             } catch { setCopyFailed(true); }
           }}
-            className="rounded-full border px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            className="rounded-[var(--radius-button)] border px-3 py-1.5 text-sm font-medium transition-all duration-200"
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', background: 'transparent', borderColor: 'var(--glass-border)' }}>Copy</button>
           <button type="button" onClick={onLetGoReleasedDraft ?? onBack}
-            className="rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            className="rounded-[var(--radius-button)] px-3 py-1.5 text-sm font-medium transition-all duration-200"
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-destructive-text)', background: 'var(--color-destructive)' }}>Let go</button>
         </div>
       )}
@@ -1376,7 +1378,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           <span className="mr-auto">Not saved{saveErrorDetail && <span className="block">{saveErrorDetail}</span>}
             {copyFailed && <span className="block">Could not copy — select the text and copy it by hand.</span>}</span>
           <button type="button" onClick={() => { setCopyFailed(false); void performSave(); }}
-            className="rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            className="rounded-[var(--radius-button)] px-3 py-1.5 text-sm font-medium transition-all duration-200"
             style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}>Retry</button>
           <button type="button" onClick={async () => {
             try {
@@ -1386,7 +1388,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               showCopiedIndicator();
             } catch { setCopyFailed(true); }
           }}
-            className="rounded-full border px-3 py-1.5 text-sm font-medium transition-all duration-200"
+            className="rounded-[var(--radius-button)] border px-3 py-1.5 text-sm font-medium transition-all duration-200"
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', background: 'transparent', borderColor: 'var(--glass-border)' }}>Copy</button>
         </div>
       )}
@@ -1423,7 +1425,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               flex items-center gap-2
               px-4 py-2
               text-xs
-              rounded-full
+              rounded-[var(--radius-button)]
               transition-all duration-300
               active:scale-95
               animate-fade-in
@@ -1495,7 +1497,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             <div className="flex items-center gap-2 shrink-0">
               <button type="button"
                 onClick={handleKeepMine}
-                className="text-xs px-3 py-1.5 rounded-md transition-colors duration-200"
+                className="text-xs px-3 py-1.5 rounded-[var(--radius-button)] transition-colors duration-200"
                 style={{
                   fontFamily: 'var(--font-body)',
                   color: 'var(--color-text-secondary)',
@@ -1513,7 +1515,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               </button>
               <button type="button"
                 onClick={handleLoadRemoteChanges}
-                className="text-xs px-3 py-1.5 rounded-md transition-colors duration-200"
+                className="text-xs px-3 py-1.5 rounded-[var(--radius-button)] transition-colors duration-200"
                 style={{
                   fontFamily: 'var(--font-body)',
                   color: 'var(--color-cta-text)',
@@ -1700,7 +1702,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
       {/* Mobile: Bottom toolbar — fixed at thumb zone */}
       {!isFocusMode && (
-        <div className="editor-toolbar-bottom">
+        <div className="editor-toolbar-bottom" ref={bottomToolbarRef}>
           <EditorToolbar
             editor={editor}
             variant="bottom"
@@ -1713,7 +1715,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       )}
 
       {/* Floating scroll-to-top button — hidden in focus mode */}
-      {!isFocusMode && <WhisperBack scrollContainerRef={scrollContainerRef} />}
+      {!isFocusMode && <WhisperBack scrollContainerRef={scrollContainerRef} bottomToolbarRef={bottomToolbarRef} />}
 
       {/* Focus Mode indicator pill + screen reader announcement */}
       <output aria-live="polite" className="sr-only">
@@ -1792,7 +1794,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 onClick={() => setShowDeleteConfirm(false)}
                 className="
                   px-5 py-2.5
-                  rounded-lg
+                  rounded-[var(--radius-button)]
                   text-sm font-medium
                   transition-all duration-200
                 "
@@ -1815,7 +1817,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 onClick={confirmDelete}
                 className="
                   px-5 py-2.5
-                  rounded-lg
+                  rounded-[var(--radius-button)]
                   text-sm font-medium
                   transition-all duration-200
                 "

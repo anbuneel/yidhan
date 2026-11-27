@@ -155,6 +155,12 @@ describe('LandingPage', () => {
     expect(within(section).getByText(/can i import or export my notes\?/i)).toBeInTheDocument();
     expect(section).toHaveTextContent(/markdown/i);
     expect(section).toHaveTextContent(/\.yidhan/i);
+    // Import and export live in the profile menu, not Settings, and import cannot read
+    // a .yidhan backup.
+    expect(section).toHaveTextContent(/the profile menu exports all your notes as json or markdown/i);
+    expect(section).toHaveTextContent(/import cannot read \.yidhan files/i);
+    expect(section).toHaveTextContent(/offered\s+when you delete your account/i);
+    expect(section).not.toHaveTextContent(/from settings you can import/i);
 
     expect(within(section).getByText(/what if i forget my passphrase\?/i)).toBeInTheDocument();
     expect(section).toHaveTextContent(/recovery key/i);

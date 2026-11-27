@@ -130,7 +130,7 @@ describe('ChapteredLibrary', () => {
       expect(document.body).not.toHaveTextContent(/encrypt/i);
       const createButton = screen.getByRole('button', { name: 'Create your first note' });
       expect(createButton).toBeInTheDocument();
-      expect(createButton).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
+      expect(createButton).toHaveStyle({ borderRadius: 'var(--radius-button)' });
       expect(createButton.className).not.toMatch(/\brounded-lg\b/);
       expect(createButton.className).toMatch(/\bfocus-ring\b/);
     });

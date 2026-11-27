@@ -130,7 +130,7 @@ export function SessionTimeoutModal({
               onClick={onSignOut}
               className="
                 flex-1 py-3
-                rounded-lg
+                rounded-[var(--radius-button)]
                 font-medium
                 transition-all duration-200
               "
@@ -155,7 +155,7 @@ export function SessionTimeoutModal({
               onClick={onStay}
               className="
                 flex-1 py-3
-                rounded-lg
+                rounded-[var(--radius-button)]
                 font-medium
                 transition-all duration-200
               "

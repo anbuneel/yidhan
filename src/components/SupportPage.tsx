@@ -41,7 +41,7 @@ export function SupportPage({
       />
 
       <main className="flex-1">
-        <div className="max-w-[800px] mx-auto px-6 sm:px-10 pb-20">
+        <div className="max-w-[calc(48ch+5rem)] mx-auto px-6 sm:px-10 pb-20" data-measure="public-page">
           {/* Title */}
           <h1
             className="font-semibold mb-3"
@@ -133,7 +133,7 @@ export function SupportPage({
                   },
                   {
                     q: 'How do I export my notes?',
-                    a: 'Open Settings and use the Export option. You can export as JSON (full fidelity, re-importable) or Markdown (human-readable). Both formats include your note titles, content, and tags.',
+                    a: 'Open the profile menu and choose Export (JSON) or Export (Markdown). JSON keeps everything and can be imported again. Markdown is easy to read anywhere. Both include your note titles, content, and tags. An encrypted .yidhan backup is offered only when you delete your account, and import cannot read it.',
                   },
                   {
                     q: 'How do I delete my account?',

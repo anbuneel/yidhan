@@ -43,7 +43,7 @@ function ShareActionBar({ revokeLabel, isRevoking, onRevoke, onClose }: ShareAct
           px-4 py-2
           text-sm font-medium
           transition-colors duration-200
-          rounded-lg
+          rounded-[var(--radius-button)]
           disabled:opacity-50
           flex items-center gap-2
         "
@@ -72,7 +72,7 @@ function ShareActionBar({ revokeLabel, isRevoking, onRevoke, onClose }: ShareAct
         onClick={onClose}
         className="
           px-5 py-2.5
-          rounded-lg
+          rounded-[var(--radius-button)]
           text-sm font-medium
           transition-all duration-200
         "
@@ -237,6 +237,42 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
     }
   };
 
+  // Revoke the old link, make a new one, and stay open to show it. The old key is
+  // gone, so this is the only way to get a link you can copy again.
+  const handleRevokeAndRecreate = async () => {
+    setIsRevoking(true);
+    try {
+      await revokeNoteShare(note.id);
+    } catch (error) {
+      console.error('Failed to revoke share:', error);
+      toast.error('Failed to revoke share link');
+      setIsRevoking(false);
+      return;
+    }
+    setShare(null);
+    setShareUrl(null);
+    // Disables "Create share link" in the view that shows while this runs.
+    setIsCreating(true);
+    try {
+      const { share: newShare, shareKey } = await createNoteShare(
+        note.id,
+        userId,
+        note,
+        selectedExpiration
+      );
+      setShare(newShare);
+      setShareUrl(buildShareUrl(newShare.shareToken, shareKey));
+      toast.success('Old link revoked. Here is the new one.');
+    } catch (error) {
+      // The old link is revoked either way. The create view is now showing.
+      console.error('Failed to create share:', error);
+      toast.error('Old link revoked, but a new one could not be made');
+    } finally {
+      setIsCreating(false);
+      setIsRevoking(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   // If a share exists but we don't have the URL (reopened modal), the key is gone
@@ -354,7 +390,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                     className="
                       px-3 py-1.5
                       text-sm
-                      rounded-lg
+                      rounded-[var(--radius-button)]
                       transition-all duration-200
                     "
                     style={{
@@ -411,7 +447,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
               className="
                 w-full
                 px-5 py-3
-                rounded-lg
+                rounded-[var(--radius-button)]
                 text-sm font-medium
                 transition-all duration-200
                 disabled:opacity-50
@@ -524,7 +560,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                   className="
                     px-3 py-1.5
                     text-sm font-medium
-                    rounded-lg
+                    rounded-[var(--radius-button)]
                     transition-all duration-200
                     shrink-0
                   "
@@ -558,7 +594,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
                     className="
                       px-3 py-1.5
                       text-sm
-                      rounded-lg
+                      rounded-[var(--radius-button)]
                       transition-all duration-200
                     "
                     style={{
@@ -623,7 +659,7 @@ export function ShareModal({ isOpen, onClose, note, userId }: ShareModalProps) {
             <ShareActionBar
               revokeLabel="Revoke & Re-create"
               isRevoking={isRevoking}
-              onRevoke={handleRevoke}
+              onRevoke={handleRevokeAndRecreate}
               onClose={onClose}
             />
           </div>

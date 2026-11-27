@@ -134,7 +134,7 @@ export function InstallPrompt({ onInstall, onDismiss }: InstallPromptProps) {
         onClick={handleInstall}
         disabled={isInstalling}
         aria-busy={isInstalling}
-        className="w-full mt-4 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 hover:opacity-90"
+        className="w-full mt-4 px-4 py-2.5 rounded-[var(--radius-button)] text-sm font-medium transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 hover:opacity-90"
         style={{
           fontFamily: 'var(--font-body)',
           background: 'var(--color-cta-bg)',
