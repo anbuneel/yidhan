@@ -7,6 +7,7 @@
  */
 
 import { useState, type Dispatch, type SetStateAction } from 'react';
+import type { UpdateNotes } from './useNotesSync';
 import type { Note, Tag, TagColor } from '../types';
 import {
   createTagOffline,
@@ -22,7 +23,7 @@ export interface UseTagActionsOptions {
   userId: string | undefined;
   notes: Note[];
   tags: Tag[];
-  setNotes: Dispatch<SetStateAction<Note[]>>;
+  setNotes: UpdateNotes;
   setTags: Dispatch<SetStateAction<Tag[]>>;
   setSelectedTagIds: Dispatch<SetStateAction<string[]>>;
 }

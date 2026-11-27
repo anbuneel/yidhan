@@ -4,11 +4,10 @@ import { useLockedNotes } from './useLockedNotes';
 import type { Note } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
 
-const fetchDecryptedNotes = vi.hoisted(() => vi.fn());
+const reloadFromStorage = vi.hoisted(() => vi.fn());
 const toastError = vi.hoisted(() => vi.fn());
 const toastPlain = vi.hoisted(() => vi.fn());
 
-vi.mock('../services/encryptedNotes', () => ({ fetchDecryptedNotes }));
 vi.mock('react-hot-toast', () => ({
   default: Object.assign(toastPlain, { error: toastError }),
 }));
@@ -45,7 +44,7 @@ describe('useLockedNotes', () => {
         openNote: note({ decryptionFailed: true }),
         userId: 'user-1',
         keys,
-        setNotes: vi.fn(),
+        reloadFromStorage,
         onLockedNoteOpened,
       })
     );
@@ -61,7 +60,7 @@ describe('useLockedNotes', () => {
         openNote: note({ title: 'Readable' }),
         userId: 'user-1',
         keys,
-        setNotes: vi.fn(),
+        reloadFromStorage,
         onLockedNoteOpened,
       })
     );
@@ -77,7 +76,7 @@ describe('useLockedNotes', () => {
         openNote: undefined,
         userId: 'user-1',
         keys,
-        setNotes: vi.fn(),
+        reloadFromStorage,
         onLockedNoteOpened,
       })
     );
@@ -86,43 +85,40 @@ describe('useLockedNotes', () => {
   });
 
   it('re-reads the library when the reader retries a locked card', async () => {
-    const refreshed = [note({ title: 'Now readable' })];
-    fetchDecryptedNotes.mockResolvedValue(refreshed);
-    const setNotes = vi.fn();
+    reloadFromStorage.mockResolvedValue({ status: 'applied', notes: [note({ title: 'Now readable' })] });
 
     const { result } = renderHook(() =>
       useLockedNotes({
         openNote: undefined,
         userId: 'user-1',
         keys,
-        setNotes,
+        reloadFromStorage,
         onLockedNoteOpened: vi.fn(),
       })
     );
 
     await result.current.retryLockedNotes();
 
-    expect(fetchDecryptedNotes).toHaveBeenCalledWith('user-1', keys);
-    await waitFor(() => expect(setNotes).toHaveBeenCalledWith(refreshed));
+    // Through the guarded reload, so a note created meanwhile is not dropped.
+    await waitFor(() => expect(reloadFromStorage).toHaveBeenCalledTimes(1));
+    expect(toastError).not.toHaveBeenCalled();
   });
 
   it('says what to try when the retry fails, rather than failing silently', async () => {
-    fetchDecryptedNotes.mockRejectedValue(new Error('still locked'));
-    const setNotes = vi.fn();
+    reloadFromStorage.mockRejectedValue(new Error('still locked'));
 
     const { result } = renderHook(() =>
       useLockedNotes({
         openNote: undefined,
         userId: 'user-1',
         keys,
-        setNotes,
+        reloadFromStorage,
         onLockedNoteOpened: vi.fn(),
       })
     );
 
     await result.current.retryLockedNotes();
 
-    expect(setNotes).not.toHaveBeenCalled();
     expect(toastError).toHaveBeenCalledWith(
       'Could not open those notes. Lock and unlock your vault, then try again.'
     );
@@ -135,12 +131,12 @@ describe('useLockedNotes', () => {
         openNote: undefined,
         userId: 'user-1',
         keys: null,
-        setNotes: vi.fn(),
+        reloadFromStorage,
         onLockedNoteOpened: vi.fn(),
       })
     );
 
     await result.current.retryLockedNotes();
-    expect(fetchDecryptedNotes).not.toHaveBeenCalled();
+    expect(reloadFromStorage).not.toHaveBeenCalled();
   });
 });

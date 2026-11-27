@@ -6,13 +6,15 @@
  * together rather than beside the rendering.
  */
 
-import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import type { Note } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
 import { VaultLockedSaveError } from '../utils/saveErrors';
 import { UNDO_TOAST_MS } from '../utils/undoToast';
 import { applySavedNote } from '../utils/applySavedNote';
+import { withNotesFirst } from '../utils/notesFirst';
+import type { ApplyOptimistic, UpdateNotes } from './useNotesSync';
 import { updateEncryptedNote } from '../services/encryptedNotes';
 import {
   softDeleteNoteOffline,
@@ -26,14 +28,14 @@ export interface UseNoteActionsOptions {
   notes: Note[];
   /** Stable read of the notes array, so the delete callback does not change identity. */
   notesRef: React.RefObject<Note[]>;
-  setNotes: Dispatch<SetStateAction<Note[]>>;
+  setNotes: UpdateNotes;
   refreshFadedNotesCount: () => Promise<void>;
   openNoteIdRef: React.RefObject<string | null>;
   /** Close the editor when the note it is showing is the one being deleted. */
   onOpenNoteClosed: () => void;
   triggerCoalescedSync: () => void;
-  /** Wraps a write whose change is already in the list, so a sync refresh waits for it. */
-  trackLocalWrite: <T>(write: () => Promise<T>) => Promise<T>;
+  /** Change the list and write, as one step, so a sync refresh waits for the write. */
+  applyOptimistic: ApplyOptimistic;
 }
 
 export interface NoteActions {
@@ -52,7 +54,7 @@ export function useNoteActions({
   openNoteIdRef,
   onOpenNoteClosed,
   triggerCoalescedSync,
-  trackLocalWrite,
+  applyOptimistic,
 }: UseNoteActionsOptions): NoteActions {
   // Read at call time, not from the render that made the callback. An Editor that
   // unmounts as the vault locks or the user signs out still holds the older callback
@@ -81,15 +83,13 @@ export function useNoteActions({
 
     // Update local state immediately for responsiveness (optimistic update)
     // Set syncStatus: 'pending' so the pending→synced transition is observable (3A)
-    setNotes((prev) =>
-      prev.map((n) => (n.id === updatedNote.id ? { ...updatedNote, syncStatus: 'pending' as const } : n))
-    );
-
+    // Encrypt and save to IndexedDB (immediate, works offline)
+    // Sync engine will push encrypted payload to server when online
     try {
-      // Encrypt and save to IndexedDB (immediate, works offline)
-      // Sync engine will push encrypted payload to server when online
-      const savedNote = await trackLocalWrite(() =>
-        updateEncryptedNote(userId, updatedNote.id, updatedNote.title, updatedNote.content, keys)
+      const savedNote = await applyOptimistic(
+        (prev) =>
+          prev.map((n) => (n.id === updatedNote.id ? { ...updatedNote, syncStatus: 'pending' as const } : n)),
+        () => updateEncryptedNote(userId, updatedNote.id, updatedNote.title, updatedNote.content, keys)
       );
 
       // applySavedNote carries the same late-acknowledgement guard and also
@@ -113,7 +113,7 @@ export function useNoteActions({
       // second, auto-dismissing notice for the same failure.
       throw error;
     }
-  }, [notes, notesRef, setNotes, triggerCoalescedSync, trackLocalWrite]);
+  }, [notes, notesRef, setNotes, triggerCoalescedSync, applyOptimistic]);
 
   // Soft delete a note (move to Faded Notes)
   // Returns true on success, false on failure (for UI recovery in swipe gestures)
@@ -142,7 +142,7 @@ export function useNoteActions({
                 try {
                   await restoreNoteOffline(userId, id);
                   if (deletedNote) {
-                    setNotes((prev) => [{ ...deletedNote, deletedAt: null }, ...prev]);
+                    setNotes((prev) => withNotesFirst(prev, [{ ...deletedNote, deletedAt: null }]));
                   }
                   await refreshFadedNotesCount();
                   toast.success('Note restored');
@@ -173,12 +173,12 @@ export function useNoteActions({
     if (!userId) return;
 
     try {
-      // Update local state immediately for responsiveness
-      setNotes((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, pinned } : n))
+      // Update local state immediately for responsiveness, then persist to
+      // IndexedDB and queue for sync
+      await applyOptimistic(
+        (prev) => prev.map((n) => (n.id === id ? { ...n, pinned } : n)),
+        () => toggleNotePinOffline(userId, id, pinned)
       );
-      // Persist to IndexedDB, queue for sync
-      await trackLocalWrite(() => toggleNotePinOffline(userId, id, pinned));
     } catch (error) {
       console.error('Failed to toggle pin:', error);
       // Revert on error
@@ -186,7 +186,7 @@ export function useNoteActions({
         prev.map((n) => (n.id === id ? { ...n, pinned: !pinned } : n))
       );
     }
-  }, [userId, setNotes, trackLocalWrite]);
+  }, [userId, setNotes, applyOptimistic]);
 
 
   return { handleNoteUpdate, handleNoteDelete, handleTogglePin };
