@@ -47,7 +47,7 @@ test.describe('Note addresses', () => {
     const before = await library.evaluate((el) => el.scrollTop);
     expect(before).toBeGreaterThan(0);
 
-    await page.locator('article').first().click();
+    await page.getByRole('button', { name: /^Open note: / }).first().click();
     await expect(page.getByTestId('note-editor')).toBeVisible();
     await expect(page).toHaveURL(/\/n\//);
 

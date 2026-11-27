@@ -45,12 +45,10 @@ test.describe('Export & Import', () => {
       const noteTitle = `Single Export ${Date.now()}`;
       await createNote(page, noteTitle, 'Single note content');
 
-      // Click export menu in editor
-      await page.getByRole('button', { name: /export|download/i }).click();
+      await page.getByRole('button', { name: 'Share and export', exact: true }).click();
 
-      // Click Markdown option
       const downloadPromise = page.waitForEvent('download');
-      await page.getByRole('menuitem', { name: /markdown/i }).click();
+      await page.getByRole('button', { name: 'Download (.md)', exact: true }).click();
 
       const download = await downloadPromise;
 
@@ -58,21 +56,15 @@ test.describe('Export & Import', () => {
       expect(download.suggestedFilename()).toContain('.md');
     });
 
-    test('exports single note as JSON from editor', async ({ authenticatedPage: page }) => {
+    // The per-note JSON download was removed in #291; the library menu still
+    // exports every note as JSON. Check that the note menu no longer offers it.
+    test('the note menu offers no JSON download', async ({ authenticatedPage: page }) => {
       const noteTitle = `Single JSON ${Date.now()}`;
       await createNote(page, noteTitle, 'Single JSON content');
 
-      // Click export menu in editor
-      await page.getByRole('button', { name: /export|download/i }).click();
-
-      // Click JSON option
-      const downloadPromise = page.waitForEvent('download');
-      await page.getByRole('menuitem', { name: /json/i }).click();
-
-      const download = await downloadPromise;
-
-      // Verify download
-      expect(download.suggestedFilename()).toContain('.json');
+      await page.getByRole('button', { name: 'Share and export', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Download (.md)', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: /json/i })).toHaveCount(0);
     });
   });
 
@@ -82,11 +74,8 @@ test.describe('Export & Import', () => {
       const noteContent = 'Plain text content';
       await createNote(page, noteTitle, noteContent);
 
-      // Click export menu
-      await page.getByRole('button', { name: /export|download/i }).click();
-
-      // Click copy as text
-      await page.getByRole('menuitem', { name: /copy.*text/i }).click();
+      await page.getByRole('button', { name: 'Share and export', exact: true }).click();
+      await page.getByRole('button', { name: 'Copy as text', exact: true }).click();
 
       // Should show copied toast
       await expect(page.getByText(/copied/i)).toBeVisible();

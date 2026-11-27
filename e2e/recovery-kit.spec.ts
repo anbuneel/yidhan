@@ -42,9 +42,17 @@ async function readStoredVault(page: Page): Promise<StoredVault | null> {
   });
 }
 
+/**
+ * Settings' open state lives in App, above the vault gate. "Lock now" leaves it
+ * set, so Settings shows again (on Profile) as soon as the vault is unlocked, and
+ * its backdrop covers the avatar button. Open it only when it is not already open.
+ */
 async function openSecuritySettings(page: Page) {
-  await openSettings(page);
-  await page.getByRole('dialog').getByRole('button', { name: 'Security', exact: true }).click();
+  const settings = page.getByRole('dialog', { name: 'Settings', exact: true });
+  if (!(await settings.isVisible())) {
+    await openSettings(page);
+  }
+  await settings.getByRole('button', { name: 'Security', exact: true }).click();
 }
 
 test.describe('Recovery kit', () => {
