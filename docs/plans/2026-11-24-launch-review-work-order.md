@@ -14,7 +14,7 @@ As of 2026-11-26, checked against `main` at `909c11b`. 25 of the 27 items have s
 | C · Dialogs and motion | B2, B3, B4 | Shipped | #282 | `218d767` | 2026-11-25 |
 | D · Landing page | D2 to D7, D9 | Shipped | #286 | `2c8cf8b` | 2026-11-25 |
 | E · Passkey unlock | E1 | Deferred 2026-11-25 | — | — | — |
-| F · Quick capture | E5 | Not started | — | — | — |
+| F · Quick capture | E5 (item 44) | In review; item 47 still blocked | PR pending | — | 2026-11-27 |
 
 Bugs found during the reviews, outside the 70 items:
 
@@ -70,7 +70,7 @@ tracker, or unrecorded if they were new ideas. See "Later items with no home" be
 | C · Dialogs and motion | B2, B3, B4 | **Shipped 2026-11-25, PR #282** | A, D. Rebase onto B |
 | D · Landing page | D2 to D7, D9 | **Shipped 2026-11-25, PR #286** | A, B, C |
 | E · Passkey unlock | E1 | **Deferred 2026-11-25.** Not needed for launch | Nothing; it needs the heavier review |
-| F · Quick capture | E5 | Not started. Item 44 ready (`/n/new`); item 47 blocked on SW test harness | — |
+| F · Quick capture | E5 | Item 44 built 2026-11-27 (`/n/new`, PWA shortcut, Ctrl+Alt+N in the editor). Item 47 blocked on SW test harness | — |
 
 One track is one branch, one PR and one agent session. Tracks running at the same time
 need a worktree each, or they overwrite each other.
@@ -273,6 +273,11 @@ Settled 2026-11-25:
 Item E5: roadmap 44, then 47. Item 44 only needs `/n/new` on top of the existing
 `/n/<id>` route in `src/routing/routes.ts`; item 47 (share target) remains blocked on
 the service-worker test harness.
+
+Item 44 built 2026-11-27: `/n/new`, the manifest "New note" shortcut, and Ctrl+Alt+N
+(Cmd+Option+N) in the editor. Cmd+N inside the editor works only in the
+installed app, because a browser tab keeps it. No native Android shortcut yet: see the
+PR. Item 47 is still blocked.
 
 ---
 

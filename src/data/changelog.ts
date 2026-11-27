@@ -7,6 +7,10 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.27.0', date: '2026-11-27', changes: [
+    { type: 'feature', text: 'Start a note from the app icon. In the installed app, long-press or right-click the icon and choose New note. If you are signed out or locked, you sign in or unlock first' },
+    { type: 'feature', text: 'Ctrl+Alt+N (Cmd+Option+N on a Mac) starts a new note from inside a note. The note you are in is saved first. In the library, N still does it' },
+  ] },
   { version: '3.26.3', date: '2026-11-27', changes: [
     { type: 'fix', text: 'Undo no longer brings back text that another device has since replaced. Before, pressing undo after a note updated from another device restored the old text and saved it over the other edit. Undo of your own typing after the update still works' },
     { type: 'fix', text: 'When a note shows "Updated on another device" and you choose Load changes, the words on your screen are kept as a new note named "(my version)". If they cannot be kept, nothing is replaced' },

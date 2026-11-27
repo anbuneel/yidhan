@@ -16,6 +16,8 @@ export interface NoteEditorViewProps {
   theme: Theme;
   onBack: () => void;
   onRequestSearch: () => void;
+  /** Start a new note (item 44); the editor saves this one first. */
+  onNewNote?: () => void;
   onUpdate: (note: Note) => Promise<void>;
   onDelete: NoteDeleteHandler;
   onToggleTag: (noteId: string, tagId: string) => void;

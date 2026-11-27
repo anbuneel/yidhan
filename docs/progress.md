@@ -955,3 +955,15 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   autosave in general: #307.
   Tests in `Editor.remoteUndo.test.tsx` run the real Tiptap editor. Review record:
   `docs/reviews/2026-11-27-pr306-remote-undo-review.md`.
+- **2026-11-27** — Quick capture, roadmap item 44 (work order track F). `/n/new`
+  (`src/routing/routes.ts`) creates one note and replaces itself with `/n/<id>`;
+  `src/hooks/useNewNoteRoute.ts` starts the create once per arrival, only when the
+  vault is open, writes are allowed and the list has loaded. Signed out, App opens
+  sign-in over the landing page; locked, the unlock screen shows. Both come before the
+  create. A failed create goes to the library with a toast. The PWA manifest gains a
+  "New note" shortcut to `/n/new`. In the editor, Ctrl+Alt+N (Cmd+Option+N) saves
+  first like Escape does, then creates a note (`src/utils/newNoteShortcut.ts`); Cmd/Ctrl+N
+  does the same in the installed app. The library keeps N: the app shell sat at 330.02 KB
+  of 330 with a library copy, so the keys live only in the lazy Editor chunk. No native Android shortcut:
+  a warm start would need in-page navigation through `@capacitor/app` and a device
+  test. Item 47 (share target) still waits on the service-worker test harness.

@@ -250,12 +250,22 @@ Row 1: [Yidhan]                         [Saving...] [🗑] [☀] [JD]
   confirms a matching content hash.
 - A failed save keeps the draft on screen with Retry and Copy, rather than discarding it.
 
+## Quick capture
+
+- `/n/new` creates a note and opens it with the cursor in the title, then replaces
+  itself with `/n/<id>`, so a reload or Back never creates a second one. Signed out it
+  shows the landing page with sign-in open; locked, the unlock screen. The note is
+  created after that step. A failed create returns to the library with an error.
+- The installed PWA lists a "New note" shortcut (long-press or right-click the icon)
+  that opens `/n/new`.
+
 ## Keyboard Shortcuts
 
 | Shortcut | Action | Context |
 |----------|--------|---------|
 | `N` | Create new note | Library, not while typing in a field |
 | `Cmd/Ctrl + N` | Create new note | Library, installed app (a browser tab keeps it for a new window) |
+| `Ctrl + Alt + N` (Mac: `Cmd + Option + N`), or `Cmd/Ctrl + N` in the installed app | Save, then start a new note | Editor, from the title or body; not from another field or behind a dialog. A failed save keeps the note open |
 | `Cmd/Ctrl + K` | Focus search | Library |
 | `Cmd/Ctrl + K` | Insert or edit a link | Editor, cursor in the note |
 | `Cmd/Ctrl + K` | Focus search | Editor, cursor elsewhere |

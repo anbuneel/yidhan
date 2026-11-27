@@ -48,6 +48,18 @@ describe('parseRoute', () => {
     expect(parseRoute('/demo')).toEqual({ name: 'demo' });
   });
 
+  it('reads the new-note address before the note-id match (item 44)', () => {
+    expect(parseRoute('/n/new')).toEqual({ name: 'newNote' });
+    expect(parseRoute('/n/new/')).toEqual({ name: 'newNote' });
+    expect(routeToPath({ name: 'newNote' })).toBe('/n/new');
+    expect(routeToViewMode({ name: 'newNote' })).toBe('library');
+    expect(isSameRoute({ name: 'newNote' }, { name: 'note', noteId: 'new' })).toBe(false);
+    // Neighbours keep their meaning.
+    expect(parseRoute('/n/new/more')).toEqual({ name: 'notFound', path: '/n/new/more' });
+    expect(parseRoute('/n/newer')).toEqual({ name: 'note', noteId: 'newer' });
+    expect(parseRoute('/demo/new')).toEqual({ name: 'demo', newNote: true });
+  });
+
   it('reads the demo arrival address', () => {
     expect(parseRoute('/demo/new')).toEqual({ name: 'demo', newNote: true });
   });
