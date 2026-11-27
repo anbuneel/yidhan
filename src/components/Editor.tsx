@@ -570,6 +570,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       inFlightSaveRef.current = savePromise;
       noteSaveQueue.set(note.id, savePromise);
 
+      // Words this Editor held before this write started. Its success covers them;
+      // an entry held later (leaving a released note) holds newer words and stays.
+      const heldBefore = heldSaves.get(instanceKey)?.revision;
+
       let saved = false;
       try {
         await onUpdate({
@@ -584,8 +588,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
           inFlightSnapshotRef.current = null;
         }
-        // These words contain any this Editor held after a failure.
-        heldSaves.release(instanceKey);
+        if (heldBefore !== undefined) heldSaves.release(instanceKey, heldBefore);
         if (!mountedRef.current) return true;
 
         setRemoteUpdate(null);

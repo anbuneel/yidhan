@@ -8,6 +8,7 @@ interface Props {
 
 interface State {
   failed: boolean;
+  copied?: boolean;
 }
 
 /**
@@ -20,22 +21,31 @@ interface State {
 export class HeldSavesBoundary extends Component<Props, State> {
   state: State = { failed: false };
 
+  copy = async () => {
+    const text = heldSaves.getSnapshot()
+      .map((e) => `${e.title}\n\n${e.content.replace(/<[^>]*>/g, ' ')}`)
+      .join('\n\n');
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      copied = true;
+    } catch { /* shown below */ }
+    this.setState({ copied });
+  };
+
   static getDerivedStateFromError(): State {
     return { failed: true };
   }
 
   render() {
     if (!this.state.failed) return this.props.children;
-    const copy = () => {
-      const text = heldSaves.getSnapshot()
-        .map((e) => `${e.title}\n\n${e.content.replace(/<[^>]*>/g, ' ')}`)
-        .join('\n\n');
-      void navigator.clipboard?.writeText(text).catch(() => {});
-    };
+    const { copied } = this.state;
     return (
       <div role="alert" className="fixed bottom-36 left-4 right-4 z-50 mx-auto flex max-w-md flex-wrap gap-3 rounded-[var(--radius-plain)] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm">
-        <span className="basis-full">Some words are not saved.</span>
-        <button type="button" onClick={copy}>Copy</button>
+        <span className="basis-full">
+          Some words are not saved.{copied === true && ' Copied.'}{copied === false && ' Could not copy.'}
+        </span>
+        <button type="button" onClick={() => { void this.copy(); }}>Copy</button>
         <button type="button" onClick={this.props.onLockAnyway}>Lock anyway</button>
       </div>
     );

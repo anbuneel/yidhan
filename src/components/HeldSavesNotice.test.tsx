@@ -514,7 +514,7 @@ describe('useLockAfterSaving', () => {
 });
 
 describe('HeldSavesBoundary', () => {
-  it('says words are not saved when the notice cannot load', () => {
+  it('says words are not saved when the notice cannot load', async () => {
     function Broken(): never {
       throw new Error('Failed to fetch dynamically imported module');
     }
@@ -530,6 +530,7 @@ describe('HeldSavesBoundary', () => {
       // The words can still be taken out, and the vault can still be locked.
       fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Kept words'));
+      expect(await screen.findByText(/Copied\./)).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Lock anyway' }));
       expect(lockAnyway).toHaveBeenCalled();
     } finally {

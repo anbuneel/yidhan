@@ -381,6 +381,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     if (!lockHeldBack || heldSaves.getSnapshot().length > 0) return;
     if (heldSaves.hasOpenEditors()) {
       setLockHeldBack(false);
+      toast('Not locked: a note is open.');
       return;
     }
     if (await lockNow()) setLockHeldBack(false);
