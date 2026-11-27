@@ -38,6 +38,7 @@ import { useTagActions } from './hooks/useTagActions';
 import { useViewTransition } from './hooks/useViewTransition';
 import { useInstallPrompt } from './hooks/useInstallPrompt';
 import { useShareTarget } from './hooks/useShareTarget';
+import { useSettingsModalState } from './hooks/useSettingsModalState';
 import './App.css';
 
 interface AppProps {
@@ -167,8 +168,8 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
   const { importProgress, handleExportJSON, handleExportMarkdown, handleImportFile, backupRestore } =
     useImport({ userId: user?.id, keys, notes, tags, setNotes, setTags });
 
-  // Settings modal state
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  // Settings modal state. Any vault lock closes it.
+  const [showSettingsModal, setShowSettingsModal] = useSettingsModalState(isUnlocked);
 
   // Offboarding ("Letting Go") modal state
   const [showLettingGoModal, setShowLettingGoModal] = useState(false);
