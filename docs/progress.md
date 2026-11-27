@@ -949,5 +949,9 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   The writer's undo steps from before a remote update are dropped; typing after it
   undoes normally. "Load changes" first keeps the writer's unsaved words as a new note
   ("… (my version)", via `keepReleasedDraft`); if that fails, nothing is replaced.
+  While it copies, autosave waits, the banner buttons do not take focus (a blur would
+  start a save), "Keep mine" is disabled, and a save already running is awaited; if
+  the note changed meanwhile, nothing is loaded. The banner still does not hold
+  autosave in general: #307.
   Tests in `Editor.remoteUndo.test.tsx` run the real Tiptap editor. Review record:
   `docs/reviews/2026-11-27-pr306-remote-undo-review.md`.
