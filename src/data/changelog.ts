@@ -7,6 +7,12 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.26.0', date: '2026-11-26', changes: [
+    { type: 'fix', text: 'Words typed just before you leave a note are now saved. Before, switching notes, going back to the library or pressing Back within a second of typing could lose the last words' },
+    { type: 'fix', text: 'A note that showed "Not saved" is saved again when you leave it. If that save fails, a notice names the note and offers Retry and Copy, on any screen' },
+    { type: 'fix', text: 'Retry never writes over newer text. If the note changed since, your words are kept as a new note' },
+    { type: 'improvement', text: '"Lock now" saves first. If something cannot be saved, your notes stay unlocked and the notice offers Retry, Copy or Lock anyway' },
+  ] },
   { version: '3.25.0', date: '2026-11-26', changes: [
     { type: 'fix', text: 'A note you just created, or reloaded, no longer closes by itself with "That note is no longer here." This could happen when a background sync finished at the same moment, or while the vault was still unlocking after a reload' },
     { type: 'fix', text: 'A pin or an edit no longer briefly reverts in the library when a background sync finishes at the same moment' },
