@@ -34,8 +34,8 @@ import { sanitizeHtml } from '../utils/sanitize';
 import {
   createEncryptedNote,
   createEncryptedNotesBatch,
-  fetchDecryptedNotes,
 } from '../services/encryptedNotes';
+import type { NotesSync } from './useNotesSync';
 import { addTagToNoteOffline } from '../services/offlineNotes';
 import { createTagOffline } from '../services/offlineTags';
 import type { ImportProgress } from '../components/ImportProgressOverlay';
@@ -45,8 +45,9 @@ export interface UseImportOptions {
   keys: DerivedKeys | null;
   notes: Note[];
   tags: Tag[];
-  setNotes: Dispatch<SetStateAction<Note[]>>;
   setTags: Dispatch<SetStateAction<Tag[]>>;
+  /** The guarded re-read from IndexedDB (useNotesSync). */
+  reloadFromStorage: NotesSync['reloadFromStorage'];
 }
 
 export interface ImportExport {
@@ -72,8 +73,8 @@ export function useImport({
   keys,
   notes,
   tags,
-  setNotes,
   setTags,
+  reloadFromStorage,
 }: UseImportOptions): ImportExport {
   // `isImporting: true` used to ride along on every setImportProgress call; nothing
   // ever read it — the overlay renders on the progress object being non-null.
@@ -202,8 +203,7 @@ export function useImport({
         toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
 
         // Refresh notes from IndexedDB
-        const refreshedNotes = await fetchDecryptedNotes(userId, keys);
-        setNotes(refreshedNotes);
+        await reloadFromStorage();
 
       } else if (isMarkdown) {
         // Try to parse as combined multi-note export first
@@ -267,8 +267,7 @@ export function useImport({
           }
 
           // Refresh notes from IndexedDB
-          const refreshedNotes2 = await fetchDecryptedNotes(userId, keys);
-          setNotes(refreshedNotes2);
+          await reloadFromStorage();
 
           toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
         } else {
@@ -329,8 +328,7 @@ export function useImport({
           }
 
           // Refresh from IndexedDB to get the note with tags
-          const refreshedNotesAll = await fetchDecryptedNotes(userId, keys);
-          setNotes(refreshedNotesAll);
+          await reloadFromStorage();
 
           toast.success(`Imported "${title}"`);
         }
@@ -347,7 +345,7 @@ export function useImport({
     } finally {
       setImportProgress(null);
     }
-  }, [userId, tags, keys, setNotes, setTags]);
+  }, [userId, tags, keys, setTags, reloadFromStorage]);
 
   // Declared after `handleImportFile` so it can call it directly. In App this needed a
   // ref, because the import handler sat two hundred lines below the backup one; here

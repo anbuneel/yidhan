@@ -8,6 +8,7 @@ import { renderEntryScreen } from './components/entryScreens';
 import { renderAccountGate } from './components/accountGates';
 import { LoadingFallback } from './components/LoadingFallback';
 import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
+import { withNotesFirst } from './utils/notesFirst';
 import { clearScrollMemory, routeToDocumentTitle, routeToViewMode, useRouter } from './routing';
 import { useAuth } from './contexts/AuthContext';
 import { useEncryption } from './contexts/EncryptionContext';
@@ -110,7 +111,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     tags, setTags,
     selectedTagIds, setSelectedTagIds,
     fadedNotesCount, refreshFadedNotesCount,
-    conflicts, removeConflict, triggerSync, triggerCoalescedSync, trackLocalWrite,
+    conflicts, removeConflict, triggerSync, triggerCoalescedSync, reloadFromStorage, applyOptimistic,
   } = useNotesSync({
     userId: user?.id,
     keys,
@@ -178,7 +179,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
 
   // Import state with progress tracking
   const { importProgress, handleExportJSON, handleExportMarkdown, handleImportFile, backupRestore } =
-    useImport({ userId: user?.id, keys, notes, tags, setNotes, setTags });
+    useImport({ userId: user?.id, keys, notes, tags, setTags, reloadFromStorage });
 
   // Settings modal state. Any vault lock closes it.
   const [showSettingsModal, setShowSettingsModal] = useSettingsModalState(isUnlocked);
@@ -284,7 +285,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     openNote: selectedNoteRecord,
     userId: user?.id,
     keys,
-    setNotes,
+    reloadFromStorage,
     onLockedNoteOpened: useCallback(() => replaceRoute({ name: 'library' }), [replaceRoute]),
   });
 
@@ -321,7 +322,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
       trackNoteCreated(); // Track for install prompt engagement
       await warmEditorRoute();
       startTransition(() => {
-        setNotes((prev) => [newNote, ...prev]);
+        setNotes((prev) => withNotesFirst(prev, [newNote]));
         navigate({ name: 'note', noteId: newNote.id });
       });
     } catch (error) {
@@ -340,7 +341,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     openNoteIdRef: selectedNoteIdRef,
     onOpenNoteClosed: () => replaceRoute({ name: 'library' }),
     triggerCoalescedSync,
-    trackLocalWrite,
+    applyOptimistic,
   });
 
   // Held saves (issue #288): words from a note the writer left whose save failed.
@@ -397,7 +398,6 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
         setNotes={setNotes}
         saveNote={handleNoteUpdate}
         triggerCoalescedSync={triggerCoalescedSync}
-        trackLocalWrite={trackLocalWrite}
         hasOpenDraft={hasOpenDraft}
         lockBlocked={lockHeldBack}
         onLockAnyway={handleLockAnyway}
@@ -459,8 +459,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
   } = useSyncActions({
     userId: user?.id,
     keys,
-    setNotes,
-    setTags,
+    reloadFromStorage,
     conflicts,
     removeConflict,
     triggerSync,
@@ -737,7 +736,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
         // does not return to an address that no longer resolves.
         vaultKeys={keys}
         onKeptReleasedDraft={(kept) => {
-          setNotes((prev) => [kept, ...prev]);
+          setNotes((prev) => withNotesFirst(prev, [kept]));
           replaceRoute({ name: 'note', noteId: kept.id });
           triggerCoalescedSync();
         }}

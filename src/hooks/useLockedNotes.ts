@@ -8,18 +8,19 @@
  * unlocked with the wrong passphrase, which the next unlock fixes.
  */
 
-import { useCallback, useEffect, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import type { Note } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
-import { fetchDecryptedNotes } from '../services/encryptedNotes';
+import type { NotesSync } from './useNotesSync';
 
 export interface UseLockedNotesOptions {
   /** The note the address names, locked or not. Null when no note is open. */
   openNote: Note | undefined;
   userId: string | undefined;
   keys: DerivedKeys | null;
-  setNotes: Dispatch<SetStateAction<Note[]>>;
+  /** The guarded re-read from IndexedDB (useNotesSync). */
+  reloadFromStorage: NotesSync['reloadFromStorage'];
   /** Correct the address away from a note that cannot be opened. */
   onLockedNoteOpened: () => void;
 }
@@ -28,7 +29,7 @@ export function useLockedNotes({
   openNote,
   userId,
   keys,
-  setNotes,
+  reloadFromStorage,
   onLockedNoteOpened,
 }: UseLockedNotesOptions): { retryLockedNotes: () => Promise<void> } {
   // Under the router the open note *is* the address, so refusing to open a locked note
@@ -42,12 +43,12 @@ export function useLockedNotes({
   const retryLockedNotes = useCallback(async () => {
     if (!userId || !keys) return;
     try {
-      setNotes(await fetchDecryptedNotes(userId, keys));
+      await reloadFromStorage();
     } catch (error) {
       console.error('Failed to re-read notes:', error);
       toast.error('Could not open those notes. Lock and unlock your vault, then try again.');
     }
-  }, [userId, keys, setNotes]);
+  }, [userId, keys, reloadFromStorage]);
 
   return { retryLockedNotes };
 }
