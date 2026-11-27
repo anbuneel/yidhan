@@ -1,5 +1,19 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { createNote, goToLibrary, deleteNoteFromLibrary, searchNotes, clearSearch } from './fixtures';
+import {
+  createNote,
+  goToLibrary,
+  deleteNoteFromLibrary,
+  searchNotes,
+  clearSearch,
+  editAndWaitForSave,
+  noteCard,
+} from './fixtures';
+
+/** The library's "Pinned" chapter, labelled "Pinned - N note(s)". */
+function pinnedSection(page: Page) {
+  return page.getByTestId('library-view').getByRole('region', { name: /^Pinned - \d+ notes?$/ });
+}
 
 test.describe('Notes', () => {
   // Use authenticated page fixture
@@ -12,8 +26,8 @@ test.describe('Notes', () => {
       await createNote(page, noteTitle, 'This is test content');
       await goToLibrary(page);
 
-      // Note should appear in library (cards are <article> elements)
-      await expect(page.locator('article').filter({ hasText: noteTitle })).toBeVisible();
+      // Note should appear in library
+      await expect(noteCard(page, noteTitle)).toBeVisible();
     });
 
     test('creates note with keyboard shortcut', async ({ authenticatedPage: page }) => {
@@ -34,25 +48,32 @@ test.describe('Notes', () => {
 
       await createNote(page, noteTitle);
 
-      // Type content
-      await page.getByTestId('rich-text-editor').click();
-      await page.keyboard.type('Auto-saved content');
-
-      // Wait for save indicator
-      await expect(page.getByText(/saving/i)).toBeVisible();
-      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 5000 });
+      // Type content and wait for the save it starts
+      await editAndWaitForSave(page, async () => {
+        await page.getByTestId('rich-text-editor').click();
+        await page.keyboard.type('Auto-saved content');
+      });
 
       // Small delay to ensure save is persisted before reload
       await page.waitForTimeout(500);
 
-      // Reload - will go to library
+      // Reload. A refresh keeps the writer in the editor, on the same note.
       await page.reload();
-      await expect(page.getByTestId('library-view')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByTestId('note-editor')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByPlaceholder(/untitled/i)).toHaveValue(noteTitle);
+      await expect(
+        page.getByTestId('rich-text-editor').getByText('Auto-saved content', { exact: true }),
+      ).toBeVisible({ timeout: 5000 });
 
-      // Open the note to verify content persisted
-      await page.locator('article').filter({ hasText: noteTitle }).click();
+      // And the saved note opens again from the library
+      await goToLibrary(page);
+      await noteCard(page, noteTitle)
+        .getByRole('button', { name: `Open note: ${noteTitle}`, exact: true })
+        .click();
       await expect(page.getByTestId('note-editor')).toBeVisible();
-      await expect(page.getByText('Auto-saved content')).toBeVisible({ timeout: 5000 });
+      await expect(
+        page.getByTestId('rich-text-editor').getByText('Auto-saved content', { exact: true }),
+      ).toBeVisible({ timeout: 5000 });
     });
 
     test('shows empty state when no notes', async ({ authenticatedPage: page }) => {
@@ -72,19 +93,17 @@ test.describe('Notes', () => {
 
       await createNote(page, originalTitle);
 
-      // Clear and type new title
-      await page.getByPlaceholder(/untitled/i).fill(newTitle);
-
-      // Wait for save indicator to show saving then saved
-      await expect(page.getByText(/saving/i)).toBeVisible();
-      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 5000 });
+      // Replace the title and wait for the save it starts
+      await editAndWaitForSave(page, async () => {
+        await page.getByPlaceholder(/untitled/i).fill(newTitle);
+      });
 
       // Small delay to ensure save is persisted
       await page.waitForTimeout(500);
 
       // Go back and verify
       await goToLibrary(page);
-      await expect(page.locator('article').filter({ hasText: newTitle })).toBeVisible({ timeout: 5000 });
+      await expect(noteCard(page, newTitle)).toBeVisible({ timeout: 5000 });
     });
 
     test('edits note content with rich text', async ({ authenticatedPage: page }) => {
@@ -93,15 +112,14 @@ test.describe('Notes', () => {
       await createNote(page, noteTitle);
 
       const editor = page.getByTestId('rich-text-editor');
-      await editor.click();
 
-      // Type and format text
-      await page.keyboard.type('Bold text');
-      await page.keyboard.press('Control+a');
-      await page.keyboard.press('Control+b');
-
-      // Wait for save
-      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 5000 });
+      // Type and format text, then wait for the save it starts
+      await editAndWaitForSave(page, async () => {
+        await editor.click();
+        await page.keyboard.type('Bold text');
+        await page.keyboard.press('Control+a');
+        await page.keyboard.press('Control+b');
+      });
 
       // Verify bold formatting is applied
       await expect(editor.locator('strong')).toBeVisible();
@@ -148,7 +166,7 @@ test.describe('Notes', () => {
       await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeVisible();
 
       // Note should be removed from library
-      await expect(page.locator('article').filter({ hasText: noteTitle })).not.toBeVisible();
+      await expect(noteCard(page, noteTitle)).not.toBeVisible();
     });
 
     test('restores note with undo', async ({ authenticatedPage: page }) => {
@@ -163,7 +181,7 @@ test.describe('Notes', () => {
       await page.getByRole('button', { name: 'Undo', exact: true }).click();
 
       // Note should be back
-      await expect(page.locator('article').filter({ hasText: noteTitle })).toBeVisible();
+      await expect(noteCard(page, noteTitle)).toBeVisible();
     });
 
     test('deletes note from editor', async ({ authenticatedPage: page }) => {
@@ -171,14 +189,17 @@ test.describe('Notes', () => {
 
       await createNote(page, noteTitle);
 
-      // Click delete button in editor header (use aria-label to be specific)
-      await page.getByLabel(/delete note/i).click();
+      // Click delete button in editor header
+      await page.getByRole('button', { name: 'Delete note', exact: true }).click();
 
       // Confirm deletion in dialog
-      await page.getByRole('button', { name: /^delete$/i }).click();
+      const dialog = page.getByRole('alertdialog', { name: 'Let this note fade?' });
+      await expect(dialog).toBeVisible();
+      await dialog.getByRole('button', { name: 'Let it fade', exact: true }).click();
 
-      // Should be back in library
+      // Should be back in library, without the note
       await expect(page.getByTestId('library-view')).toBeVisible();
+      await expect(noteCard(page, noteTitle)).toHaveCount(0);
     });
   });
 
@@ -193,7 +214,7 @@ test.describe('Notes', () => {
       await searchNotes(page, uniqueWord);
 
       // Only matching note should be visible
-      await expect(page.locator('article').filter({ hasText: noteTitle })).toBeVisible();
+      await expect(noteCard(page, noteTitle)).toBeVisible();
     });
 
     test('searches notes by content', async ({ authenticatedPage: page }) => {
@@ -206,13 +227,14 @@ test.describe('Notes', () => {
       await searchNotes(page, uniqueContent);
 
       // Matching note should be visible
-      await expect(page.locator('article').filter({ hasText: noteTitle })).toBeVisible();
+      await expect(noteCard(page, noteTitle)).toBeVisible();
     });
 
     test('shows empty state for no results', async ({ authenticatedPage: page }) => {
       await searchNotes(page, 'xyznonexistent12345');
 
-      await expect(page.getByText(/no results/i)).toBeVisible();
+      // Search-empty copy, distinct from the library-empty state
+      await expect(page.getByText('No thoughts found', { exact: true })).toBeVisible();
     });
 
     test('clears search', async ({ authenticatedPage: page }) => {
@@ -246,12 +268,15 @@ test.describe('Notes', () => {
       await goToLibrary(page);
 
       // Hover and click pin
-      const noteCard = page.locator('article').filter({ hasText: noteTitle });
-      await noteCard.hover();
-      await noteCard.getByRole('button', { name: /pin/i }).click();
+      const card = noteCard(page, noteTitle);
+      await card.hover();
+      await card.getByRole('button', { name: 'Pin note', exact: true }).click();
 
-      // Note should be in pinned section (check within library view)
-      await expect(page.getByTestId('library-view').getByText(/pinned/i).first()).toBeVisible();
+      // Note should be in the pinned section
+      await expect(
+        pinnedSection(page).getByRole('group', { name: `Note: ${noteTitle}`, exact: true }),
+      ).toBeVisible();
+      await expect(card.getByRole('button', { name: 'Unpin note', exact: true })).toBeVisible();
     });
 
     test('unpins note', async ({ authenticatedPage: page }) => {
@@ -261,19 +286,25 @@ test.describe('Notes', () => {
       await goToLibrary(page);
 
       // Pin first
-      const noteCard = page.locator('article').filter({ hasText: noteTitle });
-      await noteCard.hover();
-      await noteCard.getByRole('button', { name: /pin/i }).click();
+      const card = noteCard(page, noteTitle);
+      await card.hover();
+      await card.getByRole('button', { name: 'Pin note', exact: true }).click();
 
-      // Verify pinned section appears
-      await expect(page.getByTestId('library-view').getByText(/pinned/i).first()).toBeVisible();
+      // Verify it is in the pinned section
+      const pinnedCard = pinnedSection(page).getByRole('group', {
+        name: `Note: ${noteTitle}`,
+        exact: true,
+      });
+      await expect(pinnedCard).toBeVisible();
 
       // Then unpin
-      await noteCard.hover();
-      await noteCard.getByRole('button', { name: /unpin|pin/i }).click();
+      await card.hover();
+      await card.getByRole('button', { name: 'Unpin note', exact: true }).click();
 
-      // Unpin button should disappear from the note card
-      await expect(noteCard.getByRole('button', { name: /unpin/i })).not.toBeVisible({ timeout: 3000 });
+      // The card leaves the pinned section and offers Pin again
+      await expect(pinnedCard).toHaveCount(0, { timeout: 3000 });
+      await expect(card.getByRole('button', { name: 'Unpin note', exact: true })).toHaveCount(0);
+      await expect(card.getByRole('button', { name: 'Pin note', exact: true })).toBeVisible();
     });
   });
 

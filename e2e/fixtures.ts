@@ -1,4 +1,4 @@
-import { test as base, expect, Page } from '@playwright/test';
+import { test as base, expect, Locator, Page } from '@playwright/test';
 
 /**
  * E2E Test Fixtures for Yidhan
@@ -168,7 +168,39 @@ export async function createNote(
   }
 
   // Wait for auto-save
-  await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 5000 });
+  await expect(saveStatus(page)).toHaveText(SAVED_LABEL, { timeout: 5000 });
+}
+
+/**
+ * The editor's save status region. It is always mounted and empty while idle.
+ * After a save it reads "Saved here" (local) or "Synced" (server-confirmed),
+ * then clears after about two seconds.
+ */
+function saveStatus(page: Page): Locator {
+  return page.getByTestId('editor-header-actions').getByRole('status');
+}
+
+/** A finished save. Does not match "Not saved". */
+const SAVED_LABEL = /^(Saved here|Synced)$/;
+
+/**
+ * Run an edit and wait for a save that started after it.
+ *
+ * "Saving…" shows only while the local write runs, a few milliseconds, so a test
+ * cannot wait for it. Instead, wait for the status to clear first, so the saved
+ * label that follows belongs to this edit and not to an earlier save.
+ */
+export async function editAndWaitForSave(page: Page, edit: () => Promise<void>): Promise<void> {
+  await expect(saveStatus(page)).toHaveText('', { timeout: 5000 });
+  await edit();
+  await expect(saveStatus(page)).toHaveText(SAVED_LABEL, { timeout: 5000 });
+}
+
+/**
+ * A library note card, by its accessible name ("Note: <title>").
+ */
+export function noteCard(page: Page, title: string): Locator {
+  return page.getByRole('group', { name: `Note: ${title}`, exact: true });
 }
 
 /**
@@ -184,14 +216,13 @@ export async function goToLibrary(page: Page): Promise<void> {
  * Delete a note from the library view
  */
 export async function deleteNoteFromLibrary(page: Page, title: string): Promise<void> {
-  // Note cards are <article> elements with role="button"
-  const noteCard = page.locator('article').filter({ hasText: title });
+  const card = noteCard(page, title);
 
   // Hover to reveal delete button
-  await noteCard.hover();
+  await card.hover();
 
   // Click delete
-  await noteCard.getByRole('button', { name: /delete/i }).click();
+  await card.getByRole('button', { name: 'Delete note', exact: true }).click();
 
   // Wait for undo toast (use button with exact role to avoid matching note titles)
   await expect(page.getByRole('button', { name: /^undo$/i })).toBeVisible({ timeout: 3000 });
