@@ -11,6 +11,9 @@ export const changelog: ChangelogEntry[] = [
     { type: 'fix', text: 'A note you just created, or reloaded, no longer closes by itself with "That note is no longer here." This could happen when a background sync finished at the same moment, or while the vault was still unlocking after a reload' },
     { type: 'fix', text: 'A pin or an edit no longer briefly reverts in the library when a background sync finishes at the same moment' },
   ] },
+  { version: '3.24.1', date: '2026-11-26', changes: [
+    { type: 'fix', text: 'Locking your notes now closes Settings. Before, Settings opened again after the next unlock, on a different tab' },
+  ]},
   { version: '3.24.0', date: '2026-11-26', changes: [
     { type: 'fix', text: 'On a phone you can now delete a note from the library. Each card shows a delete button on touch screens' },
     { type: 'fix', text: 'On touch screens, Restore in Faded notes is now visible. Before, it was invisible but still tappable' },

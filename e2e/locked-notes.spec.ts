@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { createNote } from './fixtures';
+import { createNote, noteCard } from './fixtures';
 
 /**
  * One undecryptable note — item 41.
@@ -47,6 +47,21 @@ async function corruptOneNote(page: import('@playwright/test').Page, title: stri
   }, title);
 }
 
+/**
+ * Keep the server's copy of the notes out of the next load.
+ *
+ * The corruption above is local only. The server still holds the good ciphertext,
+ * and a pull overwrites a synced local row with the server's copy, so after a
+ * reload the locked card shows only until the pull lands, and then the note opens.
+ * A note that is truly unreadable on this device is unreadable on the server too,
+ * so failing the note reads models that case without writing bad rows to the server.
+ */
+async function holdServerNotes(page: import('@playwright/test').Page) {
+  await page.route('**/rest/v1/notes?**', (route) =>
+    route.request().method() === 'GET' ? route.abort() : route.continue()
+  );
+}
+
 test.describe('A note that cannot be opened', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -61,11 +76,12 @@ test.describe('A note that cannot be opened', () => {
 
     await page.goto('/');
     await corruptOneNote(page, victimId);
+    await holdServerNotes(page);
     await page.reload();
 
     // The library is still a library, not an empty page behind a toast.
     await expect(page.getByTestId('library-view')).toBeVisible();
-    await expect(page.locator('article').filter({ hasText: keeper })).toBeVisible();
+    await expect(noteCard(page, keeper)).toBeVisible();
     await expect(page.getByTestId('locked-note-card')).toHaveCount(1);
     await expect(page.getByText(/this note could not be opened/i)).toBeVisible();
   });
@@ -79,6 +95,7 @@ test.describe('A note that cannot be opened', () => {
 
     await page.goto('/');
     await corruptOneNote(page, victimId);
+    await holdServerNotes(page);
     await page.reload();
     await expect(page.getByTestId('locked-note-card')).toHaveCount(1);
 
@@ -100,6 +117,7 @@ test.describe('A note that cannot be opened', () => {
 
     await page.goto('/');
     await corruptOneNote(page, victimId);
+    await holdServerNotes(page);
     await page.goto(victimUrl);
 
     // An empty editor here would autosave over ciphertext another device can open.
