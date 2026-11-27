@@ -19,6 +19,25 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-27 — Docs may name a model again
+
+**Status:** Active
+
+**Why:** The 2026-09-07 entry banned per-doc model attribution along with the `Author:`
+header and the filename suffix. Work is now split between two models, with one building
+a PR and the other reviewing it. A plan that cannot say which model owns which PR, or
+which one raised a disputed finding, has to keep that in chat, where it is lost.
+
+**Decision:** A doc may name a model where the name is information: who builds or reviews
+a PR, who raised a finding. Nothing is required. The filename-suffix ban stays, for the
+reason given in 2026-09-07: a suffix misleads once a different model edits the file.
+
+**Rejected:** Bringing back the mandatory `Author:` header (it recorded who typed, on
+every doc, and went stale). Keeping the ban and tracking owners outside the repo (the
+plan is where the next session looks).
+
+---
+
 ## 2026-11-26 — App-shell JS limit 329 → 330 KB for saving the note you leave
 
 **Status:** Active
@@ -1712,6 +1731,9 @@ files carried an agent-name suffix. All three encode *who typed it*, not what it
 and the suffix actively misleads once a different model edits the file. A
 409-line hand-maintained `docs/Index.md` and a context-exhaustion handoff prompt
 served the same era. Agents glob and grep; the routing table is already in context.
+
+**Erratum 2026-11-27:** The ban on naming a model in a doc was lifted; see 2026-11-27,
+"Docs may name a model again". The header and the suffix stay gone.
 
 **Rejected:** Renaming the 77 suffixed files — pure churn, and the archive is
 non-authoritative anyway. Stripping stale headers from surviving docs — the same

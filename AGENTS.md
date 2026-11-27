@@ -70,8 +70,9 @@ other surface, behind an open dialog, on the wrong element, or break after a rem
 Item 43 passed every check with six of these bugs, then passed again with one left
 (`DECISIONS.md`, 2026-09-08).
 
-**No agent-name file suffixes** (`-claude`, `-codex`) and no per-doc model attribution.
-Date prefixes on dated artifacts are fine.
+**No agent-name file suffixes** (`-claude`, `-codex`). Date prefixes on dated artifacts
+are fine. A doc may name a model where that is information: who builds or reviews a PR,
+who raised a finding. No `Author:` header is required (`DECISIONS.md`, 2026-11-27).
 
 ## Session economy
 
