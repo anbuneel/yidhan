@@ -58,11 +58,18 @@ function probe(options: { bootLibrary?: boolean } = {}): void {
 
   function check(condition: Condition): string | null {
     const library = document.querySelector('[data-testid="library-view"]');
+    // An empty account's empty state is not inside a library-view element.
+    const empty = () => (document.body.textContent?.includes('Your notes await') ? 'library-empty' : null);
+    const heading = (text: string) =>
+      Array.from(document.querySelectorAll('h1, h2')).some((h) => h.textContent?.trim() === text);
     if (condition === 'library') {
-      if (!library || library.getAttribute('aria-busy') === 'true') return null;
-      if (library.querySelector('.note-card')) return 'library';
-      // An empty account paints its empty state instead of cards.
-      return library.textContent?.includes('Your notes await') ? 'library-empty' : null;
+      if (library && library.getAttribute('aria-busy') !== 'true' && library.querySelector('.note-card')) {
+        return 'library';
+      }
+      if (!library && empty()) return 'library-empty';
+      // Signed in, a reload can show the unlock form while the stored keys are
+      // checked. frameWhen only accepts this once it has held for a while.
+      return heading('Unlock your notes') ? 'unlock-gate' : null;
     }
     if (condition === 'editor') {
       const body = document.querySelector<HTMLElement>(
@@ -72,24 +79,45 @@ function probe(options: { bootLibrary?: boolean } = {}): void {
     }
     // unlocked: the library, or the recovery-key offer that can stand in front of it.
     if (library && library.getAttribute('aria-busy') !== 'true') return 'library';
-    for (const h of Array.from(document.querySelectorAll('h1, h2'))) {
-      if (h.textContent?.trim() === 'Make a recovery key') return 'recovery-offer';
-    }
-    return null;
+    if (!library && empty()) return 'library-empty';
+    return heading('Make a recovery key') ? 'recovery-offer' : null;
+  }
+
+  /** How long the unlock form must stay up before a reload counts as a failed restore. */
+  const UNLOCK_GATE_HOLD_MS = 5000;
+
+  /** Run `then` two tasks after now, so a render scheduled by this frame's work is in. */
+  function afterTwoTasks(then: () => void) {
+    const channel = new MessageChannel();
+    let hops = 0;
+    channel.port1.onmessage = () => {
+      hops += 1;
+      if (hops < 2) channel.port2.postMessage(0);
+      else then();
+    };
+    channel.port2.postMessage(0);
   }
 
   /** Resolve with the clock just after the first frame in which `condition` holds. */
   function frameWhen(condition: Condition): Promise<{ end: number; endedOn: string }> {
     return new Promise((resolve) => {
-      const tick = () => {
+      let gateSince: number | null = null;
+      const tick = (now: number) => {
         const hit = check(condition);
+        if (hit === 'unlock-gate') {
+          gateSince ??= now;
+          if (now - gateSince < UNLOCK_GATE_HOLD_MS) {
+            requestAnimationFrame(tick);
+            return;
+          }
+        } else {
+          gateSince = null;
+        }
         if (!hit) {
           requestAnimationFrame(tick);
           return;
         }
-        const channel = new MessageChannel();
-        channel.port1.onmessage = () => resolve({ end: performance.now(), endedOn: hit });
-        channel.port2.postMessage(0);
+        afterTwoTasks(() => resolve({ end: performance.now(), endedOn: hit }));
       };
       requestAnimationFrame(tick);
     });
@@ -98,11 +126,14 @@ function probe(options: { bootLibrary?: boolean } = {}): void {
   function summarise(start: number, end: number) {
     // The observer's callback runs later, as its own task. Take what it holds now.
     if (observer) record(observer.takeRecords());
-    const inside = longTasks.filter((t) => t.start + t.duration > start && t.start < end);
+    // Clip each task to the window, so one that only overlaps it counts only its overlap.
+    const inside = longTasks
+      .filter((t) => t.start + t.duration > start && t.start < end)
+      .map((t) => Math.min(t.start + t.duration, end) - Math.max(t.start, start));
     return {
       longTasks: inside.length,
-      tbtMs: inside.reduce((sum, t) => sum + Math.max(0, t.duration - 50), 0),
-      longestTaskMs: inside.reduce((max, t) => Math.max(max, t.duration), 0),
+      tbtMs: inside.reduce((sum, d) => sum + Math.max(0, d - 50), 0),
+      longestTaskMs: inside.reduce((max, d) => Math.max(max, d), 0),
     };
   }
 
@@ -120,11 +151,7 @@ function probe(options: { bootLibrary?: boolean } = {}): void {
     (event) => {
       if (!typingOn) return;
       const start = event.timeStamp;
-      requestAnimationFrame(() => {
-        const channel = new MessageChannel();
-        channel.port1.onmessage = () => typing.push(performance.now() - start);
-        channel.port2.postMessage(0);
-      });
+      requestAnimationFrame(() => afterTwoTasks(() => typing.push(performance.now() - start)));
     },
     true
   );

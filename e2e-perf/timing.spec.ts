@@ -51,8 +51,22 @@ let origin = '';
 
 const hasRealSupabase = () => {
   const url = process.env.VITE_SUPABASE_URL ?? '';
-  return url !== '' && !url.includes('placeholder');
+  const anonKey = process.env.VITE_SUPABASE_ANON_KEY ?? '';
+  return url !== '' && !url.includes('placeholder') && anonKey !== '' && !anonKey.includes('placeholder');
 };
+
+/** Close the sample's context even when an assertion throws, so no throttled page leaks. */
+async function inSample(page: Page, body: () => Promise<void>): Promise<void> {
+  try {
+    await body();
+  } finally {
+    await page.context().close();
+  }
+}
+
+/** The library, or an empty account's empty state, which is not inside library-view. */
+const libraryOrEmpty = (page: Page) =>
+  page.getByTestId('library-view').or(page.getByText('Your notes await', { exact: true }));
 
 test.describe.configure({ mode: 'serial' });
 
@@ -102,38 +116,39 @@ test('cold boot to library, then note open cold and warm (Practice Space)', asyn
 
   for (let i = 0; i < SAMPLES; i++) {
     const page = await seededDemoPage(browser);
-    await page.goto(`${origin}/demo`, { waitUntil: 'commit' });
+    await inSample(page, async () => {
+      await page.goto(`${origin}/demo`, { waitUntil: 'commit' });
 
-    const span = await perf(page).fromNavigation('library');
-    boot.push(span.ms);
-    bootLongTasks.push(span.longTasks);
-    bootTbt.push(span.tbtMs);
-    fcp.push((await perf(page).fcp()) ?? NaN);
+      const span = await perf(page).fromNavigation('library');
+      boot.push(span.ms);
+      bootLongTasks.push(span.longTasks);
+      bootTbt.push(span.tbtMs);
+      fcp.push((await perf(page).fcp()) ?? NaN);
 
-    // What runs after first paint (gesture libraries, preloads) still blocks input.
-    // The library preloads the Editor chunk, so wait for the network too: "cold"
-    // below is the first Editor mount, not the chunk download.
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-    const settled = await perf(page).sinceNavigation();
-    settledLongTasks.push(settled.longTasks);
-    settledTbt.push(settled.tbtMs);
+      // What runs after first paint (gesture libraries, preloads) still blocks input.
+      // The library preloads the Editor chunk, so wait for the network too: "cold"
+      // below is the first Editor mount, not the chunk download.
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(1000);
+      const settled = await perf(page).sinceNavigation();
+      settledLongTasks.push(settled.longTasks);
+      settledTbt.push(settled.tbtMs);
 
-    const first = await timeClick(page, 'editor', () => longNoteCard(page).click());
-    cold.push(first.ms);
-    coldTbt.push(first.tbtMs);
+      const first = await timeClick(page, 'editor', () => longNoteCard(page).click());
+      cold.push(first.ms);
+      coldTbt.push(first.tbtMs);
 
-    await page.waitForTimeout(500);
-    await page.getByRole('button', { name: 'Yidhan', exact: true }).click();
-    await expect(page.getByTestId('library-view')).toBeVisible();
-    await expect(longNoteCard(page)).toBeVisible();
-    await page.waitForTimeout(500);
+      await page.waitForTimeout(500);
+      await page.getByRole('button', { name: 'Yidhan', exact: true }).click();
+      await expect(page.getByTestId('library-view')).toBeVisible();
+      await expect(longNoteCard(page)).toBeVisible();
+      await page.waitForTimeout(500);
 
-    const second = await timeClick(page, 'editor', () => longNoteCard(page).click());
-    warm.push(second.ms);
-    warmTbt.push(second.tbtMs);
+      const second = await timeClick(page, 'editor', () => longNoteCard(page).click());
+      warm.push(second.ms);
+      warmTbt.push(second.tbtMs);
 
-    await page.context().close();
+    });
   }
 
   results['boot.toLibrary'] = metric(boot);
@@ -160,31 +175,32 @@ test('typing latency in a long note (Practice Space)', async ({ browser }) => {
 
   for (let i = 0; i < TYPING_SAMPLES; i++) {
     const page = await seededDemoPage(browser);
-    await page.goto(`${origin}/demo`);
-    await expect(longNoteCard(page)).toBeVisible();
-    await longNoteCard(page).click();
+    await inSample(page, async () => {
+      await page.goto(`${origin}/demo`);
+      await expect(longNoteCard(page)).toBeVisible();
+      await longNoteCard(page).click();
 
-    const body = page.getByTestId('rich-text-editor').locator('.ProseMirror');
-    await expect(body).toBeVisible();
-    await body.click();
-    await page.keyboard.press('Control+End');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
+      const body = page.getByTestId('rich-text-editor').locator('.ProseMirror');
+      await expect(body).toBeVisible();
+      await body.click();
+      await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End');
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(1000);
 
-    const start = await perf(page).startTyping();
-    // 100 ms apart: a fast typist. Slower than that and a slow keystroke can hide.
-    await page.keyboard.type(TYPED_TEXT, { delay: 100 });
-    await page.waitForTimeout(500);
-    const run = await perf(page).stopTyping(start);
+      const start = await perf(page).startTyping();
+      // 100 ms apart: a fast typist. Slower than that and a slow keystroke can hide.
+      await page.keyboard.type(TYPED_TEXT, { delay: 100 });
+      await page.waitForTimeout(500);
+      const run = await perf(page).stopTyping(start);
 
-    expect(run.latencies.length).toBe(TYPED_TEXT.length);
-    await expect(body).toContainText(TYPED_TEXT.trim());
-    p50.push(median(run.latencies));
-    p95.push(quantile(run.latencies, 0.95));
-    longTasks.push(run.longTasks);
-    tbt.push(run.tbtMs);
+      expect(run.latencies.length).toBe(TYPED_TEXT.length);
+      await expect(body).toContainText(TYPED_TEXT.trim());
+      p50.push(median(run.latencies));
+      p95.push(quantile(run.latencies, 0.95));
+      longTasks.push(run.longTasks);
+      tbt.push(run.tbtMs);
 
-    await page.context().close();
+    });
   }
 
   results['typing.p50'] = metric(p50);
@@ -253,19 +269,20 @@ test('unlock to library (shared test account)', async ({ browser }) => {
   for (let i = 0; i < samples; i++) {
     const context = await browser.newContext();
     const page = await throttledPage(context);
-    await signInToUnlockForm(page);
+    await inSample(page, async () => {
+      await signInToUnlockForm(page);
 
-    // Pointerdown on Unlock to the library painting. Argon2id runs on the main
-    // thread today, so the blocking numbers are what moving it to a worker changes.
-    const span = await timeClick(page, 'unlocked', () => unlockButton(page).click());
-    unlock.push(span.ms);
-    unlockLongTasks.push(span.longTasks);
-    unlockTbt.push(span.tbtMs);
-    unlockLongest.push(span.longestTaskMs);
-    unlockFrameGap.push(span.maxFrameGapMs ?? NaN);
-    endedOn.push(span.endedOn ?? 'unknown');
+      // Pointerdown on Unlock to the library painting. Argon2id runs on the main
+      // thread today, so the blocking numbers are what moving it to a worker changes.
+      const span = await timeClick(page, 'unlocked', () => unlockButton(page).click());
+      unlock.push(span.ms);
+      unlockLongTasks.push(span.longTasks);
+      unlockTbt.push(span.tbtMs);
+      unlockLongest.push(span.longestTaskMs);
+      unlockFrameGap.push(span.maxFrameGapMs ?? NaN);
+      endedOn.push(span.endedOn ?? 'unknown');
 
-    await context.close();
+    });
   }
 
   results['unlock.toLibrary'] = metric(unlock);
@@ -286,48 +303,47 @@ test('signed-in library load and decrypt (shared test account)', async ({ browse
 
   // One sign-in and unlock, then reloads. A reload restores the keys from
   // sessionStorage (after the key check), so each sample is a signed-in cold boot
-  // of the app with no Argon2id in it. The HTTP cache is warm after the first load.
-  const context = await browser.newContext();
-  const page = await throttledPage(context, { bootLibrary: true });
-  await signInToUnlockForm(page);
-  await unlockButton(page).click();
-  const library = page.getByTestId('library-view');
-  const recoveryOffer = page.getByRole('heading', { name: 'Make a recovery key', exact: true });
-  await expect(library.or(recoveryOffer).first()).toBeVisible();
-  if (await recoveryOffer.isVisible()) {
-    // Declining writes nothing; it only closes the offer for this session.
-    await page.getByRole('button', { name: 'Not now', exact: true }).click();
-  }
-  await expect(library).toBeVisible();
-  await page.waitForLoadState('networkidle');
-
+  // of the app with no Argon2id in it. The static server sends no-cache with no
+  // validators, so every reload fetches every asset again.
   const load: number[] = [];
   const toCards: number[] = [];
   const bootTbt: number[] = [];
   const bootLongest: number[] = [];
   const samples = Math.min(SAMPLES, 5);
-  const unlockGate = page.getByRole('heading', { name: 'Unlock your notes', exact: true });
 
-  for (let i = 0; i < samples; i++) {
-    await page.reload({ waitUntil: 'commit' });
-    const span = await Promise.race([
-      perf(page).fromNavigation('library'),
-      unlockGate.waitFor({ timeout: 60_000 }).then(() => null),
-    ]);
-    if (!span) {
-      throw new Error('A reload asked for the passphrase again: the session restore did not hold the keys');
+  const context = await browser.newContext();
+  const page = await throttledPage(context, { bootLibrary: true });
+  try {
+    await signInToUnlockForm(page);
+    await unlockButton(page).click();
+    const recoveryOffer = page.getByRole('heading', { name: 'Make a recovery key', exact: true });
+    await expect(libraryOrEmpty(page).or(recoveryOffer).first()).toBeVisible();
+    if (await recoveryOffer.isVisible()) {
+      // Declining writes nothing; it only closes the offer for this session.
+      await page.getByRole('button', { name: 'Not now', exact: true }).click();
     }
-    toCards.push(span.ms);
-    bootTbt.push(span.tbtMs);
-    bootLongest.push(span.longestTaskMs);
-
-    // The app's own measure, from keys available to notes set. The first one after
-    // navigation is the initial load; later ones are sync refreshes.
-    await expect.poll(async () => (await perf(page).libraryLoads()).length).toBeGreaterThan(0);
-    load.push((await perf(page).libraryLoads())[0].ms);
+    await expect(libraryOrEmpty(page).first()).toBeVisible();
     await page.waitForLoadState('networkidle');
+
+    for (let i = 0; i < samples; i++) {
+      await page.reload({ waitUntil: 'commit' });
+      const span = await perf(page).fromNavigation('library');
+      if (span.endedOn === 'unlock-gate') {
+        throw new Error('A reload asked for the passphrase again: the session restore did not hold the keys');
+      }
+      toCards.push(span.ms);
+      bootTbt.push(span.tbtMs);
+      bootLongest.push(span.longestTaskMs);
+
+      // The app's own measure, from keys available to notes set. The first one after
+      // navigation is the initial load; later ones are sync refreshes.
+      await expect.poll(async () => (await perf(page).libraryLoads()).length).toBeGreaterThan(0);
+      load.push((await perf(page).libraryLoads())[0].ms);
+      await page.waitForLoadState('networkidle');
+    }
+  } finally {
+    await context.close();
   }
-  await context.close();
 
   results['signedIn.libraryLoad'] = metric(load);
   results['signedIn.toCards'] = metric(toCards);
