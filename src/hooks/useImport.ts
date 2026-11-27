@@ -28,7 +28,6 @@ import {
   openEncryptedBackup,
 } from '../utils/encryptedBackup';
 import type { NotesSync } from './useNotesSync';
-import { isChunkLoadError } from '../utils/updateRecovery';
 import type { ImportProgress } from '../components/ImportProgressOverlay';
 
 export interface UseImportOptions {
@@ -143,7 +142,16 @@ export function useImport({
     try {
       // The parsing and writing load on demand: import is rare, and the app shell has
       // no room to spare (scripts/bundle-budget.json).
-      const { importFile } = await import('../utils/importFile');
+      let importFile: typeof import('../utils/importFile').importFile;
+      try {
+        ({ importFile } = await import('../utils/importFile'));
+      } catch (error) {
+        // The code did not load (often an app update mid-session). Nothing was written.
+        // No automatic reload: held saves live only in memory.
+        console.error('Import code failed to load:', error);
+        toast.error('Import could not load. Reload the page and try again.');
+        return;
+      }
       await importFile(file, decryptedBackup, {
         userId, keys, tags, setTags, setImportProgress, reloadAfterImport,
       });
@@ -151,10 +159,6 @@ export function useImport({
       console.error('Import failed:', error);
       if (error instanceof ValidationError) {
         toast.error(`Import failed: ${error.message}`);
-      } else if (isChunkLoadError(error)) {
-        // The import code did not load (often an app update mid-session). Nothing was
-        // written. No automatic reload: held saves live only in memory.
-        toast.error('Import could not load. Reload the page and try again.');
       } else {
         toast.error('Failed to import file. Please check the file format.');
       }

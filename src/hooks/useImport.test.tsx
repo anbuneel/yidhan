@@ -6,14 +6,11 @@ const toastError = vi.hoisted(() => vi.fn());
 vi.mock('react-hot-toast', () => ({
   default: Object.assign(vi.fn(), { success: vi.fn(), error: toastError }),
 }));
-// The import body is a lazy chunk. A service worker update can make its URL stale; the
-// browser then rejects with this message. (Vitest wraps a throwing mock factory in its
-// own error, so the rejection is raised from the module instead. Same catch.)
-vi.mock('../utils/importFile', () => ({
-  importFile: () => Promise.reject(
-    new Error('Failed to fetch dynamically imported module: /assets/importFile-old.js'),
-  ),
-}));
+// The import body is a lazy chunk. A service worker update can make its URL stale, and
+// then the import() itself rejects, before anything is written.
+vi.mock('../utils/importFile', () => {
+  throw new Error('Failed to fetch dynamically imported module: /assets/importFile-old.js');
+});
 
 import { useImport } from './useImport';
 
