@@ -895,3 +895,17 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
 - **2026-11-26** — Any vault lock closes Settings (`useSettingsModalState`). The modal
   state lives in `App` above the vault gate, so it survived a lock and Settings reopened
   after the next unlock on another tab. Found by PR #296's recovery-kit E2E.
+- **2026-11-26** — A new note no longer closes with "That note is no longer here."
+  `refreshFromSync` in `useNotesSync` read IndexedDB, decrypted the library, then
+  replaced the list. A note created during that read was dropped, and App's
+  `missingNoteId` closed it. The hook now counts every list change; a refresh whose
+  read predates a change re-reads (up to three times, then reschedules), and only the
+  latest refresh may apply. The same race could put back a note deleted by realtime or
+  an older copy of an edited note. Note updates and pin toggles change the list before
+  IndexedDB, so they now run through `trackLocalWrite` and a refresh does not apply
+  while one is in flight. A reload hit the same redirect another way: with the session
+  restored before the keys, `loading` stayed false on the render where the keys
+  arrived. `loading` is now true until a read for the current user and keys finishes.
+  A refresh for a signed-out user is dropped. After the multi-agent review, a refresh
+  also stops on a lock or key change, waits for in-flight writes, and backs off up to
+  5s. Deferred items are in #298.
