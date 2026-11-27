@@ -909,3 +909,12 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   A refresh for a signed-out user is dropped. After the multi-agent review, a refresh
   also stops on a lock or key change, waits for in-flight writes, and backs off up to
   5s. Deferred items are in #298.
+- **2026-11-26** — Save the note you leave. (#300, closes #288) The Editor is keyed by
+  note id, so a switch is an unmount and a mount. The leaving Editor saves its own last
+  words under its own id; this covers switch, Back, browser Back and close. A save that
+  fails after the writer left is held in memory (`src/stores/heldSaves.ts`) and shown
+  with Retry and Copy. Retry saves over the note only if it is unchanged since; else it
+  keeps the words as a new note. Saves for one note are ordered across Editor
+  instances. Lock now saves first and stays unlocked if words are still held; auto-lock
+  saves, then drops held words; sign-out drops them. Plan:
+  `docs/plans/2026-11-26-flush-on-leave.md`.

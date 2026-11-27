@@ -19,6 +19,54 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-26 — App-shell JS limit 329 → 330 KB for saving the note you leave
+
+**Status:** Active
+
+**Why:** The fix for #288 puts a small amount of code in the signed-in app shell: the
+held-save store, the per-note save queue and the lock-after-saving hook. Locks run from
+the shell, so these cannot load on demand. The shell measured 329.8 KB gzip against a
+329 KB limit.
+
+**Decision:** Raise `appShellJs.limitKB` to 330, the target. The budget file's rule
+gives the lower of the target and the measurement plus 1 KB, which is 330. The target
+stays the promise: the next shell growth needs code removed or a target decision.
+
+**Rejected:** Leaving the notice, its Retry/Copy code and the per-note save queue in
+the shell (they load with the Editor or on demand; the notice chunk is fetched when the
+vault opens). Lazy-loading the lock hook (a lock must not wait on a network fetch).
+
+---
+
+## 2026-11-26 — One Editor per note; leaving a note saves it
+
+**Status:** Active
+
+**Why:** Issue #288 listed five ways to lose words when leaving a note. One Editor
+instance served every note, so a switch ran a render-time block that reset state and
+refs. Saves could pair one note's id with another's words, and the 10s checkpoint saved
+the note arriving, not the one leaving. #287 tried to patch this with a snapshot, a
+per-switch token and a failure list held in the Editor; two reviews found new losses
+each time.
+
+**Decision:** `NoteEditorView` keys the Editor by `note.id`. The leaving Editor saves its
+own last words under its own id on unmount, through the normal save path. A save that
+fails after the writer left goes to an in-memory store above the Editor and shows with
+Retry and Copy. Retry saves over the note only if it is unchanged since; otherwise it
+keeps the words as a new note. Saves for one note are ordered across Editor instances,
+and a reopened Editor starts from words still waiting to be written. Held words are
+decrypted text: the store closes on every lock and user change, and a save that started
+in an earlier vault session can neither write nor hold. Lock now saves first and stays
+unlocked while words are held; auto-lock saves for at most 3s, then drops held words and
+locks; sign-out drops them at once, since it deletes the offline database anyway.
+
+**Rejected:** Patching the single Editor further (#287's path: each new piece of state
+added a new way to lose words). Persisting held words (decrypted text on disk). Holding
+the vault open on auto-lock until saves finish (a hung write would keep an idle vault
+unlocked). Flushing before sign-out (the write would be deleted by `clearOfflineData`).
+
+---
+
 ## 2026-11-26 — App-shell JS limit 327 → 329 KB for the password toggle
 
 **Status:** Active

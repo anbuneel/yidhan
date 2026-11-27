@@ -528,7 +528,9 @@ export function DemoPage({
     return (
       <>
         {LoadedEditor ? (
+          // One Editor per note, as in NoteEditorView (issue #288).
           <LoadedEditor
+            key={selectedNote.id}
             note={selectedNote}
             tags={tags}
             userId={DEMO_USER_ID}
@@ -546,6 +548,7 @@ export function DemoPage({
         ) : (
           <Suspense fallback={<LoadingFallback message="Loading editor..." />}>
             <Editor
+              key={selectedNote.id}
               note={selectedNote}
               tags={tags}
               userId={DEMO_USER_ID}

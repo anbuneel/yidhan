@@ -44,6 +44,9 @@ export interface NoteEditorViewProps {
 export function NoteEditorView({ loadedEditor, modals, ...editorProps }: NoteEditorViewProps) {
   const Editor = loadedEditor;
   const props = { ...editorProps, noteSyncStatus: editorProps.note.syncStatus };
+  // One Editor per note (issue #288): a switch unmounts the old one, which saves its
+  // own words under its own id, and mounts a fresh one. Never drop this key.
+  const key = editorProps.note.id;
 
   return (
     <>
@@ -52,10 +55,10 @@ export function NoteEditorView({ loadedEditor, modals, ...editorProps }: NoteEdi
       </a>
       <ErrorBoundary>
         {Editor ? (
-          <Editor {...props} />
+          <Editor key={key} {...props} />
         ) : (
           <Suspense fallback={<LoadingFallback message="Loading editor..." />}>
-            <LazyEditor {...props} />
+            <LazyEditor key={key} {...props} />
           </Suspense>
         )}
       </ErrorBoundary>

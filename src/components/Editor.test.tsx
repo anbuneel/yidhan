@@ -5,6 +5,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Editor } from './Editor';
+import { resetNoteSaveQueue } from '../stores/noteSaveQueue';
+import { resetHeldSaves } from '../stores/heldSaves';
 import { createMockNote, createMockTag } from '../test/factories';
 import { useAuth } from '../contexts/AuthContext';
 import * as exportImport from '../utils/exportImport';
@@ -106,6 +108,11 @@ vi.mock('../utils/exportImport', () => ({
   copyNoteWithFormatting: vi.fn().mockResolvedValue(undefined),
 }));
 
+// As NoteEditorView renders it: one Editor per note (issue #288), so a switch remounts.
+function KeyedEditor(props: React.ComponentProps<typeof Editor>) {
+  return <Editor key={props.note.id} {...props} />;
+}
+
 describe('Editor', () => {
   const mockNote = createMockNote({
     id: 'note-123',
@@ -156,17 +163,17 @@ describe('Editor', () => {
       const noteB = createMockNote({ id: 'note-b', title: 'B', content: '<p>b</p>' });
       const noteC = createMockNote({ id: 'note-c', title: 'C', content: '<p>c</p>' });
 
-      const view = render(<Editor {...defaultProps} note={noteA} />);
+      const view = render(<KeyedEditor {...defaultProps} note={noteA} />);
       expect(screen.getByLabelText('Resume editing at your last position')).toBeInTheDocument();
 
       // Switch before anything settles. The chip state is decided during render
       // from a ref comparison, so a switch that outruns the effects must still
       // leave the chip describing the note on screen.
-      view.rerender(<Editor {...defaultProps} note={noteB} />);
+      view.rerender(<KeyedEditor {...defaultProps} note={noteB} />);
       expect(screen.getByLabelText('Resume editing at your last position')).toBeInTheDocument();
 
       // note-c is below the threshold: the chip must go, not linger from B.
-      view.rerender(<Editor {...defaultProps} note={noteC} />);
+      view.rerender(<KeyedEditor {...defaultProps} note={noteC} />);
       expect(screen.queryByLabelText('Resume editing at your last position')).not.toBeInTheDocument();
     });
 
@@ -175,10 +182,10 @@ describe('Editor', () => {
       const noteA = createMockNote({ id: 'note-a', title: 'A', content: '<p>a</p>' });
       const unseen = createMockNote({ id: 'note-unseen', title: 'U', content: '<p>u</p>' });
 
-      const view = render(<Editor {...defaultProps} note={noteA} />);
+      const view = render(<KeyedEditor {...defaultProps} note={noteA} />);
       expect(screen.getByLabelText('Resume editing at your last position')).toBeInTheDocument();
 
-      view.rerender(<Editor {...defaultProps} note={unseen} />);
+      view.rerender(<KeyedEditor {...defaultProps} note={unseen} />);
 
       expect(screen.queryByLabelText('Resume editing at your last position')).not.toBeInTheDocument();
     });
@@ -188,8 +195,8 @@ describe('Editor', () => {
       seedPositions({ 'note-a': 900, 'note-b': 1500 });
       const noteA = createMockNote({ id: 'note-a', title: 'A', content: '<p>a</p>' });
       const noteB = createMockNote({ id: 'note-b', title: 'B', content: '<p>b</p>' });
-      const view = render(<Editor {...defaultProps} note={noteA} />);
-      view.rerender(<Editor {...defaultProps} note={noteB} />);
+      const view = render(<KeyedEditor {...defaultProps} note={noteA} />);
+      view.rerender(<KeyedEditor {...defaultProps} note={noteB} />);
 
       // Stubbed on the scroll container itself, not Element.prototype. jsdom
       // leaves scrollTo undefined, so a prototype assignment would persist for
@@ -213,12 +220,12 @@ describe('Editor', () => {
       const noteA = createMockNote({ id: 'note-a', title: 'A', content: '<p>a</p>' });
       const noteLow = createMockNote({ id: 'note-low', title: 'L', content: '<p>l</p>' });
 
-      const view = render(<Editor {...defaultProps} note={noteLow} />);
+      const view = render(<KeyedEditor {...defaultProps} note={noteLow} />);
       expect(screen.queryByLabelText('Resume editing at your last position')).not.toBeInTheDocument();
 
       // Dismissal must not be sticky: the chip is a property of the note shown,
       // not a one-shot that stays spent for the rest of the session.
-      view.rerender(<Editor {...defaultProps} note={noteA} />);
+      view.rerender(<KeyedEditor {...defaultProps} note={noteA} />);
 
       expect(screen.getByLabelText('Resume editing at your last position')).toBeInTheDocument();
     });
@@ -230,6 +237,8 @@ describe('Editor', () => {
     keyboardEditor.isFocused = false;
     keyboardEditor.state.selection = { empty: true, from: 1, to: 1 };
     editorReadyControl.current = true;
+    resetNoteSaveQueue();
+    resetHeldSaves();
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.mocked(useAuth).mockReturnValue({
       user: {
@@ -1781,10 +1790,16 @@ describe('Editor', () => {
       keepMock.keepReleasedDraft.mockReset().mockImplementation(
         () => new Promise((resolve) => { finishWrite = () => resolve(kept); })
       );
+      const update = vi.fn();
       function Parent() {
         const [current, setCurrent] = useState<{ note: typeof mockNote; released: boolean }>({ note: mockNote, released: true });
-        // As App does: the switch to the new note is scheduled inside the callback.
-        return <Editor {...defaultProps} note={current.note} releasedElsewhere={current.released}
+        // As App does: the switch to the new note is scheduled inside the callback, and
+        // a save updates the list before it is written.
+        return <KeyedEditor {...defaultProps} note={current.note} releasedElsewhere={current.released}
+          onUpdate={async (note) => {
+            update(note);
+            setCurrent((c) => (c.note.id === note.id ? { ...c, note } : c));
+          }}
           onKeptReleasedDraft={(note) => setCurrent({ note, released: false })} />;
       }
       render(<Parent />);
@@ -1793,6 +1808,9 @@ describe('Editor', () => {
       fireEvent.change(screen.getByDisplayValue('First words'), { target: { value: 'First words, and more' } });
       await act(async () => { finishWrite(); await Promise.resolve(); await Promise.resolve(); });
       expect(screen.getByDisplayValue('First words, and more')).toBeInTheDocument();
+      // The newer words went into the kept note, never into the released one.
+      expect(update).toHaveBeenCalledTimes(1);
+      expect(update).toHaveBeenCalledWith(expect.objectContaining({ id: 'kept', title: 'First words, and more' }));
     });
 
     it('does not hold the editor open for the writer\'s own delete of a failed draft', async () => {
@@ -1800,7 +1818,7 @@ describe('Editor', () => {
       const report = vi.fn();
       const update = vi.fn().mockRejectedValue(new Error('offline'));
       const onDelete = vi.fn().mockResolvedValue(true);
-      render(<Editor {...defaultProps} onUpdate={update} onDelete={onDelete} onDraftStateChange={report} />);
+      render(<KeyedEditor {...defaultProps} onUpdate={update} onDelete={onDelete} onDraftStateChange={report} />);
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Unsaved' } });
       await act(async () => { vi.advanceTimersByTime(800); });
       expect(report).toHaveBeenLastCalledWith({ noteId: 'note-123', unsaved: true });
@@ -1819,7 +1837,7 @@ describe('Editor', () => {
       const report = vi.fn();
       const update = vi.fn().mockRejectedValue(new Error('offline'));
       const onDelete = vi.fn().mockResolvedValue(false);
-      render(<Editor {...defaultProps} onUpdate={update} onDelete={onDelete} onDraftStateChange={report} />);
+      render(<KeyedEditor {...defaultProps} onUpdate={update} onDelete={onDelete} onDraftStateChange={report} />);
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Unsaved' } });
       await act(async () => { vi.advanceTimersByTime(800); });
       await user.click(screen.getByLabelText('Delete note'));
@@ -1830,12 +1848,12 @@ describe('Editor', () => {
 
     it('resumes saving when the note comes back', async () => {
       const update = vi.fn().mockResolvedValue(undefined);
-      const { rerender } = render(<Editor {...defaultProps} onUpdate={update} releasedElsewhere />);
+      const { rerender } = render(<KeyedEditor {...defaultProps} onUpdate={update} releasedElsewhere />);
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Back again' } });
       await act(async () => { vi.advanceTimersByTime(800); });
       expect(update).not.toHaveBeenCalled();
 
-      rerender(<Editor {...defaultProps} onUpdate={update} />);
+      rerender(<KeyedEditor {...defaultProps} onUpdate={update} />);
       await act(async () => { vi.advanceTimersByTime(800); });
       expect(update).toHaveBeenCalledWith(expect.objectContaining({ title: 'Back again' }));
       expect(screen.queryByTestId('released-draft-banner')).not.toBeInTheDocument();
@@ -1844,14 +1862,14 @@ describe('Editor', () => {
 
   describe('practice editor unencrypted label', () => {
     it('shows the unencrypted browser-local label in demo mode', () => {
-      render(<Editor {...defaultProps} isDemo />);
+      render(<KeyedEditor {...defaultProps} isDemo />);
       expect(screen.getByTestId('demo-editor-notice')).toHaveTextContent(
         'Demo · saved in this browser · not encrypted',
       );
     });
 
     it('never shows the unencrypted label for a signed-in note', () => {
-      render(<Editor {...defaultProps} />);
+      render(<KeyedEditor {...defaultProps} />);
       expect(screen.queryByTestId('demo-editor-notice')).not.toBeInTheDocument();
       expect(screen.queryByText(/not encrypted/i)).not.toBeInTheDocument();
     });
@@ -1871,7 +1889,7 @@ describe('Editor', () => {
         () => new Promise<void>((resolve) => { resolveFirstSave = resolve; })
       );
 
-      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+      const { container, rerender } = render(<KeyedEditor {...defaultProps} onUpdate={onUpdate} />);
 
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Edited A' } });
       await act(async () => { vi.advanceTimersByTime(800); });
@@ -1879,7 +1897,7 @@ describe('Editor', () => {
       expect(container.querySelector('[data-save-status="saving"]')).not.toBeNull();
 
       // Switch to note B while note A's save is still in flight.
-      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      rerender(<KeyedEditor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
       expect(screen.getByDisplayValue('Second Note')).toBeInTheDocument();
       expect(container.querySelector('[data-save-status]')).toBeNull();
 
@@ -1899,14 +1917,14 @@ describe('Editor', () => {
         () => new Promise<void>((_, reject) => { rejectFirstSave = reject; })
       );
 
-      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+      const { container, rerender } = render(<KeyedEditor {...defaultProps} onUpdate={onUpdate} />);
 
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Edited A' } });
       await act(async () => { vi.advanceTimersByTime(800); });
       expect(onUpdate).toHaveBeenCalledTimes(1);
 
       // Switch to note B while note A's save is still in flight.
-      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      rerender(<KeyedEditor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
 
       // Note A's save fails after the switch: must not appear as note B's error banner or status.
       await act(async () => {
@@ -1920,11 +1938,11 @@ describe('Editor', () => {
 
     it('does not flash Saved when switching from a pending note to a synced note', () => {
       const { container, rerender } = render(
-        <Editor {...defaultProps} note={mockNote} noteSyncStatus="pending" />
+        <KeyedEditor {...defaultProps} note={mockNote} noteSyncStatus="pending" />
       );
       expect(container.querySelector('[data-save-status]')).toBeNull();
 
-      rerender(<Editor {...defaultProps} note={noteB} noteSyncStatus="synced" />);
+      rerender(<KeyedEditor {...defaultProps} note={noteB} noteSyncStatus="synced" />);
       expect(container.querySelector('[data-save-status]')).toBeNull();
     });
 
@@ -1934,15 +1952,15 @@ describe('Editor', () => {
         () => new Promise<void>((resolve) => { resolveOldSave = resolve; })
       );
 
-      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+      const { container, rerender } = render(<KeyedEditor {...defaultProps} onUpdate={onUpdate} />);
 
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Older edit' } });
       await act(async () => { vi.advanceTimersByTime(800); });
       expect(onUpdate).toHaveBeenCalledTimes(1);
 
       // Switch A -> B -> A while the older save is still in flight.
-      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
-      rerender(<Editor {...defaultProps} note={mockNote} onUpdate={onUpdate} />);
+      rerender(<KeyedEditor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      rerender(<KeyedEditor {...defaultProps} note={mockNote} onUpdate={onUpdate} />);
       expect(container.querySelector('[data-save-status]')).toBeNull();
 
       // The older save settles after returning to A: the per-switch token must reject it.
@@ -1977,7 +1995,7 @@ describe('Editor', () => {
             >
               Release
             </button>
-            <Editor
+            <KeyedEditor
               {...defaultProps}
               note={current.note}
               releasedElsewhere={current.released}
@@ -2022,11 +2040,11 @@ describe('Editor', () => {
         )
         .mockRejectedValueOnce(new Error('offline'));
 
-      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+      const { container, rerender } = render(<KeyedEditor {...defaultProps} onUpdate={onUpdate} />);
 
       // Switch away to B and back to A.
-      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
-      rerender(<Editor {...defaultProps} note={mockNote} onUpdate={onUpdate} />);
+      rerender(<KeyedEditor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      rerender(<KeyedEditor {...defaultProps} note={mockNote} onUpdate={onUpdate} />);
 
       // Active note save shows "saving" while in flight, then "saved" on resolve.
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Back and saved' } });
@@ -2041,7 +2059,7 @@ describe('Editor', () => {
 
       // Parent echoes the saved note back (as App.tsx does after onUpdate resolves).
       const echoedA = { ...mockNote, title: 'Back and saved' };
-      rerender(<Editor {...defaultProps} note={echoedA} onUpdate={onUpdate} />);
+      rerender(<KeyedEditor {...defaultProps} note={echoedA} onUpdate={onUpdate} />);
 
       // A failed save for the active note still keeps the draft with Retry and Copy.
       fireEvent.change(screen.getByDisplayValue('Back and saved'), { target: { value: 'Back and unsaved' } });
@@ -2067,7 +2085,7 @@ describe('Editor', () => {
           () => new Promise<void>((resolve) => { resolveV2 = resolve; })
         );
 
-      const { container, rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+      const { container, rerender } = render(<KeyedEditor {...defaultProps} onUpdate={onUpdate} />);
 
       // Type v1 on A and start a slow save.
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v1' } });
@@ -2081,7 +2099,7 @@ describe('Editor', () => {
       expect(onUpdate).toHaveBeenCalledTimes(1);
 
       // Switch to B before v1 resolves.
-      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      rerender(<KeyedEditor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
       expect(container.querySelector('[data-save-status]')).toBeNull();
 
       // Resolve v1: the queued v2 save must still write, with no status shown on B.
@@ -2115,18 +2133,19 @@ describe('Editor', () => {
         )
         .mockResolvedValueOnce(undefined);
 
-      const { rerender } = render(<Editor {...defaultProps} onUpdate={onUpdate} />);
+      const { rerender } = render(<KeyedEditor {...defaultProps} onUpdate={onUpdate} />);
 
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v1' } });
       await act(async () => { vi.advanceTimersByTime(800); });
       expect(onUpdate).toHaveBeenCalledTimes(1);
 
       // Switch A -> B -> A while the first save is still in flight.
-      rerender(<Editor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
-      rerender(<Editor {...defaultProps} note={mockNote} onUpdate={onUpdate} />);
+      rerender(<KeyedEditor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
+      rerender(<KeyedEditor {...defaultProps} note={mockNote} onUpdate={onUpdate} />);
 
-      // Type on A: the second save must wait for the first to settle.
-      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v2' } });
+      // The reopened A starts from v1, which is still being written, not the older
+      // stored text. Type on it: the second save must wait for the first to settle.
+      fireEvent.change(screen.getByDisplayValue('v1'), { target: { value: 'v2' } });
       await act(async () => {
         vi.advanceTimersByTime(800);
         await Promise.resolve();
@@ -2143,7 +2162,7 @@ describe('Editor', () => {
       expect(onUpdate).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'note-123', title: 'v2' }));
     });
 
-    it('waits for A’s in-flight save when navigating Back from B', async () => {
+    it('does not hold Back on B for A’s in-flight save, which still lands', async () => {
       let resolveFirst!: () => void;
       const onBack = vi.fn();
       const onUpdate = vi.fn().mockImplementation(
@@ -2151,7 +2170,7 @@ describe('Editor', () => {
       );
 
       const { rerender } = render(
-        <Editor {...defaultProps} onBack={onBack} onUpdate={onUpdate} />
+        <KeyedEditor {...defaultProps} onBack={onBack} onUpdate={onUpdate} />
       );
 
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v1' } });
@@ -2159,23 +2178,22 @@ describe('Editor', () => {
       expect(onUpdate).toHaveBeenCalledTimes(1);
 
       // Switch to B while A's save is still running, then click Back.
-      rerender(<Editor {...defaultProps} note={noteB} onBack={onBack} onUpdate={onUpdate} />);
+      rerender(<KeyedEditor {...defaultProps} note={noteB} onBack={onBack} onUpdate={onUpdate} />);
       fireEvent.click(screen.getByText('Return to notes'));
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
       });
 
-      expect(onBack).not.toHaveBeenCalled();
-
-      // Once A's save settles, Back completes.
+      // B has nothing unsaved. A's save belongs to A and keeps running on its own;
+      // if it failed, the held-save notice would show it (issue #288).
+      expect(onBack).toHaveBeenCalledTimes(1);
       await act(async () => {
         resolveFirst();
         await Promise.resolve();
-        await Promise.resolve();
       });
-
-      expect(onBack).toHaveBeenCalledTimes(1);
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+      expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ id: 'note-123', title: 'v1' }));
     });
   });
 });
