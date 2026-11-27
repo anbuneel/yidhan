@@ -100,7 +100,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     tags, setTags,
     selectedTagIds, setSelectedTagIds,
     fadedNotesCount, refreshFadedNotesCount,
-    conflicts, removeConflict, triggerSync, triggerCoalescedSync,
+    conflicts, removeConflict, triggerSync, triggerCoalescedSync, trackLocalWrite,
   } = useNotesSync({
     userId: user?.id,
     keys,
@@ -327,6 +327,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     openNoteIdRef: selectedNoteIdRef,
     onOpenNoteClosed: () => replaceRoute({ name: 'library' }),
     triggerCoalescedSync,
+    trackLocalWrite,
   });
 
   // NoteCard owns inline recovery for pointer-triggered fades. The editor and

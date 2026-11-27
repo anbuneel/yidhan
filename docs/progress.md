@@ -898,4 +898,9 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   `missingNoteId` closed it. The hook now counts every list change; a refresh whose
   read predates a change re-reads (up to three times, then reschedules), and only the
   latest refresh may apply. The same race could put back a note deleted by realtime or
-  an older copy of an edited note.
+  an older copy of an edited note. Note updates and pin toggles change the list before
+  IndexedDB, so they now run through `trackLocalWrite` and a refresh does not apply
+  while one is in flight. A reload hit the same redirect another way: with the session
+  restored before the keys, `loading` stayed false on the render where the keys
+  arrived. `loading` is now true until a read for the current user and keys finishes.
+  A refresh for a signed-out user is dropped.

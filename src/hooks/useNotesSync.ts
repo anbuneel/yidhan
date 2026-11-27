@@ -95,6 +95,12 @@ export interface NotesSync {
   triggerCoalescedSync: () => void;
   /** Re-read notes and tags from local storage after a sync pulled remote changes. */
   refreshFromSync: () => Promise<void>;
+  /**
+   * Run a local write whose change is already on screen (an optimistic update). A
+   * sync refresh does not replace the list while one is in flight, or with a read
+   * taken before it finished: that read would put the old copy back.
+   */
+  trackLocalWrite: <T>(write: () => Promise<T>) => Promise<T>;
 }
 
 /** Build a synthetic server version representing a note deleted on another device. */
@@ -139,7 +145,29 @@ export function useNotesSync({
     listVersionRef.current += 1;
     setNotesState(action);
   }, []);
-  const [loading, setLoading] = useState(true);
+
+  // Writes whose change reached the list before it reached IndexedDB. A refresh read
+  // during one sees the old copy and the version alone cannot tell.
+  const pendingLocalWritesRef = useRef(0);
+  const trackLocalWrite = useCallback(async <T,>(write: () => Promise<T>): Promise<T> => {
+    pendingLocalWritesRef.current += 1;
+    try {
+      return await write();
+    } finally {
+      pendingLocalWritesRef.current -= 1;
+      listVersionRef.current += 1;
+    }
+  }, []);
+
+  const [loadingState, setLoading] = useState(true);
+  // The user and keys the list was last read for. On the render where the keys arrive
+  // (a reload restores the session first) the fetch effect has not run yet, so
+  // `loadingState` still says "done" from the no-keys branch. App would read that as
+  // the open note being missing and leave it.
+  const [loadedFor, setLoadedFor] = useState<{ userId: string; keys: DerivedKeys } | null>(null);
+  const loading =
+    loadingState ||
+    (Boolean(userId) && keys !== null && (loadedFor?.userId !== userId || loadedFor?.keys !== keys));
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [fadedNotesCount, setFadedNotesCount] = useState(0);
@@ -193,6 +221,14 @@ export function useNotesSync({
   // would put back what the newer one removed or miss what it added.
   const refreshIdRef = useRef(0);
   const scheduleSyncRefreshRef = useRef<() => void>(() => {});
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+  // A refresh started for one user must not land after a switch to another.
+  const currentUserIdRef = useRef(userId);
+  currentUserIdRef.current = userId;
 
   const refreshFromSync = useCallback(async () => {
     if (!userId || !keys) return;
@@ -201,15 +237,15 @@ export function useNotesSync({
       for (let read = 1; ; read++) {
         const versionAtRead = listVersionRef.current;
         const snapshot = await fetchDecryptedNotes(userId, keys);
-        if (refreshId !== refreshIdRef.current) return;
-        if (versionAtRead === listVersionRef.current) {
+        if (refreshId !== refreshIdRef.current || currentUserIdRef.current !== userId) return;
+        if (versionAtRead === listVersionRef.current && pendingLocalWritesRef.current === 0) {
           setNotesState(snapshot);
           break;
         }
-        // The list changed while we read. Local writes reach IndexedDB before they
-        // reach the list, so a fresh read includes them.
+        // The list changed while we read, or a local write is still landing. A fresh
+        // read after the write finishes includes it.
         if (read >= MAX_REFRESH_READS) {
-          scheduleSyncRefreshRef.current();
+          if (mountedRef.current) scheduleSyncRefreshRef.current();
           return;
         }
       }
@@ -378,14 +414,20 @@ export function useNotesSync({
       return;
     }
 
+    let current = true;
     fetchDecryptedNotes(userId, keys)
-      .then(setNotes)
+      .then((loaded) => { if (current) setNotes(loaded); })
       .catch((error) => {
+        if (!current) return;
         console.error('Failed to decrypt notes:', error);
         setNotes([]);
         toast.error('Could not decrypt your notes. Lock and unlock your vault, then try again.');
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!current) return;
+        setLoadedFor({ userId, keys });
+        setLoading(false);
+      });
 
     const maybeDecrypt = async (note: Note): Promise<Note> => {
       const currentKeys = keysRef.current;
@@ -494,7 +536,10 @@ export function useNotesSync({
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      current = false;
+      unsubscribe();
+    };
   }, [
     userId,
     keys,
@@ -601,5 +646,6 @@ export function useNotesSync({
     triggerSync,
     triggerCoalescedSync,
     refreshFromSync,
+    trackLocalWrite,
   };
 }

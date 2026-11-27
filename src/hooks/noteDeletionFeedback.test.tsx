@@ -66,6 +66,7 @@ describe('note deletion feedback', () => {
       openNoteIdRef: { current: null },
       onOpenNoteClosed: vi.fn(),
       triggerCoalescedSync: vi.fn(),
+      trackLocalWrite: (write) => write(),
     }));
 
     let deleted: boolean | undefined;
@@ -90,6 +91,7 @@ describe('note deletion feedback', () => {
       openNoteIdRef: { current: null },
       onOpenNoteClosed: vi.fn(),
       triggerCoalescedSync: vi.fn(),
+      trackLocalWrite: (write) => write(),
     }));
   }
 

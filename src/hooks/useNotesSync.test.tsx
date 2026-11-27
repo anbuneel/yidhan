@@ -241,14 +241,19 @@ describe('useNotesSync refresh after a sync', () => {
     mocks.fetchDecryptedNotes.mockResolvedValue(initial);
     const openNoteIdRef = { current: null };
     const onOpenNoteRemoved = vi.fn();
-    const hook = renderHook(() => useNotesSync({
-      userId: 'faded-count-user', keys: KEYS, isHydrating: false,
-      openNoteIdRef, onOpenNoteRemoved,
-    }));
+    const renders: string[][] = [];
+    const hook = renderHook(() => {
+      const sync = useNotesSync({
+        userId: 'faded-count-user', keys: KEYS, isHydrating: false,
+        openNoteIdRef, onOpenNoteRemoved,
+      });
+      renders.push(sync.notes.map((n) => n.id));
+      return sync;
+    });
     await waitFor(() => expect(hook.result.current.loading).toBe(false));
     expect(hook.result.current.notes.map((n) => n.id)).toEqual(initial.map((n) => n.id));
     expect(mocks.fetchDecryptedNotes).toHaveBeenCalledTimes(1);
-    return hook;
+    return { ...hook, renders };
   }
 
   const ids = (notes: Note[]) => notes.map((n) => n.id).sort();
@@ -256,7 +261,7 @@ describe('useNotesSync refresh after a sync', () => {
   it('keeps a note created while the refresh was reading', async () => {
     const existing = serverNote('existing', null);
     const created = serverNote('created', null);
-    const { result } = await setup([existing]);
+    const { result, renders } = await setup([existing]);
 
     // The refresh reads IndexedDB before the new note is written.
     const staleRead = deferred<Note[]>();
@@ -268,6 +273,8 @@ describe('useNotesSync refresh after a sync', () => {
 
     // handleNewNote: written to IndexedDB, then added to the list.
     act(() => { result.current.setNotes((prev) => [created, ...prev]); });
+    const firstRenderWithNote = renders.length - 1;
+    expect(renders[firstRenderWithNote]).toContain('created');
 
     await act(async () => {
       staleRead.resolve([existing]);
@@ -276,8 +283,9 @@ describe('useNotesSync refresh after a sync', () => {
 
     await waitFor(() => expect(mocks.fetchDecryptedNotes).toHaveBeenCalledTimes(3));
     await waitFor(() => expect(ids(result.current.notes)).toEqual(['created', 'existing']));
-    // Never dropped, not even for one render.
-    expect(result.current.notes.some((n) => n.id === 'created')).toBe(true);
+    // Never dropped, not even for one render: one render without it is enough for
+    // App to fire `missingNoteId`.
+    for (const ids of renders.slice(firstRenderWithNote)) expect(ids).toContain('created');
   });
 
   it('does not let an older refresh overwrite a newer one', async () => {
@@ -340,6 +348,61 @@ describe('useNotesSync refresh after a sync', () => {
     expect(ids(result.current.notes)).toEqual(['existing']);
   });
 
+  // handleNoteUpdate and handleTogglePin change the list before IndexedDB. A read
+  // taken in that gap holds the old copy, and applySavedNote will not repair it.
+  it('does not apply a read taken while a tracked local write was landing', async () => {
+    const existing = serverNote('existing', null);
+    const { result } = await setup([existing]);
+
+    let finishWrite!: () => void;
+    const write = new Promise<void>((r) => { finishWrite = r; });
+    let tracked!: Promise<void>;
+    act(() => {
+      result.current.setNotes((prev) => prev.map((n) => ({ ...n, pinned: true })));
+      tracked = result.current.trackLocalWrite(() => write);
+    });
+
+    // The refresh reads IndexedDB before the pin is written.
+    const staleRead = deferred<Note[]>();
+    mocks.fetchDecryptedNotes.mockReturnValueOnce(staleRead.promise);
+    let refresh!: Promise<void> | void;
+    act(() => { refresh = mocks.onSyncComplete?.(); });
+
+    mocks.fetchDecryptedNotes.mockResolvedValue([{ ...existing, pinned: true }]);
+    await act(async () => {
+      staleRead.resolve([existing]);
+      finishWrite();
+      await tracked;
+      await refresh;
+    });
+
+    // The stale read was dropped and a read after the write applied.
+    expect(mocks.fetchDecryptedNotes.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(result.current.notes[0].pinned).toBe(true);
+  });
+
+  it('does not apply a refresh for a user who has since signed out', async () => {
+    mocks.fetchDecryptedNotes.mockResolvedValue([serverNote('mine', null)]);
+    const openNoteIdRef = { current: null };
+    const { result, rerender } = renderHook(({ userId }: { userId: string | undefined }) => useNotesSync({
+      userId, keys: KEYS, isHydrating: false, openNoteIdRef, onOpenNoteRemoved: vi.fn(),
+    }), { initialProps: { userId: 'faded-count-user' as string | undefined } });
+    await waitFor(() => expect(result.current.notes).toHaveLength(1));
+
+    const staleRead = deferred<Note[]>();
+    mocks.fetchDecryptedNotes.mockReturnValueOnce(staleRead.promise);
+    let refresh!: Promise<void> | void;
+    act(() => { refresh = mocks.onSyncComplete?.(); });
+    rerender({ userId: undefined });
+    await waitFor(() => expect(result.current.notes).toEqual([]));
+
+    await act(async () => {
+      staleRead.resolve([serverNote('mine', null)]);
+      await refresh;
+    });
+    expect(result.current.notes).toEqual([]);
+  });
+
   it('still removes a pulled delete after retrying past a local change', async () => {
     const existing = serverNote('existing', null);
     const gone = serverNote('gone', null);
@@ -360,5 +423,56 @@ describe('useNotesSync refresh after a sync', () => {
 
     await waitFor(() => expect(ids(result.current.notes)).toEqual(['existing']));
     expect(result.current.notes[0].title).toBe('edited');
+  });
+});
+
+// A reload restores the session before the vault keys. With no keys the hook reported
+// "loaded, no notes"; on the render where the keys arrived it still said so, because
+// the effect that starts the fetch runs after that render. App read it as "the open
+// note is missing" and left the note.
+describe('useNotesSync loading when the keys arrive', () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+    mocks.cleanupExpiredFadedNotes.mockResolvedValue(0);
+    mocks.countFadedNotesOffline.mockResolvedValue(0);
+  });
+
+  it('never reports loaded with keys before the notes for those keys are read', async () => {
+    const open = serverNote('open', null);
+    let resolveRead!: (notes: Note[]) => void;
+    mocks.fetchDecryptedNotes.mockReturnValue(new Promise<Note[]>((r) => { resolveRead = r; }));
+    const openNoteIdRef = { current: 'open' };
+    const onOpenNoteRemoved = vi.fn();
+    const renders: { hasKeys: boolean; loading: boolean; ids: string[] }[] = [];
+    const { result, rerender } = renderHook(({ keys }: { keys: DerivedKeys | null }) => {
+      const sync = useNotesSync({
+        userId: 'faded-count-user', keys, isHydrating: false, openNoteIdRef, onOpenNoteRemoved,
+      });
+      renders.push({ hasKeys: keys !== null, loading: sync.loading, ids: sync.notes.map((n) => n.id) });
+      return sync;
+    }, { initialProps: { keys: null as DerivedKeys | null } });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    rerender({ keys: KEYS });
+    await act(async () => { resolveRead([open]); });
+    await waitFor(() => expect(result.current.notes.map((n) => n.id)).toEqual(['open']));
+
+    // What App's missingNoteId tests: unlocked, not loading, and the note not there.
+    const falseMissing = renders.filter((r) => r.hasKeys && !r.loading && !r.ids.includes('open'));
+    expect(falseMissing).toEqual([]);
+  });
+
+  it('still reports loaded once the read for those keys finishes without the note', async () => {
+    mocks.fetchDecryptedNotes.mockResolvedValue([]);
+    const openNoteIdRef = { current: 'gone' };
+    const { result, rerender } = renderHook(({ keys }: { keys: DerivedKeys | null }) => useNotesSync({
+      userId: 'faded-count-user', keys, isHydrating: false, openNoteIdRef, onOpenNoteRemoved: vi.fn(),
+    }), { initialProps: { keys: null as DerivedKeys | null } });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    rerender({ keys: KEYS });
+    await waitFor(() => expect(mocks.fetchDecryptedNotes).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.notes).toEqual([]);
   });
 });

@@ -32,6 +32,8 @@ export interface UseNoteActionsOptions {
   /** Close the editor when the note it is showing is the one being deleted. */
   onOpenNoteClosed: () => void;
   triggerCoalescedSync: () => void;
+  /** Wraps a write whose change is already in the list, so a sync refresh waits for it. */
+  trackLocalWrite: <T>(write: () => Promise<T>) => Promise<T>;
 }
 
 export interface NoteActions {
@@ -50,6 +52,7 @@ export function useNoteActions({
   openNoteIdRef,
   onOpenNoteClosed,
   triggerCoalescedSync,
+  trackLocalWrite,
 }: UseNoteActionsOptions): NoteActions {
   // Note update with offline-first approach
   // Writes to IndexedDB immediately, queues for sync
@@ -78,7 +81,9 @@ export function useNoteActions({
     try {
       // Encrypt and save to IndexedDB (immediate, works offline)
       // Sync engine will push encrypted payload to server when online
-      const savedNote = await updateEncryptedNote(userId, updatedNote.id, updatedNote.title, updatedNote.content, keys);
+      const savedNote = await trackLocalWrite(() =>
+        updateEncryptedNote(userId, updatedNote.id, updatedNote.title, updatedNote.content, keys)
+      );
 
       // applySavedNote carries the same late-acknowledgement guard and also
       // keeps a pin or soft delete that landed mid-save.
@@ -101,7 +106,7 @@ export function useNoteActions({
       // second, auto-dismissing notice for the same failure.
       throw error;
     }
-  }, [userId, keys, notes, notesRef, setNotes, triggerCoalescedSync]);
+  }, [userId, keys, notes, notesRef, setNotes, triggerCoalescedSync, trackLocalWrite]);
 
   // Soft delete a note (move to Faded Notes)
   // Returns true on success, false on failure (for UI recovery in swipe gestures)
@@ -166,7 +171,7 @@ export function useNoteActions({
         prev.map((n) => (n.id === id ? { ...n, pinned } : n))
       );
       // Persist to IndexedDB, queue for sync
-      await toggleNotePinOffline(userId, id, pinned);
+      await trackLocalWrite(() => toggleNotePinOffline(userId, id, pinned));
     } catch (error) {
       console.error('Failed to toggle pin:', error);
       // Revert on error
@@ -174,7 +179,7 @@ export function useNoteActions({
         prev.map((n) => (n.id === id ? { ...n, pinned: !pinned } : n))
       );
     }
-  }, [userId, setNotes]);
+  }, [userId, setNotes, trackLocalWrite]);
 
 
   return { handleNoteUpdate, handleNoteDelete, handleTogglePin };
