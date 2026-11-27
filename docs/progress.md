@@ -892,3 +892,10 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   show/hide toggle on every password and passphrase field. `--radius-button: 8px` for
   every text button; `--radius-pill` removed; the Arrange row is underlined text;
   `src/test/buttonShape.test.ts` guards the shape.
+- **2026-11-26** — A new note no longer closes with "That note is no longer here."
+  `refreshFromSync` in `useNotesSync` read IndexedDB, decrypted the library, then
+  replaced the list. A note created during that read was dropped, and App's
+  `missingNoteId` closed it. The hook now counts every list change; a refresh whose
+  read predates a change re-reads (up to three times, then reschedules), and only the
+  latest refresh may apply. The same race could put back a note deleted by realtime or
+  an older copy of an edited note.
