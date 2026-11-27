@@ -15,9 +15,15 @@ const keyboardEditor = vi.hoisted(() => ({
   commands: { focus: vi.fn(), setContent: vi.fn() },
   isFocused: false,
   state: { selection: { empty: true, from: 1, to: 1 } },
-  chain: vi.fn(() => ({
-    extendMarkRange: vi.fn(() => ({ run: vi.fn() })),
-  })),
+  chain: vi.fn(() => {
+    const chain = {
+      extendMarkRange: vi.fn(() => chain),
+      setMeta: vi.fn(() => chain),
+      setContent: vi.fn(() => chain),
+      run: vi.fn(),
+    };
+    return chain;
+  }),
 }));
 const editorReadyControl = vi.hoisted(() => ({ current: true }));
 const keepMock = vi.hoisted(() => ({ keepReleasedDraft: vi.fn() }));

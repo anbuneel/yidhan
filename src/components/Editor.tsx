@@ -120,6 +120,14 @@ function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): bo
   return a !== null && b !== null && a.title === b.title && a.content === b.content;
 }
 
+// Puts another device's text in the editor without an undo step (issue #284).
+// Undo could otherwise bring back the replaced text, and autosave would write it
+// over that device's edit. Earlier undo steps are mapped through the replacement,
+// so undo cannot reach text from before it; typing after it undoes as normal.
+function applyRemoteContent(editor: TiptapEditor, content: string) {
+  editor.chain().setMeta('addToHistory', false).setContent(content, { emitUpdate: false }).run();
+}
+
 // An empty note: no title and no body beyond empty paragraphs. A body with an image
 // or a divider is not blank.
 function isBlank(title: string, content: string): boolean {
@@ -320,7 +328,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
   useEffect(() => {
     if (!editor || pendingEditorContentRef.current === null) return;
-    editor.commands.setContent(pendingEditorContentRef.current, { emitUpdate: false });
+    applyRemoteContent(editor, pendingEditorContentRef.current);
     pendingEditorContentRef.current = null;
   // note.content included so same-note remote updates also trigger this effect (not just note switches)
   }, [editor, note.id, note.content]);
@@ -1018,7 +1026,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     committedSnapshotRef.current = remoteUpdate;
     inFlightSnapshotRef.current = null;
     if (editor) {
-      editor.commands.setContent(remoteUpdate.content, { emitUpdate: false });
+      applyRemoteContent(editor, remoteUpdate.content);
     }
     setRemoteUpdate(null);
   }, [remoteUpdate, editor]);
