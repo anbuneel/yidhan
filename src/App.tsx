@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import { Suspense, lazy, useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { LibraryScreen } from './components/LibraryScreen';
 import { FadedNotesScreen } from './components/FadedNotesScreen';
@@ -41,7 +41,7 @@ import { useShareTarget } from './hooks/useShareTarget';
 import { useSettingsModalState } from './hooks/useSettingsModalState';
 import { heldSaves, useHeldSaves } from './stores/heldSaves';
 import { useLockAfterSaving } from './hooks/useLockAfterSaving';
-import { lazyWithRetry } from './utils/lazyWithRetry';
+import { HeldSavesBoundary } from './components/HeldSavesBoundary';
 import './App.css';
 
 interface AppProps {
@@ -55,8 +55,11 @@ interface AppProps {
   initialAuthModal?: 'login' | 'signup';
 }
 
-// The held-save notice is rare; it loads only while words are held (issue #288).
-const HeldSavesLayer = lazyWithRetry(() => import('./components/HeldSavesLayer'));
+// The held-save notice is rare, so it is not in the app shell (issue #288). It is
+// fetched when the vault opens, before any words can be held, and loaded with plain
+// `lazy`: lazyWithRetry may reload the page, which would wipe held words.
+const loadHeldSavesLayer = () => import('./components/HeldSavesLayer');
+const HeldSavesLayer = lazy(loadHeldSavesLayer);
 
 function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
   const libraryFooterRef = useRef<HTMLElement>(null);
@@ -352,6 +355,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
       return;
     }
     heldSaves.open();
+    void loadHeldSavesLayer().catch(() => {});
     return () => { heldSaves.close(); };
   }, [heldSavesOpen, heldSavesUserId]);
 
@@ -369,12 +373,14 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     setLockHeldBack(false);
     lockAnyway();
   };
-  const lockIfAllDealtWith = () => {
+  // Retry or Copy dealt with an entry. Once none are left, go ahead with the lock the
+  // writer asked for, saving first like Lock now: an open Editor may hold new words.
+  const lockIfAllDealtWith = async () => {
     if (!lockHeldBack || heldSaves.getSnapshot().length > 0) return;
-    setLockHeldBack(false);
-    lockAnyway();
+    if (await lockNow()) setLockHeldBack(false);
   };
   const heldSavesNotice = user && (heldSaveCount > 0 || lockHeldBack) ? (
+    <HeldSavesBoundary>
     <Suspense fallback={null}>
       <HeldSavesLayer
         userId={user.id}
@@ -388,10 +394,12 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
         hasOpenDraft={hasOpenDraft}
         lockBlocked={lockHeldBack}
         onLockAnyway={handleLockAnyway}
-        onDealtWith={lockIfAllDealtWith}
+        onDealtWith={() => { void lockIfAllDealtWith(); }}
+        onTryLockAgain={() => { void handleLockNow(); }}
         retryHeldSavesRef={retryHeldSavesRef}
       />
     </Suspense>
+    </HeldSavesBoundary>
   ) : null;
 
   // NoteCard owns inline recovery for pointer-triggered fades. The editor and

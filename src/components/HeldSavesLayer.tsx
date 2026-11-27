@@ -13,11 +13,13 @@ export interface HeldSavesLayerProps extends UseHeldSaveActionsOptions {
   onLockAnyway: () => void;
   /** Retry or Copy dealt with an entry. */
   onDealtWith: () => void;
+  /** Lock now again, when it was held back by saves still running. */
+  onTryLockAgain: () => void;
   /** Where App's locks find the retry for held saves. */
   retryHeldSavesRef: React.RefObject<() => Promise<boolean>>;
 }
 
-export default function HeldSavesLayer({ lockBlocked, onLockAnyway, onDealtWith, retryHeldSavesRef, ...options }: HeldSavesLayerProps) {
+export default function HeldSavesLayer({ lockBlocked, onLockAnyway, onDealtWith, onTryLockAgain, retryHeldSavesRef, ...options }: HeldSavesLayerProps) {
   const entries = useHeldSaves();
   const { retry, retryAll, copy } = useHeldSaveActions(options);
 
@@ -39,6 +41,7 @@ export default function HeldSavesLayer({ lockBlocked, onLockAnyway, onDealtWith,
       }}
       lockBlocked={lockBlocked}
       onLockAnyway={onLockAnyway}
+      onTryLockAgain={onTryLockAgain}
     />
   );
 }

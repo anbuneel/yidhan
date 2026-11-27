@@ -25,7 +25,7 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 **Why:** The fix for #288 puts a small amount of code in the signed-in app shell: the
 held-save store, the per-note save queue and the lock-after-saving hook. Locks run from
-the shell, so these cannot load on demand. The shell measured 329.7 KB gzip against a
+the shell, so these cannot load on demand. The shell measured 329.9 KB gzip against a
 329 KB limit.
 
 **Decision:** Raise `appShellJs.limitKB` to 330, the target. The budget file's rule

@@ -8,6 +8,7 @@ import { render, screen, fireEvent, act, renderHook } from '@testing-library/rea
 import { NoteEditorView } from './NoteEditorView';
 import { Editor } from './Editor';
 import { HeldSavesNotice } from './HeldSavesNotice';
+import { HeldSavesBoundary } from './HeldSavesBoundary';
 import { heldSaves, resetHeldSaves, useHeldSaves, type HeldSave } from '../stores/heldSaves';
 import { noteSaveQueue, resetNoteSaveQueue } from '../stores/noteSaveQueue';
 import { useHeldSaveActions } from '../hooks/useHeldSaveActions';
@@ -281,8 +282,9 @@ describe('held saves (issue #288)', () => {
     }));
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await flush();
-    // Copy waits while Retry runs.
-    expect(screen.getByRole('button', { name: 'Copy' })).toBeDisabled();
+    // A second Retry cannot start; Copy stays open, since it must not wait on saving.
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled();
     await act(async () => { finishKeep(); });
     await flush();
     expect(keepMock.keepReleasedDraft).toHaveBeenCalledTimes(1);
@@ -340,7 +342,10 @@ describe('retryHeldSave', () => {
 });
 
 describe('heldSaves store', () => {
-  beforeEach(() => resetHeldSaves());
+  beforeEach(() => {
+    resetHeldSaves();
+    resetNoteSaveQueue();
+  });
 
   it('replaces an instance\'s earlier entry and keeps other instances\' entries', () => {
     holdNow(heldEntry({ key: 'one', title: 'first' }));
@@ -355,6 +360,30 @@ describe('heldSaves store', () => {
     heldSaves.open();
     heldSaves.hold(heldEntry(), before);
     expect(heldSaves.getSnapshot()).toEqual([]);
+  });
+
+  it('runs two writes for one note in turn, never at once', async () => {
+    const events: string[] = [];
+    let finishFirst!: () => void;
+    const first = noteSaveQueue.run('note-a', () => {
+      events.push('first start');
+      return new Promise<void>((resolve) => { finishFirst = () => { events.push('first end'); resolve(); }; });
+    });
+    const second = noteSaveQueue.run('note-a', async () => { events.push('second start'); });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(events).toEqual(['first start']);
+    finishFirst();
+    await Promise.all([first, second]);
+    expect(events).toEqual(['first start', 'first end', 'second start']);
+  });
+
+  it('never offers a waiting draft from before a lock to a new Editor', () => {
+    noteSaveQueue.setPendingDraft('note-a', { title: 'Before lock', content: '' });
+    expect(noteSaveQueue.pendingDraft('note-a')?.title).toBe('Before lock');
+    heldSaves.close();
+    heldSaves.open();
+    expect(noteSaveQueue.pendingDraft('note-a')).toBeUndefined();
   });
 
   it('releases only the revision it names', () => {
@@ -416,9 +445,10 @@ describe('useLockAfterSaving', () => {
   it('auto-lock saves first, then drops held words and locks', async () => {
     const { result, lockVault, flushEditor, retry } = setup(false);
     holdNow(heldEntry());
-    act(() => result.current.lockVaultAfterSaving('auto-lock'));
+    let locking!: Promise<void>;
+    act(() => { locking = result.current.lockVaultAfterSaving('auto-lock'); });
     expect(lockVault).not.toHaveBeenCalled();
-    await act(async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); });
+    await act(async () => { await locking; });
     expect(flushEditor).toHaveBeenCalled();
     expect(retry).toHaveBeenCalled();
     expect(lockVault).toHaveBeenCalledWith('auto-lock');
@@ -447,9 +477,9 @@ describe('useLockAfterSaving', () => {
       const { result, lockVault } = setup();
       holdNow(heldEntry());
       noteSaveQueue.track(new Promise<boolean>(() => {}));
-      act(() => result.current.lockVaultAfterSaving('auto-lock'));
+      act(() => { void result.current.lockVaultAfterSaving('auto-lock'); });
       // A second idle tick while saving does not start another round.
-      act(() => result.current.lockVaultAfterSaving('auto-lock'));
+      act(() => { void result.current.lockVaultAfterSaving('auto-lock'); });
       await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
       expect(lockVault).toHaveBeenCalledTimes(1);
       expect(lockVault).toHaveBeenCalledWith('auto-lock');
@@ -476,9 +506,24 @@ describe('useLockAfterSaving', () => {
   it('sign-out drops held words and locks at once', () => {
     const { result, lockVault, flushEditor } = setup();
     holdNow(heldEntry());
-    act(() => result.current.lockVaultAfterSaving('sign-out'));
+    act(() => { void result.current.lockVaultAfterSaving('sign-out'); });
     expect(lockVault).toHaveBeenCalledWith('sign-out');
     expect(flushEditor).not.toHaveBeenCalled();
     expect(heldSaves.getSnapshot()).toEqual([]);
+  });
+});
+
+describe('HeldSavesBoundary', () => {
+  it('says words are not saved when the notice cannot load', () => {
+    function Broken(): never {
+      throw new Error('Failed to fetch dynamically imported module');
+    }
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      render(<HeldSavesBoundary><Broken /></HeldSavesBoundary>);
+      expect(screen.getByRole('alert')).toHaveTextContent('Some words are not saved');
+    } finally {
+      vi.mocked(console.error).mockRestore();
+    }
   });
 });

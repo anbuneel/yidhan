@@ -9,6 +9,8 @@ export interface HeldSavesNoticeProps {
   /** "Lock now" was held back because of these entries. */
   lockBlocked?: boolean;
   onLockAnyway?: () => void;
+  /** Lock now again; offered when saves were still running and nothing is held. */
+  onTryLockAgain?: () => void;
 }
 
 const buttonBase = 'rounded-[var(--radius-button)] px-3 py-1.5 text-sm font-medium transition-all duration-200';
@@ -18,7 +20,7 @@ const buttonBase = 'rounded-[var(--radius-button)] px-3 py-1.5 text-sm font-medi
  * library and the editor, above the editor's own "Not saved" banner, until Retry or
  * Copy deals with each one.
  */
-export function HeldSavesNotice({ entries, onRetry, onCopy, lockBlocked = false, onLockAnyway }: HeldSavesNoticeProps) {
+export function HeldSavesNotice({ entries, onRetry, onCopy, lockBlocked = false, onLockAnyway, onTryLockAgain }: HeldSavesNoticeProps) {
   const [copyFailedKey, setCopyFailedKey] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   if (entries.length === 0 && !lockBlocked) return null;
@@ -36,6 +38,10 @@ export function HeldSavesNotice({ entries, onRetry, onCopy, lockBlocked = false,
               ? 'Your notes are still unlocked. These words are not saved yet.'
               : 'Your notes are still unlocked. Some words are still being saved.'}
           </span>
+          {entries.length === 0 && onTryLockAgain && (
+            <button type="button" onClick={onTryLockAgain} className={buttonBase}
+              style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}>Try again</button>
+          )}
           <button type="button" onClick={onLockAnyway} className={buttonBase}
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-destructive-text)', background: 'var(--color-destructive)' }}>Lock anyway</button>
         </div>
@@ -47,14 +53,14 @@ export function HeldSavesNotice({ entries, onRetry, onCopy, lockBlocked = false,
             {entry.detail && <span className="block">{entry.detail}</span>}
             {copyFailedKey === entry.key && <span className="block">Could not copy. Retry keeps them as a note.</span>}
           </span>
-          <button type="button" disabled={busyKey !== null}
+          <button type="button" disabled={busyKey === entry.key}
             onClick={async () => {
               setBusyKey(entry.key);
               try { await onRetry(entry.key); } finally { setBusyKey(null); }
             }}
             className={buttonBase}
             style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}>Retry</button>
-          <button type="button" disabled={busyKey !== null}
+          <button type="button"
             onClick={async () => {
               setCopyFailedKey((await onCopy(entry.key)) ? null : entry.key);
             }}

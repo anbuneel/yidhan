@@ -37,6 +37,10 @@ export interface HeldSaveActions {
 }
 
 const RETRY_FAILED = 'Still not saved. Try again, or copy the words.';
+/** How long Retry waits for an earlier write of the note before it gives up. */
+const RETRY_WAIT_MS = 5000;
+
+class RetryTimedOut extends Error {}
 
 export function useHeldSaveActions({
   userId,
@@ -60,14 +64,27 @@ export function useHeldSaveActions({
     try {
       // Let any write for this note finish first. The list then shows what is stored,
       // not an optimistic copy that may still fail.
-      await noteSaveQueue.waitIdle(entry.noteId);
+      const idle = await Promise.race([
+        noteSaveQueue.waitIdle(entry.noteId).then(() => true),
+        new Promise<false>((resolve) => setTimeout(() => resolve(false), RETRY_WAIT_MS)),
+      ]);
+      if (!idle) throw new RetryTimedOut();
       if (!heldSaves.isCurrent(fromSession)) return false;
       await retryHeldSave(entry, {
         current: notesRef.current.find((n) => n.id === entry.noteId),
         // An open Editor with its own unsaved words on this note counts as a change:
         // saving over the stored copy would race those words.
         openDraft: hasOpenDraft(entry.noteId),
-        saveOver: (note) => noteSaveQueue.run(note.id, () => saveNote(note)),
+        saveOver: (note) => noteSaveQueue.run(note.id, () => {
+          // The vault may have locked, or the note changed, while this waited its turn.
+          // A change makes this attempt fail; the next Retry keeps a copy instead.
+          if (!heldSaves.isCurrent(fromSession)) throw new VaultLockedSaveError();
+          const now = notesRef.current.find((n) => n.id === note.id);
+          if (!now || now.title !== entry.baseTitle || now.content !== entry.baseContent) {
+            throw new Error('The note changed while Retry waited.');
+          }
+          return saveNote(note);
+        }),
         keepAsCopy: async (held, original) => {
           if (!heldSaves.isCurrent(fromSession)) throw new VaultLockedSaveError();
           const kept = await trackLocalWrite(() =>
@@ -113,8 +130,7 @@ export function useHeldSaveActions({
   }, [retry]);
 
   const copy = useCallback(async (key: string): Promise<boolean> => {
-    // A retry in progress decides the entry's fate first.
-    await retriesRef.current.get(key);
+    // Copy never waits on the save path: it is the way out when saving hangs.
     const entry = heldSaves.get(key);
     if (!entry) return true;
     try {

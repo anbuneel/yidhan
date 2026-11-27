@@ -20,7 +20,8 @@ export interface UseSessionGuardsOptions {
   isUnlocked: boolean;
   /** The new-account setup screen is open. A new account starts on the default preset. */
   isAccountSetup?: boolean;
-  lockVault: (reason: 'auto-lock' | 'manual' | 'sign-out') => void;
+  /** May save first (issue #288); resolves once the vault is locked. */
+  lockVault: (reason: 'auto-lock' | 'manual' | 'sign-out') => void | Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -75,8 +76,8 @@ export function useSessionGuards({
   // Vault auto-lock timer (separate from session timeout)
   useIdleTimer({
     minutes: vaultSettings.settings.autoLockMinutes,
-    onIdle: () => {
-      lockVault('auto-lock');
+    onIdle: async () => {
+      await lockVault('auto-lock');
       toast('Vault locked after inactivity', {
         icon: '🔒',
         duration: 3000,

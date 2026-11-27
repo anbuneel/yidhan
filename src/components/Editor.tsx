@@ -741,7 +741,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       if (kept) {
         if (lastTitle === kept.title && lastContent === kept.content) return;
         const fromSession = heldSaves.session();
-        onUpdateRef.current({ ...kept.note, title: lastTitle, content: lastContent, updatedAt: new Date() })
+        // In the per-note queue and tracked, like every other save: the kept note's new
+        // Editor may save too, and a lock waits for this one.
+        void noteSaveQueue.track(noteSaveQueue.run(kept.note.id, () => {
+          if (heldSaves.session() !== fromSession) throw new VaultLockedSaveError();
+          return onUpdateRef.current({ ...kept.note, title: lastTitle, content: lastContent, updatedAt: new Date() });
+        }))
           .catch((error: unknown) => {
             console.error('Failed to save words typed during Keep:', error);
             if (error instanceof VaultLockedSaveError) return;

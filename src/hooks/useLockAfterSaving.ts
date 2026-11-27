@@ -23,8 +23,8 @@ import { noteSaveQueue } from '../stores/noteSaveQueue';
 const SAVE_BEFORE_LOCK_MS = 3000;
 
 export interface LockAfterSaving {
-  /** Drop-in for `lockVault`, for the idle and session guards. */
-  lockVaultAfterSaving: (reason?: LockReason) => void;
+  /** Drop-in for `lockVault`, for the idle and session guards. Resolves once locked. */
+  lockVaultAfterSaving: (reason?: LockReason) => Promise<void>;
   /** "Lock now". Resolves false when unsaved words kept the vault open. */
   lockNow: () => Promise<boolean>;
   /** "Lock anyway": drop held words and lock. */
@@ -37,13 +37,11 @@ function within<T>(ms: number, work: Promise<T>, fallback: T): Promise<T> {
   return Promise.race([work, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
 }
 
-function closeAndReport(): void {
+/** Close the store and say if words were dropped: held ones, or ones not saved in time. */
+function closeAndReport(allSaved: boolean): void {
   const dropped = heldSaves.close();
-  if (dropped > 0) {
-    toast.error(dropped === 1
-      ? 'One note had words that could not be saved. They were not kept.'
-      : `${dropped} notes had words that could not be saved. They were not kept.`);
-  }
+  noteSaveQueue.clearPendingDrafts();
+  if (dropped > 0 || !allSaved) toast.error('Some words could not be saved before locking.');
 }
 
 export function useLockAfterSaving(lockVault: (reason?: LockReason) => void): LockAfterSaving {
@@ -63,31 +61,30 @@ export function useLockAfterSaving(lockVault: (reason?: LockReason) => void): Lo
     return within(SAVE_BEFORE_LOCK_MS, work, false);
   }, []);
 
-  const lockVaultAfterSaving = useCallback((reason: LockReason = 'manual') => {
+  const lockVaultAfterSaving = useCallback(async (reason: LockReason = 'manual') => {
     if (reason !== 'auto-lock') {
-      heldSaves.close();
+      closeAndReport(true);
       lockVaultRef.current(reason);
       return;
     }
     if (autoLockingRef.current) return;
     autoLockingRef.current = true;
-    void saveFirst().catch(() => false).finally(() => {
-      autoLockingRef.current = false;
-      closeAndReport();
-      lockVaultRef.current('auto-lock');
-    });
+    const allSaved = await saveFirst().catch(() => false);
+    autoLockingRef.current = false;
+    closeAndReport(allSaved);
+    lockVaultRef.current('auto-lock');
   }, [saveFirst]);
 
   const lockNow = useCallback(async (): Promise<boolean> => {
     const saved = await saveFirst().catch(() => false);
     if (!saved || heldSaves.getSnapshot().length > 0) return false;
-    heldSaves.close();
+    closeAndReport(true);
     lockVaultRef.current('manual');
     return true;
   }, [saveFirst]);
 
   const lockAnyway = useCallback(() => {
-    heldSaves.close();
+    closeAndReport(true);
     lockVaultRef.current('manual');
   }, []);
 

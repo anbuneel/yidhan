@@ -10,13 +10,20 @@
  * - Every save still running, including ones from Editors already gone, so a lock
  *   can wait for them before it decides.
  */
+import { heldSaves } from './heldSaves';
+
 export interface PendingDraft {
   title: string;
   content: string;
 }
 
+interface SessionDraft extends PendingDraft {
+  session: number;
+}
+
 const inFlight = new Map<string, Promise<boolean>>();
-const pendingDrafts = new Map<string, PendingDraft>();
+const pendingDrafts = new Map<string, SessionDraft>();
+const draftKeys = new WeakMap<PendingDraft, SessionDraft>();
 const running = new Set<Promise<unknown>>();
 
 function timeout(ms: number): Promise<'timeout'> {
@@ -48,7 +55,10 @@ export const noteSaveQueue = {
 
   /** Run a write for this note in turn, after any in flight. */
   async run<T>(noteId: string, write: () => Promise<T>): Promise<T> {
-    await noteSaveQueue.waitIdle(noteId);
+    // Check and take the slot in one synchronous step, so no other write slips in.
+    for (let pending = inFlight.get(noteId); pending; pending = inFlight.get(noteId)) {
+      await pending.catch(() => false);
+    }
     let done!: (ok: boolean) => void;
     const slot = new Promise<boolean>((resolve) => { done = resolve; });
     inFlight.set(noteId, slot);
@@ -64,15 +74,32 @@ export const noteSaveQueue = {
     }
   },
 
+  /**
+   * The newest draft waiting to be written for this note, from the current vault
+   * session only. A draft from before a lock is decrypted text from a vault since
+   * closed; it is dropped, never shown again.
+   */
   pendingDraft(noteId: string): PendingDraft | undefined {
-    return pendingDrafts.get(noteId);
+    const draft = pendingDrafts.get(noteId);
+    if (!draft) return undefined;
+    if (!heldSaves.isCurrent(draft.session)) {
+      pendingDrafts.delete(noteId);
+      return undefined;
+    }
+    return { title: draft.title, content: draft.content };
   },
   setPendingDraft(noteId: string, draft: PendingDraft): void {
-    pendingDrafts.set(noteId, draft);
+    const stored = { ...draft, session: heldSaves.session() };
+    draftKeys.set(draft, stored);
+    pendingDrafts.set(noteId, stored);
   },
   /** Clears the draft only if it is still this one. */
   clearPendingDraft(noteId: string, draft: PendingDraft): void {
-    if (pendingDrafts.get(noteId) === draft) pendingDrafts.delete(noteId);
+    if (pendingDrafts.get(noteId) === draftKeys.get(draft)) pendingDrafts.delete(noteId);
+  },
+  /** Vault locked: forget every waiting draft. */
+  clearPendingDrafts(): void {
+    pendingDrafts.clear();
   },
 
   /** Count a save as running until it settles. Returns the same promise. */
