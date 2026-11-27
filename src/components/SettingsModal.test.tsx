@@ -64,7 +64,7 @@ function openSecurityTab({ unlocked = true } = {}) {
       onPersistToLocal={onPersistToLocal}
     />,
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Security' }));
+  fireEvent.click(screen.getByRole('tab', { name: 'Security' }));
 }
 
 const radio = (label: string) => screen.getByRole('radio', { name: new RegExp('^' + label) });
@@ -262,5 +262,89 @@ describe('SettingsModal Security tab', () => {
 
     expect(screen.getByText(/Make a recovery key first/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Go to Recovery key' })).not.toBeInTheDocument();
+  });
+});
+
+describe('SettingsModal tabs', () => {
+  beforeEach(() => {
+    makeSettings({ autoLockMinutes: 60, rememberBrowser: false }, 10080);
+    mockUser.app_metadata = { provider: 'email' };
+  });
+
+  function renderSettings() {
+    render(
+      <SettingsModal
+        isOpen
+        onClose={vi.fn()}
+        theme="dark"
+        onThemeToggle={vi.fn()}
+        onLetGoClick={vi.fn()}
+        sessionSettings={sessionSettings}
+        vaultSettings={vaultSettings}
+        isVaultUnlocked
+      />,
+    );
+  }
+
+  it('uses the tabs pattern: one selected tab, in the tab order alone, controlling the panel', () => {
+    renderSettings();
+    const tablist = screen.getByRole('tablist', { name: 'Settings sections' });
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Profile', 'Password', 'Security', 'Editor']);
+    expect(tablist).toContainElement(tabs[0]);
+    expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
+    expect(tabs[0]).toHaveAttribute('tabindex', '0');
+    for (const tab of tabs.slice(1)) {
+      expect(tab).toHaveAttribute('aria-selected', 'false');
+      expect(tab).toHaveAttribute('tabindex', '-1');
+    }
+    const panel = screen.getByRole('tabpanel');
+    expect(tabs[0]).toHaveAttribute('aria-controls', panel.id);
+    expect(panel).toHaveAttribute('aria-labelledby', tabs[0].id);
+  });
+
+  it('moves and selects with the arrow keys, wrapping, and with Home and End', () => {
+    renderSettings();
+    const tab = (name: string) => screen.getByRole('tab', { name });
+    tab('Profile').focus();
+
+    fireEvent.keyDown(tab('Profile'), { key: 'ArrowRight' });
+    expect(tab('Password')).toHaveFocus();
+    expect(tab('Password')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', tab('Password').id);
+
+    fireEvent.keyDown(tab('Password'), { key: 'End' });
+    expect(tab('Editor')).toHaveFocus();
+    fireEvent.keyDown(tab('Editor'), { key: 'ArrowRight' });
+    expect(tab('Profile')).toHaveFocus();
+    fireEvent.keyDown(tab('Profile'), { key: 'ArrowLeft' });
+    expect(tab('Editor')).toHaveFocus();
+    fireEvent.keyDown(tab('Editor'), { key: 'Home' });
+    expect(tab('Profile')).toHaveFocus();
+    expect(tab('Profile')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('ignores other keys and keys typed inside the panel', () => {
+    renderSettings();
+    const profile = screen.getByRole('tab', { name: 'Profile' });
+    profile.focus();
+    fireEvent.keyDown(profile, { key: 'ArrowDown' });
+    fireEvent.keyDown(profile, { key: 'a' });
+    expect(profile).toHaveAttribute('aria-selected', 'true');
+
+    // Arrow keys in a text field move the caret, not the tabs.
+    const field = screen.getByRole('tabpanel').querySelector('input:not([readonly]), input')!;
+    fireEvent.keyDown(field, { key: 'ArrowRight' });
+    expect(profile).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('skips the Password tab for an OAuth account when moving by arrow', () => {
+    mockUser.app_metadata = { provider: 'google' };
+    renderSettings();
+    expect(screen.queryByRole('tab', { name: 'Password' })).not.toBeInTheDocument();
+    const profile = screen.getByRole('tab', { name: 'Profile' });
+    profile.focus();
+    fireEvent.keyDown(profile, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Security' })).toHaveFocus();
   });
 });

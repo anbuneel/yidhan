@@ -573,6 +573,49 @@ describe('ChapteredLibrary', () => {
     });
   });
 
+  describe('empty-state announcements', () => {
+    const someNotes = [createMockNote({ id: 'a' }), createMockNote({ id: 'b' })];
+    const announcer = () => screen.getByTestId('library-announcer');
+
+    it('is a polite live region that says nothing on first load, even when the library is empty', () => {
+      const { rerender } = render(<ChapteredLibrary {...defaultProps} isLoading />);
+      expect(announcer()).toHaveAttribute('aria-live', 'polite');
+      rerender(<ChapteredLibrary {...defaultProps} />);
+      expect(screen.getByText('Your notes await')).toBeInTheDocument();
+      expect(announcer()).toBeEmptyDOMElement();
+    });
+
+    it('says nothing when the first state is already an empty search', () => {
+      render(<ChapteredLibrary {...defaultProps} isSearching searchQuery="nothing" />);
+      expect(announcer()).toBeEmptyDOMElement();
+    });
+
+    it('announces a search that empties the list, and clears when results return', () => {
+      const { rerender } = render(<ChapteredLibrary {...defaultProps} notes={someNotes} />);
+      const region = announcer();
+      rerender(<ChapteredLibrary {...defaultProps} notes={[]} isSearching searchQuery="zzz" />);
+      // The same node stays mounted, so screen readers hear the change.
+      expect(announcer()).toBe(region);
+      expect(region).toHaveTextContent('No thoughts found. Try a different search.');
+
+      rerender(<ChapteredLibrary {...defaultProps} notes={someNotes} isSearching searchQuery="a" />);
+      expect(announcer()).toBe(region);
+      expect(region).toBeEmptyDOMElement();
+    });
+
+    it('does not announce a search that still has results', () => {
+      const { rerender } = render(<ChapteredLibrary {...defaultProps} notes={someNotes} />);
+      rerender(<ChapteredLibrary {...defaultProps} notes={someNotes.slice(0, 1)} isSearching searchQuery="a" />);
+      expect(announcer()).toBeEmptyDOMElement();
+    });
+
+    it('announces the library becoming empty after the last note goes', () => {
+      const { rerender } = render(<ChapteredLibrary {...defaultProps} notes={someNotes} />);
+      rerender(<ChapteredLibrary {...defaultProps} notes={[]} />);
+      expect(announcer()).toHaveTextContent('Your notes await.');
+    });
+  });
+
   // Note: IntersectionObserver behavior is tested implicitly via the global mock in test/setup.ts
   // The nav click tests verify scroll-to-chapter behavior which relies on the observer updating currentChapter
 });

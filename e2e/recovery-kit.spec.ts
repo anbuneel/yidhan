@@ -52,7 +52,7 @@ async function openSecuritySettings(page: Page) {
   if (!(await settings.isVisible())) {
     await openSettings(page);
   }
-  await settings.getByRole('button', { name: 'Security', exact: true }).click();
+  await settings.getByRole('tab', { name: 'Security', exact: true }).click();
 }
 
 test.describe('Recovery kit', () => {

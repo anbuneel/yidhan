@@ -283,9 +283,9 @@ for (const theme of THEMES) {
         await expect(dialog).toBeVisible();
         all['settings profile'] = await scan(page, testInfo, 'settings profile', label);
         motion.settings = await runningAnimations(page);
-        await dialog.getByRole('button', { name: 'Password', exact: true }).click();
+        await dialog.getByRole('tab', { name: 'Password', exact: true }).click();
         all['settings password'] = await scan(page, testInfo, 'settings password', label);
-        await dialog.getByRole('button', { name: 'Security', exact: true }).click();
+        await dialog.getByRole('tab', { name: 'Security', exact: true }).click();
         all['settings security'] = await scan(page, testInfo, 'settings security', label);
 
         // What axe cannot see: Tab stays in the open dialog, and Escape closes it.
