@@ -20,7 +20,9 @@ Bugs found during the reviews, outside the 70 items:
 
 - Issue #285, a running save reported its status on the next note. Fixed by PR #287,
   `909c11b`, 2026-11-26.
-- Issue #284, undo can overwrite another device's edit. Open.
+- Issue #284, undo can overwrite another device's edit. Fixed by PR #306, `bddef59`,
+  2026-11-27, after a multi-agent review. "Load changes" now saves the writer's unsaved
+  words as a new note first.
 - Issue #288, unsaved words can be lost when leaving a note. Fixed by PR #300,
   `7fd26dc`, 2026-11-27, after a multi-agent review. Design in
   `docs/archive/2026-11-26-flush-on-leave.md`.
@@ -34,8 +36,7 @@ verified by anyone: the new landing page and share image on real devices.
 
 Left to do, in order:
 
-1. Issue #284.
-2. Track F.
+1. Track F.
 
 The 27 items chosen from the 2026-11-24 launch review, grouped into tracks by the files
 they touch. The review merged three passes (Claude, Gemini, Codex) over the live site
