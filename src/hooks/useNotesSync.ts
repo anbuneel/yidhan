@@ -549,6 +549,7 @@ export function useNotesSync({
     reportRealtimeDisplayFailure,
     reportRealtimePersistenceFailure,
     scheduleFadedNotesCountRefresh,
+    setNotes,
   ]);
 
   // --- Tags: fetch and realtime ---------------------------------------------
