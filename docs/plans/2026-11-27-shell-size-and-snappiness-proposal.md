@@ -113,7 +113,15 @@ reviews it. The two models work in separate worktrees.
 | 5. Search index | A4, C20 | Gemini | Opus | `useNoteSearch.ts` only. No sync-engine code. |
 | 6. Editor typing | C11, with the #288 cases as regression tests | Opus | Gemini | Save path. Multi-agent review. Last, alone. |
 
-PR 0 lands first. Then PR 1 and PR 2 run in parallel; their files are disjoint. Then PR 3
+**PR 0 landed 2026-11-27 (#309).** Baseline on a Windows dev box, 4x throttle: boot to
+library 1,231 ms, note open 910 ms cold and 573 ms warm, typing p95 83 ms with 45 long
+tasks over 60 keys on a rich 2,500-word note. Two things follow. PR 6 stays: per-keystroke
+work is real on a realistic note, but it must profile first, since word-count metrics and
+three toolbar instances also run per key. And the unlock and signed-in library-load cases
+have not run, so PR 3 has no baseline yet and the C6 gate in PR 4 is still open; both
+need one run with the `E2E_TEST_*` credentials.
+
+Next: PR 1 and PR 2 run in parallel; their files are disjoint. Then PR 3
 and PR 5 in parallel, then PR 4, then PR 6.
 
 No PR unless a measurement justifies it: A6, A8, C14, C18.

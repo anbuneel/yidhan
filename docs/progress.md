@@ -967,3 +967,7 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   of 330 with a library copy, so the keys live only in the lazy Editor chunk. No native Android shortcut:
   a warm start would need in-page navigation through `@capacitor/app` and a device
   test. Item 47 (share target) still waits on the service-worker test harness.
+- **2026-11-27** — Timing harness for production builds, item D1 of the shell-size and
+  snappiness proposal (#309). `npm run e2e:perf` times cold boot, note open and typing
+  under 4x CPU throttle, in its own CI job with loose ceilings. The unlock and signed-in
+  library-load cases are built but have not run: they need the `E2E_TEST_*` credentials.
