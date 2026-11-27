@@ -356,6 +356,30 @@ describe('undo after a remote update (issue #284)', () => {
     expect(save).not.toHaveBeenCalled();
   });
 
+  it('"Load changes" waits for a save already running, and loads nothing if it landed', async () => {
+    let finishSave!: () => void;
+    await mount();
+
+    typeText(' unsaved');
+    save.mockReturnValueOnce(new Promise<void>((resolve) => { finishSave = resolve; }));
+    await act(async () => { vi.advanceTimersByTime(AUTOSAVE_MS + 50); });
+    expect(savedContents(save)).toEqual(['<p>Alpha unsaved</p>']);
+    // The remote copy arrives while that save is still running.
+    api.current!.remote('<p>Remote words</p>');
+    expect(screen.getByText('Updated on another device')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Load changes'));
+    await waitFor(() => expect(keep.keepReleasedDraft).toHaveBeenCalled());
+    await act(async () => { await Promise.resolve(); });
+    // Still waiting on the save: nothing replaced yet.
+    expect(editor().getText()).toBe('Alpha unsaved');
+
+    await act(async () => { finishSave(); await Promise.resolve(); await Promise.resolve(); });
+    // The save wrote the writer's words, so loading now would leave the screen and
+    // the stored note apart. The screen keeps their words.
+    expect(editor().getText()).toBe('Alpha unsaved');
+  });
+
   it('"Keep mine" leaves the writer\'s text and its undo history alone', async () => {
     await mount();
 

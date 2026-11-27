@@ -1033,33 +1033,37 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // bring them back (issue #284), so keep them as a new note first. If that fails,
     // nothing is replaced and the banner stays.
     const dropped = { title, content };
+    const committedAtStart = committedSnapshotRef.current;
     const worthKeeping = !isBlank(dropped.title, dropped.content)
       && !(dropped.title === incoming.title && dropped.content === incoming.content);
-    if (worthKeeping) {
-      loadingRemoteRef.current = true;
-      setIsLoadingRemote(true);
-      const committedAtStart = committedSnapshotRef.current;
-      try {
+    loadingRemoteRef.current = true;
+    setIsLoadingRemote(true);
+    try {
+      if (worthKeeping) {
         const suffix = ' (my version)';
         const copyTitle = (dropped.title.slice(0, MAX_NOTE_TITLE_LENGTH - suffix.length).replace(/[\uD800-\uDBFF]$/, '') + suffix).trim();
         const kept = await keepReleasedDraft(userId, vaultKeys, copyTitle, dropped.content, { ...note, pinned: false }, tags, 'Your version was kept as a new note.');
         onKeptReplacedDraft?.(kept);
-      } catch (error) {
-        console.error('Failed to keep the replaced draft as a new note:', error);
-        toast.error('Your version could not be kept, so nothing was replaced.');
-        return;
-      } finally {
-        loadingRemoteRef.current = false;
-        if (mountedRef.current) setIsLoadingRemote(false);
       }
-      if (!mountedRef.current) return;
-      // Words typed while the copy was written are not in it, and a save that was
-      // already in flight may have landed. Either way, leave the screen as it is.
-      if (draftRef.current.title !== dropped.title || draftRef.current.content !== dropped.content
-        || committedSnapshotRef.current !== committedAtStart) {
-        toast('The other device\'s version was not loaded, because your note changed meanwhile.');
-        return;
-      }
+      // A save already running would land after the remote text and write the old
+      // words over it. Wait for it; the check below sees what it changed.
+      if (inFlightSaveRef.current) await inFlightSaveRef.current;
+    } catch (error) {
+      // The words stay on screen, and autosave resumes over the remote edit (#307).
+      console.error('Failed to keep the replaced draft as a new note:', error);
+      toast.error('Your version could not be kept, so nothing was replaced.');
+      return;
+    } finally {
+      loadingRemoteRef.current = false;
+      if (mountedRef.current) setIsLoadingRemote(false);
+    }
+    if (!mountedRef.current) return;
+    // Words typed while the copy was written are not in it, and a save may have
+    // landed. Either way, leave the screen as it is. A tag-only change is fine.
+    if (draftRef.current.title !== dropped.title || draftRef.current.content !== dropped.content
+      || !sameTitleAndContent(committedSnapshotRef.current, committedAtStart)) {
+      toast('The other device\'s version was not loaded, because your note changed meanwhile.');
+      return;
     }
     setTitle(incoming.title);
     setContent(incoming.content);
