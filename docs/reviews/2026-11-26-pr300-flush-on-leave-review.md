@@ -5,15 +5,15 @@ balanced, decisions deferred, no required reviewer.
 
 ## Reviewers
 
-| Reviewer | Independence | Round 1 | Round 2 | Round 3 |
-|---|---|---|---|---|
-| primary-native | primary | ran | ran | ran |
-| lens: code-reviewer | native | ran | ran | ran |
-| lens: silent-failure-hunter | native | ran | ran | ran |
-| lens: type-design-analyzer | native | ran | ran | ran |
-| Codex CLI 0.166.0 | independent | ran | ran | ran |
-| GitHub: chatgpt-codex-connector, claude[bot] | independent | polled | polled | polled |
-| Claude CLI | same family | skipped | skipped | skipped |
+| Reviewer | Independence | R1 | R2 | R3 | R4 | R5 |
+|---|---|---|---|---|---|---|
+| primary-native | primary | ran | ran | ran | ran | ran |
+| lens: code-reviewer | native | ran | ran | ran | ran | ran |
+| lens: silent-failure-hunter | native | ran | ran | ran | ran | ran |
+| lens: type-design-analyzer | native | ran | ran | ran | ran | ran |
+| Codex CLI 0.166.0 | independent | ran | ran | ran | failed: usage limit | skipped |
+| GitHub: chatgpt-codex-connector, claude[bot] | independent | polled | polled | polled | polled | polled |
+| Claude CLI | same family | skipped | skipped | skipped | skipped | skipped |
 
 ## Round 1 findings and dispositions
 
@@ -75,8 +75,35 @@ All round-2 fixes confirmed. New findings:
 | 36 | code-reviewer | The deferred lock can fire while the writer types in a note | agree: dropped when an Editor is open |
 | 37 | silent-failure | Retry's 5s cap covers only the first wait | defer: Copy and the lock stay bounded |
 
-Fix commit: see the PR history after `d2c1838`. The per-note queue also left the app
-shell (running saves are counted in the held-save store) to stay inside the 330 KB budget.
+Fix commit: `e74cb8f`. The per-note queue also left the app shell (running saves are
+counted in the held-save store) to stay inside the 330 KB budget.
+
+## Round 4 (verification of e74cb8f)
+
+All round-3 fixes confirmed by the three agents. Codex hit its usage limit and did not
+run.
+
+| # | Source | Finding | Disposition |
+|---|---|---|---|
+| 38 | silent-failure | An older save that succeeds late releases a released note's newer held words | agree: a save releases only the entry held before its write started |
+| 39 | silent-failure, code-reviewer, type-design | The fallback Copy does not say whether it worked | agree: "Copied." or "Could not copy." |
+| 40 | silent-failure | A pending lock dropped because a note is open says nothing | agree: toast |
+
+Fix commit: `74f2d2b`.
+
+## Round 5 (verification of 74f2d2b)
+
+All round-4 fixes confirmed; code-reviewer found nothing new. One finding, raised by two
+reviewers:
+
+| # | Source | Finding | Disposition |
+|---|---|---|---|
+| 41 | silent-failure, type-design | "Copied." stays after newer words are held | agree: shown only while the held revisions match the ones copied |
+
+Fixed in the final commit. Round 5 is the review's cap, so this fix was not re-reviewed;
+it has its own test.
+
+Status: converged at the round cap. Deferred items: #301.
 
 ## Needs your call
 
@@ -89,19 +116,19 @@ the design in the PR. Flipping it to ACTIVE would also need another ACTIVE plan 
 
 ### Deferred
 
-**19. Safe error text on held entries.** Reviewer: pass through messages known to be
+**19. Safe error text on held entries (#301).** Reviewer: pass through messages known to be
 safe, such as the locked-note refusal. Primary: worth doing, but it needs a typed error
 for the locked-note refusal in `useNoteActions`; small follow-up.
 
-**20. A save waits forever behind a hung earlier save.** Reviewer: put a time limit on
+**20. A save waits forever behind a hung earlier save (#301).** Reviewer: put a time limit on
 the wait and show "Not saved". Primary: the same unbounded wait existed before within one
 Editor; a hung IndexedDB write is a wider problem than this PR. Locks are bounded now.
 
-**37. Retry's time limit.** Reviewer: put the whole retry under the 5s cap. Primary: a
+**37. Retry's time limit (#301).** Reviewer: put the whole retry under the 5s cap. Primary: a
 slow save that later succeeds would be reported as failed. Copy and the lock path are
 already bounded, so the words can always be taken out.
 
-**21. Notice on entry screens.** Reviewer: render it for every signed-in, unlocked view.
+**21. Notice on entry screens (#301).** Reviewer: render it for every signed-in, unlocked view.
 Primary: held entries stay in the store and show again in the library; only an
 auto-lock while on a legal page would drop them unseen, and that drops them with a toast.
 

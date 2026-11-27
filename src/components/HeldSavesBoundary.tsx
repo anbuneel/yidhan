@@ -1,6 +1,10 @@
 import { Component, type ReactNode } from 'react';
 import { heldSaves } from '../stores/heldSaves';
 
+function heldRevisions(): string {
+  return heldSaves.getSnapshot().map((e) => e.revision).join(',');
+}
+
 interface Props {
   children: ReactNode;
   onLockAnyway: () => void;
@@ -8,7 +12,8 @@ interface Props {
 
 interface State {
   failed: boolean;
-  copied?: boolean;
+  /** The held revisions last copied, or false when the copy failed. */
+  copied?: string | false;
 }
 
 /**
@@ -25,10 +30,11 @@ export class HeldSavesBoundary extends Component<Props, State> {
     const text = heldSaves.getSnapshot()
       .map((e) => `${e.title}\n\n${e.content.replace(/<[^>]*>/g, ' ')}`)
       .join('\n\n');
-    let copied = false;
+    const revisions = heldRevisions();
+    let copied: string | false = false;
     try {
       await navigator.clipboard.writeText(text);
-      copied = true;
+      copied = revisions;
     } catch { /* shown below */ }
     this.setState({ copied });
   };
@@ -39,11 +45,14 @@ export class HeldSavesBoundary extends Component<Props, State> {
 
   render() {
     if (!this.state.failed) return this.props.children;
+    // "Copied." only while the held words are the ones copied: App re-renders this
+    // whenever the held store changes.
     const { copied } = this.state;
+    const copiedNow = copied !== undefined && copied !== false && copied === heldRevisions();
     return (
       <div role="alert" className="fixed bottom-36 left-4 right-4 z-50 mx-auto flex max-w-md flex-wrap gap-3 rounded-[var(--radius-plain)] border border-[var(--color-error)] bg-[var(--color-bg-secondary)] px-4 py-3 text-sm">
         <span className="basis-full">
-          Some words are not saved.{copied === true && ' Copied.'}{copied === false && ' Could not copy.'}
+          Some words are not saved.{copiedNow && ' Copied.'}{copied === false && ' Could not copy.'}
         </span>
         <button type="button" onClick={() => { void this.copy(); }}>Copy</button>
         <button type="button" onClick={this.props.onLockAnyway}>Lock anyway</button>

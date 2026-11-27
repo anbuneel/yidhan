@@ -113,7 +113,7 @@ remembers the kept note and, on unmount, saves any newer words into it.
   running from Editors already gone, then retry held ones, for at most 3s. If anything
   is still unsaved, the vault stays unlocked, Settings closes and the notice says so,
   with Retry, Copy and "Lock anyway". Once Retry or Copy deals with the last entry,
-  the lock goes ahead.
+  the lock goes ahead, saving first again, unless the writer has opened a note.
 - **Auto-lock**: the same saving, bounded at 3s, then clear the store and lock. A hung
   write never keeps an idle vault open. If words were dropped, a toast says so.
 - **Sign-out** (any path): clear the store. Sign-out already deletes the offline database

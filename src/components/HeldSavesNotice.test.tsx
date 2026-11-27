@@ -525,12 +525,16 @@ describe('HeldSavesBoundary', () => {
       Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
       resetHeldSaves();
       holdNow(heldEntry({ title: 'Kept words', content: '<p>Body</p>' }));
-      render(<HeldSavesBoundary onLockAnyway={lockAnyway}><Broken /></HeldSavesBoundary>);
+      const { rerender } = render(<HeldSavesBoundary onLockAnyway={lockAnyway}><Broken /></HeldSavesBoundary>);
       expect(screen.getByRole('alert')).toHaveTextContent('Some words are not saved');
       // The words can still be taken out, and the vault can still be locked.
       fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Kept words'));
       expect(await screen.findByText(/Copied\./)).toBeInTheDocument();
+      // Newer words held after the copy: no longer "Copied".
+      holdNow(heldEntry({ key: 'editor-y', title: 'Newer' }));
+      rerender(<HeldSavesBoundary onLockAnyway={lockAnyway}><Broken /></HeldSavesBoundary>);
+      expect(screen.queryByText(/Copied\./)).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Lock anyway' }));
       expect(lockAnyway).toHaveBeenCalled();
     } finally {
