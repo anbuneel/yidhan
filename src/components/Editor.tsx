@@ -2,6 +2,8 @@ import { VaultLockedSaveError } from '../utils/saveErrors';
 import type { OpenDraftState } from '../hooks/useReleasedDraft';
 import type { DerivedKeys } from '../lib/encryption';
 import { keepReleasedDraft } from '../utils/keepReleasedDraft';
+import { heldSaves } from '../stores/heldSaves';
+import { noteSaveQueue } from '../stores/noteSaveQueue';
 import { useState, useEffect, useLayoutEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { getSaveLabel } from '../utils/saveStatus';
@@ -117,6 +119,13 @@ function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): bo
   return a !== null && b !== null && a.title === b.title && a.content === b.content;
 }
 
+function isBlank(title: string, content: string): boolean {
+  return title.trim() === '' && content.replace(/<[^>]*>/g, '').trim() === '';
+}
+
+// Names each Editor instance, so a held save belongs to the instance that held it.
+let editorInstanceCount = 0;
+
 // The save pill is neutral roman text; the icon tells the states apart.
 const SAVE_LABEL_ICON: Record<ReturnType<typeof getSaveLabel>, SyncStateKind> = {
   'Not saved': 'not-saved',
@@ -124,6 +133,11 @@ const SAVE_LABEL_ICON: Record<ReturnType<typeof getSaveLabel>, SyncStateKind> = 
   Synced: 'synced',
 };
 
+/**
+ * One instance per note: `NoteEditorView` keys it by `note.id` (issue #288), so a
+ * switch is an unmount and a mount and every ref here belongs to one note. On unmount
+ * the Editor saves what it had on screen under its own note's id.
+ */
 export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus, releasedElsewhere = false, onKeptReleasedDraft, vaultKeys = null, onLetGoReleasedDraft, onDraftStateChange }: EditorProps) {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
@@ -140,12 +154,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [keepFailed, setKeepFailed] = useState(false);
   const [isKeeping, setIsKeeping] = useState(false);
-  // The id of the released note being kept as a new note, from the click until the
-  // switch to the new note renders. That switch must not reset the words: anything
-  // typed during the write stays. Cleared by the switch itself, not when the promise
-  // settles: the parent switches notes inside the callback and React may render the
-  // switch after the promise has resolved.
+  // Set while Keep as new note is writing, so a second click does nothing.
   const keepingFromNoteIdRef = useRef<string | null>(null);
+  // The new note Keep wrote, and the words it wrote. The route then moves to it, which
+  // unmounts this Editor; anything typed during the write is saved into it on the way.
+  const keptRef = useRef<{ note: Note; title: string; content: string } | null>(null);
   // Each release starts a fresh episode, without the last one's warnings or an
   // open delete dialog for a note that is no longer there.
   const [prevReleased, setPrevReleased] = useState(releasedElsewhere);
@@ -218,9 +231,16 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const pendingEditorContentRef = useRef<string | null>(null);
   // Track in-flight save promise to await on navigation
   const inFlightSaveRef = useRef<Promise<boolean> | null>(null);
-  const currentNoteIdRef = useRef(note.id);
-  const activeSwitchTokenRef = useRef(1);
-  const lastCommittedNoteIdRef = useRef(note.id);
+  const [instanceKey] = useState(() => `editor-${++editorInstanceCount}`);
+  // False once this Editor has unmounted: its saves then report to the held store.
+  const mountedRef = useRef(false);
+  // Set when the writer deleted the note here, so leaving does not save it.
+  const deletedRef = useRef(false);
+  // The last committed draft and props, for saves that run after unmount. Written in
+  // a layout effect below, never during render.
+  const draftRef = useRef({ title, content });
+  const releasedRef = useRef(releasedElsewhere);
+  const onUpdateRef = useRef(onUpdate);
   const prevSyncStatusRef = useRef(noteSyncStatus);
   const shouldStartSyncedStatusTimerRef = useRef(false);
 
@@ -236,64 +256,12 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // doesn't re-show the banner after the next sync rehydration
   const dismissedRemoteRef = useRef<NoteSnapshot | null>(null);
 
-  const switchedDuringRender = currentNoteIdRef.current !== note.id;
-  if (switchedDuringRender) {
-    // Flush any pending scroll save for the previous note before switching
-    throttledScrollSaveRef.current?.flush();
-
-    // A released draft just kept as a new note: these are the writer's own words,
-    // and any typed while the note was written are newer than the stored copy.
-    const switchIsKeep = keepingFromNoteIdRef.current !== null &&
-      keepingFromNoteIdRef.current === currentNoteIdRef.current;
-    keepingFromNoteIdRef.current = null;
-    currentNoteIdRef.current = note.id;
-    if (!switchIsKeep) {
-      setTitle(note.title);
-      setContent(note.content);
-    }
-    setSaveStatus('idle');
-    setKeepFailed(false);
-    setCopyFailed(false);
-    setHasSaveError(false);
-    setSaveErrorDetail('');
-    committedSnapshotRef.current = buildSnapshot(note.title, note.content, note.tags);
-    inFlightSnapshotRef.current = null;
-    setRemoteUpdate(null);
-    dismissedRemoteRef.current = null;
-    // Reset resume chip, scroll save, and focus mode for new note
-    setShowResumeChip(false);
-    savedScrollPositionRef.current = null;
-    setIsFocusMode(false);
-    resumeChipShownAtRef.current = 0;
-    throttledScrollSaveRef.current = null;
-    pendingScrollSaveRef.current = null; // Clear pending data for old note
-  }
-
-  // Issue #285: bump a per-switch token synchronously on commit when the note changes,
-  // and clear stale indicator timers and sync-status tracking so an earlier save never
-  // reports its status or error banner on another note (including A -> B -> A).
-  useLayoutEffect(() => {
-    if (lastCommittedNoteIdRef.current === note.id) return;
-    lastCommittedNoteIdRef.current = note.id;
-    activeSwitchTokenRef.current += 1;
-    if (savePhaseTimeoutRef.current) {
-      clearTimeout(savePhaseTimeoutRef.current);
-      savePhaseTimeoutRef.current = null;
-    }
-    if (hideIndicatorTimeoutRef.current) {
-      clearTimeout(hideIndicatorTimeoutRef.current);
-      hideIndicatorTimeoutRef.current = null;
-    }
-    prevSyncStatusRef.current = noteSyncStatus;
-    shouldStartSyncedStatusTimerRef.current = false;
-  }, [note.id, noteSyncStatus]);
-
   // Detect remote updates to the currently open note (2B)
   // When the note prop changes (from sync rehydration) while the same note is open:
   // - Self-echo: incoming matches what we last saved → ignore
   // - Clean editor: no unsaved changes → silently update local state
   // - Dirty editor: user has unsaved changes → show "Updated on another device" banner
-  if (note.id === currentNoteIdRef.current) {
+  {
     const incomingSnapshot = buildSnapshot(note.title, note.content, note.tags);
     const committedSnapshot = committedSnapshotRef.current;
     const activeInFlightSnapshot = inFlightSnapshotRef.current;
@@ -523,7 +491,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // Escape keep the writer here; the released banner offers the ways out.
     if (releasedElsewhere) return false;
 
-    const saveToken = activeSwitchTokenRef.current;
     const draftSnapshot = buildSnapshot(title, content, note.tags);
 
     // Nothing to write means nothing is unsaved, so any banner left by an
@@ -541,17 +508,25 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       return nothingToSave();
     }
 
-    if (inFlightSaveRef.current) {
-      await inFlightSaveRef.current;
-      if (
-        activeSwitchTokenRef.current === saveToken &&
-        sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)
-      ) {
+    // Wait until no save for this note is running. A loop, not one wait: another
+    // waiter (the debounce, the leave save) may start the next save first, and then
+    // this one may have nothing left to write.
+    let pending = inFlightSaveRef.current ?? noteSaveQueue.get(note.id);
+    if (pending) {
+      while (pending) {
+        await pending;
+        pending = inFlightSaveRef.current ?? noteSaveQueue.get(note.id);
+      }
+      if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
         return nothingToSave();
       }
+      if (releasedRef.current) return false;
     }
 
-    if (activeSwitchTokenRef.current === saveToken) {
+    // The stored text these words are written over, for a held save's Retry.
+    const baseSnapshot = committedSnapshotRef.current;
+
+    if (mountedRef.current) {
       // Clear any existing indicator timeouts
       if (savePhaseTimeoutRef.current) {
         clearTimeout(savePhaseTimeoutRef.current);
@@ -561,8 +536,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       }
 
       setSaveStatus('saving');
-      inFlightSnapshotRef.current = draftSnapshot;
     }
+    inFlightSnapshotRef.current = draftSnapshot;
 
     // Create and track the save promise
     let savePromise: Promise<boolean> | null = null;
@@ -575,16 +550,14 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           updatedAt: new Date(),
         });
 
-        // Issue #285: guard with per-switch token so switching notes (including A -> B -> A)
-        // never lets an earlier save report "Saved" or clobber the active note.
-        if (activeSwitchTokenRef.current !== saveToken) {
-          return true;
-        }
-
         committedSnapshotRef.current = draftSnapshot;
         if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
           inFlightSnapshotRef.current = null;
         }
+        // These words contain any this Editor held after a failure.
+        heldSaves.release(instanceKey);
+        if (!mountedRef.current) return true;
+
         setRemoteUpdate(null);
 
         // Show success state. A save that worked closes out the whole failure
@@ -596,21 +569,36 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
         // Hide indicator after 2 seconds
         hideIndicatorTimeoutRef.current = setTimeout(() => {
-          if (activeSwitchTokenRef.current === saveToken) {
-            setSaveStatus('idle');
-          }
+          setSaveStatus('idle');
         }, 2000);
         return true;
       } catch (error) {
-        // Issue #285: do not show a previous note's failure banner on the note now on screen.
-        if (activeSwitchTokenRef.current !== saveToken) {
+        if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
+          inFlightSnapshotRef.current = null;
+        }
+
+        if (!mountedRef.current) {
+          // The writer has left this note (issue #288). Hold the words above the
+          // Editor so the app can offer Retry and Copy. Not when the vault locked:
+          // decrypted text must not outlive it. Not for a note released elsewhere
+          // (the released banner dealt with those words) or deleted here.
+          const settled = releasedRef.current || deletedRef.current || keptRef.current !== null;
+          if (!settled && !(error instanceof VaultLockedSaveError)) {
+            heldSaves.hold({
+              key: instanceKey,
+              noteId: note.id,
+              title: draftSnapshot.title,
+              content: draftSnapshot.content,
+              baseTitle: baseSnapshot?.title ?? note.title,
+              baseContent: baseSnapshot?.content ?? note.content,
+              attemptedAt: Date.now(),
+              detail: '',
+            });
+          }
           return false;
         }
 
         setSaveErrorDetail(error instanceof VaultLockedSaveError ? error.message : '');
-        if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
-          inFlightSnapshotRef.current = null;
-        }
 
         // Save failed after retries. The banner carries the message, so the
         // header indicator just stops claiming anything. copyFailed is left
@@ -625,12 +613,24 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         if (inFlightSaveRef.current === savePromise) {
           inFlightSaveRef.current = null;
         }
+        noteSaveQueue.settle(note.id, savePromise);
       }
     })();
 
     inFlightSaveRef.current = savePromise;
+    noteSaveQueue.set(note.id, savePromise);
     return await savePromise;
-  }, [title, content, note, onUpdate, releasedElsewhere]);
+  }, [title, content, note, onUpdate, releasedElsewhere, instanceKey]);
+
+  // The last committed render's save and draft, for the unmount save. Written in a
+  // layout effect, not during render, so a render React discards never lands here.
+  const performSaveRef = useRef(performSave);
+  useLayoutEffect(() => {
+    performSaveRef.current = performSave;
+    draftRef.current = { title, content };
+    releasedRef.current = releasedElsewhere;
+    onUpdateRef.current = onUpdate;
+  });
 
   // Tell the app whether this screen holds words the stored note does not, so a
   // delete from another device does not close the editor over them (issue #205).
@@ -654,13 +654,14 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     try {
       // `note` is the released copy, so the new note carries its pin and tags;
       // `tags` is the live list, so a tag deleted meanwhile is not resurrected.
-      onKeptReleasedDraft(await keepReleasedDraft(userId, vaultKeys, title, content, note, tags));
+      const kept = await keepReleasedDraft(userId, vaultKeys, title, content, note, tags);
+      keptRef.current = { note: kept, title, content };
+      onKeptReleasedDraft(kept);
     } catch (error) {
       console.error('Failed to keep released draft as a new note:', error);
-      // No switch is coming, so the next one must reset as usual.
-      if (keepingFromNoteIdRef.current === note.id) keepingFromNoteIdRef.current = null;
       setKeepFailed(true);
     } finally {
+      keepingFromNoteIdRef.current = null;
       setIsKeeping(false);
     }
   };
@@ -687,6 +688,57 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       }
     };
   }, [title, content, note.title, note.content, performSave, releasedElsewhere]);
+
+  // Leaving the note (issue #288): switch, Back, browser Back, or the note closing.
+  // The Editor is keyed by note id, so this is the one path for all of them. It saves
+  // this Editor's own last words under its own note's id; a failure is held above the
+  // Editor by `performSave`. While mounted, the Editor registers the same flush so a
+  // vault lock can save what is on screen first.
+  useEffect(() => {
+    mountedRef.current = true;
+    const unregister = heldSaves.registerFlusher(async () => {
+      cancelPendingAutoSave();
+      await performSaveRef.current();
+    });
+    return () => {
+      mountedRef.current = false;
+      unregister();
+      cancelPendingAutoSave();
+      const { title: lastTitle, content: lastContent } = draftRef.current;
+
+      // Keep as new note wrote the draft into a new note and moved there. Words typed
+      // during that write go into the new note, never into the released one.
+      const kept = keptRef.current;
+      if (kept) {
+        if (lastTitle === kept.title && lastContent === kept.content) return;
+        onUpdateRef.current({ ...kept.note, title: lastTitle, content: lastContent, updatedAt: new Date() })
+          .catch((error: unknown) => {
+            console.error('Failed to save words typed during Keep:', error);
+            if (error instanceof VaultLockedSaveError) return;
+            heldSaves.hold({
+              key: instanceKey,
+              noteId: kept.note.id,
+              title: lastTitle,
+              content: lastContent,
+              baseTitle: kept.title,
+              baseContent: kept.content,
+              attemptedAt: Date.now(),
+              detail: '',
+            });
+          });
+        return;
+      }
+
+      // Released elsewhere or deleted here: there is no note to save into.
+      if (releasedRef.current || deletedRef.current) return;
+      // An empty draft never replaces words on the way out. Clearing a note is saved
+      // by the debounce while the writer stays on it.
+      const committed = committedSnapshotRef.current;
+      if (isBlank(lastTitle, lastContent) && committed && !isBlank(committed.title, committed.content)) return;
+
+      void performSaveRef.current();
+    };
+  }, [cancelPendingAutoSave, instanceKey]);
 
   // Bound continuous typing using the same encrypted local-save path as autosave.
   const checkpoint = useEffectEvent(() => { void performSave(); });
@@ -845,7 +897,6 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // to 'synced', briefly show the "Saved" status as confirmation.
   // Only fires when the editor is idle to avoid interrupting active save indicators.
   const shouldShowSyncedStatus =
-    !switchedDuringRender &&
     prevSyncStatusRef.current === 'pending' &&
     noteSyncStatus === 'synced' &&
     saveStatus === 'idle';
@@ -951,7 +1002,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
     // not a release to hold the editor open for (issue #205). If the delete fails,
     // the words are still here and still unsaved.
     onDraftStateChange?.({ noteId: note.id, unsaved: false });
+    deletedRef.current = true;
     if (!(await onDelete(note.id))) {
+      deletedRef.current = false;
       onDraftStateChange?.({ noteId: note.id, unsaved: holdsUnsavedWordsRef.current });
     }
   };
