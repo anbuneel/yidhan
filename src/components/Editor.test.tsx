@@ -15,13 +15,23 @@ const keyboardEditor = vi.hoisted(() => ({
   commands: { focus: vi.fn(), setContent: vi.fn() },
   isFocused: false,
   state: { selection: { empty: true, from: 1, to: 1 } },
-  chain: vi.fn(() => ({
-    extendMarkRange: vi.fn(() => ({ run: vi.fn() })),
-  })),
+  chain: vi.fn(() => {
+    const chain = {
+      extendMarkRange: vi.fn(() => chain),
+      setMeta: vi.fn(() => chain),
+      setContent: vi.fn(() => chain),
+      run: vi.fn(),
+    };
+    return chain;
+  }),
 }));
 const editorReadyControl = vi.hoisted(() => ({ current: true }));
 const keepMock = vi.hoisted(() => ({ keepReleasedDraft: vi.fn() }));
 vi.mock('../utils/keepReleasedDraft', () => keepMock);
+// The real helper rebuilds ProseMirror state, which the fake editor below cannot do.
+// Editor.remoteUndo.test.tsx runs it against the real Tiptap editor.
+const historyMock = vi.hoisted(() => ({ replaceContentWithFreshHistory: vi.fn() }));
+vi.mock('../utils/editorHistory', () => historyMock);
 
 // Mock dependencies
 vi.mock('../contexts/AuthContext', () => ({
@@ -1353,11 +1363,15 @@ describe('Editor', () => {
       });
       rerender(<Editor {...defaultProps} note={updatedNote} onUpdate={onUpdate} />);
 
-      // Click "Load changes"
+      // Click "Load changes". The writer's words are kept as a new note first.
       await user.click(screen.getByText('Load changes'));
+      await waitFor(() => expect(screen.queryByText('Updated on another device')).not.toBeInTheDocument());
+      expect(keepMock.keepReleasedDraft).toHaveBeenCalledWith(
+        'user-123', null, 'My Local Edit (my version)', '<p>Test content</p>',
+        expect.objectContaining({ id: 'note-123', pinned: false }), mockTags, 'Your version was kept as a new note.',
+      );
 
-      // Banner should be gone, title should be remote
-      expect(screen.queryByText('Updated on another device')).not.toBeInTheDocument();
+      // Title should be remote
       expect(screen.getByDisplayValue('Remote Title')).toBeInTheDocument();
     });
 

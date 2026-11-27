@@ -3,6 +3,9 @@ import type { OpenDraftState } from '../hooks/useReleasedDraft';
 import { useMenuButton } from '../hooks/useMenuButton';
 import type { DerivedKeys } from '../lib/encryption';
 import { keepReleasedDraft } from '../utils/keepReleasedDraft';
+import { replaceContentWithFreshHistory } from '../utils/editorHistory';
+import toast from 'react-hot-toast';
+import { MAX_NOTE_TITLE_LENGTH } from '../utils/validation';
 import { heldSaves } from '../stores/heldSaves';
 import { noteSaveQueue } from '../stores/noteSaveQueue';
 import { useState, useEffect, useLayoutEffect, useEffectEvent, useRef, useCallback } from 'react';
@@ -75,6 +78,11 @@ interface EditorProps {
   releasedElsewhere?: boolean;
   /** The released draft was kept as this new note; the app adds it and opens it. */
   onKeptReleasedDraft?: (note: Note) => void;
+  /**
+   * "Load changes" replaced the writer's unsaved words with another device's. They
+   * were kept as this new note first (issue #284); the app adds it to the list.
+   */
+  onKeptReplacedDraft?: (note: Note) => void;
   /** Vault keys, for writing a released draft into a new note. */
   vaultKeys?: DerivedKeys | null;
   /** The writer chose to let the words of a released note go. Defaults to onBack. */
@@ -141,7 +149,7 @@ const SAVE_LABEL_ICON: Record<ReturnType<typeof getSaveLabel>, SyncStateKind> = 
  * switch is an unmount and a mount and every ref here belongs to one note. On unmount
  * the Editor saves what it had on screen under its own note's id.
  */
-export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus, releasedElsewhere = false, onKeptReleasedDraft, vaultKeys = null, onLetGoReleasedDraft, onDraftStateChange }: EditorProps) {
+export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus, releasedElsewhere = false, onKeptReleasedDraft, onKeptReplacedDraft, vaultKeys = null, onLetGoReleasedDraft, onDraftStateChange }: EditorProps) {
   // Words for this note still waiting to be written by an Editor the writer left
   // (issue #288). They are newer than the list's copy, so this Editor starts from them.
   const [startingDraft] = useState(() => noteSaveQueue.pendingDraft(note.id));
@@ -160,6 +168,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [keepFailed, setKeepFailed] = useState(false);
   const [isKeeping, setIsKeeping] = useState(false);
+  // Set while "Load changes" keeps the writer's words as a new note. Autosave waits,
+  // so no save lands on the open note between the copy and the remote text.
+  const [isLoadingRemote, setIsLoadingRemote] = useState(false);
+  const loadingRemoteRef = useRef(false);
   // Set while Keep as new note is writing, so a second click does nothing.
   const keepingFromNoteIdRef = useRef<string | null>(null);
   // The new note Keep wrote, and the words it wrote. The route then moves to it, which
@@ -320,7 +332,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
   useEffect(() => {
     if (!editor || pendingEditorContentRef.current === null) return;
-    editor.commands.setContent(pendingEditorContentRef.current, { emitUpdate: false });
+    // Another device's text: undo must not bring back what it replaced (issue #284).
+    replaceContentWithFreshHistory(editor, pendingEditorContentRef.current);
     pendingEditorContentRef.current = null;
   // note.content included so same-note remote updates also trigger this effect (not just note switches)
   }, [editor, note.id, note.content]);
@@ -709,7 +722,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // Auto-save when content changes (debounced)
   useEffect(() => {
     // Don't auto-save if nothing changed, or if the note was released elsewhere
-    if (releasedElsewhere) return;
+    if (releasedElsewhere || isLoadingRemote) return;
     if (title === note.title && content === note.content) return;
 
     // Clear any existing auto-save timeout
@@ -727,7 +740,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [title, content, note.title, note.content, performSave, releasedElsewhere]);
+  }, [title, content, note.title, note.content, performSave, releasedElsewhere, isLoadingRemote]);
 
   // Leaving the note (issue #288): switch, Back, browser Back, or the note closing.
   // The Editor is keyed by note id, so this is the one path for all of them. It saves
@@ -1011,17 +1024,56 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   };
 
   // Remote update banner handlers (2B)
-  const handleLoadRemoteChanges = useCallback(() => {
-    if (!remoteUpdate) return;
-    setTitle(remoteUpdate.title);
-    setContent(remoteUpdate.content);
-    committedSnapshotRef.current = remoteUpdate;
+  const handleLoadRemoteChanges = useCallback(async () => {
+    if (!remoteUpdate || loadingRemoteRef.current) return;
+    const incoming = remoteUpdate;
+    // A pending autosave would write the words being replaced over the remote edit.
+    cancelPendingAutoSave();
+    // The banner shows only over unsaved words, and loading replaces them. Undo cannot
+    // bring them back (issue #284), so keep them as a new note first. If that fails,
+    // nothing is replaced and the banner stays.
+    const dropped = { title, content };
+    const committedAtStart = committedSnapshotRef.current;
+    const worthKeeping = !isBlank(dropped.title, dropped.content)
+      && !(dropped.title === incoming.title && dropped.content === incoming.content);
+    loadingRemoteRef.current = true;
+    setIsLoadingRemote(true);
+    try {
+      if (worthKeeping) {
+        const suffix = ' (my version)';
+        const copyTitle = (dropped.title.slice(0, MAX_NOTE_TITLE_LENGTH - suffix.length).replace(/[\uD800-\uDBFF]$/, '') + suffix).trim();
+        const kept = await keepReleasedDraft(userId, vaultKeys, copyTitle, dropped.content, { ...note, pinned: false }, tags, 'Your version was kept as a new note.');
+        onKeptReplacedDraft?.(kept);
+      }
+      // A save already running would land after the remote text and write the old
+      // words over it. Wait for it; the check below sees what it changed.
+      if (inFlightSaveRef.current) await inFlightSaveRef.current;
+    } catch (error) {
+      // The words stay on screen, and autosave resumes over the remote edit (#307).
+      console.error('Failed to keep the replaced draft as a new note:', error);
+      toast.error('Your version could not be kept, so nothing was replaced.');
+      return;
+    } finally {
+      loadingRemoteRef.current = false;
+      if (mountedRef.current) setIsLoadingRemote(false);
+    }
+    if (!mountedRef.current) return;
+    // Words typed while the copy was written are not in it, and a save may have
+    // landed. Either way, leave the screen as it is. A tag-only change is fine.
+    if (draftRef.current.title !== dropped.title || draftRef.current.content !== dropped.content
+      || !sameTitleAndContent(committedSnapshotRef.current, committedAtStart)) {
+      toast('The other device\'s version was not loaded, because your note changed meanwhile.');
+      return;
+    }
+    setTitle(incoming.title);
+    setContent(incoming.content);
+    committedSnapshotRef.current = incoming;
     inFlightSnapshotRef.current = null;
     if (editor) {
-      editor.commands.setContent(remoteUpdate.content, { emitUpdate: false });
+      replaceContentWithFreshHistory(editor, incoming.content);
     }
     setRemoteUpdate(null);
-  }, [remoteUpdate, editor]);
+  }, [remoteUpdate, cancelPendingAutoSave, editor, title, content, userId, vaultKeys, note, tags, onKeptReplacedDraft]);
 
   const handleKeepMine = useCallback(() => {
     if (remoteUpdate) {
@@ -1619,7 +1671,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button type="button"
+                // Neither button takes focus: blurring the editor would start a save
+                // of the words on screen before the writer's choice runs.
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={handleKeepMine}
+                disabled={isLoadingRemote}
                 className="text-xs px-3 py-1.5 rounded-[var(--radius-button)] transition-colors duration-200"
                 style={{
                   fontFamily: 'var(--font-body)',
@@ -1637,7 +1693,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 Keep mine
               </button>
               <button type="button"
-                onClick={handleLoadRemoteChanges}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { void handleLoadRemoteChanges(); }}
+                disabled={isLoadingRemote}
                 className="text-xs px-3 py-1.5 rounded-[var(--radius-button)] transition-colors duration-200"
                 style={{
                   fontFamily: 'var(--font-body)',

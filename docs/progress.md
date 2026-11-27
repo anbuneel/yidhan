@@ -938,3 +938,20 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   `aria-haspopup="listbox"` and is a disclosure of toggle buttons. Time ribbon dots
   get a focus ring; the chapter nav shows on `focus-within`. A J/K-selected note card
   is one tab stop. A human VoiceOver/NVDA pass is still needed.
+- **2026-11-27** — Remote updates to the open note no longer reach undo (#284).
+  `Editor.tsx` applied them with `setContent`, which recorded an undo step, so undo
+  restored the replaced text and autosave wrote it over the other device's edit. Both
+  paths (the silent update on a clean editor and "Load changes") now call
+  `replaceContentWithFreshHistory` (`src/utils/editorHistory.ts`), which also serves the
+  note switch in `RichTextEditor`: it sets the content and rebuilds the editor state, so
+  undo history starts afresh. `addToHistory: false` alone was not enough: an undo step
+  starting at document position 0 survives mapping through a whole-document replace.
+  The writer's undo steps from before a remote update are dropped; typing after it
+  undoes normally. "Load changes" first keeps the writer's unsaved words as a new note
+  ("… (my version)", via `keepReleasedDraft`); if that fails, nothing is replaced.
+  While it copies, autosave waits, the banner buttons do not take focus (a blur would
+  start a save), "Keep mine" is disabled, and a save already running is awaited; if
+  the note changed meanwhile, nothing is loaded. The banner still does not hold
+  autosave in general: #307.
+  Tests in `Editor.remoteUndo.test.tsx` run the real Tiptap editor. Review record:
+  `docs/reviews/2026-11-27-pr306-remote-undo-review.md`.

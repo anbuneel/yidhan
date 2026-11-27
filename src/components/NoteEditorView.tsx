@@ -26,6 +26,8 @@ export interface NoteEditorViewProps {
   releasedElsewhere?: boolean;
   /** The released draft was kept as this new note. */
   onKeptReleasedDraft?: (note: Note) => void;
+  /** The writer's words that "Load changes" replaced were kept as this new note. */
+  onKeptReplacedDraft?: (note: Note) => void;
   /** Vault keys, for writing a released draft into a new note. */
   vaultKeys?: DerivedKeys | null;
   /** The writer chose to let the words of a released note go. */

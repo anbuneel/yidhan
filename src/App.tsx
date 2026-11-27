@@ -740,6 +740,13 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
           replaceRoute({ name: 'note', noteId: kept.id });
           triggerCoalescedSync();
         }}
+        // "Load changes" replaced the writer's unsaved words with another device's:
+        // they were kept as a new note (issue #284). It joins the list; the open note
+        // stays open.
+        onKeptReplacedDraft={(kept) => {
+          setNotes((prev) => withNotesFirst(prev, [kept]));
+          triggerCoalescedSync();
+        }}
         // Let go: `replaceRoute`, for the same reason as Keep.
         onLetGoReleasedDraft={() => replaceRoute({ name: 'library' })}
         onDraftStateChange={(state) => { openDraftRef.current = state; }}
