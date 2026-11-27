@@ -70,9 +70,13 @@ Closed. All four PRs from the 2026-11-26 design critique shipped on 2026-11-26: 
 #293 (security presets). The plan is archived at
 `docs/archive/2026-11-26-design-critique-decisions.md`.
 
-Still open from it: the screen-reader pass (roadmap 68), with findings logged as issues.
-Not yet checked by anyone: the Security tab presets and the "Change passphrase" row in a
-signed-in session.
+Follow-ups shipped on 2026-11-27: #303 fixed the screen-reader and keyboard gaps found
+in code (tab roles, menu semantics, announced errors and empty states, focus rings, one
+tab stop per card), and #305 added a signed-in E2E for the Security tab presets and the
+"Change passphrase" row.
+
+Still open: a human screen-reader pass with VoiceOver or NVDA (roadmap 68). The code
+fixes in #303 do not replace it.
 
 ### Maintainer
 

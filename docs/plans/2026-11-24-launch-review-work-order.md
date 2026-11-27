@@ -1,5 +1,5 @@
 Status: PROPOSAL
-Last verified: 2026-11-26
+Last verified: 2026-11-27
 
 # Launch review work order
 
@@ -21,8 +21,12 @@ Bugs found during the reviews, outside the 70 items:
 - Issue #285, a running save reported its status on the next note. Fixed by PR #287,
   `909c11b`, 2026-11-26.
 - Issue #284, undo can overwrite another device's edit. Open.
-- Issue #288, unsaved words can be lost when leaving a note. Open. Needs a plan and the
-  multi-agent review.
+- Issue #288, unsaved words can be lost when leaving a note. Fixed by PR #300,
+  `7fd26dc`, 2026-11-27, after a multi-agent review. Design in
+  `docs/archive/2026-11-26-flush-on-leave.md`.
+- A new note sometimes closed with "That note is no longer here" (a sync refresh
+  dropped it). Fixed by PR #297, `1e14624`, 2026-11-26. The other whole-list reloads
+  got the same guard in PR #302 (#298), `6293e34`, 2026-11-27.
 
 Issue #271 was closed as obsolete (B5). The launch gates in the ACTIVE plan are still
 open, so the review's verdict stands: hold the public launch, open a private beta. Not
@@ -30,9 +34,8 @@ verified by anyone: the new landing page and share image on real devices.
 
 Left to do, in order:
 
-1. Issue #288.
-2. Issue #284.
-3. Track F.
+1. Issue #284.
+2. Track F.
 
 The 27 items chosen from the 2026-11-24 launch review, grouped into tracks by the files
 they touch. The review merged three passes (Claude, Gemini, Codex) over the live site

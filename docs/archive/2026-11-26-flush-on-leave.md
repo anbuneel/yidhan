@@ -1,5 +1,5 @@
-Status: PROPOSAL
-Last verified: 2026-11-26
+Status: COMPLETE
+Last verified: 2026-11-27
 
 # Save the note you leave (#288)
 

@@ -917,7 +917,7 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   keeps the words as a new note. Saves for one note are ordered across Editor
   instances. Lock now saves first and stays unlocked if words are still held; auto-lock
   saves, then drops held words; sign-out drops them. Plan:
-  `docs/plans/2026-11-26-flush-on-leave.md`.
+  `docs/archive/2026-11-26-flush-on-leave.md`.
 - **2026-11-27** — Guard every whole-list note reload. (#302, closes #298) The Refresh
   button, conflict resolve, the locked-note retry and the three post-import refreshes
   now call `reloadFromStorage` in `useNotesSync`, the guarded refresh from #297. It
