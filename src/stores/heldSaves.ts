@@ -4,7 +4,12 @@
  * The Editor that held the words is gone, so they live here until Retry or Copy deals
  * with them. Memory only: never persisted, never exported. The entries are decrypted
  * text, so the store is cleared and closed whenever the vault locks or the user
- * changes, and a closed store takes no new entries.
+ * changes.
+ *
+ * Every close starts a new session. A producer reads `session()` when its save starts
+ * and passes it to `hold()`; an entry from an older session is refused even after the
+ * store opens again, so a save that fails late can never put one vault's or one
+ * user's words into the next one's notice.
  *
  * The store also lists the open Editors' flush functions, so a lock can save what is
  * on screen first.
@@ -25,15 +30,23 @@ export interface HeldSave {
   detail: string;
 }
 
-type Listener = () => void;
-type Flusher = () => Promise<void>;
+/** An entry as stored: `revision` changes on every hold, so a release can name the one it handled. */
+export interface StoredHeldSave extends HeldSave {
+  revision: number;
+}
 
-let entries: readonly HeldSave[] = [];
+type Listener = () => void;
+/** Resolves true when what was on screen is saved. */
+type Flusher = () => Promise<boolean>;
+
+let entries: readonly StoredHeldSave[] = [];
 let accepting = true;
+let session = 0;
+let revision = 0;
 const listeners = new Set<Listener>();
 const flushers = new Set<Flusher>();
 
-function emit(next: readonly HeldSave[]) {
+function emit(next: readonly StoredHeldSave[]) {
   entries = next;
   listeners.forEach((listener) => listener());
 }
@@ -44,30 +57,51 @@ export const heldSaves = {
     return () => { listeners.delete(listener); };
   },
 
-  getSnapshot(): readonly HeldSave[] {
+  getSnapshot(): readonly StoredHeldSave[] {
     return entries;
   },
 
-  get(key: string): HeldSave | undefined {
+  get(key: string): StoredHeldSave | undefined {
     return entries.find((entry) => entry.key === key);
   },
 
-  /** Hold words whose save failed. Replaces this instance's earlier entry. */
-  hold(entry: HeldSave): void {
-    if (!accepting) return;
-    emit([...entries.filter((e) => e.key !== entry.key), entry]);
+  /** The current vault session. Read it when a save starts; pass it to `hold`. */
+  session(): number {
+    return session;
   },
 
-  /** Drop one entry: its words were saved, copied, or kept as a new note. */
-  release(key: string): void {
-    if (!entries.some((e) => e.key === key)) return;
+  /** True while words from `fromSession` may still be held or written. */
+  isCurrent(fromSession: number): boolean {
+    return accepting && fromSession === session;
+  },
+
+  /**
+   * Hold words whose save failed. Replaces this instance's earlier entry. Refused
+   * when the store is closed or the save started in an earlier session.
+   */
+  hold(entry: HeldSave, fromSession: number): void {
+    if (!heldSaves.isCurrent(fromSession)) return;
+    revision += 1;
+    emit([...entries.filter((e) => e.key !== entry.key), { ...entry, revision }]);
+  },
+
+  /**
+   * Drop an entry: its words were saved, copied, or kept as a new note. With a
+   * revision, only that revision: a newer failure of the same Editor stays.
+   */
+  release(key: string, onlyRevision?: number): void {
+    const entry = entries.find((e) => e.key === key);
+    if (!entry || (onlyRevision !== undefined && entry.revision !== onlyRevision)) return;
     emit(entries.filter((e) => e.key !== key));
   },
 
-  /** Vault locked or user gone: drop every entry and take no new ones. */
-  close(): void {
+  /** Vault locked or user gone: drop every entry, take no new ones, start a new session. */
+  close(): number {
+    const dropped = entries.length;
     accepting = false;
-    if (entries.length > 0) emit([]);
+    session += 1;
+    if (dropped > 0) emit([]);
+    return dropped;
   },
 
   /** Vault unlocked for a signed-in user. */
@@ -81,13 +115,14 @@ export const heldSaves = {
     return () => { flushers.delete(flush); };
   },
 
-  /** Save what every open Editor has on screen. Failures stay with their Editor. */
-  async flushOpenEditors(): Promise<void> {
-    await Promise.allSettled([...flushers].map((flush) => flush()));
+  /** Save what every open Editor has on screen. Resolves true when all of it saved. */
+  async flushOpenEditors(): Promise<boolean> {
+    const results = await Promise.allSettled([...flushers].map((flush) => flush()));
+    return results.every((r) => r.status === 'fulfilled' && r.value);
   },
 };
 
-export function useHeldSaves(): readonly HeldSave[] {
+export function useHeldSaves(): readonly StoredHeldSave[] {
   return useSyncExternalStore(heldSaves.subscribe, heldSaves.getSnapshot);
 }
 
@@ -95,6 +130,7 @@ export function useHeldSaves(): readonly HeldSave[] {
 export function resetHeldSaves(): void {
   entries = [];
   accepting = true;
+  session += 1;
   flushers.clear();
   listeners.forEach((listener) => listener());
 }

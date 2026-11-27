@@ -2143,8 +2143,9 @@ describe('Editor', () => {
       rerender(<KeyedEditor {...defaultProps} note={noteB} onUpdate={onUpdate} />);
       rerender(<KeyedEditor {...defaultProps} note={mockNote} onUpdate={onUpdate} />);
 
-      // Type on A: the second save must wait for the first to settle.
-      fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'v2' } });
+      // The reopened A starts from v1, which is still being written, not the older
+      // stored text. Type on it: the second save must wait for the first to settle.
+      fireEvent.change(screen.getByDisplayValue('v1'), { target: { value: 'v2' } });
       await act(async () => {
         vi.advanceTimersByTime(800);
         await Promise.resolve();

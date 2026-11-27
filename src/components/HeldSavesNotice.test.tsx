@@ -9,7 +9,7 @@ import { NoteEditorView } from './NoteEditorView';
 import { Editor } from './Editor';
 import { HeldSavesNotice } from './HeldSavesNotice';
 import { heldSaves, resetHeldSaves, useHeldSaves, type HeldSave } from '../stores/heldSaves';
-import { resetNoteSaveQueue } from '../stores/noteSaveQueue';
+import { noteSaveQueue, resetNoteSaveQueue } from '../stores/noteSaveQueue';
 import { useHeldSaveActions } from '../hooks/useHeldSaveActions';
 import { useLockAfterSaving } from '../hooks/useLockAfterSaving';
 import { retryHeldSave } from '../utils/retryHeldSave';
@@ -50,6 +50,10 @@ vi.mock('../utils/exportImport', () => ({
 const keys = {} as DerivedKeys;
 const noteA = createMockNote({ id: 'note-a', title: 'Note A', content: '<p>A words</p>' });
 const noteB = createMockNote({ id: 'note-b', title: 'Note B', content: '<p>B words</p>' });
+
+function holdNow(entry: HeldSave) {
+  heldSaves.hold(entry, heldSaves.session());
+}
 
 function heldEntry(overrides: Partial<HeldSave> = {}): HeldSave {
   return {
@@ -99,6 +103,7 @@ function Harness({ save, api }: { save: Save; api: { current: HarnessApi | null 
     saveNote: onUpdate,
     triggerCoalescedSync: vi.fn(),
     trackLocalWrite: (write) => write(),
+    hasOpenDraft: () => false,
   });
   api.current = {
     open: (id) => act(() => setOpenId(id)),
@@ -264,6 +269,35 @@ describe('held saves (issue #288)', () => {
     expect(heldSaves.getSnapshot()).toHaveLength(1);
   });
 
+  it('runs one retry per entry, so the words are never kept twice', async () => {
+    const save = vi.fn<Save>().mockRejectedValue(new Error('disk full'));
+    leaveWithFailedSave(save);
+    await flush();
+    // The note changed since, so Retry keeps the words as a new note.
+    api.current!.setNotes((prev) => prev.map((n) => (n.id === 'note-a' ? { ...n, title: 'Changed' } : n)));
+    let finishKeep!: () => void;
+    keepMock.keepReleasedDraft.mockImplementation(() => new Promise((resolve) => {
+      finishKeep = () => resolve(createMockNote({ id: 'kept' }));
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await flush();
+    // Copy waits while Retry runs.
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeDisabled();
+    await act(async () => { finishKeep(); });
+    await flush();
+    expect(keepMock.keepReleasedDraft).toHaveBeenCalledTimes(1);
+    expect(notice()).toBeNull();
+  });
+
+  it('says so when Retry fails again', async () => {
+    const save = vi.fn<Save>().mockRejectedValue(new Error('disk full'));
+    leaveWithFailedSave(save);
+    await flush();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await flush();
+    expect(notice()).toHaveTextContent('Still not saved');
+  });
+
   it('does not hold words when the save failed because the vault locked', async () => {
     const save = vi.fn<Save>().mockRejectedValue(new VaultLockedSaveError());
     leaveWithFailedSave(save);
@@ -309,30 +343,49 @@ describe('heldSaves store', () => {
   beforeEach(() => resetHeldSaves());
 
   it('replaces an instance\'s earlier entry and keeps other instances\' entries', () => {
-    heldSaves.hold(heldEntry({ key: 'one', title: 'first' }));
-    heldSaves.hold(heldEntry({ key: 'two', title: 'other' }));
-    heldSaves.hold(heldEntry({ key: 'one', title: 'second' }));
+    holdNow(heldEntry({ key: 'one', title: 'first' }));
+    holdNow(heldEntry({ key: 'two', title: 'other' }));
+    holdNow(heldEntry({ key: 'one', title: 'second' }));
     expect(heldSaves.getSnapshot().map((e) => [e.key, e.title])).toEqual([['two', 'other'], ['one', 'second']]);
   });
 
+  it('refuses words from an earlier session even after the store opens again', () => {
+    const before = heldSaves.session();
+    heldSaves.close();
+    heldSaves.open();
+    heldSaves.hold(heldEntry(), before);
+    expect(heldSaves.getSnapshot()).toEqual([]);
+  });
+
+  it('releases only the revision it names', () => {
+    holdNow(heldEntry({ title: 'v1' }));
+    const v1 = heldSaves.get('editor-x')!.revision;
+    holdNow(heldEntry({ title: 'v2' }));
+    heldSaves.release('editor-x', v1);
+    expect(heldSaves.get('editor-x')?.title).toBe('v2');
+  });
+
   it('drops everything on close and takes nothing until opened again', () => {
-    heldSaves.hold(heldEntry());
+    holdNow(heldEntry());
     heldSaves.close();
     expect(heldSaves.getSnapshot()).toEqual([]);
-    heldSaves.hold(heldEntry());
+    holdNow(heldEntry());
     expect(heldSaves.getSnapshot()).toEqual([]);
     heldSaves.open();
-    heldSaves.hold(heldEntry());
+    holdNow(heldEntry());
     expect(heldSaves.getSnapshot()).toHaveLength(1);
   });
 });
 
 describe('useLockAfterSaving', () => {
-  beforeEach(() => resetHeldSaves());
+  beforeEach(() => {
+    resetHeldSaves();
+    resetNoteSaveQueue();
+  });
 
   function setup(retryResult = true) {
     const lockVault = vi.fn();
-    const flushEditor = vi.fn().mockResolvedValue(undefined);
+    const flushEditor = vi.fn().mockResolvedValue(true);
     heldSaves.registerFlusher(flushEditor);
     const { result } = renderHook(() => useLockAfterSaving(lockVault));
     const retry = vi.fn().mockResolvedValue(retryResult);
@@ -350,7 +403,7 @@ describe('useLockAfterSaving', () => {
 
   it('Lock now keeps the vault open while words are held', async () => {
     const { result, lockVault } = setup(false);
-    heldSaves.hold(heldEntry());
+    holdNow(heldEntry());
     expect(await result.current.lockNow()).toBe(false);
     expect(lockVault).not.toHaveBeenCalled();
     expect(heldSaves.getSnapshot()).toHaveLength(1);
@@ -362,7 +415,7 @@ describe('useLockAfterSaving', () => {
 
   it('auto-lock saves first, then drops held words and locks', async () => {
     const { result, lockVault, flushEditor, retry } = setup(false);
-    heldSaves.hold(heldEntry());
+    holdNow(heldEntry());
     act(() => result.current.lockVaultAfterSaving('auto-lock'));
     expect(lockVault).not.toHaveBeenCalled();
     await act(async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); });
@@ -372,9 +425,57 @@ describe('useLockAfterSaving', () => {
     expect(heldSaves.getSnapshot()).toEqual([]);
   });
 
+  it('Lock now waits for a save still running from an Editor already gone', async () => {
+    const { result, lockVault } = setup();
+    let fail!: () => void;
+    const departed = noteSaveQueue.track(new Promise<boolean>((resolve) => {
+      fail = () => { holdNow(heldEntry()); resolve(false); };
+    }));
+    const locking = result.current.lockNow();
+    await act(async () => { await Promise.resolve(); });
+    expect(lockVault).not.toHaveBeenCalled();
+    fail();
+    await departed;
+    expect(await locking).toBe(false);
+    expect(lockVault).not.toHaveBeenCalled();
+    expect(heldSaves.getSnapshot()).toHaveLength(1);
+  });
+
+  it('auto-lock still locks when a save hangs, and says words were dropped', async () => {
+    vi.useFakeTimers();
+    try {
+      const { result, lockVault } = setup();
+      holdNow(heldEntry());
+      noteSaveQueue.track(new Promise<boolean>(() => {}));
+      act(() => result.current.lockVaultAfterSaving('auto-lock'));
+      // A second idle tick while saving does not start another round.
+      act(() => result.current.lockVaultAfterSaving('auto-lock'));
+      await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+      expect(lockVault).toHaveBeenCalledTimes(1);
+      expect(lockVault).toHaveBeenCalledWith('auto-lock');
+      expect(heldSaves.getSnapshot()).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('Lock now gives up after the time limit and keeps the vault open', async () => {
+    vi.useFakeTimers();
+    try {
+      const { result, lockVault } = setup();
+      noteSaveQueue.track(new Promise<boolean>(() => {}));
+      const locking = result.current.lockNow();
+      await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+      expect(await locking).toBe(false);
+      expect(lockVault).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('sign-out drops held words and locks at once', () => {
     const { result, lockVault, flushEditor } = setup();
-    heldSaves.hold(heldEntry());
+    holdNow(heldEntry());
     act(() => result.current.lockVaultAfterSaving('sign-out'));
     expect(lockVault).toHaveBeenCalledWith('sign-out');
     expect(flushEditor).not.toHaveBeenCalled();

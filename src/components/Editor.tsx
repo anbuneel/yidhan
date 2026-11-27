@@ -119,8 +119,10 @@ function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): bo
   return a !== null && b !== null && a.title === b.title && a.content === b.content;
 }
 
+// An empty note: no title and no body beyond empty paragraphs. A body with an image
+// or a divider is not blank.
 function isBlank(title: string, content: string): boolean {
-  return title.trim() === '' && content.replace(/<[^>]*>/g, '').trim() === '';
+  return title.trim() === '' && /^(?:\s|<p>(?:\s|<br\s*\/?>)*<\/p>)*$/.test(content);
 }
 
 // Names each Editor instance, so a held save belongs to the instance that held it.
@@ -139,8 +141,11 @@ const SAVE_LABEL_ICON: Record<ReturnType<typeof getSaveLabel>, SyncStateKind> = 
  * the Editor saves what it had on screen under its own note's id.
  */
 export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus, releasedElsewhere = false, onKeptReleasedDraft, vaultKeys = null, onLetGoReleasedDraft, onDraftStateChange }: EditorProps) {
-  const [title, setTitle] = useState(note.title);
-  const [content, setContent] = useState(note.content);
+  // Words for this note still waiting to be written by an Editor the writer left
+  // (issue #288). They are newer than the list's copy, so this Editor starts from them.
+  const [startingDraft] = useState(() => noteSaveQueue.pendingDraft(note.id));
+  const [title, setTitle] = useState(startingDraft?.title ?? note.title);
+  const [content, setContent] = useState(startingDraft?.content ?? note.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const keepWritingButtonRef = useRef<HTMLButtonElement>(null);
   const deleteDialogRef = useModalFocusTrap({
@@ -236,6 +241,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   const mountedRef = useRef(false);
   // Set when the writer deleted the note here, so leaving does not save it.
   const deletedRef = useRef(false);
+  // Set when the writer chose Let go on a note released elsewhere.
+  const letGoRef = useRef(false);
   // The last committed draft and props, for saves that run after unmount. Written in
   // a layout effect below, never during render.
   const draftRef = useRef({ title, content });
@@ -282,8 +289,14 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       const hasUnsavedChanges =
         title !== committedSnapshot.title ||
         content !== committedSnapshot.content;
+      // The incoming copy is exactly what is on screen: an earlier Editor's save of
+      // these same words landing (issue #288). Nothing differs, so nothing to show.
+      const matchesScreen = title === note.title && content === note.content;
 
-      if (hasUnsavedChanges) {
+      if (matchesScreen) {
+        committedSnapshotRef.current = incomingSnapshot;
+        if (remoteUpdate !== null) setRemoteUpdate(null);
+      } else if (hasUnsavedChanges) {
         if (!sameSnapshot(remoteUpdate, incomingSnapshot)) {
           setRemoteUpdate(incomingSnapshot);
         }
@@ -485,12 +498,15 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   }, []);
 
   // Perform the actual save (async with proper status tracking)
-  const performSave = useCallback(async (): Promise<boolean> => {
+  const performSave = useCallback((): Promise<boolean> => noteSaveQueue.track((async (): Promise<boolean> => {
     // A released note has nowhere to save to: writing would edit a note another
     // device let go, or one that no longer exists. Report "not saved" so Back and
     // Escape keep the writer here; the released banner offers the ways out.
     if (releasedElsewhere) return false;
 
+    // The vault session this save belongs to. If the vault locks or the user changes
+    // while it waits, it must not write, or hold its words, in the next session.
+    const fromSession = heldSaves.session();
     const draftSnapshot = buildSnapshot(title, content, note.tags);
 
     // Nothing to write means nothing is unsaved, so any banner left by an
@@ -508,40 +524,53 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       return nothingToSave();
     }
 
-    // Wait until no save for this note is running. A loop, not one wait: another
-    // waiter (the debounce, the leave save) may start the next save first, and then
-    // this one may have nothing left to write.
-    let pending = inFlightSaveRef.current ?? noteSaveQueue.get(note.id);
-    if (pending) {
-      while (pending) {
-        await pending;
-        pending = inFlightSaveRef.current ?? noteSaveQueue.get(note.id);
+    // These words are not on disk yet. A new Editor for this note, opened while they
+    // wait or are written, starts from them rather than from older text.
+    const pendingDraft = { title: draftSnapshot.title, content: draftSnapshot.content };
+    noteSaveQueue.setPendingDraft(note.id, pendingDraft);
+    try {
+      // Wait until no save for this note is running. A loop, not one wait: another
+      // waiter (the debounce, the leave save) may start the next save first, and then
+      // this one may have nothing left to write.
+      let pending = inFlightSaveRef.current ?? noteSaveQueue.get(note.id);
+      if (pending) {
+        while (pending) {
+          await pending;
+          const next: Promise<boolean> | undefined = inFlightSaveRef.current ?? noteSaveQueue.get(note.id);
+          if (next === pending) break;
+          pending = next;
+        }
+        if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
+          return nothingToSave();
+        }
+        if (releasedRef.current) return false;
       }
-      if (sameTitleAndContent(draftSnapshot, committedSnapshotRef.current)) {
-        return nothingToSave();
+      if (heldSaves.session() !== fromSession) return false;
+
+      // The stored text these words are written over, for a held save's Retry.
+      const baseSnapshot = committedSnapshotRef.current;
+
+      if (mountedRef.current) {
+        // Clear any existing indicator timeouts
+        if (savePhaseTimeoutRef.current) {
+          clearTimeout(savePhaseTimeoutRef.current);
+        }
+        if (hideIndicatorTimeoutRef.current) {
+          clearTimeout(hideIndicatorTimeoutRef.current);
+        }
+
+        setSaveStatus('saving');
       }
-      if (releasedRef.current) return false;
-    }
+      inFlightSnapshotRef.current = draftSnapshot;
 
-    // The stored text these words are written over, for a held save's Retry.
-    const baseSnapshot = committedSnapshotRef.current;
+      // Register the save before it starts, so a write that settles at once still
+      // leaves no stale entry behind.
+      let finishSave!: (saved: boolean) => void;
+      const savePromise = new Promise<boolean>((resolve) => { finishSave = resolve; });
+      inFlightSaveRef.current = savePromise;
+      noteSaveQueue.set(note.id, savePromise);
 
-    if (mountedRef.current) {
-      // Clear any existing indicator timeouts
-      if (savePhaseTimeoutRef.current) {
-        clearTimeout(savePhaseTimeoutRef.current);
-      }
-      if (hideIndicatorTimeoutRef.current) {
-        clearTimeout(hideIndicatorTimeoutRef.current);
-      }
-
-      setSaveStatus('saving');
-    }
-    inFlightSnapshotRef.current = draftSnapshot;
-
-    // Create and track the save promise
-    let savePromise: Promise<boolean> | null = null;
-    savePromise = (async () => {
+      let saved = false;
       try {
         await onUpdate({
           ...note,
@@ -549,6 +578,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           content: draftSnapshot.content,
           updatedAt: new Date(),
         });
+        saved = true;
 
         committedSnapshotRef.current = draftSnapshot;
         if (sameSnapshot(inFlightSnapshotRef.current, draftSnapshot)) {
@@ -580,9 +610,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         if (!mountedRef.current) {
           // The writer has left this note (issue #288). Hold the words above the
           // Editor so the app can offer Retry and Copy. Not when the vault locked:
-          // decrypted text must not outlive it. Not for a note released elsewhere
-          // (the released banner dealt with those words) or deleted here.
-          const settled = releasedRef.current || deletedRef.current || keptRef.current !== null;
+          // decrypted text must not outlive it. Not for a note deleted here or kept
+          // as a new note: those words already went where the writer chose.
+          const settled = deletedRef.current || keptRef.current !== null;
           if (!settled && !(error instanceof VaultLockedSaveError)) {
             heldSaves.hold({
               key: instanceKey,
@@ -593,7 +623,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               baseContent: baseSnapshot?.content ?? note.content,
               attemptedAt: Date.now(),
               detail: '',
-            });
+            }, fromSession);
           }
           return false;
         }
@@ -609,18 +639,17 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
         return false;
       } finally {
-        // Clear the in-flight ref when done
+        // Clear the in-flight refs before waiters resume.
         if (inFlightSaveRef.current === savePromise) {
           inFlightSaveRef.current = null;
         }
-        if (savePromise) noteSaveQueue.settle(note.id, savePromise);
+        noteSaveQueue.settle(note.id, savePromise);
+        finishSave(saved);
       }
-    })();
-
-    inFlightSaveRef.current = savePromise;
-    noteSaveQueue.set(note.id, savePromise);
-    return await savePromise;
-  }, [title, content, note, onUpdate, releasedElsewhere, instanceKey]);
+    } finally {
+      noteSaveQueue.clearPendingDraft(note.id, pendingDraft);
+    }
+  })()), [title, content, note, onUpdate, releasedElsewhere, instanceKey]);
 
   // The last committed render's save and draft, for the unmount save. Written in a
   // layout effect, not during render, so a render React discards never lands here.
@@ -696,9 +725,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   // vault lock can save what is on screen first.
   useEffect(() => {
     mountedRef.current = true;
-    const unregister = heldSaves.registerFlusher(async () => {
+    const unregister = heldSaves.registerFlusher(() => {
       cancelPendingAutoSave();
-      await performSaveRef.current();
+      return performSaveRef.current();
     });
     return () => {
       mountedRef.current = false;
@@ -711,6 +740,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       const kept = keptRef.current;
       if (kept) {
         if (lastTitle === kept.title && lastContent === kept.content) return;
+        const fromSession = heldSaves.session();
         onUpdateRef.current({ ...kept.note, title: lastTitle, content: lastContent, updatedAt: new Date() })
           .catch((error: unknown) => {
             console.error('Failed to save words typed during Keep:', error);
@@ -724,21 +754,40 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               baseContent: kept.content,
               attemptedAt: Date.now(),
               detail: '',
-            });
+            }, fromSession);
           });
         return;
       }
 
-      // Released elsewhere or deleted here: there is no note to save into.
-      if (releasedRef.current || deletedRef.current) return;
+      // Deleted here: the writer let these words go.
+      if (deletedRef.current) return;
+      const committed = committedSnapshotRef.current;
+      const { title: storedTitle, content: storedContent } = committed ?? { title: '', content: '' };
+
+      // Released elsewhere: there is no note to save into. Unless the writer chose
+      // Let go, words left on screen (browser Back, a route change) are held, and
+      // Retry keeps them as a new note.
+      if (releasedRef.current) {
+        if (letGoRef.current || (lastTitle === storedTitle && lastContent === storedContent)) return;
+        heldSaves.hold({
+          key: instanceKey,
+          noteId: note.id,
+          title: lastTitle,
+          content: lastContent,
+          baseTitle: storedTitle,
+          baseContent: storedContent,
+          attemptedAt: Date.now(),
+          detail: 'This note was released on another device.',
+        }, heldSaves.session());
+        return;
+      }
       // An empty draft never replaces words on the way out. Clearing a note is saved
       // by the debounce while the writer stays on it.
-      const committed = committedSnapshotRef.current;
       if (isBlank(lastTitle, lastContent) && committed && !isBlank(committed.title, committed.content)) return;
 
       void performSaveRef.current();
     };
-  }, [cancelPendingAutoSave, instanceKey]);
+  }, [cancelPendingAutoSave, instanceKey, note.id]);
 
   // Bound continuous typing using the same encrypted local-save path as autosave.
   const checkpoint = useEffectEvent(() => { void performSave(); });
@@ -1421,7 +1470,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           }}
             className="rounded-[var(--radius-button)] border px-3 py-1.5 text-sm font-medium transition-all duration-200"
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)', background: 'transparent', borderColor: 'var(--glass-border)' }}>Copy</button>
-          <button type="button" onClick={onLetGoReleasedDraft ?? onBack}
+          <button type="button" onClick={() => { letGoRef.current = true; (onLetGoReleasedDraft ?? onBack)(); }}
             className="rounded-[var(--radius-button)] px-3 py-1.5 text-sm font-medium transition-all duration-200"
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-destructive-text)', background: 'var(--color-destructive)' }}>Let go</button>
         </div>

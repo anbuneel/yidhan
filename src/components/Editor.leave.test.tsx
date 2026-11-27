@@ -10,7 +10,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { NoteEditorView } from './NoteEditorView';
 import { Editor } from './Editor';
 import { resetNoteSaveQueue } from '../stores/noteSaveQueue';
-import { resetHeldSaves } from '../stores/heldSaves';
+import { heldSaves, resetHeldSaves } from '../stores/heldSaves';
 import { createMockNote } from '../test/factories';
 import { useAuth } from '../contexts/AuthContext';
 import type { Note } from '../types';
@@ -292,6 +292,83 @@ describe('leaving a note (issue #288)', () => {
     // Continuous typing never lets the debounce fire; only the 10s checkpoint saves.
     expect(save).toHaveBeenCalledTimes(1);
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ title: expect.stringMatching(/^Draft 1\d$/) }));
+  });
+
+  it('reopens with words still queued behind a slow save, and never types over them', async () => {
+    let finishFirst!: () => void;
+    const save = vi.fn<Save>()
+      .mockImplementationOnce(() => new Promise<void>((resolve) => { finishFirst = resolve; }))
+      .mockResolvedValue(undefined);
+    render(<Harness save={save} api={api} />);
+    type('first');
+    await act(async () => { vi.advanceTimersByTime(800); });
+    type('first second');
+    api.current!.open('note-b');
+    await flush();
+    api.current!.open('note-a');
+    await flush();
+    // "second" is waiting behind the first save, but it is on screen.
+    expect(titleInput().value).toBe('first second');
+    type('first second third');
+    await act(async () => { finishFirst(); });
+    await flush();
+    await act(async () => { vi.advanceTimersByTime(800); });
+    await flush();
+    expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'note-a', title: 'first second third' }));
+    expect(screen.queryByText(/another device/i)).not.toBeInTheDocument();
+  });
+
+  it('holds the words of a released note left by a route change', async () => {
+    const save = vi.fn<Save>().mockResolvedValue(undefined);
+    render(<Harness save={save} api={api} />);
+    type('Words on a released note');
+    act(() => api.current!.release(true));
+    api.current!.open(null);
+    await flush();
+    expect(save).not.toHaveBeenCalled();
+    expect(heldSaves.getSnapshot()).toEqual([
+      expect.objectContaining({ noteId: 'note-a', title: 'Words on a released note' }),
+    ]);
+  });
+
+  it('holds nothing for a released note the writer let go', async () => {
+    const save = vi.fn<Save>().mockResolvedValue(undefined);
+    render(<Harness save={save} api={api} />);
+    type('Let these go');
+    act(() => api.current!.release(true));
+    fireEvent.click(screen.getByRole('button', { name: 'Let go' }));
+    await flush();
+    expect(save).not.toHaveBeenCalled();
+    expect(heldSaves.getSnapshot()).toEqual([]);
+  });
+
+  it('saves an image-only draft on leave: it is not blank', async () => {
+    const save = vi.fn<Save>().mockResolvedValue(undefined);
+    render(<Harness save={save} api={api} />);
+    type('');
+    fireEvent.change(screen.getByTestId('editor-content'), { target: { value: '<p><img src="x.png"></p>' } });
+    api.current!.open(null);
+    await flush();
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: 'note-a', content: '<p><img src="x.png"></p>' }));
+  });
+
+  it('does not write or hold a save that waited past a vault lock', async () => {
+    let finishFirst!: () => void;
+    const save = vi.fn<Save>()
+      .mockImplementationOnce(() => new Promise<void>((resolve) => { finishFirst = resolve; }))
+      .mockRejectedValue(new Error('offline'));
+    render(<Harness save={save} api={api} />);
+    type('first');
+    await act(async () => { vi.advanceTimersByTime(800); });
+    type('first second');
+    api.current!.open(null);
+    // The vault locks and opens again while "second" waits.
+    heldSaves.close();
+    heldSaves.open();
+    await act(async () => { finishFirst(); });
+    await flush();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(heldSaves.getSnapshot()).toEqual([]);
   });
 
   it('never shows Synced for the reopened note before the server confirms it', async () => {

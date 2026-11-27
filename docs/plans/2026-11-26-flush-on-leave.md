@@ -52,7 +52,19 @@ interface HeldSave {
   later Editor for the same note does **not** remove it: that editor opened the older
   stored text and does not have the held words.
 - Cleared, and closed to new entries, whenever the vault is locked or the user changes.
-  A save that failed because the vault is locked is never held.
+  Every close starts a new session; a save that started in an earlier session can
+  neither write nor hold, even after the store opens again. A save that failed
+  because the vault is locked is never held.
+- Copy and Retry release only the entry revision they handled; a newer failure of the
+  same Editor stays. One retry per entry runs at a time.
+
+## Saves across Editor instances
+
+`src/stores/noteSaveQueue.ts` orders writes for one note across Editor instances, so
+the old Editor's leave save and the new one's saves never race. It also keeps the
+newest draft still waiting to be written; a reopened Editor starts from it, so words
+queued behind a slow save are on screen and not typed over. Retry's save-over runs in
+the same queue.
 
 ## The five cases
 
@@ -79,7 +91,9 @@ interface HeldSave {
 ## Must not happen, and how
 
 - No unmount save for a note released elsewhere (`releasedElsewhere`), or one the writer
-  deleted from this Editor (a flag set before `onDelete`, cleared if delete fails).
+  deleted from this Editor (a flag set before `onDelete`, cleared if delete fails). A
+  released note left by a route change, not by Let go, has its words held; Retry keeps
+  them as a new note.
 - No unmount save for a locked note: `handleNoteUpdate` refuses, as today.
 - No empty unmount save over a note that had words. Clearing a note is saved by the
   debounce while the writer stays; leaving inside the window keeps the old words.
@@ -95,11 +109,13 @@ remembers the kept note and, on unmount, saves any newer words into it.
 
 ## Lock and sign-out
 
-- **Lock now** (Settings, library only): flush pending saves, then retry held ones. If
-  any are still held, the vault stays unlocked, Settings closes and the notice says so,
-  with Retry, Copy and "Lock anyway".
-- **Auto-lock**: flush the open Editor and retry held saves, then clear the store and
-  lock. Local writes survive an auto-lock, so the flush is worth it.
+- **Lock now** (Settings, library only): flush the open Editor, wait for saves still
+  running from Editors already gone, then retry held ones, for at most 3s. If anything
+  is still unsaved, the vault stays unlocked, Settings closes and the notice says so,
+  with Retry, Copy and "Lock anyway". Once Retry or Copy deals with the last entry,
+  the lock goes ahead.
+- **Auto-lock**: the same saving, bounded at 3s, then clear the store and lock. A hung
+  write never keeps an idle vault open. If words were dropped, a toast says so.
 - **Sign-out** (any path): clear the store. Sign-out already deletes the offline database
   (`clearOfflineData`), so a flush to IndexedDB first would be deleted with it.
 

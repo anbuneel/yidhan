@@ -21,7 +21,7 @@ const buttonBase = 'rounded-[var(--radius-button)] px-3 py-1.5 text-sm font-medi
 export function HeldSavesNotice({ entries, onRetry, onCopy, lockBlocked = false, onLockAnyway }: HeldSavesNoticeProps) {
   const [copyFailedKey, setCopyFailedKey] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  if (entries.length === 0) return null;
+  if (entries.length === 0 && !lockBlocked) return null;
 
   return (
     <div
@@ -31,7 +31,11 @@ export function HeldSavesNotice({ entries, onRetry, onCopy, lockBlocked = false,
     >
       {lockBlocked && (
         <div className="flex flex-wrap items-center gap-3">
-          <span className="mr-auto basis-full">Your notes are still unlocked. These words are not saved yet.</span>
+          <span className="mr-auto basis-full">
+            {entries.length > 0
+              ? 'Your notes are still unlocked. These words are not saved yet.'
+              : 'Your notes are still unlocked. Some words are still being saved.'}
+          </span>
           <button type="button" onClick={onLockAnyway} className={buttonBase}
             style={{ fontFamily: 'var(--font-body)', color: 'var(--color-destructive-text)', background: 'var(--color-destructive)' }}>Lock anyway</button>
         </div>
@@ -43,14 +47,14 @@ export function HeldSavesNotice({ entries, onRetry, onCopy, lockBlocked = false,
             {entry.detail && <span className="block">{entry.detail}</span>}
             {copyFailedKey === entry.key && <span className="block">Could not copy. Retry keeps them as a note.</span>}
           </span>
-          <button type="button" disabled={busyKey === entry.key}
+          <button type="button" disabled={busyKey !== null}
             onClick={async () => {
               setBusyKey(entry.key);
               try { await onRetry(entry.key); } finally { setBusyKey(null); }
             }}
             className={buttonBase}
             style={{ fontFamily: 'var(--font-body)', background: 'var(--color-cta-bg)', color: 'var(--color-cta-text)' }}>Retry</button>
-          <button type="button"
+          <button type="button" disabled={busyKey !== null}
             onClick={async () => {
               setCopyFailedKey((await onCopy(entry.key)) ? null : entry.key);
             }}

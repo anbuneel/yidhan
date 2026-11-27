@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { LibraryScreen } from './components/LibraryScreen';
 import { FadedNotesScreen } from './components/FadedNotesScreen';
@@ -39,10 +39,9 @@ import { useViewTransition } from './hooks/useViewTransition';
 import { useInstallPrompt } from './hooks/useInstallPrompt';
 import { useShareTarget } from './hooks/useShareTarget';
 import { useSettingsModalState } from './hooks/useSettingsModalState';
-import { useHeldSaveActions } from './hooks/useHeldSaveActions';
 import { heldSaves, useHeldSaves } from './stores/heldSaves';
 import { useLockAfterSaving } from './hooks/useLockAfterSaving';
-import { HeldSavesNotice } from './components/HeldSavesNotice';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 import './App.css';
 
 interface AppProps {
@@ -55,6 +54,9 @@ interface AppProps {
   /** Opened by Sign in or Start writing on the public shell, which cannot open it itself. */
   initialAuthModal?: 'login' | 'signup';
 }
+
+// The held-save notice is rare; it loads only while words are held (issue #288).
+const HeldSavesLayer = lazyWithRetry(() => import('./components/HeldSavesLayer'));
 
 function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
   const libraryFooterRef = useRef<HTMLElement>(null);
@@ -340,18 +342,8 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
 
   // Held saves (issue #288): words from a note the writer left whose save failed.
   // The store takes entries only while the vault is open for this user.
-  const heldSaveEntries = useHeldSaves();
-  const heldSaveActions = useHeldSaveActions({
-    userId: user?.id,
-    keys,
-    notesRef,
-    tags,
-    setNotes,
-    saveNote: handleNoteUpdate,
-    triggerCoalescedSync,
-    trackLocalWrite,
-  });
-  retryHeldSavesRef.current = heldSaveActions.retryAll;
+  const heldSaveCount = useHeldSaves().length;
+  const hasOpenDraft = useCallback((noteId: string) => holdsUnsavedDraft(openDraftRef, noteId), []);
   const heldSavesOpen = Boolean(user) && isUnlocked;
   const heldSavesUserId = user?.id;
   useEffect(() => {
@@ -360,13 +352,14 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
       return;
     }
     heldSaves.open();
-    return () => heldSaves.close();
+    return () => { heldSaves.close(); };
   }, [heldSavesOpen, heldSavesUserId]);
 
-  // "Lock now": save first. If words are still held, keep the vault open and say so,
-  // with Retry, Copy and "Lock anyway".
+  // "Lock now": save first. If words are still unsaved, keep the vault open and say
+  // so, with Retry, Copy and "Lock anyway". Once Retry or Copy has dealt with the last
+  // of them, the lock the writer asked for goes ahead.
   const [lockHeldBack, setLockHeldBack] = useState(false);
-  if (lockHeldBack && heldSaveEntries.length === 0) setLockHeldBack(false);
+  if (lockHeldBack && !isUnlocked) setLockHeldBack(false);
   const handleLockNow = async () => {
     if (await lockNow()) return;
     setShowSettingsModal(false);
@@ -376,15 +369,30 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     setLockHeldBack(false);
     lockAnyway();
   };
-  const heldSavesNotice = (
-    <HeldSavesNotice
-      entries={heldSaveEntries}
-      onRetry={async (key) => { await heldSaveActions.retry(key); }}
-      onCopy={heldSaveActions.copy}
-      lockBlocked={lockHeldBack}
-      onLockAnyway={handleLockAnyway}
-    />
-  );
+  const lockIfAllDealtWith = () => {
+    if (!lockHeldBack || heldSaves.getSnapshot().length > 0) return;
+    setLockHeldBack(false);
+    lockAnyway();
+  };
+  const heldSavesNotice = user && (heldSaveCount > 0 || lockHeldBack) ? (
+    <Suspense fallback={null}>
+      <HeldSavesLayer
+        userId={user.id}
+        keys={keys}
+        notesRef={notesRef}
+        tags={tags}
+        setNotes={setNotes}
+        saveNote={handleNoteUpdate}
+        triggerCoalescedSync={triggerCoalescedSync}
+        trackLocalWrite={trackLocalWrite}
+        hasOpenDraft={hasOpenDraft}
+        lockBlocked={lockHeldBack}
+        onLockAnyway={handleLockAnyway}
+        onDealtWith={lockIfAllDealtWith}
+        retryHeldSavesRef={retryHeldSavesRef}
+      />
+    </Suspense>
+  ) : null;
 
   // NoteCard owns inline recovery for pointer-triggered fades. The editor and
   // keyboard paths have no inline error surface, so they keep a single toast.

@@ -3,12 +3,15 @@
  * save failed. The rule for Retry is in `utils/retryHeldSave`; this hook gives it the
  * app's notes, the save path and the way to keep words as a new note.
  */
-import { useCallback, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import type { DerivedKeys } from '../lib/encryption';
 import type { Note, Tag } from '../types';
 import { heldSaves } from '../stores/heldSaves';
+import { noteSaveQueue } from '../stores/noteSaveQueue';
 import { retryHeldSave } from '../utils/retryHeldSave';
 import { VaultLockedSaveError } from '../utils/saveErrors';
+import { keepReleasedDraft } from '../utils/keepReleasedDraft';
+import { copyNoteToClipboard } from '../utils/exportImport';
 
 export interface UseHeldSaveActionsOptions {
   userId: string | undefined;
@@ -20,6 +23,8 @@ export interface UseHeldSaveActionsOptions {
   triggerCoalescedSync: () => void;
   /** Marks a write a list refresh must wait for (`useNotesSync`). */
   trackLocalWrite: <T>(write: () => Promise<T>) => Promise<T>;
+  /** True when an open Editor on this note holds words its stored copy does not. */
+  hasOpenDraft: (noteId: string) => boolean;
 }
 
 export interface HeldSaveActions {
@@ -31,6 +36,8 @@ export interface HeldSaveActions {
   copy: (key: string) => Promise<boolean>;
 }
 
+const RETRY_FAILED = 'Still not saved. Try again, or copy the words.';
+
 export function useHeldSaveActions({
   userId,
   keys,
@@ -40,39 +47,62 @@ export function useHeldSaveActions({
   saveNote,
   triggerCoalescedSync,
   trackLocalWrite,
+  hasOpenDraft,
 }: UseHeldSaveActionsOptions): HeldSaveActions {
-  const retry = useCallback(async (key: string): Promise<boolean> => {
+  // One retry per entry at a time: a click and a lock's retry share it, so the words
+  // are never kept as two new notes.
+  const retriesRef = useRef(new Map<string, Promise<boolean>>());
+
+  const runRetry = useCallback(async (key: string): Promise<boolean> => {
     const entry = heldSaves.get(key);
     if (!entry) return true;
+    const fromSession = heldSaves.session();
     try {
+      // Let any write for this note finish first. The list then shows what is stored,
+      // not an optimistic copy that may still fail.
+      await noteSaveQueue.waitIdle(entry.noteId);
+      if (!heldSaves.isCurrent(fromSession)) return false;
       await retryHeldSave(entry, {
         current: notesRef.current.find((n) => n.id === entry.noteId),
-        saveOver: saveNote,
-        keepAsCopy: async (held, current) => {
-          // Loaded on demand: this path is rare, and keeps the module out of the app shell.
-          const { keepReleasedDraft } = await import('../utils/keepReleasedDraft');
+        // An open Editor with its own unsaved words on this note counts as a change:
+        // saving over the stored copy would race those words.
+        openDraft: hasOpenDraft(entry.noteId),
+        saveOver: (note) => noteSaveQueue.run(note.id, () => saveNote(note)),
+        keepAsCopy: async (held, original) => {
+          if (!heldSaves.isCurrent(fromSession)) throw new VaultLockedSaveError();
           const kept = await trackLocalWrite(() =>
-            keepReleasedDraft(userId, keys, held.title, held.content, current, tags)
+            keepReleasedDraft(userId, keys, held.title, held.content, original, tags)
           );
+          // The vault locked during the write: the note is stored, encrypted, and
+          // loads with the list next time. Decrypted text stays out of app state.
+          if (!heldSaves.isCurrent(fromSession)) return;
           setNotes((prev) => [kept, ...prev]);
           triggerCoalescedSync();
         },
       });
-      heldSaves.release(key);
+      heldSaves.release(key, entry.revision);
       return true;
     } catch (error) {
       console.error('Retry of a held save failed:', error);
       const still = heldSaves.get(key);
-      if (still) {
+      if (still && still.revision === entry.revision) {
         heldSaves.hold({
           ...still,
           attemptedAt: Date.now(),
-          detail: error instanceof VaultLockedSaveError ? error.message : '',
-        });
+          detail: error instanceof VaultLockedSaveError ? error.message : RETRY_FAILED,
+        }, fromSession);
       }
       return false;
     }
-  }, [userId, keys, notesRef, tags, setNotes, saveNote, triggerCoalescedSync, trackLocalWrite]);
+  }, [userId, keys, notesRef, tags, setNotes, saveNote, triggerCoalescedSync, trackLocalWrite, hasOpenDraft]);
+
+  const retry = useCallback((key: string): Promise<boolean> => {
+    const running = retriesRef.current.get(key);
+    if (running) return running;
+    const attempt = runRetry(key).finally(() => retriesRef.current.delete(key));
+    retriesRef.current.set(key, attempt);
+    return attempt;
+  }, [runRetry]);
 
   const retryAll = useCallback(async (): Promise<boolean> => {
     let allDone = true;
@@ -83,10 +113,11 @@ export function useHeldSaveActions({
   }, [retry]);
 
   const copy = useCallback(async (key: string): Promise<boolean> => {
+    // A retry in progress decides the entry's fate first.
+    await retriesRef.current.get(key);
     const entry = heldSaves.get(key);
     if (!entry) return true;
     try {
-      const { copyNoteToClipboard } = await import('../utils/exportImport');
       const current = notesRef.current.find((n) => n.id === entry.noteId);
       const base: Note = current ?? {
         id: entry.noteId,
@@ -99,7 +130,8 @@ export function useHeldSaveActions({
         deletedAt: null,
       };
       await copyNoteToClipboard({ ...base, title: entry.title, content: entry.content });
-      heldSaves.release(key);
+      // Only the words that reached the clipboard: a newer failure stays held.
+      heldSaves.release(key, entry.revision);
       return true;
     } catch (error) {
       console.error('Copy of a held save failed:', error);
