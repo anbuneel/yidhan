@@ -104,7 +104,7 @@ export type ApplyOptimistic = <T>(update: (prev: Note[]) => Note[], write: () =>
  * - `ended`: the vault locked, the user changed or the app unmounted. Nothing was
  *   applied and nothing should be said.
  */
-export type ReloadResult =
+type ReloadResult =
   | { status: 'applied'; notes: Note[] }
   | { status: 'deferred' }
   | { status: 'superseded' }
@@ -190,12 +190,12 @@ export function useNotesSync({
     listVersionRef.current += 1;
     setNotesState(action);
   }, []);
-  const updateNotes = useCallback<UpdateNotes>((update) => setNotes(update), [setNotes]);
 
   // Writes whose change reached the list before it reached IndexedDB. A refresh read
   // during one sees the old copy and the version alone cannot tell.
   const pendingLocalWritesRef = useRef(new Set<Promise<unknown>>());
-  const trackLocalWrite = useCallback(async <T,>(write: () => Promise<T>): Promise<T> => {
+  const applyOptimistic = useCallback(async <T,>(update: (prev: Note[]) => Note[], write: () => Promise<T>): Promise<T> => {
+    setNotes(update);
     let pending: Promise<T> | undefined;
     try {
       pending = write();
@@ -205,12 +205,7 @@ export function useNotesSync({
       if (pending) pendingLocalWritesRef.current.delete(pending);
       listVersionRef.current += 1;
     }
-  }, []);
-
-  const applyOptimistic = useCallback<ApplyOptimistic>((update, write) => {
-    setNotes(update);
-    return trackLocalWrite(write);
-  }, [setNotes, trackLocalWrite]);
+  }, [setNotes]);
 
   /** Resolves true once the writes in flight now have settled, false on timeout. */
   const waitForLocalWrites = useCallback(async (): Promise<boolean> => {
@@ -321,21 +316,19 @@ export function useNotesSync({
     };
 
     let result: ReloadResult = { status: 'deferred' };
-    for (let read = 1; ; read++) {
+    let stop: ReloadResult | null;
+    // A read that loses to a local change is retried: a fresh read includes the
+    // change, because local writes reach IndexedDB before the version moves past them.
+    for (let read = 0; read < MAX_REFRESH_READS; read++) {
       // Wait for a write in flight instead of reading the copy it is replacing.
       if (pendingLocalWritesRef.current.size > 0) {
         const settled = await waitForLocalWrites();
-        const stop = stopped();
-        if (stop) return stop;
-        if (!settled) {
-          deferRefreshRef.current();
-          break;
-        }
+        if ((stop = stopped())) return stop;
+        if (!settled) break;
       }
       const versionAtRead = listVersionRef.current;
       const snapshot = await fetchDecryptedNotes(userId, keys);
-      const stop = stopped();
-      if (stop) return stop;
+      if ((stop = stopped())) return stop;
       if (versionAtRead === listVersionRef.current && pendingLocalWritesRef.current.size === 0) {
         setNotesState(snapshot);
         appliedRefreshesRef.current += 1;
@@ -343,13 +336,8 @@ export function useNotesSync({
         result = { status: 'applied', notes: snapshot };
         break;
       }
-      // The list changed while we read. A fresh read includes the change, because
-      // local writes reach IndexedDB before the version moves past them.
-      if (read >= MAX_REFRESH_READS) {
-        deferRefreshRef.current();
-        break;
-      }
     }
+    if (result.status === 'deferred') deferRefreshRef.current();
     // Tags do not race with the list, so they refresh even when the notes deferred.
     // A failed tags read does not undo the notes that applied, so it is not thrown.
     try {
@@ -357,7 +345,7 @@ export function useNotesSync({
       if (ended()) return ENDED;
       if (refreshId === refreshIdRef.current) setTags(refreshedTags);
     } catch (error) {
-      console.error('Failed to re-read tags:', error);
+      console.error(error);
     }
     return result;
   }, [userId, keys, waitForLocalWrites]);
@@ -570,16 +558,9 @@ export function useNotesSync({
       .then((loaded) => { if (current && !refreshedMeanwhile()) setNotes(loaded); })
       .catch((error) => {
         if (!current) return;
-        if (refreshedMeanwhile()) {
-          // The refresh's list is newer and on screen, so keep it, but record the failure.
-          reportReliabilityIssue({
-            category: 'sync',
-            message: 'First read of notes failed after a refresh loaded them',
-            level: 'warning',
-          }, error);
-          return;
-        }
         console.error('Failed to decrypt notes:', error);
+        // A refresh's list is newer and on screen: keep it, and say nothing.
+        if (refreshedMeanwhile()) return;
         setNotes([]);
         toast.error('Could not decrypt your notes. Lock and unlock your vault, then try again.');
       })
@@ -794,7 +775,8 @@ export function useNotesSync({
 
   return {
     notes,
-    setNotes: updateNotes,
+    // The same setter, narrowed to updaters by the type.
+    setNotes,
     loading,
     tags,
     setTags,

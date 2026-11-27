@@ -370,7 +370,7 @@ describe('callers when the reload does not apply', () => {
     await ready(h);
     mocks.fetchDecryptedNotes.mockRejectedValueOnce(new Error('read failed'));
     await act(async () => { await h.result.current.syncActions.handleConflictResolve('local'); });
-    expect(toast.error).toHaveBeenCalledWith('Conflict resolved, but the list could not refresh. Pull to refresh.');
+    expect(toast.error).toHaveBeenCalledWith('Resolved. Pull to refresh to see it.');
     expect(toast.error).not.toHaveBeenCalledWith('Failed to resolve conflict. Please try again.');
   });
 
@@ -382,7 +382,7 @@ describe('callers when the reload does not apply', () => {
     await act(async () => {
       await h.result.current.importer.handleImportFile(new File(['# Imported\n\nWords'], 'imported.md'));
     });
-    expect(toast.error).toHaveBeenCalledWith('Imported, but the list could not refresh. Pull to refresh.');
+    expect(toast.error).toHaveBeenCalledWith('Imported. Pull to refresh to see it.');
     expect(toast.error).not.toHaveBeenCalledWith('Failed to import file. Please check the file format.');
   });
 

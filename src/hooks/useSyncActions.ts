@@ -102,8 +102,8 @@ export function useSyncActions({
         onOpenNoteClosed();
       }
     } catch (error) {
-      console.error('Failed to re-read notes after resolving a conflict:', error);
-      toast.error('Conflict resolved, but the list could not refresh. Pull to refresh.');
+      console.error(error);
+      toast.error('Resolved. Pull to refresh to see it.');
     }
   };
 

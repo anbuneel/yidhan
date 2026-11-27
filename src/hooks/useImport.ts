@@ -8,17 +8,14 @@
 
 import { useCallback, useState, type Dispatch, type SetStateAction } from 'react';
 import toast from 'react-hot-toast';
-import type { Note, Tag, TagColor } from '../types';
+import type { Note, Tag } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
 import { KdfLoadError } from '../lib/argon2';
 import {
   exportNotesToJSON,
   downloadFile,
-  parseImportedJSON,
   readFileAsText,
   downloadMarkdownZip,
-  markdownToHtml,
-  parseMultiNoteMarkdown,
   partitionExportableNotes,
   describeOmittedNotes,
   ValidationError,
@@ -30,14 +27,7 @@ import {
   BackupPassphraseError,
   openEncryptedBackup,
 } from '../utils/encryptedBackup';
-import { sanitizeHtml } from '../utils/sanitize';
-import {
-  createEncryptedNote,
-  createEncryptedNotesBatch,
-} from '../services/encryptedNotes';
 import type { NotesSync } from './useNotesSync';
-import { addTagToNoteOffline } from '../services/offlineNotes';
-import { createTagOffline } from '../services/offlineTags';
 import type { ImportProgress } from '../components/ImportProgressOverlay';
 
 export interface UseImportOptions {
@@ -118,18 +108,14 @@ export function useImport({
   }, [notes, reportOmittedFromExport]);
 
   // Import file (JSON, Markdown, or a decrypted `.yidhan` payload)
-  // The notes are already written when this runs. A failed re-read must not say the
-  // file was bad: the reader would import it again and get every note twice.
-  const reloadAfterImport = useCallback(async () => {
-    try {
-      await reloadFromStorage();
-    } catch (error) {
-      console.error('Failed to re-read notes after import:', error);
-      toast.error('Imported, but the list could not refresh. Pull to refresh.');
-    }
-  }, [reloadFromStorage]);
-
   const handleImportFile = useCallback(async (file: File, decryptedBackup?: string) => {
+    // The notes are already written when this runs. A failed re-read must not say the
+    // file was bad: the reader would import it again and get every note twice.
+    const reloadAfterImport = () => reloadFromStorage().catch((error: unknown) => {
+      console.error(error);
+      toast.error('Imported. Pull to refresh to see it.');
+    });
+
     if (!userId) return;
     if (!keys) {
       toast.error('Please unlock your vault before importing notes');
@@ -154,198 +140,12 @@ export function useImport({
 
     setImportProgress({ current: 0, total: 0, phase: 'parsing' });
     try {
-      const content = decryptedBackup ?? (await readFileAsText(file));
-      const isJSON = decryptedBackup !== undefined || file.name.endsWith('.json');
-      const isMarkdown = file.name.endsWith('.md') || file.name.endsWith('.markdown');
-
-      if (isJSON) {
-        // Import JSON backup with validation
-        const data = parseImportedJSON(content);
-        const totalNotes = data.notes.length;
-
-        setImportProgress({ current: 0, total: totalNotes, phase: 'importing' });
-
-        // Create tags first (if they don't exist)
-        const tagMap = new Map<string, string>(); // name -> id
-        for (const tagData of data.tags) {
-          const existingTag = tags.find(t => t.name.toLowerCase() === tagData.name.toLowerCase());
-          if (existingTag) {
-            tagMap.set(tagData.name, existingTag.id);
-          } else {
-            const newTag = await createTagOffline(userId, tagData.name, tagData.color as TagColor);
-            tagMap.set(tagData.name, newTag.id);
-            setTags(prev => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)));
-          }
-        }
-
-        // Prepare notes for batch insert (keep original tags for later)
-        const originalTagsMap = new Map<number, string[]>();
-        const notesToImport = data.notes.map((noteData, index) => {
-          originalTagsMap.set(index, noteData.tags);
-          return {
-            title: noteData.title,
-            pinned: noteData.pinned,
-            content: sanitizeHtml(noteData.content),
-            createdAt: noteData.createdAt ? new Date(noteData.createdAt) : undefined,
-            updatedAt: noteData.updatedAt ? new Date(noteData.updatedAt) : undefined,
-          };
-        });
-
-        // Batch insert notes with progress callback. Authenticated imports must be encrypted.
-        const progressCb = (completed: number, total: number) => {
-          setImportProgress({ current: completed, total, phase: 'importing' });
-        };
-        const createdNotes = await createEncryptedNotesBatch(userId, notesToImport, keys, progressCb);
-
-        // Add tags to notes (this still needs to be sequential due to junction table)
-        setImportProgress({ current: 0, total: createdNotes.length, phase: 'finalizing' });
-        for (let i = 0; i < createdNotes.length; i++) {
-          const note = createdNotes[i];
-          const originalTags = originalTagsMap.get(i) || [];
-          for (const tagName of originalTags) {
-            const tagId = tagMap.get(tagName);
-            if (tagId) {
-              await addTagToNoteOffline(userId, note.id, tagId, { preserveUpdatedAt: true });
-            }
-          }
-          setImportProgress({ current: i + 1, total: createdNotes.length, phase: 'finalizing' });
-        }
-
-        toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
-
-        // Refresh notes from IndexedDB
-        await reloadAfterImport();
-
-      } else if (isMarkdown) {
-        // Try to parse as combined multi-note export first
-        const multiNotes = parseMultiNoteMarkdown(content);
-
-        if (multiNotes) {
-          const totalNotes = multiNotes.length;
-          setImportProgress({ current: 0, total: totalNotes, phase: 'importing' });
-
-          // Collect all unique tags from imported notes
-          const allTagNames = new Set<string>();
-          for (const noteData of multiNotes) {
-            for (const tagName of noteData.tags) {
-              allTagNames.add(tagName);
-            }
-          }
-
-          // Create tag map (create missing tags)
-          const tagMap = new Map<string, string>(); // name -> id
-          for (const tagName of allTagNames) {
-            const existingTag = tags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
-            if (existingTag) {
-              tagMap.set(tagName, existingTag.id);
-            } else {
-              const newTag = await createTagOffline(userId, tagName, 'stone');
-              tagMap.set(tagName, newTag.id);
-              setTags(prev => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)));
-            }
-          }
-
-          // Prepare notes for batch insert (keep original tags for later)
-          const originalTagsMap = new Map<number, string[]>();
-          const notesToImport = multiNotes.map((noteData, index) => {
-            originalTagsMap.set(index, noteData.tags);
-            return {
-              title: noteData.title,
-              content: sanitizeHtml(markdownToHtml(noteData.content)),
-            };
-          });
-
-          // Batch insert notes with progress callback. Authenticated imports must be encrypted.
-          const mdProgressCb = (completed: number, total: number) => {
-            setImportProgress({ current: completed, total, phase: 'importing' });
-          };
-          const createdNotes = await createEncryptedNotesBatch(userId, notesToImport, keys, mdProgressCb);
-
-          // Add tags to notes if any tags were present
-          if (tagMap.size > 0) {
-            setImportProgress({ current: 0, total: createdNotes.length, phase: 'finalizing' });
-            for (let i = 0; i < createdNotes.length; i++) {
-              const note = createdNotes[i];
-              const originalTags = originalTagsMap.get(i) || [];
-              for (const tagName of originalTags) {
-                const tagId = tagMap.get(tagName);
-                if (tagId) {
-                  await addTagToNoteOffline(userId, note.id, tagId, { preserveUpdatedAt: true });
-                }
-              }
-              setImportProgress({ current: i + 1, total: createdNotes.length, phase: 'finalizing' });
-            }
-          }
-
-          // Refresh notes from IndexedDB
-          await reloadAfterImport();
-
-          toast.success(`Successfully imported ${createdNotes.length} note${createdNotes.length === 1 ? '' : 's'}`);
-        } else {
-          // Import single markdown file as a note
-          setImportProgress({ current: 0, total: 1, phase: 'importing' });
-
-          const lines = content.split('\n');
-          let title = file.name.replace(/\.(md|markdown)$/, '');
-          let noteContent = content;
-          let noteTags: string[] = [];
-          let contentStartIndex = 0;
-
-          // Extract title from first H1 if present
-          if (lines[0]?.startsWith('# ')) {
-            title = lines[0].substring(2).trim();
-            contentStartIndex = 1;
-          }
-
-          // Check for Tags line (e.g., "Tags: tag1, tag2")
-          const nextLine = lines[contentStartIndex]?.trim();
-          if (nextLine?.startsWith('Tags:')) {
-            const tagsStr = nextLine.substring(5).trim();
-            noteTags = tagsStr.split(',').map(t => t.trim()).filter(t => t.length > 0);
-            contentStartIndex++;
-          }
-
-          // Skip empty line after tags if present
-          if (lines[contentStartIndex]?.trim() === '') {
-            contentStartIndex++;
-          }
-
-          noteContent = lines.slice(contentStartIndex).join('\n').trim();
-
-          // Create tag map (create missing tags)
-          const tagMap = new Map<string, string>();
-          for (const tagName of noteTags) {
-            const existingTag = tags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
-            if (existingTag) {
-              tagMap.set(tagName, existingTag.id);
-            } else {
-              const newTag = await createTagOffline(userId, tagName, 'stone');
-              tagMap.set(tagName, newTag.id);
-              setTags(prev => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)));
-            }
-          }
-
-          // Convert markdown to HTML and sanitize
-          const htmlContent = sanitizeHtml(markdownToHtml(noteContent));
-
-          const newNote = await createEncryptedNote(userId, title, htmlContent, keys);
-
-          // Add tags to the note
-          for (const tagName of noteTags) {
-            const tagId = tagMap.get(tagName);
-            if (tagId) {
-              await addTagToNoteOffline(userId, newNote.id, tagId, { preserveUpdatedAt: true });
-            }
-          }
-
-          // Refresh from IndexedDB to get the note with tags
-          await reloadAfterImport();
-
-          toast.success(`Imported "${title}"`);
-        }
-      } else {
-        toast.error('Unsupported file format. Please use .json or .md files.');
-      }
+      // The parsing and writing load on demand: import is rare, and the app shell has
+      // no room to spare (scripts/bundle-budget.json).
+      const { importFile } = await import('../utils/importFile');
+      await importFile(file, decryptedBackup, {
+        userId, keys, tags, setTags, setImportProgress, reloadAfterImport,
+      });
     } catch (error) {
       console.error('Import failed:', error);
       if (error instanceof ValidationError) {
@@ -356,7 +156,7 @@ export function useImport({
     } finally {
       setImportProgress(null);
     }
-  }, [userId, tags, keys, setTags, reloadAfterImport]);
+  }, [userId, tags, keys, setTags, reloadFromStorage]);
 
   // Declared after `handleImportFile` so it can call it directly. In App this needed a
   // ref, because the import handler sat two hundred lines below the backup one; here
