@@ -110,6 +110,22 @@ jobs:
       - name: Service worker update tests
         run: npm run e2e:sw
 
+      # Timing harness (docs/setup/perf-harness.md). Its ceilings are several times
+      # a local median, so it catches a step change, not drift. Unlock skips here:
+      # this job has no E2E secrets. It shares this job because the job already has
+      # a browser and runs beside the longer e2e job, so it adds no wall-clock time.
+      - name: Timing harness (loose ceilings)
+        run: npm run e2e:perf
+
+      - name: Upload timing results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-results
+          path: perf-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
   # Full browser suite (~10min, serial)
   #
   # 97 tests across 10 specs, run on Desktop Chrome and Pixel 5 — 194 runs. Written

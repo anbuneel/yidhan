@@ -1,0 +1,123 @@
+# Timing harness
+
+A Playwright suite that times a production build under CPU throttling. It is a
+before/after tool for the shell-size and snappiness work
+(`docs/plans/2026-11-27-shell-size-and-snappiness-proposal.md`, item D1). It is not
+a regression gate: CI checks only loose ceilings.
+
+## What it measures
+
+Every sample runs in a fresh browser context, so caches start empty. CPU is
+throttled 4x through CDP (`Emulation.setCPUThrottlingRate`). The service worker is
+blocked, so its precache download does not compete with what is timed.
+
+| Metric | From | To |
+|---|---|---|
+| `boot.toLibrary` | navigation start | first frame with library cards painted |
+| `boot.fcp` | navigation start | first contentful paint |
+| `boot.longTasks`, `boot.tbt` | navigation start | library painted |
+| `boot.settled.longTasks`, `boot.settled.tbt` | navigation start | network idle plus 1 s |
+| `open.cold` | pointerdown on the long note's card | first frame with the editor visible and editable |
+| `open.warm` | the same, second open in the same page | the same |
+| `typing.p50`, `typing.p95` | each keydown | the frame after it |
+| `typing.longTasks`, `typing.tbt` | first keystroke | 0.5 s after the last |
+| `unlock.toLibrary` | pointerdown on Unlock | library painted, or the recovery-key offer |
+| `unlock.tbt` | the same | the same |
+
+Total blocking time (TBT) is the sum of each long task's time over 50 ms.
+
+Start times are input event timestamps, so time an event spent queued behind a busy
+main thread counts. End times are read in a task posted from the
+`requestAnimationFrame` callback that first sees the result, which is after that
+frame paints.
+
+Each metric reports the median across samples (5 by default; typing takes 3, each
+of 60 keystrokes 100 ms apart, at the end of a 2,500-word note). The raw samples
+are in the JSON.
+
+Notes:
+
+- `open.cold` is the first Editor mount in the page, not the chunk download. The
+  library preloads the Editor chunk, and the harness waits for the network to go
+  idle before it clicks.
+- The signed-out cases use a seeded Practice Space at `/demo` (`e2e-perf/seed.ts`):
+  41 notes, fixed text, no Supabase. The signed-in boot path differs (Supabase,
+  Dexie, decryption), so `boot.*` tracks the app shell's code, not a signed-in
+  cold start.
+- `unlock.*` needs the shared test account. It signs in and unlocks, and creates or
+  changes nothing, so it leaves no data behind. If the account has no recovery key,
+  the recovery-key offer appears before the library; the harness stops there and
+  says so in the notes. Each sample is a password sign-in, so it takes at most 3.
+
+## Run it
+
+```powershell
+npm run e2e:perf
+```
+
+It builds for production first (`npm run build`, with the bundle budget check),
+then serves `dist/` on 127.0.0.1. It takes about two minutes.
+
+Not part of `npm run e2e`, `npm run e2e:sw` or `npm run check`: it has its own
+directory (`e2e-perf/`) and config (`playwright.perf.config.ts`).
+
+For the unlock case, put `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`,
+`E2E_TEST_PASSPHRASE` and a real `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+in `.env.local`. Without them it skips. See `docs/setup/e2e-testing-setup.md`.
+
+On a machine where `npx playwright install` does not work, point Playwright at
+system Chrome:
+
+```powershell
+$env:PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = 'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
+```
+
+Options, as environment variables:
+
+| Variable | Default | Effect |
+|---|---|---|
+| `PERF_SAMPLES` | 5 | samples per metric (typing takes half, at least 3; unlock at most 3) |
+| `PERF_CPU_THROTTLE` | 4 | CPU slowdown factor |
+| `PERF_SKIP_BUILD` | unset | `1` reuses `dist/` as it is |
+
+Close other heavy programs first. The numbers are only worth comparing between runs
+on the same machine, at the same throttle rate.
+
+## Output
+
+The run prints a table and writes `perf-results/<time>-<commit>.json` and
+`perf-results/latest.json`. The folder is gitignored. Each file records the commit,
+whether the tree was dirty, the machine, the browser version, the throttle rate and
+every sample.
+
+## Compare two runs
+
+```powershell
+git switch main; npm run e2e:perf; Copy-Item perf-results/latest.json perf-results/before.json
+```
+
+```powershell
+git switch my-branch; npm run e2e:perf
+```
+
+```powershell
+node scripts/compare-perf.mjs perf-results/before.json
+```
+
+The script prints before, after, the change and the change in percent for every
+metric. It warns when the runs used a different throttle rate or CPU.
+
+Run each side twice if a change is small. At 4x throttling a 10% swing between two
+runs of the same build is normal; a change worth reporting is one that holds across
+runs and is larger than that.
+
+## CI
+
+The `service-worker` job runs `npm run e2e:perf` after `npm run e2e:sw` and
+uploads `perf-results/` as an artifact. The job has no E2E secrets, so unlock skips.
+
+The spec checks loose ceilings on four medians: `boot.toLibrary`, `open.cold`,
+`open.warm` and `typing.p95`. They are set many times above the local baseline so a
+slow shared runner does not fail them. They catch a step change, such as the Editor
+never becoming editable or typing stalling for a second per key. Long-task counts
+and TBT have no ceiling: on a shared runner they vary too much to mean anything.
