@@ -924,4 +924,6 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   returns `applied`, `deferred` or `stale`. `applyOptimistic(update, write)` replaces
   `trackLocalWrite`; the public `setNotes` takes updaters only. The first load skips
   its result if a refresh applied while it read. Prepends go through `withNotesFirst`,
-  so a note a refresh already read is not shown twice.
+  so a note a refresh already read is not shown twice. The import body now loads on
+  demand (`src/utils/importFile.ts`) to keep the app shell under 330 KB. Review:
+  `docs/reviews/2026-11-27-pr302-whole-list-reloads-review.md`; tags follow-up #304.
