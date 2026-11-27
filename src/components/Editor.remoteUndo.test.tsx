@@ -5,7 +5,7 @@
  * and autosave wrote it over that device's edit.
  */
 import { useCallback, useState, type ReactNode } from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { Editor } from './Editor';
@@ -16,6 +16,7 @@ import { useAuth } from '../contexts/AuthContext';
 import type { Note } from '../types';
 
 const tiptap = vi.hoisted(() => ({ current: null as TiptapEditor | null }));
+const keep = vi.hoisted(() => ({ keepReleasedDraft: vi.fn() }));
 
 vi.mock('./RichTextEditor', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./RichTextEditor')>();
@@ -33,7 +34,7 @@ vi.mock('./RichTextEditor', async (importOriginal) => {
   };
 });
 vi.mock('../contexts/AuthContext', () => ({ useAuth: vi.fn() }));
-vi.mock('../utils/keepReleasedDraft', () => ({ keepReleasedDraft: vi.fn() }));
+vi.mock('../utils/keepReleasedDraft', () => keep);
 vi.mock('./EditorSidebar', () => ({ EditorSidebar: () => null }));
 vi.mock('./EditorToolbar', () => ({ EditorToolbar: () => null }));
 vi.mock('./TagSelector', () => ({ TagSelector: () => null }));
@@ -71,7 +72,12 @@ interface HarnessApi {
 }
 
 /** As the app: a save updates the list's copy at once, so its echo is the prop. */
-function Harness({ save, api, released }: { save: Save; api: { current: HarnessApi | null }; released: boolean }) {
+function Harness({ save, api, released, onKeptReplacedDraft }: {
+  save: Save;
+  api: { current: HarnessApi | null };
+  released: boolean;
+  onKeptReplacedDraft: (note: Note) => void;
+}) {
   const [note, setNote] = useState(base);
   const onUpdate = useCallback(async (updated: Note) => {
     setNote(updated);
@@ -93,6 +99,7 @@ function Harness({ save, api, released }: { save: Save; api: { current: HarnessA
       onThemeToggle={vi.fn()}
       onSettingsClick={vi.fn()}
       releasedElsewhere={released}
+      onKeptReplacedDraft={onKeptReplacedDraft}
     />
   );
 }
@@ -114,6 +121,15 @@ function typeText(text: string) {
   });
 }
 
+/** Selects the whole note and types over it, so the undo step starts at position 0. */
+function replaceAll(text: string) {
+  act(() => {
+    const ed = editor();
+    ed.commands.selectAll();
+    ed.view.dispatch(ed.state.tr.insertText(text));
+  });
+}
+
 function undo() {
   act(() => {
     editor().commands.undo();
@@ -130,16 +146,18 @@ async function pause() {
   await act(async () => { vi.advanceTimersByTime(1000); });
 }
 
-function savedContents(save: ReturnType<typeof vi.fn>) {
-  return save.mock.calls.map(([n]) => (n as Note).content);
+function savedContents(save: Mock<Save>) {
+  return save.mock.calls.map(([n]) => n.content);
 }
 
 describe('undo after a remote update (issue #284)', () => {
   let api: { current: HarnessApi | null };
-  let save: ReturnType<typeof vi.fn<Save>>;
+  let save: Mock<Save>;
+  let onKeptReplacedDraft: Mock<(note: Note) => void>;
+  const keptCopy = createMockNote({ id: 'note-copy', title: 'Shared (my version)', content: '<p>Alpha unsaved</p>' });
 
   async function mount(released = false) {
-    render(<Harness save={save} api={api} released={released} />);
+    render(<Harness save={save} api={api} released={released} onKeptReplacedDraft={onKeptReplacedDraft} />);
     await waitFor(() => expect(tiptap.current).not.toBeNull());
   }
 
@@ -147,6 +165,8 @@ describe('undo after a remote update (issue #284)', () => {
     tiptap.current = null;
     api = { current: null };
     save = vi.fn<Save>().mockResolvedValue(undefined);
+    onKeptReplacedDraft = vi.fn();
+    keep.keepReleasedDraft.mockReset().mockResolvedValue(keptCopy);
     resetNoteSaveQueue();
     resetHeldSaves();
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -187,6 +207,26 @@ describe('undo after a remote update (issue #284)', () => {
     expect(savedContents(save)).toEqual(['<p>Alpha mine</p>']);
   });
 
+  it('does not bring back replaced text from an undo step at the start of the note', async () => {
+    await mount();
+
+    // Select-all and type: the undo step starts at document position 0, where a
+    // whole-document replacement does not map it away.
+    replaceAll('Rewritten');
+    await autosave();
+    expect(savedContents(save)).toEqual(['<p>Rewritten</p>']);
+    api.current!.remote('<p>Remote words</p>');
+    save.mockClear();
+
+    undo();
+    expect(editor().getText()).toBe('Remote words');
+    act(() => { editor().commands.redo(); });
+    expect(editor().getText()).toBe('Remote words');
+    await autosave();
+
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it('a remote update does not trigger an autosave of its own', async () => {
     await mount();
 
@@ -211,7 +251,8 @@ describe('undo after a remote update (issue #284)', () => {
     expect(editor().getText()).toBe('Remote words');
 
     await autosave();
-    expect(savedContents(save)).not.toContain('<p>Alpha</p>');
+    // Back at the remote text, nothing differs from the stored note.
+    expect(save).not.toHaveBeenCalled();
   });
 
   it('keeps the writer\'s undo history when their own save echoes back', async () => {
@@ -225,7 +266,7 @@ describe('undo after a remote update (issue #284)', () => {
     expect(editor().getText()).toBe('Alpha');
   });
 
-  it('"Load changes" applies the remote text outside undo history', async () => {
+  it('"Load changes" keeps the writer\'s words as a new note, then applies the remote text outside undo history', async () => {
     await mount();
 
     // Unsaved typing when the remote copy arrives shows the banner.
@@ -233,15 +274,58 @@ describe('undo after a remote update (issue #284)', () => {
     api.current!.remote('<p>Remote words</p>');
     expect(screen.getByText('Updated on another device')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Load changes'));
-    expect(editor().getText()).toBe('Remote words');
+    await waitFor(() => expect(editor().getText()).toBe('Remote words'));
+
+    // The words undo can no longer reach are in a new note the writer can open.
+    expect(keep.keepReleasedDraft).toHaveBeenCalledTimes(1);
+    expect(keep.keepReleasedDraft).toHaveBeenCalledWith(
+      'user-1', null, 'Shared (my version)', '<p>Alpha unsaved</p>',
+      expect.objectContaining({ id: 'note-1', pinned: false }), [], 'Your version was kept as a new note.',
+    );
+    expect(onKeptReplacedDraft).toHaveBeenCalledWith(keptCopy);
+    expect(screen.queryByText('Updated on another device')).not.toBeInTheDocument();
 
     undo();
     undo();
     await autosave();
 
     expect(editor().getText()).toBe('Remote words');
-    expect(savedContents(save)).not.toContain('<p>Alpha unsaved</p>');
-    expect(savedContents(save)).not.toContain('<p>Alpha</p>');
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('"Load changes" replaces nothing when the writer\'s words cannot be kept', async () => {
+    keep.keepReleasedDraft.mockRejectedValue(new Error('vault locked'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await mount();
+
+    typeText(' unsaved');
+    api.current!.remote('<p>Remote words</p>');
+    fireEvent.click(screen.getByText('Load changes'));
+    await waitFor(() => expect(keep.keepReleasedDraft).toHaveBeenCalled());
+    await act(async () => { await Promise.resolve(); });
+
+    expect(editor().getText()).toBe('Alpha unsaved');
+    expect(screen.getByText('Updated on another device')).toBeInTheDocument();
+    expect(onKeptReplacedDraft).not.toHaveBeenCalled();
+    // Their own typing still undoes.
+    undo();
+    expect(editor().getText()).toBe('Alpha');
+  });
+
+  it('"Load changes" leaves words typed while the copy was written on screen', async () => {
+    let finishKeep!: (note: Note) => void;
+    keep.keepReleasedDraft.mockReturnValue(new Promise<Note>((resolve) => { finishKeep = resolve; }));
+    await mount();
+
+    typeText(' unsaved');
+    api.current!.remote('<p>Remote words</p>');
+    fireEvent.click(screen.getByText('Load changes'));
+    await waitFor(() => expect(keep.keepReleasedDraft).toHaveBeenCalled());
+    typeText(' more');
+    await act(async () => { finishKeep(keptCopy); await Promise.resolve(); });
+
+    expect(editor().getText()).toBe('Alpha unsaved more');
+    expect(screen.getByText('Updated on another device')).toBeInTheDocument();
   });
 
   it('"Keep mine" leaves the writer\'s text and its undo history alone', async () => {

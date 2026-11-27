@@ -9,6 +9,7 @@ import type { Note, Tag } from '../types';
  * Issue #205: write the words of a note released on another device into a new note.
  * The new note carries the released note's pin and its tags that still exist. Loaded
  * on demand from App, because it runs only on this rare path. Says what it kept.
+ * Also keeps the writer's words that "Load changes" replaces (issue #284).
  */
 export async function keepReleasedDraft(
   userId: string | undefined,
@@ -16,7 +17,8 @@ export async function keepReleasedDraft(
   title: string,
   content: string,
   releasedNote: Note | undefined,
-  liveTags: Tag[]
+  liveTags: Tag[],
+  keptMessage = 'Kept as a new note.'
 ): Promise<Note> {
   if (!userId) throw new Error('Cannot save without a signed-in user');
   if (!keys) throw new VaultLockedSaveError();
@@ -37,6 +39,6 @@ export async function keepReleasedDraft(
       tagsDropped = true;
     }
   }
-  toast(tagsDropped ? 'Kept as a new note. Some of its tags are gone.' : 'Kept as a new note.');
+  toast(tagsDropped ? `${keptMessage} Some of its tags are gone.` : keptMessage);
   return { ...newNote, tags: keptTags };
 }

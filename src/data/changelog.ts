@@ -9,6 +9,7 @@ export interface ChangelogEntry {
 export const changelog: ChangelogEntry[] = [
   { version: '3.26.3', date: '2026-11-27', changes: [
     { type: 'fix', text: 'Undo no longer brings back text that another device has since replaced. Before, pressing undo after a note updated from another device restored the old text and saved it over the other edit. Undo of your own typing after the update still works' },
+    { type: 'fix', text: 'When a note shows "Updated on another device" and you choose Load changes, the words on your screen are kept as a new note named "(my version)". If they cannot be kept, nothing is replaced' },
   ] },
   { version: '3.26.2', date: '2026-11-27', changes: [
     { type: 'improvement', text: 'Screen readers now hear when a search finds nothing, and hear sign-in, unlock and password errors as they appear' },

@@ -3,6 +3,9 @@ import type { OpenDraftState } from '../hooks/useReleasedDraft';
 import { useMenuButton } from '../hooks/useMenuButton';
 import type { DerivedKeys } from '../lib/encryption';
 import { keepReleasedDraft } from '../utils/keepReleasedDraft';
+import { replaceContentWithFreshHistory } from '../utils/editorHistory';
+import toast from 'react-hot-toast';
+import { MAX_NOTE_TITLE_LENGTH } from '../utils/validation';
 import { heldSaves } from '../stores/heldSaves';
 import { noteSaveQueue } from '../stores/noteSaveQueue';
 import { useState, useEffect, useLayoutEffect, useEffectEvent, useRef, useCallback } from 'react';
@@ -75,6 +78,11 @@ interface EditorProps {
   releasedElsewhere?: boolean;
   /** The released draft was kept as this new note; the app adds it and opens it. */
   onKeptReleasedDraft?: (note: Note) => void;
+  /**
+   * "Load changes" replaced the writer's unsaved words with another device's. They
+   * were kept as this new note first (issue #284); the app adds it to the list.
+   */
+  onKeptReplacedDraft?: (note: Note) => void;
   /** Vault keys, for writing a released draft into a new note. */
   vaultKeys?: DerivedKeys | null;
   /** The writer chose to let the words of a released note go. Defaults to onBack. */
@@ -120,14 +128,6 @@ function sameTitleAndContent(a: NoteSnapshot | null, b: NoteSnapshot | null): bo
   return a !== null && b !== null && a.title === b.title && a.content === b.content;
 }
 
-// Puts another device's text in the editor without an undo step (issue #284).
-// Undo could otherwise bring back the replaced text, and autosave would write it
-// over that device's edit. Earlier undo steps are mapped through the replacement,
-// so undo cannot reach text from before it; typing after it undoes as normal.
-function applyRemoteContent(editor: TiptapEditor, content: string) {
-  editor.chain().setMeta('addToHistory', false).setContent(content, { emitUpdate: false }).run();
-}
-
 // An empty note: no title and no body beyond empty paragraphs. A body with an image
 // or a divider is not blank.
 function isBlank(title: string, content: string): boolean {
@@ -149,7 +149,7 @@ const SAVE_LABEL_ICON: Record<ReturnType<typeof getSaveLabel>, SyncStateKind> = 
  * switch is an unmount and a mount and every ref here belongs to one note. On unmount
  * the Editor saves what it had on screen under its own note's id.
  */
-export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus, releasedElsewhere = false, onKeptReleasedDraft, vaultKeys = null, onLetGoReleasedDraft, onDraftStateChange }: EditorProps) {
+export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, onDelete, onToggleTag, onCreateTag, theme, onThemeToggle, onSettingsClick, isDemo = false, noteSyncStatus, releasedElsewhere = false, onKeptReleasedDraft, onKeptReplacedDraft, vaultKeys = null, onLetGoReleasedDraft, onDraftStateChange }: EditorProps) {
   // Words for this note still waiting to be written by an Editor the writer left
   // (issue #288). They are newer than the list's copy, so this Editor starts from them.
   const [startingDraft] = useState(() => noteSaveQueue.pendingDraft(note.id));
@@ -328,7 +328,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
   useEffect(() => {
     if (!editor || pendingEditorContentRef.current === null) return;
-    applyRemoteContent(editor, pendingEditorContentRef.current);
+    // Another device's text: undo must not bring back what it replaced (issue #284).
+    replaceContentWithFreshHistory(editor, pendingEditorContentRef.current);
     pendingEditorContentRef.current = null;
   // note.content included so same-note remote updates also trigger this effect (not just note switches)
   }, [editor, note.id, note.content]);
@@ -1019,17 +1020,47 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   };
 
   // Remote update banner handlers (2B)
-  const handleLoadRemoteChanges = useCallback(() => {
-    if (!remoteUpdate) return;
-    setTitle(remoteUpdate.title);
-    setContent(remoteUpdate.content);
-    committedSnapshotRef.current = remoteUpdate;
+  const [isLoadingRemote, setIsLoadingRemote] = useState(false);
+  const loadingRemoteRef = useRef(false);
+  const handleLoadRemoteChanges = useCallback(async () => {
+    if (!remoteUpdate || loadingRemoteRef.current) return;
+    const incoming = remoteUpdate;
+    // The banner shows only over unsaved words, and loading replaces them. Undo cannot
+    // bring them back (issue #284), so keep them as a new note first. If that fails,
+    // nothing is replaced and the banner stays.
+    const dropped = { title, content };
+    const worthKeeping = !isBlank(dropped.title, dropped.content)
+      && !(dropped.title === incoming.title && dropped.content === incoming.content);
+    if (worthKeeping) {
+      loadingRemoteRef.current = true;
+      setIsLoadingRemote(true);
+      try {
+        const suffix = ' (my version)';
+        const copyTitle = dropped.title.slice(0, MAX_NOTE_TITLE_LENGTH - suffix.length).replace(/[\uD800-\uDBFF]$/, '') + suffix;
+        const kept = await keepReleasedDraft(userId, vaultKeys, copyTitle, dropped.content, { ...note, pinned: false }, tags, 'Your version was kept as a new note.');
+        onKeptReplacedDraft?.(kept);
+      } catch (error) {
+        console.error('Failed to keep the replaced draft as a new note:', error);
+        toast.error('Your version could not be kept, so nothing was replaced.');
+        return;
+      } finally {
+        loadingRemoteRef.current = false;
+        if (mountedRef.current) setIsLoadingRemote(false);
+      }
+      if (!mountedRef.current) return;
+      // Words typed while the copy was written are not in it. Leave them on screen;
+      // the banner stays for the writer to choose again.
+      if (draftRef.current.title !== dropped.title || draftRef.current.content !== dropped.content) return;
+    }
+    setTitle(incoming.title);
+    setContent(incoming.content);
+    committedSnapshotRef.current = incoming;
     inFlightSnapshotRef.current = null;
     if (editor) {
-      applyRemoteContent(editor, remoteUpdate.content);
+      replaceContentWithFreshHistory(editor, incoming.content);
     }
     setRemoteUpdate(null);
-  }, [remoteUpdate, editor]);
+  }, [remoteUpdate, editor, title, content, userId, vaultKeys, note, tags, onKeptReplacedDraft]);
 
   const handleKeepMine = useCallback(() => {
     if (remoteUpdate) {
@@ -1645,7 +1676,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 Keep mine
               </button>
               <button type="button"
-                onClick={handleLoadRemoteChanges}
+                onClick={() => { void handleLoadRemoteChanges(); }}
+                disabled={isLoadingRemote}
                 className="text-xs px-3 py-1.5 rounded-[var(--radius-button)] transition-colors duration-200"
                 style={{
                   fontFamily: 'var(--font-body)',
