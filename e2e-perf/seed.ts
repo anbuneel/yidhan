@@ -43,6 +43,67 @@ function paragraphs(seed: number, wordCount: number): string {
   return out.join('');
 }
 
+/**
+ * The long note: headings, bold, italic, links, bullet lists and task lists, so
+ * serialising it walks many nodes and marks, as a real long note does. The word
+ * count lands within a few words of the target. The last block is always a
+ * paragraph, so typing lands in plain text.
+ */
+function richDocument(seed: number, wordCount: number): string {
+  const next = generator(seed);
+  const pick = () => WORDS[Math.floor(next() * WORDS.length)];
+  let remaining = wordCount;
+
+  /** `n` words with marks sprinkled in: about one word in six is bold, italic or a link. */
+  const text = (n: number) => {
+    const words: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const word = pick();
+      const roll = next();
+      if (roll < 0.06) words.push(`<strong>${word}</strong>`);
+      else if (roll < 0.12) words.push(`<em>${word}</em>`);
+      else if (roll < 0.16) words.push(`<a href="https://example.com/${word}">${word}</a>`);
+      else words.push(word);
+    }
+    remaining -= n;
+    return words.join(' ');
+  };
+  const take = (min: number, spread: number) => Math.min(remaining, min + Math.floor(next() * spread));
+
+  const blocks: string[] = [];
+  let sinceHeading = 0;
+  while (remaining > 0) {
+    if (sinceHeading >= 6 && remaining > 20) {
+      blocks.push(`<h2>${text(take(3, 4))}</h2>`);
+      sinceHeading = 0;
+      continue;
+    }
+    sinceHeading += 1;
+    const roll = next();
+    if (roll < 0.15 && remaining > 40) {
+      const items: string[] = [];
+      for (let i = 0, n = 3 + Math.floor(next() * 4); i < n && remaining > 0; i++) {
+        items.push(`<li><p>${text(take(4, 10))}</p></li>`);
+      }
+      blocks.push(`<ul>${items.join('')}</ul>`);
+    } else if (roll < 0.25 && remaining > 40) {
+      const items: string[] = [];
+      for (let i = 0, n = 3 + Math.floor(next() * 4); i < n && remaining > 0; i++) {
+        const checked = next() < 0.4;
+        items.push(
+          `<li data-type="taskItem" data-checked="${checked}"><label><input type="checkbox"${checked ? ' checked' : ''}><span></span></label>` +
+            `<div><p>${text(take(3, 8))}</p></div></li>`
+        );
+      }
+      blocks.push(`<ul data-type="taskList">${items.join('')}</ul>`);
+    } else {
+      blocks.push(`<p>${text(take(30, 70))}.</p>`);
+    }
+  }
+  if (!blocks[blocks.length - 1].startsWith('<p>')) blocks.push('<p>End.</p>');
+  return blocks.join('');
+}
+
 /** The `yidhan-demo-state` value: 40 short notes and one long one. */
 export function seededDemoState(now: number) {
   const notes = [];
@@ -61,7 +122,7 @@ export function seededDemoState(now: number) {
   notes.unshift({
     localId: 'perf-long-note',
     title: LONG_NOTE_TITLE,
-    content: paragraphs(7, LONG_NOTE_WORDS),
+    content: richDocument(7, LONG_NOTE_WORDS),
     pinned: false,
     tagIds: [],
     createdAt: now,
