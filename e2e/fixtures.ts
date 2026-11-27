@@ -176,12 +176,12 @@ export async function createNote(
  * After a save it reads "Saved here" (local) or "Synced" (server-confirmed),
  * then clears after about two seconds.
  */
-export function saveStatus(page: Page): Locator {
+function saveStatus(page: Page): Locator {
   return page.getByTestId('editor-header-actions').getByRole('status');
 }
 
 /** A finished save. Does not match "Not saved". */
-export const SAVED_LABEL = /^(Saved here|Synced)$/;
+const SAVED_LABEL = /^(Saved here|Synced)$/;
 
 /**
  * Run an edit and wait for a save that started after it.
