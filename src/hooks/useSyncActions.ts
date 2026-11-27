@@ -6,13 +6,11 @@
  * authoritative copy after any of them is the local database, not React state.
  */
 
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import type { Note, Tag } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
 import { resolveConflict, type useSyncEngine } from './useSyncEngine';
-import { fetchDecryptedNotes } from '../services/encryptedNotes';
-import { fetchTagsOffline } from '../services/offlineTags';
+import type { NotesSync } from './useNotesSync';
 import {
   getBlockedSyncReason,
   retryBlockedSyncEntries,
@@ -24,8 +22,8 @@ type SyncConflict = ReturnType<typeof useSyncEngine>['conflicts'][number];
 export interface UseSyncActionsOptions {
   userId: string | undefined;
   keys: DerivedKeys | null;
-  setNotes: Dispatch<SetStateAction<Note[]>>;
-  setTags: Dispatch<SetStateAction<Tag[]>>;
+  /** The guarded re-read from IndexedDB (useNotesSync). */
+  reloadFromStorage: NotesSync['reloadFromStorage'];
   conflicts: SyncConflict[];
   removeConflict: (entityId: string) => void;
   triggerSync: ReturnType<typeof useSyncEngine>['triggerSync'];
@@ -46,8 +44,7 @@ export interface SyncActions {
 export function useSyncActions({
   userId,
   keys,
-  setNotes,
-  setTags,
+  reloadFromStorage,
   conflicts,
   removeConflict,
   triggerSync,
@@ -78,12 +75,24 @@ export function useSyncActions({
       await resolveConflict(userId, conflictToResolve, choice, keys);
       removeConflict(conflictToResolve.entityId);
       setActiveConflict(null);
+    } catch (error) {
+      console.error('Failed to resolve conflict:', error);
+      toast.error('Failed to resolve conflict. Please try again.');
+      // Still remove the conflict to prevent infinite retry loops
+      // User can trigger a sync to re-detect conflicts if needed
+      removeConflict(conflictToResolve.entityId);
+      setActiveConflict(null);
+      return;
+    }
 
-      // Refresh notes from IndexedDB after conflict resolution
-      const refreshedNotes = await fetchDecryptedNotes(userId, keys);
-      setNotes(refreshedNotes);
+    // Refresh notes from IndexedDB after conflict resolution. If this reload did not
+    // apply, a later one does. A note gone by then is closed by App, with its "no
+    // longer here" notice, rather than silently here.
+    try {
+      const reload = await reloadFromStorage();
+      if (reload.status !== 'applied') return;
 
-      const resolvedOriginalMissing = !refreshedNotes.some(
+      const resolvedOriginalMissing = !reload.notes.some(
         (note) => note.id === conflictToResolve.entityId
       );
       if (
@@ -93,12 +102,8 @@ export function useSyncActions({
         onOpenNoteClosed();
       }
     } catch (error) {
-      console.error('Failed to resolve conflict:', error);
-      toast.error('Failed to resolve conflict. Please try again.');
-      // Still remove the conflict to prevent infinite retry loops
-      // User can trigger a sync to re-detect conflicts if needed
-      removeConflict(conflictToResolve.entityId);
-      setActiveConflict(null);
+      console.error(error);
+      toast.error('Resolved. Pull to refresh to see it.');
     }
   };
 
@@ -121,11 +126,11 @@ export function useSyncActions({
       // Sync with server first (push + pull)
       const { outcome } = await triggerSync();
 
-      // Rehydrate React state from IndexedDB (now has fresh server data)
-      const refreshedNotes = await fetchDecryptedNotes(userId, keys);
-      setNotes(refreshedNotes);
-      const refreshedTags = await fetchTagsOffline(userId);
-      setTags(refreshedTags);
+      // Rehydrate React state from IndexedDB (now has fresh server data). The vault
+      // may have locked during the sync: then nothing is shown and nothing is said.
+      // A reload superseded or deferred still applies later, so the outcome is shown.
+      const reload = await reloadFromStorage();
+      if (reload.status === 'ended') return;
 
       // Show outcome-specific feedback
       switch (outcome) {
@@ -153,7 +158,7 @@ export function useSyncActions({
       console.error('Refresh failed:', error);
       toast.error('Failed to refresh notes');
     }
-  }, [userId, triggerSync, keys, setNotes, setTags]);
+  }, [userId, triggerSync, keys, reloadFromStorage]);
 
   const handleRetryBlockedChanges = useCallback(async () => {
     if (!userId || isRetryingBlockedChanges) {

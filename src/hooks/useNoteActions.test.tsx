@@ -26,7 +26,7 @@ describe('useNoteActions', () => {
       openNoteIdRef: { current: null },
       onOpenNoteClosed: vi.fn(),
       triggerCoalescedSync: vi.fn(),
-      trackLocalWrite: (write) => write(),
+      applyOptimistic: (_update, write) => write(),
     };
     const { result, rerender } = renderHook((props: UseNoteActionsOptions) => useNoteActions(props), {
       initialProps: options,

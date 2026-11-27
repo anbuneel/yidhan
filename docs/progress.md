@@ -918,3 +918,12 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   instances. Lock now saves first and stays unlocked if words are still held; auto-lock
   saves, then drops held words; sign-out drops them. Plan:
   `docs/plans/2026-11-26-flush-on-leave.md`.
+- **2026-11-27** — Guard every whole-list note reload. (#302, closes #298) The Refresh
+  button, conflict resolve, the locked-note retry and the three post-import refreshes
+  now call `reloadFromStorage` in `useNotesSync`, the guarded refresh from #297. It
+  returns `applied`, `deferred` or `stale`. `applyOptimistic(update, write)` replaces
+  `trackLocalWrite`; the public `setNotes` takes updaters only. The first load skips
+  its result if a refresh applied while it read. Prepends go through `withNotesFirst`,
+  so a note a refresh already read is not shown twice. The import body now loads on
+  demand (`src/utils/importFile.ts`) to keep the app shell under 330 KB. Review:
+  `docs/reviews/2026-11-27-pr302-whole-list-reloads-review.md`; tags follow-up #304.

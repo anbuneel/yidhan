@@ -7,6 +7,10 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.26.1', date: '2026-11-27', changes: [
+    { type: 'fix', text: 'Refresh, resolving a sync conflict, retrying a locked note and importing no longer undo a change you make while they run. A note you create, edit, pin or delete at that moment stays as you left it' },
+    { type: 'fix', text: 'A note no longer shows twice in the library when a sync finishes just as you create or restore it' },
+  ] },
   { version: '3.26.0', date: '2026-11-26', changes: [
     { type: 'fix', text: 'Words typed just before you leave a note are now saved. Before, switching notes, going back to the library or pressing Back within a second of typing could lose the last words' },
     { type: 'fix', text: 'A note that showed "Not saved" is saved again when you leave it. If that save fails, a notice names the note and offers Retry and Copy, on any screen' },
