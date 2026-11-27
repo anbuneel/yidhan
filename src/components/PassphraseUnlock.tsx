@@ -277,7 +277,7 @@ export function PassphraseUnlock() {
           </label>
 
           {error && (
-            <p className="text-xs" style={{ color: 'var(--color-destructive)' }}>
+            <p role="alert" className="text-xs" style={{ color: 'var(--color-destructive)' }}>
               {error}
             </p>
           )}

@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import type { Note, NoteDeleteHandler } from '../types';
 import { ChapterSection } from './ChapterSection';
 import { LibraryArrangeBar } from './LibraryArrangeBar';
@@ -49,7 +49,63 @@ interface ChapteredLibraryProps {
   onSortChange?: (sort: NoteSortKey) => void;
 }
 
-export function ChapteredLibrary({
+type EmptyState = 'loading' | 'search-empty' | 'library-empty' | null;
+
+function emptyStateOf(noteCount: number, isSearching: boolean, isLoading: boolean): EmptyState {
+  if (noteCount > 0) return null;
+  if (isLoading) return 'loading';
+  return isSearching ? 'search-empty' : 'library-empty';
+}
+
+const EMPTY_STATE_ANNOUNCEMENTS: Record<'search-empty' | 'library-empty', string> = {
+  'search-empty': 'No thoughts found. Try a different search.',
+  'library-empty': 'Your notes await.',
+};
+
+/**
+ * A polite live region that stays mounted across every library state, so a
+ * search that empties the list is announced. The state reached on first load
+ * is the baseline and is never announced: the reader did not cause it.
+ */
+function LibraryEmptyAnnouncer({ noteCount, isSearching, isLoading }: {
+  noteCount: number;
+  isSearching: boolean;
+  isLoading: boolean;
+}) {
+  const state = emptyStateOf(noteCount, isSearching, isLoading);
+  const baselineSeen = useRef(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (state === 'loading') return;
+    if (!baselineSeen.current) {
+      baselineSeen.current = true;
+      return;
+    }
+    setMessage(state ? EMPTY_STATE_ANNOUNCEMENTS[state] : '');
+  }, [state]);
+
+  return (
+    <output aria-live="polite" className="sr-only" data-testid="library-announcer">
+      {message}
+    </output>
+  );
+}
+
+export function ChapteredLibrary(props: ChapteredLibraryProps) {
+  return (
+    <>
+      <LibraryEmptyAnnouncer
+        noteCount={props.notes.length}
+        isSearching={props.isSearching ?? false}
+        isLoading={props.isLoading ?? false}
+      />
+      <ChapteredLibraryView {...props} />
+    </>
+  );
+}
+
+function ChapteredLibraryView({
   footerRef,
   notes,
   onNoteClick,

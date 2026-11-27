@@ -927,3 +927,14 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   so a note a refresh already read is not shown twice. The import body now loads on
   demand (`src/utils/importFile.ts`) to keep the app shell under 330 KB. Review:
   `docs/reviews/2026-11-27-pr302-whole-list-reloads-review.md`; tags follow-up #304.
+- **2026-11-27** — Screen-reader and keyboard fixes, from the deferred screen-reader
+  pass. The library has a polite live region that stays mounted across its states and
+  announces an empty search or an emptied library, but never the state reached on first
+  load. Settings tabs follow the WAI-ARIA tabs pattern (roving tabindex, arrow keys,
+  Home/End, one tabpanel). Auth, unlock and re-auth errors are `role="alert"`. The
+  editor's Share and export menu is a menu button (`src/hooks/useMenuButton.ts`):
+  arrow keys, Home/End, Escape closes it, returns focus to the trigger and is consumed
+  so the editor and anything behind it ignore it. The tag picker drops its false
+  `aria-haspopup="listbox"` and is a disclosure of toggle buttons. Time ribbon dots
+  get a focus ring; the chapter nav shows on `focus-within`. A J/K-selected note card
+  is one tab stop. A human VoiceOver/NVDA pass is still needed.

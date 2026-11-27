@@ -640,6 +640,99 @@ describe('Editor', () => {
         expect(screen.queryByText('Copy as text')).not.toBeInTheDocument();
       });
     });
+
+    it('is a menu button: haspopup, expanded state and menuitems, first item focused on open', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<Editor {...defaultProps} />);
+      const trigger = screen.getByRole('button', { name: 'Share and export' });
+      expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+      expect(trigger).toHaveAttribute('aria-expanded', 'false');
+      expect(trigger).not.toHaveAttribute('aria-controls');
+
+      await user.click(trigger);
+      const menu = screen.getByRole('menu', { name: 'Share and export' });
+      expect(trigger).toHaveAttribute('aria-expanded', 'true');
+      expect(trigger).toHaveAttribute('aria-controls', menu.id);
+      const items = within(menu).getAllByRole('menuitem');
+      expect(items.map((item) => item.textContent?.trim())).toEqual([
+        'Share as letter', 'Copy as text', 'Copy with formatting', 'Download (.md)',
+      ]);
+      for (const item of items) expect(item).toHaveAttribute('tabindex', '-1');
+      expect(items[0]).toHaveFocus();
+    });
+
+    it('moves through items with the arrow keys, wrapping, and with Home and End', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<Editor {...defaultProps} />);
+      await user.click(screen.getByRole('button', { name: 'Share and export' }));
+      const item = (name: string) => screen.getByRole('menuitem', { name });
+
+      await user.keyboard('{ArrowDown}');
+      expect(item('Copy as text')).toHaveFocus();
+      await user.keyboard('{End}');
+      expect(item('Download (.md)')).toHaveFocus();
+      await user.keyboard('{ArrowDown}');
+      expect(item('Share as letter')).toHaveFocus();
+      await user.keyboard('{ArrowUp}');
+      expect(item('Download (.md)')).toHaveFocus();
+      await user.keyboard('{Home}');
+      expect(item('Share as letter')).toHaveFocus();
+    });
+
+    it('opens from the trigger with ArrowUp on the last item', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<Editor {...defaultProps} />);
+      screen.getByRole('button', { name: 'Share and export' }).focus();
+      await user.keyboard('{ArrowUp}');
+      expect(screen.getByRole('menuitem', { name: 'Download (.md)' })).toHaveFocus();
+    });
+
+    it('closes on Escape and returns focus to the trigger without leaving the editor or reaching a handler behind', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onBack = vi.fn();
+      const behind = vi.fn();
+      document.addEventListener('keydown', behind);
+      try {
+        render(<Editor {...defaultProps} onBack={onBack} />);
+        const trigger = screen.getByRole('button', { name: 'Share and export' });
+        await user.click(trigger);
+        await user.keyboard('{ArrowDown}');
+
+        await user.keyboard('{Escape}');
+        expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+        expect(trigger).toHaveFocus();
+        expect(trigger).toHaveAttribute('aria-expanded', 'false');
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        });
+        expect(onBack).not.toHaveBeenCalled();
+        expect(behind).not.toHaveBeenCalledWith(expect.objectContaining({ key: 'Escape' }));
+      } finally {
+        document.removeEventListener('keydown', behind);
+      }
+    });
+
+    it('returns focus to the trigger after choosing an item', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<Editor {...defaultProps} />);
+      const trigger = screen.getByRole('button', { name: 'Share and export' });
+      await user.click(trigger);
+      await user.keyboard('{End}{Enter}');
+      expect(exportImport.downloadFile).toHaveBeenCalled();
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+    });
+
+    it('does not take focus back when closed by a click elsewhere', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<Editor {...defaultProps} />);
+      const trigger = screen.getByRole('button', { name: 'Share and export' });
+      await user.click(trigger);
+      const title = screen.getByRole('textbox', { name: 'Note title' });
+      await user.click(title);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      expect(title).toHaveFocus();
+    });
   });
 
   describe('navigation', () => {

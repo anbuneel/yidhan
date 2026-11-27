@@ -1,5 +1,6 @@
 import { VaultLockedSaveError } from '../utils/saveErrors';
 import type { OpenDraftState } from '../hooks/useReleasedDraft';
+import { useMenuButton } from '../hooks/useMenuButton';
 import type { DerivedKeys } from '../lib/encryption';
 import { keepReleasedDraft } from '../utils/keepReleasedDraft';
 import { heldSaves } from '../stores/heldSaves';
@@ -208,6 +209,11 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   useKeyboardHeightCssVariable(); // Sets --keyboard-height for bottom toolbar positioning, without re-rendering the editor
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const { triggerProps: exportTriggerProps, menuProps: exportMenuProps } = useMenuButton({
+    menuId: 'editor-export-menu',
+    isOpen: showExportMenu,
+    setOpen: setShowExportMenu,
+  });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomToolbarRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
@@ -1276,6 +1282,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
       {/* Export button with dropdown */}
       <div className="relative" ref={exportMenuRef}>
         <button type="button"
+          {...exportTriggerProps}
           onClick={() => setShowExportMenu(!showExportMenu)}
           className="
             size-9
@@ -1313,6 +1320,8 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         {/* Export dropdown menu */}
         {showExportMenu && (
           <div
+            {...exportMenuProps}
+            aria-label="Share and export"
             className="absolute right-0 mt-2 py-1 rounded-lg shadow-[var(--shadow-lg)] z-50 min-w-[180px]"
             style={{
               background: 'var(--color-bg-primary)',
@@ -1322,14 +1331,14 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             {/* Share option first - hidden in demo mode and when sharing is off */}
             {sharingEnabled && !isDemo && (
               <>
-                <button type="button"
+                <button type="button" role="menuitem" tabIndex={-1}
                   onClick={async () => {
                     setShowExportMenu(false);
                     // Flush any unsaved edits so ShareModal encrypts the latest content
                     cancelPendingAutoSave();
                     if (await performSave()) setShowShareModal(true);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
+                  className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150 focus-ring focus-visible:bg-[var(--color-bg-secondary)]"
                   style={{
                     fontFamily: 'var(--font-body)',
                     color: 'var(--color-text-primary)',
@@ -1348,6 +1357,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
                 </button>
                 {/* Divider */}
                 <div
+                  role="separator"
                   className="my-1 mx-3"
                   style={{ borderTop: '1px solid var(--glass-border)' }}
                 />
@@ -1355,9 +1365,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
             )}
 
             {/* Copy options */}
-            <button type="button"
+            <button type="button" role="menuitem" tabIndex={-1}
               onClick={handleCopyPlainText}
-              className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
+              className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150 focus-ring focus-visible:bg-[var(--color-bg-secondary)]"
               style={{
                 fontFamily: 'var(--font-body)',
                 color: 'var(--color-text-primary)',
@@ -1374,9 +1384,9 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
               </svg>
               Copy as text
             </button>
-            <button type="button"
+            <button type="button" role="menuitem" tabIndex={-1}
               onClick={handleCopyWithFormatting}
-              className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
+              className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150 focus-ring focus-visible:bg-[var(--color-bg-secondary)]"
               style={{
                 fontFamily: 'var(--font-body)',
                 color: 'var(--color-text-primary)',
@@ -1396,14 +1406,15 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
 
             {/* Divider */}
             <div
+              role="separator"
               className="my-1 mx-3"
               style={{ borderTop: '1px solid var(--glass-border)' }}
             />
 
             {/* Export options */}
-            <button type="button"
+            <button type="button" role="menuitem" tabIndex={-1}
               onClick={handleExportMarkdown}
-              className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150"
+              className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors duration-150 focus-ring focus-visible:bg-[var(--color-bg-secondary)]"
               style={{
                 fontFamily: 'var(--font-body)',
                 color: 'var(--color-text-primary)',

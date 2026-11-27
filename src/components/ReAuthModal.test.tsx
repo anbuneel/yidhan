@@ -81,6 +81,29 @@ describe('ReAuthModal', () => {
     expect(mockVerifyPassword).not.toHaveBeenCalled();
   });
 
+  it('announces a wrong password as an alert, and shows none before submitting', async () => {
+    const user = userEvent.setup({ delay: null });
+    mockConfirmAccountDeletion.mockResolvedValue({ success: false });
+
+    render(
+      <ReAuthModal
+        isOpen
+        onSuccess={vi.fn()}
+        onCancel={vi.fn()}
+        actionDescription="begin your departure"
+        sensitiveAction="account_deletion"
+      />
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Your password'), 'wrong-password');
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent("That doesn't seem right. Try again?");
+    });
+  });
+
   it('uses email OTP for OAuth account deletion instead of accepting typed email as proof', async () => {
     const user = userEvent.setup({ delay: null });
     const onSuccess = vi.fn();

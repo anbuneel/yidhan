@@ -69,7 +69,7 @@ export function ChapterNav({
         backdrop-blur-md
         transition-opacity duration-300
         z-40
-        ${isVisible ? 'opacity-100' : 'opacity-0 hover:opacity-100'}
+        ${isVisible ? 'opacity-100' : 'opacity-0 hover:opacity-100 focus-within:opacity-100'}
       `}
       style={{
         background: 'var(--color-card-bg)',
@@ -115,6 +115,8 @@ export function ChapterNav({
               onClick={() => onChapterClick(chapter.key)}
               onMouseEnter={() => setHoveredChapter(chapter.key)}
               onMouseLeave={() => setHoveredChapter(null)}
+              onFocus={() => setHoveredChapter(chapter.key)}
+              onBlur={() => setHoveredChapter(null)}
               className="
                 relative
                 size-6
@@ -122,9 +124,9 @@ export function ChapterNav({
                 rounded-full
                 transition-all duration-300
                 focus:outline-none
-                focus:ring-2
-                focus:ring-[var(--color-accent)]
-                focus:ring-offset-2
+                focus-visible:ring-2
+                focus-visible:ring-[var(--color-accent)]
+                focus-visible:ring-offset-2
               "
               aria-label={`Jump to ${CHAPTER_LABELS[chapter.key]}`}
               aria-current={isActive ? 'true' : undefined}
