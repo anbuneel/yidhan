@@ -28,6 +28,7 @@ import {
   openEncryptedBackup,
 } from '../utils/encryptedBackup';
 import type { NotesSync } from './useNotesSync';
+import { isChunkLoadError } from '../utils/updateRecovery';
 import type { ImportProgress } from '../components/ImportProgressOverlay';
 
 export interface UseImportOptions {
@@ -150,6 +151,10 @@ export function useImport({
       console.error('Import failed:', error);
       if (error instanceof ValidationError) {
         toast.error(`Import failed: ${error.message}`);
+      } else if (isChunkLoadError(error)) {
+        // The import code did not load (often an app update mid-session). Nothing was
+        // written. No automatic reload: held saves live only in memory.
+        toast.error('Import could not load. Reload the page and try again.');
       } else {
         toast.error('Failed to import file. Please check the file format.');
       }
