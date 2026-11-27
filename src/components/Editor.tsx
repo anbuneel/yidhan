@@ -613,7 +613,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         if (inFlightSaveRef.current === savePromise) {
           inFlightSaveRef.current = null;
         }
-        noteSaveQueue.settle(note.id, savePromise);
+        if (savePromise) noteSaveQueue.settle(note.id, savePromise);
       }
     })();
 

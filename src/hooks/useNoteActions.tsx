@@ -6,7 +6,7 @@
  * together rather than beside the rendering.
  */
 
-import { useCallback, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import toast from 'react-hot-toast';
 import type { Note } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
@@ -54,10 +54,17 @@ export function useNoteActions({
   triggerCoalescedSync,
   trackLocalWrite,
 }: UseNoteActionsOptions): NoteActions {
+  // Read at call time, not from the render that made the callback. An Editor that
+  // unmounts as the vault locks or the user signs out still holds the older callback
+  // (issue #288); its save must fail closed, not encrypt with keys the app let go of.
+  const sessionRef = useRef({ userId, keys });
+  sessionRef.current = { userId, keys };
+
   // Note update with offline-first approach
   // Writes to IndexedDB immediately, queues for sync
   // Returns a Promise so Editor can track save status accurately
   const handleNoteUpdate = useCallback(async (updatedNote: Note): Promise<void> => {
+    const { userId, keys } = sessionRef.current;
     // Only the locked vault gets the unlock message; a missing user is a
     // different failure and must not be told to unlock anything.
     if (!userId) throw new Error('Cannot save without a signed-in user');
@@ -106,7 +113,7 @@ export function useNoteActions({
       // second, auto-dismissing notice for the same failure.
       throw error;
     }
-  }, [userId, keys, notes, notesRef, setNotes, triggerCoalescedSync, trackLocalWrite]);
+  }, [notes, notesRef, setNotes, triggerCoalescedSync, trackLocalWrite]);
 
   // Soft delete a note (move to Faded Notes)
   // Returns true on success, false on failure (for UI recovery in swipe gestures)

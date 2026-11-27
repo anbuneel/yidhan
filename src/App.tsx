@@ -39,6 +39,10 @@ import { useViewTransition } from './hooks/useViewTransition';
 import { useInstallPrompt } from './hooks/useInstallPrompt';
 import { useShareTarget } from './hooks/useShareTarget';
 import { useSettingsModalState } from './hooks/useSettingsModalState';
+import { useHeldSaveActions } from './hooks/useHeldSaveActions';
+import { heldSaves, useHeldSaves } from './stores/heldSaves';
+import { useLockAfterSaving } from './hooks/useLockAfterSaving';
+import { HeldSavesNotice } from './components/HeldSavesNotice';
 import './App.css';
 
 interface AppProps {
@@ -127,6 +131,9 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
   // Share Target handling
   const { sharedData, clearSharedData, hasStoredShare } = useShareTarget();
 
+  // Issue #288: a lock saves what is on screen first; held words never outlive it.
+  const { lockVaultAfterSaving, lockNow, lockAnyway, retryHeldSavesRef } = useLockAfterSaving(lockVault);
+
   const {
     sessionSettings,
     vaultSettings,
@@ -139,7 +146,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     isEncryptionSetup,
     isUnlocked,
     isAccountSetup: setupScreen,
-    lockVault,
+    lockVault: lockVaultAfterSaving,
     signOut,
   });
 
@@ -331,6 +338,54 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     trackLocalWrite,
   });
 
+  // Held saves (issue #288): words from a note the writer left whose save failed.
+  // The store takes entries only while the vault is open for this user.
+  const heldSaveEntries = useHeldSaves();
+  const heldSaveActions = useHeldSaveActions({
+    userId: user?.id,
+    keys,
+    notesRef,
+    tags,
+    setNotes,
+    saveNote: handleNoteUpdate,
+    triggerCoalescedSync,
+    trackLocalWrite,
+  });
+  retryHeldSavesRef.current = heldSaveActions.retryAll;
+  const heldSavesOpen = Boolean(user) && isUnlocked;
+  const heldSavesUserId = user?.id;
+  useEffect(() => {
+    if (!heldSavesOpen) {
+      heldSaves.close();
+      return;
+    }
+    heldSaves.open();
+    return () => heldSaves.close();
+  }, [heldSavesOpen, heldSavesUserId]);
+
+  // "Lock now": save first. If words are still held, keep the vault open and say so,
+  // with Retry, Copy and "Lock anyway".
+  const [lockHeldBack, setLockHeldBack] = useState(false);
+  if (lockHeldBack && heldSaveEntries.length === 0) setLockHeldBack(false);
+  const handleLockNow = async () => {
+    if (await lockNow()) return;
+    setShowSettingsModal(false);
+    setLockHeldBack(true);
+  };
+  const handleLockAnyway = () => {
+    setLockHeldBack(false);
+    lockAnyway();
+  };
+  const heldSavesNotice = (
+    <HeldSavesNotice
+      entries={heldSaveEntries}
+      onRetry={async (key) => { await heldSaveActions.retry(key); }}
+      onCopy={heldSaveActions.copy}
+      lockBlocked={lockHeldBack}
+      onLockAnyway={handleLockAnyway}
+    />
+  );
+
   // NoteCard owns inline recovery for pointer-triggered fades. The editor and
   // keyboard paths have no inline error surface, so they keep a single toast.
   const handleNoteDeleteWithToast = useCallback(async (id: string): Promise<boolean> => {
@@ -510,6 +565,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
 
   if (view === 'faded') {
     return (
+      <>
       <FadedNotesScreen
         notes={fadedNotes}
         isLoading={fadedNotesLoading}
@@ -521,6 +577,8 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
         onThemeToggle={handleThemeToggle}
         onSettingsClick={() => setShowSettingsModal(true)}
       />
+      {heldSavesNotice}
+      </>
     );
   }
 
@@ -594,6 +652,8 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
           onSupportClick: publicPageNav.onSupportClick,
         }}
         modals={
+          <>
+          {heldSavesNotice}
           <AppModals
             scope="library"
             {...sharedModalProps}
@@ -606,7 +666,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
             sessionSettings={sessionSettings}
             vaultSettings={vaultSettings}
             isVaultUnlocked={isUnlocked}
-            onLockVault={() => lockVault('manual')}
+            onLockVault={() => { void handleLockNow(); }}
             onPersistToLocal={persistToLocal}
             showLettingGoModal={showLettingGoModal}
             onCloseLettingGo={() => setShowLettingGoModal(false)}
@@ -627,6 +687,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
             showShortcutsModal={showShortcutsModal}
             onCloseShortcuts={() => setShowShortcutsModal(false)}
           />
+          </>
         }
       />
     );
@@ -664,7 +725,7 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
         onThemeToggle={handleThemeToggle}
         onSettingsClick={() => setShowSettingsModal(true)}
         loadedEditor={LoadedEditor}
-        modals={<AppModals scope="editor" {...sharedModalProps} />}
+        modals={<>{heldSavesNotice}<AppModals scope="editor" {...sharedModalProps} /></>}
       />
     );
   }

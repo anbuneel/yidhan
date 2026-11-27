@@ -18,6 +18,8 @@ export interface UseHeldSaveActionsOptions {
   setNotes: Dispatch<SetStateAction<Note[]>>;
   saveNote: (note: Note) => Promise<void>;
   triggerCoalescedSync: () => void;
+  /** Marks a write a list refresh must wait for (`useNotesSync`). */
+  trackLocalWrite: <T>(write: () => Promise<T>) => Promise<T>;
 }
 
 export interface HeldSaveActions {
@@ -37,6 +39,7 @@ export function useHeldSaveActions({
   setNotes,
   saveNote,
   triggerCoalescedSync,
+  trackLocalWrite,
 }: UseHeldSaveActionsOptions): HeldSaveActions {
   const retry = useCallback(async (key: string): Promise<boolean> => {
     const entry = heldSaves.get(key);
@@ -48,7 +51,9 @@ export function useHeldSaveActions({
         keepAsCopy: async (held, current) => {
           // Loaded on demand: this path is rare, and keeps the module out of the app shell.
           const { keepReleasedDraft } = await import('../utils/keepReleasedDraft');
-          const kept = await keepReleasedDraft(userId, keys, held.title, held.content, current, tags);
+          const kept = await trackLocalWrite(() =>
+            keepReleasedDraft(userId, keys, held.title, held.content, current, tags)
+          );
           setNotes((prev) => [kept, ...prev]);
           triggerCoalescedSync();
         },
@@ -67,7 +72,7 @@ export function useHeldSaveActions({
       }
       return false;
     }
-  }, [userId, keys, notesRef, tags, setNotes, saveNote, triggerCoalescedSync]);
+  }, [userId, keys, notesRef, tags, setNotes, saveNote, triggerCoalescedSync, trackLocalWrite]);
 
   const retryAll = useCallback(async (): Promise<boolean> => {
     let allDone = true;
