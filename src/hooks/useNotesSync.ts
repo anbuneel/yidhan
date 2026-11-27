@@ -56,6 +56,15 @@ const SYNC_REFRESH_COALESCE_MS = 150;
  */
 const MAX_REFRESH_READS = 3;
 
+/** How long a refresh waits for an in-flight local write before deferring itself. */
+const LOCAL_WRITE_WAIT_MS = 5000;
+
+/** Ceiling for the delay between deferred refreshes. */
+const MAX_REFRESH_BACKOFF_MS = 5000;
+
+/** Deferrals in a row before the stall is reported. */
+const REPORT_REFRESH_DEFERRALS = 5;
+
 /** After a save, wait before syncing so rapid typing does not flood the queue. */
 const COALESCED_SYNC_DELAY_MS = 2000;
 
@@ -99,6 +108,9 @@ export interface NotesSync {
    * Run a local write whose change is already on screen (an optimistic update). A
    * sync refresh does not replace the list while one is in flight, or with a read
    * taken before it finished: that read would put the old copy back.
+   *
+   * Call it in the same synchronous step as the optimistic `setNotes`, with no
+   * `await` between them. Any writer that changes the list before IndexedDB needs it.
    */
   trackLocalWrite: <T>(write: () => Promise<T>) => Promise<T>;
 }
@@ -148,14 +160,31 @@ export function useNotesSync({
 
   // Writes whose change reached the list before it reached IndexedDB. A refresh read
   // during one sees the old copy and the version alone cannot tell.
-  const pendingLocalWritesRef = useRef(0);
+  const pendingLocalWritesRef = useRef(new Set<Promise<unknown>>());
   const trackLocalWrite = useCallback(async <T,>(write: () => Promise<T>): Promise<T> => {
-    pendingLocalWritesRef.current += 1;
+    const pending = write();
+    pendingLocalWritesRef.current.add(pending);
     try {
-      return await write();
+      return await pending;
     } finally {
-      pendingLocalWritesRef.current -= 1;
+      pendingLocalWritesRef.current.delete(pending);
       listVersionRef.current += 1;
+    }
+  }, []);
+
+  /** Resolves true once the writes in flight now have settled, false on timeout. */
+  const waitForLocalWrites = useCallback(async (): Promise<boolean> => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<false>((resolve) => {
+      timer = setTimeout(() => resolve(false), LOCAL_WRITE_WAIT_MS);
+    });
+    try {
+      return await Promise.race([
+        Promise.allSettled([...pendingLocalWritesRef.current]).then(() => true as const),
+        timedOut,
+      ]);
+    } finally {
+      clearTimeout(timer);
     }
   }, []);
 
@@ -220,7 +249,7 @@ export function useNotesSync({
   // Only the latest refresh may replace the list; an older one that resolves last
   // would put back what the newer one removed or miss what it added.
   const refreshIdRef = useRef(0);
-  const scheduleSyncRefreshRef = useRef<() => void>(() => {});
+  const deferRefreshRef = useRef<() => void>(() => {});
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
@@ -233,27 +262,47 @@ export function useNotesSync({
   const refreshFromSync = useCallback(async () => {
     if (!userId || !keys) return;
     const refreshId = ++refreshIdRef.current;
+    // Superseded, unmounted, signed out, or the vault locked or changed keys. A lock in
+    // particular: a read with the old keys must not put plaintext back on screen.
+    const abandoned = () =>
+      !mountedRef.current ||
+      refreshId !== refreshIdRef.current ||
+      currentUserIdRef.current !== userId ||
+      keysRef.current !== keys;
     try {
       for (let read = 1; ; read++) {
+        // Wait for a write in flight instead of reading the copy it is replacing.
+        if (pendingLocalWritesRef.current.size > 0) {
+          const settled = await waitForLocalWrites();
+          if (abandoned()) return;
+          if (!settled) {
+            deferRefreshRef.current();
+            break;
+          }
+        }
         const versionAtRead = listVersionRef.current;
         const snapshot = await fetchDecryptedNotes(userId, keys);
-        if (refreshId !== refreshIdRef.current || currentUserIdRef.current !== userId) return;
-        if (versionAtRead === listVersionRef.current && pendingLocalWritesRef.current === 0) {
+        if (abandoned()) return;
+        if (versionAtRead === listVersionRef.current && pendingLocalWritesRef.current.size === 0) {
           setNotesState(snapshot);
+          refreshDeferralsRef.current = 0;
           break;
         }
-        // The list changed while we read, or a local write is still landing. A fresh
-        // read after the write finishes includes it.
+        // The list changed while we read. A fresh read includes the change, because
+        // local writes reach IndexedDB before the version moves past them.
         if (read >= MAX_REFRESH_READS) {
-          if (mountedRef.current) scheduleSyncRefreshRef.current();
-          return;
+          deferRefreshRef.current();
+          break;
         }
       }
-      setTags(await fetchTagsOffline(userId));
+      // Tags do not race with the list, so they refresh even when the notes deferred.
+      const refreshedTags = await fetchTagsOffline(userId);
+      if (abandoned()) return;
+      setTags(refreshedTags);
     } catch (error) {
       console.error('Failed to rehydrate after sync:', error);
     }
-  }, [userId, keys]);
+  }, [userId, keys, waitForLocalWrites]);
 
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleSyncRefresh = useCallback(() => {
@@ -263,7 +312,28 @@ export function useNotesSync({
       void refreshFromSync();
     }, SYNC_REFRESH_COALESCE_MS);
   }, [refreshFromSync]);
-  scheduleSyncRefreshRef.current = scheduleSyncRefresh;
+
+  // A refresh that keeps losing to local changes (steady typing, a slow write) backs
+  // off instead of decrypting the library every 150ms, and a long stall is reported.
+  const refreshDeferralsRef = useRef(0);
+  deferRefreshRef.current = () => {
+    if (!mountedRef.current) return;
+    refreshDeferralsRef.current += 1;
+    const deferrals = refreshDeferralsRef.current;
+    if (deferrals === REPORT_REFRESH_DEFERRALS) {
+      reportReliabilityIssue({
+        category: 'sync',
+        message: 'Sync refresh deferred repeatedly by local changes',
+        level: 'warning',
+        data: { deferrals, pendingWrites: pendingLocalWritesRef.current.size },
+      });
+    }
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => {
+      refreshTimerRef.current = null;
+      void refreshFromSync();
+    }, Math.min(SYNC_REFRESH_COALESCE_MS * 2 ** deferrals, MAX_REFRESH_BACKOFF_MS));
+  };
 
   useEffect(() => () => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);

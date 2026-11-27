@@ -352,7 +352,13 @@ describe('useNotesSync refresh after a sync', () => {
   // taken in that gap holds the old copy, and applySavedNote will not repair it.
   it('does not apply a read taken while a tracked local write was landing', async () => {
     const existing = serverNote('existing', null);
-    const { result } = await setup([existing]);
+    const { result, renders } = await setup([existing]);
+
+    // The refresh reads IndexedDB before the pin is written.
+    const staleRead = deferred<Note[]>();
+    mocks.fetchDecryptedNotes.mockReturnValueOnce(staleRead.promise);
+    let refresh!: Promise<void> | void;
+    act(() => { refresh = mocks.onSyncComplete?.(); });
 
     let finishWrite!: () => void;
     const write = new Promise<void>((r) => { finishWrite = r; });
@@ -361,24 +367,64 @@ describe('useNotesSync refresh after a sync', () => {
       result.current.setNotes((prev) => prev.map((n) => ({ ...n, pinned: true })));
       tracked = result.current.trackLocalWrite(() => write);
     });
+    const pinnedFrom = renders.length - 1;
 
-    // The refresh reads IndexedDB before the pin is written.
-    const staleRead = deferred<Note[]>();
-    mocks.fetchDecryptedNotes.mockReturnValueOnce(staleRead.promise);
-    let refresh!: Promise<void> | void;
-    act(() => { refresh = mocks.onSyncComplete?.(); });
+    // The stale read lands while the write is still in flight: the refresh waits.
+    await act(async () => { staleRead.resolve([existing]); });
+    expect(result.current.notes[0].pinned).toBe(true);
 
     mocks.fetchDecryptedNotes.mockResolvedValue([{ ...existing, pinned: true }]);
     await act(async () => {
-      staleRead.resolve([existing]);
       finishWrite();
       await tracked;
       await refresh;
     });
 
-    // The stale read was dropped and a read after the write applied.
-    expect(mocks.fetchDecryptedNotes.mock.calls.length).toBeGreaterThanOrEqual(3);
     expect(result.current.notes[0].pinned).toBe(true);
+    for (const ids of renders.slice(pinnedFrom)) expect(ids).toEqual(['existing']);
+  });
+
+  it('does not put notes back after the vault locks mid-refresh', async () => {
+    mocks.fetchDecryptedNotes.mockResolvedValue([serverNote('secret', null)]);
+    const openNoteIdRef = { current: null };
+    const { result, rerender } = renderHook(({ keys }: { keys: DerivedKeys | null }) => useNotesSync({
+      userId: 'faded-count-user', keys, isHydrating: false, openNoteIdRef, onOpenNoteRemoved: vi.fn(),
+    }), { initialProps: { keys: KEYS as DerivedKeys | null } });
+    await waitFor(() => expect(result.current.notes).toHaveLength(1));
+
+    const inFlight = deferred<Note[]>();
+    mocks.fetchDecryptedNotes.mockReturnValueOnce(inFlight.promise);
+    let refresh!: Promise<void> | void;
+    act(() => { refresh = mocks.onSyncComplete?.(); });
+    rerender({ keys: null });
+    await waitFor(() => expect(result.current.notes).toEqual([]));
+
+    await act(async () => {
+      inFlight.resolve([serverNote('secret', null)]);
+      await refresh;
+    });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(result.current.notes).toEqual([]);
+    // No retry read with the old keys either.
+    expect(mocks.fetchDecryptedNotes).toHaveBeenCalledTimes(2);
+  });
+
+  it('backs off instead of re-reading when local changes keep landing', async () => {
+    const existing = serverNote('existing', null);
+    const { result } = await setup([existing]);
+    mocks.fetchDecryptedNotes.mockClear();
+    // Every read sees the list change underneath it, as with steady typing.
+    mocks.fetchDecryptedNotes.mockImplementation(async () => {
+      result.current.setNotes((prev) => [...prev]);
+      return [existing];
+    });
+
+    await act(async () => { await mocks.onSyncComplete?.(); });
+    expect(mocks.fetchDecryptedNotes).toHaveBeenCalledTimes(3);
+
+    // The first deferral waits 300ms, not the usual 150ms.
+    await new Promise((r) => setTimeout(r, 200));
+    expect(mocks.fetchDecryptedNotes).toHaveBeenCalledTimes(3);
   });
 
   it('does not apply a refresh for a user who has since signed out', async () => {
