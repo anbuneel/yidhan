@@ -1,11 +1,27 @@
-import { useState, useEffect, type RefObject } from 'react';
+import { useState, useEffect, type CSSProperties, type RefObject } from 'react';
 
 interface WhisperBackProps {
   scrollContainerRef?: RefObject<HTMLElement | null>;
+  /** The phone bottom toolbar. Under 768px the button sits above it, the keyboard and
+   *  the safe area (`.whisper-back-above-toolbar` in index.css). The toolbar's height,
+   *  safe-area padding included, is measured rather than guessed. */
+  bottomToolbarRef?: RefObject<HTMLElement | null>;
 }
 
-export function WhisperBack({ scrollContainerRef }: WhisperBackProps) {
+export function WhisperBack({ scrollContainerRef, bottomToolbarRef }: WhisperBackProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [toolbarHeight, setToolbarHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const toolbar = bottomToolbarRef?.current;
+    if (!toolbar) return;
+    const measure = () => setToolbarHeight(toolbar.offsetHeight || null);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(toolbar);
+    return () => observer.disconnect();
+  }, [bottomToolbarRef]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -57,6 +73,7 @@ export function WhisperBack({ scrollContainerRef }: WhisperBackProps) {
       onClick={handleScrollToTop}
       className={`
         fixed z-20
+        ${bottomToolbarRef ? 'whisper-back-above-toolbar' : ''}
         transition-all duration-300 ease-out
         focus:outline-none
         focus:ring-2
@@ -78,6 +95,7 @@ export function WhisperBack({ scrollContainerRef }: WhisperBackProps) {
         }
       `}
       style={{
+        ...(toolbarHeight ? ({ '--whisper-toolbar-offset': `${toolbarHeight}px` } as CSSProperties) : {}),
         fontFamily: 'var(--font-body)',
         color: 'var(--color-text-primary)',
         background: 'var(--color-bg-secondary)',

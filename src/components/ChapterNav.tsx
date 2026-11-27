@@ -117,7 +117,7 @@ export function ChapterNav({
               onMouseLeave={() => setHoveredChapter(null)}
               className="
                 relative
-                min-w-[24px] min-h-[24px]
+                size-6
                 flex items-center justify-center
                 rounded-full
                 transition-all duration-300

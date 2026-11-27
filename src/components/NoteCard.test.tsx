@@ -118,6 +118,30 @@ describe('NoteCard deletion', () => {
   });
 });
 
+describe('NoteCard delete button on compact cards', () => {
+  it('renders delete on compact cards, visible only on touch screens', () => {
+    renderPreviewCard('Short', true);
+    const del = screen.getByRole('button', { name: 'Delete note' });
+    expect(del.className).toMatch(/(^|\s)hidden(\s|$)/);
+    expect(del.className).toMatch(/\[@media\(hover:none\)\]:flex/);
+    expect(del.className).toMatch(/\[@media\(any-pointer:coarse\)\]:flex/);
+  });
+
+  it('does not hide delete on full cards', () => {
+    renderPreviewCard('Short', false);
+    const del = screen.getByRole('button', { name: 'Delete note' });
+    expect(del.className).not.toMatch(/(^|\s)hidden(\s|$)/);
+    expect(del.className).toMatch(/(^|\s)flex(\s|$)/);
+  });
+
+  it('does not render delete on decorative cards', () => {
+    render(
+      <NoteCard note={createMockNote()} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} isCompact isDecorative />
+    );
+    expect(screen.queryByRole('button', { name: 'Delete note' })).toBeNull();
+  });
+});
+
 describe('NoteCard preview mask', () => {
   it('does not mask a one-line preview', () => {
     const { container, rerenderCard } = renderPreviewCard('<p>One clear line.</p>');

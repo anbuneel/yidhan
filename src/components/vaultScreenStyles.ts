@@ -12,7 +12,7 @@ export function vaultPrimaryButtonStyle(enabled: boolean) {
   return {
     background: 'var(--color-cta-bg)',
     color: 'var(--color-cta-text)',
-    borderRadius: 'var(--radius-pill)',
+    borderRadius: 'var(--radius-button)',
     fontFamily: 'var(--font-body)',
     fontWeight: 500,
     opacity: enabled ? 1 : 0.5,
@@ -25,7 +25,7 @@ export const vaultSecondaryButtonStyle = {
   background: 'transparent',
   color: 'var(--color-text-secondary)',
   border: '1px solid var(--glass-border)',
-  borderRadius: 'var(--radius-pill)',
+  borderRadius: 'var(--radius-button)',
   fontFamily: 'var(--font-body)',
   cursor: 'pointer',
 } as const;

@@ -199,7 +199,7 @@ export function Header({
       onClick={onNewNote}
       className="
         p-2 sm:px-4 sm:py-2
-        rounded-full
+        rounded-[var(--radius-button)]
         flex items-center gap-2
         transition-all duration-300
         focus:outline-none

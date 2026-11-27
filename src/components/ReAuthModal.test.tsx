@@ -69,6 +69,7 @@ describe('ReAuthModal', () => {
       />
     );
 
+    expect(screen.getByRole('button', { name: 'Show password' })).toHaveAttribute('aria-pressed', 'false');
     await user.type(screen.getByLabelText('Your password'), 'current-password');
     await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
@@ -111,6 +112,9 @@ describe('ReAuthModal', () => {
       expect(mockStartAccountDeletionOtp).toHaveBeenCalledOnce();
     });
 
+    // A one-time code is not a secret to hide, so it gets no show/hide toggle.
+    expect(screen.queryByRole('button', { name: 'Show password' })).toBeNull();
+    expect(screen.getByLabelText('Verification code')).toHaveAttribute('type', 'text');
     await user.type(screen.getByLabelText('Verification code'), '123456');
     await user.click(screen.getByRole('button', { name: 'Confirm' }));
 

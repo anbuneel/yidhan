@@ -51,7 +51,7 @@ test.describe('Authentication', () => {
       await page.getByRole('button', { name: /sign in/i }).click();
 
       await page.getByRole('textbox', { name: /email/i }).fill('wrong@example.com');
-      await page.getByLabel(/password/i).fill('wrongpassword');
+      await page.getByLabel(/^password$/i).fill('wrongpassword');
       await page.locator('form').getByRole('button', { name: /sign in/i }).click();
 
       // Should show a user-facing auth or connectivity error.

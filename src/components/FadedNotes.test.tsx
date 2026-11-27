@@ -96,6 +96,17 @@ describe('Faded notes wording (design critique G1, G2, G4)', () => {
     expect(icon.className).toMatch(/(^|\s)opacity-0(\s|$)/);
   });
 
+  it('shows Restore on touch screens too, and keeps it hover-only on a mouse', () => {
+    render(
+      <FadedNoteCard note={createMockNote({ deletedAt: new Date() })} onRestore={vi.fn()} onPermanentDelete={vi.fn()} />
+    );
+    const restore = screen.getByRole('button', { name: 'Restore note' });
+    expect(restore.className).toMatch(/\[@media\(hover:none\)\]:opacity-100/);
+    expect(restore.className).toMatch(/\[@media\(any-pointer:coarse\)\]:opacity-100/);
+    // A mouse still sees it only on hover.
+    expect(restore.className).toMatch(/(^|\s)opacity-0(\s|$)/);
+  });
+
   it('asks plainly before deleting every faded note', () => {
     const onEmptyAll = vi.fn();
     render(

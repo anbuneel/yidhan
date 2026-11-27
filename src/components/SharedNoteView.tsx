@@ -244,7 +244,7 @@ export function SharedNoteView({
                 fontFamily: 'var(--font-body)',
                 color: 'var(--color-cta-text)',
                 background: 'var(--color-cta-bg)',
-                borderRadius: 'var(--radius-pill)',
+                borderRadius: 'var(--radius-button)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
@@ -332,7 +332,7 @@ export function SharedNoteView({
                 fontFamily: 'var(--font-body)',
                 color: 'var(--color-cta-text)',
                 background: 'var(--color-cta-bg)',
-                borderRadius: 'var(--radius-pill)',
+                borderRadius: 'var(--radius-button)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--color-cta-bg-hover)';
@@ -444,7 +444,7 @@ export function SharedNoteView({
                 color: 'var(--color-text-secondary)',
                 background: 'transparent',
                 border: '1px solid var(--glass-border)',
-                borderRadius: 'var(--radius-pill)',
+                borderRadius: 'var(--radius-button)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = 'var(--color-accent)';

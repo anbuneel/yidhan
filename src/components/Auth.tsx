@@ -4,6 +4,7 @@ import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import type { Theme } from '../types';
 import { Logo } from './Logo';
 import { ModalBackdropButton } from './ModalBackdropButton';
+import { PasswordInput } from './PasswordInput';
 
 type AuthMode = 'login' | 'signup' | 'forgot' | 'reset';
 
@@ -113,7 +114,7 @@ function OAuthButton({ provider, onClick, loading, disabled }: OAuthButtonProps)
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="auth-btn-secondary flex-1 py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
+      className="auth-btn-secondary flex-1 py-3 rounded-[var(--radius-button)] font-medium transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
     >
       {loading ? 'Redirecting...' : (
         <>
@@ -367,7 +368,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 type="button"
                 onClick={handleResendConfirmation}
                 disabled={loading || resendCooldown > 0}
-                className="auth-btn-cta w-full py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50"
+                className="auth-btn-cta w-full py-3 rounded-[var(--radius-button)] font-medium transition-all duration-200 disabled:opacity-50"
               >
                 {loading && 'Sending...'}
                 {!loading && resendCooldown > 0 && `Resend in ${resendCooldown}s`}
@@ -376,7 +377,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               <button
                 type="button"
                 onClick={handleChangeEmail}
-                className="auth-btn-secondary w-full py-3 rounded-lg font-medium transition-all duration-200"
+                className="auth-btn-secondary w-full py-3 rounded-[var(--radius-button)] font-medium transition-all duration-200"
               >
                 Use a different email
               </button>
@@ -456,9 +457,9 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               >
                 {mode === 'reset' ? 'New password' : 'Password'}
               </label>
-              <input
+              <PasswordInput
                 id="auth-password"
-                type="password"
+                revealLabel="password"
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -485,9 +486,9 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
               >
                 Confirm password
               </label>
-              <input
+              <PasswordInput
                 id="auth-confirm-password"
-                type="password"
+                revealLabel="password"
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -537,7 +538,7 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
             className="
               auth-btn-cta
               w-full py-3
-              rounded-lg
+              rounded-[var(--radius-button)]
               font-medium
               transition-all duration-200
               disabled:opacity-50
@@ -747,13 +748,13 @@ export function Auth({ theme, onThemeToggle, initialMode = 'login', onPasswordRe
                 <button type="button"
                   ref={keepEditingRef}
                   onClick={() => setShowCloseConfirm(false)}
-                  className="auth-btn-ghost px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                  className="auth-btn-ghost px-4 py-2 rounded-[var(--radius-button)] text-sm font-medium transition-all duration-200"
                 >
                   Keep editing
                 </button>
                 <button type="button"
                   onClick={handleConfirmClose}
-                  className="auth-btn-cta px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                  className="auth-btn-cta px-4 py-2 rounded-[var(--radius-button)] text-sm font-medium transition-all duration-200"
                 >
                   Discard
                 </button>

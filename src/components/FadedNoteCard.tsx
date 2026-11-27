@@ -90,6 +90,8 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
           focus:ring-[var(--color-accent)]
           focus:opacity-100
           opacity-0 group-hover:opacity-100
+          [@media(hover:none)]:opacity-100
+          [@media(any-pointer:coarse)]:opacity-100
         "
         style={{
           background: 'var(--color-bg-secondary)',
@@ -251,7 +253,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
               onClick={handleCancelDelete}
               className="
                 px-4 py-2
-                rounded-lg
+                rounded-[var(--radius-button)]
                 text-sm font-medium
                 transition-all duration-200
               "
@@ -274,7 +276,7 @@ export function FadedNoteCard({ note, onRestore, onPermanentDelete }: FadedNoteC
               onClick={handleConfirmDelete}
               className="
                 px-4 py-2
-                rounded-lg
+                rounded-[var(--radius-button)]
                 text-sm font-medium
                 transition-all duration-200
               "

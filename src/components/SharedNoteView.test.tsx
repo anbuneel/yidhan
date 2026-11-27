@@ -26,7 +26,7 @@ it('opens an anonymous /s/token/slug letter using its fragment and fails closed 
   expect(screen.getByText('Shared via Yidhan')).toBeVisible();
   expect(screen.queryByText(/quiet space|quietly/i)).toBeNull();
   const startLink = screen.getByRole('link', { name: 'Start writing with Yidhan' });
-  expect(startLink).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
+  expect(startLink).toHaveStyle({ borderRadius: 'var(--radius-button)' });
   expect(startLink.className).not.toMatch(/\brounded-lg\b/);
   expect(startLink.className).toMatch(/\bfocus-ring\b/);
   cleanup(); sessionStorage.clear(); vi.mocked(fetchSharedNote).mockClear();
@@ -35,7 +35,7 @@ it('opens an anonymous /s/token/slug letter using its fragment and fails closed 
   expect(screen.queryByText('A private letter')).toBeNull();
   expect(screen.getByText(/incomplete/i)).toBeVisible();
   const incompleteButton = screen.getByRole('button', { name: 'Go to Yidhan' });
-  expect(incompleteButton).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
+  expect(incompleteButton).toHaveStyle({ borderRadius: 'var(--radius-button)' });
   expect(incompleteButton.className).not.toMatch(/\brounded-lg\b/);
   expect(incompleteButton.className).toMatch(/\bfocus-ring\b/);
   expect(fetchSharedNote).not.toHaveBeenCalled();
@@ -49,7 +49,7 @@ it('shows the faded letter message when the token no longer resolves', async () 
     onInvalidToken={vi.fn()} onChangelogClick={vi.fn()} onRoadmapClick={vi.fn()} />);
   expect(await screen.findByText('This letter has faded')).toBeVisible();
   const button = screen.getByRole('button', { name: 'Go to Yidhan' });
-  expect(button).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
+  expect(button).toHaveStyle({ borderRadius: 'var(--radius-button)' });
   expect(button.className).not.toMatch(/\brounded-lg\b/);
   expect(button.className).toMatch(/\bfocus-ring\b/);
 });
@@ -61,7 +61,7 @@ it('reports a failure rather than a fade when the lookup itself errors', async (
     onInvalidToken={vi.fn()} onChangelogClick={vi.fn()} onRoadmapClick={vi.fn()} />);
   expect(await screen.findByText('Something went wrong')).toBeVisible();
   const button = screen.getByRole('button', { name: 'Go to Yidhan' });
-  expect(button).toHaveStyle({ borderRadius: 'var(--radius-pill)' });
+  expect(button).toHaveStyle({ borderRadius: 'var(--radius-button)' });
   expect(button.className).not.toMatch(/\brounded-lg\b/);
   expect(button.className).toMatch(/\bfocus-ring\b/);
 });

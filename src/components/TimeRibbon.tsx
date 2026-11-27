@@ -173,7 +173,7 @@ export function TimeRibbon({
                 inline-flex items-center justify-center
                 min-w-[36px] min-h-[48px]
                 md:min-w-0 md:min-h-0
-                rounded-full
+                rounded-[var(--radius-button)]
                 transition-all duration-300
                 focus:outline-none
               "

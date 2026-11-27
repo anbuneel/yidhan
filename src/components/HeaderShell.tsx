@@ -132,7 +132,8 @@ export function HeaderShell({
         {/* Separator - only show if rightActions provided */}
         {rightActions && (
           <div
-            className="w-px h-5 md:h-6 mx-0.5 md:mx-1 max-[399px]:hidden"
+            data-testid="header-actions-separator"
+            className="w-px h-5 md:h-6 shrink-0 mx-0.5 md:mx-1 max-[399px]:mx-0"
             style={{ background: 'var(--glass-border)' }}
           />
         )}
@@ -342,7 +343,7 @@ export function HeaderShell({
           onSignIn && (
             <button type="button"
               onClick={onSignIn}
-              className="h-9 px-3 md:px-4 inline-flex items-center rounded-lg text-sm font-medium transition-all duration-200"
+              className="h-9 px-3 md:px-4 inline-flex items-center rounded-[var(--radius-button)] text-sm font-medium transition-all duration-200"
               style={{
                 fontFamily: 'var(--font-body)',
                 color: 'var(--color-accent-text)',

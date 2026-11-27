@@ -49,22 +49,21 @@ function ArrangeGroup<T extends string>({
             aria-label={`${description} ${labels[value].toLowerCase()}`}
             aria-pressed={isActive}
             className="
-              px-2.5 py-1.5
+              px-1.5 py-1.5
               text-[13px] font-medium
-              transition-all duration-300
-              focus:outline-none
-              focus:ring-2
-              focus:ring-[var(--color-accent)]
-              focus:ring-offset-1
+              underline-offset-[6px] decoration-1
+              transition-colors duration-200
+              focus-ring
+              rounded-sm
               shrink-0
               touch-press
             "
             style={{
               fontFamily: 'var(--font-body)',
-              borderRadius: 'var(--radius-pill)',
-              background: isActive ? 'var(--color-accent-glow)' : 'transparent',
-              border: isActive ? '1px solid var(--color-accent)' : '1px solid transparent',
+              // Plain text, like the tag filter: the active option is underlined, not
+              // filled or outlined.
               color: isActive ? 'var(--color-accent-text)' : 'var(--color-text-tertiary)',
+              textDecorationLine: isActive ? 'underline' : 'none',
             }}
           >
             {labels[value]}

@@ -81,7 +81,7 @@ export function LinkPopover({ editor, onClose }: LinkPopoverProps) {
           onClose();
         }}>Remove link</button>}
         <button type="button" onClick={() => { onClose(); editor.commands.focus(); }}>Cancel</button>
-        <button type="submit" className="rounded bg-[var(--color-cta-bg)] px-3 py-2 text-[var(--color-cta-text)]">Save link</button>
+        <button type="submit" className="rounded-[var(--radius-button)] bg-[var(--color-cta-bg)] px-3 py-2 text-[var(--color-cta-text)]">Save link</button>
       </div>
     </form>
   );
