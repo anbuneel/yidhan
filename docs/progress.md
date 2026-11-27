@@ -892,3 +892,6 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   show/hide toggle on every password and passphrase field. `--radius-button: 8px` for
   every text button; `--radius-pill` removed; the Arrange row is underlined text;
   `src/test/buttonShape.test.ts` guards the shape.
+- **2026-11-26** — Any vault lock closes Settings (`useSettingsModalState`). The modal
+  state lives in `App` above the vault gate, so it survived a lock and Settings reopened
+  after the next unlock on another tab. Found by PR #296's recovery-kit E2E.
