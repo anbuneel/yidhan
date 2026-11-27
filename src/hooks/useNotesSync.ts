@@ -62,7 +62,7 @@ const LOCAL_WRITE_WAIT_MS = 5000;
 /** Ceiling for the delay between deferred refreshes. */
 const MAX_REFRESH_BACKOFF_MS = 5000;
 
-/** Deferrals in a row before the stall is reported. */
+/** A stall is reported at every this-many deferrals in a row. */
 const REPORT_REFRESH_DEFERRALS = 5;
 
 /** After a save, wait before syncing so rapid typing does not flood the queue. */
@@ -162,12 +162,13 @@ export function useNotesSync({
   // during one sees the old copy and the version alone cannot tell.
   const pendingLocalWritesRef = useRef(new Set<Promise<unknown>>());
   const trackLocalWrite = useCallback(async <T,>(write: () => Promise<T>): Promise<T> => {
-    const pending = write();
-    pendingLocalWritesRef.current.add(pending);
+    let pending: Promise<T> | undefined;
     try {
+      pending = write();
+      pendingLocalWritesRef.current.add(pending);
       return await pending;
     } finally {
-      pendingLocalWritesRef.current.delete(pending);
+      if (pending) pendingLocalWritesRef.current.delete(pending);
       listVersionRef.current += 1;
     }
   }, []);
@@ -261,6 +262,9 @@ export function useNotesSync({
 
   const refreshFromSync = useCallback(async () => {
     if (!userId || !keys) return;
+    // A timer set before a lock or user switch holds an old closure. It must not claim
+    // a refresh id, or it would cancel the refresh that belongs to the current keys.
+    if (currentUserIdRef.current !== userId || keysRef.current !== keys) return;
     const refreshId = ++refreshIdRef.current;
     // Superseded, unmounted, signed out, or the vault locked or changed keys. A lock in
     // particular: a read with the old keys must not put plaintext back on screen.
@@ -316,11 +320,22 @@ export function useNotesSync({
   // A refresh that keeps losing to local changes (steady typing, a slow write) backs
   // off instead of decrypting the library every 150ms, and a long stall is reported.
   const refreshDeferralsRef = useRef(0);
+  // A new user or new keys start a fresh cadence: no inherited backoff or stall count,
+  // and no timer left over from the previous session.
+  useEffect(() => {
+    refreshDeferralsRef.current = 0;
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, [userId, keys]);
   deferRefreshRef.current = () => {
     if (!mountedRef.current) return;
     refreshDeferralsRef.current += 1;
     const deferrals = refreshDeferralsRef.current;
-    if (deferrals === REPORT_REFRESH_DEFERRALS) {
+    if (deferrals % REPORT_REFRESH_DEFERRALS === 0) {
       reportReliabilityIssue({
         category: 'sync',
         message: 'Sync refresh deferred repeatedly by local changes',

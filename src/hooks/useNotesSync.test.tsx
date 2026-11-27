@@ -409,6 +409,35 @@ describe('useNotesSync refresh after a sync', () => {
     expect(mocks.fetchDecryptedNotes).toHaveBeenCalledTimes(2);
   });
 
+  it('does not let a refresh from before a lock cancel the one after unlock', async () => {
+    const existing = serverNote('existing', null);
+    const pulled = serverNote('pulled', null);
+    mocks.fetchDecryptedNotes.mockResolvedValue([existing]);
+    const openNoteIdRef = { current: null };
+    const { result, rerender } = renderHook(({ keys }: { keys: DerivedKeys | null }) => useNotesSync({
+      userId: 'faded-count-user', keys, isHydrating: false, openNoteIdRef, onOpenNoteRemoved: vi.fn(),
+    }), { initialProps: { keys: KEYS as DerivedKeys | null } });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const refreshBeforeLock = mocks.onSyncComplete;
+
+    rerender({ keys: null });
+    rerender({ keys: { ...KEYS } });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const currentRead = deferred<Note[]>();
+    mocks.fetchDecryptedNotes.mockReturnValueOnce(currentRead.promise);
+    let refresh!: Promise<void> | void;
+    act(() => { refresh = mocks.onSyncComplete?.(); });
+    // A timer set before the lock fires now, holding the old keys.
+    await act(async () => { await refreshBeforeLock?.(); });
+
+    await act(async () => {
+      currentRead.resolve([pulled, existing]);
+      await refresh;
+    });
+    expect(result.current.notes.map((n) => n.id).sort()).toEqual(['existing', 'pulled']);
+  });
+
   it('backs off instead of re-reading when local changes keep landing', async () => {
     const existing = serverNote('existing', null);
     const { result } = await setup([existing]);
