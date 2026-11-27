@@ -22,9 +22,17 @@ blocked, so its precache download does not compete with what is timed.
 | `typing.p50`, `typing.p95` | each keydown | the frame after it |
 | `typing.longTasks`, `typing.tbt` | first keystroke | 0.5 s after the last |
 | `unlock.toLibrary` | pointerdown on Unlock | library painted, or the recovery-key offer |
-| `unlock.tbt` | the same | the same |
+| `unlock.longTasks`, `unlock.tbt`, `unlock.longestTask` | the same | the same |
+| `unlock.maxFrameGap` | the same | the same: the longest gap between animation frames |
+| `signedIn.libraryLoad` | keys available | notes set: local read plus decrypt (the app's own measure) |
+| `signedIn.toCards` | navigation start (a reload) | first frame with cards painted |
+| `signedIn.tbt`, `signedIn.longestTask` | navigation start | cards painted |
+| `signedIn.noteCount` | — | live notes in the account, counted from Node |
 
 Total blocking time (TBT) is the sum of each long task's time over 50 ms.
+`unlock.maxFrameGap` is how long a spinner on the unlock screen could freeze. Unlock
+time itself may not change when Argon2id moves to a worker; blocking and frame gap
+should.
 
 Start times are input event timestamps, so time an event spent queued behind a busy
 main thread counts. End times are read in a task posted from the
@@ -44,10 +52,19 @@ Notes:
   41 notes, fixed text, no Supabase. The signed-in boot path differs (Supabase,
   Dexie, decryption), so `boot.*` tracks the app shell's code, not a signed-in
   cold start.
-- `unlock.*` needs the shared test account. It signs in and unlocks, and creates or
-  changes nothing, so it leaves no data behind. If the account has no recovery key,
-  the recovery-key offer appears before the library; the harness stops there and
-  says so in the notes. Each sample is a password sign-in, so it takes at most 3.
+- `unlock.*` and `signedIn.*` need the shared test account. They sign in, unlock,
+  reload and count notes. They create and change nothing, so they leave no data
+  behind. If the account has no recovery key, the recovery-key offer appears before
+  the library; `unlock.*` stops there and says so in the notes. Each unlock sample
+  is a password sign-in, so it takes at most 3.
+- `signedIn.*` signs in and unlocks once, declines the recovery-key offer if shown,
+  then reloads up to 5 times. A reload restores the keys from sessionStorage, so
+  these samples have no Argon2id in them, and the HTTP cache is warm.
+- `signedIn.libraryLoad` comes from a `performance.measure` named
+  `yidhan:library-load` in `src/hooks/useNotesSync.ts`, around
+  `fetchDecryptedNotes`. Its names are fixed and it carries no detail. It is the
+  only hook in `src/`. Read it next to `signedIn.noteCount`: a decrypt time means
+  little without the library size.
 
 ## Run it
 
@@ -79,9 +96,29 @@ Options, as environment variables:
 | `PERF_SAMPLES` | 5 | samples per metric (typing takes half, at least 3; unlock at most 3) |
 | `PERF_CPU_THROTTLE` | 4 | CPU slowdown factor |
 | `PERF_SKIP_BUILD` | unset | `1` reuses `dist/` as it is |
+| `PERF_LONG_NOTE_WORDS` | 2500 | words in the long note used by `open.*` and `typing.*` |
 
 Close other heavy programs first. The numbers are only worth comparing between runs
 on the same machine, at the same throttle rate.
+
+## Run only the signed-in cases
+
+For someone with the test account's credentials:
+
+1. Put these in `.env.local` at the repo root: `E2E_TEST_EMAIL`,
+   `E2E_TEST_PASSWORD`, `E2E_TEST_PASSPHRASE`, and the real `VITE_SUPABASE_URL` and
+   `VITE_SUPABASE_ANON_KEY`. The build must use the real Supabase URL, so do not
+   pass `PERF_SKIP_BUILD=1` on the first run after adding them.
+2. Run the two cases alone:
+
+   ```powershell
+   npx playwright test --config playwright.perf.config.ts --reporter=line -g "shared test account"
+   ```
+
+3. Paste the printed table into the PR, or attach `perf-results/latest.json`. It
+   holds `unlock.*` and `signedIn.*`, with the note count. It holds no credentials.
+
+Without the credentials both cases skip and the run passes.
 
 ## Output
 

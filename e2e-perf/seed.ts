@@ -6,7 +6,8 @@
  */
 
 export const LONG_NOTE_TITLE = 'Perf long note';
-export const LONG_NOTE_WORDS = 2500;
+/** PERF_LONG_NOTE_WORDS changes it, for a run on a longer note (say 10000). */
+export const LONG_NOTE_WORDS = Number(process.env.PERF_LONG_NOTE_WORDS ?? 2500);
 const LIBRARY_NOTES = 40;
 
 const WORDS = (

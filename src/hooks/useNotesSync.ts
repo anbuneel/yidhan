@@ -71,6 +71,23 @@ const COALESCED_SYNC_DELAY_MS = 2000;
 /** Maximum wait for hydration before fetching anyway (Android WebView edge cases). */
 const HYDRATION_FAILSAFE_MS = 15000;
 
+/**
+ * A `performance.measure` the timing harness reads: `yidhan:library-load`. Names are
+ * fixed and carry no detail, so a trace never holds a title, id or count. A browser
+ * without User Timing simply records nothing.
+ */
+function markLibraryLoad(phase: 'start' | 'end'): void {
+  try {
+    if (phase === 'start') {
+      performance.mark('yidhan:library-load:start');
+    } else {
+      performance.measure('yidhan:library-load', 'yidhan:library-load:start');
+    }
+  } catch {
+    // No start mark (cleared, or never set): nothing to measure.
+  }
+}
+
 export interface UseNotesSyncOptions {
   userId: string | undefined;
   keys: DerivedKeys | null;
@@ -554,8 +571,14 @@ export function useNotesSync({
     // one; `loading` still clears below, so the loader cannot stick.
     const appliedAtStart = appliedRefreshesRef.current;
     const refreshedMeanwhile = () => appliedRefreshesRef.current !== appliedAtStart;
+    // Timing harness (docs/setup/perf-harness.md): local read plus decrypt, keys to
+    // notes set. Fixed names, no detail — nothing about the notes goes in here.
+    markLibraryLoad('start');
     fetchDecryptedNotes(userId, keys)
-      .then((loaded) => { if (current && !refreshedMeanwhile()) setNotes(loaded); })
+      .then((loaded) => {
+        if (current && !refreshedMeanwhile()) setNotes(loaded);
+        if (current) markLibraryLoad('end');
+      })
       .catch((error) => {
         if (!current) return;
         console.error('Failed to decrypt notes:', error);

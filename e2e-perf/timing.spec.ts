@@ -6,8 +6,9 @@
  * diff the two files (docs/setup/perf-harness.md).
  *
  * Signed-out cases use a seeded Practice Space at /demo: a real library and the
- * real Editor, no Supabase, the same notes every run. Only unlock needs the shared
- * test account. It signs in and unlocks; it creates and changes nothing.
+ * real Editor, no Supabase, the same notes every run. Unlock and the signed-in
+ * library load need the shared test account. They sign in, unlock, reload and
+ * count notes; they create and change nothing.
  *
  * The ceilings below are deliberately loose — several times a local median — so a
  * shared CI runner does not flake on them. They catch a step change, not drift.
@@ -16,6 +17,7 @@ import { test, expect, type Browser, type Page } from '@playwright/test';
 import type { Server } from 'node:http';
 import path from 'node:path';
 import { buildForProduction, repoRoot, startStaticServer } from '../e2e-sw/productionBuild';
+import { createClient } from '@supabase/supabase-js';
 import { E2E_CREDENTIALS_CONFIGURED, TEST_USER } from '../e2e/fixtures';
 import {
   CPU_THROTTLE,
@@ -29,7 +31,7 @@ import {
   writeResults,
   type Results,
 } from './harness';
-import { LONG_NOTE_TITLE, seededDemoState } from './seed';
+import { LONG_NOTE_TITLE, LONG_NOTE_WORDS, seededDemoState } from './seed';
 
 /** Generous ceilings in ms, checked only on the median. See the header. */
 const CEILINGS: Record<string, number> = {
@@ -189,19 +191,61 @@ test('typing latency in a long note (Practice Space)', async ({ browser }) => {
   results['typing.p95'] = metric(p95);
   results['typing.longTasks'] = metric(longTasks, 'count');
   results['typing.tbt'] = metric(tbt);
-  notes.push(`typing: ${TYPED_TEXT.length} keystrokes per sample, ${TYPING_SAMPLES} samples, at the end of a 2,500-word note`);
+  notes.push(`typing: ${TYPED_TEXT.length} keystrokes per sample, ${TYPING_SAMPLES} samples, at the end of a ${LONG_NOTE_WORDS}-word note`);
 
   expect(median(p95)).toBeLessThan(CEILINGS['typing.p95']);
 });
 
+const SKIP_REASON =
+  'Needs E2E_TEST_EMAIL, E2E_TEST_PASSWORD, E2E_TEST_PASSPHRASE and a real VITE_SUPABASE_URL in .env.local';
+
+/** Sign in through the landing page and stop on the unlock form, passphrase typed. */
+async function signInToUnlockForm(page: Page): Promise<void> {
+  await page.goto(`${origin}/`);
+  await page.getByRole('button', { name: /sign in/i }).first().click();
+  await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+  await page.getByLabel(/^email$/i).fill(TEST_USER.email);
+  await page.getByLabel(/^password$/i).fill(TEST_USER.password);
+  await page.locator('form').getByRole('button', { name: /sign in/i }).click();
+
+  await expect(page.getByRole('heading', { name: 'Unlock your notes', exact: true })).toBeVisible();
+  await page.getByLabel('Passphrase', { exact: true }).fill(TEST_USER.passphrase);
+  await page.waitForLoadState('networkidle');
+}
+
+const unlockButton = (page: Page) => page.getByRole('button', { name: 'Unlock', exact: true });
+
+/**
+ * How many live notes the account holds, read from Node with the anon key. Read only.
+ * Signs out with scope 'local', which ends this client's session and no other.
+ */
+async function countAccountNotes(): Promise<number> {
+  const supabase = createClient(process.env.VITE_SUPABASE_URL!, process.env.VITE_SUPABASE_ANON_KEY!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error: signInError } = await supabase.auth.signInWithPassword({
+    email: TEST_USER.email,
+    password: TEST_USER.password,
+  });
+  if (signInError || !data.user) throw new Error(`Note count sign-in failed: ${signInError?.message}`);
+  const { count, error } = await supabase
+    .from('notes')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', data.user.id)
+    .is('deleted_at', null);
+  await supabase.auth.signOut({ scope: 'local' });
+  if (error || count === null) throw new Error(`Note count failed: ${error?.message}`);
+  return count;
+}
+
 test('unlock to library (shared test account)', async ({ browser }) => {
-  test.skip(
-    !E2E_CREDENTIALS_CONFIGURED || !hasRealSupabase(),
-    'Needs E2E_TEST_EMAIL, E2E_TEST_PASSWORD, E2E_TEST_PASSPHRASE and a real VITE_SUPABASE_URL in .env.local'
-  );
+  test.skip(!E2E_CREDENTIALS_CONFIGURED || !hasRealSupabase(), SKIP_REASON);
 
   const unlock: number[] = [];
+  const unlockLongTasks: number[] = [];
   const unlockTbt: number[] = [];
+  const unlockLongest: number[] = [];
+  const unlockFrameGap: number[] = [];
   const endedOn: string[] = [];
   // Each sample is a full password sign-in. Keep the count down for the auth rate limit.
   const samples = Math.min(SAMPLES, 3);
@@ -209,32 +253,89 @@ test('unlock to library (shared test account)', async ({ browser }) => {
   for (let i = 0; i < samples; i++) {
     const context = await browser.newContext();
     const page = await throttledPage(context);
-    await page.goto(`${origin}/`);
+    await signInToUnlockForm(page);
 
-    await page.getByRole('button', { name: /sign in/i }).first().click();
-    await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
-    await page.getByLabel(/^email$/i).fill(TEST_USER.email);
-    await page.getByLabel(/^password$/i).fill(TEST_USER.password);
-    await page.locator('form').getByRole('button', { name: /sign in/i }).click();
-
-    await expect(page.getByRole('heading', { name: 'Unlock your notes', exact: true })).toBeVisible();
-    await page.getByLabel('Passphrase', { exact: true }).fill(TEST_USER.passphrase);
-    await page.waitForLoadState('networkidle');
-
-    const span = await timeClick(page, 'unlocked', () =>
-      page.getByRole('button', { name: 'Unlock', exact: true }).click()
-    );
+    // Pointerdown on Unlock to the library painting. Argon2id runs on the main
+    // thread today, so the blocking numbers are what moving it to a worker changes.
+    const span = await timeClick(page, 'unlocked', () => unlockButton(page).click());
     unlock.push(span.ms);
+    unlockLongTasks.push(span.longTasks);
     unlockTbt.push(span.tbtMs);
+    unlockLongest.push(span.longestTaskMs);
+    unlockFrameGap.push(span.maxFrameGapMs ?? NaN);
     endedOn.push(span.endedOn ?? 'unknown');
 
     await context.close();
   }
 
   results['unlock.toLibrary'] = metric(unlock);
+  results['unlock.longTasks'] = metric(unlockLongTasks, 'count');
   results['unlock.tbt'] = metric(unlockTbt);
+  results['unlock.longestTask'] = metric(unlockLongest);
+  results['unlock.maxFrameGap'] = metric(unlockFrameGap);
   if (endedOn.some((e) => e !== 'library')) {
     notes.push(`unlock: ended on ${endedOn.join(', ')} (the recovery-key offer stands in front of the library)`);
   }
   notes.push(`unlock: ${samples} samples, includes Argon2id`);
+});
+
+test('signed-in library load and decrypt (shared test account)', async ({ browser }) => {
+  test.skip(!E2E_CREDENTIALS_CONFIGURED || !hasRealSupabase(), SKIP_REASON);
+
+  const noteCount = await countAccountNotes();
+
+  // One sign-in and unlock, then reloads. A reload restores the keys from
+  // sessionStorage (after the key check), so each sample is a signed-in cold boot
+  // of the app with no Argon2id in it. The HTTP cache is warm after the first load.
+  const context = await browser.newContext();
+  const page = await throttledPage(context, { bootLibrary: true });
+  await signInToUnlockForm(page);
+  await unlockButton(page).click();
+  const library = page.getByTestId('library-view');
+  const recoveryOffer = page.getByRole('heading', { name: 'Make a recovery key', exact: true });
+  await expect(library.or(recoveryOffer).first()).toBeVisible();
+  if (await recoveryOffer.isVisible()) {
+    // Declining writes nothing; it only closes the offer for this session.
+    await page.getByRole('button', { name: 'Not now', exact: true }).click();
+  }
+  await expect(library).toBeVisible();
+  await page.waitForLoadState('networkidle');
+
+  const load: number[] = [];
+  const toCards: number[] = [];
+  const bootTbt: number[] = [];
+  const bootLongest: number[] = [];
+  const samples = Math.min(SAMPLES, 5);
+  const unlockGate = page.getByRole('heading', { name: 'Unlock your notes', exact: true });
+
+  for (let i = 0; i < samples; i++) {
+    await page.reload({ waitUntil: 'commit' });
+    const span = await Promise.race([
+      perf(page).fromNavigation('library'),
+      unlockGate.waitFor({ timeout: 60_000 }).then(() => null),
+    ]);
+    if (!span) {
+      throw new Error('A reload asked for the passphrase again: the session restore did not hold the keys');
+    }
+    toCards.push(span.ms);
+    bootTbt.push(span.tbtMs);
+    bootLongest.push(span.longestTaskMs);
+
+    // The app's own measure, from keys available to notes set. The first one after
+    // navigation is the initial load; later ones are sync refreshes.
+    await expect.poll(async () => (await perf(page).libraryLoads()).length).toBeGreaterThan(0);
+    load.push((await perf(page).libraryLoads())[0].ms);
+    await page.waitForLoadState('networkidle');
+  }
+  await context.close();
+
+  results['signedIn.libraryLoad'] = metric(load);
+  results['signedIn.toCards'] = metric(toCards);
+  results['signedIn.tbt'] = metric(bootTbt);
+  results['signedIn.longestTask'] = metric(bootLongest);
+  results['signedIn.noteCount'] = metric([noteCount], 'count');
+  notes.push(
+    `signedIn: ${samples} reloads of one unlocked session, ${noteCount} notes; ` +
+      'libraryLoad is keys available to notes set (local read plus decrypt), toCards is navigation to cards painted'
+  );
 });

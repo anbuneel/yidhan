@@ -28,6 +28,9 @@ export interface Span {
   ms: number;
   longTasks: number;
   tbtMs: number;
+  longestTaskMs: number;
+  /** Longest gap between animation frames in the window: how long a spinner froze. */
+  maxFrameGapMs?: number;
   /** Only for `unlocked`: which screen ended the wait. */
   endedOn?: string;
 }
@@ -36,7 +39,7 @@ export interface Span {
  * Installed with addInitScript, so it runs before any app code on every page.
  * Runs in the browser: it must not reference anything outside its own body.
  */
-function probe(): void {
+function probe(options: { bootLibrary?: boolean } = {}): void {
   type W = Window & { __perf?: unknown };
   const w = window as W;
   if (w.__perf) return;
@@ -56,9 +59,10 @@ function probe(): void {
   function check(condition: Condition): string | null {
     const library = document.querySelector('[data-testid="library-view"]');
     if (condition === 'library') {
-      return library && library.getAttribute('aria-busy') !== 'true' && library.querySelector('.note-card')
-        ? 'library'
-        : null;
+      if (!library || library.getAttribute('aria-busy') === 'true') return null;
+      if (library.querySelector('.note-card')) return 'library';
+      // An empty account paints its empty state instead of cards.
+      return library.textContent?.includes('Your notes await') ? 'library-empty' : null;
     }
     if (condition === 'editor') {
       const body = document.querySelector<HTMLElement>(
@@ -98,13 +102,14 @@ function probe(): void {
     return {
       longTasks: inside.length,
       tbtMs: inside.reduce((sum, t) => sum + Math.max(0, t.duration - 50), 0),
+      longestTaskMs: inside.reduce((max, t) => Math.max(max, t.duration), 0),
     };
   }
 
   let armed: Promise<Span> | null = null;
   // Started here, not on request, so an early paint cannot be missed.
   const boot =
-    location.pathname === '/demo'
+    location.pathname === '/demo' || options.bootLibrary
       ? frameWhen('library').then(({ end, endedOn }) => ({ end, endedOn }))
       : null;
   const typing: number[] = [];
@@ -137,9 +142,21 @@ function probe(): void {
           'pointerdown',
           (event) => {
             const start = event.timeStamp;
-            void frameWhen(condition).then(({ end, endedOn }) =>
-              resolve({ ms: end - start, endedOn, ...summarise(start, end) })
-            );
+            let done = false;
+            let last = start;
+            let maxGap = 0;
+            const gap = (now: number) => {
+              if (done) return;
+              maxGap = Math.max(maxGap, now - last);
+              last = now;
+              requestAnimationFrame(gap);
+            };
+            requestAnimationFrame(gap);
+            void frameWhen(condition).then(({ end, endedOn }) => {
+              done = true;
+              maxGap = Math.max(maxGap, end - last);
+              resolve({ ms: end - start, endedOn, maxFrameGapMs: maxGap, ...summarise(start, end) });
+            });
           },
           { capture: true, once: true }
         );
@@ -161,6 +178,10 @@ function probe(): void {
     sinceNavigation() {
       return summarise(0, performance.now());
     },
+    /** The app's `yidhan:library-load` measures (useNotesSync), oldest first. */
+    libraryLoads() {
+      return performance.getEntriesByName('yidhan:library-load').map((e) => ({ start: e.startTime, ms: e.duration }));
+    },
     fcp() {
       const entry = performance.getEntriesByName('first-contentful-paint')[0];
       return entry ? entry.startTime : null;
@@ -169,8 +190,11 @@ function probe(): void {
 }
 
 /** A throttled page with the probe installed. One fresh context per sample. */
-export async function throttledPage(context: BrowserContext): Promise<Page> {
-  await context.addInitScript(probe);
+export async function throttledPage(
+  context: BrowserContext,
+  options: { bootLibrary?: boolean } = {}
+): Promise<Page> {
+  await context.addInitScript(probe, options);
   const page = await context.newPage();
   const cdp = await context.newCDPSession(page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU_THROTTLE });
@@ -182,8 +206,9 @@ type PerfApi = {
   arm(c: Condition): void;
   armed(): Promise<Span> | null;
   startTyping(): number;
-  stopTyping(start: number): { latencies: number[]; longTasks: number; tbtMs: number };
-  sinceNavigation(): { longTasks: number; tbtMs: number };
+  stopTyping(start: number): { latencies: number[]; longTasks: number; tbtMs: number; longestTaskMs: number };
+  sinceNavigation(): { longTasks: number; tbtMs: number; longestTaskMs: number };
+  libraryLoads(): { start: number; ms: number }[];
   fcp(): number | null;
 };
 
@@ -198,6 +223,7 @@ export function perf(page: Page) {
     stopTyping: (start: number) =>
       page.evaluate((s) => (window as unknown as { __perf: PerfApi }).__perf.stopTyping(s), start),
     sinceNavigation: () => page.evaluate(() => (window as unknown as { __perf: PerfApi }).__perf.sinceNavigation()),
+    libraryLoads: () => page.evaluate(() => (window as unknown as { __perf: PerfApi }).__perf.libraryLoads()),
     fcp: () => page.evaluate(() => (window as unknown as { __perf: PerfApi }).__perf.fcp()),
   };
 }
