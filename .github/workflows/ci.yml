@@ -110,6 +110,44 @@ jobs:
       - name: Service worker update tests
         run: npm run e2e:sw
 
+  # Timing harness (docs/setup/perf-harness.md, ~2min)
+  #
+  # Its own job so a missed ceiling never turns the service worker guard red.
+  # The ceilings are many times a local median: they catch a step change, not
+  # drift. The signed-in cases skip here, because this job gets no E2E secrets.
+  # Runs beside the longer e2e job, so it adds no wall-clock time.
+  perf:
+    runs-on: ubuntu-24.04 # ubuntu-latest is 26.04, which Playwright cannot install Chromium on
+    needs: fast-checks
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Same fallback as the service-worker job.
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium || npx playwright install chromium
+
+      - name: Timing harness (loose ceilings)
+        run: npm run e2e:perf
+
+      - name: Upload timing results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-results
+          path: perf-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
   # Full browser suite (~10min, serial)
   #
   # 97 tests across 10 specs, run on Desktop Chrome and Pixel 5 — 194 runs. Written

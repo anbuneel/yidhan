@@ -3,7 +3,8 @@
 ## Overview
 
 Yidhan uses GitHub Actions for continuous integration. `fast-checks` gates everything;
-`full-tests`, `service-worker` and `e2e` run after it, in parallel.
+`full-tests`, `service-worker`, `perf` and `e2e` run after it, in parallel. The diagram
+below leaves out `perf`; it runs on everything, like `service-worker`.
 
 ## Workflow Behavior
 
@@ -84,6 +85,14 @@ Runs `npm run e2e:sw` against a real production build. Unit tests cannot run a s
 worker, and the main browser suite runs against the dev server, which produces none — so
 the update path is untestable anywhere else. `registerType: 'prompt'` stranded clients on
 an old build for months before this job existed.
+
+### perf
+
+Runs `npm run e2e:perf`, the timing harness (`docs/setup/perf-harness.md`), against a
+production build under 4x CPU throttling, and uploads `perf-results/` as an artifact. It
+fails only when a median passes a loose ceiling, set many times above a local run, so it
+catches a step change, not drift. It is its own job so a missed ceiling never turns the
+service worker guard red. It gets no E2E secrets, so the signed-in cases skip.
 
 ### e2e
 
@@ -216,6 +225,7 @@ If you need to force full tests on a non-src change, you can:
 
 - **2026-09-07**: Removed `paths-ignore` from the push trigger — it conflicted with the
   `fast-checks` required status check on `main` (see Path Filtering).
+- **2026-11-27**: Added the `perf` job (item D1 of the shell-size plan).
 - **2026-09-08**: Ungated the `e2e` job — it now runs `npm run e2e` on every PR using
   placeholder Supabase values when the secrets are absent, so it gates merges on forks
   too. Added `E2E_TEST_PASSPHRASE` so the fixture can unlock the test account's vault.
