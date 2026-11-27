@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { goToLibrary, createTag, filterByTag, clearTagFilters } from './fixtures';
+import { goToLibrary, createTag, filterByTag, clearTagFilters, noteCard } from './fixtures';
 
 const MAX_E2E_TAG_NAME_LENGTH = 18;
 
@@ -69,8 +69,8 @@ test.describe('Tags', () => {
       await page.getByPlaceholder(/tag name/i).fill(tagName);
       await page.getByRole('button', { name: /create|save/i }).click();
 
-      // Should show error
-      await expect(page.getByText(/exists|duplicate/i)).toBeVisible();
+      // Should show error, in the dialog (the tag's own filter button also says "Duplicate")
+      await expect(page.getByRole('dialog').getByText('A tag with this name already exists')).toBeVisible();
     });
   });
 
@@ -96,7 +96,9 @@ test.describe('Tags', () => {
       await expect(page.getByRole('button', { name: new RegExp(newName, 'i') })).toBeVisible();
     });
 
-    test('changes tag color', async ({ authenticatedPage: page }) => {
+    // Tags lost their colour in the UI in #279; an edit keeps the stored colour.
+    // Check that the edit dialog offers no colour picker and still saves.
+    test('edits a tag with no colour picker', async ({ authenticatedPage: page }) => {
       const tagName = uniqueTagName('ColorChg');
 
       await createTag(page, tagName);
@@ -106,8 +108,8 @@ test.describe('Tags', () => {
       await tagPill.hover();
       await page.getByRole('button', { name: 'Edit tag' }).first().click();
 
-      // Change color
-      await page.getByRole('button', { name: /forest/i }).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await expect(page.getByRole('button', { name: /forest|terracotta/i })).toHaveCount(0);
       await page.getByRole('button', { name: /save/i }).click();
 
       // Modal should close
@@ -126,14 +128,10 @@ test.describe('Tags', () => {
       await tagPill.hover();
       await page.getByRole('button', { name: 'Edit tag' }).first().click();
 
-      // Delete
-      await page.getByRole('button', { name: /delete/i }).click();
-
-      // Confirm if needed
-      const confirmButton = page.getByRole('button', { name: /confirm|yes|delete/i });
-      if (await confirmButton.isVisible()) {
-        await confirmButton.click();
-      }
+      // Delete. TagModal has no confirm step. Scoped to the dialog: a note card's
+      // "Open note: ... delete ..." button would match /delete/ too.
+      await page.getByRole('dialog').getByRole('button', { name: 'Delete tag', exact: true }).click();
+      await expect(page.getByRole('dialog')).not.toBeVisible();
 
       // Tag should be gone
       await expect(page.getByRole('button', { name: new RegExp(tagName, 'i') })).not.toBeVisible();
@@ -154,7 +152,7 @@ test.describe('Tags', () => {
 
       // Add tag to note
       await page.getByRole('button', { name: /add tag|tags/i }).click();
-      await page.getByRole('option', { name: new RegExp(tagName, 'i') }).click();
+      await page.getByRole('button', { name: new RegExp(tagName, 'i') }).click();
 
       await goToLibrary(page);
 
@@ -162,7 +160,7 @@ test.describe('Tags', () => {
       await filterByTag(page, tagName);
 
       // Only tagged note should be visible
-      await expect(page.getByRole('article').filter({ hasText: noteTitle })).toBeVisible();
+      await expect(noteCard(page, noteTitle)).toBeVisible();
     });
 
     test('clears tag filter', async ({ authenticatedPage: page }) => {
@@ -176,7 +174,9 @@ test.describe('Tags', () => {
       await expect(page.getByRole('button', { name: /all notes/i })).toHaveAttribute('aria-pressed', 'true');
     });
 
-    test('filters clear search when activated', async ({ authenticatedPage: page }) => {
+    // A tag filter keeps the search query on purpose (useTagActions: the notes are
+    // re-filtered by both). The old test expected the search to clear.
+    test('a tag filter keeps the search query', async ({ authenticatedPage: page }) => {
       // Create a tag to guarantee a filter button exists
       const tagName = uniqueTagName('FilterClr');
       await createTag(page, tagName);
@@ -184,11 +184,10 @@ test.describe('Tags', () => {
       // Search for something
       await page.getByPlaceholder(/search/i).first().fill('test');
 
-      // Click the tag filter — this should clear the search
       await filterByTag(page, tagName);
 
-      // Search should be cleared
-      await expect(page.getByPlaceholder(/search/i).first()).toHaveValue('');
+      await expect(page.getByRole('button', { name: `Filter by ${tagName}`, exact: true })).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByPlaceholder(/search/i).first()).toHaveValue('test');
     });
   });
 
@@ -207,7 +206,7 @@ test.describe('Tags', () => {
       await page.getByRole('button', { name: /add tag|tags/i }).click();
 
       // Select tag
-      await page.getByRole('option', { name: new RegExp(tagName, 'i') }).click();
+      await page.getByRole('button', { name: new RegExp(tagName, 'i') }).click();
 
       // Tag should appear on note
       await expect(page.getByText(tagName)).toBeVisible();
