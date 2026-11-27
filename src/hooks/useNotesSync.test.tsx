@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   onNoteUpdate: undefined as ((note: Note) => void) | undefined,
   onNoteDelete: undefined as ((id: string) => void) | undefined,
   onSyncPullComplete: undefined as (() => void) | undefined,
+  onSyncComplete: undefined as (() => Promise<void> | void) | undefined,
+  fetchDecryptedNotes: vi.fn(),
   cleanupExpiredFadedNotes: vi.fn(),
   countFadedNotesOffline: vi.fn(),
   upsertNoteFromServer: vi.fn(),
@@ -36,14 +38,15 @@ vi.mock('../services/offlineNotes', () => ({
   deleteTagFromServer: vi.fn(),
 }));
 vi.mock('../services/encryptedNotes', () => ({
-  fetchDecryptedNotes: vi.fn().mockResolvedValue([]),
+  fetchDecryptedNotes: mocks.fetchDecryptedNotes,
   decryptNoteFromServer: vi.fn().mockImplementation(async (note: Note) => note),
 }));
 vi.mock('../services/offlineTags', () => ({ fetchTagsOffline: vi.fn().mockResolvedValue([]) }));
 vi.mock('../services/noteTagSync', () => ({ subscribeToNoteTags: () => vi.fn() }));
 vi.mock('./useStoragePersistence', () => ({ useStoragePersistence: vi.fn() }));
 vi.mock('./useSyncEngine', () => ({
-  useSyncEngine: (_onSyncComplete?: unknown, onSyncPullComplete?: () => void) => {
+  useSyncEngine: (onSyncComplete?: () => Promise<void> | void, onSyncPullComplete?: () => void) => {
+    mocks.onSyncComplete = onSyncComplete;
     mocks.onSyncPullComplete = onSyncPullComplete;
     return { conflicts: [], removeConflict: vi.fn(), triggerSync: vi.fn() };
   },
@@ -79,6 +82,7 @@ describe('useNotesSync faded count', () => {
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+    mocks.fetchDecryptedNotes.mockResolvedValue([]);
     mocks.fadedIds.clear();
     mocks.fadedIds.add('already-faded');
     mocks.fadedIds.add('expired');
@@ -148,6 +152,7 @@ describe('useNotesSync open-note removal', () => {
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+    mocks.fetchDecryptedNotes.mockResolvedValue([]);
     mocks.fadedIds.clear();
     mocks.cleanupExpiredFadedNotes.mockResolvedValue(0);
     mocks.countFadedNotesOffline.mockImplementation(async () => mocks.fadedIds.size);
@@ -210,5 +215,150 @@ describe('useNotesSync open-note removal', () => {
     act(() => { mocks.onNoteDelete?.('open'); });
     await settleRealtimeRecount();
     expect(onOpenNoteRemoved).not.toHaveBeenCalled();
+  });
+});
+
+// A sync refresh reads IndexedDB, decrypts every note, then replaces the list. A note
+// created while that read was in flight is in IndexedDB and on screen, but not in the
+// snapshot. Applying the snapshot dropped it, and App then closed the editor with
+// "That note is no longer here."
+describe('useNotesSync refresh after a sync', () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+    mocks.cleanupExpiredFadedNotes.mockResolvedValue(0);
+    mocks.countFadedNotesOffline.mockResolvedValue(0);
+    mocks.deleteNoteFromServer.mockResolvedValue({ deleted: true });
+  });
+
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((r) => { resolve = r; });
+    return { promise, resolve };
+  }
+
+  async function setup(initial: Note[]) {
+    mocks.fetchDecryptedNotes.mockResolvedValue(initial);
+    const openNoteIdRef = { current: null };
+    const onOpenNoteRemoved = vi.fn();
+    const hook = renderHook(() => useNotesSync({
+      userId: 'faded-count-user', keys: KEYS, isHydrating: false,
+      openNoteIdRef, onOpenNoteRemoved,
+    }));
+    await waitFor(() => expect(hook.result.current.loading).toBe(false));
+    expect(hook.result.current.notes.map((n) => n.id)).toEqual(initial.map((n) => n.id));
+    expect(mocks.fetchDecryptedNotes).toHaveBeenCalledTimes(1);
+    return hook;
+  }
+
+  const ids = (notes: Note[]) => notes.map((n) => n.id).sort();
+
+  it('keeps a note created while the refresh was reading', async () => {
+    const existing = serverNote('existing', null);
+    const created = serverNote('created', null);
+    const { result } = await setup([existing]);
+
+    // The refresh reads IndexedDB before the new note is written.
+    const staleRead = deferred<Note[]>();
+    mocks.fetchDecryptedNotes.mockReturnValueOnce(staleRead.promise);
+    // Any later read sees the note, because the create wrote it first.
+    mocks.fetchDecryptedNotes.mockResolvedValue([created, existing]);
+    let refresh!: Promise<void> | void;
+    act(() => { refresh = mocks.onSyncComplete?.(); });
+
+    // handleNewNote: written to IndexedDB, then added to the list.
+    act(() => { result.current.setNotes((prev) => [created, ...prev]); });
+
+    await act(async () => {
+      staleRead.resolve([existing]);
+      await refresh;
+    });
+
+    await waitFor(() => expect(mocks.fetchDecryptedNotes).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(ids(result.current.notes)).toEqual(['created', 'existing']));
+    // Never dropped, not even for one render.
+    expect(result.current.notes.some((n) => n.id === 'created')).toBe(true);
+  });
+
+  it('does not let an older refresh overwrite a newer one', async () => {
+    const existing = serverNote('existing', null);
+    const pulled = serverNote('pulled', null);
+    const { result } = await setup([existing]);
+
+    const older = deferred<Note[]>();
+    const newer = deferred<Note[]>();
+    mocks.fetchDecryptedNotes.mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise);
+    let first!: Promise<void> | void;
+    let second!: Promise<void> | void;
+    act(() => { first = mocks.onSyncComplete?.(); });
+    act(() => { second = mocks.onSyncComplete?.(); });
+
+    await act(async () => {
+      newer.resolve([pulled, existing]);
+      await second;
+    });
+    expect(ids(result.current.notes)).toEqual(['existing', 'pulled']);
+
+    await act(async () => {
+      older.resolve([existing]);
+      await first;
+    });
+    expect(ids(result.current.notes)).toEqual(['existing', 'pulled']);
+  });
+
+  // Where it should still fire: a note deleted on another device and removed by the
+  // pull leaves the list, so App still says it is no longer here.
+  it('still removes a note the pull deleted when nothing changed locally', async () => {
+    const existing = serverNote('existing', null);
+    const gone = serverNote('gone', null);
+    const { result } = await setup([gone, existing]);
+
+    mocks.fetchDecryptedNotes.mockResolvedValue([existing]);
+    await act(async () => { await mocks.onSyncComplete?.(); });
+
+    expect(ids(result.current.notes)).toEqual(['existing']);
+  });
+
+  it('does not bring back a note deleted elsewhere while the refresh was reading', async () => {
+    const existing = serverNote('existing', null);
+    const gone = serverNote('gone', null);
+    const { result } = await setup([gone, existing]);
+
+    const staleRead = deferred<Note[]>();
+    mocks.fetchDecryptedNotes.mockReturnValueOnce(staleRead.promise);
+    mocks.fetchDecryptedNotes.mockResolvedValue([existing]);
+    let refresh!: Promise<void> | void;
+    act(() => { refresh = mocks.onSyncComplete?.(); });
+
+    act(() => { mocks.onNoteDelete?.('gone'); });
+    await waitFor(() => expect(ids(result.current.notes)).toEqual(['existing']));
+
+    await act(async () => {
+      staleRead.resolve([gone, existing]);
+      await refresh;
+    });
+    expect(ids(result.current.notes)).toEqual(['existing']);
+  });
+
+  it('still removes a pulled delete after retrying past a local change', async () => {
+    const existing = serverNote('existing', null);
+    const gone = serverNote('gone', null);
+    const { result } = await setup([gone, existing]);
+
+    const staleRead = deferred<Note[]>();
+    mocks.fetchDecryptedNotes.mockReturnValueOnce(staleRead.promise);
+    mocks.fetchDecryptedNotes.mockResolvedValue([{ ...existing, title: 'edited' }]);
+    let refresh!: Promise<void> | void;
+    act(() => { refresh = mocks.onSyncComplete?.(); });
+    act(() => {
+      result.current.setNotes((prev) => prev.map((n) => (n.id === 'existing' ? { ...n, title: 'edited' } : n)));
+    });
+    await act(async () => {
+      staleRead.resolve([existing]);
+      await refresh;
+    });
+
+    await waitFor(() => expect(ids(result.current.notes)).toEqual(['existing']));
+    expect(result.current.notes[0].title).toBe('edited');
   });
 });

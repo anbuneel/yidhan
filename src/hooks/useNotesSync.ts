@@ -50,6 +50,12 @@ import { reportReliabilityIssue } from '../utils/reliabilityTelemetry';
  */
 const SYNC_REFRESH_COALESCE_MS = 150;
 
+/**
+ * A refresh that loses the race with a local change re-reads this many times before
+ * handing over to the next scheduled refresh.
+ */
+const MAX_REFRESH_READS = 3;
+
 /** After a save, wait before syncing so rapid typing does not flood the queue. */
 const COALESCED_SYNC_DELAY_MS = 2000;
 
@@ -121,7 +127,18 @@ export function useNotesSync({
   onOpenNoteRemoved,
   onSignedOut,
 }: UseNotesSyncOptions): NotesSync {
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [notes, setNotesState] = useState<Note[]>([]);
+
+  // Counts every change to the list except a refresh snapshot. A refresh reads
+  // IndexedDB and decrypts the whole library before it replaces the list; if the count
+  // moved meanwhile, the snapshot predates a local change (a note just created, an
+  // edit, a realtime insert) and applying it would undo that change on screen. A note
+  // created that way vanished and App closed it as "no longer here".
+  const listVersionRef = useRef(0);
+  const setNotes = useCallback<Dispatch<SetStateAction<Note[]>>>((action) => {
+    listVersionRef.current += 1;
+    setNotesState(action);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -172,10 +189,30 @@ export function useNotesSync({
 
   // --- Sync engine wiring ---------------------------------------------------
 
+  // Only the latest refresh may replace the list; an older one that resolves last
+  // would put back what the newer one removed or miss what it added.
+  const refreshIdRef = useRef(0);
+  const scheduleSyncRefreshRef = useRef<() => void>(() => {});
+
   const refreshFromSync = useCallback(async () => {
     if (!userId || !keys) return;
+    const refreshId = ++refreshIdRef.current;
     try {
-      setNotes(await fetchDecryptedNotes(userId, keys));
+      for (let read = 1; ; read++) {
+        const versionAtRead = listVersionRef.current;
+        const snapshot = await fetchDecryptedNotes(userId, keys);
+        if (refreshId !== refreshIdRef.current) return;
+        if (versionAtRead === listVersionRef.current) {
+          setNotesState(snapshot);
+          break;
+        }
+        // The list changed while we read. Local writes reach IndexedDB before they
+        // reach the list, so a fresh read includes them.
+        if (read >= MAX_REFRESH_READS) {
+          scheduleSyncRefreshRef.current();
+          return;
+        }
+      }
       setTags(await fetchTagsOffline(userId));
     } catch (error) {
       console.error('Failed to rehydrate after sync:', error);
@@ -190,6 +227,7 @@ export function useNotesSync({
       void refreshFromSync();
     }, SYNC_REFRESH_COALESCE_MS);
   }, [refreshFromSync]);
+  scheduleSyncRefreshRef.current = scheduleSyncRefresh;
 
   useEffect(() => () => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
