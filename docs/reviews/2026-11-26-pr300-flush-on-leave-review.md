@@ -5,15 +5,15 @@ balanced, decisions deferred, no required reviewer.
 
 ## Reviewers
 
-| Reviewer | Independence | Round 1 | Round 2 |
-|---|---|---|---|
-| primary-native | primary | ran | ran |
-| lens: code-reviewer | native | ran | ran |
-| lens: silent-failure-hunter | native | ran | ran |
-| lens: type-design-analyzer | native | ran | ran |
-| Codex CLI 0.166.0 | independent | ran | ran |
-| GitHub: chatgpt-codex-connector, claude[bot] | independent | polled | polled |
-| Claude CLI | same family | skipped | skipped |
+| Reviewer | Independence | Round 1 | Round 2 | Round 3 |
+|---|---|---|---|---|
+| primary-native | primary | ran | ran | ran |
+| lens: code-reviewer | native | ran | ran | ran |
+| lens: silent-failure-hunter | native | ran | ran | ran |
+| lens: type-design-analyzer | native | ran | ran | ran |
+| Codex CLI 0.166.0 | independent | ran | ran | ran |
+| GitHub: chatgpt-codex-connector, claude[bot] | independent | polled | polled | polled |
+| Claude CLI | same family | skipped | skipped | skipped |
 
 ## Round 1 findings and dispositions
 
@@ -43,7 +43,40 @@ balanced, decisions deferred, no required reviewer.
 | 22 | code-reviewer, claude[bot] | Plan should be ACTIVE, not PROPOSAL | CONSIDER | reject |
 | 23 | CI (reported by the parent session) | Mixed static and dynamic import of `exportImport` fails the build | build | agree: static imports; the notice loads on demand instead |
 
-Fix commit: see the PR history after `88693ee`.
+Fix commit: `72ceb13`.
+
+## Round 2 (verification of 72ceb13)
+
+Every round-1 fix was confirmed by the reviewer that raised it. New findings:
+
+| # | Source | Finding | Disposition |
+|---|---|---|---|
+| 24 | Codex, type-design, silent-failure, code-reviewer | Waiting drafts survive a lock | agree: drafts carry the session; every close clears them |
+| 25 | Codex, code-reviewer | `run()` takes its slot a microtask late | agree: check and take in one step |
+| 26 | Codex, silent-failure | A held-back Lock now completes without saving first | agree: goes through Lock now |
+| 27 | Codex, silent-failure, code-reviewer | The lazy notice can reload the page while words are held | agree: fetched on unlock, plain `lazy`, a boundary that never reloads |
+| 28 | Codex | Keep's follow-up write bypasses the queue | agree: queued and tracked |
+| 29 | type-design | Retry's save-over does not re-check the session after waiting | agree: re-checks session and stored text in its slot |
+| 30 | type-design, silent-failure | "Still being saved" notice can stay up; Copy waits on a hung Retry | agree: "Try again"; Copy independent; Retry wait capped at 5s |
+| 31 | silent-failure | Sign-out and failed auto-lock saves drop words quietly; toast before lock | agree: one toast when words are dropped; toast after the lock |
+
+Fix commit: `d2c1838`.
+
+## Round 3 (verification of d2c1838)
+
+All round-2 fixes confirmed. New findings:
+
+| # | Source | Finding | Disposition |
+|---|---|---|---|
+| 32 | Codex | An older save failing late overwrites a released note's newer held words, or brings them back after Let go | agree: a released note is held only by the leave path |
+| 33 | Codex, silent-failure, code-reviewer | The boundary fallback offers no Copy and no way to lock | agree: plain Copy of every held note and Lock anyway, with no lazy code |
+| 34 | type-design | `open()` starts no new session | agree: it does now |
+| 35 | type-design | A repeat idle tick toasts before the lock | agree: it waits for the lock in progress |
+| 36 | code-reviewer | The deferred lock can fire while the writer types in a note | agree: dropped when an Editor is open |
+| 37 | silent-failure | Retry's 5s cap covers only the first wait | defer: Copy and the lock stay bounded |
+
+Fix commit: see the PR history after `d2c1838`. The per-note queue also left the app
+shell (running saves are counted in the held-save store) to stay inside the 330 KB budget.
 
 ## Needs your call
 
@@ -63,6 +96,10 @@ for the locked-note refusal in `useNoteActions`; small follow-up.
 **20. A save waits forever behind a hung earlier save.** Reviewer: put a time limit on
 the wait and show "Not saved". Primary: the same unbounded wait existed before within one
 Editor; a hung IndexedDB write is a wider problem than this PR. Locks are bounded now.
+
+**37. Retry's time limit.** Reviewer: put the whole retry under the 5s cap. Primary: a
+slow save that later succeeds would be reported as failed. Copy and the lock path are
+already bounded, so the words can always be taken out.
 
 **21. Notice on entry screens.** Reviewer: render it for every signed-in, unlocked view.
 Primary: held entries stay in the store and show again in the library; only an

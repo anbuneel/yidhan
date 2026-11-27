@@ -7,8 +7,9 @@
  * - The newest draft waiting to be written per note. A reopened Editor starts from it
  *   instead of the older text the list holds, so words queued behind a slow save are
  *   on screen and are not typed over.
- * - Every save still running, including ones from Editors already gone, so a lock
- *   can wait for them before it decides.
+ *
+ * Saves still running, which a lock waits for, are counted in `heldSaves`, so the
+ * app shell does not load this module.
  */
 import { heldSaves } from './heldSaves';
 
@@ -24,11 +25,6 @@ interface SessionDraft extends PendingDraft {
 const inFlight = new Map<string, Promise<boolean>>();
 const pendingDrafts = new Map<string, SessionDraft>();
 const draftKeys = new WeakMap<PendingDraft, SessionDraft>();
-const running = new Set<Promise<unknown>>();
-
-function timeout(ms: number): Promise<'timeout'> {
-  return new Promise((resolve) => setTimeout(() => resolve('timeout'), ms));
-}
 
 export const noteSaveQueue = {
   get(noteId: string): Promise<boolean> | undefined {
@@ -102,27 +98,13 @@ export const noteSaveQueue = {
     pendingDrafts.clear();
   },
 
-  /** Count a save as running until it settles. Returns the same promise. */
-  track<T>(save: Promise<T>): Promise<T> {
-    running.add(save);
-    void save.finally(() => running.delete(save)).catch(() => {});
-    return save;
-  },
-
-  /** Resolves true once every running save has settled, false if `ms` ran out first. */
-  async drain(ms: number): Promise<boolean> {
-    const deadline = timeout(ms);
-    while (running.size > 0) {
-      const settled = Promise.allSettled([...running]).then(() => 'settled' as const);
-      if ((await Promise.race([settled, deadline])) === 'timeout') return false;
-    }
-    return true;
-  },
 };
+
+// Waiting drafts are decrypted text: every lock or user change drops them.
+heldSaves.onClose(() => noteSaveQueue.clearPendingDrafts());
 
 /** Test helper: forget every save, including ones a test left unresolved. */
 export function resetNoteSaveQueue(): void {
   inFlight.clear();
   pendingDrafts.clear();
-  running.clear();
 }

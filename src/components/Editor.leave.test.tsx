@@ -331,6 +331,23 @@ describe('leaving a note (issue #288)', () => {
     ]);
   });
 
+  it('keeps the newest held words of a released note when an older save fails late', async () => {
+    let failFirst!: () => void;
+    const save = vi.fn<Save>().mockImplementationOnce(
+      () => new Promise<void>((_, reject) => { failFirst = () => reject(new Error('gone')); }),
+    );
+    render(<Harness save={save} api={api} />);
+    type('first');
+    await act(async () => { vi.advanceTimersByTime(800); });
+    type('first second');
+    act(() => api.current!.release(true));
+    api.current!.open(null);
+    await flush();
+    await act(async () => { failFirst(); });
+    await flush();
+    expect(heldSaves.getSnapshot()).toEqual([expect.objectContaining({ title: 'first second' })]);
+  });
+
   it('holds nothing for a released note the writer let go', async () => {
     const save = vi.fn<Save>().mockResolvedValue(undefined);
     render(<Harness save={save} api={api} />);

@@ -458,7 +458,7 @@ describe('useLockAfterSaving', () => {
   it('Lock now waits for a save still running from an Editor already gone', async () => {
     const { result, lockVault } = setup();
     let fail!: () => void;
-    const departed = noteSaveQueue.track(new Promise<boolean>((resolve) => {
+    const departed = heldSaves.trackSave(new Promise<boolean>((resolve) => {
       fail = () => { holdNow(heldEntry()); resolve(false); };
     }));
     const locking = result.current.lockNow();
@@ -476,7 +476,7 @@ describe('useLockAfterSaving', () => {
     try {
       const { result, lockVault } = setup();
       holdNow(heldEntry());
-      noteSaveQueue.track(new Promise<boolean>(() => {}));
+      heldSaves.trackSave(new Promise<boolean>(() => {}));
       act(() => { void result.current.lockVaultAfterSaving('auto-lock'); });
       // A second idle tick while saving does not start another round.
       act(() => { void result.current.lockVaultAfterSaving('auto-lock'); });
@@ -493,7 +493,7 @@ describe('useLockAfterSaving', () => {
     vi.useFakeTimers();
     try {
       const { result, lockVault } = setup();
-      noteSaveQueue.track(new Promise<boolean>(() => {}));
+      heldSaves.trackSave(new Promise<boolean>(() => {}));
       const locking = result.current.lockNow();
       await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
       expect(await locking).toBe(false);
@@ -520,8 +520,18 @@ describe('HeldSavesBoundary', () => {
     }
     vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      render(<HeldSavesBoundary><Broken /></HeldSavesBoundary>);
+      const lockAnyway = vi.fn();
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+      resetHeldSaves();
+      holdNow(heldEntry({ title: 'Kept words', content: '<p>Body</p>' }));
+      render(<HeldSavesBoundary onLockAnyway={lockAnyway}><Broken /></HeldSavesBoundary>);
       expect(screen.getByRole('alert')).toHaveTextContent('Some words are not saved');
+      // The words can still be taken out, and the vault can still be locked.
+      fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Kept words'));
+      fireEvent.click(screen.getByRole('button', { name: 'Lock anyway' }));
+      expect(lockAnyway).toHaveBeenCalled();
     } finally {
       vi.mocked(console.error).mockRestore();
     }

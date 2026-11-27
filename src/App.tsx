@@ -375,12 +375,18 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
   };
   // Retry or Copy dealt with an entry. Once none are left, go ahead with the lock the
   // writer asked for, saving first like Lock now: an open Editor may hold new words.
+  // If the writer has opened a note meanwhile, they went back to writing: drop the
+  // pending lock rather than lock mid-sentence.
   const lockIfAllDealtWith = async () => {
     if (!lockHeldBack || heldSaves.getSnapshot().length > 0) return;
+    if (heldSaves.hasOpenEditors()) {
+      setLockHeldBack(false);
+      return;
+    }
     if (await lockNow()) setLockHeldBack(false);
   };
   const heldSavesNotice = user && (heldSaveCount > 0 || lockHeldBack) ? (
-    <HeldSavesBoundary>
+    <HeldSavesBoundary onLockAnyway={handleLockAnyway}>
     <Suspense fallback={null}>
       <HeldSavesLayer
         userId={user.id}

@@ -45,6 +45,8 @@ let session = 0;
 let revision = 0;
 const listeners = new Set<Listener>();
 const flushers = new Set<Flusher>();
+const closeListeners = new Set<() => void>();
+const running = new Set<Promise<unknown>>();
 
 function emit(next: readonly StoredHeldSave[]) {
   entries = next;
@@ -101,12 +103,43 @@ export const heldSaves = {
     accepting = false;
     session += 1;
     if (dropped > 0) emit([]);
+    closeListeners.forEach((onClose) => onClose());
     return dropped;
   },
 
-  /** Vault unlocked for a signed-in user. */
+  /**
+   * Vault unlocked for a signed-in user. A new session too: a save that started while
+   * the store was closed belongs to no open vault.
+   */
   open(): void {
     accepting = true;
+    session += 1;
+  },
+
+  hasOpenEditors(): boolean {
+    return flushers.size > 0;
+  },
+
+  /** Run `onClose` on every close, to drop other decrypted state with the store. */
+  onClose(onClose: () => void): void {
+    closeListeners.add(onClose);
+  },
+
+  /** Count a save as running until it settles, including saves of Editors already gone. */
+  trackSave<T>(save: Promise<T>): Promise<T> {
+    running.add(save);
+    void save.finally(() => running.delete(save)).catch(() => {});
+    return save;
+  },
+
+  /** Resolves true once every running save has settled, false if `ms` ran out first. */
+  async drainSaves(ms: number): Promise<boolean> {
+    const deadline = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), ms));
+    while (running.size > 0) {
+      const settled = Promise.allSettled([...running]).then(() => 'settled' as const);
+      if ((await Promise.race([settled, deadline])) === 'timeout') return false;
+    }
+    return true;
   },
 
   /** An open Editor registers how to save what it has on screen. */
@@ -132,5 +165,6 @@ export function resetHeldSaves(): void {
   accepting = true;
   session += 1;
   flushers.clear();
+  running.clear();
   listeners.forEach((listener) => listener());
 }

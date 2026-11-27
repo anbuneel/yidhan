@@ -17,7 +17,6 @@ import { useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import type { LockReason } from '../contexts/EncryptionContext';
 import { heldSaves } from '../stores/heldSaves';
-import { noteSaveQueue } from '../stores/noteSaveQueue';
 
 /** The longest a lock waits for saves. A lock is a security control; it must not hang. */
 const SAVE_BEFORE_LOCK_MS = 3000;
@@ -40,7 +39,6 @@ function within<T>(ms: number, work: Promise<T>, fallback: T): Promise<T> {
 /** Close the store and say if words were dropped: held ones, or ones not saved in time. */
 function closeAndReport(allSaved: boolean): void {
   const dropped = heldSaves.close();
-  noteSaveQueue.clearPendingDrafts();
   if (dropped > 0 || !allSaved) toast.error('Some words could not be saved before locking.');
 }
 
@@ -48,13 +46,13 @@ export function useLockAfterSaving(lockVault: (reason?: LockReason) => void): Lo
   const lockVaultRef = useRef(lockVault);
   lockVaultRef.current = lockVault;
   const retryHeldSavesRef = useRef<() => Promise<boolean>>(async () => true);
-  const autoLockingRef = useRef(false);
+  const autoLockRef = useRef<Promise<void> | null>(null);
 
   /** Resolves true when everything was saved in time. */
   const saveFirst = useCallback(async (): Promise<boolean> => {
     const work = (async () => {
       const flushed = await heldSaves.flushOpenEditors();
-      const drained = await noteSaveQueue.drain(SAVE_BEFORE_LOCK_MS);
+      const drained = await heldSaves.drainSaves(SAVE_BEFORE_LOCK_MS);
       const retried = await retryHeldSavesRef.current();
       return flushed && drained && retried;
     })();
@@ -67,12 +65,14 @@ export function useLockAfterSaving(lockVault: (reason?: LockReason) => void): Lo
       lockVaultRef.current(reason);
       return;
     }
-    if (autoLockingRef.current) return;
-    autoLockingRef.current = true;
-    const allSaved = await saveFirst().catch(() => false);
-    autoLockingRef.current = false;
-    closeAndReport(allSaved);
-    lockVaultRef.current('auto-lock');
+    // A second idle tick while saving waits for the same lock.
+    if (autoLockRef.current) return autoLockRef.current;
+    autoLockRef.current = (async () => {
+      const allSaved = await saveFirst().catch(() => false);
+      closeAndReport(allSaved);
+      lockVaultRef.current('auto-lock');
+    })().finally(() => { autoLockRef.current = null; });
+    return autoLockRef.current;
   }, [saveFirst]);
 
   const lockNow = useCallback(async (): Promise<boolean> => {

@@ -25,16 +25,16 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 **Why:** The fix for #288 puts a small amount of code in the signed-in app shell: the
 held-save store, the per-note save queue and the lock-after-saving hook. Locks run from
-the shell, so these cannot load on demand. The shell measured 329.9 KB gzip against a
+the shell, so these cannot load on demand. The shell measured 329.8 KB gzip against a
 329 KB limit.
 
 **Decision:** Raise `appShellJs.limitKB` to 330, the target. The budget file's rule
 gives the lower of the target and the measurement plus 1 KB, which is 330. The target
 stays the promise: the next shell growth needs code removed or a target decision.
 
-**Rejected:** Leaving the notice and its Retry/Copy code in the shell (they now load on
-demand, only while words are held; that saved 1.1 KB). Lazy-loading the lock hook (a
-lock must not wait on a network fetch).
+**Rejected:** Leaving the notice, its Retry/Copy code and the per-note save queue in
+the shell (they load with the Editor or on demand; the notice chunk is fetched when the
+vault opens). Lazy-loading the lock hook (a lock must not wait on a network fetch).
 
 ---
 

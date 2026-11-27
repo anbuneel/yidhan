@@ -498,7 +498,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
   }, []);
 
   // Perform the actual save (async with proper status tracking)
-  const performSave = useCallback((): Promise<boolean> => noteSaveQueue.track((async (): Promise<boolean> => {
+  const performSave = useCallback((): Promise<boolean> => heldSaves.trackSave((async (): Promise<boolean> => {
     // A released note has nowhere to save to: writing would edit a note another
     // device let go, or one that no longer exists. Report "not saved" so Back and
     // Escape keep the writer here; the released banner offers the ways out.
@@ -611,8 +611,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
           // The writer has left this note (issue #288). Hold the words above the
           // Editor so the app can offer Retry and Copy. Not when the vault locked:
           // decrypted text must not outlive it. Not for a note deleted here or kept
-          // as a new note: those words already went where the writer chose.
-          const settled = deletedRef.current || keptRef.current !== null;
+          // as a new note: those words already went where the writer chose. Not for a
+          // note released elsewhere: leaving it held its newest words already (or the
+          // writer chose Let go), and this older save must not replace them.
+          const settled = deletedRef.current || keptRef.current !== null || releasedRef.current;
           if (!settled && !(error instanceof VaultLockedSaveError)) {
             heldSaves.hold({
               key: instanceKey,
@@ -743,7 +745,7 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onUpdate, 
         const fromSession = heldSaves.session();
         // In the per-note queue and tracked, like every other save: the kept note's new
         // Editor may save too, and a lock waits for this one.
-        void noteSaveQueue.track(noteSaveQueue.run(kept.note.id, () => {
+        void heldSaves.trackSave(noteSaveQueue.run(kept.note.id, () => {
           if (heldSaves.session() !== fromSession) throw new VaultLockedSaveError();
           return onUpdateRef.current({ ...kept.note, title: lastTitle, content: lastContent, updatedAt: new Date() });
         }))
