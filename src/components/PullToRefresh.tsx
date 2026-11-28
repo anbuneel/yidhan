@@ -207,7 +207,16 @@ function PullToRefreshGestureLayer({
     {
       target: containerRef,
       axis: 'y',
-      filterTaps: true,
+      // No `filterTaps` here. That filter stops every click whose gesture it did not
+      // see as a tap, and this gesture listens to touch events only: it never sees a
+      // mouse, trackpad or pen press, so it stopped every such click inside the
+      // library. On a touchscreen laptop no card could be opened, pinned or deleted
+      // once the gesture chunk loaded. A pull needs no click filter: browsers send
+      // no click after a touch pan, and a pull that starts on a card is filtered by
+      // the card's own drag (SwipeableNoteCard), which sees the press.
+      // 3px is the start distance `filterTaps` used to set, so the pull starts where
+      // it did.
+      threshold: 3,
       pointer: { touch: true },
     }
   );
