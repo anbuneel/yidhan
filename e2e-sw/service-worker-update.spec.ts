@@ -129,8 +129,20 @@ test.describe('service worker updates', () => {
       )
       .toBe('live');
 
-    await page.reload({ waitUntil: 'networkidle' });
-    await expect(page.locator('#sw-smoke-marker')).toHaveCount(1);
+    // 'live' is true from `activating`. autoUpdate's registerSW then reloads the page
+    // itself on `activated` (vite-plugin-pwa, client/build/register.js), which can land
+    // on top of a reload started here and abort it (net::ERR_ABORTED). So reload until
+    // the page shows v2, and treat an aborted navigation as one more try. This still
+    // proves the move: a reload under a worker parked in `waiting` serves v1 again.
+    await expect
+      .poll(
+        async () => {
+          await page.reload({ waitUntil: 'load' }).catch(() => undefined);
+          return page.locator('#sw-smoke-marker').count().catch(() => 0);
+        },
+        { message: 'the client should end up on the new build', timeout: 15000 }
+      )
+      .toBe(1);
   });
 
   /**
