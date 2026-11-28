@@ -2,12 +2,9 @@ import { Suspense } from 'react';
 import type { Note, Tag, TagColor, Theme } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
 import { ErrorBoundary } from './ErrorBoundary';
-import { WelcomeBackPrompt } from './WelcomeBackPrompt';
-import { InstallPrompt } from './InstallPrompt';
 import { SessionTimeoutModal } from './SessionTimeoutModal';
 import { EncryptedConflictModal as ConflictModal } from './EncryptedConflictModal';
 import { ImportProgressOverlay, type ImportProgress } from './ImportProgressOverlay';
-import { BackupPassphraseModal } from './BackupPassphraseModal';
 import type { BackupRestore } from '../hooks/useImport';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import type { useSessionSettings } from '../hooks/useSessionSettings';
@@ -26,6 +23,19 @@ const LettingGoModal = lazyWithRetry(() =>
 );
 const KeyboardShortcutsModal = lazyWithRetry(() =>
   import('./KeyboardShortcutsModal').then((m) => ({ default: m.KeyboardShortcutsModal }))
+);
+// Rare, and none of them guards data or sits on the lock path (shell-size plan A3).
+// Kept eager on purpose: SessionTimeoutModal and the conflict modal guard data, and
+// ImportProgressOverlay shows while an import writes, where a chunk error would make
+// the boundary reload the page mid-import.
+const WelcomeBackPrompt = lazyWithRetry(() =>
+  import('./WelcomeBackPrompt').then((m) => ({ default: m.WelcomeBackPrompt }))
+);
+const InstallPrompt = lazyWithRetry(() =>
+  import('./InstallPrompt').then((m) => ({ default: m.InstallPrompt }))
+);
+const BackupPassphraseModal = lazyWithRetry(() =>
+  import('./BackupPassphraseModal').then((m) => ({ default: m.BackupPassphraseModal }))
 );
 
 /**
@@ -163,27 +173,41 @@ export function AppModals(props: AppModalsProps) {
       )}
 
       {props.showWelcomeBack && props.daysUntilRelease !== null && (
-        <WelcomeBackPrompt
-          daysRemaining={props.daysUntilRelease}
-          onStay={props.onDismissWelcomeBack}
-          onContinue={props.onDismissWelcomeBack}
-        />
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <WelcomeBackPrompt
+              daysRemaining={props.daysUntilRelease}
+              onStay={props.onDismissWelcomeBack}
+              onContinue={props.onDismissWelcomeBack}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
 
       {props.importProgress && <ImportProgressOverlay progress={props.importProgress} />}
 
       {/* Backup passphrase — a `.yidhan` file cannot be read without it (item 38) */}
-      <BackupPassphraseModal
-        mode="open"
-        isOpen={props.backupRestore.pendingFile !== null}
-        error={props.backupRestore.error}
-        isBusy={props.backupRestore.isBusy}
-        onSubmit={props.backupRestore.onSubmit}
-        onCancel={props.backupRestore.onCancel}
-      />
+      {props.backupRestore.pendingFile !== null && (
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <BackupPassphraseModal
+              mode="open"
+              isOpen
+              error={props.backupRestore.error}
+              isBusy={props.backupRestore.isBusy}
+              onSubmit={props.backupRestore.onSubmit}
+              onCancel={props.backupRestore.onCancel}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       {props.shouldShowInstallPrompt && (
-        <InstallPrompt onInstall={props.onInstall} onDismiss={props.onDismissInstall} />
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <InstallPrompt onInstall={props.onInstall} onDismiss={props.onDismissInstall} />
+          </Suspense>
+        </ErrorBoundary>
       )}
 
       {props.shouldShowIOSGuide && (
