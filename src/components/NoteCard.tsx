@@ -20,6 +20,226 @@ interface NoteCardProps {
   isFocused?: boolean;
 }
 
+const PREVIEW_MAX_BLOCKS = 8;
+const PREVIEW_MAX_TOTAL_BLOCKS = 20;
+const PREVIEW_MAX_TEXT_CHARS = 800;
+const PREVIEW_HARD_TEXT_CHARS = 1200;
+
+const VOID_HTML_TAGS = new Set([
+  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+  'link', 'meta', 'param', 'source', 'track', 'wbr',
+]);
+
+const LEAF_BLOCK_TAGS = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre']);
+const CONTAINER_BLOCK_TAGS = new Set(['li', 'blockquote', 'div']);
+
+function findTagEnd(html: string, start: number): number {
+  let quote: '"' | "'" | null = null;
+  for (let i = start; i < html.length; i++) {
+    const ch = html[i];
+    if (quote) {
+      if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+    } else if (ch === '>') {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function closeOpenTags(openStack: string[]): string {
+  let suffix = '';
+  for (let i = openStack.length - 1; i >= 0; i--) {
+    suffix += `</${openStack[i]}>`;
+  }
+  return suffix;
+}
+
+/**
+ * Slice long note HTML to its first few blocks before DOMPurify runs so card
+ * previews do not parse and mount an entire multi-thousand-word document only
+ * to clip it at 8em. The returned fragment must still pass through sanitizeHtml.
+ */
+function truncateHtmlForPreview(html: string): string {
+  if (!html) return html;
+
+  const openStack: string[] = [];
+  const countedInsideContainer: boolean[] = [];
+  let nonEmptyBlocks = 0;
+  let totalBlocks = 0;
+  let textChars = 0;
+  let blockHasText = false;
+  let rawTextTag: 'script' | 'style' | null = null;
+  let i = 0;
+
+  while (i < html.length) {
+    if (html[i] === '<') {
+      if (html.startsWith('<!--', i)) {
+        const endComment = html.indexOf('-->', i + 4);
+        i = endComment === -1 ? html.length : endComment + 3;
+        continue;
+      }
+
+      const end = findTagEnd(html, i + 1);
+      if (end === -1) break;
+
+      const rawTag = html.slice(i + 1, end).trim();
+      const nextPos = end + 1;
+
+      if (!rawTag || rawTag[0] === '!' || rawTag[0] === '?') {
+        i = nextPos;
+        continue;
+      }
+
+      const isClosing = rawTag[0] === '/';
+      const nameMatch = (isClosing ? rawTag.slice(1) : rawTag).match(/^([a-zA-Z][a-zA-Z0-9-]*)/);
+      if (!nameMatch) {
+        i = nextPos;
+        continue;
+      }
+
+      const tagName = nameMatch[1].toLowerCase();
+
+      if (rawTextTag) {
+        if (isClosing && tagName === rawTextTag) {
+          rawTextTag = null;
+        }
+        i = nextPos;
+        continue;
+      }
+
+      if (!isClosing) {
+        const isSelfClosing = rawTag.endsWith('/') || VOID_HTML_TAGS.has(tagName);
+        if (tagName === 'script' || tagName === 'style') {
+          if (!isSelfClosing) rawTextTag = tagName;
+          i = nextPos;
+          continue;
+        }
+        if (tagName === 'hr') {
+          totalBlocks += 1;
+          nonEmptyBlocks += 1;
+          blockHasText = false;
+          if (countedInsideContainer.length > 0) {
+            countedInsideContainer[countedInsideContainer.length - 1] = true;
+          }
+          if (
+            openStack.length === 0 &&
+            nextPos < html.length &&
+            (nonEmptyBlocks >= PREVIEW_MAX_BLOCKS ||
+              totalBlocks >= PREVIEW_MAX_TOTAL_BLOCKS ||
+              textChars >= PREVIEW_MAX_TEXT_CHARS)
+          ) {
+            return html.slice(0, nextPos);
+          }
+        } else if (!isSelfClosing) {
+          openStack.push(tagName);
+          if (CONTAINER_BLOCK_TAGS.has(tagName)) {
+            countedInsideContainer.push(false);
+          }
+        }
+        i = nextPos;
+        continue;
+      }
+
+      // Closing tag: unwind stack to matching open tag if present.
+      const matchIndex = openStack.lastIndexOf(tagName);
+      let hadChildBlock = false;
+      if (matchIndex !== -1) {
+        for (let k = openStack.length - 1; k >= matchIndex; k--) {
+          if (CONTAINER_BLOCK_TAGS.has(openStack[k])) {
+            const popped = countedInsideContainer.pop() ?? false;
+            if (k === matchIndex) hadChildBlock = popped;
+          }
+        }
+        openStack.length = matchIndex;
+      }
+
+      let countedThisTag = false;
+      if (LEAF_BLOCK_TAGS.has(tagName)) {
+        totalBlocks += 1;
+        if (blockHasText) nonEmptyBlocks += 1;
+        blockHasText = false;
+        countedThisTag = true;
+      } else if (CONTAINER_BLOCK_TAGS.has(tagName) && !hadChildBlock) {
+        if (tagName === 'li' || openStack.length === 0) {
+          totalBlocks += 1;
+          if (blockHasText) nonEmptyBlocks += 1;
+          blockHasText = false;
+          countedThisTag = true;
+        }
+      }
+
+      if (countedThisTag && countedInsideContainer.length > 0) {
+        countedInsideContainer[countedInsideContainer.length - 1] = true;
+      }
+
+      const insideListItem = openStack.includes('li');
+      const isSafeBoundary =
+        openStack.length === 0 ||
+        tagName === 'li' ||
+        (LEAF_BLOCK_TAGS.has(tagName) && !insideListItem);
+
+      if (
+        isSafeBoundary &&
+        nextPos < html.length &&
+        (nonEmptyBlocks >= PREVIEW_MAX_BLOCKS ||
+          totalBlocks >= PREVIEW_MAX_TOTAL_BLOCKS ||
+          textChars >= PREVIEW_MAX_TEXT_CHARS)
+      ) {
+        return html.slice(0, nextPos) + closeOpenTags(openStack);
+      }
+
+      i = nextPos;
+      continue;
+    }
+
+    // Text run up to the next tag.
+    const nextTag = html.indexOf('<', i);
+    const textEnd = nextTag === -1 ? html.length : nextTag;
+
+    if (rawTextTag) {
+      i = textEnd;
+      continue;
+    }
+
+    let pos = i;
+    while (pos < textEnd) {
+      const ch = html[pos];
+      if (ch === '&') {
+        const semi = html.indexOf(';', pos + 1);
+        if (semi !== -1 && semi < textEnd && semi - pos <= 10) {
+          pos = semi + 1;
+          textChars += 1;
+          blockHasText = true;
+        } else {
+          pos += 1;
+          textChars += 1;
+          blockHasText = true;
+        }
+      } else {
+        if (ch > ' ') blockHasText = true;
+        textChars += 1;
+        pos += 1;
+      }
+
+      if (textChars >= PREVIEW_HARD_TEXT_CHARS && pos < html.length) {
+        // Advance slightly to finish the current word without crossing a tag or entity.
+        let cut = pos;
+        const limit = Math.min(textEnd, pos + 40);
+        while (cut < limit && html[cut] > ' ' && html[cut] !== '&') {
+          cut += 1;
+        }
+        return html.slice(0, cut) + closeOpenTags(openStack);
+      }
+    }
+
+    i = textEnd;
+  }
+
+  return html;
+}
+
 /**
  * The mark of a pinned note: a marigold disc holding a bookmark in the logo's deep
  * green. The disc is the logo's sun. Marigold's one job in the product
@@ -69,10 +289,15 @@ export const NoteCard = memo(function NoteCard({
 
   // Run DOMPurify only for what this render mode needs: compact cards and
   // search results need plain text; full cards without a search snippet need HTML.
+  // Outside search, slice long notes on block boundaries before sanitising.
   const needsPlainText = isCompact || hasSearchTerms;
   const plainText = useMemo(
-    () => (needsPlainText ? htmlToPlainText(note.content) : ''),
-    [needsPlainText, note.content]
+    () => (
+      needsPlainText
+        ? htmlToPlainText(hasSearchTerms ? note.content : truncateHtmlForPreview(note.content))
+        : ''
+    ),
+    [needsPlainText, hasSearchTerms, note.content]
   );
   const compactPreview = isCompact
     ? plainText.slice(0, 80) + (plainText.length > 80 ? '...' : '')
@@ -86,7 +311,7 @@ export const NoteCard = memo(function NoteCard({
   const needsHtmlPreview = !isCompact && !searchSnippet;
   // Sanitized HTML preview preserves task list checkboxes, formatting structure
   const htmlPreview = useMemo(
-    () => (needsHtmlPreview ? sanitizeHtml(note.content) : ''),
+    () => (needsHtmlPreview ? sanitizeHtml(truncateHtmlForPreview(note.content)) : ''),
     [needsHtmlPreview, note.content]
   );
   const highlightedTitle = useMemo(() => {
