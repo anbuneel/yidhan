@@ -254,14 +254,12 @@ export async function openEncryptedBackup(
     memorySize: envelope.kdf.memorySize,
     hashLength: BACKUP_ARGON2_PARAMS.hashLength,
   });
-  const key = await crypto.subtle.importKey(
-    'raw',
-    keyBytes as BufferSource,
-    { name: 'AES-GCM' },
-    false,
-    ['decrypt']
-  );
-  keyBytes.fill(0);
+  let key: CryptoKey;
+  try {
+    key = await crypto.subtle.importKey('raw', keyBytes as BufferSource, { name: 'AES-GCM' }, false, ['decrypt']);
+  } finally {
+    keyBytes.fill(0);
+  }
 
   let plaintext: ArrayBuffer;
   try {

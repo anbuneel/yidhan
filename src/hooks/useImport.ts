@@ -10,7 +10,7 @@ import { useCallback, useState, type Dispatch, type SetStateAction } from 'react
 import toast from 'react-hot-toast';
 import type { Note, Tag } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
-import { KdfCancelledError, KdfLoadError } from '../lib/argon2';
+import { KdfCancelledError, KdfLoadError, KdfResultError } from '../lib/argon2';
 import { BACKUP_FILE_EXTENSION, MAX_IMPORT_FILE_SIZE } from '../utils/fileLimits';
 import { loadOnDemand } from '../utils/loadOnDemand';
 import type { NotesSync } from './useNotesSync';
@@ -205,7 +205,8 @@ export function useImport({
         ? 'The backup code could not load. Reload the page and try again.'
         : error instanceof backup.BackupFormatError ||
             error instanceof backup.BackupPassphraseError ||
-            error instanceof KdfLoadError
+            error instanceof KdfLoadError ||
+            error instanceof KdfResultError
           ? error.message
           : 'That backup could not be opened.';
       console.error('Failed to open backup:', error);
