@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useDrag } from '@use-gesture/react';
-import { useSpring, animated, config } from '@react-spring/web';
+import { useEffect, useRef, useState, type ReactNode, type MutableRefObject } from 'react';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
-import { useSpringReducedMotion } from '../utils/springMotion';
+import { useGestureRuntime, type GestureRuntime } from '../utils/gestureRuntime';
 import { ModalBackdropButton } from './ModalBackdropButton';
 
 interface BottomSheetProps {
@@ -50,26 +48,36 @@ const DISMISS_THRESHOLD = 100;
 // This matches iOS behavior where a quick flick dismisses regardless of drag distance
 const VELOCITY_THRESHOLD = 0.5;
 
-/**
- * iOS-style bottom sheet modal.
- *
- * On mobile: Slides up from bottom, drag handle to dismiss
- * On desktop: Falls back to centered modal behavior
- *
- * Uses react-spring for physics-based animations matching
- * the swipe gesture feel elsewhere in the app.
- */
-export function BottomSheet({
+interface MobileSpringBottomSheetProps {
+  runtime: GestureRuntime;
+  isOpen: boolean;
+  wasAlreadyOpen: boolean;
+  onClose: () => void;
+  onRenderChange: (rendered: boolean) => void;
+  sheetRef: MutableRefObject<HTMLElement | null>;
+  children: ReactNode;
+  title?: string;
+  maxHeightPercent: number;
+  showHandle: boolean;
+  className: string;
+  keyboardHeight: number;
+}
+
+function MobileSpringBottomSheet({
+  runtime,
   isOpen,
+  wasAlreadyOpen,
   onClose,
+  onRenderChange,
+  sheetRef,
   children,
   title,
-  maxHeightPercent = 90,
-  showHandle = true,
-  className = '',
-}: BottomSheetProps) {
-  const isMobile = useMobileDetect();
-  const keyboardHeight = useKeyboardHeight();
+  maxHeightPercent,
+  showHandle,
+  className,
+  keyboardHeight,
+}: MobileSpringBottomSheetProps) {
+  const { useDrag, useSpring, animated, config, useSpringReducedMotion } = runtime;
   const reducedMotion = useSpringReducedMotion();
 
   // Track whether component should render (allows animation to complete before unmount)
@@ -77,13 +85,13 @@ export function BottomSheet({
 
   // Spring for sheet position (0 = fully open, positive = dragging down)
   const [{ y }, api] = useSpring(() => ({
-    y: window.innerHeight, // Start off-screen
+    y: wasAlreadyOpen ? 0 : window.innerHeight,
     config: config.stiff,
   }));
 
   // Spring for backdrop opacity
   const [{ backdropOpacity }, backdropApi] = useSpring(() => ({
-    backdropOpacity: 0,
+    backdropOpacity: wasAlreadyOpen ? 1 : 0,
     config: config.default,
   }));
 
@@ -91,7 +99,6 @@ export function BottomSheet({
   // Using queueMicrotask to defer setState and avoid synchronous render cascade
   useEffect(() => {
     if (isOpen) {
-      // Defer to next microtask to avoid synchronous setState in effect
       queueMicrotask(() => setShouldRender(true));
       api.start({ y: 0, immediate: reducedMotion });
       backdropApi.start({ backdropOpacity: 1, immediate: reducedMotion });
@@ -99,7 +106,7 @@ export function BottomSheet({
       api.start({
         y: window.innerHeight,
         immediate: reducedMotion,
-        onRest: () => setShouldRender(false), // Unmount after close animation
+        onRest: () => setShouldRender(false),
       });
       backdropApi.start({ backdropOpacity: 0, immediate: reducedMotion });
       if (reducedMotion) {
@@ -108,14 +115,9 @@ export function BottomSheet({
     }
   }, [isOpen, api, backdropApi, reducedMotion]);
 
-  const sheetRef = useRef<HTMLElement | null>(null);
-  const isRendered = shouldRender && isOpen;
-  useModalFocusTrap({
-    isOpen: isRendered,
-    onClose,
-    dialogRef: sheetRef,
-    nodeKey: isMobile,
-  });
+  useEffect(() => {
+    onRenderChange(shouldRender && isOpen);
+  }, [shouldRender, isOpen, onRenderChange]);
 
   // Drag to dismiss gesture - bound to handle area only
   const bind = useDrag(
@@ -160,73 +162,14 @@ export function BottomSheet({
       filterTaps: true,
       bounds: { top: 0 },
       rubberband: true,
-      enabled: isMobile,
+      enabled: true,
     }
   );
 
-  // Don't render if closed and animation complete
   if (!shouldRender) {
     return null;
   }
 
-  // Desktop fallback: centered modal
-  if (!isMobile) {
-    // Gate desktop render on isOpen directly (no animation needed)
-    if (!isOpen) return null;
-
-    return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
-      >
-        <ModalBackdropButton label="Close sheet" onClick={onClose} />
-        <dialog
-          open
-          ref={(el) => { sheetRef.current = el; }}
-          tabIndex={-1}
-          className={`
-            relative z-10 w-full max-w-md mx-4 max-h-[85vh] overflow-hidden
-            rounded-2xl shadow-[var(--shadow-lg)]
-            p-0 border-0
-            ${className}
-          `}
-          style={{
-            background: 'var(--color-bg-primary)',
-            animation: 'modal-enter 0.3s var(--ease-out-quint) forwards',
-            margin: 0,
-          }}
-          aria-modal="true"
-          aria-labelledby={title ? 'bottom-sheet-title' : undefined}
-        >
-          {/* Header with title and close button */}
-          <div
-            className="px-6 py-4 border-b flex items-center justify-between"
-            style={{ borderColor: 'var(--glass-border)' }}
-          >
-            {/* Spacer for centering */}
-            <div className="w-8" />
-                {title && (
-                  <h2
-                    id="bottom-sheet-title"
-                    className="text-lg font-medium text-center flex-1"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  color: 'var(--color-text-primary)',
-                }}
-              >
-                {title}
-              </h2>
-            )}
-            <CloseButton onClick={onClose} />
-          </div>
-          <div className="overflow-y-auto max-h-[calc(85vh-60px)]">
-            {children}
-          </div>
-        </dialog>
-      </div>
-    );
-  }
-
-  // Mobile: bottom sheet
   return (
     <>
       {/* Backdrop — keeps inline styles instead of .modal-backdrop per DESIGN.md */}
@@ -311,6 +254,198 @@ export function BottomSheet({
           {children}
         </div>
       </animated.div>
+    </>
+  );
+}
+
+/**
+ * iOS-style bottom sheet modal.
+ *
+ * On mobile: Slides up from bottom, drag handle to dismiss (gesture/spring runtime loaded lazily, A1c)
+ * On desktop: Falls back to centered modal behavior without loading gesture libraries
+ */
+export function BottomSheet({
+  isOpen,
+  onClose,
+  children,
+  title,
+  maxHeightPercent = 90,
+  showHandle = true,
+  className = '',
+}: BottomSheetProps) {
+  const isMobile = useMobileDetect();
+  const keyboardHeight = useKeyboardHeight();
+  const runtime = useGestureRuntime(isMobile && isOpen ? 'immediate' : 'passive');
+  const [mobileRendered, setMobileRendered] = useState(isOpen);
+  const [openedWithoutRuntime, setOpenedWithoutRuntime] = useState(() => isOpen && isMobile && !runtime);
+  const sheetRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setOpenedWithoutRuntime(false);
+    } else if (isMobile && !runtime) {
+      setOpenedWithoutRuntime(true);
+    }
+  }, [isOpen, isMobile, runtime]);
+
+  const isRendered = isMobile ? (runtime ? mobileRendered && isOpen : isOpen) : isOpen;
+  useModalFocusTrap({
+    isOpen: isRendered,
+    onClose,
+    dialogRef: sheetRef,
+    nodeKey: `${isMobile}-${Boolean(runtime)}`,
+  });
+
+  // Desktop fallback: centered modal (never loads react-spring or use-gesture)
+  if (!isMobile) {
+    if (!isOpen) return null;
+
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
+      >
+        <ModalBackdropButton label="Close sheet" onClick={onClose} />
+        <dialog
+          open
+          ref={(el) => { sheetRef.current = el; }}
+          tabIndex={-1}
+          className={`
+            relative z-10 w-full max-w-md mx-4 max-h-[85vh] overflow-hidden
+            rounded-2xl shadow-[var(--shadow-lg)]
+            p-0 border-0
+            ${className}
+          `}
+          style={{
+            background: 'var(--color-bg-primary)',
+            animation: 'modal-enter 0.3s var(--ease-out-quint) forwards',
+            margin: 0,
+          }}
+          aria-modal="true"
+          aria-labelledby={title ? 'bottom-sheet-title' : undefined}
+        >
+          {/* Header with title and close button */}
+          <div
+            className="px-6 py-4 border-b flex items-center justify-between"
+            style={{ borderColor: 'var(--glass-border)' }}
+          >
+            {/* Spacer for centering */}
+            <div className="w-8" />
+                {title && (
+                  <h2
+                    id="bottom-sheet-title"
+                    className="text-lg font-medium text-center flex-1"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  color: 'var(--color-text-primary)',
+                }}
+              >
+                {title}
+              </h2>
+            )}
+            <CloseButton onClick={onClose} />
+          </div>
+          <div className="overflow-y-auto max-h-[calc(85vh-60px)]">
+            {children}
+          </div>
+        </dialog>
+      </div>
+    );
+  }
+
+  // Mobile: full spring + drag sheet once runtime is ready
+  if (runtime) {
+    return (
+      <MobileSpringBottomSheet
+        runtime={runtime}
+        isOpen={isOpen}
+        wasAlreadyOpen={openedWithoutRuntime}
+        onClose={onClose}
+        onRenderChange={setMobileRendered}
+        sheetRef={sheetRef}
+        title={title}
+        maxHeightPercent={maxHeightPercent}
+        showHandle={showHandle}
+        className={className}
+        keyboardHeight={keyboardHeight}
+      >
+        {children}
+      </MobileSpringBottomSheet>
+    );
+  }
+
+  // Mobile pre-load fallback: static accessible sheet until the gesture chunk arrives.
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <div
+        data-modal-backdrop="true"
+        aria-hidden="true"
+        className="fixed inset-0 z-50"
+        style={{
+          background: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+        onClick={onClose}
+      />
+
+      <div
+        ref={(el) => { sheetRef.current = el; }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? 'bottom-sheet-title' : undefined}
+        tabIndex={-1}
+        className={`
+          fixed left-0 right-0 bottom-0 z-50
+          rounded-t-3xl shadow-[var(--shadow-lg)] overflow-hidden
+          ${className}
+        `}
+        style={{
+          maxHeight: `${maxHeightPercent}vh`,
+          background: 'var(--color-bg-primary)',
+          paddingBottom: `calc(env(safe-area-inset-bottom) + ${keyboardHeight}px)`,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {showHandle && (
+          <div className="flex justify-center pt-3 pb-2">
+            <div
+              className="w-10 h-1 rounded-full"
+              style={{ background: 'var(--color-bg-tertiary)' }}
+            />
+          </div>
+        )}
+
+        <div
+          className="px-6 pb-3 border-b flex items-center justify-between"
+          style={{ borderColor: 'var(--glass-border)' }}
+        >
+          <div className="w-8" />
+          {title && (
+            <h2
+              id="bottom-sheet-title"
+              className="text-lg font-medium text-center flex-1"
+              style={{
+                fontFamily: 'var(--font-display)',
+                color: 'var(--color-text-primary)',
+              }}
+            >
+              {title}
+            </h2>
+          )}
+          <CloseButton onClick={onClose} />
+        </div>
+
+        <div
+          className="overflow-y-auto touch-pan-y"
+          style={{
+            maxHeight: `calc(${maxHeightPercent}vh - ${title ? '80px' : '40px'} - env(safe-area-inset-bottom) - ${keyboardHeight}px)`,
+          }}
+        >
+          {children}
+        </div>
+      </div>
     </>
   );
 }

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ChapteredLibrary, resetLibraryEntranceForTests } from './ChapteredLibrary';
+import { ChapteredLibrary } from './ChapteredLibrary';
+import { resetLibraryEntranceForTests } from '../utils/libraryEntrance';
 import { createMockNote } from '../test/factories';
 
 // Mock the two grouping functions, keeping the module's real vocabulary — the arrange
