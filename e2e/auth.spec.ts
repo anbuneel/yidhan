@@ -136,8 +136,8 @@ test.describe('Authentication', () => {
       await loginUser(page, TEST_USER.email, TEST_USER.password);
       await logoutUser(page);
 
-      // Should be back on landing page
-      await expect(page.getByRole('button', { name: /^try writing$/i })).toBeVisible();
+      // Should be back on landing page. It has two "Try writing" buttons.
+      await expect(page.getByRole('button', { name: /^try writing$/i }).first()).toBeVisible();
     });
   });
 

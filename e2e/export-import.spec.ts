@@ -48,7 +48,7 @@ test.describe('Export & Import', () => {
       await page.getByRole('button', { name: 'Share and export', exact: true }).click();
 
       const downloadPromise = page.waitForEvent('download');
-      await page.getByRole('button', { name: 'Download (.md)', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Download (.md)', exact: true }).click();
 
       const download = await downloadPromise;
 
@@ -63,8 +63,8 @@ test.describe('Export & Import', () => {
       await createNote(page, noteTitle, 'Single JSON content');
 
       await page.getByRole('button', { name: 'Share and export', exact: true }).click();
-      await expect(page.getByRole('button', { name: 'Download (.md)', exact: true })).toBeVisible();
-      await expect(page.getByRole('button', { name: /json/i })).toHaveCount(0);
+      await expect(page.getByRole('menuitem', { name: 'Download (.md)', exact: true })).toBeVisible();
+      await expect(page.getByRole('menuitem', { name: /json/i })).toHaveCount(0);
     });
   });
 
@@ -75,7 +75,7 @@ test.describe('Export & Import', () => {
       await createNote(page, noteTitle, noteContent);
 
       await page.getByRole('button', { name: 'Share and export', exact: true }).click();
-      await page.getByRole('button', { name: 'Copy as text', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Copy as text', exact: true }).click();
 
       // Should show copied toast
       await expect(page.getByText(/copied/i)).toBeVisible();
