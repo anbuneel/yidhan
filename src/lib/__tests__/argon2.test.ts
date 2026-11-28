@@ -244,6 +244,7 @@ describe('a malformed worker reply is an error, never a key', () => {
       await expect(pending).rejects.toBeInstanceOf(KdfResultError);
       expect(worker.terminated).toBe(true);
       // The real answer arriving afterwards changes nothing.
+      await vi.waitFor(() => expect(worker.held).not.toBeNull());
       worker.release();
       expect(loadState.loads).toBe(0);
     });

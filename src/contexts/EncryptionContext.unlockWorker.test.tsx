@@ -10,7 +10,7 @@
 
 import { useEffect } from 'react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, waitFor } from '@testing-library/react';
+import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { webcrypto } from 'node:crypto';
 
 beforeAll(() => {
@@ -39,7 +39,7 @@ vi.mock('../utils/reliabilityTelemetry', () => ({
 import { EncryptionProvider, useEncryption } from './EncryptionContext';
 import { createKeyCheck, deriveKeys, toBase64 } from '../lib/encryption';
 import { buildMigratedVault, copyMasterKey } from '../lib/vaultKey';
-import { KdfCancelledError } from '../lib/argon2';
+import { KdfCancelledError, cancelArgon2Derivations } from '../lib/argon2';
 import type { VaultMetadata } from '../lib/vaultMetadata';
 import { FakeArgon2Worker, installFakeArgon2Worker, resetFakeArgon2Worker, usedWorkers } from '../test/fakeArgon2Worker';
 
@@ -118,7 +118,9 @@ async function startHeldUnlock(passphrase = PASSPHRASE) {
     (ok) => { settled = { ok }; },
     (error: unknown) => { settled = { error }; }
   );
-  await waitFor(() => expect(usedWorkers()[before]?.held).not.toBeNull(), { timeout: 20_000 });
+  // `?? null`: before the worker exists the held reply is undefined, which
+  // `not.toBeNull()` would accept at once.
+  await waitFor(() => expect(usedWorkers()[before]?.held ?? null).not.toBeNull(), { timeout: 20_000 });
   return { worker: usedWorkers()[before], promise, settled: () => settled };
 }
 
@@ -144,6 +146,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // A test that failed mid-derivation must not leave a pending unlock or a
+  // mounted provider for the next one.
+  cancelArgon2Derivations();
+  cleanup();
   resetFakeArgon2Worker();
 });
 

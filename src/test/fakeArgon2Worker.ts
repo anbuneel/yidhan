@@ -45,8 +45,12 @@ export class FakeArgon2Worker {
 
   /** Deliver the held reply, the way a slow worker finally answers. */
   release(): void {
-    if (this.held) this.deliver(this.held);
+    // Releasing nothing means the test lost track of its derivation; fail loudly
+    // rather than leave a promise that never settles.
+    if (!this.held) throw new Error('FakeArgon2Worker.release(): no reply is held');
+    const reply = this.held;
     this.held = null;
+    this.deliver(reply);
   }
 
   /** Answer with anything at all. */
