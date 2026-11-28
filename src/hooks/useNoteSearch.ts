@@ -266,11 +266,15 @@ function rankedTextMatches(
 
 function fallbackTextMatches(
   entries: Map<string, IndexedEntry>,
+  notes: Note[],
   terms: SearchTextTerm[]
 ): RankedResult[] {
   const results: RankedResult[] = [];
 
-  for (const { document } of entries.values()) {
+  for (const note of notes) {
+    const entry = entries.get(note.id);
+    if (!entry) continue;
+    const { document } = entry;
     const titleLower = document.title.toLowerCase();
     const contentLower = document.content.toLowerCase();
     let titleTokens: string[] | null = null;
@@ -327,11 +331,12 @@ function fallbackTextMatches(
     if (matched) results.push({ id: document.id, score, titleMatches, matchedTerms });
   }
 
+  // Array.prototype.sort is stable (ES2019+), so iterating `notes` in library
+  // order breaks ties by library order rather than by arbitrary note ID.
   return results.sort(
     (left, right) =>
       right.titleMatches - left.titleMatches
       || right.score - left.score
-      || left.id.localeCompare(right.id)
   );
 }
 
@@ -596,7 +601,7 @@ export function useNoteSearchResults(
     const notesById = new Map(notes.map((note) => [note.id, note]));
     const rawMatches = searchState.index
       ? rankedTextMatches(searchState.index, searchState.entries, parsedQuery.textTerms)
-      : fallbackTextMatches(searchState.entries, parsedQuery.textTerms);
+      : fallbackTextMatches(searchState.entries, notes, parsedQuery.textTerms);
     const rankedMatches = rawMatches.filter(({ id }) => {
       const note = notesById.get(id);
       return note !== undefined && matchesFilters(note, parsedQuery.filters);

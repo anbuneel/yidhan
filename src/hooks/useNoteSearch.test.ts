@@ -190,6 +190,23 @@ describe('lazy loading, lock lifecycle, and chunk failure recovery (A4)', () => 
     expect(text).toHaveBeenCalledTimes(3);
   });
 
+  it('breaks ties in the fallback scan by library order rather than note id', () => {
+    const pending = deferred<{ default: typeof MiniSearch }>();
+    setMiniSearchImporterForTests(vi.fn(() => pending.promise));
+
+    const notes = [
+      createMockNote({ id: 'z-first', title: 'Field log', content: '<p>Quiet meadow</p>' }),
+      createMockNote({ id: 'a-second', title: 'Field log', content: '<p>Quiet meadow</p>' }),
+      createMockNote({ id: 'm-third', title: 'Field log', content: '<p>Quiet meadow</p>' }),
+    ];
+
+    const { result } = renderHook(() =>
+      useNoteSearch(notes, 'meadow', { preloadOnIdle: false })
+    );
+
+    expect(result.current.map((n) => n.id)).toEqual(['z-first', 'a-second', 'm-third']);
+  });
+
   it('leaves the library usable when chunk loading fails and retries on next search focus', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     let attempts = 0;
