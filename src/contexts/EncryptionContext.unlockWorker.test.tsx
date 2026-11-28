@@ -272,6 +272,45 @@ describe('nothing unlocks after the derivation was overtaken', () => {
   }, 60_000);
 });
 
+describe('a cancellation before or around the derivation', () => {
+  it('a lock during the vault chunk load starts no derivation with that passphrase', async () => {
+    const app = openApp();
+    let outcome: unknown = null;
+    act(() => {
+      h.ctx.unlockWithPassphrase(PASSPHRASE).then(
+        (ok) => { outcome = ok; },
+        (err: unknown) => { outcome = err; }
+      );
+      // Same tick: the vault chunk has not loaded yet.
+      h.ctx.lockVault('manual');
+    });
+    await waitFor(() => expect(outcome).toBeInstanceOf(KdfCancelledError));
+    expect(usedWorkers()).toHaveLength(0);
+    expect(h.ctx.isUnlocked).toBe(false);
+    app.unmount();
+  }, 30_000);
+
+  it('a lock during account setup cancels its derivation and reports nothing', async () => {
+    server = {};
+    const app = openApp();
+    FakeArgon2Worker.hold = true;
+    let outcome: unknown = null;
+    act(() => {
+      h.ctx.beginAccountSetup(PASSPHRASE).then(
+        () => { outcome = 'resolved'; },
+        (err: unknown) => { outcome = err; }
+      );
+    });
+    await waitFor(() => expect(usedWorkers()[0]?.held ?? null).not.toBeNull(), { timeout: 20_000 });
+    act(() => h.ctx.lockVault('sign-out'));
+    await waitFor(() => expect(outcome).toBeInstanceOf(KdfCancelledError));
+    expect(usedWorkers()[0].terminated).toBe(true);
+    expect(mockReportReliabilityIssue).not.toHaveBeenCalled();
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+    app.unmount();
+  }, 30_000);
+});
+
 describe('restore still verifies the key check', () => {
   async function unlockOnce() {
     const app = openApp();

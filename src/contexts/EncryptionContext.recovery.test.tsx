@@ -61,7 +61,7 @@ import { createKeyCheck, decryptNote, deriveKeys, encryptNote, toBase64, verifyK
 import type { DerivedKeys, EncryptedNote } from '../lib/encryption';
 import { buildMigratedVault, copyMasterKey } from '../lib/vaultKey';
 import { readVaultMetadata } from '../lib/vaultMetadata';
-import { deriveArgon2id, KdfLoadError } from '../lib/argon2';
+import { deriveArgon2id, KdfCancelledError, KdfLoadError } from '../lib/argon2';
 import type { VaultMetadata } from '../lib/vaultMetadata';
 
 const PASSPHRASE = 'correct horse battery staple 42';
@@ -635,6 +635,33 @@ describe('recovery kit (item 26)', () => {
       expect(h.ctx.isUnlocked).toBe(false);
     }, 30_000);
   });
+});
+
+describe('a cancelled derivation (shell-size plan C1)', () => {
+  it('saving a new passphrase after recovery: rethrown as a cancellation, not reported, nothing written', async () => {
+    const app = openApp();
+    await act(async () => { await h.ctx.unlockWithPassphrase(PASSPHRASE); });
+    const recoveryKey = await makeKit();
+    act(() => h.ctx.lockVault('manual'));
+    refreshAuth(app);
+    let status = '';
+    await act(async () => { status = await h.ctx.unlockWithRecoveryKey(recoveryKey); });
+    expect(status).toBe('ok');
+    const vaultBefore = JSON.stringify(server.vault);
+    mockReportReliabilityIssue.mockClear();
+
+    // What a lock mid-derivation makes deriveArgon2id throw.
+    vi.mocked(deriveArgon2id).mockRejectedValueOnce(new KdfCancelledError());
+    let failure: unknown;
+    await act(async () => {
+      await h.ctx.setPassphraseAfterRecovery(NEW_PASSPHRASE).catch((err: unknown) => { failure = err; });
+    });
+    expect(failure).toBeInstanceOf(KdfCancelledError);
+    expect(mockReportReliabilityIssue).not.toHaveBeenCalled();
+    expect(JSON.stringify(server.vault)).toBe(vaultBefore);
+    expect(h.ctx.isUnlocked).toBe(false);
+    app.unmount();
+  }, 30_000);
 });
 
 describe('when the hash-wasm chunk does not load (item 61, step 7)', () => {

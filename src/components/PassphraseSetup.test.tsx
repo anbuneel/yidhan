@@ -157,6 +157,17 @@ describe('PassphraseSetup — step 1, passphrase', () => {
     expect(mockBeginAccountSetup).toHaveBeenCalledWith(suggested);
   });
 
+  it('shows nothing and stays on step 1 when a lock cancelled the derivation', async () => {
+    const { KdfCancelledError } = await import('../lib/argon2');
+    mockBeginAccountSetup.mockRejectedValueOnce(new KdfCancelledError());
+    render(<PassphraseSetup />);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(mockBeginAccountSetup).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Continue' })).not.toBeDisabled());
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByTestId('recovery-key')).toBeNull();
+  });
+
   it('lets the writer type their own, and checks it against the policy', async () => {
     const user = userEvent.setup({ delay: null });
     render(<PassphraseSetup />);

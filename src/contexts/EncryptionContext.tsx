@@ -740,6 +740,11 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     // A small chunk, fetched while Argon2id is about to run anyway. It is
     // precached, so offline unlock still works.
     const { passphraseUnlock, startMigration } = await loadVaultUnlock();
+    // A lock or account switch during the chunk load: do not start a derivation
+    // with this passphrase at all.
+    if (attempt !== unlockAttemptRef.current || prevUserIdRef.current !== userId) {
+      throw new KdfCancelledError();
+    }
     const result = await passphraseUnlock({
       passphrase,
       salt,

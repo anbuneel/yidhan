@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useEncryption } from '../contexts/EncryptionContext';
+import { KdfCancelledError } from '../lib/argon2';
 import { MIN_PASSPHRASE_LENGTH, validatePassphrasePolicy } from '../utils/passphrasePolicy';
 import { VaultScreenCard } from './VaultScreenCard';
 import { vaultInputStyle, vaultPrimaryButtonStyle, vaultQuietButtonStyle } from './vaultScreenStyles';
@@ -50,8 +51,10 @@ export function RecoveryPassphraseReset() {
       await setPassphraseAfterRecovery(passphrase);
       // Unlocked: the account gate moves on to the library.
     } catch (err) {
-      setError(resetErrorMessage(err));
       setIsSaving(false);
+      // A lock or sign-out stopped it. Not an error to show.
+      if (err instanceof KdfCancelledError) return;
+      setError(resetErrorMessage(err));
     }
   };
 

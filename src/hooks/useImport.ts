@@ -10,7 +10,7 @@ import { useCallback, useState, type Dispatch, type SetStateAction } from 'react
 import toast from 'react-hot-toast';
 import type { Note, Tag } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
-import { KdfLoadError } from '../lib/argon2';
+import { KdfCancelledError, KdfLoadError } from '../lib/argon2';
 import { BACKUP_FILE_EXTENSION, MAX_IMPORT_FILE_SIZE } from '../utils/fileLimits';
 import { loadOnDemand } from '../utils/loadOnDemand';
 import type { NotesSync } from './useNotesSync';
@@ -196,6 +196,8 @@ export function useImport({
       setPendingBackupFile(null);
       await handleImportFile(file, payload);
     } catch (error) {
+      // The vault locked while the key was derived. Nothing was imported; say nothing.
+      if (error instanceof KdfCancelledError) return;
       // A damaged file and a wrong passphrase are different problems, and only one of
       // them is something the reader can do anything about. Say which. Code that did
       // not load is a third, and a reload fixes it.

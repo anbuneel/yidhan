@@ -59,6 +59,15 @@ describe('RecoveryPassphraseReset', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('another device'));
   });
 
+  it('shows nothing when a lock cancelled the derivation, and the button works again', async () => {
+    const { KdfCancelledError } = await import('../lib/argon2');
+    mockSetPassphraseAfterRecovery.mockRejectedValueOnce(new KdfCancelledError());
+    render(<RecoveryPassphraseReset />);
+    fill(GOOD, GOOD);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save passphrase' })).not.toBeDisabled());
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('cancels back to the unlock screen', () => {
     render(<RecoveryPassphraseReset />);
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
