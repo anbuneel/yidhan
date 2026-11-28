@@ -13,7 +13,7 @@ import {
   reportReliabilityIssue,
 } from '../utils/reliabilityTelemetry';
 import { validatePassphrasePolicy } from '../utils/passphrasePolicy';
-import { preloadArgon2 } from '../lib/argon2';
+import { KdfCancelledError, cancelArgon2Derivations, preloadArgon2 } from '../lib/argon2';
 // The vault code (metadata reader, crypto, unlock and migration) is loaded with
 // import() on the paths that need it, so it stays out of the entry chunk. The
 // chunks are precached, so offline unlock still works. Never import those
@@ -370,6 +370,12 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
    */
   const setupEpochRef = useRef(0);
   /**
+   * Bumped by every passphrase unlock, lock and user change. Argon2id runs in a
+   * worker, so the screen stays live while it does: an unlock that finishes after
+   * a lock, a sign-out, another account, or a newer attempt installs nothing.
+   */
+  const unlockAttemptRef = useRef(0);
+  /**
    * The user whose setup write landed in this tab. Counts as set up until the
    * auth context hands over the new metadata, which it may not have done by the
    * time the writer leaves step 3.
@@ -423,11 +429,15 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     // A recovery lookup for the previous account must not install its keys.
     recoveryAttemptRef.current++;
     setupEpochRef.current++;
+    // A derivation for the previous account must not finish into this one.
+    unlockAttemptRef.current++;
+    cancelArgon2Derivations();
   }, [currentUserId]);
 
-  // Warm the Argon2id chunk once the signed-in app is idle (item 61, step 7). It
-  // stays off the render path, but is in memory before a lock screen needs it, so
-  // an offline unlock or one after a deploy does not depend on fetching it then.
+  // Start an empty Argon2id worker once the signed-in app is idle (item 61 step 7,
+  // shell-size plan C1). It stays off the render path, but its code is in memory
+  // before a lock screen needs it, so an offline unlock or one after a deploy does
+  // not depend on fetching it then. Without Worker support it warms the fallback.
   useEffect(() => {
     if (!currentUserId) return;
     if (typeof window.requestIdleCallback === 'function') {
@@ -725,6 +735,8 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
 
     const salt = fromBase64(encryptionSalt);
     const userId = user.id;
+    // Taken before any await, so a lock during the chunk load also counts.
+    const attempt = ++unlockAttemptRef.current;
     // A small chunk, fetched while Argon2id is about to run anyway. It is
     // precached, so offline unlock still works.
     const { passphraseUnlock, startMigration } = await loadVaultUnlock();
@@ -734,6 +746,15 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       userId,
       metadata: user.user_metadata,
     });
+    if (attempt !== unlockAttemptRef.current || prevUserIdRef.current !== userId) {
+      // Locked, signed out, switched account, or superseded by a newer attempt
+      // while Argon2id ran. Not a wrong passphrase: install nothing, count nothing.
+      if (result) {
+        clearKeyMaterial(result.keys);
+        result.migration?.master.fill(0);
+      }
+      throw new KdfCancelledError();
+    }
     if (!result) return false;
 
     installKeys(userId, result.keys, 'unlock_passphrase');
@@ -834,6 +855,9 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     // After auto-lock, keyState.userId is null but currentUserId still holds the
     // authenticated user's ID — ensuring sign-out from locked state clears localStorage.
     recoveryAttemptRef.current++;
+    // Stop a passphrase derivation still running: its result is discarded.
+    unlockAttemptRef.current++;
+    cancelArgon2Derivations();
     const effectiveUserId = currentUserId ?? keyState.userId;
     clearSession(effectiveUserId);
     setRecovery((prev) => {

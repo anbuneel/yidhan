@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useEncryption } from '../contexts/EncryptionContext';
 import { useAuth } from '../contexts/AuthContext';
+import { KdfCancelledError } from '../lib/argon2';
 import { useVaultSettings } from '../hooks/useVaultSettings';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { vaultQuietButtonStyle } from './vaultScreenStyles';
@@ -174,6 +175,8 @@ export function PassphraseUnlock() {
         setLockoutState(clearLockoutState(userId));
       }
     } catch (err) {
+      // A lock, sign-out or account switch ended it. Not a failed attempt.
+      if (err instanceof KdfCancelledError) return;
       const message = err instanceof Error ? err.message : 'An error occurred';
       console.error('Passphrase unlock failed:', err);
       setError(`Unlock failed: ${message}`);

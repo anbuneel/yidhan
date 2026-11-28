@@ -247,6 +247,25 @@ describe('PassphraseUnlock', () => {
     consoleSpy.mockRestore();
   });
 
+  it('shows nothing and records no failed attempt when a lock cancelled the derivation', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { KdfCancelledError } = await import('../lib/argon2');
+    mockUnlockWithPassphrase.mockRejectedValueOnce(new KdfCancelledError());
+    const user = userEvent.setup({ delay: null });
+
+    render(<PassphraseUnlock />);
+
+    await user.type(screen.getByLabelText('Passphrase'), 'correct-passphrase');
+    await user.click(screen.getByRole('button', { name: 'Unlock' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Unlock' })).not.toBeDisabled());
+    expect(screen.queryByText(/Unlock failed/)).toBeNull();
+    expect(screen.queryByText(/Incorrect passphrase/)).toBeNull();
+    expect(localStorage.getItem('yidhan-user-unlock-1-vault-unlock-lockout')).toBeNull();
+    expect(consoleSpy).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
   it('does not record a failed attempt when unlock fails due to vault metadata', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockUnlockWithPassphrase.mockRejectedValue(
