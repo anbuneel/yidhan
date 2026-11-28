@@ -143,6 +143,18 @@ test.describe('service worker updates', () => {
         { message: 'the client should end up on the new build', timeout: 15000 }
       )
       .toBe(1);
+
+    // Tolerating aborted reloads above must not hide a reload loop, which the
+    // cooldown-guarded reload exists to prevent. Once on v2, the page stays put.
+    let navigations = 0;
+    const countNavigation = (frame: import('@playwright/test').Frame) => {
+      if (frame === page.mainFrame()) navigations++;
+    };
+    page.on('framenavigated', countNavigation);
+    await page.waitForTimeout(3000);
+    page.off('framenavigated', countNavigation);
+    expect(navigations, 'the page should not reload again once on the new build').toBe(0);
+    await expect(page.locator('#sw-smoke-marker')).toHaveCount(1);
   });
 
   /**
