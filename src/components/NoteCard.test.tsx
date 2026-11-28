@@ -144,7 +144,7 @@ describe('NoteCard delete button on compact cards', () => {
 });
 
 describe('NoteCard preview mask', () => {
-  it('does not mask a one-line preview', () => {
+  it('does not mask a one-line preview', async () => {
     const { container, rerenderCard } = renderPreviewCard('<p>One clear line.</p>');
     const preview = container.querySelector<HTMLElement>('.note-card-preview');
     if (!preview) throw new Error('Full card preview was not rendered');
@@ -152,10 +152,10 @@ describe('NoteCard preview mask', () => {
     setPreviewHeight(preview, 24, 24);
     rerenderCard('<p>One clear line, updated.</p>');
 
-    expect(preview).not.toHaveClass('note-card-preview-overflowing');
+    await waitFor(() => expect(preview).not.toHaveClass('note-card-preview-overflowing'));
   });
 
-  it('does not mask a preview exactly at the overflow boundary', () => {
+  it('does not mask a preview exactly at the overflow boundary', async () => {
     const { container, rerenderCard } = renderPreviewCard('<p>Boundary preview.</p>');
     const preview = container.querySelector<HTMLElement>('.note-card-preview');
     if (!preview) throw new Error('Full card preview was not rendered');
@@ -163,21 +163,58 @@ describe('NoteCard preview mask', () => {
     setPreviewHeight(preview, 128, 128);
     rerenderCard('<p>Boundary preview, updated.</p>');
 
-    expect(preview).not.toHaveClass('note-card-preview-overflowing');
+    await waitFor(() => expect(preview).not.toHaveClass('note-card-preview-overflowing'));
   });
 
-  it('masks overflowing full previews but keeps compact cards on their truncation path', () => {
+  it('masks overflowing full previews but keeps compact cards on their truncation path', async () => {
     const { container, rerenderCard } = renderPreviewCard('<p>Long preview.</p>');
     const preview = container.querySelector<HTMLElement>('.note-card-preview');
     if (!preview) throw new Error('Full card preview was not rendered');
 
     setPreviewHeight(preview, 128, 129);
     rerenderCard('<p>Long preview with another clipped line.</p>');
-    expect(preview).toHaveClass('note-card-preview-overflowing');
+    await waitFor(() => expect(preview).toHaveClass('note-card-preview-overflowing'));
 
     rerenderCard('<p>Long preview with another clipped line.</p>', true);
     expect(container.querySelector('.note-card-preview')).toBeNull();
     expect(container.querySelector('.note-card-preview-overflowing')).toBeNull();
+  });
+
+  it('shares one ResizeObserver across many full cards and skips observing compact cards (C4)', async () => {
+    const observerSpy = vi.spyOn(window, 'ResizeObserver');
+
+    const compactRender = render(
+      <NoteCard note={createMockNote({ id: 'compact-1' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} isCompact />
+    );
+    expect(observerSpy).not.toHaveBeenCalled();
+    compactRender.unmount();
+
+    const fullRender = render(
+      <>
+        <NoteCard note={createMockNote({ id: 'full-1' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+        <NoteCard note={createMockNote({ id: 'full-2' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+        <NoteCard note={createMockNote({ id: 'full-3' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+      </>
+    );
+
+    expect(observerSpy).toHaveBeenCalledTimes(1);
+    const sharedInstance = observerSpy.mock.results[0].value as { observe: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> };
+    expect(sharedInstance.observe).toHaveBeenCalledTimes(3);
+
+    fullRender.unmount();
+    expect(sharedInstance.disconnect).toHaveBeenCalledTimes(1);
+
+    // Remount after all cards unmounted must create a clean observer and detect overflow.
+    const remount = render(
+      <NoteCard note={createMockNote({ id: 'full-4' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+    expect(observerSpy).toHaveBeenCalledTimes(2);
+    const preview = remount.container.querySelector<HTMLElement>('.note-card-preview')!;
+    setPreviewHeight(preview, 128, 200);
+    remount.rerender(
+      <NoteCard note={createMockNote({ id: 'full-4', content: '<p>Updated overflow</p>' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+    await waitFor(() => expect(preview).toHaveClass('note-card-preview-overflowing'));
   });
 });
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useLayoutEffect, useCallback, memo } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback, memo } from 'react';
 import type { Note, NoteDeleteHandler } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
@@ -240,6 +240,81 @@ function truncateHtmlForPreview(html: string): string {
   return html;
 }
 
+type OverflowListener = (isOverflowing: boolean) => void;
+
+const overflowListeners = new Map<HTMLElement, OverflowListener>();
+const pendingOverflowChecks = new Set<HTMLElement>();
+let sharedOverflowObserver: ResizeObserver | null = null;
+let overflowFrameId: number | null = null;
+
+function flushOverflowChecks(): void {
+  overflowFrameId = null;
+  if (pendingOverflowChecks.size === 0) return;
+
+  // Read every queued preview before issuing any state updates so layout is
+  // measured once per animation frame instead of interleaved per card.
+  const measurements: Array<[OverflowListener, boolean]> = [];
+  pendingOverflowChecks.forEach((element) => {
+    const listener = overflowListeners.get(element);
+    if (!listener || !element.isConnected) return;
+    measurements.push([listener, element.scrollHeight > element.clientHeight]);
+  });
+  pendingOverflowChecks.clear();
+
+  for (const [listener, isOverflowing] of measurements) {
+    listener(isOverflowing);
+  }
+}
+
+function scheduleOverflowCheck(element: HTMLElement): void {
+  pendingOverflowChecks.add(element);
+  if (overflowFrameId !== null) return;
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+    overflowFrameId = window.requestAnimationFrame(flushOverflowChecks);
+  } else {
+    flushOverflowChecks();
+  }
+}
+
+function ensureSharedOverflowObserver(): ResizeObserver | null {
+  if (sharedOverflowObserver) return sharedOverflowObserver;
+  if (typeof ResizeObserver === 'undefined') return null;
+
+  sharedOverflowObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.target instanceof HTMLElement && overflowListeners.has(entry.target)) {
+        scheduleOverflowCheck(entry.target);
+      }
+    }
+  });
+  return sharedOverflowObserver;
+}
+
+function observePreviewOverflow(element: HTMLElement, listener: OverflowListener): () => void {
+  overflowListeners.set(element, listener);
+  const observer = ensureSharedOverflowObserver();
+  observer?.observe(element);
+  scheduleOverflowCheck(element);
+
+  return () => {
+    overflowListeners.delete(element);
+    pendingOverflowChecks.delete(element);
+    sharedOverflowObserver?.unobserve(element);
+    if (overflowListeners.size === 0) {
+      sharedOverflowObserver?.disconnect();
+      sharedOverflowObserver = null;
+      if (
+        overflowFrameId !== null &&
+        typeof window !== 'undefined' &&
+        typeof window.cancelAnimationFrame === 'function'
+      ) {
+        window.cancelAnimationFrame(overflowFrameId);
+        overflowFrameId = null;
+      }
+    }
+  };
+}
+
 /**
  * The mark of a pinned note: a marigold disc holding a bookmark in the logo's deep
  * green. The disc is the logo's sun. Marigold's one job in the product
@@ -319,24 +394,27 @@ export const NoteCard = memo(function NoteCard({
     return highlightSearchText(htmlToPlainText(note.title), searchTerms);
   }, [hasSearchTerms, note.title, searchTerms]);
 
-  useLayoutEffect(() => {
-    if (!needsHtmlPreview) return;
+  useEffect(() => {
+    if (!needsHtmlPreview) {
+      setIsPreviewOverflowing(false);
+      return;
+    }
 
     const preview = previewRef.current;
     if (!preview) return;
 
-    const updateOverflow = () => {
-      const isOverflowing = preview.scrollHeight > preview.clientHeight;
+    return observePreviewOverflow(preview, (isOverflowing) => {
       setIsPreviewOverflowing((current) =>
         current === isOverflowing ? current : isOverflowing
       );
-    };
+    });
+  }, [needsHtmlPreview]);
 
-    updateOverflow();
-    const resizeObserver = new ResizeObserver(updateOverflow);
-    resizeObserver.observe(preview);
-
-    return () => resizeObserver.disconnect();
+  useEffect(() => {
+    if (!needsHtmlPreview) return;
+    const preview = previewRef.current;
+    if (!preview) return;
+    scheduleOverflowCheck(preview);
   }, [htmlPreview, needsHtmlPreview]);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
