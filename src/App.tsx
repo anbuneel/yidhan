@@ -24,6 +24,7 @@ import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useLibraryCardNavigation } from './hooks/useLibraryCardNavigation';
 import { useAppLoader } from './hooks/useAppLoader';
 import { useEditorChunk } from './hooks/useEditorChunk';
+import { useEditorWarmup } from './hooks/useEditorWarmup';
 import { useShareRoute } from './hooks/useShareRoute';
 import { useVisibleNoteSearch } from './hooks/useVisibleNotes';
 import { useLibraryArrangement } from './hooks/useLibraryArrangement';
@@ -225,11 +226,9 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     if (!authLoading && !user) void AuthScreen.preload();
   }, [authLoading, user]);
 
-  useEffect(() => {
-    if (user && isEncryptionSetup && isUnlocked && view === 'library') {
-      void preloadEditorRoute();
-    }
-  }, [user, isEncryptionSetup, isUnlocked, view, preloadEditorRoute]);
+  // On idle, or at once on a note card's pointer or focus: not the moment of unlock,
+  // where it competed with decrypt and first render (shell-size plan C17).
+  useEditorWarmup(Boolean(user && isEncryptionSetup && isUnlocked && view === 'library'), preloadEditorRoute);
 
   // Show WelcomeBackPrompt when user signs in during grace period
   useEffect(() => {
