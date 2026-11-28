@@ -310,3 +310,95 @@ describe('NoteCard sanitization per render mode (C2)', () => {
     expect(container.querySelector('.note-card-preview')).toHaveTextContent('Body without that word.');
   });
 });
+
+describe('NoteCard preview block truncation (C3)', () => {
+  it('does not truncate short notes and preserves their full visible text', () => {
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const content = '<p>First line with <strong>bold</strong>.</p><p>Second line.</p>';
+    const note = createMockNote({ id: 'c3-short', content });
+
+    const { container } = render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+
+    expect(htmlSpy).toHaveBeenCalledWith(content);
+    expect(container.querySelector('.note-card-preview')).toHaveTextContent('First line with bold.Second line.');
+  });
+
+  it('truncates a long multi-block note on block boundaries before sanitising', () => {
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const blocks = Array.from({ length: 40 }, (_, i) => `<p>Paragraph ${i + 1}: steady writing across the page.</p>`);
+    const content = blocks.join('');
+    const note = createMockNote({ id: 'c3-long', content });
+
+    const { container } = render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+
+    expect(htmlSpy).toHaveBeenCalledTimes(1);
+    const passedToSanitize = htmlSpy.mock.calls[0][0];
+    expect(passedToSanitize.length).toBeLessThan(content.length / 2);
+    expect(passedToSanitize.endsWith('</p>')).toBe(true);
+    expect(passedToSanitize).not.toContain('Paragraph 40');
+    expect(container.querySelector('.note-card-preview')).toHaveTextContent('Paragraph 1');
+    expect(container.querySelector('.note-card-preview')).not.toHaveTextContent('Paragraph 40');
+  });
+
+  it('closes open list tags when truncating a long task list before sanitising', () => {
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const items = Array.from(
+      { length: 25 },
+      (_, i) =>
+        `<li data-checked="${i % 2 === 0 ? 'true' : 'false'}" data-type="taskItem"><label><input type="checkbox" ${i % 2 === 0 ? 'checked="checked"' : ''}><span></span></label><div><p>Task item ${i + 1}</p></div></li>`
+    ).join('');
+    const content = `<ul data-type="taskList">${items}</ul>`;
+    const note = createMockNote({ id: 'c3-tasks', content });
+
+    const { container } = render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+
+    const passedToSanitize = htmlSpy.mock.calls[0][0];
+    expect(passedToSanitize.endsWith('</ul>')).toBe(true);
+    expect(passedToSanitize).not.toContain('Task item 25');
+    expect(container.querySelectorAll('.note-card-preview li').length).toBe(8);
+  });
+
+  it('bounds a single giant paragraph and still sanitises dangerous markup', () => {
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const words = Array.from({ length: 600 }, (_, i) => `word${i}`).join(' ');
+    const content = `<p><script>alert(1)</script>${words}</p>`;
+    const note = createMockNote({ id: 'c3-giant', content });
+
+    const { container } = render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+
+    const passedToSanitize = htmlSpy.mock.calls[0][0];
+    expect(passedToSanitize.length).toBeLessThan(content.length / 2);
+    expect(passedToSanitize.endsWith('</p>')).toBe(true);
+    expect(container.querySelector('.note-card-preview script')).toBeNull();
+    expect(container.querySelector('.note-card-preview')).toHaveTextContent('word0');
+  });
+
+  it('does not truncate before search snippet matching so deep matches still highlight', () => {
+    const filler = Array.from({ length: 30 }, (_, i) => `<p>Filler paragraph ${i + 1} with ordinary words.</p>`).join('');
+    const note = createMockNote({
+      id: 'c3-deep-search',
+      title: 'Long note',
+      content: `${filler}<p>Hidden needle near the end.</p>`,
+    });
+
+    const { container } = render(
+      <NoteCard
+        note={note}
+        onClick={vi.fn()}
+        onDelete={vi.fn()}
+        onTogglePin={vi.fn()}
+        searchQuery="needle"
+      />
+    );
+
+    expect(container.querySelector('.search-snippet mark')).toHaveTextContent('needle');
+  });
+});
