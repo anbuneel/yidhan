@@ -263,6 +263,7 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
       {/* Card wrapper stays the same DOM element before and after gesture activation. */}
       <div
         ref={cardWrapperRef}
+        className="relative"
         style={{
           touchAction: 'pan-y',
         }}
