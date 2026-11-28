@@ -227,5 +227,23 @@ describe('Root', () => {
       await screen.findByTestId('app-shell');
       expect(preloads.auth).toHaveBeenCalledTimes(1);
     });
+
+    it('warms Auth for our own password-reset redirect, /?reset=true&code=', async () => {
+      visit('/?reset=true&code=abc');
+      await screen.findByTestId('app-shell');
+      expect(preloaded()).toEqual({ auth: 1, demo: 0, notFound: 0 });
+    });
+
+    it('does not warm Auth for a sign-in callback that is not a reset', async () => {
+      let view = visit('/?code=abc');
+      await screen.findByTestId('app-shell');
+      view.unmount();
+      view = visit('/?reset=false&code=abc');
+      await screen.findByTestId('app-shell');
+      view.unmount();
+      visit('/#access_token=a&refresh_token=b&type=magiclink');
+      await screen.findByTestId('app-shell');
+      expect(preloads.auth).not.toHaveBeenCalled();
+    });
   });
 });

@@ -25,8 +25,15 @@ const AppShell = lazyWithRetry(() => import('./AppShell'));
  * the app shell's own fetch, so it is there when the shell renders and does not flash
  * a fallback (shell-size plan A2). Signed-in readers never need these chunks.
  */
+function isPasswordResetLink(): boolean {
+  // Two shapes: the hash of an implicit-flow recovery link, and our own `/?reset=true`
+  // redirect (AuthContext.resetPassword), which carries a PKCE `code` beside it.
+  return /(^|[#&?])type=recovery(&|$)/.test(window.location.hash)
+    || new URLSearchParams(window.location.search).get('reset') === 'true';
+}
+
 function preloadEntryScreen(start: AppStart) {
-  if (start.authModal || /(^|[#&?])type=recovery(&|$)/.test(window.location.hash)) void Auth.preload();
+  if (start.authModal || isPasswordResetLink()) void Auth.preload();
   const route = parseRoute(window.location.pathname, { allowPlayground: import.meta.env.DEV });
   if (route.name === 'demo') void DemoPage.preload();
   else if (route.name === 'notFound') void NotFoundPage.preload();
