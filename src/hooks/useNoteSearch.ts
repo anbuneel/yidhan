@@ -417,6 +417,7 @@ export function useNoteSearchResults(
 
   // This mounted library owns the index. Its plaintext never leaves process memory.
   const stateRef = useRef<SearchIndexState | null>(null);
+  const heldResultsRef = useRef<NoteSearchResults | null>(null);
   const generationRef = useRef(0);
   const mountedRef = useRef(true);
   const failedChunkAttemptRef = useRef(false);
@@ -432,6 +433,7 @@ export function useNoteSearchResults(
   ) {
     prevScopeRef.current = { enabled, sessionKey };
     stateRef.current = null;
+    heldResultsRef.current = null;
     generationRef.current += 1;
     failedChunkAttemptRef.current = false;
   }
@@ -451,6 +453,8 @@ export function useNoteSearchResults(
   hasTextQueryRef.current = hasTextQuery;
 
   const [indexRevision, setIndexRevision] = useState(0);
+  const [chunkLoadFailed, setChunkLoadFailed] = useState(false);
+  const effectiveChunkFailed = chunkLoadFailed && failedChunkAttemptRef.current;
 
   const triggerIndexLoad = useCallback((isUserRetry: boolean) => {
     if (!enabledRef.current || !mountedRef.current) return;
@@ -458,6 +462,7 @@ export function useNoteSearchResults(
     if (!isUserRetry && failedChunkAttemptRef.current) return;
     if (isUserRetry) {
       failedChunkAttemptRef.current = false;
+      setChunkLoadFailed(false);
     }
 
     cancelIdleRef.current?.();
@@ -466,6 +471,8 @@ export function useNoteSearchResults(
     const buildGeneration = generationRef.current;
     const loadedCtor = getLoadedMiniSearch();
     if (loadedCtor) {
+      failedChunkAttemptRef.current = false;
+      setChunkLoadFailed(false);
       stateRef.current = attachMiniSearchIndex(
         stateRef.current,
         loadedCtor,
@@ -487,9 +494,11 @@ export function useNoteSearchResults(
       }
       if (!MiniSearchCtor) {
         failedChunkAttemptRef.current = true;
+        setChunkLoadFailed(true);
         return;
       }
       failedChunkAttemptRef.current = false;
+      setChunkLoadFailed(false);
       stateRef.current = attachMiniSearchIndex(
         stateRef.current,
         MiniSearchCtor,
@@ -509,6 +518,7 @@ export function useNoteSearchResults(
       cancelIdleRef.current?.();
       cancelIdleRef.current = null;
       stateRef.current = null;
+      heldResultsRef.current = null;
       generationRef.current += 1;
     };
   }, []);
@@ -579,19 +589,24 @@ export function useNoteSearchResults(
 
   return useMemo(() => {
     if (!enabled) {
+      heldResultsRef.current = null;
       return { notes: [], matchedTermsByNoteId: EMPTY_MATCH_TERMS, isRankedSearch: false };
     }
 
     if (!query.trim()) {
+      heldResultsRef.current = null;
       return { notes, matchedTermsByNoteId: EMPTY_MATCH_TERMS, isRankedSearch: false };
     }
 
     if (parsedQuery.textTerms.length === 0) {
-      return {
-        notes: notes.filter((note) => matchesFilters(note, parsedQuery.filters)),
+      const filteredNotes = notes.filter((note) => matchesFilters(note, parsedQuery.filters));
+      const filterResult: NoteSearchResults = {
+        notes: filteredNotes,
         matchedTermsByNoteId: EMPTY_MATCH_TERMS,
         isRankedSearch: false,
       };
+      heldResultsRef.current = filteredNotes.length > 0 ? filterResult : null;
+      return filterResult;
     }
 
     if (!searchState) {
@@ -606,17 +621,55 @@ export function useNoteSearchResults(
       const note = notesById.get(id);
       return note !== undefined && matchesFilters(note, parsedQuery.filters);
     });
+    const matchedNotes = rankedMatches
+      .map(({ id }) => notesById.get(id))
+      .filter((note): note is Note => note !== undefined);
 
-    return {
-      notes: rankedMatches
-        .map(({ id }) => notesById.get(id))
-        .filter((note): note is Note => note !== undefined),
+    // The plain-text fallback has no fuzzy matching. While MiniSearch is still
+    // loading, hold the previous non-empty results (or filter-matching notes)
+    // instead of returning [] so "No thoughts found" only appears after the real
+    // index answers (or if the chunk fails to load).
+    if (!searchState.index && matchedNotes.length === 0 && !effectiveChunkFailed) {
+      const candidates = notes.filter(
+        (note) => !note.decryptionFailed && matchesFilters(note, parsedQuery.filters)
+      );
+      if (candidates.length > 0) {
+        const previousHeld = heldResultsRef.current;
+        if (previousHeld) {
+          const retainedNotes = previousHeld.notes
+            .map((note) => notesById.get(note.id))
+            .filter(
+              (note): note is Note =>
+                note !== undefined &&
+                !note.decryptionFailed &&
+                matchesFilters(note, parsedQuery.filters)
+            );
+          if (retainedNotes.length > 0) {
+            return {
+              notes: retainedNotes,
+              matchedTermsByNoteId: previousHeld.matchedTermsByNoteId,
+              isRankedSearch: previousHeld.isRankedSearch,
+            };
+          }
+        }
+        return {
+          notes: candidates,
+          matchedTermsByNoteId: EMPTY_MATCH_TERMS,
+          isRankedSearch: false,
+        };
+      }
+    }
+
+    const nextResult: NoteSearchResults = {
+      notes: matchedNotes,
       matchedTermsByNoteId: new Map(
         rankedMatches.map(({ id, matchedTerms }) => [id, [...matchedTerms]])
       ),
       isRankedSearch: true,
     };
-  }, [enabled, notes, query, searchState, parsedQuery]);
+    heldResultsRef.current = matchedNotes.length > 0 ? nextResult : null;
+    return nextResult;
+  }, [enabled, notes, query, searchState, parsedQuery, effectiveChunkFailed]);
 }
 
 /** Compatibility wrapper for callers that only need the ranked notes. */

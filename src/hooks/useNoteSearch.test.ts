@@ -173,8 +173,10 @@ describe('lazy loading, lock lifecycle, and chunk failure recovery (A4)', () => 
     expect(result.current.isRankedSearch).toBe(true);
     expect(text).toHaveBeenCalledTimes(3);
 
-    // Typing a typo query before MiniSearch resolves waits for the chunk, then resolves cleanly.
+    // Typing a typo query before MiniSearch resolves holds the previous matches
+    // instead of flashing an empty state, then upgrades once the index loads.
     rerender({ query: 'harvst' });
+    expect(result.current.notes.map((n) => n.id)).toEqual(['title', 'content']);
     expect(text).toHaveBeenCalledTimes(3);
 
     await act(async () => {
@@ -184,10 +186,46 @@ describe('lazy loading, lock lifecycle, and chunk failure recovery (A4)', () => 
 
     await waitFor(() => {
       expect(result.current.notes.map((n) => n.id)).toEqual(['title', 'content']);
+      expect(result.current.matchedTermsByNoteId.get('title')).toEqual(['harvest']);
     });
-    expect(result.current.matchedTermsByNoteId.get('title')).toEqual(['harvest']);
     // Documents extracted during fallback scan were reused when attaching MiniSearch.
     expect(text).toHaveBeenCalledTimes(3);
+  });
+
+  it('holds the empty state for a typo or non-matching query until MiniSearch resolves', async () => {
+    const pending = deferred<{ default: typeof MiniSearch }>();
+    setMiniSearchImporterForTests(vi.fn(() => pending.promise));
+
+    const notes = [
+      createMockNote({ id: 'harvest', title: 'Autumn harvest', content: '<p>Cider press</p>' }),
+    ];
+
+    // First query is a typo while MiniSearch is still loading: must not return []
+    // (which would show "No thoughts found" before MiniSearch can answer).
+    const { result, rerender } = renderHook(
+      ({ query }) => useNoteSearchResults(notes, query, { preloadOnIdle: false }),
+      { initialProps: { query: 'harvst' } }
+    );
+    expect(result.current.notes).toEqual(notes);
+
+    // Non-matching query while still loading also holds until the real index answers.
+    rerender({ query: 'unmatchedquery' });
+    expect(result.current.notes).toEqual(notes);
+
+    await act(async () => {
+      pending.resolve({ default: MiniSearch });
+      await Promise.resolve();
+    });
+
+    // Once MiniSearch resolves, the real index confirms zero matches.
+    await waitFor(() => {
+      expect(result.current.notes).toEqual([]);
+    });
+
+    // And the typo query finds its fuzzy match from MiniSearch.
+    rerender({ query: 'harvst' });
+    expect(result.current.notes).toEqual(notes);
+    expect(result.current.matchedTermsByNoteId.get('harvest')).toEqual(['harvest']);
   });
 
   it('breaks ties in the fallback scan by library order rather than note id', () => {
