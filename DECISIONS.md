@@ -92,6 +92,27 @@ would cross a message boundary; a separate decision).
 
 ---
 
+## 2026-11-27 — App-shell target lowered 330 → 285 KB
+
+**Status:** Active
+
+**Why:** The shell-size plan took the signed-in app shell from 329.9 to 278.8 KB gzip
+(PR 1, #311, and PR 2, #313). The 330 KB target was set for the first-visit plan, and the
+build is now 51 KB under it. A target that far above the measurement protects nothing: the
+limit could be raised back toward 330 without anyone deciding the shell should grow.
+
+**Decision:** `appShellJs.targetKB` is 285. The limit stays 280 (the measurement, 278.8,
+rounded up, plus 1 KB), as the budget rule sets it once a target is met. That leaves about
+6 KB between today's shell and the promise: room for a few small shell features, each of
+which can still raise the limit toward 285 with an entry here, but not for a regression of
+the size the plan just removed.
+
+**Rejected:** Leaving the target at 330 (it no longer bounds anything). Setting the target
+at the measurement, 279 or 280: every small feature that has to live in the shell would
+then be a target decision rather than a limit decision.
+
+---
+
 ## 2026-11-28 — Precache limit raised 964 → 968 KB for the deferred gesture chunk
 
 **Status:** Active
