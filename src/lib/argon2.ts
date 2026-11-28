@@ -91,6 +91,7 @@ let workerFactory: Argon2WorkerFactory | null = typeof Worker === 'undefined' ? 
 /** Tests only: jsdom has no Worker, so unit tests pass a fake, or null for none. */
 export function setArgon2WorkerFactoryForTests(factory: Argon2WorkerFactory | null): void {
   workerFactory = factory;
+  workersUnavailable = false;
   spare?.terminate();
   spare = null;
 }
@@ -101,14 +102,25 @@ let nextRequestId = 1;
 /** Bumped by cancelArgon2Derivations; a call that sees it change rejects. */
 let generation = 0;
 const running = new Set<() => void>();
+/**
+ * Set once a worker could not be created or failed to load. The tab then uses the
+ * main-thread fallback for every later derivation instead of starting doomed
+ * workers. A worker that loaded and reported an error does not set it.
+ */
+let workersUnavailable = false;
 
-const FALLBACK = Symbol('fallback');
+/** The worker did not load, crashed, or could not be sent the request. */
+const WORKER_FAILED = Symbol('worker failed');
+/** The worker ran and reported that the derivation failed. */
+const WORKER_REPORTED_ERROR = Symbol('worker reported an error');
+type WorkerOutcome = Uint8Array | typeof WORKER_FAILED | typeof WORKER_REPORTED_ERROR;
 
 function spawnWorker(): Worker | null {
-  if (!workerFactory) return null;
+  if (!workerFactory || workersUnavailable) return null;
   try {
     return workerFactory();
   } catch {
+    workersUnavailable = true;
     return null;
   }
 }
@@ -138,11 +150,12 @@ function startSpare(): void {
     event.preventDefault();
     worker.terminate();
     if (spare === worker) spare = null;
+    workersUnavailable = true;
     void loadHashWasm().catch(() => undefined);
   };
 }
 
-function runInWorker(worker: Worker, params: Argon2Params): Promise<Uint8Array | typeof FALLBACK> {
+function runInWorker(worker: Worker, params: Argon2Params): Promise<WorkerOutcome> {
   return new Promise((resolve, reject) => {
     const id = nextRequestId++;
     const finish = () => {
@@ -161,7 +174,7 @@ function runInWorker(worker: Worker, params: Argon2Params): Promise<Uint8Array |
     worker.onmessage = (event: MessageEvent<unknown>) => {
       finish();
       const reply = readArgon2Reply(event.data, id, params.hashLength);
-      if (reply === 'error') resolve(FALLBACK);
+      if (reply === 'error') resolve(WORKER_REPORTED_ERROR);
       else if (reply === null) reject(new KdfResultError());
       else resolve(reply);
     };
@@ -169,11 +182,11 @@ function runInWorker(worker: Worker, params: Argon2Params): Promise<Uint8Array |
     worker.onerror = (event: ErrorEvent) => {
       event.preventDefault();
       finish();
-      resolve(FALLBACK);
+      resolve(WORKER_FAILED);
     };
     worker.onmessageerror = () => {
       finish();
-      resolve(FALLBACK);
+      resolve(WORKER_FAILED);
     };
 
     // A copy, transferred, so the caller's salt is untouched and no second copy stays here.
@@ -192,7 +205,7 @@ function runInWorker(worker: Worker, params: Argon2Params): Promise<Uint8Array |
       worker.postMessage(request, [salt.buffer]);
     } catch {
       finish();
-      resolve(FALLBACK);
+      resolve(WORKER_FAILED);
     }
   });
 }
@@ -233,16 +246,18 @@ export async function deriveArgon2id(params: Argon2Params): Promise<Uint8Array> 
   const worker = takeWorker();
   if (worker) {
     const result = await runInWorker(worker, params);
-    // Now, not on idle: a vault unlock with a wrong passphrase runs a second
-    // derivation (the legacy fields) straight after the first.
-    startSpare();
-    if (result !== FALLBACK) {
+    if (result instanceof Uint8Array) {
       if (startedIn !== generation) {
         result.fill(0);
         throw new KdfCancelledError();
       }
+      // Re-arm now, not on idle: a vault unlock with a wrong passphrase runs a
+      // second derivation (the legacy fields) straight after the first. Only after
+      // a worker that worked, so a browser where workers fail starts no more.
+      startSpare();
       return result;
     }
+    if (result === WORKER_FAILED) workersUnavailable = true;
     if (startedIn !== generation) throw new KdfCancelledError();
   }
   return runOnMainThread(params, startedIn);

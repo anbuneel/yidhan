@@ -246,6 +246,66 @@ describe('fallback to the main thread', () => {
   });
 });
 
+describe('when workers fail, the tab stops starting them', () => {
+  it('after a worker fails to load, later derivations start no worker and use the fallback', async () => {
+    const { deriveArgon2id } = await freshArgon2();
+    FakeArgon2Worker.failOnPost = true;
+    const first = await deriveArgon2id(CHEAP);
+    expect(FakeArgon2Worker.instances).toHaveLength(1);
+    // No spare was started after the fallback, and none is started now.
+    await expect(deriveArgon2id(CHEAP)).resolves.toEqual(first);
+    await flush();
+    expect(FakeArgon2Worker.instances).toHaveLength(1);
+  });
+
+  it('after a worker cannot be created, it is not tried again', async () => {
+    const mod = await freshArgon2();
+    let attempts = 0;
+    mod.setArgon2WorkerFactoryForTests(() => {
+      attempts += 1;
+      throw new Error('SecurityError');
+    });
+    await mod.deriveArgon2id(CHEAP);
+    await mod.deriveArgon2id(CHEAP);
+    mod.preloadArgon2();
+    expect(attempts).toBe(1);
+  });
+
+  it('a spare that fails to load stops later workers too', async () => {
+    const { deriveArgon2id, preloadArgon2 } = await freshArgon2();
+    preloadArgon2();
+    FakeArgon2Worker.instances[0].fail();
+    await expect(deriveArgon2id(CHEAP)).resolves.toHaveLength(32);
+    expect(FakeArgon2Worker.instances).toHaveLength(1);
+  });
+
+  it('a worker that reports an error is not replaced by a spare, but workers stay available', async () => {
+    const { deriveArgon2id } = await freshArgon2();
+    FakeArgon2Worker.hold = true;
+    const pending = deriveArgon2id(CHEAP);
+    await vi.waitFor(() => expect(used()).toHaveLength(1));
+    const worker = used()[0];
+    worker.reply({ type: 'error', id: (worker.posted[0].data as { id: number }).id });
+    await expect(pending).resolves.toHaveLength(32);
+    await flush();
+    expect(FakeArgon2Worker.instances).toHaveLength(1);
+    FakeArgon2Worker.hold = false;
+    await deriveArgon2id(CHEAP);
+    expect(used()).toHaveLength(2);
+  });
+
+  it('no spare is started for a derivation that a cancel overtook', async () => {
+    const { deriveArgon2id, cancelArgon2Derivations } = await freshArgon2();
+    FakeArgon2Worker.hold = true;
+    const pending = deriveArgon2id(CHEAP).catch(() => undefined);
+    await vi.waitFor(() => expect(used()).toHaveLength(1));
+    cancelArgon2Derivations();
+    await pending;
+    await flush();
+    expect(FakeArgon2Worker.instances).toHaveLength(1);
+  });
+});
+
 describe('a malformed worker reply is an error, never a key', () => {
   const malformed: [string, (id: number) => unknown][] = [
     ['too short', (id) => ({ type: 'result', id, hash: new ArrayBuffer(31) })],
