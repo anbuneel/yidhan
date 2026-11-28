@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_DEBOUNCE_MS = 150;
 
 export interface LibrarySearch {
   searchQuery: string;
@@ -34,7 +34,7 @@ export function useLibrarySearch(): LibrarySearch {
       setSearchQuery(query);
       clearSearchTimeout();
 
-      // Clearing is immediate. Waiting 300ms to show the whole library back is the
+      // Clearing is immediate. Waiting 150ms to show the whole library back is the
       // one case where the debounce reads as lag rather than as calm.
       if (!query.trim()) {
         setDebouncedSearchQuery('');
