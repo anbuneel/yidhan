@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { deriveArgon2id } from '../lib/argon2';
 import {
   BACKUP_FORMAT,
   BACKUP_FORMAT_VERSION,
@@ -12,6 +13,13 @@ import {
 } from './encryptedBackup';
 import { exportFullAccountData, parseImportedJSON } from './exportImport';
 import type { Note, Tag } from '../types';
+
+// The real KDF runs by default. The spy lets the bounds tests prove that a rejected
+// file never reaches it.
+vi.mock('../lib/argon2', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/argon2')>();
+  return { ...actual, deriveArgon2id: vi.fn(actual.deriveArgon2id) };
+});
 
 const PASSPHRASE = 'a-long-enough-backup-passphrase';
 
@@ -229,6 +237,118 @@ describe('a backup that will not open', () => {
       openEncryptedBackup(JSON.stringify(original), PASSPHRASE)
     ).rejects.toBeInstanceOf(BackupPassphraseError);
   }, KDF_TIMEOUT);
+});
+
+describe('KDF parameters read from the file are bounded', () => {
+  // A crafted file can ask for a derivation big enough to kill the worker or hang
+  // the tab. These run first: where the gate must hold, then where it must not fire.
+  let written: EncryptedBackupEnvelope;
+
+  beforeAll(async () => {
+    written = JSON.parse(await createEncryptedBackup('{}', PASSPHRASE)) as EncryptedBackupEnvelope;
+  }, KDF_TIMEOUT);
+
+  beforeEach(() => {
+    vi.mocked(deriveArgon2id).mockClear();
+  });
+
+  function withKdf(field: string, value: unknown): string {
+    const envelope = structuredClone(written);
+    (envelope.kdf as unknown as Record<string, unknown>)[field] = value;
+    return JSON.stringify(envelope);
+  }
+
+  const outside: Array<[string, unknown]> = [
+    ['memorySize', 8191],
+    ['memorySize', 262145],
+    ['memorySize', 4 * 1024 * 1024],
+    ['iterations', 9],
+    ['iterations', 1_000_000],
+    ['parallelism', 5],
+  ];
+  const malformed: unknown[] = [0, -1, 2.5, 'three', '65536', null, true, [3], {}];
+
+  for (const [field, value] of outside) {
+    it(`rejects ${field} = ${String(value)} without deriving a key`, async () => {
+      await expect(openEncryptedBackup(withKdf(field, value), PASSPHRASE)).rejects.toThrow(
+        /incomplete or damaged/i
+      );
+      expect(deriveArgon2id).not.toHaveBeenCalled();
+    });
+  }
+
+  for (const field of ['memorySize', 'iterations', 'parallelism']) {
+    for (const value of malformed) {
+      it(`rejects ${field} = ${JSON.stringify(value)} without deriving a key`, async () => {
+        const error = await openEncryptedBackup(withKdf(field, value), PASSPHRASE).catch(
+          (e: unknown) => e
+        );
+        expect(error).toBeInstanceOf(BackupFormatError);
+        expect((error as Error).message).toMatch(/incomplete or damaged/i);
+        expect(deriveArgon2id).not.toHaveBeenCalled();
+      });
+    }
+
+    // JSON has no NaN or Infinity. A file that writes them anyway is not valid JSON,
+    // so it fails at parse, before any bound is checked.
+    for (const value of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      it(`rejects ${field} = ${String(value)} without deriving a key`, async () => {
+        const text = withKdf(field, '__X__').replace('"__X__"', String(value));
+        await expect(openEncryptedBackup(text, PASSPHRASE)).rejects.toBeInstanceOf(
+          BackupFormatError
+        );
+        expect(deriveArgon2id).not.toHaveBeenCalled();
+      });
+    }
+
+    it(`rejects a missing ${field} without deriving a key`, async () => {
+      const envelope = structuredClone(written);
+      delete (envelope.kdf as unknown as Record<string, unknown>)[field];
+      await expect(openEncryptedBackup(JSON.stringify(envelope), PASSPHRASE)).rejects.toBeInstanceOf(
+        BackupFormatError
+      );
+      expect(deriveArgon2id).not.toHaveBeenCalled();
+    });
+  }
+
+  it('rejects a salt one byte too long without deriving a key', async () => {
+    const envelope = structuredClone(written);
+    const salt = new Uint8Array(17);
+    envelope.kdf.salt = btoa(String.fromCharCode(...salt));
+    await expect(openEncryptedBackup(JSON.stringify(envelope), PASSPHRASE)).rejects.toThrow(
+      /salt is the wrong length/i
+    );
+    expect(deriveArgon2id).not.toHaveBeenCalled();
+  });
+
+  it('opens a backup written by the current code', async () => {
+    const file = await createEncryptedBackup(makePayload(), PASSPHRASE);
+    const restored = parseImportedJSON(await openEncryptedBackup(file, PASSPHRASE));
+    expect(restored.notes).toHaveLength(2);
+  }, KDF_TIMEOUT);
+
+  // Values at each bound pass the gate and reach the KDF with the file's own values.
+  // The derivation is stubbed: a real one at 256 MB is too slow for a unit test, and
+  // the stub key cannot open the file, so success here is a passphrase error.
+  const inside: Array<[string, number]> = [
+    ['memorySize', 8192],
+    ['memorySize', 262144],
+    ['iterations', 1],
+    ['iterations', 8],
+    ['parallelism', 1],
+    ['parallelism', 4],
+  ];
+
+  for (const [field, value] of inside) {
+    it(`lets ${field} = ${value} through to the KDF`, async () => {
+      vi.mocked(deriveArgon2id).mockResolvedValueOnce(new Uint8Array(32));
+      await expect(openEncryptedBackup(withKdf(field, value), PASSPHRASE)).rejects.toBeInstanceOf(
+        BackupPassphraseError
+      );
+      expect(deriveArgon2id).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(deriveArgon2id).mock.calls[0][0]).toMatchObject({ [field]: value });
+    });
+  }
 });
 
 describe('buildBackupFilename', () => {
