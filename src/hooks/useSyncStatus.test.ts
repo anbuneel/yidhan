@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
+import Dexie from 'dexie';
 import { clearOfflineDb, createPendingSyncQueueEntry, getOfflineDb } from '../lib/offlineDb';
 import { getSyncQueueSnapshot } from '../services/offlineNotes';
 import { useSyncStatus } from './useSyncStatus';
@@ -70,7 +71,8 @@ describe('useSyncStatus (C23)', () => {
     setDocumentHidden(false);
     await act(async () => {
       document.dispatchEvent(new Event('visibilitychange'));
-      await vi.advanceTimersByTimeAsync(0);
+      // liveQuery's first read goes through fake-indexeddb, which runs on timers.
+      await vi.advanceTimersByTimeAsync(100);
     });
     const readsAfterVisible = snapshotSpy.mock.calls.length;
     expect(readsAfterVisible).toBeGreaterThanOrEqual(1);
@@ -100,7 +102,7 @@ describe('useSyncStatus (C23)', () => {
     expect(renderCount).toBe(rendersAfterFirst);
   });
 
-  it('detaches Dexie queue hooks on unmount so later writes do not read IndexedDB', async () => {
+  it('unsubscribes on unmount so later writes do not read IndexedDB', async () => {
     const snapshotSpy = vi.mocked(getSyncQueueSnapshot);
     const { unmount } = renderHook(() => useSyncStatus());
     await waitFor(() => expect(snapshotSpy).toHaveBeenCalled());
@@ -190,5 +192,99 @@ describe('useSyncStatus (C23)', () => {
     });
     expect(result.current.isStuck).toBe(true);
     expect(snapshotSpy.mock.calls.length).toBe(readsAfterInit + 1);
+  });
+
+  // F3: another tab writes through its own Dexie connection, not this tab's instance.
+  // A second connection in the same page is the closest a unit test gets; between real
+  // tabs Dexie carries the same change signal over a BroadcastChannel.
+  describe('writes from another connection to the same database', () => {
+    async function openOtherConnection(): Promise<Dexie> {
+      const other = new Dexie(getOfflineDb('sync-status-user').name);
+      await other.open();
+      return other;
+    }
+
+    it('clears a pending indicator when another connection drains the queue', async () => {
+      const db = getOfflineDb('sync-status-user');
+      const id = await db.syncQueue.add(
+        createPendingSyncQueueEntry({
+          operation: 'update',
+          entityType: 'note',
+          entityId: 'other-tab-note',
+          payload: {},
+        })
+      );
+      const { result } = renderHook(() => useSyncStatus());
+      await waitFor(() => expect(result.current.pendingCount).toBe(1));
+
+      const other = await openOtherConnection();
+      try {
+        await other.table('syncQueue').delete(id);
+        await waitFor(() => {
+          expect(result.current.pendingCount).toBe(0);
+          expect(result.current.isSynced).toBe(true);
+        });
+      } finally {
+        other.close();
+      }
+    });
+
+    it('shows an entry another connection blocks', async () => {
+      const { result } = renderHook(() => useSyncStatus());
+      await waitFor(() => expect(result.current.isSynced).toBe(true));
+
+      const other = await openOtherConnection();
+      try {
+        await other.table('syncQueue').add({
+          ...createPendingSyncQueueEntry({
+            operation: 'update',
+            entityType: 'note',
+            entityId: 'blocked-elsewhere',
+            payload: {},
+          }),
+          status: 'blocked',
+          blockedAt: Date.now(),
+          lastError: 'permission denied (42501)',
+        });
+        await waitFor(() => expect(result.current.blockedCount).toBe(1));
+      } finally {
+        other.close();
+      }
+    });
+
+    it('does not read while hidden, then shows the current queue on return', async () => {
+      const snapshotSpy = vi.mocked(getSyncQueueSnapshot);
+      const { result } = renderHook(() => useSyncStatus());
+      await waitFor(() => expect(result.current.isSynced).toBe(true));
+
+      setDocumentHidden(true);
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      snapshotSpy.mockClear();
+
+      const other = await openOtherConnection();
+      try {
+        await other.table('syncQueue').add(
+          createPendingSyncQueueEntry({
+            operation: 'update',
+            entityType: 'note',
+            entityId: 'while-hidden',
+            payload: {},
+          })
+        );
+        await new Promise((r) => setTimeout(r, 80));
+        expect(snapshotSpy).not.toHaveBeenCalled();
+        expect(result.current.pendingCount).toBe(0);
+
+        setDocumentHidden(false);
+        act(() => {
+          document.dispatchEvent(new Event('visibilitychange'));
+        });
+        await waitFor(() => expect(result.current.pendingCount).toBe(1));
+      } finally {
+        other.close();
+      }
+    });
   });
 });

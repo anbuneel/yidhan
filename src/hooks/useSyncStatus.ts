@@ -2,14 +2,15 @@
  * Sync Status Hook
  *
  * Provides sync state information for UI components.
- * Reacts to local IndexedDB sync-queue mutations and visibility/online transitions
- * instead of polling every 10 seconds forever.
+ * Follows the IndexedDB sync queue through a Dexie liveQuery (writes from this tab
+ * and from other tabs), plus visibility and online transitions, instead of polling
+ * every 10 seconds.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { liveQuery } from 'dexie';
 import { useAuth } from '../contexts/AuthContext';
-import { getOfflineDb } from '../lib/offlineDb';
 import { getSyncQueueSnapshot } from '../services/offlineNotes';
 import { describeSyncFailure } from '../utils/syncErrorMessages';
 import { useNetworkStatus } from './useNetworkStatus';
@@ -19,8 +20,6 @@ const isNative = Capacitor.isNativePlatform();
 
 /** Show pending indicator only after items have been stuck this long */
 const STUCK_THRESHOLD_MS = 30_000;
-/** Coalesce burst queue writes (e.g. batch sync draining) into one snapshot read */
-const QUEUE_REFRESH_DEBOUNCE_MS = 50;
 
 interface SyncSnapshotState {
   pendingCount: number;
@@ -73,7 +72,6 @@ export function useSyncStatus(): SyncStatus {
   const lastLoggedRawReasonRef = useRef<string | null>(null);
   const pendingSinceRef = useRef<number | null>(null);
   const stuckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const queueRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
   const requestSeqRef = useRef(0);
 
@@ -81,13 +79,6 @@ export function useSyncStatus(): SyncStatus {
     if (stuckTimerRef.current !== null) {
       clearTimeout(stuckTimerRef.current);
       stuckTimerRef.current = null;
-    }
-  }, []);
-
-  const clearQueueRefreshTimer = useCallback(() => {
-    if (queueRefreshTimerRef.current !== null) {
-      clearTimeout(queueRefreshTimerRef.current);
-      queueRefreshTimerRef.current = null;
     }
   }, []);
 
@@ -121,23 +112,11 @@ export function useSyncStatus(): SyncStatus {
     [clearStuckTimer]
   );
 
-  const refresh = useCallback(async () => {
-    const seq = ++requestSeqRef.current;
+  const refreshRef = useRef<() => Promise<void>>(async () => {});
 
-    if (!user) {
-      clearStuckTimer();
-      pendingSinceRef.current = null;
-      lastLoggedRawReasonRef.current = null;
-      commitSnapshot(EMPTY_SNAPSHOT);
-      return;
-    }
-
-    try {
-      // One pass: a separate count and reason query can disagree when a sync
-      // run lands between them, showing a block with no reason for a tick.
-      const counts = await getSyncQueueSnapshot(user.id);
-      if (!mountedRef.current || seq !== requestSeqRef.current) return;
-
+  // Apply one queue snapshot: counts, reason, and the 30s stuck timer.
+  const applyCounts = useCallback(
+    (counts: { pendingCount: number; blockedCount: number; blockedReason: string | null }) => {
       // The technical text belongs in the console, not the interface.
       if (counts.blockedReason && counts.blockedReason !== lastLoggedRawReasonRef.current) {
         console.warn('[sync] blocked entry:', counts.blockedReason);
@@ -163,107 +142,106 @@ export function useSyncStatus(): SyncStatus {
       });
 
       if (counts.pendingCount > 0 && !nextIsStuck) {
-        scheduleStuckCheck(refresh);
+        scheduleStuckCheck(() => refreshRef.current());
       } else {
         clearStuckTimer();
       }
+    },
+    [clearStuckTimer, commitSnapshot, scheduleStuckCheck]
+  );
+
+  const refresh = useCallback(async () => {
+    const seq = ++requestSeqRef.current;
+
+    if (!user) {
+      clearStuckTimer();
+      pendingSinceRef.current = null;
+      lastLoggedRawReasonRef.current = null;
+      commitSnapshot(EMPTY_SNAPSHOT);
+      return;
+    }
+
+    try {
+      // One pass: a separate count and reason query can disagree when a sync
+      // run lands between them, showing a block with no reason for a tick.
+      const counts = await getSyncQueueSnapshot(user.id);
+      if (!mountedRef.current || seq !== requestSeqRef.current) return;
+      applyCounts(counts);
     } catch (error) {
       console.error('Failed to get sync status:', error);
     }
-  }, [user, clearStuckTimer, commitSnapshot, scheduleStuckCheck]);
+  }, [user, clearStuckTimer, commitSnapshot, applyCounts]);
+
+  useEffect(() => {
+    refreshRef.current = refresh;
+  }, [refresh]);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       clearStuckTimer();
-      clearQueueRefreshTimer();
     };
-  }, [clearStuckTimer, clearQueueRefreshTimer]);
+  }, [clearStuckTimer]);
 
-  // Initial load, reactive Dexie queue hooks, and visibility pause/resume
+  // Live queue snapshot while the tab is visible. Dexie's liveQuery re-runs the snapshot
+  // after any write to syncQueue, from this tab or another one (Dexie broadcasts its
+  // mutations between tabs), so the indicator never waits on a poll. Hidden tabs drop
+  // the subscription; becoming visible subscribes again, which reads the queue at once.
   useEffect(() => {
-    const scheduleDebouncedRefresh = () => {
-      if (isDocumentHidden()) return;
-      if (queueRefreshTimerRef.current !== null) return;
-      queueRefreshTimerRef.current = setTimeout(() => {
-        queueRefreshTimerRef.current = null;
-        if (!mountedRef.current || isDocumentHidden()) return;
+    if (!user) {
+      const timeout = setTimeout(() => {
         void refresh();
-      }, QUEUE_REFRESH_DEBOUNCE_MS);
+      }, 0);
+      return () => clearTimeout(timeout);
+    }
+
+    const userId = user.id;
+    let subscription: { unsubscribe: () => void } | null = null;
+
+    const subscribe = () => {
+      if (subscription || isDocumentHidden()) return;
+      try {
+        subscription = liveQuery(() => getSyncQueueSnapshot(userId)).subscribe({
+          next: (counts) => {
+            if (!mountedRef.current || isDocumentHidden()) return;
+            // Supersede any one-off refresh still in flight with an older reading.
+            requestSeqRef.current += 1;
+            applyCounts(counts);
+          },
+          error: (error) => {
+            console.error('Failed to get sync status:', error);
+          },
+        });
+      } catch (error) {
+        // IndexedDB unavailable in restricted contexts; visibility/online triggers still apply.
+        console.error('Failed to get sync status:', error);
+      }
     };
 
-    const initialTimeout = !isDocumentHidden()
-      ? setTimeout(() => {
-          void refresh();
-        }, 0)
-      : null;
+    const unsubscribe = () => {
+      subscription?.unsubscribe();
+      subscription = null;
+    };
 
     const handleVisibilityChange = () => {
       if (isDocumentHidden()) {
+        unsubscribe();
         clearStuckTimer();
-        clearQueueRefreshTimer();
       } else {
-        void refresh();
+        subscribe();
       }
     };
 
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-    }
-
-    // Subscribe to Dexie syncQueue mutations so the indicator updates immediately
-    // after any write, retry, block, or sync completion without background polling.
-    let unsubscribeHooks: (() => void) | null = null;
-    if (user) {
-      try {
-        const db = getOfflineDb(user.id);
-        const onTransaction = (tx?: { on?: (event: string, cb: () => void) => void }) => {
-          if (tx && typeof tx.on === 'function') {
-            tx.on('complete', scheduleDebouncedRefresh);
-          } else {
-            scheduleDebouncedRefresh();
-          }
-        };
-        const onCreating = (_primKey: number, _obj: unknown, tx: { on?: (event: string, cb: () => void) => void }) => {
-          onTransaction(tx);
-        };
-        const onUpdating = (
-          _mods: object,
-          _primKey: number,
-          _obj: unknown,
-          tx: { on?: (event: string, cb: () => void) => void }
-        ) => {
-          onTransaction(tx);
-        };
-        const onDeleting = (_primKey: number, _obj: unknown, tx: { on?: (event: string, cb: () => void) => void }) => {
-          onTransaction(tx);
-        };
-
-        db.syncQueue.hook('creating', onCreating);
-        db.syncQueue.hook('updating', onUpdating);
-        db.syncQueue.hook('deleting', onDeleting);
-
-        unsubscribeHooks = () => {
-          db.syncQueue.hook('creating').unsubscribe(onCreating);
-          db.syncQueue.hook('updating').unsubscribe(onUpdating);
-          db.syncQueue.hook('deleting').unsubscribe(onDeleting);
-        };
-      } catch {
-        // IndexedDB unavailable in restricted contexts; visibility/online triggers still apply.
-      }
-    }
+    subscribe();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      if (initialTimeout !== null) clearTimeout(initialTimeout);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      unsubscribe();
       clearStuckTimer();
-      clearQueueRefreshTimer();
-      if (typeof document !== 'undefined') {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-      }
-      unsubscribeHooks?.();
     };
-  }, [user, refresh, clearStuckTimer, clearQueueRefreshTimer]);
+  }, [user, refresh, applyCounts, clearStuckTimer]);
 
   // Refresh when coming back online (if the tab is visible)
   useEffect(() => {
