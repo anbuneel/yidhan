@@ -32,7 +32,9 @@ allows a raise only with an entry here.
 
 **Decision:** Raise `precache.limitKB` to 980 (measurement rounded up, plus 1 KB). The
 target (1108 KB) is unchanged. The cost is about 12 KB more in the background precache,
-which installs after the load event; nothing is added before the library paints.
+which installs after the load event; nothing is added before the library paints. The owner
+confirmed this on 2026-11-28 and kept the fallback copy, and pre-approved about 982 KB
+overall so that PR #316 (search index, about 1.8 KB) can ratchet to its own measurement.
 
 **Rejected:** Dropping the fallback copy (old Android WebViews without module workers,
 and a failed worker fetch, would then have no way to unlock). Loading the worker file
