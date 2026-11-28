@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
 import { Globals, useSpring, animated } from '@react-spring/web';
 import {
   REDUCED_MOTION_QUERY,
   syncSpringReducedMotion,
   useSpringReducedMotion,
 } from './springMotion';
+import { resetGestureRuntimeForTests } from './gestureRuntime';
 import { BottomSheet } from '../components/BottomSheet';
 import { PullToRefresh } from '../components/PullToRefresh';
 import { SwipeableNoteCard } from '../components/SwipeableNoteCard';
@@ -77,10 +78,12 @@ describe('springMotion reduced motion (B3)', () => {
 
   beforeEach(() => {
     capturedDragHandlers.length = 0;
+    resetGestureRuntimeForTests();
     Globals.assign({ skipAnimation: false });
   });
 
   afterEach(() => {
+    resetGestureRuntimeForTests();
     window.matchMedia = originalMatchMedia;
     Globals.assign({ skipAnimation: false });
   });
@@ -196,7 +199,7 @@ describe('springMotion reduced motion (B3)', () => {
     expect(latestReduced).toBe(false);
   });
 
-  it('BottomSheet on mobile dismisses immediately on drag without 200ms delay under reduced motion', async () => {
+  it('BottomSheet on mobile works before gestures load and dismisses immediately on drag under reduced motion once loaded', async () => {
     const { matchMedia } = createMockMatchMedia(true);
     window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
     const onClose = vi.fn();
@@ -207,6 +210,10 @@ describe('springMotion reduced motion (B3)', () => {
       </BottomSheet>
     );
 
+    // Dialog is accessible immediately even before the gesture chunk resolves.
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument();
+
+    await waitFor(() => expect(capturedDragHandlers.length).toBeGreaterThan(0));
     expect(Globals.skipAnimation).toBe(true);
     const dragHandler = capturedDragHandlers[capturedDragHandlers.length - 1];
     const cancel = vi.fn();
@@ -219,17 +226,24 @@ describe('springMotion reduced motion (B3)', () => {
     expect(cancel).toHaveBeenCalledTimes(1);
   });
 
-  it('PullToRefresh completes refresh without spinning loop and resets state under reduced motion', async () => {
+  it('PullToRefresh stays inert and preserves child DOM before gestures load, then refreshes under reduced motion', async () => {
     const { matchMedia } = createMockMatchMedia(true);
     window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
     const onRefresh = vi.fn().mockResolvedValue(undefined);
 
     render(
       <PullToRefresh onRefresh={onRefresh}>
-        <div>Library</div>
+        <div data-testid="ptr-child">Library</div>
       </PullToRefresh>
     );
 
+    // Before the deferred gesture chunk resolves, drag is inert and children render normally.
+    const childBefore = screen.getByTestId('ptr-child');
+    expect(capturedDragHandlers).toHaveLength(0);
+
+    await waitFor(() => expect(capturedDragHandlers.length).toBeGreaterThan(0));
+    // Activating gestures must not remount library content.
+    expect(screen.getByTestId('ptr-child')).toBe(childBefore);
     expect(Globals.skipAnimation).toBe(true);
     const dragHandler = capturedDragHandlers[capturedDragHandlers.length - 1];
 
@@ -248,22 +262,32 @@ describe('springMotion reduced motion (B3)', () => {
     await waitFor(() => expect(onRefresh).toHaveBeenCalledTimes(2));
   });
 
-  it('SwipeableNoteCard invokes onTogglePin immediately under reduced motion without bounce delay', () => {
+  it('SwipeableNoteCard works normally before gestures load without remounting NoteCard, then toggles pin on swipe', async () => {
     const { matchMedia } = createMockMatchMedia(true);
     window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
     const note = createMockNote({ id: 'n-1', title: 'Draft', pinned: false });
+    const onClick = vi.fn();
     const onTogglePin = vi.fn();
 
     render(
       <SwipeableNoteCard
         note={note}
-        onClick={vi.fn()}
+        onClick={onClick}
         onDelete={vi.fn()}
         onTogglePin={onTogglePin}
       />
     );
 
-    expect(screen.getByText('Draft')).toBeInTheDocument();
+    // Before the gesture chunk resolves: swipe is inert, card renders and opens on click.
+    const cardBefore = screen.getByRole('button', { name: 'Open note: Draft' }).closest('.note-card');
+    expect(cardBefore).toBeInTheDocument();
+    expect(capturedDragHandlers).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Open note: Draft' }));
+    expect(onClick).toHaveBeenCalledWith('n-1');
+
+    await waitFor(() => expect(capturedDragHandlers.length).toBeGreaterThan(0));
+    // Activating gestures must not remount NoteCard.
+    expect(screen.getByRole('button', { name: 'Open note: Draft' }).closest('.note-card')).toBe(cardBefore);
     expect(Globals.skipAnimation).toBe(true);
     const dragHandler = capturedDragHandlers[capturedDragHandlers.length - 1];
 

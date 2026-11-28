@@ -1,7 +1,5 @@
-import { useRef, useCallback, type ReactNode } from 'react';
-import { useDrag } from '@use-gesture/react';
-import { useSpring, animated, config } from '@react-spring/web';
-import { useSpringReducedMotion } from '../utils/springMotion';
+import { useRef, useCallback, type ReactNode, type RefObject } from 'react';
+import { useGestureRuntime, type GestureRuntime } from '../utils/gestureRuntime';
 
 interface PullToRefreshProps {
   children: ReactNode;
@@ -14,20 +12,20 @@ const PULL_THRESHOLD = 80; // Distance to trigger refresh
 const MAX_PULL = 120; // Maximum pull distance
 const INDICATOR_SIZE = 40;
 
-/**
- * Pull-to-refresh wrapper component with iOS-like behavior.
- *
- * - Pull down from top to trigger refresh
- * - Shows Yidhan-branded refresh indicator
- * - Spring physics for native feel
- * - Haptic feedback at threshold
- */
-export function PullToRefresh({
-  children,
+interface PullToRefreshGestureLayerProps {
+  runtime: GestureRuntime;
+  containerRef: RefObject<HTMLDivElement | null>;
+  onRefresh: () => Promise<void>;
+  disabled: boolean;
+}
+
+function PullToRefreshGestureLayer({
+  runtime,
+  containerRef,
   onRefresh,
-  disabled = false,
-}: PullToRefreshProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  disabled,
+}: PullToRefreshGestureLayerProps) {
+  const { useDrag, useSpring, animated, config, useSpringReducedMotion } = runtime;
   const isRefreshingRef = useRef(false);
   const canPullRef = useRef(false);
   // Cache scrollable element to avoid DOM traversal on every touch
@@ -95,7 +93,7 @@ export function PullToRefresh({
         isRefreshingRef.current = false;
       }
     }
-  }, [api, onRefresh, reducedMotion, triggerHaptic]);
+  }, [api, config.stiff, onRefresh, reducedMotion, triggerHaptic]);
 
   // Helper to check if element is truly scrollable (not just overflow-hidden)
   const isScrollable = useCallback((el: Element): boolean => {
@@ -145,10 +143,11 @@ export function PullToRefresh({
 
     // Fallback to document scroll
     return document.documentElement.scrollTop || document.body.scrollTop;
-  }, [findScrollableChild]);
+  }, [containerRef, findScrollableChild]);
 
-  // Gesture binding
-  const bind = useDrag(
+  // Gesture binding attached directly to containerRef so children never remount
+  // when the deferred gesture runtime activates after first paint.
+  useDrag(
     ({ movement: [, my], down, first, memo = { hapticTriggered: false } }) => {
       if (disabled || isRefreshingRef.current) return memo;
 
@@ -206,6 +205,7 @@ export function PullToRefresh({
       return memo;
     },
     {
+      target: containerRef,
       axis: 'y',
       filterTaps: true,
       pointer: { touch: true },
@@ -213,47 +213,74 @@ export function PullToRefresh({
   );
 
   return (
+    <animated.div
+      className="absolute left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+      style={{
+        y,
+        opacity,
+        width: INDICATOR_SIZE,
+        height: INDICATOR_SIZE,
+      }}
+    >
+      <animated.div
+        className="size-full rounded-full flex items-center justify-center shadow-[var(--shadow-lg)]"
+        style={{
+          transform: rotate.to((r) => `rotate(${r}deg)`),
+          background: 'var(--color-bg-secondary)',
+          border: '2px solid var(--color-accent)',
+        }}
+      >
+        {/* Yidhan refresh icon */}
+        <svg
+          className="size-5"
+          style={{ color: 'var(--color-accent)' }}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+          />
+        </svg>
+      </animated.div>
+    </animated.div>
+  );
+}
+
+/**
+ * Pull-to-refresh wrapper component with iOS-like behavior.
+ *
+ * - Pull down from top to trigger refresh
+ * - Shows Yidhan-branded refresh indicator
+ * - Spring physics loaded after first paint (A1c); list renders and scrolls normally before
+ * - Haptic feedback at threshold
+ */
+export function PullToRefresh({
+  children,
+  onRefresh,
+  disabled = false,
+}: PullToRefreshProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const runtime = useGestureRuntime('after-paint');
+
+  return (
     <div
       ref={containerRef}
       className="relative h-full overflow-auto"
       style={{ touchAction: 'pan-y' }}
-      {...bind()}
     >
-      {/* Pull indicator */}
-      <animated.div
-        className="absolute left-1/2 -translate-x-1/2 z-50 pointer-events-none"
-        style={{
-          y,
-          opacity,
-          width: INDICATOR_SIZE,
-          height: INDICATOR_SIZE,
-        }}
-      >
-        <animated.div
-          className="size-full rounded-full flex items-center justify-center shadow-[var(--shadow-lg)]"
-          style={{
-            transform: rotate.to((r) => `rotate(${r}deg)`),
-            background: 'var(--color-bg-secondary)',
-            border: '2px solid var(--color-accent)',
-          }}
-        >
-          {/* Yidhan refresh icon */}
-          <svg
-            className="size-5"
-            style={{ color: 'var(--color-accent)' }}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-        </animated.div>
-      </animated.div>
+      {/* Pull indicator and drag listener activate once the gesture chunk loads. */}
+      {runtime && (
+        <PullToRefreshGestureLayer
+          runtime={runtime}
+          containerRef={containerRef}
+          onRefresh={onRefresh}
+          disabled={disabled}
+        />
+      )}
 
       {/* Content */}
       {children}
