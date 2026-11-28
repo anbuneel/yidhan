@@ -120,3 +120,33 @@ describe('ChapterSection pinned row (item 111)', () => {
     expect(cards()[0]).toBe(first);
   });
 });
+
+describe('ChapterSection entrance stagger (C9)', () => {
+  it('skips entrance stagger on search results', () => {
+    const notes = Array.from({ length: 4 }, (_, i) => createMockNote({ id: `s-${i}` }));
+    render(<ChapterSection {...chapterProps('thisWeek', notes)} isSearching searchQuery="note" />);
+
+    expect(document.querySelectorAll('.note-card-entrance')).toHaveLength(0);
+  });
+
+  it('skips entrance stagger when animateEntrance is false', () => {
+    const notes = Array.from({ length: 4 }, (_, i) => createMockNote({ id: `b-${i}` }));
+    render(<ChapterSection {...chapterProps('thisWeek', notes)} animateEntrance={false} />);
+
+    expect(document.querySelectorAll('.note-card-entrance')).toHaveLength(0);
+  });
+
+  it('applies a tighter stagger capped at 0.3s on initial load', () => {
+    // 14 notes with focusedNoteId on the last reveals all 14 cards so we can verify the cap.
+    const notes = Array.from({ length: 14 }, (_, i) => createMockNote({ id: `n-${i}` }));
+    render(<ChapterSection {...chapterProps('thisWeek', notes)} animateEntrance focusedNoteId="n-13" />);
+
+    const delayOf = (id: string) =>
+      document.querySelector(`[data-library-card-id="${id}"]`)?.closest<HTMLElement>('.note-card-entrance')?.style.animationDelay;
+    expect(document.querySelectorAll('.note-card-entrance').length).toBeGreaterThanOrEqual(12);
+    expect(delayOf('n-0')).toBe('0s');
+    expect(delayOf('n-1')).toBe('0.03s');
+    expect(delayOf('n-10')).toBe('0.3s');
+    expect(delayOf('n-13')).toBe('0.3s');
+  });
+});

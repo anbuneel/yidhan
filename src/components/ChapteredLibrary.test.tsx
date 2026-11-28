@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ChapteredLibrary } from './ChapteredLibrary';
+import { ChapteredLibrary, resetLibraryEntranceForTests } from './ChapteredLibrary';
 import { createMockNote } from '../test/factories';
 
 // Mock the two grouping functions, keeping the module's real vocabulary — the arrange
@@ -22,6 +22,7 @@ vi.mock('./ChapterSection', () => ({
     label,
     notes,
     isCompact,
+    animateEntrance,
     onNoteClick,
     onNoteDelete,
     onTogglePin,
@@ -30,11 +31,17 @@ vi.mock('./ChapterSection', () => ({
     label: string;
     notes: { id: string }[];
     isCompact?: boolean;
+    animateEntrance?: boolean;
     onNoteClick: (id: string) => void;
     onNoteDelete: (id: string) => void;
     onTogglePin: (id: string, pinned: boolean) => void;
   }) => (
-    <div data-testid={`chapter-${chapterKey}`} id={`chapter-${chapterKey}`} data-compact={String(Boolean(isCompact))}>
+    <div
+      data-testid={`chapter-${chapterKey}`}
+      id={`chapter-${chapterKey}`}
+      data-compact={String(Boolean(isCompact))}
+      data-animate-entrance={String(Boolean(animateEntrance))}
+    >
       <h2>{label}</h2>
       <span data-testid={`${chapterKey}-count`}>{notes.length} notes</span>
       {notes.map((note) => (
@@ -108,6 +115,7 @@ describe('ChapteredLibrary', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetLibraryEntranceForTests();
     // Set default mock implementations
     vi.mocked(temporalGrouping.groupNotesByChapter).mockReturnValue([]);
     vi.mocked(temporalGrouping.getDefaultExpansionState).mockReturnValue({
@@ -675,6 +683,33 @@ describe('ChapteredLibrary', () => {
       } finally {
         window.matchMedia = originalMatchMedia;
       }
+    });
+  });
+
+  describe('entrance stagger lifecycle (C9)', () => {
+    it('staggers on first library load, skips on remount (back-navigation), and skips on search', () => {
+      const note = createMockNote({ id: 'n-stagger' });
+      vi.mocked(temporalGrouping.groupNotesByChapter).mockReturnValue([
+        { key: 'thisWeek', label: 'This week', notes: [note] },
+      ]);
+
+      // First library load: stagger enabled.
+      const firstMount = render(<ChapteredLibrary {...defaultProps} notes={[note]} />);
+      expect(screen.getByTestId('chapter-thisWeek')).toHaveAttribute('data-animate-entrance', 'true');
+
+      // Entering search disables stagger, and clearing search does not re-stagger.
+      firstMount.rerender(
+        <ChapteredLibrary {...defaultProps} notes={[note]} isSearching searchQuery="n" />
+      );
+      expect(screen.getByTestId('chapter-thisWeek')).toHaveAttribute('data-animate-entrance', 'false');
+
+      firstMount.rerender(<ChapteredLibrary {...defaultProps} notes={[note]} />);
+      expect(screen.getByTestId('chapter-thisWeek')).toHaveAttribute('data-animate-entrance', 'false');
+      firstMount.unmount();
+
+      // Returning from a note remounts ChapteredLibrary: stagger stays skipped.
+      render(<ChapteredLibrary {...defaultProps} notes={[note]} />);
+      expect(screen.getByTestId('chapter-thisWeek')).toHaveAttribute('data-animate-entrance', 'false');
     });
   });
 

@@ -26,6 +26,15 @@ const noop = () => undefined;
 // Mobile breakpoint matching masonry grid (< 700px)
 const COMPACT_VIEWPORT_QUERY = '(max-width: 699px)';
 
+// Tracks whether the library has already painted notes in this page session.
+// Returning from a note remounts ChapteredLibrary; skipping the entrance stagger
+// on subsequent mounts keeps back-navigation immediate.
+let libraryHasPaintedInSession = false;
+
+export function resetLibraryEntranceForTests(): void {
+  libraryHasPaintedInSession = false;
+}
+
 interface ChapteredLibraryProps {
   footerRef?: RefObject<HTMLElement | null>;
   notes: Note[];
@@ -154,6 +163,26 @@ function ChapteredLibraryView({
       };
     }
   }, []);
+
+  // Entrance stagger runs only on the first library load of the session, never on
+  // back-navigation (remount) or search results.
+  const [allowEntranceStagger, setAllowEntranceStagger] = useState(
+    () => !libraryHasPaintedInSession && !isSearching
+  );
+
+  useEffect(() => {
+    if (!isLoading && notes.length > 0) {
+      libraryHasPaintedInSession = true;
+    }
+  }, [isLoading, notes.length]);
+
+  useEffect(() => {
+    if (isSearching && allowEntranceStagger) {
+      setAllowEntranceStagger(false);
+    }
+  }, [isSearching, allowEntranceStagger]);
+
+  const animateEntrance = allowEntranceStagger && !isSearching;
 
   // Detect touch capability for pull-to-refresh
   const isTouchDevice = useTouchCapable();
@@ -393,6 +422,7 @@ function ChapteredLibraryView({
           searchQuery={searchQuery}
           searchMatchTerms={searchMatchTerms}
           isSearching={isSearching}
+          animateEntrance={animateEntrance}
           focusedNoteId={focusedNoteId}
         />
       ))}

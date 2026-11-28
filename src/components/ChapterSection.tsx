@@ -11,6 +11,8 @@ import { useTouchCapable } from '../hooks/useMobileDetect';
 
 const INITIAL_CARD_COUNT = 6;
 const BATCH_SIZE = 6;
+const CARD_STAGGER_STEP_SECONDS = 0.03;
+const CARD_STAGGER_CAP_SECONDS = 0.3;
 
 interface ChapterSectionProps {
   chapterKey: LibrarySectionKey;
@@ -27,6 +29,7 @@ interface ChapterSectionProps {
   searchQuery?: string;
   searchMatchTerms?: ReadonlyMap<string, readonly string[]>;
   isSearching?: boolean;
+  animateEntrance?: boolean;
   showGestureHint?: boolean;
   focusedNoteId?: string | null;
 }
@@ -56,6 +59,7 @@ export const ChapterSection = memo(function ChapterSection({
   searchQuery,
   searchMatchTerms,
   isSearching = false,
+  animateEntrance = true,
   showGestureHint = false,
   focusedNoteId,
 }: ChapterSectionProps) {
@@ -194,6 +198,7 @@ export const ChapterSection = memo(function ChapterSection({
   }, [isSearching, notes.length, fingerprint, effectiveExpanded]);
 
   const opacity = CHAPTER_OPACITY[chapterKey];
+  const shouldAnimateEntrance = animateEntrance && !isSearching;
 
   // Get first 3 note titles for collapsed preview
   const previewTitles = notes
@@ -338,10 +343,14 @@ export const ChapterSection = memo(function ChapterSection({
                 {displayNotes.map((note, index) => (
                   <div
                     key={note.id}
-                    className="note-card-entrance"
-                    style={{
-                      animationDelay: `${Math.min(index * 0.06, 0.6)}s`,
-                    }}
+                    className={shouldAnimateEntrance ? 'note-card-entrance' : undefined}
+                    style={
+                      shouldAnimateEntrance
+                        ? {
+                            animationDelay: `${Math.min(index * CARD_STAGGER_STEP_SECONDS, CARD_STAGGER_CAP_SECONDS)}s`,
+                          }
+                        : undefined
+                    }
                   >
                     {note.decryptionFailed ? (
                       // A note whose ciphertext would not open. It has no title, no
@@ -414,6 +423,7 @@ export const ChapterSection = memo(function ChapterSection({
   prev.searchQuery === next.searchQuery &&
   prev.searchMatchTerms === next.searchMatchTerms &&
   prev.isSearching === next.isSearching &&
+  prev.animateEntrance === next.animateEntrance &&
   prev.showGestureHint === next.showGestureHint &&
   prev.onNoteClick === next.onNoteClick &&
   prev.onRetryLockedNote === next.onRetryLockedNote &&
