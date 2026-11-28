@@ -145,6 +145,27 @@ export async function logoutUser(page: Page): Promise<void> {
 }
 
 /**
+ * Whether this page is on a touch screen, by the same test the app uses
+ * (`useTouchCapable`). On a touch screen the library mounts swipe and
+ * pull-to-refresh, and phone cards hide the buttons a mouse would hover to find.
+ */
+async function isTouchScreen(page: Page): Promise<boolean> {
+  return page.evaluate(() => 'ontouchstart' in window || navigator.maxTouchPoints > 0);
+}
+
+/**
+ * Press a control the way a person on this device would: a finger tap on a
+ * touch screen, a mouse click otherwise.
+ */
+export async function press(page: Page, target: Locator): Promise<void> {
+  if (await isTouchScreen(page)) {
+    await target.tap();
+  } else {
+    await target.click();
+  }
+}
+
+/**
  * Create a new note
  */
 export async function createNote(
@@ -153,7 +174,7 @@ export async function createNote(
   content?: string
 ): Promise<void> {
   // Click new note button (use aria-label to avoid matching note card text)
-  await page.getByRole('button', { name: 'New note', exact: true }).click();
+  await press(page, page.getByRole('button', { name: 'New note', exact: true }));
 
   // Wait for editor
   await expect(page.getByTestId('note-editor')).toBeVisible();
@@ -208,24 +229,95 @@ export function noteCard(page: Page, title: string): Locator {
  */
 export async function goToLibrary(page: Page): Promise<void> {
   // Logo is a button, not a link
-  await page.getByRole('button', { name: /yidhan/i }).click();
+  await press(page, page.getByRole('button', { name: /yidhan/i }));
   await expect(page.getByTestId('library-view')).toBeVisible();
 }
 
 /**
- * Delete a note from the library view
+ * Delete a note from the library view.
+ *
+ * With a mouse the delete button shows on hover. A touch screen has no hover, so
+ * the button is always shown there, and a finger taps it.
  */
 export async function deleteNoteFromLibrary(page: Page, title: string): Promise<void> {
   const card = noteCard(page, title);
+  const del = card.getByRole('button', { name: 'Delete note', exact: true });
 
-  // Hover to reveal delete button
-  await card.hover();
-
-  // Click delete
-  await card.getByRole('button', { name: 'Delete note', exact: true }).click();
+  if (await isTouchScreen(page)) {
+    await del.tap();
+  } else {
+    await card.hover();
+    await del.click();
+  }
 
   // Wait for undo toast (use button with exact role to avoid matching note titles)
   await expect(page.getByRole('button', { name: /^undo$/i })).toBeVisible({ timeout: 3000 });
+}
+
+/**
+ * Pin a note from the library view.
+ *
+ * With a mouse, hover the card and click Pin. On a touch screen, swipe the card
+ * right: phone cards are compact and have no Pin button, so the swipe is the way a
+ * phone user pins.
+ */
+export async function pinNoteFromLibrary(page: Page, title: string): Promise<void> {
+  const card = noteCard(page, title);
+
+  if (await isTouchScreen(page)) {
+    await swipeCardRight(page, card);
+  } else {
+    await card.hover();
+    await card.getByRole('button', { name: 'Pin note', exact: true }).click();
+  }
+}
+
+/**
+ * Unpin a note from the library view. A pinned card keeps its Unpin button on
+ * every layout, including phone cards, so this presses it.
+ */
+export async function unpinNoteFromLibrary(page: Page, title: string): Promise<void> {
+  const card = noteCard(page, title);
+  const unpin = card.getByRole('button', { name: 'Unpin note', exact: true });
+
+  if (await isTouchScreen(page)) {
+    await unpin.tap();
+  } else {
+    await card.hover();
+    await unpin.click();
+  }
+}
+
+/**
+ * Swipe a library card right with one finger, far enough to pin it.
+ *
+ * Playwright has no touch drag, so this sends real touch input through the Chrome
+ * DevTools Protocol. Chromium projects only. It waits for the swipe layer first:
+ * swipe loads after first paint, and a swipe before then does nothing.
+ */
+async function swipeCardRight(page: Page, card: Locator): Promise<void> {
+  const swipeable = page.locator('.touch-pan-y').filter({ has: card });
+  await expect(swipeable.locator('> .absolute.inset-y-0')).toHaveCount(1);
+
+  const box = await card.boundingBox();
+  if (!box) throw new Error('The card to swipe is not on screen.');
+  // Start left of centre, clear of the buttons in the corners.
+  const startX = box.x + box.width * 0.25;
+  const y = box.y + box.height / 2;
+
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: startX, y }] });
+    for (let step = 1; step <= 12; step += 1) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x: startX + step * 18, y }],
+      });
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  } finally {
+    await cdp.detach();
+  }
 }
 
 /**
@@ -263,10 +355,21 @@ export async function clearTagFilters(page: Page): Promise<void> {
 }
 
 /**
- * Search for notes (uses first visible search input for desktop/mobile)
+ * The library search box a person can see.
+ *
+ * The header renders the search bar twice, one copy for wide screens and one for
+ * phones, and hides the other with CSS. Taking the first match picks the hidden
+ * wide-screen copy on a phone.
+ */
+export function searchInput(page: Page): Locator {
+  return page.getByRole('textbox', { name: 'Search notes', exact: true }).filter({ visible: true });
+}
+
+/**
+ * Search for notes
  */
 export async function searchNotes(page: Page, query: string): Promise<void> {
-  await page.getByPlaceholder(/search/i).first().fill(query);
+  await searchInput(page).fill(query);
   // Wait for search results to update
   await page.waitForTimeout(500);
 }
@@ -275,7 +378,7 @@ export async function searchNotes(page: Page, query: string): Promise<void> {
  * Clear search
  */
 export async function clearSearch(page: Page): Promise<void> {
-  await page.getByPlaceholder(/search/i).first().clear();
+  await searchInput(page).clear();
 }
 
 /**
