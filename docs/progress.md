@@ -1017,3 +1017,13 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   passphrase. Captured vectors pin the output on both paths. Precache limit 968 → 980
   KB (`DECISIONS.md`, 2026-11-28). Opus built it; Gemini reviewed it. Merged without
   the multi-agent review, by the owner's call.
+- **2026-11-28** — App-shell target and boot loader delay (#314, item C7). The
+  `appShellJs` target drops 330 → 285 KB; it measures 279.8 KB after #315, limit 280
+  (`DECISIONS.md`, 2026-11-27). `useAppLoader`'s 200 ms minimum hold is gone: for the
+  first 150 ms of boot the screen is blank in the theme background, then the loader shows
+  until boot finishes. The delay is counted once per page load and shared by Root's
+  Suspense fallback and App's gate. App now blocks on `authLoading`, so a signed-in reload
+  never paints the landing page, and on the first vault key restore
+  (`EncryptionContext.isRestoringKeys`), so it never paints the unlock screen. The
+  service-worker update spec waits out autoUpdate's own reload and checks the page stays
+  on the new build. Opus built it; Gemini reviews it before merge.
