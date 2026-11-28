@@ -13,7 +13,7 @@
 import { Suspense, startTransition, useCallback, useEffect, useState } from 'react';
 import { isSupabaseSessionKey, readGateInput, shouldStartApp } from '../appGate';
 import { Auth, DemoPage, NotFoundPage } from '../components/entryScreenChunks';
-import { LoadingFallback } from '../components/LoadingFallback';
+import { BootLoadingFallback } from '../components/LoadingFallback';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { parseRoute } from '../routing/routes';
 import { PublicShell, type AppStart } from './PublicShell';
@@ -81,7 +81,7 @@ export function Root() {
   }, [started, startApp]);
 
   return (
-    <Suspense fallback={<LoadingFallback message="Preparing your space..." />}>
+    <Suspense fallback={<BootLoadingFallback message="Preparing your space..." />}>
       {start ? <AppShell start={start} /> : <PublicShell onStartApp={startApp} />}
     </Suspense>
   );

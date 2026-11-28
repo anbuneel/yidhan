@@ -58,6 +58,12 @@ interface EncryptionContextType {
   /** Whether encryption has been set up (salt exists in user_metadata) */
   isEncryptionSetup: boolean;
   /**
+   * The first key restore for this user (sessionStorage, then a remembered browser)
+   * has not settled yet. App counts it as boot, so a reload does not paint the unlock
+   * screen for the frames before the restored keys arrive (shell-size plan C7).
+   */
+  isRestoringKeys: boolean;
+  /**
    * Item 27, step 1 to step 2: make the vault key and wrap it under `passphrase`.
    * Nothing is written until the recovery kit it makes is committed; that write
    * sets the account up. The caller must `discard` the setup.
@@ -349,6 +355,8 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
   const { user } = useAuth();
   const [keyState, setKeyState] = useState<KeyState>({ keys: null, userId: null });
   const sessionRestoreAttemptedRef = useRef<string | null>(null);
+  /** The user whose first restore attempt has finished, kept or not. */
+  const [restoreSettledFor, setRestoreSettledFor] = useState<string | null>(null);
   /**
    * Bumped by every lock and every passphrase unlock. A recovery-key lookup still
    * in flight from before is stale: its keys are zeroed, never installed.
@@ -459,6 +467,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     sessionRestoreAttemptedRef.current = currentUserId;
 
     let cancelled = false;
+    const restoringFor = currentUserId;
     (async () => {
       try {
         const { keyCheck, keyCheckIv, keyCheckVersion } = await resolveRestoreKeyCheck(keyCheckMetadataJson);
@@ -523,6 +532,10 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
           console.warn('[EncryptionContext] Session restore failed, passphrase required:', err);
           clearSession(currentUserId);
         }
+      } finally {
+        // Even when cancelled: the attempt runs once per user, so nothing else would
+        // settle it, and a flag stuck on would hold the boot screen.
+        setRestoreSettledFor(restoringFor);
       }
     })();
     return () => { cancelled = true; };
@@ -632,6 +645,8 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     return keyState.keys;
   }, [keyState, currentUserId]);
   const isUnlocked = keys !== null;
+  const isRestoringKeys =
+    currentUserId !== null && isEncryptionSetup && !isUnlocked && restoreSettledFor !== currentUserId;
 
   /** Install keys the server has just confirmed, as every unlock does. */
   const installKeys = useCallback((userId: string, installed: DerivedKeys, source: string) => {
@@ -908,6 +923,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       keys,
       isUnlocked,
       isEncryptionSetup,
+      isRestoringKeys,
       beginAccountSetup,
       finishAccountSetup,
       setupScreen,
@@ -926,6 +942,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     keys,
     isUnlocked,
     isEncryptionSetup,
+    isRestoringKeys,
     beginAccountSetup,
     finishAccountSetup,
     setupScreen,

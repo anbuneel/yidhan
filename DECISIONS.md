@@ -92,6 +92,32 @@ would cross a message boundary; a separate decision).
 
 ---
 
+## 2026-11-27 — The boot loader waits 150 ms before showing; no minimum hold (C7)
+
+**Status:** Active
+
+**Why:** `useAppLoader` held the loading screen for at least 200 ms so a fast boot would
+not flash it. That made every fast boot wait: a local boot that finished in 30 ms still
+showed the loader for 200 ms. A delay before showing solves the same flash without the
+wait.
+
+**Decision:** For the first 150 ms of boot the screen is blank in the theme's background.
+If boot finishes inside that window, the destination paints with no loader. Past it, the
+loader shows until boot finishes, with no minimum. The 150 ms is counted once per page
+load, shared by Root's Suspense fallback (app shell chunk) and App's own gate. Two things
+the old hold had been hiding now block explicitly: App renders nothing past the gate while
+`authLoading` is true, because `renderEntryScreen` reads the null user as signed out and
+would paint the landing page; and boot includes the first vault key restore
+(`isRestoringKeys` in `EncryptionContext`), because between auth resolving and the
+restored keys arriving the account gate would paint the unlock screen.
+
+**Rejected:** Shortening the minimum hold (still makes fast boots wait). Returning false
+from the hook during the delay (paints the landing page on every signed-in reload).
+Showing the static landing shell during the delay (wrong for a signed-in reader, and
+`boot.js` already hides it whenever the app shell starts).
+
+---
+
 ## 2026-11-27 — App-shell target lowered 330 → 285 KB
 
 **Status:** Active

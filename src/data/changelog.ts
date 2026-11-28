@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.27.4', date: '2026-11-28', changes: [
+    { type: 'improvement', text: 'The app opens straight to your library when it loads quickly. It no longer shows a loading screen for a fraction of a second on every visit; the loading screen now appears only when loading takes longer' },
+  ] },
   { version: '3.27.3', date: '2026-11-27', changes: [
     { type: 'improvement', text: 'The unlock screen no longer freezes while your passphrase is checked. The work that turns your passphrase into your key now runs in the background, so the screen keeps responding. Unlocking takes about as long as before' },
   ] },

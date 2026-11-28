@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderEntryScreen, type EntryScreenProps } from './entryScreens';
+import { BootBlankScreen, LoadingFallback } from './LoadingFallback';
+import { APP_LOADER_DELAY_MS, appBootScreen, resetAppBootForTests, useAppBoot } from '../hooks/useAppLoader';
 
 // The three signed-out screens are lazy chunks (shell-size plan A2). Stubs stand in for
 // them so these tests check the loading, not the screens.
@@ -88,5 +90,38 @@ describe('renderEntryScreen', () => {
     render(<>{renderEntryScreen(baseProps({ route: { name: 'library' } }))}</>);
     expect(await screen.findByTestId('landing')).toBeInTheDocument();
     expect(screen.queryByTestId('auth')).toBeNull();
+  });
+});
+
+// App's order: the boot gate first, then the entry screens. `user` is null while auth
+// resolves, so the entry screens alone would read a signed-in reload as signed out.
+function BootThenEntry({ authLoading, loading }: { authLoading: boolean; loading: boolean }) {
+  const phase = useAppBoot(authLoading || loading);
+  const boot = appBootScreen(phase, { authLoading, fromPublicShell: false });
+  if (boot === 'loader') return <LoadingFallback message="Preparing your space..." />;
+  if (boot === 'blank') return <BootBlankScreen />;
+  return <>{renderEntryScreen(baseProps({ route: { name: 'library' }, isSignedIn: !authLoading }))}</>;
+}
+
+describe('the boot gate in front of the entry screens (shell-size plan C7)', () => {
+  it('never paints the landing page on a signed-in reload, inside the delay or after it', () => {
+    vi.useFakeTimers();
+    resetAppBootForTests();
+    try {
+      const { rerender } = render(<BootThenEntry authLoading loading={false} />);
+      expect(screen.getByTestId('boot-blank')).toBeInTheDocument();
+      expect(screen.queryByTestId('landing')).toBeNull();
+
+      act(() => vi.advanceTimersByTime(APP_LOADER_DELAY_MS));
+      expect(screen.getByText('Preparing your space...')).toBeInTheDocument();
+      expect(screen.queryByTestId('landing')).toBeNull();
+
+      // Auth resolves with a user: the entry screens step aside for the library.
+      rerender(<BootThenEntry authLoading={false} loading={false} />);
+      expect(screen.queryByTestId('landing')).toBeNull();
+      expect(screen.queryByTestId('boot-blank')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
