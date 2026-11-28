@@ -1007,3 +1007,13 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   first open (#312); compact cards show the same 80 characters as before, with "..."
   when cut; a failed gesture chunk load retries on the next sheet open, library mount or
   `online` event, never by reloading.
+- **2026-11-28** — Shell-size PR 3, Argon2id in a Web Worker (#315, item C1). Every
+  derivation goes through `deriveArgon2id` in `src/lib/argon2.ts`: one worker per
+  derivation, terminated after its reply, with the same derivation on the main thread
+  when a worker cannot start or fails. Only the derivation moved; roadmap item 102 is
+  not part of it. Unlock under 4x throttle: longest task about 800 ms → 0 to 61 ms.
+  `lockVault` and a user change cancel a running derivation, and a result overtaken by
+  a lock, another account or a newer attempt installs nothing and is not a wrong
+  passphrase. Captured vectors pin the output on both paths. Precache limit 968 → 980
+  KB (`DECISIONS.md`, 2026-11-28). Opus built it; Gemini reviewed it. Merged without
+  the multi-agent review, by the owner's call.

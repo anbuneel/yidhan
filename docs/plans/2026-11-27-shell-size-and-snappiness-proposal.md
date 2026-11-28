@@ -1,5 +1,5 @@
 Status: PROPOSAL
-Last verified: 2026-11-27
+Last verified: 2026-11-28
 
 # App shell size and snappiness — every idea, for review
 Two independent audits of the same build, merged. Nothing is dropped. Nothing here is decided. Mark each item keep, drop or later.
@@ -108,7 +108,7 @@ reviews it. The two models work in separate worktrees.
 | 0. Timing harness | D1 | Opus | Gemini | Lands alone, first, so nothing rebases onto a moving branch. Seeded fixture; the unlock case needs the `E2E_TEST_*` secrets and skips without them. A local before/after harness with loose CI ceilings, not tight millisecond gates: throttled timings vary on shared runners. |
 | 1. Bytes | B1, B2, B3 (`ShareModal` only), A2, A5, C17, the A3 modals that do not guard data, D2, A7 | Opus | Gemini | All bundle-shape changes. One budget ratchet and one `DECISIONS.md` entry. |
 | 2. Library feel | C2, C3, C4, C13, C19, C12, C23, then C7, C9, C10, C15, C16, then A1c | Gemini | Opus | A1c is here, not in PR 1: it edits `ChapteredLibrary.tsx` and `ChapterSection.tsx`, which this PR already owns. Try on a phone. Re-measure the budget if PR 1 landed first. |
-| 3. Unlock worker | C1, designed with roadmap item 102 | Opus | Gemini | Encryption. Multi-agent review. Revertable alone. |
+| 3. Unlock worker | C1, derivation only. The owner decided on 2026-11-28 that roadmap item 102 (the unlocked key held in a Worker) is not part of this PR. | Opus | Gemini | Encryption. Multi-agent review. Revertable alone. |
 | 4. Decrypt cache | C5. C6 only if PR 0 shows decrypt time above about 100 ms. | Opus | Gemini | Encrypted read and sync-refresh path. Multi-agent review. Review against stale closures holding old keys, locked notes cached as empty, and refresh races. |
 | 5. Search index | A4, C20 | Gemini | Opus | `useNoteSearch.ts` only. No sync-engine code. |
 | 6. Editor typing | C11, with the #288 cases as regression tests | Opus | Gemini | Save path. Multi-agent review. Last, alone. |
@@ -148,9 +148,20 @@ same PR fixed the phone Settings sheet bug from #312. Left out: C7 (it needed
 focus rings and scroll restoration). Merged without a real-phone check, by the owner's
 call. The timing gain claimed for it could not be confirmed: reruns were noise.
 
-Still to do from the plan: lower `appShellJs.targetKB` from 330 with a `DECISIONS.md`
-entry; C7; and the remaining PRs. PR 3
-and PR 5 in parallel, then PR 4, then PR 6.
+**PR 3 landed 2026-11-28 (#315).** Argon2id runs in a Web Worker, with a main-thread
+fallback. Derivation only; the key is held as before. Unlock under 4x throttle, on the
+same machine and day: longest task about 800 ms → 0 to 61 ms, largest frame gap about
+750 ms → 62 to 94 ms. App shell 278.8 → 279.6 KB gzip, limit still 280. The precache
+limit rose 968 → 980 KB by the owner's decision: the worker holds its own copy of
+`hash-wasm` beside the fallback chunk. A lock, sign-out, account switch or newer attempt
+during a derivation now cancels it and installs nothing. Opus built it; Gemini reviewed
+it and its six findings were fixed. Merged without the multi-agent review that
+`CLAUDE.md` asks for on encryption changes, by the owner's call. Not checked: a real
+Android device, Firefox, Safari. Open follow-up: `openEncryptedBackup` takes Argon2id
+cost parameters from the backup file with no upper cap.
+
+Still to do from the plan: the target and C7 (#314, open), PR 5 (#316, open), then
+PR 4, then PR 6.
 
 No PR unless a measurement justifies it: A6, A8, C14, C18.
 
