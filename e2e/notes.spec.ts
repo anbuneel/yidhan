@@ -8,11 +8,23 @@ import {
   clearSearch,
   editAndWaitForSave,
   noteCard,
+  pinNoteFromLibrary,
+  unpinNoteFromLibrary,
+  searchInput,
+  press,
 } from './fixtures';
 
 /** The library's "Pinned" chapter, labelled "Pinned - N note(s)". */
 function pinnedSection(page: Page) {
   return page.getByTestId('library-view').getByRole('region', { name: /^Pinned - \d+ notes?$/ });
+}
+
+/** The label on a touch card's swipe action: "Pin" or "Unpin". */
+function swipeActionLabel(page: Page, title: string) {
+  return page
+    .locator('.touch-pan-y')
+    .filter({ has: noteCard(page, title) })
+    .locator('> .absolute.inset-y-0 span');
 }
 
 test.describe('Notes', () => {
@@ -241,8 +253,7 @@ test.describe('Notes', () => {
       await searchNotes(page, 'test');
       await clearSearch(page);
 
-      // Search input should be empty (use first() for desktop/mobile)
-      await expect(page.getByPlaceholder(/search/i).first()).toHaveValue('');
+      await expect(searchInput(page)).toHaveValue('');
     });
 
     // Note: Ctrl+Shift+K keyboard shortcut may not work reliably in headless browser
@@ -251,12 +262,11 @@ test.describe('Notes', () => {
       // Ensure we're on the library page
       await expect(page.getByTestId('library-view')).toBeVisible();
 
-      // Click search input to focus
-      const searchInput = page.getByPlaceholder(/search/i).first();
-      await searchInput.click();
+      // Tap or click the search box to focus it
+      const search = searchInput(page);
+      await press(page, search);
 
-      // Search input should be focused
-      await expect(searchInput).toBeFocused();
+      await expect(search).toBeFocused();
     });
   });
 
@@ -267,10 +277,8 @@ test.describe('Notes', () => {
       await createNote(page, noteTitle);
       await goToLibrary(page);
 
-      // Hover and click pin
       const card = noteCard(page, noteTitle);
-      await card.hover();
-      await card.getByRole('button', { name: 'Pin note', exact: true }).click();
+      await pinNoteFromLibrary(page, noteTitle);
 
       // Note should be in the pinned section
       await expect(
@@ -287,8 +295,7 @@ test.describe('Notes', () => {
 
       // Pin first
       const card = noteCard(page, noteTitle);
-      await card.hover();
-      await card.getByRole('button', { name: 'Pin note', exact: true }).click();
+      await pinNoteFromLibrary(page, noteTitle);
 
       // Verify it is in the pinned section
       const pinnedCard = pinnedSection(page).getByRole('group', {
@@ -298,13 +305,18 @@ test.describe('Notes', () => {
       await expect(pinnedCard).toBeVisible();
 
       // Then unpin
-      await card.hover();
-      await card.getByRole('button', { name: 'Unpin note', exact: true }).click();
+      await unpinNoteFromLibrary(page, noteTitle);
 
       // The card leaves the pinned section and offers Pin again
       await expect(pinnedCard).toHaveCount(0, { timeout: 3000 });
       await expect(card.getByRole('button', { name: 'Unpin note', exact: true })).toHaveCount(0);
-      await expect(card.getByRole('button', { name: 'Pin note', exact: true })).toBeVisible();
+      if (await card.evaluate((el) => el.classList.contains('note-card-compact'))) {
+        // Compact cards (phones) have no Pin button; swiping right pins them. The
+        // swipe now offers Pin again instead of Unpin.
+        await expect(swipeActionLabel(page, noteTitle)).toHaveText('Pin', { useInnerText: true });
+      } else {
+        await expect(card.getByRole('button', { name: 'Pin note', exact: true })).toBeVisible();
+      }
     });
   });
 

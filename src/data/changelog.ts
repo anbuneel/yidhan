@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.27.4', date: '2026-11-28', changes: [
+    { type: 'fix', text: 'On a touchscreen laptop or a tablet with a trackpad, clicking a note in the library works again. A mouse or trackpad click on a note, or on its pin or delete button, did nothing a moment after the library loaded' },
+  ] },
   { version: '3.27.3', date: '2026-11-27', changes: [
     { type: 'improvement', text: 'The unlock screen no longer freezes while your passphrase is checked. The work that turns your passphrase into your key now runs in the background, so the screen keeps responding. Unlocking takes about as long as before' },
   ] },
