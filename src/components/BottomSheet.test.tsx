@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { StrictMode, useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BottomSheet } from './BottomSheet';
@@ -314,4 +314,34 @@ describe('BottomSheet focus', () => {
     });
   });
 
+  // PR #312: on a phone the sheet slid up, then back to translateY(innerHeight), and
+  // stayed there. useSpring re-applied its initial props when React re-attached effects.
+  // StrictMode re-attaches them on purpose, so it reproduces this in a unit test.
+  it('stays on screen after opening under StrictMode once the runtime is loaded', async () => {
+    mobileState.value = true;
+    // Load the gesture runtime first, the way the library does after its first paint.
+    const preload = render(
+      <BottomSheet isOpen onClose={vi.fn()} title="Warm up">
+        <span>warm</span>
+      </BottomSheet>
+    );
+    await waitFor(() => expect(document.querySelector('.cursor-grab')).not.toBeNull());
+    preload.unmount();
+
+    function StrictHarness({ open }: { open: boolean }) {
+      return (
+        <StrictMode>
+          <BottomSheet isOpen={open} onClose={vi.fn()} title="Settings">
+            <button type="button">Inside</button>
+          </BottomSheet>
+        </StrictMode>
+      );
+    }
+    const { rerender } = render(<StrictHarness open={false} />);
+    rerender(<StrictHarness open />);
+    const dialog = await screen.findByRole('dialog', { name: 'Settings' });
+
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    expect(dialog.style.transform).toBe('');
+  });
 });

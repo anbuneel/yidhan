@@ -4,6 +4,8 @@ import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { useGestureRuntime, type GestureRuntime } from '../utils/gestureRuntime';
 import { ModalBackdropButton } from './ModalBackdropButton';
+// Type only: erased at build, so react-spring stays out of the static shell (A1c).
+import type { SpringValue as SpringValueType } from '@react-spring/web';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -79,7 +81,7 @@ function MobileSheetMotion({
   handleRef,
   titleRef,
 }: MobileSheetMotionProps) {
-  const { useDrag, useSpring, config, useSpringReducedMotion } = runtime;
+  const { useDrag, SpringValue, config, useSpringReducedMotion } = runtime;
   const reducedMotion = useSpringReducedMotion();
 
   const applyY = useCallback(
@@ -100,48 +102,78 @@ function MobileSheetMotion({
     [backdropRef]
   );
 
-  // Spring for sheet position (0 = fully open, positive = dragging down)
-  const [{ y }, api] = useSpring(() => ({
-    y: startOpen ? 0 : window.innerHeight,
-    config: config.stiff,
-    onChange: ({ value }: { value: { y: number } }) => applyY(value.y),
-  }));
+  // Where the sheet and backdrop are, kept across spring re-creation.
+  const yRef = useRef(startOpen ? 0 : window.innerHeight);
+  const opacityRef = useRef(startOpen ? 1 : 0);
+  const ySpringRef = useRef<SpringValueType<number> | null>(null);
+  const opacitySpringRef = useRef<SpringValueType<number> | null>(null);
 
-  // Spring for backdrop opacity
-  const [{ backdropOpacity }, backdropApi] = useSpring(() => ({
-    backdropOpacity: startOpen ? 1 : 0,
-    config: config.default,
-    onChange: ({ value }: { value: { backdropOpacity: number } }) =>
-      applyBackdropOpacity(value.backdropOpacity),
-  }));
-
-  // Open and close. A layout effect, so the starting position is written before the
-  // first paint, and so it runs again whenever React re-attaches layout effects (for
-  // example when a Suspense boundary above the sheet hides and reveals it), which puts
-  // the sheet back on its target instead of leaving it wherever the spring was reset to.
+  // The springs are plain SpringValues owned by this effect, not useSpring. useSpring
+  // re-applies its initial props from its own layout effect and stops its controllers in
+  // an effect cleanup; when React detaches and re-attaches effects (StrictMode in
+  // development, Suspense or Activity in production) that sent the sheet back to its
+  // off-screen start and left it there (PR #312). Here a re-attach makes fresh springs
+  // that start from wherever the sheet actually is.
   useLayoutEffect(() => {
-    applyY(y.get());
-    applyBackdropOpacity(backdropOpacity.get());
+    const ySpring = new SpringValue(yRef.current, {
+      config: config.stiff,
+      onChange: (_result, spring) => {
+        const value = spring.get();
+        yRef.current = value;
+        applyY(value);
+      },
+    });
+    const opacitySpring = new SpringValue(opacityRef.current, {
+      config: config.default,
+      onChange: (_result, spring) => {
+        const value = spring.get();
+        opacityRef.current = value;
+        applyBackdropOpacity(value);
+      },
+    });
+    ySpringRef.current = ySpring;
+    opacitySpringRef.current = opacitySpring;
+    // Write the starting position before the first paint.
+    applyY(yRef.current);
+    applyBackdropOpacity(opacityRef.current);
+    return () => {
+      ySpringRef.current = null;
+      opacitySpringRef.current = null;
+      ySpring.stop();
+      opacitySpring.stop();
+    };
+  }, [SpringValue, config, applyY, applyBackdropOpacity]);
+
+  // Open and close. Declared after the spring effect, so on a re-attach it runs against
+  // the fresh springs.
+  useLayoutEffect(() => {
+    const ySpring = ySpringRef.current;
+    const opacitySpring = opacitySpringRef.current;
+    if (!ySpring || !opacitySpring) return;
 
     if (isOpen) {
-      api.start({ y: 0, immediate: reducedMotion });
-      backdropApi.start({ backdropOpacity: 1, immediate: reducedMotion });
+      void ySpring.start({ to: 0, immediate: reducedMotion });
+      void opacitySpring.start({ to: 1, immediate: reducedMotion });
       return;
     }
 
-    backdropApi.start({ backdropOpacity: 0, immediate: reducedMotion });
+    void opacitySpring.start({ to: 0, immediate: reducedMotion });
     if (reducedMotion) {
-      api.start({ y: window.innerHeight, immediate: true });
+      void ySpring.start({ to: window.innerHeight, immediate: true });
       queueMicrotask(onExited);
       return;
     }
-    api.start({
-      y: window.innerHeight,
+    void ySpring.start({
+      to: window.innerHeight,
       onRest: (result: { finished?: boolean }) => {
         if (result.finished !== false) onExited();
       },
     });
-  }, [isOpen, reducedMotion, api, backdropApi, y, backdropOpacity, applyY, applyBackdropOpacity, onExited]);
+  }, [isOpen, reducedMotion, onExited]);
+
+  const moveSheet = (props: { to: number; immediate?: boolean; config?: object }) => {
+    void ySpringRef.current?.start(props);
+  };
 
   // Drag to dismiss - bound to the handle and the title only, never the content.
   const handleDrag = ({
@@ -157,25 +189,25 @@ function MobileSheetMotion({
   }) => {
     // Only allow dragging down
     if (my < 0) {
-      api.start({ y: 0, immediate: true });
+      moveSheet({ to: 0, immediate: true });
       return;
     }
 
     if (down) {
       // While dragging, follow finger
-      api.start({ y: my, immediate: true });
+      moveSheet({ to: my, immediate: true });
       return;
     }
 
     // On release, check if should dismiss
     const shouldDismiss = my > DISMISS_THRESHOLD || (vy > VELOCITY_THRESHOLD && my > 30);
     if (shouldDismiss) {
-      api.start({
-        y: window.innerHeight,
+      moveSheet({
+        to: window.innerHeight,
         immediate: reducedMotion,
         config: { ...config.stiff, velocity: vy },
       });
-      backdropApi.start({ backdropOpacity: 0, immediate: reducedMotion });
+      void opacitySpringRef.current?.start({ to: 0, immediate: reducedMotion });
       if (reducedMotion) {
         onClose();
       } else {
@@ -185,12 +217,12 @@ function MobileSheetMotion({
       cancel();
     } else {
       // Snap back
-      api.start({ y: 0, immediate: reducedMotion });
+      moveSheet({ to: 0, immediate: reducedMotion });
     }
   };
 
   const dragOptions = {
-    from: () => [0, y.get()] as [number, number],
+    from: () => [0, yRef.current] as [number, number],
     filterTaps: true,
     bounds: { top: 0 },
     rubberband: true,

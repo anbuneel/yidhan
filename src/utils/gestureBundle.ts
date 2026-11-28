@@ -6,7 +6,7 @@
  * are parsed. Never import this file statically outside type-only imports.
  */
 import { useDrag } from '@use-gesture/react';
-import { useSpring, animated, config } from '@react-spring/web';
+import { useSpring, animated, config, SpringValue } from '@react-spring/web';
 import { useSpringReducedMotion } from './springMotion';
 
 export interface GestureRuntime {
@@ -14,6 +14,7 @@ export interface GestureRuntime {
   useSpring: typeof useSpring;
   animated: typeof animated;
   config: typeof config;
+  SpringValue: typeof SpringValue;
   useSpringReducedMotion: typeof useSpringReducedMotion;
 }
 
@@ -22,5 +23,6 @@ export const gestureRuntime: GestureRuntime = {
   useSpring,
   animated,
   config,
+  SpringValue,
   useSpringReducedMotion,
 };
