@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.27.4', date: '2026-11-28', changes: [
+    { type: 'fix', text: 'Opening a damaged or tampered backup file can no longer freeze or crash the app. A file that asks for an unreasonable amount of work to unlock is now refused as damaged before any work starts' },
+  ] },
   { version: '3.27.3', date: '2026-11-27', changes: [
     { type: 'improvement', text: 'The unlock screen no longer freezes while your passphrase is checked. The work that turns your passphrase into your key now runs in the background, so the screen keeps responding. Unlocking takes about as long as before' },
   ] },

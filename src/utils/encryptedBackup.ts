@@ -28,6 +28,30 @@ const BACKUP_ARGON2_PARAMS = {
   hashLength: 32, // one AES-256 key; no HMAC half is needed here
 } as const;
 
+/**
+ * Bounds on the KDF parameters a backup file names. The file is untrusted: without
+ * these, a crafted file could ask for gigabytes or millions of passes, which kills
+ * the worker or, on the main-thread fallback, hangs or crashes the tab.
+ *
+ * Every backup the app has written used `BACKUP_ARGON2_PARAMS` above (p=1, t=3,
+ * m=64 MB); git history shows no other values. Each range holds that value with room
+ * for a future cost change, and no more. Raise a bound in the same change that writes
+ * a value outside it, or files that change writes will not open.
+ */
+const KDF_PARAM_BOUNDS = {
+  // KiB. Floor 8 MB: well under the 64 MB ever written, and above Argon2's own
+  // minimum of 8 KiB per lane. Ceiling 256 MB: 4x the written value. Much more risks
+  // a failed WebAssembly allocation on a phone.
+  memorySize: { min: 8 * 1024, max: 256 * 1024 },
+  // Floor 1: the Argon2 minimum. Ceiling 8: under 3x the 3 ever written. Time scales
+  // linearly, so 8 passes at 256 MB is about 11x the cost of a normal open.
+  iterations: { min: 1, max: 8 },
+  // Floor 1: the Argon2 minimum, and the value ever written. Ceiling 4: hash-wasm runs
+  // lanes on one thread, so more lanes buy nothing here; 4 leaves room for a change.
+  parallelism: { min: 1, max: 4 },
+} as const;
+
+/** The salt is always 16 bytes; a file with any other length is rejected outright. */
 const SALT_LENGTH_BYTES = 16;
 const IV_LENGTH_BYTES = 12;
 /** AES-GCM appends a 16-byte tag; anything shorter cannot be a sealed payload. */
@@ -221,10 +245,17 @@ export function parseBackupEnvelope(fileText: string): EncryptedBackupEnvelope {
     throw new BackupFormatError(`${DAMAGED} (its contents are missing)`);
   }
 
+  // Fail closed: a value outside its bounds rejects the file. There is no fallback to
+  // the default parameters, which would derive the wrong key and only look like a
+  // wrong passphrase.
   for (const field of ['iterations', 'memorySize', 'parallelism'] as const) {
-    const value = envelope.kdf[field];
-    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    const value: unknown = envelope.kdf[field];
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
       throw new BackupFormatError(`${DAMAGED} (${field} is not a number)`);
+    }
+    const { min, max } = KDF_PARAM_BOUNDS[field];
+    if (!Number.isSafeInteger(value) || value < min || value > max) {
+      throw new BackupFormatError(`${DAMAGED} (${field} is out of range)`);
     }
   }
 
