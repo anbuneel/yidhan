@@ -66,9 +66,13 @@ used exactly as before. The keys are held on the main thread as today.
   wasm memory at once and leaves nothing that ever saw a passphrase. Cost: a worker
   start and a wasm compile per unlock, tens of milliseconds, against an unlock that
   takes a second. To keep that off the unlock, an empty spare worker is started on idle
-  after sign-in and after each derivation. It has seen no request and holds no secret.
-  It also keeps the worker code in memory, so a deploy that removes the old file does
-  not break the next unlock (the reason item 61 step 7 preloaded the chunk).
+  after sign-in, and again straight after each derivation a worker completed. It has
+  seen no request and holds no secret.
+- Deploys: a worker started after a deploy removed its file fails to load. The idle
+  preload therefore also loads the main-thread fallback chunk, which then stays in the
+  module registry for the tab (the reason item 61 step 7 preloaded it), so the fallback
+  needs no fetch. Once a worker fails to load, the tab stops starting workers and
+  leaves one constant breadcrumb, so a browser class that loses workers is visible.
 - Fallback: when a worker cannot be created, fails to load, crashes or reports an
   error, the same derivation runs on the main thread through the existing lazy
   `vendor-hash-wasm` chunk. A reply of the wrong shape or length is an error, never a
