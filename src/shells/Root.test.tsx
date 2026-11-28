@@ -18,9 +18,6 @@ vi.mock('./AppShell', () => ({
   },
 }));
 
-const markAppShellStarted = vi.fn();
-vi.mock('./appShellStarted', () => ({ markAppShellStarted: () => markAppShellStarted() }));
-
 // The signed-out screens' chunks (shell-size plan A2). Root warms the one the app
 // shell is about to show; these spies record which.
 const preloads = vi.hoisted(() => ({ auth: vi.fn(), demo: vi.fn(), notFound: vi.fn() }));
@@ -46,7 +43,6 @@ afterEach(() => {
   window.history.replaceState(null, '', '/');
   document.documentElement.classList.remove(LANDING_HANDOFF_CLASS);
   appShellRender.mockClear();
-  markAppShellStarted.mockClear();
   Object.values(preloads).forEach((spy) => spy.mockClear());
   window.localStorage.clear();
 });
@@ -57,8 +53,6 @@ describe('Root', () => {
     expect(await screen.findAllByRole('button', { name: /^try writing$/i })).not.toHaveLength(0);
     expect(screen.queryByTestId('app-shell')).toBeNull();
     expect(appShellRender).not.toHaveBeenCalled();
-    // Session Replay waits for this; an anonymous landing visit never sends it.
-    expect(markAppShellStarted).not.toHaveBeenCalled();
   });
 
   it('renders a public page for an anonymous visitor without loading the app shell', async () => {
@@ -72,7 +66,6 @@ describe('Root', () => {
     visit('/');
     expect(await screen.findByTestId('app-shell')).toHaveTextContent('direct:none');
     expect(screen.queryByRole('button', { name: /^try writing$/i })).toBeNull();
-    expect(markAppShellStarted).toHaveBeenCalled();
   });
 
   it('loads the app shell straight away for an OAuth callback', async () => {
@@ -95,7 +88,6 @@ describe('Root', () => {
     await user.click(signIn);
     expect(await screen.findByTestId('app-shell')).toHaveTextContent('from-public:login');
     expect(document.documentElement).toHaveClass(LANDING_HANDOFF_CLASS);
-    expect(markAppShellStarted).toHaveBeenCalled();
   });
 
   it('hands over with the sign-up modal requested from Create an account', async () => {

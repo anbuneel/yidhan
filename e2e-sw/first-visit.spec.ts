@@ -13,8 +13,8 @@
  * in scripts/bundle-budget.json.
  *
  * Sentry (step 2) loads after `load`: none of its chunks may be requested before it.
- * Replay waits for the app shell (step 5), so an anonymous landing visit never
- * requests it, and it is never requested on a shared-note route.
+ * Session Replay was removed (shell-size plan D2): no route requests a Replay chunk,
+ * and scripts/check-bundle-budget.mjs fails the build if Replay code returns.
  *
  * The landing page renders from the public shell (step 5): no Supabase, Dexie or
  * app-shell chunk is requested before `load`, and none at all until the visitor opens
@@ -31,9 +31,10 @@ import { buildForProduction, repoRoot, startStaticServer } from './productionBui
 
 const distDir = path.join(repoRoot, 'dist');
 
-/** Sentry's chunks: vendor-sentry, vendor-sentry-replay, and our sentryClient and sentryReplay. */
-const SENTRY_CHUNK = /\/assets\/(vendor-sentry|sentryClient|sentryReplay)[-.]/;
-const REPLAY_CHUNK = /\/assets\/(vendor-sentry-replay|sentryReplay)[-.]/;
+/** Sentry's chunks: vendor-sentry and our sentryClient. */
+const SENTRY_CHUNK = /\/assets\/(vendor-sentry|sentryClient)[-.]/;
+/** The Replay chunks that existed before D2, and any that might come back. */
+const REPLAY_CHUNK = /\/assets\/[^/]*replay[^/]*\.js$/i;
 /** The app shell and the two vendor chunks only it imports (step 5). */
 const APP_CHUNK = /\/assets\/(AppShell|vendor-supabase|vendor-dexie)-/;
 
@@ -161,7 +162,6 @@ test.describe('first visit', () => {
         message: 'Sentry loads after the load event',
       })
       .toBeGreaterThanOrEqual(2);
-    // Step 5: Replay waits for the app shell, which an anonymous landing never starts.
     expect(requestedAfterLoad().filter((url) => REPLAY_CHUNK.test(url)), 'Replay on the landing').toEqual([]);
 
     // Step 5: the landing is the public shell. Nothing that needs Supabase or Dexie,
@@ -206,9 +206,28 @@ test.describe('first visit', () => {
     expect(
       await page.evaluate(() => (window as unknown as { __sameDocument?: boolean }).__sameDocument)
     ).toBe(true);
-    // Replay follows the app shell.
-    await expect.poll(() => scripts.some((url) => REPLAY_CHUNK.test(url))).toBe(true);
+    // Session Replay is gone: the app shell no longer brings it.
+    await page.waitForLoadState('networkidle');
+    expect(scripts.filter((url) => REPLAY_CHUNK.test(url)), 'Replay after sign-in').toEqual([]);
   });
+
+  // Shell-size plan D2. Sentry still starts on every route; Replay on none.
+  for (const route of ['/demo', '/privacy', '/no-such-page']) {
+    test(`${route} loads Sentry but no Replay`, async ({ page }) => {
+      const scripts: string[] = [];
+      page.on('request', (request) => {
+        if (request.resourceType() === 'script') scripts.push(new URL(request.url()).pathname);
+      });
+      await page.goto(`${baseURL}${route}`, { waitUntil: 'load' });
+      await expect
+        .poll(() => scripts.filter((url) => /\/assets\/sentryClient-/.test(url)).length, {
+          message: `Sentry starts on ${route}`,
+        })
+        .toBe(1);
+      await page.waitForLoadState('networkidle');
+      expect(scripts.filter((url) => REPLAY_CHUNK.test(url)), `Replay requested on ${route}`).toEqual([]);
+    });
+  }
 
   test('a signed-in visitor on / loads the app shell at once', async ({ page }) => {
     const scripts: string[] = [];

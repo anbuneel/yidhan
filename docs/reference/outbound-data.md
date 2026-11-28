@@ -151,11 +151,10 @@ Two entries are worth explaining:
   until item 101, and redacting them in telemetry would imply a protection the database
   does not provide.
 
-Session replay is masked (`maskAllText`, `maskAllInputs`) and blocks
-`.rich-text-editor`, `.ProseMirror`, `[data-sensitive]` and `.note-card`. On a `/s/`
-route the replay integration (`src/utils/sentryReplay.ts`, its own chunk from our
-bundle, never Sentry's CDN) is **not loaded at all** and both sample rates are 0,
-because a shared letter is decrypted in the page and a replay would film it.
+There is **no session replay**. It was removed on 2026-11-27 (`DECISIONS.md`): its
+recorder watched the page on every signed-in session, and with note text masked and
+cards and the editor blocked, a replay showed little. The build fails if its code
+returns (`scripts/check-bundle-budget.mjs`).
 
 **What Sentry can still receive:** the shape of an error, a stack trace, the route
 name, the browser and OS, and a user id when one is set. Not note text, not a

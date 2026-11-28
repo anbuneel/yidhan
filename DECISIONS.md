@@ -19,6 +19,29 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-27 — Session Replay is removed
+
+**Status:** Active
+
+**Why:** `replaysOnErrorSampleRate: 1.0` kept Replay's recorder attached on every
+signed-in session, so an error could be replayed; the 10% session rate only decided what
+was uploaded. That is a DOM observer running while the reader types, and a 38.7 KB gzip
+chunk (120.7 KB raw) parsed on every signed-in load. Note text was masked and the cards
+and the editor were blocked, so a replay showed little. The shell-size plan (item D2)
+measured this; the owner chose to drop it.
+
+**Decision:** No Session Replay. The integration, `src/utils/sentryReplay.ts`, its sample
+rates, its chunk and the app-shell-started signal that only it used are gone. Error
+reporting is unchanged: Sentry still loads after `load` on every route, the scrubbers run
+on every event and breadcrumb, and errors thrown before Sentry loads are queued and sent
+once it does. The bundle check fails if Replay's recorder (rrweb) is in any chunk.
+
+**Rejected:** Lowering `replaysOnErrorSampleRate`. Any rate above zero keeps the recorder
+attached on every session, which is the cost. Keeping Replay because the app-shell
+budget never counted it: it still downloaded and ran on every signed-in load.
+
+---
+
 ## 2026-11-27 — Docs may name a model again
 
 **Status:** Active
@@ -866,7 +889,8 @@ documents — they serve only visitors who cannot run the worker.
 
 ## 2026-11-08 — Session Replay waits for the app shell; a budget at its target is capped there
 
-**Status:** Active
+**Status:** Superseded in part by 2026-11-27, "Session Replay is removed". The Replay half
+no longer applies; the rule that caps a budget at its target still stands.
 
 **Why:** Item 61 step 5 split the landing page and the public pages into a public shell
 that loads no Supabase. With that done, the landing still requested 329 KB before

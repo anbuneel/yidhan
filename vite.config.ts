@@ -58,9 +58,6 @@ export default defineConfig({
           ) {
             return 'vendor-tiptap'
           }
-          // Replay apart from the rest of Sentry: it is imported later, on its own
-          // (src/utils/sentryReplay.ts), and never on shared-note routes.
-          if (/\/node_modules\/@sentry-internal\/replay(-canvas)?\//.test(id)) return 'vendor-sentry-replay'
           if (/\/node_modules\/@sentry(-internal)?\//.test(id)) return 'vendor-sentry'
           return undefined
         },

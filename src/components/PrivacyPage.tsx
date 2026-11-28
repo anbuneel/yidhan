@@ -154,7 +154,7 @@ export function PrivacyPage({
                   Yidhan uses Sentry for error tracking to help us find and fix bugs. Sentry receives crash reports and basic performance data. It does not receive your note content; encrypted fields are stripped before any data reaches Sentry.
                 </p>
                 <p>
-                  Session replay (if sampled) masks all text and blocks note card elements to prevent accidental capture of decrypted content.
+                  Sentry does not record sessions. There is no session replay, so it never sees what is on your screen.
                 </p>
               </div>
             </section>

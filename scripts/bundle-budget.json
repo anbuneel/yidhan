@@ -24,7 +24,7 @@
   "appShellJs": {
     "limitKB": 330,
     "targetKB": 330,
-    "measures": "JS to render the unlocked library, Editor excluded (gzip): the entry path, the app shell (lazy since step 5) and what it imports, and Sentry, which loads after load since step 2; Replay is not counted",
+    "measures": "JS to render the unlocked library, Editor excluded (gzip): the entry path, the app shell (lazy since step 5) and what it imports, and Sentry, which loads after load since step 2. Session Replay was removed (shell-size plan D2)",
     "reachesTargetWith": "step 7 (reached: 325.4 KB)"
   },
   "largestChunk": {

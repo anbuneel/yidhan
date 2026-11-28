@@ -6,28 +6,18 @@ const config = { dsn: 'https://k@example.invalid/1', environment: 'test' };
 
 describe('sentryOptions', () => {
   it('uses the scrubbers as beforeSend and beforeBreadcrumb', () => {
-    const options = sentryOptions({ ...config, isSharedRoute: false });
+    const options = sentryOptions(config);
     expect(options.beforeSend).toBe(scrubEvent);
     expect(options.beforeBreadcrumb).toBe(scrubBreadcrumb);
   });
 
-  it('keeps the scrubbers on shared routes too', () => {
-    const options = sentryOptions({ ...config, isSharedRoute: true });
-    expect(options.beforeSend).toBe(scrubEvent);
-    expect(options.beforeBreadcrumb).toBe(scrubBreadcrumb);
-  });
-
-  it('never configures Replay at init, and samples none on shared routes', () => {
-    const shared = sentryOptions({ ...config, isSharedRoute: true });
-    const names = (shared.integrations as { name: string }[]).map((integration) => integration.name);
+  // Shell-size plan D2: no Session Replay, on any route.
+  it('configures no Replay integration and no replay sampling', () => {
+    const options = sentryOptions(config);
+    const names = (options.integrations as { name: string }[]).map((integration) => integration.name);
     expect(names).not.toContain('Replay');
-    expect(shared.replaysSessionSampleRate).toBe(0);
-    expect(shared.replaysOnErrorSampleRate).toBe(0);
-
-    const app = sentryOptions({ ...config, isSharedRoute: false });
-    expect((app.integrations as { name: string }[]).map((integration) => integration.name)).not.toContain('Replay');
-    expect(app.replaysSessionSampleRate).toBe(0.1);
-    expect(app.replaysOnErrorSampleRate).toBe(1);
+    expect(options.replaysSessionSampleRate).toBeUndefined();
+    expect(options.replaysOnErrorSampleRate).toBeUndefined();
   });
 });
 

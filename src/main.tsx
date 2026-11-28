@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Root } from './shells/Root'
-import { appShellStarted } from './shells/appShellStarted'
 import { isChunkLoadError, reloadForUpdatedApp } from './utils/updateRecovery'
 import {
   activateWaitingUpdate,
@@ -47,15 +46,11 @@ void registerServiceWorker()
 // that still carry them.
 void removeLegacyRuntimeCaches()
 
-// Error monitoring, only with a DSN configured. Waits for `load`; Replay follows in
-// its own chunk once the app shell has started, and is never loaded on shared-note
-// routes (/s/*).
+// Error monitoring, only with a DSN configured. Waits for `load`.
 if (sentryDsn) {
   void startMonitoring({
     dsn: sentryDsn,
     environment: import.meta.env.MODE,
-    pathname: window.location.pathname,
-    replayAfter: appShellStarted,
   })
 }
 

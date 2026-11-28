@@ -45,7 +45,10 @@ const read = (file) => readFileSync(path.join(distDir, file), 'utf8');
 // A build without VITE_SENTRY_DSN folds `if (sentryDsn)` to false and drops Sentry,
 // which takes about 78 KB gzip out of the entry path. Measuring that bundle would pass
 // by accident. Production always sets a DSN, so CI must build with a dummy one.
-const sentryBuiltIn = allJs.some((file) => read(file).includes('"BrowserTracing"'));
+// `sentry_key` is the DSN parameter Sentry's transport sends: present in any build
+// that reports errors, whatever integrations it has.
+const SENTRY_MARKER = 'sentry_key';
+const sentryBuiltIn = allJs.some((file) => read(file).includes(SENTRY_MARKER));
 if (!sentryBuiltIn) {
   const message =
     'Sentry is not in this build, so the JS budgets would measure the wrong bundle. ' +
@@ -80,8 +83,7 @@ if (sentryBuiltIn) {
   // The unlocked library renders from the entry closure, the app shell
   // (src/shells/AppShell.tsx, lazy since step 5) and what it imports, plus Sentry,
   // which loads after `load` since step 2 (src/utils/sentryClient.ts and what it
-  // imports). Replay stays out: it is deferred further. The Editor is a lazy chunk of
-  // its own and is not counted.
+  // imports). The Editor is a lazy chunk of its own and is not counted.
   const sentryClient = allJs.filter((file) => /^assets\/sentryClient-/.test(file));
   const appShellChunk = allJs.filter((file) => /^assets\/AppShell-/.test(file));
   assert.equal(appShellChunk.length, 1, `Expected one AppShell chunk, found ${appShellChunk.join(', ') || 'none'}`);
@@ -160,11 +162,22 @@ requireThat(
 // Step 2: Sentry loads after `load`, from src/utils/monitoring.ts. A static import of
 // @sentry/react anywhere in the entry path brings all of it back.
 if (sentryBuiltIn) {
-  const sentryInEntry = entry.closure.filter((file) => /BrowserTracing|replay_event/.test(read(file)));
+  const sentryInEntry = entry.closure.filter((file) => read(file).includes(SENTRY_MARKER));
   requireThat(
     'Sentry not in the entry closure',
     sentryInEntry.length === 0,
     `Sentry is in the entry path (${sentryInEntry.join(', ')}); report through src/utils/monitoring.ts, not @sentry/react`
+  );
+}
+
+// Shell-size plan D2: Session Replay was removed. Its recorder (rrweb) must not come
+// back in any chunk, lazy or not.
+{
+  const replayChunks = allJs.filter((file) => read(file).includes('rrweb'));
+  requireThat(
+    'no Session Replay in any chunk',
+    replayChunks.length === 0,
+    `Session Replay code is in the build (${replayChunks.join(', ')}); it was removed on purpose (DECISIONS.md, 2026-11-27)`
   );
 }
 

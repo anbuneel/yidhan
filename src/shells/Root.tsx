@@ -16,7 +16,6 @@ import { Auth, DemoPage, NotFoundPage } from '../components/entryScreenChunks';
 import { LoadingFallback } from '../components/LoadingFallback';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { parseRoute } from '../routing/routes';
-import { markAppShellStarted } from './appShellStarted';
 import { PublicShell, type AppStart } from './PublicShell';
 
 const AppShell = lazyWithRetry(() => import('./AppShell'));
@@ -42,9 +41,6 @@ export function Root() {
   );
 
   const started = start !== null;
-  useEffect(() => {
-    if (started) markAppShellStarted();
-  }, [started]);
 
   // A load that starts in the app shell (a direct visit to /demo, a 404, a recovery
   // link) warms its screen at once. Later starts warm it in startApp.

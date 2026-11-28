@@ -131,37 +131,17 @@ export function disableReporting(): void {
 interface MonitoringConfig {
   dsn: string;
   environment: string;
-  pathname: string;
-  /**
-   * Replay waits for this as well as for init. main.tsx passes the moment the app
-   * shell starts (src/shells/appShellStarted.ts): an anonymous visit to the public
-   * pages never loads Replay's 39 KB (item 61, step 5). Default: at once.
-   */
-  replayAfter?: Promise<unknown>;
 }
 
 /**
- * Load and initialise Sentry after `load`, then Replay. Replay is never imported on a
- * shared-note route (`/s/*`): those pages show decrypted content.
+ * Load and initialise Sentry after `load`. Error reporting only: Session Replay was
+ * removed (shell-size plan D2, DECISIONS.md 2026-11-27).
  */
-export async function startMonitoring({
-  dsn,
-  environment,
-  pathname,
-  replayAfter,
-}: MonitoringConfig): Promise<void> {
-  const isSharedRoute = pathname.startsWith('/s/');
+export async function startMonitoring({ dsn, environment }: MonitoringConfig): Promise<void> {
   try {
     await whenPageLoaded();
     const sentry = await import('./sentryClient');
-    attachReporter(sentry.startSentry({ dsn, environment, isSharedRoute }));
-    if (isSharedRoute) return;
-    await replayAfter;
-    // Asked again: Replay can start well after page load, and the app shell can start
-    // on a navigation to a shared note (Back from `/` to `/s/...`).
-    if (window.location.pathname.startsWith('/s/')) return;
-    const { createReplayIntegration } = await import('./sentryReplay');
-    sentry.addIntegration(createReplayIntegration());
+    attachReporter(sentry.startSentry({ dsn, environment }));
   } catch (error) {
     // Monitoring must never break the app. If Sentry itself did not load, there is
     // nothing to report to; keep holding nothing.
