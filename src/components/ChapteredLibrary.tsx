@@ -23,8 +23,8 @@ import { scrollRegionProps } from '../routing';
 /** A locked card without a retry wired up simply does nothing on click. */
 const noop = () => undefined;
 
-// Mobile breakpoint matching masonry grid (700px)
-const MOBILE_BREAKPOINT = 700;
+// Mobile breakpoint matching masonry grid (< 700px)
+const COMPACT_VIEWPORT_QUERY = '(max-width: 699px)';
 
 interface ChapteredLibraryProps {
   footerRef?: RefObject<HTMLElement | null>;
@@ -124,20 +124,35 @@ function ChapteredLibraryView({
   onBasisChange,
   onSortChange,
 }: ChapteredLibraryProps) {
-  // Auto-detect compact mode based on viewport width (mobile = compact)
+  // Auto-detect compact mode via matchMedia (avoids resize churn when mobile browser chrome hides)
   const [isCompact, setIsCompact] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth < MOBILE_BREAKPOINT;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false;
+    }
+    return window.matchMedia(COMPACT_VIEWPORT_QUERY).matches;
   });
 
-  // Update compact mode on viewport resize
   useEffect(() => {
-    const handleResize = () => {
-      setIsCompact(window.innerWidth < MOBILE_BREAKPOINT);
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+    const mediaQuery = window.matchMedia(COMPACT_VIEWPORT_QUERY);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsCompact(event.matches);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+    if (typeof mediaQuery.addListener === 'function') {
+      mediaQuery.addListener(handleChange);
+      return () => {
+        if (typeof mediaQuery.removeListener === 'function') {
+          mediaQuery.removeListener(handleChange);
+        }
+      };
+    }
   }, []);
 
   // Detect touch capability for pull-to-refresh

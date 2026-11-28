@@ -1,63 +1,74 @@
 import { useState, useEffect } from 'react';
 
+const NARROW_VIEWPORT_QUERY = '(max-width: 767px)';
+const COARSE_POINTER_QUERY = '(pointer: coarse)';
+
+function addMediaQueryListener(
+  mediaQuery: MediaQueryList,
+  listener: () => void
+): () => void {
+  if (typeof mediaQuery.addEventListener === 'function') {
+    mediaQuery.addEventListener('change', listener);
+    return () => mediaQuery.removeEventListener('change', listener);
+  }
+  if (typeof mediaQuery.addListener === 'function') {
+    // Fallback for older Safari (iOS < 14)
+    mediaQuery.addListener(listener);
+    return () => {
+      if (typeof mediaQuery.removeListener === 'function') {
+        mediaQuery.removeListener(listener);
+      }
+    };
+  }
+  return () => {};
+}
+
+function detectTouchCapable(): boolean {
+  return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+}
+
 /**
  * Hook to detect if the user is on a mobile/touch device.
  *
  * Uses multiple signals for reliable detection:
  * - Touch capability (primary indicator)
- * - Viewport width (secondary)
+ * - Viewport width via matchMedia (secondary — avoids resize churn from mobile URL bars)
  * - Pointer type (CSS media query)
  *
  * Returns true for phones and tablets, false for desktop.
  */
 export function useMobileDetect(): boolean {
   const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false;
+    }
 
-    // Check for touch capability
-    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const hasTouch = detectTouchCapable();
+    const isNarrow = window.matchMedia(NARROW_VIEWPORT_QUERY).matches;
+    const hasCoarsePointer = window.matchMedia(COARSE_POINTER_QUERY).matches;
 
-    // Check viewport width (768px is common tablet/mobile breakpoint)
-    const isNarrow = window.innerWidth < 768;
-
-    // Coarse pointer indicates touch (vs fine = mouse)
-    const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
-
-    // Consider mobile if touch capable AND (narrow OR coarse pointer)
     return hasTouch && (isNarrow || hasCoarsePointer);
   });
 
   useEffect(() => {
-    const checkMobile = () => {
-      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      const isNarrow = window.innerWidth < 768;
-      const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
-
-      setIsMobile(hasTouch && (isNarrow || hasCoarsePointer));
-    };
-
-    // Check on resize (handles orientation changes)
-    window.addEventListener('resize', checkMobile);
-
-    // Check on pointer type change (handles laptop with touch screen)
-    const mediaQuery = window.matchMedia('(pointer: coarse)');
-
-    // Use addEventListener with fallback to deprecated addListener for older Safari
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', checkMobile);
-    } else if (mediaQuery.addListener) {
-      // Fallback for older Safari (iOS < 14)
-      mediaQuery.addListener(checkMobile);
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
     }
 
+    const narrowQuery = window.matchMedia(NARROW_VIEWPORT_QUERY);
+    const coarseQuery = window.matchMedia(COARSE_POINTER_QUERY);
+
+    const checkMobile = () => {
+      const hasTouch = detectTouchCapable();
+      setIsMobile(hasTouch && (narrowQuery.matches || coarseQuery.matches));
+    };
+
+    const detachNarrow = addMediaQueryListener(narrowQuery, checkMobile);
+    const detachCoarse = addMediaQueryListener(coarseQuery, checkMobile);
+
     return () => {
-      window.removeEventListener('resize', checkMobile);
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', checkMobile);
-      } else if (mediaQuery.removeListener) {
-        // Fallback for older Safari
-        mediaQuery.removeListener(checkMobile);
-      }
+      detachNarrow();
+      detachCoarse();
     };
   }, []);
 
