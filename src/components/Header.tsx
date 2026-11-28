@@ -3,6 +3,7 @@ import type { Theme } from '../types';
 import { HeaderShell, type MenuSectionConfig } from './HeaderShell';
 import { SyncIndicator } from './SyncIndicator';
 import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
+import { signalSearchIntent } from '../utils/miniSearchRuntime';
 
 const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 const modKey = isMac ? '\u2318' : 'Ctrl+';
@@ -52,6 +53,7 @@ export function Header({
     }
 
     lastHandledSearchFocusToken = searchFocusToken;
+    signalSearchIntent();
 
     const frame = window.requestAnimationFrame(() => {
       scheduleSearchFocus(LIBRARY_SEARCH_INPUT_ID);
@@ -152,7 +154,10 @@ export function Header({
                 e.currentTarget.blur();
               }
             }}
-            onFocus={() => setIsSearchFocused(true)}
+            onFocus={() => {
+              setIsSearchFocused(true);
+              signalSearchIntent();
+            }}
             onBlur={() => setIsSearchFocused(false)}
             placeholder="Search notes..."
             className="flex-1 bg-transparent border-none outline-none text-sm min-w-0"

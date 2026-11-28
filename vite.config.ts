@@ -53,6 +53,10 @@ export default defineConfig({
           // first-visit spec can see by name that the landing never requests it (item
           // 61, step 5).
           if (id.includes('/node_modules/dexie/')) return 'vendor-dexie'
+          // Loaded with import() by src/utils/miniSearchRuntime.ts after first paint or
+          // on search focus (shell-size plan A4); named so the budget check and first-visit
+          // spec can assert it stays off the boot path.
+          if (id.includes('/node_modules/minisearch/')) return 'vendor-minisearch'
           // Loaded with import() by src/lib/argon2.ts on the first key derivation; named
           // so the budget check can assert the app shell never imports it statically.
           if (id.includes('/node_modules/hash-wasm/')) return 'vendor-hash-wasm'

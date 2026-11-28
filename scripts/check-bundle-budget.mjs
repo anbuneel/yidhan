@@ -102,6 +102,23 @@ if (sentryBuiltIn) {
   check(`largest JS chunk (gzip, ${largest.file})`, largest.bytes, budget.largestChunk);
 }
 
+// Shell-size plan A4: MiniSearch loads lazily after the library paints or on
+// search focus, never statically in the app shell. Named in manualChunks so any
+// accidental static import fails the build by file name.
+{
+  const appShellChunk = allJs.filter((file) => /^assets\/AppShell-/.test(file));
+  const appShellPath = new Set([...entry.closure, ...staticClosure(distDir, appShellChunk)]);
+  const miniSearchChunks = allJs.filter((file) => /^assets\/vendor-minisearch-/.test(file));
+  const miniSearchInAppShell = [...appShellPath].filter((file) => miniSearchChunks.includes(file));
+  requireThat(
+    'MiniSearch not in the app-shell closure',
+    miniSearchChunks.length === 1 && miniSearchInAppShell.length === 0,
+    miniSearchChunks.length !== 1
+      ? `Expected one vendor-minisearch chunk, found ${miniSearchChunks.join(', ') || 'none'}`
+      : `MiniSearch is in the app shell's static path (${miniSearchInAppShell.join(', ')}); load it through src/utils/miniSearchRuntime.ts`
+  );
+}
+
 // Step 7: hash-wasm loads inside key derivation (src/lib/argon2.ts), not with the
 // app shell. Every hash-wasm module goes to one named chunk (manualChunks in
 // vite.config.ts), so a static import anywhere in the app shell's path shows up

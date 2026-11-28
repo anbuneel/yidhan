@@ -1,3 +1,5 @@
+import { signalSearchIntent } from './miniSearchRuntime';
+
 export const LIBRARY_SEARCH_INPUT_ID = 'library-search-input';
 export const DEMO_SEARCH_INPUT_ID = 'demo-search-input';
 
@@ -12,6 +14,8 @@ function focusSearchInput(inputId: string): boolean {
 }
 
 export function scheduleSearchFocus(inputId: string): void {
+  signalSearchIntent();
+
   if (typeof window === 'undefined') {
     return;
   }

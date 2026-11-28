@@ -925,3 +925,11 @@ export function useEncryption() {
   }
   return context;
 }
+
+/**
+ * The encryption context where there may be none (such as isolated hook tests).
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useOptionalEncryption(): EncryptionContextType | null {
+  return use(EncryptionContext) ?? null;
+}

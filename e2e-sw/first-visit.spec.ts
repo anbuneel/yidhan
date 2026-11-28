@@ -37,6 +37,8 @@ const SENTRY_CHUNK = /\/assets\/(vendor-sentry|sentryClient)[-.]/;
 const REPLAY_CHUNK = /\/assets\/[^/]*replay[^/]*\.js$/i;
 /** The app shell and the two vendor chunks only it imports (step 5). */
 const APP_CHUNK = /\/assets\/(AppShell|vendor-supabase|vendor-dexie)-/;
+/** MiniSearch loads lazily after paint or on search intent (shell-size plan A4). */
+const MINISEARCH_CHUNK = /\/assets\/vendor-minisearch-/;
 
 interface Budget {
   landingJsBeforeLoad: { limitKB: number };
@@ -174,6 +176,10 @@ test.describe('first visit', () => {
       requestedAfterLoad().filter((url) => APP_CHUNK.test(url)),
       'Supabase, Dexie or app-shell chunks fetched by an anonymous landing visit'
     ).toEqual([]);
+    expect(
+      untilIdle.map((r) => new URL(r.url()).pathname).filter((url) => MINISEARCH_CHUNK.test(url)),
+      'MiniSearch fetched on the landing page'
+    ).toEqual([]);
 
     // Step 6: registration waits for load, and the worker fetched nothing before it.
     await expect
@@ -226,6 +232,10 @@ test.describe('first visit', () => {
         .toBe(1);
       await page.waitForLoadState('networkidle');
       expect(scripts.filter((url) => REPLAY_CHUNK.test(url)), `Replay requested on ${route}`).toEqual([]);
+      expect(
+        scripts.filter((url) => MINISEARCH_CHUNK.test(url)),
+        `MiniSearch requested on ${route} before search is used`
+      ).toEqual([]);
     });
   }
 
@@ -273,6 +283,7 @@ test.describe('first visit', () => {
       .toBe(1);
     await page.waitForLoadState('networkidle');
     expect(scripts.filter((url) => REPLAY_CHUNK.test(url)), 'Replay requested on /s/*').toEqual([]);
+    expect(scripts.filter((url) => MINISEARCH_CHUNK.test(url)), 'MiniSearch requested on /s/*').toEqual([]);
   });
 
   test('the landing, the library and the changelog open offline', async ({ page, context }) => {

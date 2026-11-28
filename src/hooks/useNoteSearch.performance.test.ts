@@ -1,6 +1,7 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { createMockNote } from '../test/factories';
+import { loadMiniSearch, signalSearchIntent } from '../utils/miniSearchRuntime';
 import { useNoteSearch } from './useNoteSearch';
 
 // DOM sanitization is item 11's existing plaintext-cache cost. This fixture measures
@@ -34,13 +35,17 @@ function percentile(samples: number[], percentileRank: number): number {
 // turning unrelated CPU-heavy tests into search benchmark noise.
 const performanceTest = process.env.RUN_SEARCH_BENCHMARK === '1' ? it : it.skip;
 
-performanceTest('keeps 10k-note free-text search below the 200 ms p95 budget on the main thread', () => {
+performanceTest('keeps 10k-note free-text search below the 200 ms p95 budget on the main thread', async () => {
+  await loadMiniSearch();
   const notes = generateBenchmarkNotes(10_000);
-  const buildStarted = performance.now();
   const { result, rerender } = renderHook(
-    ({ items, query }) => useNoteSearch(items, query),
+    ({ items, query }) => useNoteSearch(items, query, { preloadOnIdle: false }),
     { initialProps: { items: notes, query: '' } }
   );
+  const buildStarted = performance.now();
+  act(() => {
+    signalSearchIntent();
+  });
   const initialBuildMs = performance.now() - buildStarted;
   expect(result.current).toBe(notes);
 
