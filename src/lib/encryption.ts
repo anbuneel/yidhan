@@ -20,7 +20,7 @@
  * All binary data is stored/transmitted as base64 strings.
  */
 
-import { argon2id } from './argon2';
+import { deriveArgon2id } from './argon2';
 import { fromBase64, fromBase64Url, toBase64, toBase64Url } from './base64';
 
 // Re-exported so existing callers keep one import. Code on the landing path imports
@@ -183,25 +183,19 @@ export async function deriveKeys(
   const keySalt = salt ?? crypto.getRandomValues(new Uint8Array(SALT_LENGTH_BYTES));
 
   // Argon2id: 64-byte output
-  const hashHex = await argon2id({
+  const hashBytes = await deriveArgon2id({
     password: passphrase,
     salt: keySalt,
     parallelism: ARGON2_PARAMS.parallelism,
     iterations: ARGON2_PARAMS.iterations,
     memorySize: ARGON2_PARAMS.memorySize,
     hashLength: ARGON2_PARAMS.hashLength,
-    outputType: 'hex',
   });
-
-  // Convert hex to bytes
-  const hashBytes = new Uint8Array(64);
-  for (let i = 0; i < 64; i++) {
-    hashBytes[i] = parseInt(hashHex.substring(i * 2, i * 2 + 2), 16);
-  }
 
   // Split: first 32 bytes → AES key, last 32 bytes → HMAC key
   const encKeyRaw = hashBytes.slice(0, 32);
   const hmacKeyRaw = hashBytes.slice(32, 64);
+  hashBytes.fill(0);
 
   // Import as non-extractable CryptoKeys
   const encryptionKey = await importAesKey(encKeyRaw);

@@ -28,7 +28,7 @@ import { readRecoveryWrap, readVaultMetadata } from '../lib/vaultMetadata';
 import type { VaultMetadata } from '../lib/vaultMetadata';
 import { addReliabilityBreadcrumb, reportReliabilityIssue } from '../utils/reliabilityTelemetry';
 import { migrationInFlight } from './vaultUnlock';
-import { KdfLoadError } from '../lib/argon2';
+import { KdfCancelledError, KdfLoadError } from '../lib/argon2';
 
 /**
  * Why a recovery-kit step did not finish. The UI turns the code into copy.
@@ -229,7 +229,10 @@ export async function prepareRecoveryKit({
 }
 
 /** Report a failure without the error's own text when it is ours, and return a `RecoveryKitError`. */
-function reportKitError(message: string, source: string, err: unknown): RecoveryKitError {
+function reportKitError(message: string, source: string, err: unknown): RecoveryKitError | KdfCancelledError {
+  // A lock, sign-out or account switch stopped the derivation. Not a failure:
+  // nothing to report, and the caller shows nothing.
+  if (err instanceof KdfCancelledError) return err;
   // A key-derivation chunk that did not load while offline is the offline case.
   const code = err instanceof RecoveryKitError
     ? err.code

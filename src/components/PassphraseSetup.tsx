@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useEncryption } from '../contexts/EncryptionContext';
 import type { AccountSetup } from '../contexts/EncryptionContext';
 import type { DerivedKeys } from '../lib/encryption';
+import { KdfCancelledError } from '../lib/argon2';
 import { GENERATED_PASSPHRASE_WORDS, generatePassphrase } from '../lib/passphraseGenerator';
 import { createEncryptedNote } from '../services/encryptedNotes';
 import {
@@ -181,6 +182,8 @@ export function PassphraseSetup() {
       setupRef.current = setup;
       setStep('recovery');
     } catch (err) {
+      // A lock or sign-out stopped it. Not an error to show.
+      if (err instanceof KdfCancelledError) return;
       if (mountedRef.current) {
         setError(err instanceof Error ? err.message : 'Setup didn’t start. Try again.');
       }

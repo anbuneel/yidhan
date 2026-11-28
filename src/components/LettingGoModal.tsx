@@ -11,6 +11,7 @@ import {
   exportFullAccountData,
 } from '../utils/exportImport';
 import { buildBackupFilename, createEncryptedBackup } from '../utils/encryptedBackup';
+import { KdfCancelledError } from '../lib/argon2';
 import { BackupPassphraseModal } from './BackupPassphraseModal';
 import { fetchAllNoteShares } from '../services/notes';
 import type { Note, Tag } from '../types';
@@ -134,6 +135,8 @@ export function LettingGoModal({ isOpen, onClose, notes, tags }: LettingGoModalP
       setShowBackupPassphrase(false);
       toast.success('Encrypted backup saved');
     } catch (error) {
+      // The vault locked while the key was derived. Nothing was saved; say nothing.
+      if (error instanceof KdfCancelledError) return;
       console.error('Failed to create encrypted backup:', error);
       toast.error('Failed to create the encrypted backup. Please try again.');
     } finally {

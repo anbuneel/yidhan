@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase';
 import { KEY_CHECK_VERSION, createKeyCheck, deriveKeys, verifyKeyCheck } from '../lib/encryption';
 import type { DerivedKeys, KeyCheckVersion } from '../lib/encryption';
 import { buildMigratedVault, copyMasterKey, unlockVault } from '../lib/vaultKey';
+import { KdfCancelledError } from '../lib/argon2';
 import { parseKeyCheckVersion, readRecoveryWrap, readVaultMetadata } from '../lib/vaultMetadata';
 
 export { selectKeyCheck } from '../lib/vaultMetadata';
@@ -54,8 +55,8 @@ async function migrateToWrappedKey({
   legacyKeyCheck,
 }: MigrationOptions): Promise<boolean> {
   try {
-    // The KEK derivation is a full Argon2id run on the main thread. Let the
-    // unlocked library paint first.
+    // The KEK derivation is a full Argon2id run, in a worker where one is
+    // available. Let the unlocked library paint first either way.
     await waitForIdle();
 
     const vault = await buildMigratedVault({ passphrase, master, legacySalt, userId, legacyKeyCheck });
@@ -111,6 +112,8 @@ async function migrateToWrappedKey({
     });
     return true;
   } catch (err) {
+    // A lock or sign-out stopped the KEK derivation. The next unlock retries.
+    if (err instanceof KdfCancelledError) return false;
     reportReliabilityIssue({
       category: 'vault',
       message: 'Vault migration to wrapped master key failed',

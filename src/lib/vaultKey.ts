@@ -16,7 +16,7 @@
  * entry chunk carries only `vaultMetadata.ts`.
  */
 
-import { argon2id } from './argon2';
+import { deriveArgon2id } from './argon2';
 import {
   ARGON2_PARAMS,
   KEY_CHECK_VERSION,
@@ -129,14 +129,13 @@ export async function deriveKekBytes(passphrase: string, kekSalt: Uint8Array): P
   if (kekSalt.length !== KEK_SALT_LENGTH_BYTES) {
     throw new Error(`Invalid KEK salt length: expected ${KEK_SALT_LENGTH_BYTES}, got ${kekSalt.length}`);
   }
-  return argon2id({
+  return deriveArgon2id({
     password: passphrase,
     salt: kekSalt,
     parallelism: KEK_ARGON2_PARAMS.parallelism,
     iterations: KEK_ARGON2_PARAMS.iterations,
     memorySize: KEK_ARGON2_PARAMS.memorySize,
     hashLength: KEK_ARGON2_PARAMS.hashLength,
-    outputType: 'binary',
   });
 }
 

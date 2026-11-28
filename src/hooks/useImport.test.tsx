@@ -66,6 +66,40 @@ describe('useImport when the import code cannot load', () => {
     expect(result.current.backupRestore.isBusy).toBe(false);
   });
 
+  /** The backup code loads, and opening the file throws `error`. */
+  async function openBackupThatThrows(error: Error) {
+    const { result } = hook();
+    await act(async () => {
+      await result.current.handleImportFile(new File(['{}'], 'notes.yidhan'));
+    });
+    class BackupFormatError extends Error {}
+    class BackupPassphraseError extends Error {}
+    loadOnDemand
+      .mockImplementationOnce(() => Promise.resolve({
+        openEncryptedBackup: () => Promise.reject(error),
+        BackupFormatError,
+        BackupPassphraseError,
+      }) as never)
+      .mockImplementationOnce(() => Promise.resolve({ readFileAsText: async () => '{}' }) as never);
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    act(() => result.current.backupRestore.onSubmit('a long passphrase'));
+    await waitFor(() => expect(result.current.backupRestore.isBusy).toBe(false));
+    consoleSpy.mockRestore();
+    return result;
+  }
+
+  it('says what a malformed key-derivation result means, instead of a bare failure', async () => {
+    const { KdfResultError } = await import('../lib/argon2');
+    const result = await openBackupThatThrows(new KdfResultError());
+    expect(result.current.backupRestore.error).toBe(new KdfResultError().message);
+  });
+
+  it('shows nothing when a lock cancelled the derivation', async () => {
+    const { KdfCancelledError } = await import('../lib/argon2');
+    const result = await openBackupThatThrows(new KdfCancelledError());
+    expect(result.current.backupRestore.error).toBeNull();
+  });
+
   it('turns away an oversized file before loading any code', async () => {
     const { result } = hook();
     toastError.mockClear();

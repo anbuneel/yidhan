@@ -52,7 +52,7 @@ vi.mock('../utils/reliabilityTelemetry', () => ({
 // missing hash-wasm chunk does (item 61, step 7).
 vi.mock('../lib/argon2', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lib/argon2')>();
-  return { ...actual, argon2id: vi.fn(actual.argon2id) };
+  return { ...actual, deriveArgon2id: vi.fn(actual.deriveArgon2id) };
 });
 
 import { EncryptionProvider, useEncryption } from './EncryptionContext';
@@ -61,7 +61,7 @@ import { createKeyCheck, decryptNote, deriveKeys, encryptNote, toBase64, verifyK
 import type { DerivedKeys, EncryptedNote } from '../lib/encryption';
 import { buildMigratedVault, copyMasterKey } from '../lib/vaultKey';
 import { readVaultMetadata } from '../lib/vaultMetadata';
-import { argon2id, KdfLoadError } from '../lib/argon2';
+import { deriveArgon2id, KdfCancelledError, KdfLoadError } from '../lib/argon2';
 import type { VaultMetadata } from '../lib/vaultMetadata';
 
 const PASSPHRASE = 'correct horse battery staple 42';
@@ -637,12 +637,39 @@ describe('recovery kit (item 26)', () => {
   });
 });
 
+describe('a cancelled derivation (shell-size plan C1)', () => {
+  it('saving a new passphrase after recovery: rethrown as a cancellation, not reported, nothing written', async () => {
+    const app = openApp();
+    await act(async () => { await h.ctx.unlockWithPassphrase(PASSPHRASE); });
+    const recoveryKey = await makeKit();
+    act(() => h.ctx.lockVault('manual'));
+    refreshAuth(app);
+    let status = '';
+    await act(async () => { status = await h.ctx.unlockWithRecoveryKey(recoveryKey); });
+    expect(status).toBe('ok');
+    const vaultBefore = JSON.stringify(server.vault);
+    mockReportReliabilityIssue.mockClear();
+
+    // What a lock mid-derivation makes deriveArgon2id throw.
+    vi.mocked(deriveArgon2id).mockRejectedValueOnce(new KdfCancelledError());
+    let failure: unknown;
+    await act(async () => {
+      await h.ctx.setPassphraseAfterRecovery(NEW_PASSPHRASE).catch((err: unknown) => { failure = err; });
+    });
+    expect(failure).toBeInstanceOf(KdfCancelledError);
+    expect(mockReportReliabilityIssue).not.toHaveBeenCalled();
+    expect(JSON.stringify(server.vault)).toBe(vaultBefore);
+    expect(h.ctx.isUnlocked).toBe(false);
+    app.unmount();
+  }, 30_000);
+});
+
 describe('when the hash-wasm chunk does not load (item 61, step 7)', () => {
   const chunkFailure = () => new KdfLoadError(new TypeError('Failed to fetch dynamically imported module'));
 
   it('a passphrase unlock throws a retryable error, not a wrong passphrase, and the retry unlocks', async () => {
     const app = openApp();
-    vi.mocked(argon2id).mockRejectedValueOnce(chunkFailure());
+    vi.mocked(deriveArgon2id).mockRejectedValueOnce(chunkFailure());
     let failure: unknown;
     await act(async () => {
       await h.ctx.unlockWithPassphrase(PASSPHRASE).then(
@@ -671,7 +698,7 @@ describe('when the hash-wasm chunk does not load (item 61, step 7)', () => {
     expect(status).toBe('ok');
     const writesBefore = mockUpdateUser.mock.calls.length;
 
-    vi.mocked(argon2id).mockRejectedValueOnce(chunkFailure());
+    vi.mocked(deriveArgon2id).mockRejectedValueOnce(chunkFailure());
     let failure: unknown;
     await act(async () => {
       await h.ctx.setPassphraseAfterRecovery(NEW_PASSPHRASE).then(
@@ -688,7 +715,7 @@ describe('when the hash-wasm chunk does not load (item 61, step 7)', () => {
 
     // Offline, the same failure is the offline case, which says nothing changed.
     const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
-    vi.mocked(argon2id).mockRejectedValueOnce(chunkFailure());
+    vi.mocked(deriveArgon2id).mockRejectedValueOnce(chunkFailure());
     await act(async () => {
       await h.ctx.setPassphraseAfterRecovery(NEW_PASSPHRASE).then(
         () => { failure = 'resolved'; },
