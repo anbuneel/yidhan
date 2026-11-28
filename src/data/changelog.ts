@@ -7,6 +7,11 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.27.1', date: '2026-11-27', changes: [
+    { type: 'improvement', text: 'The library opens and scrolls faster when you have long notes. Cards now prepare only the preview they show instead of processing the whole note' },
+    { type: 'improvement', text: 'Returning to the library from a note shows your cards immediately, and search results appear sooner as you type' },
+    { type: 'improvement', text: 'Background tabs no longer poll the offline sync queue every ten seconds; the sync indicator updates as changes happen' },
+  ] },
   { version: '3.27.0', date: '2026-11-27', changes: [
     { type: 'feature', text: 'Start a note from the app icon. In the installed app, long-press or right-click the icon and choose New note. If you are signed out or locked, you sign in or unlock first' },
     { type: 'feature', text: 'Ctrl+Alt+N (Cmd+Option+N on a Mac) starts a new note from inside a note. The note you are in is saved first. In the library, N still does it' },

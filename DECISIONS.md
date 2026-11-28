@@ -19,6 +19,53 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-27 — Defer gesture and spring libraries until after library paint (A1c)
+
+**Status:** Active
+
+**Why:** `@react-spring/web` and `@use-gesture/react` sat inside the static `AppShell`
+chunk (~23 KB gzip / ~62 KB raw), so every cold boot parsed them before the library
+painted, including on phones where parse time dominates. Rewriting all three gesture
+surfaces (`SwipeableNoteCard`, `PullToRefresh`, `BottomSheet`) in Pointer Events and CSS
+risked losing rubber-banding, velocity hand-off and interruptible springs; loading them
+only on touch devices saved nothing on phones.
+
+**Decision:** Keep both libraries and `springMotion.ts`, isolate them behind a single
+dynamic import (`src/utils/gestureBundle.ts`) scheduled strictly after first library
+paint (`src/utils/gestureRuntime.ts`) on every device, and load them immediately only if
+a mobile `BottomSheet` opens first. `PullToRefresh` and `SwipeableNoteCard` bind drag
+listeners to stable wrapper refs once loaded so neither the list nor `NoteCard` remounts.
+Reduced-motion handling through `springMotion.ts` and `Globals.skipAnimation` is unchanged.
+The chunk stays precached for offline use; static `appShellJs` drops by ~20.7 KB gzip
+because only static imports are counted, though those bytes still load after paint.
+
+**Rejected:** Touch-only loading (A1a — no parse-time win on phones). Removing both
+libraries and rewriting in CSS/Pointer Events (A1b — deferred until the timing harness
+shows the post-paint parse is still a bottleneck).
+
+---
+
+## 2026-11-27 — Tighter card stagger and 150 ms library search debounce (C9, C10)
+
+**Status:** Active
+
+**Why:** A 60 ms-per-card stagger capped at 0.6 s made the library feel slow to settle,
+especially when returning from a note or viewing search results. A 300 ms debounce on a
+local in-memory search index added a noticeable pause once `NoteCard` stopped running
+DOMPurify twice per card (C2).
+
+**Decision:** Keep the card entrance stagger on the first library load of a session,
+tightened to 30 ms per card capped at 0.3 s, and skip it on back-navigation (subsequent
+library mounts) and search results. Lower the library search debounce from 300 ms to
+150 ms while keeping query clear immediate and progressive rendering suspended during
+search.
+
+**Rejected:** Removing the first-load stagger altogether (retains the intended first-load
+entrance rhythm). Dropping the search debounce to 0 ms (re-renders every match on every
+keystroke while progressive rendering is suspended).
+
+---
+
 ## 2026-11-27 — Docs may name a model again
 
 **Status:** Active
