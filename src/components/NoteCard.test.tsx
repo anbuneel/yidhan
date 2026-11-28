@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { createMockNote } from '../test/factories';
 import type { NoteDeleteHandler } from '../types';
+import * as sanitize from '../utils/sanitize';
 import { NoteCard } from './NoteCard';
 
 function setPreviewHeight(preview: HTMLElement, clientHeight: number, scrollHeight: number) {
@@ -223,5 +224,89 @@ describe('NoteCard search highlighting', () => {
 
     expect(container.querySelector('mark')).toHaveTextContent('harvest');
     expect(container.querySelector('.search-snippet')).toHaveTextContent('orchard harvest');
+  });
+});
+
+describe('NoteCard sanitization per render mode (C2)', () => {
+  it('does not run htmlToPlainText on a full card outside search, and still sanitises HTML', () => {
+    const plainSpy = vi.spyOn(sanitize, 'htmlToPlainText');
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const note = createMockNote({
+      id: 'c2-full',
+      title: 'Safe title',
+      content: '<p>Visible <strong>text</strong></p><script>window.__xss=1</script><img src="x" onerror="alert(1)" />',
+    });
+
+    const { container } = render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+
+    expect(plainSpy).not.toHaveBeenCalled();
+    expect(htmlSpy).toHaveBeenCalledTimes(1);
+    const preview = container.querySelector('.note-card-preview');
+    expect(preview).toHaveTextContent('Visible text');
+    expect(preview?.querySelector('script')).toBeNull();
+    expect(preview?.querySelector('img')).toBeNull();
+  });
+
+  it('does not run sanitizeHtml on a compact card outside search', () => {
+    const plainSpy = vi.spyOn(sanitize, 'htmlToPlainText');
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const note = createMockNote({
+      id: 'c2-compact',
+      content: '<p>Compact <em>preview</em> text</p>',
+    });
+
+    render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} isCompact />
+    );
+
+    expect(htmlSpy).not.toHaveBeenCalled();
+    expect(plainSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Compact preview text')).toBeInTheDocument();
+  });
+
+  it('does not run sanitizeHtml when a search card renders a content snippet', () => {
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const note = createMockNote({
+      id: 'c2-search',
+      title: 'Notes',
+      content: '<p>Found the <strong>lantern</strong> in the shed.</p>',
+    });
+
+    const { container } = render(
+      <NoteCard
+        note={note}
+        onClick={vi.fn()}
+        onDelete={vi.fn()}
+        onTogglePin={vi.fn()}
+        searchQuery="lantern"
+      />
+    );
+
+    expect(htmlSpy).not.toHaveBeenCalled();
+    expect(container.querySelector('.search-snippet mark')).toHaveTextContent('lantern');
+  });
+
+  it('falls back to sanitized HTML when search matches only the title on a full card', () => {
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const note = createMockNote({
+      id: 'c2-title-only',
+      title: 'Lantern notes',
+      content: '<p>Body without that word.</p>',
+    });
+
+    const { container } = render(
+      <NoteCard
+        note={note}
+        onClick={vi.fn()}
+        onDelete={vi.fn()}
+        onTogglePin={vi.fn()}
+        searchQuery="lantern"
+      />
+    );
+
+    expect(htmlSpy).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('.note-card-preview')).toHaveTextContent('Body without that word.');
   });
 });

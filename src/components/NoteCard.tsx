@@ -58,11 +58,6 @@ export const NoteCard = memo(function NoteCard({
   noteIdRef.current = note.id;
   onDeleteRef.current = onDelete;
 
-  // Plain text for compact mode and search (memoized to avoid repeated DOMPurify calls)
-  const plainText = useMemo(() => htmlToPlainText(note.content), [note.content]);
-  const compactPreview = plainText.slice(0, 80) + (plainText.length > 80 ? '...' : '');
-  // Sanitized HTML preview preserves task list checkboxes, formatting structure
-  const htmlPreview = useMemo(() => sanitizeHtml(note.content), [note.content]);
   const parsedSearchTerms = useMemo(
     () => searchQuery
       ? parseSearchQuery(searchQuery).textTerms.map(({ normalized }) => normalized)
@@ -70,13 +65,37 @@ export const NoteCard = memo(function NoteCard({
     [searchQuery]
   );
   const searchTerms = searchMatchTerms ?? parsedSearchTerms;
+  const hasSearchTerms = searchTerms.length > 0;
+
+  // Run DOMPurify only for what this render mode needs: compact cards and
+  // search results need plain text; full cards without a search snippet need HTML.
+  const needsPlainText = isCompact || hasSearchTerms;
+  const plainText = useMemo(
+    () => (needsPlainText ? htmlToPlainText(note.content) : ''),
+    [needsPlainText, note.content]
+  );
+  const compactPreview = isCompact
+    ? plainText.slice(0, 80) + (plainText.length > 80 ? '...' : '')
+    : '';
+  // Search snippets cover every content match. Operators are metadata filters,
+  // so only the parsed free-text remainder is highlighted.
+  const searchSnippet = useMemo(() => {
+    if (!hasSearchTerms) return null;
+    return buildSearchSnippet(plainText, searchTerms);
+  }, [hasSearchTerms, plainText, searchTerms]);
+  const needsHtmlPreview = !isCompact && !searchSnippet;
+  // Sanitized HTML preview preserves task list checkboxes, formatting structure
+  const htmlPreview = useMemo(
+    () => (needsHtmlPreview ? sanitizeHtml(note.content) : ''),
+    [needsHtmlPreview, note.content]
+  );
   const highlightedTitle = useMemo(() => {
-    if (searchTerms.length === 0) return sanitizeText(note.title);
+    if (!hasSearchTerms) return sanitizeText(note.title);
     return highlightSearchText(htmlToPlainText(note.title), searchTerms);
-  }, [note.title, searchTerms]);
+  }, [hasSearchTerms, note.title, searchTerms]);
 
   useLayoutEffect(() => {
-    if (isCompact) return;
+    if (!needsHtmlPreview) return;
 
     const preview = previewRef.current;
     if (!preview) return;
@@ -93,14 +112,7 @@ export const NoteCard = memo(function NoteCard({
     resizeObserver.observe(preview);
 
     return () => resizeObserver.disconnect();
-  }, [htmlPreview, isCompact]);
-
-  // Search snippets cover every content match. Operators are metadata filters,
-  // so only the parsed free-text remainder is highlighted.
-  const searchSnippet = useMemo(() => {
-    if (searchTerms.length === 0) return null;
-    return buildSearchSnippet(plainText, searchTerms);
-  }, [plainText, searchTerms]);
+  }, [htmlPreview, needsHtmlPreview]);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
