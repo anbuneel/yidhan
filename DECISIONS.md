@@ -19,6 +19,33 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-27 — The mobile bottom sheet owns its springs; it does not use `useSpring`
+
+**Status:** Active
+
+**Why:** On a phone the Settings sheet slid up on its first open after a page load, then
+slid back to `translateY(innerHeight)` and stayed mounted, untappable (PR #312). Logging
+the sheet's spring showed `useSpring` replaying its stored initial props from its own
+layout effect and stopping its controllers in an effect cleanup. When React detached and
+re-attached the sheet's effects, the spring returned to its off-screen start and later
+`start()` calls did not move it. StrictMode does that on every mount in development; in a
+production build it happened on some first opens (1 of 4 runs), trigger not pinned down.
+
+**Decision:** `BottomSheet` renders one plain sheet element whether or not the gesture
+chunk has loaded, and drives its transform and backdrop opacity from two `SpringValue`s
+that its own layout effect creates and stops. A re-attach makes fresh springs from the
+sheet's current position, and the open/close effect sets the target again. This also
+keeps an open sheet's contents mounted when the chunk arrives (review finding F1 on
+PR #310).
+
+**Rejected:** Keeping `useSpring` and re-asserting the target in a layout effect (tried;
+the sheet still stuck off-screen in 1 of 3 dev runs). Disabling StrictMode (hides the
+development symptom, not the production one). Changing `AppModals.tsx` or
+`SettingsModal.tsx` (owned by PR #311, and the sheet should not depend on how its
+parent mounts it).
+
+---
+
 ## 2026-11-27 — Defer gesture and spring libraries until after library paint (A1c)
 
 **Status:** Active

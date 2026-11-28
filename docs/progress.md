@@ -989,9 +989,10 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   uses CSS `:hover` for card elevation instead of JS style handlers (C13), drops animated
   blur from `card-delete` (C15), and replaces `transition-all` with named properties in
   the owned library files (C12). `ChapteredLibrary` and `useMobileDetect` listen to
-  `matchMedia` `change` events instead of `window.resize` (C19). `useSyncStatus` reacts
-  to Dexie `syncQueue` hooks, pauses while `document.hidden`, schedules a targeted 30 s
-  stuck timer, and skips state updates when counts are unchanged (C23). Card entrance
+  `matchMedia` `change` events instead of `window.resize` (C19). `useSyncStatus` follows
+  the queue through a Dexie `liveQuery`, which also sees other tabs' writes, drops the
+  subscription while `document.hidden`, schedules a targeted 30 s stuck timer, and skips
+  state updates when counts are unchanged (C23). Card entrance
   stagger caps at 0.3 s on first load and skips back-navigation and search (C9); search
   debounce drops from 300 ms to 150 ms (C10). `@react-spring/web`, `@use-gesture/react`
   and `springMotion.ts` move into a post-paint `gestureBundle` chunk loaded on every
@@ -999,4 +1000,10 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   `useAppLoader` requires `App.tsx`, owned by PR 1, or signed-in reloads flash
   `LandingPage` during `authLoading`) and C16 (`content-visibility: auto` conflicts with
   `ChapterSection`'s 100 ms `drainCheck` layout read, clips card shadows/focus rings via
-  `contain: paint`, and breaks scroll restoration on remount).
+  `contain: paint`, and breaks scroll restoration on remount). Review fixes (Opus, on
+  Gemini's PR): the mobile `BottomSheet` keeps one DOM tree when the gesture chunk
+  arrives, so an open sheet's contents no longer remount; it drives its position with
+  its own `SpringValue`s, which fixes the phone Settings sheet sliding off-screen on its
+  first open (#312); compact cards show the same 80 characters as before, with "..."
+  when cut; a failed gesture chunk load retries on the next sheet open, library mount or
+  `online` event, never by reloading.
