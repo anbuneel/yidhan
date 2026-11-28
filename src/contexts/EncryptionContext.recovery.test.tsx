@@ -52,7 +52,7 @@ vi.mock('../utils/reliabilityTelemetry', () => ({
 // missing hash-wasm chunk does (item 61, step 7).
 vi.mock('../lib/argon2', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lib/argon2')>();
-  return { ...actual, argon2id: vi.fn(actual.argon2id) };
+  return { ...actual, deriveArgon2id: vi.fn(actual.deriveArgon2id) };
 });
 
 import { EncryptionProvider, useEncryption } from './EncryptionContext';
@@ -61,7 +61,7 @@ import { createKeyCheck, decryptNote, deriveKeys, encryptNote, toBase64, verifyK
 import type { DerivedKeys, EncryptedNote } from '../lib/encryption';
 import { buildMigratedVault, copyMasterKey } from '../lib/vaultKey';
 import { readVaultMetadata } from '../lib/vaultMetadata';
-import { argon2id, KdfLoadError } from '../lib/argon2';
+import { deriveArgon2id, KdfLoadError } from '../lib/argon2';
 import type { VaultMetadata } from '../lib/vaultMetadata';
 
 const PASSPHRASE = 'correct horse battery staple 42';
@@ -642,7 +642,7 @@ describe('when the hash-wasm chunk does not load (item 61, step 7)', () => {
 
   it('a passphrase unlock throws a retryable error, not a wrong passphrase, and the retry unlocks', async () => {
     const app = openApp();
-    vi.mocked(argon2id).mockRejectedValueOnce(chunkFailure());
+    vi.mocked(deriveArgon2id).mockRejectedValueOnce(chunkFailure());
     let failure: unknown;
     await act(async () => {
       await h.ctx.unlockWithPassphrase(PASSPHRASE).then(
@@ -671,7 +671,7 @@ describe('when the hash-wasm chunk does not load (item 61, step 7)', () => {
     expect(status).toBe('ok');
     const writesBefore = mockUpdateUser.mock.calls.length;
 
-    vi.mocked(argon2id).mockRejectedValueOnce(chunkFailure());
+    vi.mocked(deriveArgon2id).mockRejectedValueOnce(chunkFailure());
     let failure: unknown;
     await act(async () => {
       await h.ctx.setPassphraseAfterRecovery(NEW_PASSPHRASE).then(
@@ -688,7 +688,7 @@ describe('when the hash-wasm chunk does not load (item 61, step 7)', () => {
 
     // Offline, the same failure is the offline case, which says nothing changed.
     const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
-    vi.mocked(argon2id).mockRejectedValueOnce(chunkFailure());
+    vi.mocked(deriveArgon2id).mockRejectedValueOnce(chunkFailure());
     await act(async () => {
       await h.ctx.setPassphraseAfterRecovery(NEW_PASSPHRASE).then(
         () => { failure = 'resolved'; },

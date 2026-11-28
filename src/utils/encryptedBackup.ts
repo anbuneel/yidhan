@@ -13,7 +13,7 @@
  * `docs/plans/2026-09-07-key-migration-and-rotation-design.md` §4.3.
  */
 
-import { argon2id } from '../lib/argon2';
+import { deriveArgon2id } from '../lib/argon2';
 import { toBase64, fromBase64 } from '../lib/encryption';
 import { BACKUP_FILE_EXTENSION } from './fileLimits';
 
@@ -74,25 +74,23 @@ export class BackupPassphraseError extends Error {
 }
 
 async function deriveBackupKey(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
-  const hashHex = await argon2id({
+  const keyBytes = await deriveArgon2id({
     password: passphrase,
     salt,
     parallelism: BACKUP_ARGON2_PARAMS.parallelism,
     iterations: BACKUP_ARGON2_PARAMS.iterations,
     memorySize: BACKUP_ARGON2_PARAMS.memorySize,
     hashLength: BACKUP_ARGON2_PARAMS.hashLength,
-    outputType: 'hex',
   });
 
-  const keyBytes = new Uint8Array(BACKUP_ARGON2_PARAMS.hashLength);
-  for (let i = 0; i < keyBytes.length; i++) {
-    keyBytes[i] = parseInt(hashHex.substring(i * 2, i * 2 + 2), 16);
+  try {
+    return await crypto.subtle.importKey('raw', keyBytes as BufferSource, { name: 'AES-GCM' }, false, [
+      'encrypt',
+      'decrypt',
+    ]);
+  } finally {
+    keyBytes.fill(0);
   }
-
-  return crypto.subtle.importKey('raw', keyBytes as BufferSource, { name: 'AES-GCM' }, false, [
-    'encrypt',
-    'decrypt',
-  ]);
 }
 
 /**
@@ -248,20 +246,14 @@ export async function openEncryptedBackup(
   // Read the parameters from the file rather than from the constants above, so a
   // backup made under different costs still opens after they are changed.
   const salt = fromBase64(envelope.kdf.salt);
-  const hashHex = await argon2id({
+  const keyBytes = await deriveArgon2id({
     password: passphrase,
     salt,
     parallelism: envelope.kdf.parallelism,
     iterations: envelope.kdf.iterations,
     memorySize: envelope.kdf.memorySize,
     hashLength: BACKUP_ARGON2_PARAMS.hashLength,
-    outputType: 'hex',
   });
-
-  const keyBytes = new Uint8Array(BACKUP_ARGON2_PARAMS.hashLength);
-  for (let i = 0; i < keyBytes.length; i++) {
-    keyBytes[i] = parseInt(hashHex.substring(i * 2, i * 2 + 2), 16);
-  }
   const key = await crypto.subtle.importKey(
     'raw',
     keyBytes as BufferSource,
@@ -269,6 +261,7 @@ export async function openEncryptedBackup(
     false,
     ['decrypt']
   );
+  keyBytes.fill(0);
 
   let plaintext: ArrayBuffer;
   try {
