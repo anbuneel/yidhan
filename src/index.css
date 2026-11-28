@@ -462,17 +462,16 @@ nav,
   border-radius: 2px;
 }
 
-/* Delete: gentle collapse with subtle rotation */
+/* Delete: gentle collapse with subtle rotation (compositor-only: transform + opacity) */
 @keyframes card-delete {
   to {
     opacity: 0;
     transform: scale(0.85) rotate(1.5deg);
-    filter: blur(2px);
   }
 }
 
 .note-card.deleting {
-  will-change: transform, opacity, filter;
+  will-change: transform, opacity;
   animation: card-delete 0.3s ease-out forwards;
   pointer-events: none;
 }
