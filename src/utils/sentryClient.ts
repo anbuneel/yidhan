@@ -1,14 +1,14 @@
 /**
  * Sentry's initialisation. Loaded only by `startMonitoring` in ./monitoring, with a
  * dynamic import after the window `load` event (item 61, step 2), so nothing here is
- * in the entry path. There is no Session Replay (shell-size plan D2).
+ * in the entry path. There is no Session Replay (shell-size plan D2) and no tracing
+ * (A7).
  *
  * E2EE: every event and every breadcrumb passes through the scrubbers below before
  * it is sent, including the ones queued before init.
  */
 import {
   addBreadcrumb,
-  browserTracingIntegration,
   captureException,
   captureMessage,
   init,
@@ -63,9 +63,9 @@ export function sentryOptions({ dsn, environment }: SentryConfig): BrowserOption
   return {
     dsn,
     environment,
-    integrations: [browserTracingIntegration()],
-    // Performance monitoring sample rate (10% of transactions)
-    tracesSampleRate: 0.1,
+    // Errors only. No performance tracing (shell-size plan A7): no integration and no
+    // tracesSampleRate, so no spans are made or sent.
+    integrations: [],
     beforeSend: scrubEvent,
     beforeBreadcrumb: scrubBreadcrumb,
   };

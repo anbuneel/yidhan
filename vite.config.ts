@@ -9,6 +9,13 @@ import { publicPageDocumentsPlugin } from './scripts/public-page-documents.mjs'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Sentry's tree-shaking flags (shell-size plan A7). Its packages check these at build
+  // time: false drops the SDK's debug logging and its tracing code. Errors are all we
+  // send, so neither is used.
+  define: {
+    __SENTRY_DEBUG__: false,
+    __SENTRY_TRACING__: false,
+  },
   build: {
     // Keep fonts and the logo masks as files, even under the default inline
     // limit (the 4KB seed mask is). An inlined font is embedded in the CSS as

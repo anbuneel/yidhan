@@ -11,6 +11,14 @@ describe('sentryOptions', () => {
     expect(options.beforeBreadcrumb).toBe(scrubBreadcrumb);
   });
 
+  // Shell-size plan A7: errors only, no performance tracing.
+  it('configures no tracing integration and no trace sampling', () => {
+    const options = sentryOptions(config);
+    expect(options.integrations ?? []).toEqual([]);
+    expect(options.tracesSampleRate).toBeUndefined();
+    expect(options.tracesSampler).toBeUndefined();
+  });
+
   // Shell-size plan D2: no Session Replay, on any route.
   it('configures no Replay integration and no replay sampling', () => {
     const options = sentryOptions(config);

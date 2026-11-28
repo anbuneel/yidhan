@@ -181,6 +181,17 @@ if (sentryBuiltIn) {
   );
 }
 
+// Shell-size plan A7: no performance tracing. BrowserTracing names the integration and
+// `sentry-trace` is the header tracing adds to requests; neither may be in any chunk.
+if (sentryBuiltIn) {
+  const tracingChunks = allJs.filter((file) => /BrowserTracing|sentry-trace/.test(read(file)));
+  requireThat(
+    'no Sentry tracing in any chunk',
+    tracingChunks.length === 0,
+    `Sentry tracing code is in the build (${tracingChunks.join(', ')}); errors only (DECISIONS.md, 2026-11-27)`
+  );
+}
+
 // Step 5: the landing page's static import closure is the public shell
 // (src/shells/PublicShell.tsx): React, the router, the theme, the landing page, the
 // header, the hero's note card and DOMPurify. The app shell loads lazily, and Supabase

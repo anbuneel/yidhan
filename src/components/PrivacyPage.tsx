@@ -151,7 +151,7 @@ export function PrivacyPage({
               </h2>
               <div className="space-y-3" style={{ color: 'var(--color-text-secondary)', fontWeight: 400, lineHeight: 1.7, fontSize: '0.95rem' }}>
                 <p>
-                  Yidhan uses Sentry for error tracking to help us find and fix bugs. Sentry receives crash reports and basic performance data. It does not receive your note content; encrypted fields are stripped before any data reaches Sentry.
+                  Yidhan uses Sentry for error tracking to help us find and fix bugs. Sentry receives crash reports only. It does not receive your note content; encrypted fields are stripped before any data reaches Sentry.
                 </p>
                 <p>
                   Sentry does not record sessions. There is no session replay, so it never sees what is on your screen.

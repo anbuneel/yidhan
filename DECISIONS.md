@@ -19,6 +19,27 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-27 — Sentry sends errors only: no performance tracing
+
+**Status:** Active
+
+**Why:** `browserTracingIntegration` with `tracesSampleRate: 0.1` sent page-load and
+navigation spans for one session in ten. It was about 17.5 KB gzip of the app shell,
+parsed on every signed-in load. The owner decided to drop tracing unless Sentry's
+Performance tab is in real use; nobody has said it is. This entry stands or falls with
+the A7 commit of the shell-size PR.
+
+**Decision:** No tracing integration, no trace sampling, and Sentry's build-time flags
+`__SENTRY_TRACING__` and `__SENTRY_DEBUG__` set to false in `vite.config.ts`, which drop
+the SDK's tracing and debug-logging code. Error reporting is unchanged. The bundle check
+fails if tracing code returns. Web vitals and page-load timings are no longer reported;
+`npm run e2e:perf` is the timing tool.
+
+**Rejected:** A lower trace sample rate. The cost is the integration's code and its
+observers on every load, not the share of sessions uploaded.
+
+---
+
 ## 2026-11-27 — Session Replay is removed
 
 **Status:** Active

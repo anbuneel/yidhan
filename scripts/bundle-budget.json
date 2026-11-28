@@ -23,10 +23,10 @@
     "reachesTargetWith": "step 5 (reached: 290.9 KB in the browser); raised for the display cut on 2026-11-09 (measured: 307.8 KB)"
   },
   "appShellJs": {
-    "limitKB": 319,
+    "limitKB": 300,
     "targetKB": 330,
     "measures": "JS to render the unlocked library, Editor excluded (gzip): the entry path, the app shell (lazy since step 5) and what it imports, and Sentry, which loads after load since step 2. Session Replay was removed (shell-size plan D2)",
-    "reachesTargetWith": "step 7 (reached: 325.4 KB); shell-size PR 1 measured 317.3 KB"
+    "reachesTargetWith": "step 7 (reached: 325.4 KB); shell-size PR 1 measured 317.3 KB, and 298.5 KB without Sentry tracing (A7)"
   },
   "largestChunk": {
     "limitKB": 118,
@@ -35,7 +35,7 @@
     "reachesTargetWith": "step 5 (reached: 136.4 KB); shell-size PR 1 measured 116.1 KB"
   },
   "precache": {
-    "limitKB": 983,
+    "limitKB": 964,
     "targetKB": 1108,
     "measures": "Precache transfer: every URL in dist/sw.js, counted once",
     "maxPngKB": 100,

@@ -82,10 +82,8 @@ Notes:
   `yidhan:library-load` in `src/hooks/useNotesSync.ts`, around
   `fetchDecryptedNotes`. Its names are fixed and it carries no detail. It is the
   only hook in `src/`. Read it next to `signedIn.noteCount`: a decrypt time means
-  little without the library size. Sentry's `browserTracingIntegration` turns this
-  mark and measure into spans on sampled page loads. They carry no note data. If
-  tracing stays after the bundle work, `ignorePerformanceApiSpans: [/^yidhan:/]` in
-  `src/utils/sentryClient.ts` would keep them out.
+  little without the library size. Sentry sends no performance data (no tracing since
+  2026-11-27), so the mark never leaves the browser.
 
 ## Run it
 
