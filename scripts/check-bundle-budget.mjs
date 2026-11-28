@@ -118,6 +118,36 @@ if (sentryBuiltIn) {
       ? `Expected one vendor-hash-wasm chunk, found ${hashWasmChunks.join(', ') || 'none'}`
       : `hash-wasm is in the app shell's static path (${hashWasmInAppShell.join(', ')}); call Argon2id through src/lib/argon2.ts`
   );
+
+  // Shell-size plan C1: the derivation runs in a worker, which Vite bundles on its
+  // own with a second copy of hash-wasm. Check it by name: there is exactly one, the
+  // app shell never imports it, it is self-contained (an offline unlock needs only
+  // this file), and it holds the wasm. The precache check below requires it too.
+  const workerChunks = allJs.filter((file) => /^assets\/argon2\.worker-[^/]+\.js$/.test(file));
+  const workerInAppShell = [...appShellPath].filter((file) => workerChunks.includes(file));
+  const workerSource = workerChunks.length === 1 ? read(workerChunks[0]) : '';
+  requireThat(
+    'Argon2id worker is one self-contained file, outside the app-shell closure',
+    workerChunks.length === 1 &&
+      workerInAppShell.length === 0 &&
+      workerSource.includes('WebAssembly') &&
+      !/\bimport\s*\(|\bimportScripts\b|^\s*import\s/m.test(workerSource),
+    workerChunks.length !== 1
+      ? `Expected one argon2.worker chunk, found ${workerChunks.join(', ') || 'none'}`
+      : workerInAppShell.length > 0
+        ? `The Argon2id worker is in the app shell's static path (${workerInAppShell.join(', ')})`
+        : `${workerChunks[0]} imports other files or holds no wasm; it must be one self-contained file`
+  );
+  // hash-wasm's code is in those two files and nowhere in the app shell's path. The
+  // shell may name the worker's URL, but must not hold the algorithm itself.
+  const wasmInAppShell = [...appShellPath].filter(
+    (file) => !/^assets\/vendor-sentry-/.test(file) && read(file).includes('WebAssembly')
+  );
+  requireThat(
+    'no WebAssembly code in the app-shell closure (hash-wasm stays in its two files)',
+    wasmInAppShell.length === 0,
+    `WebAssembly code is in the app shell's static path (${wasmInAppShell.join(', ')}); call Argon2id through src/lib/argon2.ts`
+  );
 }
 
 // Shell-size plan B1/B2: Tiptap and ProseMirror load with the Editor. They go to one
@@ -281,6 +311,16 @@ requireThat(
   'precache keeps the shell icons and font licences',
   kept.length === 0,
   `Precache dropped files the offline shell needs: ${kept.join(', ')}`
+);
+
+// Shell-size plan C1: an offline unlock needs the Argon2id worker, or the main-thread
+// fallback chunk where no worker runs. Both must be precached.
+const kdfFiles = [/^assets\/argon2\.worker-[^/]+\.js$/, /^assets\/vendor-hash-wasm-[^/]+\.js$/];
+const kdfMissing = kdfFiles.filter((pattern) => !precacheUrls.some((url) => pattern.test(url)));
+requireThat(
+  'precache holds the Argon2id worker and its main-thread fallback',
+  kdfMissing.length === 0,
+  `Precache is missing ${kdfMissing.map(String).join(', ')}; offline unlock would fail`
 );
 
 console.log(rows.join('\n'));

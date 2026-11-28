@@ -4,7 +4,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { createServer, type Server } from 'node:http';
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -54,7 +54,14 @@ export function buildForProduction(): void {
  */
 export function startStaticServer(
   dirRef: { current: string },
-  { spaFallback = false }: { spaFallback?: boolean } = {}
+  {
+    spaFallback = false,
+    headers = {},
+  }: {
+    spaFallback?: boolean;
+    /** Sent on every response, for example the production CSP (vercelHeaders). */
+    headers?: Record<string, string>;
+  } = {}
 ): Promise<{ server: Server; port: number }> {
   const server = createServer((req, res) => {
     const requested = decodeURIComponent((req.url ?? '/').split('?')[0]);
@@ -75,6 +82,7 @@ export function startStaticServer(
     }
 
     res.writeHead(200, {
+      ...headers,
       'Content-Type': CONTENT_TYPES[path.extname(filePath)] ?? 'application/octet-stream',
       // A service worker script must never be served stale, or an update check
       // cannot see the new version.
@@ -90,4 +98,14 @@ export function startStaticServer(
       resolve({ server, port });
     });
   });
+}
+
+/** The headers vercel.json sends on every path (the `/(.*)` rule), CSP included. */
+export function vercelHeaders(): Record<string, string> {
+  const config = JSON.parse(readFileSync(path.join(repoRoot, 'vercel.json'), 'utf8')) as {
+    headers: { source: string; headers: { key: string; value: string }[] }[];
+  };
+  const rule = config.headers.find((entry) => entry.source === '/(.*)');
+  if (!rule) throw new Error('vercel.json has no /(.*) header rule');
+  return Object.fromEntries(rule.headers.map(({ key, value }) => [key, value]));
 }
