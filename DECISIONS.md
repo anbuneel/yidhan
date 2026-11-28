@@ -19,6 +19,29 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-28 — Precache limit raised 964 → 968 KB for the deferred gesture chunk
+
+**Status:** Active
+
+**Why:** Shell-size PR 2 (#310) moves `@react-spring/web` and `@use-gesture/react` out of
+the app shell into a `gestureBundle` chunk loaded after the library paints. The shell fell
+from 298.6 to 278.8 KB gzip. The precache counts every chunk, and it rose from 962.5 to
+966.1 KB: in a chunk of their own the gesture libraries compress about 2.3 KB worse than
+inside the shared chunk they left (22.7 KB in, 20.4 KB out), and the PR adds about 1 KB of
+code (truncation, the sheet rewrite, the gesture loader, changelog text). The budget rule
+allows a raise only with an entry here.
+
+**Decision:** Raise `precache.limitKB` to 968 (measurement rounded up, plus 1 KB) and lower
+`appShellJs.limitKB` to 280 in the same change. The precache target (1108 KB) is unchanged.
+The trade is about 20 KB less JavaScript before the library paints for about 3.6 KB more in
+the background precache, which installs after the load event.
+
+**Rejected:** Keeping the gesture libraries in the shared chunk (gives back the shell win
+that A1c exists for). Trimming unrelated precache entries to make room (out of scope for
+this PR, and hides the cost of the split).
+
+---
+
 ## 2026-11-27 — The mobile bottom sheet owns its springs; it does not use `useSpring`
 
 **Status:** Active
