@@ -5,6 +5,8 @@
  * Uses theme CSS variables for consistent styling.
  */
 
+import { useBootDelayElapsed } from '../hooks/useAppLoader';
+
 interface LoadingFallbackProps {
   message?: string;
 }
@@ -26,4 +28,25 @@ export function LoadingFallback({ message = 'Loading...' }: LoadingFallbackProps
       </div>
     </div>
   );
+}
+
+/**
+ * The boot delay's blank frame: the theme's background and nothing else, so nothing
+ * wrong paints while auth or the vault resolves (shell-size plan C7).
+ */
+export function BootBlankScreen() {
+  return (
+    <div
+      className="min-h-screen"
+      style={{ background: 'var(--page-background)' }}
+      aria-busy="true"
+      data-testid="boot-blank"
+    />
+  );
+}
+
+/** A Suspense fallback for the boot path: blank inside the boot delay, the loader after it. */
+export function BootLoadingFallback({ message }: LoadingFallbackProps) {
+  const showLoader = useBootDelayElapsed(true);
+  return showLoader ? <LoadingFallback message={message} /> : <BootBlankScreen />;
 }

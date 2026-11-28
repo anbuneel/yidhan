@@ -889,3 +889,100 @@ describe('EncryptionContext wrapped-key migration (item 24)', () => {
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 });
+
+describe('EncryptionContext isRestoringKeys (shell-size plan C7)', () => {
+  function StateProbe({ seen }: { seen: string[] }) {
+    const { isUnlocked, isRestoringKeys, lockVault } = useEncryption();
+    const state = isUnlocked ? 'unlocked' : isRestoringKeys ? 'restoring' : 'locked';
+    if (seen[seen.length - 1] !== state) seen.push(state);
+    return (
+      <div>
+        <div>{state}</div>
+        <button type="button" onClick={() => lockVault('manual')}>Manual lock</button>
+      </div>
+    );
+  }
+
+  it('reports restoring from the first render until the restored keys arrive, never plain locked', async () => {
+    sessionStorage.setItem(
+      'yidhan-vault-user-1-vault-session',
+      JSON.stringify({ encKey: 'enc', hashKey: 'hash', salt: 'salt' })
+    );
+    mockImportSessionKeys.mockResolvedValue(createFakeKeys());
+    mockVerifyKeyCheck.mockResolvedValue(true);
+    const seen: string[] = [];
+
+    render(
+      <EncryptionProvider>
+        <StateProbe seen={seen} />
+      </EncryptionProvider>
+    );
+
+    await waitFor(() => expect(screen.getByText('unlocked')).toBeInTheDocument());
+    // The unlock screen would paint on a 'locked' frame; a reload must not have one.
+    expect(seen).toEqual(['restoring', 'unlocked']);
+  });
+
+  it('settles to locked when there is nothing to restore', async () => {
+    const seen: string[] = [];
+    render(
+      <EncryptionProvider>
+        <StateProbe seen={seen} />
+      </EncryptionProvider>
+    );
+
+    await waitFor(() => expect(screen.getByText('locked')).toBeInTheDocument());
+    expect(seen).toEqual(['restoring', 'locked']);
+  });
+
+  it('settles to locked when the restore fails its key-check', async () => {
+    sessionStorage.setItem(
+      'yidhan-vault-user-1-vault-session',
+      JSON.stringify({ encKey: 'enc', hashKey: 'hash', salt: 'salt' })
+    );
+    mockImportSessionKeys.mockResolvedValue(createFakeKeys());
+    mockVerifyKeyCheck.mockResolvedValue(false);
+    const seen: string[] = [];
+
+    render(
+      <EncryptionProvider>
+        <StateProbe seen={seen} />
+      </EncryptionProvider>
+    );
+
+    await waitFor(() => expect(screen.getByText('locked')).toBeInTheDocument());
+    expect(seen).toEqual(['restoring', 'locked']);
+  });
+
+  it('does not report restoring after a manual lock', async () => {
+    sessionStorage.setItem(
+      'yidhan-vault-user-1-vault-session',
+      JSON.stringify({ encKey: 'enc', hashKey: 'hash', salt: 'salt' })
+    );
+    mockImportSessionKeys.mockResolvedValue(createFakeKeys());
+    mockVerifyKeyCheck.mockResolvedValue(true);
+    const seen: string[] = [];
+
+    render(
+      <EncryptionProvider>
+        <StateProbe seen={seen} />
+      </EncryptionProvider>
+    );
+    await waitFor(() => expect(screen.getByText('unlocked')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Manual lock' }));
+    await waitFor(() => expect(screen.getByText('locked')).toBeInTheDocument());
+    expect(seen).toEqual(['restoring', 'unlocked', 'locked']);
+  });
+
+  it('is never restoring for an account without encryption set up', () => {
+    mockUseAuth.mockReturnValue({ user: { id: 'new-user', user_metadata: {} } });
+    const seen: string[] = [];
+    render(
+      <EncryptionProvider>
+        <StateProbe seen={seen} />
+      </EncryptionProvider>
+    );
+    expect(seen).toEqual(['locked']);
+  });
+});

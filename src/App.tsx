@@ -7,7 +7,7 @@ import { AppModals } from './components/AppModals';
 import { renderEntryScreen } from './components/entryScreens';
 import { Auth as AuthScreen } from './components/entryScreenChunks';
 import { renderAccountGate } from './components/accountGates';
-import { LoadingFallback } from './components/LoadingFallback';
+import { BootBlankScreen, LoadingFallback } from './components/LoadingFallback';
 import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
 import { withNotesFirst } from './utils/notesFirst';
 import { clearScrollMemory, routeToDocumentTitle, routeToViewMode, useRouter } from './routing';
@@ -22,7 +22,7 @@ import { useAppNavigation } from './hooks/useAppNavigation';
 import { useLibrarySearch } from './hooks/useLibrarySearch';
 import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useLibraryCardNavigation } from './hooks/useLibraryCardNavigation';
-import { useAppLoader } from './hooks/useAppLoader';
+import { appBootScreen, useAppBoot } from './hooks/useAppLoader';
 import { useEditorChunk } from './hooks/useEditorChunk';
 import { useEditorWarmup } from './hooks/useEditorWarmup';
 import { useShareRoute } from './hooks/useShareRoute';
@@ -69,7 +69,7 @@ const HeldSavesLayer = lazy(loadHeldSavesLayer);
 function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
   const libraryFooterRef = useRef<HTMLElement>(null);
   const { user, loading: authLoading, isPasswordRecovery, clearPasswordRecovery, isDeparting, daysUntilRelease, isHydrating, signOut } = useAuth();
-  const { keys, isEncryptionSetup, isUnlocked, lockVault, persistToLocal, recoveryScreen, setupScreen } = useEncryption();
+  const { keys, isEncryptionSetup, isUnlocked, isRestoringKeys, lockVault, persistToLocal, recoveryScreen, setupScreen } = useEncryption();
   // Ref for encryption keys — used in realtime handlers to avoid stale closures
   // when the vault is locked/unlocked (avoids resubscribing Supabase channels)
   const keysRef = useRef(keys);
@@ -160,7 +160,9 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     signOut,
   });
 
-  const showAppLoader = useAppLoader(!fromPublicShell && (authLoading || loading));
+  // Boot is auth, the first key restore and the first notes read. Without the restore,
+  // a reload would paint the unlock screen for the frames before the keys arrive.
+  const bootPhase = useAppBoot(!fromPublicShell && (authLoading || isRestoringKeys || loading));
 
   const { LoadedEditor, preloadEditorRoute, warmEditorRoute } = useEditorChunk();
 
@@ -567,12 +569,12 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
   }, [missingNoteId, replaceRoute]);
 
 
-  // Show loading while checking auth or fetching notes
-  if (showAppLoader) {
-    return (
-      <LoadingFallback message={appLoadingMessage} />
-    );
-  }
+  // While boot resolves: blank for the boot delay, then the loader (shell-size plan
+  // C7). This gate is also what keeps renderEntryScreen from painting the landing page
+  // for a signed-in reader, since `user` is null until auth resolves.
+  const bootScreen = appBootScreen(bootPhase, { authLoading, fromPublicShell });
+  if (bootScreen === 'loader') return <LoadingFallback message={appLoadingMessage} />;
+  if (bootScreen === 'blank') return <BootBlankScreen />;
 
   const entryScreen = renderEntryScreen({
     route,

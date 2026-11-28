@@ -92,6 +92,53 @@ would cross a message boundary; a separate decision).
 
 ---
 
+## 2026-11-27 — The boot loader waits 150 ms before showing; no minimum hold (C7)
+
+**Status:** Active
+
+**Why:** `useAppLoader` held the loading screen for at least 200 ms so a fast boot would
+not flash it. That made every fast boot wait: a local boot that finished in 30 ms still
+showed the loader for 200 ms. A delay before showing solves the same flash without the
+wait.
+
+**Decision:** For the first 150 ms of boot the screen is blank in the theme's background.
+If boot finishes inside that window, the destination paints with no loader. Past it, the
+loader shows until boot finishes, with no minimum. The 150 ms is counted once per page
+load, shared by Root's Suspense fallback (app shell chunk) and App's own gate. Two things
+the old hold had been hiding now block explicitly: App renders nothing past the gate while
+`authLoading` is true, because `renderEntryScreen` reads the null user as signed out and
+would paint the landing page; and boot includes the first vault key restore
+(`isRestoringKeys` in `EncryptionContext`), because between auth resolving and the
+restored keys arriving the account gate would paint the unlock screen.
+
+**Rejected:** Shortening the minimum hold (still makes fast boots wait). Returning false
+from the hook during the delay (paints the landing page on every signed-in reload).
+Showing the static landing shell during the delay (wrong for a signed-in reader, and
+`boot.js` already hides it whenever the app shell starts).
+
+---
+
+## 2026-11-27 — App-shell target lowered 330 → 285 KB
+
+**Status:** Active
+
+**Why:** The shell-size plan took the signed-in app shell from 329.9 to 278.8 KB gzip
+(PR 1, #311, and PR 2, #313). The 330 KB target was set for the first-visit plan, and the
+build is now 51 KB under it. A target that far above the measurement protects nothing: the
+limit could be raised back toward 330 without anyone deciding the shell should grow.
+
+**Decision:** `appShellJs.targetKB` is 285. The limit stays 280 (the measurement, 278.8,
+rounded up, plus 1 KB), as the budget rule sets it once a target is met. That leaves about
+6 KB between today's shell and the promise: room for a few small shell features, each of
+which can still raise the limit toward 285 with an entry here, but not for a regression of
+the size the plan just removed.
+
+**Rejected:** Leaving the target at 330 (it no longer bounds anything). Setting the target
+at the measurement, 279 or 280: every small feature that has to live in the shell would
+then be a target decision rather than a limit decision.
+
+---
+
 ## 2026-11-28 — Precache limit raised 964 → 968 KB for the deferred gesture chunk
 
 **Status:** Active

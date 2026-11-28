@@ -4,8 +4,8 @@
     "Checked by scripts/check-bundle-budget.mjs after every build, and by e2e-sw/first-visit.spec.ts in a browser.",
     "Sizes in KB (1024 bytes): JS, CSS, HTML and text at gzip level 9; images and fonts as stored.",
     "limitKB is what the build may not exceed. Where it is above targetKB, it is the value measured in CI after the last landed step, rounded up to the next whole KB, plus 1 KB of headroom (DECISIONS.md, 2026-11-08): a feature that has to live in the entry path may grow it by a few hundred bytes without a budget decision. Lower it to the new measurement plus 1 KB as each step lands; never raise it otherwise without a DECISIONS.md entry.",
-    "Once a budget meets its target, limitKB is the lower of the target and the measurement plus 1 KB: the target is the promise, so CI never lets a build pass above it. landingJsBeforeLoad is at its 90 KB target with 0.1 KB to spare; appShellJs met its 330 KB target with step 7.",
-    "Shell-size PR 1 (docs/plans/2026-11-27-shell-size-and-snappiness-proposal.md) lowered appShellJs, largestChunk and precache to their measurements plus 1 KB. The targets are unchanged: the owner lowers them after PR 2.",
+    "Once a budget meets its target, limitKB is the lower of the target and the measurement plus 1 KB: the target is the promise, so CI never lets a build pass above it. landingJsBeforeLoad is at its 90 KB target with 0.1 KB to spare. appShellJs is under its 285 KB target at 279.8 KB after shell-size PR 3; the limit stays 280, set from PR 2's 278.8 KB.",
+    "Shell-size PR 1 (docs/plans/2026-11-27-shell-size-and-snappiness-proposal.md) lowered appShellJs, largestChunk and precache to their measurements plus 1 KB. After PR 2 the owner lowered the appShellJs target 330 -> 285 KB (DECISIONS.md, 2026-11-27); the largestChunk and precache targets are unchanged.",
     "Shell-size PR 2 (library feel) moved the gesture libraries out of the shell: appShellJs 298.6 -> 278.8 KB, limit lowered to 280. The same split raised precache 962.5 -> 966.1 KB, limit raised to 968 (DECISIONS.md, 2026-11-28): the gesture libraries compress about 2.3 KB worse in a chunk of their own, and the PR adds about 1 KB of code.",
     "Shell-size PR 3 (Argon2id in a worker, C1) raised precache 966.1 -> 978.2 KB, limit raised to 980 (DECISIONS.md, 2026-11-28, owner to confirm): the worker file holds its own copy of hash-wasm (11.4 KB gzip) beside the main-thread fallback chunk.",
     "landingPageTotal: the browser spec counts every request until network idle; the build check can only count what index.html names, so it measures less.",
@@ -26,9 +26,9 @@
   },
   "appShellJs": {
     "limitKB": 280,
-    "targetKB": 330,
+    "targetKB": 285,
     "measures": "JS to render the unlocked library, Editor excluded (gzip): the entry path, the app shell (lazy since step 5) and what it imports, and Sentry, which loads after load since step 2. Session Replay was removed (shell-size plan D2)",
-    "reachesTargetWith": "step 7 (reached: 325.4 KB); shell-size PR 1 measured 317.3 KB, and 298.5 KB without Sentry tracing (A7); shell-size PR 2 measured 278.8 KB (A1c)"
+    "reachesTargetWith": "shell-size PR 2 (reached: 278.8 KB, A1c). The 285 KB target was set after it; the earlier 330 KB target was reached with step 7 (325.4 KB)"
   },
   "largestChunk": {
     "limitKB": 118,
