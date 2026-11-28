@@ -25,9 +25,8 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 **Why:** `browserTracingIntegration` with `tracesSampleRate: 0.1` sent page-load and
 navigation spans for one session in ten. It was about 17.5 KB gzip of the app shell,
-parsed on every signed-in load. The owner decided to drop tracing unless Sentry's
-Performance tab is in real use; nobody has said it is. This entry stands or falls with
-the A7 commit of the shell-size PR.
+parsed on every signed-in load. The owner confirmed on 2026-11-28 that Sentry's
+Performance tab is not in use, so tracing goes.
 
 **Decision:** No tracing integration, no trace sampling, and Sentry's build-time flags
 `__SENTRY_TRACING__` and `__SENTRY_DEBUG__` set to false in `vite.config.ts`, which drop
