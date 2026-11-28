@@ -1016,6 +1016,7 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   MiniSearch once loaded without reparsing HTML; failed chunk loads leave the library
   usable without reloading and retry on the next search focus. The index drops
   synchronously on lock, sign-out, and user switch and cancels any in-flight build.
-  `SearchDocument.source` is removed in favour of a 53-bit content fingerprint, content
-  length, title check, and `WeakMap<Note, IndexedEntry>` fast path so duplicate HTML is
-  no longer retained and title-only edits reindex without reparsing HTML.
+  `SearchDocument.source` is removed from the MiniSearch document in favour of
+  comparing and rebinding the live `note.content` string reference alongside a
+  `WeakMap<Note, IndexedEntry>` fast path so sync refreshes release older HTML
+  allocations and title-only edits reindex without reparsing HTML.

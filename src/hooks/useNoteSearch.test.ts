@@ -383,6 +383,49 @@ describe('indexed search reconciliation and query semantics', () => {
     expect(result.current).toEqual([]);
   });
 
+  it('reconciles a sync refresh of new note objects with unchanged content without HTML parsing or per-char hashing', () => {
+    const text = vi.spyOn(sanitize, 'htmlToPlainText');
+    const charCodeAt = vi.spyOn(String.prototype, 'charCodeAt');
+    const initialNotes = Array.from({ length: 50 }, (_, index) =>
+      createMockNote({
+        id: `sync-${index}`,
+        title: `Entry ${index}`,
+        content: `<p>Quiet stream ${index}</p>`,
+        contentHash: `hash-${index}`,
+      })
+    );
+
+    const { result, rerender } = renderHook(
+      ({ items, query }) => useNoteSearch(items, query, { preloadOnIdle: false }),
+      { initialProps: { items: initialNotes, query: 'stream' } }
+    );
+    expect(result.current).toHaveLength(50);
+    expect(text).toHaveBeenCalledTimes(50);
+
+    // Simulate fetchDecryptedNotes: brand-new Note objects and freshly allocated content strings.
+    const refreshedNotes = initialNotes.map((note, index) => ({
+      ...note,
+      title: `${note.title}`,
+      content: `<p>${'Quiet stream'} ${index}</p>`,
+      updatedAt: new Date(note.updatedAt.getTime()),
+    }));
+
+    charCodeAt.mockClear();
+    rerender({ items: refreshedNotes, query: 'stream' });
+    expect(result.current).toHaveLength(50);
+    expect(text).toHaveBeenCalledTimes(50);
+    // No JS per-character hashing loop ran across the refreshed notes.
+    expect(charCodeAt).not.toHaveBeenCalled();
+
+    // A later edit on a refreshed note still reindexes immediately.
+    const updatedNotes = refreshedNotes.map((note, index) =>
+      index === 0 ? { ...note, content: '<p>Glacier waterfall</p>' } : note
+    );
+    rerender({ items: updatedNotes, query: 'glacier' });
+    expect(result.current.map((n) => n.id)).toEqual(['sync-0']);
+    expect(text).toHaveBeenCalledTimes(51);
+  });
+
   it('indexes a note created while the query is already active', () => {
     const { result, rerender } = renderHook(
       ({ items }) => useNoteSearch(items, 'newborn', { preloadOnIdle: false }),

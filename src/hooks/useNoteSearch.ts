@@ -24,8 +24,13 @@ interface SearchDocument {
 
 interface IndexedEntry {
   document: SearchDocument;
-  contentLength: number;
-  contentSignature: number;
+  /**
+   * Points to the latest live `note.content` string reference. Comparing with `===`
+   * stays fast across sync refreshes (V8 native compare), and rebinding to the
+   * incoming string on match lets older decrypted allocations be GC'd so only one
+   * copy of the HTML is retained in memory. Never passed to MiniSearch.
+   */
+  contentRef: string;
 }
 
 interface SearchIndexState {
@@ -80,25 +85,6 @@ const SEARCH_IDLE_FALLBACK_MS = 300;
 const FALLBACK_TOKEN_SPLIT = /[\s\p{P}]+/u;
 const EMPTY_MATCH_TERMS: ReadonlyMap<string, readonly string[]> = new Map();
 
-/**
- * Fast 53-bit non-cryptographic fingerprint (cyrb53) of raw note HTML.
- * Lets the index detect content edits without retaining a second copy of every
- * note's HTML string, even when `contentHash` is absent (Demo notes) or stale
- * (optimistic edits before encryption finishes).
- */
-function fingerprintContent(text: string): number {
-  let h1 = 0xdeadbeef;
-  let h2 = 0x41c6ce57;
-  for (let i = 0; i < text.length; i++) {
-    const c = text.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 2654435761);
-    h2 = Math.imul(h2 ^ c, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
-}
-
 function createSearchState(MiniSearchCtor: MiniSearchConstructor | null): SearchIndexState {
   return {
     entries: new Map(),
@@ -125,16 +111,15 @@ function reconcileSearchState(state: SearchIndexState, notes: Note[]): void {
     // still reindexes instead of looking up to date.
     if (previous && state.seenNotes.get(note) === previous) continue;
 
-    const contentLength = note.content.length;
-    const contentSignature = fingerprintContent(note.content);
-    const contentUnchanged =
-      previous !== undefined &&
-      previous.contentLength === contentLength &&
-      previous.contentSignature === contentSignature;
-
-    if (previous && contentUnchanged && previous.document.title === note.title) {
-      state.seenNotes.set(note, previous);
-      continue;
+    const contentUnchanged = previous !== undefined && previous.contentRef === note.content;
+    if (previous && contentUnchanged) {
+      // Rebind to the current live string reference so a sync refresh does not
+      // leave an older decrypted copy pinned beside React's note list.
+      previous.contentRef = note.content;
+      if (previous.document.title === note.title) {
+        state.seenNotes.set(note, previous);
+        continue;
+      }
     }
 
     const nextEntry: IndexedEntry = {
@@ -143,8 +128,7 @@ function reconcileSearchState(state: SearchIndexState, notes: Note[]): void {
         title: note.title,
         content: contentUnchanged ? previous.document.content : htmlToPlainText(note.content),
       },
-      contentLength,
-      contentSignature,
+      contentRef: note.content,
     };
 
     if (state.index) {
