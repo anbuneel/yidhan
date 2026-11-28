@@ -11,7 +11,7 @@ describe('useLibrarySearch', () => {
     vi.useRealTimers();
   });
 
-  it('shows the typed query immediately and the debounced one later', () => {
+  it('shows the typed query immediately and the debounced one after 150ms', () => {
     const { result } = renderHook(() => useLibrarySearch());
 
     act(() => result.current.handleSearchChange('harvest'));
@@ -19,7 +19,12 @@ describe('useLibrarySearch', () => {
     expect(result.current.debouncedSearchQuery).toBe('');
 
     act(() => {
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(149);
+    });
+    expect(result.current.debouncedSearchQuery).toBe('');
+
+    act(() => {
+      vi.advanceTimersByTime(1);
     });
     expect(result.current.debouncedSearchQuery).toBe('harvest');
   });
@@ -40,7 +45,7 @@ describe('useLibrarySearch', () => {
     expect(result.current.debouncedSearchQuery).toBe('');
 
     act(() => {
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(150);
     });
     expect(result.current.debouncedSearchQuery).toBe('har');
   });
@@ -50,7 +55,7 @@ describe('useLibrarySearch', () => {
 
     act(() => result.current.handleSearchChange('harvest'));
     act(() => {
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(150);
     });
     expect(result.current.debouncedSearchQuery).toBe('harvest');
 
@@ -66,7 +71,7 @@ describe('useLibrarySearch', () => {
     expect(result.current.isSearching).toBe(false);
 
     act(() => {
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(150);
     });
     expect(result.current.debouncedSearchQuery).toBe('');
   });
@@ -78,7 +83,7 @@ describe('useLibrarySearch', () => {
     expect(result.current.isSearching).toBe(false);
 
     act(() => {
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(150);
     });
     expect(result.current.isSearching).toBe(true);
   });
