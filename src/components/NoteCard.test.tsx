@@ -439,3 +439,31 @@ describe('NoteCard preview block truncation (C3)', () => {
     expect(container.querySelector('.search-snippet mark')).toHaveTextContent('needle');
   });
 });
+
+describe('NoteCard hover shadow via CSS (C13)', () => {
+  it('does not write inline boxShadow on mouse enter or leave', () => {
+    const { container } = render(
+      <NoteCard note={createMockNote({ id: 'c13-full' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+    const card = container.querySelector<HTMLElement>('.note-card')!;
+
+    expect(card.style.boxShadow).toBe('');
+    expect(card).not.toHaveClass('note-card-decorative');
+    expect(card).not.toHaveClass('note-card-compact');
+
+    fireEvent.mouseEnter(card);
+    expect(card.style.boxShadow).toBe('');
+    fireEvent.mouseLeave(card);
+    expect(card.style.boxShadow).toBe('');
+  });
+
+  it('marks decorative cards so hover elevation rules skip them', () => {
+    const { container } = render(
+      <NoteCard note={createMockNote({ id: 'c13-deco' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} isDecorative />
+    );
+    const card = container.querySelector<HTMLElement>('.note-card')!;
+    expect(card).toHaveClass('note-card-decorative');
+    fireEvent.mouseEnter(card);
+    expect(card.style.boxShadow).toBe('');
+  });
+});

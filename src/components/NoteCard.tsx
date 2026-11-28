@@ -498,7 +498,7 @@ export const NoteCard = memo(function NoteCard({
         focus:ring-2
         focus:ring-[var(--color-accent)]
         focus:ring-offset-2
-        ${isDecorative ? '' : 'cursor-pointer active:scale-[0.98]'}
+        ${isDecorative ? 'note-card-decorative' : 'cursor-pointer active:scale-[0.98]'}
         ${isDeleting ? 'deleting' : ''}
         ${isCompact ? 'note-card-compact p-3' : 'p-6 pb-5'}
       `}
@@ -506,21 +506,11 @@ export const NoteCard = memo(function NoteCard({
         background: 'linear-gradient(to bottom, var(--color-card-bg), color-mix(in srgb, var(--color-card-bg) 97%, var(--color-accent)))',
         border: '1px solid var(--glass-border)',
         borderRadius: 'var(--radius-card)',
-        boxShadow: isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)',
         transitionTimingFunction: 'var(--ease-out-quint)',
         // Full cards size to their content so the masonry actually staggers;
         // the preview caps its own height below. Compact keeps a fixed clamp.
         minHeight: isCompact ? 'auto' : undefined,
         maxHeight: isCompact ? '120px' : undefined,
-      }}
-      onMouseEnter={(e) => {
-        if (!isCompact && !isDecorative) {
-          e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (isDecorative) return;
-        e.currentTarget.style.boxShadow = isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)';
       }}
     >
       {!isDecorative && (
