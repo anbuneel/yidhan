@@ -39,22 +39,55 @@ function getServerSnapshot(): GestureRuntime | null {
   return null;
 }
 
+type GestureBundleImporter = () => Promise<{ gestureRuntime: GestureRuntime }>;
+
+const defaultImporter: GestureBundleImporter = () => import('./gestureBundle');
+let importGestureBundle: GestureBundleImporter = defaultImporter;
+let retryOnOnlineAttached = false;
+
+function handleOnline(): void {
+  detachRetryOnOnline();
+  void loadGestureRuntime();
+}
+
+function attachRetryOnOnline(): void {
+  if (retryOnOnlineAttached || typeof window === 'undefined') return;
+  retryOnOnlineAttached = true;
+  window.addEventListener('online', handleOnline);
+}
+
+function detachRetryOnOnline(): void {
+  if (!retryOnOnlineAttached || typeof window === 'undefined') return;
+  retryOnOnlineAttached = false;
+  window.removeEventListener('online', handleOnline);
+}
+
 /**
  * Load the gesture runtime immediately (idempotent singleton).
  * Returns null if the dynamic import fails so callers stay safely inert.
+ *
+ * A failure is retried on the next natural trigger: the next mobile sheet open, the
+ * next library mount, or the browser coming back online. It never reloads the page:
+ * a held save lives only in memory, and swipe and pull-to-refresh can wait.
  */
 function loadGestureRuntime(): Promise<GestureRuntime | null> {
   if (loadedRuntime) return Promise.resolve(loadedRuntime);
   if (loadPromise) return loadPromise;
 
-  loadPromise = import('./gestureBundle')
+  loadPromise = importGestureBundle()
     .then((mod) => {
       loadedRuntime = mod.gestureRuntime;
+      detachRetryOnOnline();
       notify();
       return loadedRuntime;
     })
-    .catch(() => {
+    .catch((error: unknown) => {
       loadPromise = null;
+      console.warn(
+        '[gestures] Could not load the gesture runtime. Swipe and pull-to-refresh stay off until it loads.',
+        error
+      );
+      attachRetryOnOnline();
       return null;
     });
 
@@ -137,4 +170,11 @@ export function resetGestureRuntimeForTests(): void {
   loadedRuntime = null;
   loadPromise = null;
   postPaintScheduled = false;
+  detachRetryOnOnline();
+  importGestureBundle = defaultImporter;
+}
+
+/** Tests only: replace the dynamic import, for example with one that fails first. */
+export function setGestureBundleImporterForTests(importer: GestureBundleImporter): void {
+  importGestureBundle = importer;
 }
