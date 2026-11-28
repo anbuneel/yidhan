@@ -339,6 +339,50 @@ describe('indexed search reconciliation and query semantics', () => {
     expect(result.current).toEqual([]);
   });
 
+  it('reindexes without contentHash, skips HTML reparsing on title-only edits and save acks, and handles rollback (C20)', () => {
+    const text = vi.spyOn(sanitize, 'htmlToPlainText');
+    const original = createMockNote({
+      id: 'demo-1',
+      title: 'Draft',
+      content: '<p>Cedar and rain</p>',
+      contentHash: undefined,
+    });
+
+    const { result, rerender } = renderHook(
+      ({ items, query }) => useNoteSearch(items, query, { preloadOnIdle: false }),
+      { initialProps: { items: [original], query: 'cedar' } }
+    );
+    expect(result.current.map((n) => n.id)).toEqual(['demo-1']);
+    expect(text).toHaveBeenCalledTimes(1);
+
+    // Title-only edit reindexes the title immediately without reparsing unchanged HTML.
+    const renamed = { ...original, title: 'Storm journal' };
+    rerender({ items: [renamed], query: 'storm' });
+    expect(result.current.map((n) => n.id)).toEqual(['demo-1']);
+    expect(text).toHaveBeenCalledTimes(1);
+    rerender({ items: [renamed], query: 'draft' });
+    expect(result.current).toEqual([]);
+
+    // Content edit on a note with no contentHash reindexes immediately.
+    const edited = { ...renamed, content: '<p>Pine and thunder</p>' };
+    rerender({ items: [edited], query: 'thunder' });
+    expect(result.current.map((n) => n.id)).toEqual(['demo-1']);
+    expect(text).toHaveBeenCalledTimes(2);
+
+    // Save acknowledgement (new object carrying fresh contentHash and updatedAt, identical text)
+    // does not reparse HTML.
+    const savedAck = { ...edited, contentHash: 'fresh-hash', updatedAt: new Date(edited.updatedAt.getTime() + 1000) };
+    rerender({ items: [savedAck], query: 'thunder' });
+    expect(result.current.map((n) => n.id)).toEqual(['demo-1']);
+    expect(text).toHaveBeenCalledTimes(2);
+
+    // Rollback restoring the exact previous Note object reference reindexes back to the old text.
+    rerender({ items: [original], query: 'cedar' });
+    expect(result.current.map((n) => n.id)).toEqual(['demo-1']);
+    rerender({ items: [original], query: 'thunder' });
+    expect(result.current).toEqual([]);
+  });
+
   it('indexes a note created while the query is already active', () => {
     const { result, rerender } = renderHook(
       ({ items }) => useNoteSearch(items, 'newborn', { preloadOnIdle: false }),

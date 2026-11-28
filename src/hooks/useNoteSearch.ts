@@ -20,11 +20,17 @@ interface SearchDocument {
   id: string;
   title: string;
   content: string;
-  source: string;
+}
+
+interface IndexedEntry {
+  document: SearchDocument;
+  contentLength: number;
+  contentSignature: number;
 }
 
 interface SearchIndexState {
-  documents: Map<string, SearchDocument>;
+  entries: Map<string, IndexedEntry>;
+  seenNotes: WeakMap<Note, IndexedEntry>;
   index: MiniSearch<SearchDocument> | null;
 }
 
@@ -74,9 +80,29 @@ const SEARCH_IDLE_FALLBACK_MS = 300;
 const FALLBACK_TOKEN_SPLIT = /[\s\p{P}]+/u;
 const EMPTY_MATCH_TERMS: ReadonlyMap<string, readonly string[]> = new Map();
 
+/**
+ * Fast 53-bit non-cryptographic fingerprint (cyrb53) of raw note HTML.
+ * Lets the index detect content edits without retaining a second copy of every
+ * note's HTML string, even when `contentHash` is absent (Demo notes) or stale
+ * (optimistic edits before encryption finishes).
+ */
+function fingerprintContent(text: string): number {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+
 function createSearchState(MiniSearchCtor: MiniSearchConstructor | null): SearchIndexState {
   return {
-    documents: new Map(),
+    entries: new Map(),
+    seenNotes: new WeakMap(),
     index: MiniSearchCtor
       ? new MiniSearchCtor<SearchDocument>({
           fields: ['title', 'content'],
@@ -86,19 +112,6 @@ function createSearchState(MiniSearchCtor: MiniSearchConstructor | null): Search
   };
 }
 
-function searchDocument(note: Note): SearchDocument {
-  return {
-    id: note.id,
-    title: note.title,
-    content: htmlToPlainText(note.content),
-    source: note.content,
-  };
-}
-
-function matchesNote(document: SearchDocument, note: Note): boolean {
-  return document.title === note.title && document.source === note.content;
-}
-
 function reconcileSearchState(state: SearchIndexState, notes: Note[]): void {
   const retainedIds = new Set<string>();
 
@@ -106,21 +119,46 @@ function reconcileSearchState(state: SearchIndexState, notes: Note[]): void {
     if (note.decryptionFailed) continue;
 
     retainedIds.add(note.id);
-    const previous = state.documents.get(note.id);
-    if (previous && matchesNote(previous, note)) continue;
+    const previous = state.entries.get(note.id);
+    // O(1) fast path for untouched Note references. Comparing the WeakMap value
+    // against `previous` guarantees a rollback restoring an earlier Note object
+    // still reindexes instead of looking up to date.
+    if (previous && state.seenNotes.get(note) === previous) continue;
 
-    const next = searchDocument(note);
-    if (state.index) {
-      if (previous) state.index.remove(previous);
-      state.index.add(next);
+    const contentLength = note.content.length;
+    const contentSignature = fingerprintContent(note.content);
+    const contentUnchanged =
+      previous !== undefined &&
+      previous.contentLength === contentLength &&
+      previous.contentSignature === contentSignature;
+
+    if (previous && contentUnchanged && previous.document.title === note.title) {
+      state.seenNotes.set(note, previous);
+      continue;
     }
-    state.documents.set(note.id, next);
+
+    const nextEntry: IndexedEntry = {
+      document: {
+        id: note.id,
+        title: note.title,
+        content: contentUnchanged ? previous.document.content : htmlToPlainText(note.content),
+      },
+      contentLength,
+      contentSignature,
+    };
+
+    if (state.index) {
+      if (previous) state.index.remove(previous.document);
+      state.index.add(nextEntry.document);
+    }
+    state.entries.set(note.id, nextEntry);
+    state.seenNotes.set(note, nextEntry);
   }
 
-  for (const [id, document] of state.documents) {
+  for (const [id, entry] of state.entries) {
     if (retainedIds.has(id)) continue;
-    state.index?.remove(document);
-    state.documents.delete(id);
+    state.index?.remove(entry.document);
+    state.entries.delete(id);
   }
 }
 
@@ -144,11 +182,12 @@ function attachMiniSearchIndex(
     // so htmlToPlainText runs at most once per note. Return a fresh wrapper so
     // downstream memos see the transition from fallback scan to MiniSearch.
     reconcileSearchState(existing, notes);
-    for (const document of existing.documents.values()) {
-      index.add(document);
+    for (const entry of existing.entries.values()) {
+      index.add(entry.document);
     }
     return {
-      documents: existing.documents,
+      entries: existing.entries,
+      seenNotes: existing.seenNotes,
       index,
     };
   }
@@ -189,7 +228,7 @@ function searchTerm(
 
 function rankedTextMatches(
   index: MiniSearch<SearchDocument>,
-  documents: Map<string, SearchDocument>,
+  entries: Map<string, IndexedEntry>,
   terms: SearchTextTerm[]
 ): RankedResult[] {
   let matches: Map<string, RankedResult> | null = null;
@@ -198,7 +237,7 @@ function rankedTextMatches(
     const termMatches = new Map<string, RankedResult>();
     for (const result of searchTerm(index, term)) {
       const id = String(result.id);
-      const document = documents.get(id);
+      const document = entries.get(id)?.document;
       if (!document || !matchesExactPhrase(document, term)) continue;
 
       termMatches.set(id, {
@@ -241,77 +280,55 @@ function rankedTextMatches(
     );
 }
 
-function tokenizeForFallback(text: string): string[] {
-  return text.toLowerCase().split(FALLBACK_TOKEN_SPLIT).filter(Boolean);
-}
-
-function matchFallbackToken(tokens: string[], queryToken: string): string | null {
-  const allowPrefix = queryToken.length >= 2;
-  for (const token of tokens) {
-    if (allowPrefix ? token.startsWith(queryToken) : token === queryToken) {
-      return token;
-    }
-  }
-  return null;
-}
-
-/**
- * Synchronous plain-text fallback used while the MiniSearch chunk is still
- * loading (or if its import failed). Matches exact 1-char tokens, >=2-char
- * prefixes, and exact quoted phrases, with title matches ranked first. Once
- * MiniSearch loads, the active query upgrades automatically to BM25 + fuzzy.
- */
 function fallbackTextMatches(
-  documents: Map<string, SearchDocument>,
+  entries: Map<string, IndexedEntry>,
   terms: SearchTextTerm[]
 ): RankedResult[] {
   const results: RankedResult[] = [];
 
-  for (const document of documents.values()) {
+  for (const { document } of entries.values()) {
+    const titleLower = document.title.toLowerCase();
+    const contentLower = document.content.toLowerCase();
     let titleTokens: string[] | null = null;
     let contentTokens: string[] | null = null;
     let score = 0;
     let titleMatches = 0;
     const matchedTerms = new Set<string>();
-    let allMatched = true;
+    let matched = true;
 
     for (const term of terms) {
       if (term.quoted) {
-        const inTitle = phraseMatchesTitle(document, term);
-        const inContent = document.content.toLowerCase().includes(term.normalized);
-        if (!inTitle && !inContent) {
-          allMatched = false;
+        const inTitle = titleLower.includes(term.normalized);
+        if (!inTitle && !contentLower.includes(term.normalized)) {
+          matched = false;
           break;
         }
-        if (inTitle) {
-          titleMatches += 1;
-          score += SEARCH_OPTIONS.boost.title;
-        } else {
-          score += SEARCH_OPTIONS.boost.content;
-        }
+        if (inTitle) titleMatches += 1;
+        score += inTitle ? SEARCH_OPTIONS.boost.title : SEARCH_OPTIONS.boost.content;
         matchedTerms.add(term.normalized);
         continue;
       }
 
-      if (titleTokens === null) titleTokens = tokenizeForFallback(document.title);
-      if (contentTokens === null) contentTokens = tokenizeForFallback(document.content);
-
-      const queryTokens = tokenizeForFallback(term.normalized);
+      titleTokens ??= titleLower.split(FALLBACK_TOKEN_SPLIT).filter(Boolean);
+      contentTokens ??= contentLower.split(FALLBACK_TOKEN_SPLIT).filter(Boolean);
+      const queryTokens = term.normalized.split(FALLBACK_TOKEN_SPLIT).filter(Boolean);
       if (queryTokens.length === 0) {
-        allMatched = false;
+        matched = false;
         break;
       }
 
-      let termMatchedTitle = false;
-      for (const queryToken of queryTokens) {
-        const titleHit = matchFallbackToken(titleTokens, queryToken);
-        const contentHit = titleHit ? null : matchFallbackToken(contentTokens, queryToken);
+      let hitTitle = false;
+      for (const q of queryTokens) {
+        const matchToken = (list: string[]) =>
+          list.find((token) => (q.length >= 2 ? token.startsWith(q) : token === q));
+        const titleHit = matchToken(titleTokens);
+        const contentHit = titleHit ? undefined : matchToken(contentTokens);
         if (!titleHit && !contentHit) {
-          allMatched = false;
+          matched = false;
           break;
         }
         if (titleHit) {
-          termMatchedTitle = true;
+          hitTitle = true;
           score += SEARCH_OPTIONS.boost.title;
           matchedTerms.add(titleHit);
         } else if (contentHit) {
@@ -319,19 +336,18 @@ function fallbackTextMatches(
           matchedTerms.add(contentHit);
         }
       }
-      if (!allMatched) break;
-      if (termMatchedTitle) titleMatches += 1;
+      if (!matched) break;
+      if (hitTitle) titleMatches += 1;
     }
 
-    if (allMatched) {
-      results.push({ id: document.id, score, titleMatches, matchedTerms });
-    }
+    if (matched) results.push({ id: document.id, score, titleMatches, matchedTerms });
   }
 
-  return results.sort((left, right) =>
-    right.titleMatches - left.titleMatches
-    || right.score - left.score
-    || left.id.localeCompare(right.id)
+  return results.sort(
+    (left, right) =>
+      right.titleMatches - left.titleMatches
+      || right.score - left.score
+      || left.id.localeCompare(right.id)
   );
 }
 
@@ -595,8 +611,8 @@ export function useNoteSearchResults(
 
     const notesById = new Map(notes.map((note) => [note.id, note]));
     const rawMatches = searchState.index
-      ? rankedTextMatches(searchState.index, searchState.documents, parsedQuery.textTerms)
-      : fallbackTextMatches(searchState.documents, parsedQuery.textTerms);
+      ? rankedTextMatches(searchState.index, searchState.entries, parsedQuery.textTerms)
+      : fallbackTextMatches(searchState.entries, parsedQuery.textTerms);
     const rankedMatches = rawMatches.filter(({ id }) => {
       const note = notesById.get(id);
       return note !== undefined && matchesFilters(note, parsedQuery.filters);

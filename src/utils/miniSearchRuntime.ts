@@ -59,10 +59,7 @@ export function loadMiniSearch(): Promise<MiniSearchConstructor | null> {
     })
     .catch((error: unknown) => {
       loadPromise = null;
-      console.warn(
-        '[search] Could not load the search index. Falling back to plain text search until the next search focus.',
-        error
-      );
+      console.warn('[search] Search index unavailable; retrying on next focus.', error);
       return null;
     });
 
