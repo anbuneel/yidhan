@@ -982,3 +982,21 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   Session Replay and performance tracing are removed; error reports stay. Corrects the
   2026-11-27 entry: the test credentials do exist, in the main checkout's `.env.local`,
   which a git worktree does not get.
+- **2026-11-27** — Library feel pass, PR 2 of the shell-size and snappiness proposal
+  (built by Gemini, reviewed by Opus). `NoteCard` now runs DOMPurify once for its active
+  mode (C2), slices long notes on block boundaries before sanitising outside search (C3),
+  shares one `ResizeObserver` with batched `requestAnimationFrame` overflow reads (C4),
+  uses CSS `:hover` for card elevation instead of JS style handlers (C13), drops animated
+  blur from `card-delete` (C15), and replaces `transition-all` with named properties in
+  the owned library files (C12). `ChapteredLibrary` and `useMobileDetect` listen to
+  `matchMedia` `change` events instead of `window.resize` (C19). `useSyncStatus` reacts
+  to Dexie `syncQueue` hooks, pauses while `document.hidden`, schedules a targeted 30 s
+  stuck timer, and skips state updates when counts are unchanged (C23). Card entrance
+  stagger caps at 0.3 s on first load and skips back-navigation and search (C9); search
+  debounce drops from 300 ms to 150 ms (C10). `@react-spring/web`, `@use-gesture/react`
+  and `springMotion.ts` move into a post-paint `gestureBundle` chunk loaded on every
+  device without remounting the list or cards (A1c). Left out: C7 (flipping
+  `useAppLoader` requires `App.tsx`, owned by PR 1, or signed-in reloads flash
+  `LandingPage` during `authLoading`) and C16 (`content-visibility: auto` conflicts with
+  `ChapterSection`'s 100 ms `drainCheck` layout read, clips card shadows/focus rings via
+  `contain: paint`, and breaks scroll restoration on remount).
