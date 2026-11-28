@@ -28,6 +28,7 @@ import { HeaderShell } from '../components/HeaderShell';
 import { LoadingFallback } from '../components/LoadingFallback';
 import { Logo } from '../components/Logo';
 import { DEMO_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
+import { signalSearchIntent } from '../utils/miniSearchRuntime';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { getLoadedEditorComponent, loadEditorComponent } from '../utils/editorLoader';
 import { useEditorWarmup } from '../hooks/useEditorWarmup';
@@ -236,12 +237,14 @@ export function DemoPage({
     return clearSearchTimeout;
   }, [clearSearchTimeout]);
 
-  // Apply debounced search on top of tag-filtered notes
+  // Apply debounced search on top of tag-filtered notes.
+  // Practice Space skips idle preload so MiniSearch is not requested before
+  // a visitor focuses search, hits Cmd/Ctrl+K, or types a query (A4).
   const {
     notes: displayNotes,
     matchedTermsByNoteId,
     isRankedSearch,
-  } = useNoteSearchResults(tagFilteredNotes, debouncedSearchQuery);
+  } = useNoteSearchResults(tagFilteredNotes, debouncedSearchQuery, { preloadOnIdle: false });
 
   const isSearching = debouncedSearchQuery.trim().length > 0;
 
@@ -735,6 +738,7 @@ function DemoHeader({
     }
 
     lastHandledDemoSearchFocusToken = searchFocusToken;
+    signalSearchIntent();
 
     const frame = window.requestAnimationFrame(() => {
       searchRef.current?.focus();
@@ -800,7 +804,10 @@ function DemoHeader({
                     e.currentTarget.blur();
                   }
                 }}
-                onFocus={() => setIsSearchFocused(true)}
+                onFocus={() => {
+                  setIsSearchFocused(true);
+                  signalSearchIntent();
+                }}
                 onBlur={() => setIsSearchFocused(false)}
                 placeholder="Search notes..."
                 aria-label="Search notes"

@@ -1007,3 +1007,16 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   first open (#312); compact cards show the same 80 characters as before, with "..."
   when cut; a failed gesture chunk load retries on the next sheet open, library mount or
   `online` event, never by reloading.
+- **2026-11-28** — Search index pass, PR 5 of the shell-size and snappiness proposal
+  (items A4 and C20; built by Gemini, reviewed by Opus). `minisearch` moves out of the
+  static app shell into a lazy `vendor-minisearch` chunk loaded after the library paints
+  (idle) or immediately on search focus, `Cmd/Ctrl+K`, or typing; Practice Space (`/demo`)
+  skips idle preload so the chunk is not requested until search is used. Queries typed
+  before the index is ready fall back to a synchronous plain-text scan and upgrade to
+  MiniSearch once loaded without reparsing HTML; failed chunk loads leave the library
+  usable without reloading and retry on the next search focus. The index drops
+  synchronously on lock, sign-out, and user switch and cancels any in-flight build.
+  `SearchDocument.source` is removed from the MiniSearch document in favour of
+  comparing and rebinding the live `note.content` string reference alongside a
+  `WeakMap<Note, IndexedEntry>` fast path so sync refreshes release older HTML
+  allocations and title-only edits reindex without reparsing HTML.

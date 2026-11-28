@@ -102,6 +102,25 @@ if (sentryBuiltIn) {
   check(`largest JS chunk (gzip, ${largest.file})`, largest.bytes, budget.largestChunk);
 }
 
+// Shell-size plan A4: MiniSearch loads lazily after the library paints or on
+// search focus, never statically in the app shell. Named in manualChunks so any
+// accidental static import fails the build by file name.
+{
+  const appShellChunk = allJs.filter((file) => /^assets\/AppShell-/.test(file));
+  const appShellPath = new Set([...entry.closure, ...staticClosure(distDir, appShellChunk)]);
+  const miniSearchChunks = allJs.filter((file) => /^assets\/vendor-minisearch-/.test(file));
+  const miniSearchInAppShell = [...appShellPath].filter((file) => miniSearchChunks.includes(file));
+  requireThat(
+    'MiniSearch not in the app-shell closure',
+    appShellChunk.length === 1 && miniSearchChunks.length === 1 && miniSearchInAppShell.length === 0,
+    appShellChunk.length !== 1
+      ? `Expected one AppShell chunk, found ${appShellChunk.join(', ') || 'none'}`
+      : miniSearchChunks.length !== 1
+        ? `Expected one vendor-minisearch chunk, found ${miniSearchChunks.join(', ') || 'none'}`
+        : `MiniSearch is in the app shell's static path (${miniSearchInAppShell.join(', ')}); load it through src/utils/miniSearchRuntime.ts`
+  );
+}
+
 // Step 7: hash-wasm loads inside key derivation (src/lib/argon2.ts), not with the
 // app shell. Every hash-wasm module goes to one named chunk (manualChunks in
 // vite.config.ts), so a static import anywhere in the app shell's path shows up
@@ -113,10 +132,12 @@ if (sentryBuiltIn) {
   const hashWasmInAppShell = [...appShellPath].filter((file) => hashWasmChunks.includes(file));
   requireThat(
     'hash-wasm not in the app-shell closure',
-    hashWasmChunks.length === 1 && hashWasmInAppShell.length === 0,
-    hashWasmChunks.length !== 1
-      ? `Expected one vendor-hash-wasm chunk, found ${hashWasmChunks.join(', ') || 'none'}`
-      : `hash-wasm is in the app shell's static path (${hashWasmInAppShell.join(', ')}); call Argon2id through src/lib/argon2.ts`
+    appShellChunk.length === 1 && hashWasmChunks.length === 1 && hashWasmInAppShell.length === 0,
+    appShellChunk.length !== 1
+      ? `Expected one AppShell chunk, found ${appShellChunk.join(', ') || 'none'}`
+      : hashWasmChunks.length !== 1
+        ? `Expected one vendor-hash-wasm chunk, found ${hashWasmChunks.join(', ') || 'none'}`
+        : `hash-wasm is in the app shell's static path (${hashWasmInAppShell.join(', ')}); call Argon2id through src/lib/argon2.ts`
   );
 }
 

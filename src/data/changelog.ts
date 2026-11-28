@@ -7,6 +7,9 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.27.3', date: '2026-11-28', changes: [
+    { type: 'improvement', text: 'The library paints sooner on open. Search indexing now runs after your notes appear or when you open search, and uses less memory' },
+  ] },
   { version: '3.27.2', date: '2026-11-27', changes: [
     { type: 'improvement', text: 'The library opens and scrolls faster when you have long notes. Cards now prepare only the preview they show instead of processing the whole note' },
     { type: 'improvement', text: 'Returning to the library from a note shows your cards immediately, and search results appear sooner as you type' },

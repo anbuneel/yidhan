@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { createElement, type ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
+import { AuthContext, type AuthContextType } from '../contexts/authState';
+import * as sanitize from '../utils/sanitize';
+import { resetMiniSearchRuntimeForTests, setMiniSearchImporterForTests } from '../utils/miniSearchRuntime';
 import { useVisibleNotes } from './useVisibleNotes';
 import type { Note, Tag } from '../types';
 
@@ -101,5 +105,28 @@ describe('useVisibleNotes', () => {
 
     rerender({ tagIds: ['tag-ideas'] });
     expect(ids(result.current)).toEqual(['recent', 'middle']);
+  });
+
+  describe('vault lifecycle gating', () => {
+    afterEach(() => {
+      resetMiniSearchRuntimeForTests();
+      vi.restoreAllMocks();
+    });
+
+    it('builds no index and returns no matches when signed out inside AuthContext', () => {
+      resetMiniSearchRuntimeForTests();
+      const importer = vi.fn(() => import('minisearch'));
+      setMiniSearchImporterForTests(importer);
+      const text = vi.spyOn(sanitize, 'htmlToPlainText');
+
+      const signedOutAuth = { user: null } as unknown as AuthContextType;
+      const wrapper = ({ children }: { children: ReactNode }) =>
+        createElement(AuthContext.Provider, { value: signedOutAuth }, children);
+
+      const { result } = renderHook(() => useVisibleNotes(ALL, [], 'recent'), { wrapper });
+      expect(result.current).toEqual([]);
+      expect(importer).not.toHaveBeenCalled();
+      expect(text).not.toHaveBeenCalled();
+    });
   });
 });
