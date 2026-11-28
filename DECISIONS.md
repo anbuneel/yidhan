@@ -19,6 +19,30 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-28 — Precache limit raised 968 → 980 KB for the Argon2id worker
+
+**Status:** Active
+
+**Why:** Shell-size PR 3 (C1) runs Argon2id in a worker. Vite bundles a worker on its own,
+so the worker file (`argon2.worker-*.js`, 11.4 KB gzip) holds a second copy of hash-wasm
+beside the main-thread fallback chunk (`vendor-hash-wasm`, 11.4 KB gzip). Both must be
+precached: the worker for an offline unlock, the fallback for browsers where no worker
+runs. The precache rose from 966.1 to 978.3 KB against a 968 KB limit. The budget rule
+allows a raise only with an entry here.
+
+**Decision:** Raise `precache.limitKB` to 980 (measurement rounded up, plus 1 KB). The
+target (1108 KB) is unchanged. The cost is about 12 KB more in the background precache,
+which installs after the load event; nothing is added before the library paints.
+
+**Rejected:** Dropping the fallback copy (old Android WebViews without module workers,
+and a failed worker fetch, would then have no way to unlock). Loading the worker file
+itself as a module on the main thread for the fallback, so one copy serves both (needs
+an ES-format worker that exports its function and installs its handler only in a worker
+scope; more moving parts in an encryption path, and a failed fetch of that one file
+would leave nothing to fall back to).
+
+---
+
 ## 2026-11-27 — Argon2id runs in a Web Worker; the unlocked key stays on the main thread
 
 **Status:** Active
