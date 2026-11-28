@@ -971,3 +971,14 @@ not reconstructed here; see `docs/archive/` for the plans of that era.
   snappiness proposal (#309). `npm run e2e:perf` times cold boot, note open and typing
   under 4x CPU throttle, in its own CI job with loose ceilings. The unlock and signed-in
   library-load cases are built but have not run: they need the `E2E_TEST_*` credentials.
+- **2026-11-28** — Ten signed-in Playwright specs fixed (#312): auth logout, export and
+  import, settings. All ten were stale specs. CI has no `E2E_TEST_*` secrets, so it skips
+  the 164 signed-in tests and these failures went unseen. Found on the way: on a phone
+  viewport the Settings sheet slides off-screen on its first open after a page load. Not
+  fixed; five mobile tests are `fixme` until it is.
+- **2026-11-28** — Shell-size PR 1, bytes (#311): app shell 329.9 → 298.6 KB gzip, limit
+  300. Settings no longer loads Tiptap (93.4 → 10.7 KB beyond the shell). Signed-out
+  screens, export, backup and three rare modals load on demand. The Editor warms on idle.
+  Session Replay and performance tracing are removed; error reports stay. Corrects the
+  2026-11-27 entry: the test credentials do exist, in the main checkout's `.env.local`,
+  which a git worktree does not get.

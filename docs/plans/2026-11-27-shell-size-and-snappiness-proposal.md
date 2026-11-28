@@ -121,7 +121,23 @@ three toolbar instances also run per key. And the unlock and signed-in library-l
 have not run, so PR 3 has no baseline yet and the C6 gate in PR 4 is still open; both
 need one run with the `E2E_TEST_*` credentials.
 
-Next: PR 1 and PR 2 run in parallel; their files are disjoint. Then PR 3
+**PR 1 landed 2026-11-28 (#311).** App shell 329.9 → 298.6 KB gzip, limit 300. A7 stayed:
+the owner confirmed tracing was not in use. A3 kept more modals eager than listed, each
+for a stated reason. Known and not fixed: four more lazy modals now share
+`lazyWithRetry`'s reload-on-chunk-failure, which can lose a held save.
+
+**The signed-in baseline exists.** The credentials are in the main checkout's
+`.env.local`; a worktree does not get that file, which is why PR 0 reported them missing.
+On `main` before PR 1, at 4x throttle: unlock's longest task is 1,396 ms and its longest
+frame gap 1,384 ms. That is the Argon2id freeze PR 3 removes. Signed-in library load is
+10.6 ms, but the test account holds 4 notes, so the C6 gate is still open: it needs an
+account with a few hundred notes.
+
+**Found on the way (#312):** on a phone viewport the Settings bottom sheet slides back
+off-screen on its first open after a page load. It reproduces on `main`. Not part of this
+plan's items; PR 2 neither causes nor fixes it.
+
+PR 2 (#310) is reviewed and being fixed. Then: PR 1 and PR 2 were built in parallel; their files are disjoint. Then PR 3
 and PR 5 in parallel, then PR 4, then PR 6.
 
 No PR unless a measurement justifies it: A6, A8, C14, C18.
@@ -135,8 +151,9 @@ After each PR lands, lower `appShellJs.limitKB` to the new measurement plus 1 KB
 - A1: **decided 2026-11-27 — A1c, load after first paint.** A1a is dropped (nothing for
   phones). A1b, the rewrite, is deferred until the D1 timing spec can prove it.
   
-- D2 and A7: **decided 2026-11-27 — drop Session Replay. Drop performance tracing too,
-  unless Sentry's Performance tab is in real use.** Error reporting stays.
+- D2 and A7: **decided 2026-11-27 — drop Session Replay and performance tracing.**
+  The owner confirmed on 2026-11-28 that Sentry's Performance tab is not in use. Error
+  reporting stays.
   
 - C9 and C10: **decided 2026-11-27 — tune both, modestly, after C2.** Stagger stays on
   the first library load, capped near 0.3 s, and is skipped on back-navigation and search
