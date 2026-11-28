@@ -118,6 +118,31 @@ if (sentryBuiltIn) {
   );
 }
 
+// Shell-size plan B1/B2: Tiptap and ProseMirror load with the Editor. They go to one
+// named chunk (manualChunks in vite.config.ts), so a static import from the app shell
+// or from Settings shows up here by file name. Settings once pulled the whole chunk in
+// through the Smart typography preference helpers.
+{
+  const tiptapChunks = allJs.filter((file) => /^assets\/vendor-tiptap-/.test(file));
+  const appShellChunk = allJs.filter((file) => /^assets\/AppShell-/.test(file));
+  const settingsChunk = allJs.filter((file) => /^assets\/SettingsModal-/.test(file));
+  for (const [name, roots, hint] of [
+    ['app-shell', [...entry.closure, ...appShellChunk], 'load editor code from the Editor route'],
+    ['SettingsModal', settingsChunk, 'import preference helpers from a module with no Tiptap import'],
+  ]) {
+    const found = staticClosure(distDir, roots).filter((file) => tiptapChunks.includes(file));
+    requireThat(
+      `Tiptap not in the ${name} closure`,
+      tiptapChunks.length === 1 && roots.length > 0 && found.length === 0,
+      tiptapChunks.length !== 1
+        ? `Expected one vendor-tiptap chunk, found ${tiptapChunks.join(', ') || 'none'}`
+        : roots.length === 0
+          ? `No chunk found for ${name}`
+          : `Tiptap is in the ${name} static path (${found.join(', ')}); ${hint}`
+    );
+  }
+}
+
 // Step 4: react and react-dom in one chunk. Before, the object form of manualChunks
 // left react-dom/client in main and put react itself in vendor-sentry. The markers are
 // production strings unique to each package: Component#setState's error (react) and
