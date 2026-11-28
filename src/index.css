@@ -841,6 +841,21 @@ nav,
   opacity: 0.7;
 }
 
+/* Note Card Elevation (C13: CSS :hover replaces JS mouseenter/mouseleave style writes) */
+.note-card {
+  box-shadow: var(--shadow-md);
+}
+
+.note-card.note-card-compact {
+  box-shadow: var(--shadow-sm);
+}
+
+@media (hover: hover) {
+  .note-card:not(.note-card-compact):not(.note-card-decorative):hover {
+    box-shadow: var(--shadow-lg);
+  }
+}
+
 /* Note Card Preview - Scaled down rich text */
 .note-card-preview {
   font-family: var(--font-body);
