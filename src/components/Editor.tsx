@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { MAX_NOTE_TITLE_LENGTH } from '../utils/validation';
 import { heldSaves } from '../stores/heldSaves';
 import { noteSaveQueue } from '../stores/noteSaveQueue';
-import { useState, useEffect, useLayoutEffect, useEffectEvent, useRef, useCallback } from 'react';
+import { Suspense, useState, useEffect, useLayoutEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { getSaveLabel } from '../utils/saveStatus';
 import { isFieldOutsideNote, isModAltN, isModN } from '../utils/newNoteShortcut';
@@ -21,7 +21,8 @@ import { EditorSidebar } from './EditorSidebar';
 import { EditorMetrics } from './EditorMetrics';
 import { FindReplacePanel } from './FindReplacePanel';
 import { TagSelector } from './TagSelector';
-import { ShareModal } from './ShareModal';
+import { ErrorBoundary } from './ErrorBoundary';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { formatShortDate, formatRelativeTime } from '../utils/formatTime';
 import { HeaderShell } from './HeaderShell';
 import { Logo } from './Logo';
@@ -146,6 +147,11 @@ const SAVE_LABEL_ICON: Record<ReturnType<typeof getSaveLabel>, SyncStateKind> = 
   'Saved here': 'saved',
   Synced: 'synced',
 };
+
+// Share is rare, so its modal (and the share crypto) loads on first use. Opening the
+// export menu starts the fetch; the share item also waits on a save first.
+const loadShareModal = () => import('./ShareModal').then((m) => ({ default: m.ShareModal }));
+const ShareModal = lazyWithRetry(loadShareModal);
 
 /**
  * One instance per note: `NoteEditorView` keys it by `note.id` (issue #288), so a
@@ -1364,7 +1370,10 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onNewNote,
       <div className="relative" ref={exportMenuRef}>
         <button type="button"
           {...exportTriggerProps}
-          onClick={() => setShowExportMenu(!showExportMenu)}
+          onClick={() => {
+            if (!showExportMenu && sharingEnabled && !isDemo) void loadShareModal().catch(() => {});
+            setShowExportMenu(!showExportMenu);
+          }}
           className="
             size-9
             rounded-full
@@ -2051,13 +2060,17 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onNewNote,
       )}
 
       {/* Share Modal - only rendered in authenticated mode when sharing is enabled */}
-      {sharingEnabled && !isDemo && (
-        <ShareModal
-          isOpen={showShareModal}
-          onClose={() => setShowShareModal(false)}
-          note={note}
-          userId={userId}
-        />
+      {sharingEnabled && !isDemo && showShareModal && (
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <ShareModal
+              isOpen
+              onClose={() => setShowShareModal(false)}
+              note={note}
+              userId={userId}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </div>
   );

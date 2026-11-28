@@ -636,6 +636,38 @@ describe('Editor', () => {
       expect(screen.getByText('Share as letter')).toBeInTheDocument();
     });
 
+    // ShareModal is a lazy chunk (shell-size plan B3). It must still open, reopen after
+    // closing, and open again after the Editor remounts.
+    it('opens the lazy share modal, again after closing, and after a remount', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const openShare = async () => {
+        await user.click(screen.getByLabelText('Share and export'));
+        await user.click(screen.getByText('Share as letter'));
+        expect(await screen.findByTestId('share-modal')).toBeInTheDocument();
+      };
+      const { unmount } = render(<Editor {...defaultProps} />);
+      expect(screen.queryByTestId('share-modal')).not.toBeInTheDocument();
+
+      await openShare();
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+      expect(screen.queryByTestId('share-modal')).not.toBeInTheDocument();
+      await openShare();
+
+      unmount();
+      render(<Editor {...defaultProps} />);
+      expect(screen.queryByTestId('share-modal')).not.toBeInTheDocument();
+      await openShare();
+    });
+
+    it('offers no share in the demo, so the share chunk is never needed there', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<Editor {...defaultProps} isDemo />);
+
+      await user.click(screen.getByLabelText('Share and export'));
+      expect(screen.queryByText('Share as letter')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('share-modal')).not.toBeInTheDocument();
+    });
+
     it('closes export menu when clicking outside', async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<Editor {...defaultProps} />);
