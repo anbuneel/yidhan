@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { StrictMode, useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BottomSheet } from './BottomSheet';
 import { SessionTimeoutModal } from './SessionTimeoutModal';
+import { resetGestureRuntimeForTests } from '../utils/gestureRuntime';
 
 const { mobileState } = vi.hoisted(() => ({
   mobileState: { value: false },
@@ -49,6 +50,7 @@ async function openSheet() {
 describe('BottomSheet focus', () => {
   beforeEach(() => {
     mobileState.value = false;
+    resetGestureRuntimeForTests();
   });
 
   it('moves focus into the sheet when it opens', async () => {
@@ -131,26 +133,77 @@ describe('BottomSheet focus', () => {
     expect(desktopDialog.tagName).toBe('DIALOG');
     await waitFor(() => expect(desktopDialog.contains(document.activeElement)).toBe(true));
 
-    // Flip to mobile while open: DOM node swaps from <dialog> to <div role="dialog">.
+    // Flip to mobile while open: DOM node swaps from <dialog> to <div role="dialog">,
+    // and may swap once more when the deferred gesture runtime resolves (A1c).
     mobileState.value = true;
     rerender(<Harness />);
 
-    const mobileDialog = await screen.findByRole('dialog');
-    expect(mobileDialog.tagName).toBe('DIV');
-    expect(mobileDialog).not.toBe(desktopDialog);
-    await waitFor(() => expect(mobileDialog.contains(document.activeElement)).toBe(true));
+    await waitFor(() => {
+      const mobileDialog = screen.getByRole('dialog');
+      expect(mobileDialog.tagName).toBe('DIV');
+      expect(mobileDialog).not.toBe(desktopDialog);
+      expect(mobileDialog.contains(document.activeElement)).toBe(true);
+    });
+
+    // Wait for the deferred gesture runtime upgrade (if still in flight) so subsequent
+    // assertions run against a settled DOM node and prove focus survives the upgrade.
+    await waitFor(() => {
+      const activeDialog = screen.getByRole('dialog');
+      expect(activeDialog.querySelector('.cursor-grab')).not.toBeNull();
+      expect(activeDialog.contains(document.activeElement)).toBe(true);
+    });
 
     // Background remains inert, Tab stays trapped in the swapped node, and Escape returns
     // focus to the original page opener captured before the swap.
+    const currentDialog = screen.getByRole('dialog');
     expect(screen.getByText('Behind the sheet')).toHaveAttribute('inert');
     const last = screen.getByRole('button', { name: 'Last inside' });
     last.focus();
     tab();
-    expect(mobileDialog.contains(document.activeElement)).toBe(true);
+    expect(currentDialog.contains(document.activeElement)).toBe(true);
     expect(document.activeElement).not.toBe(last);
 
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(document.activeElement).toBe(opener);
+  });
+
+  it('keeps stack order and focus on the covering modal when the gesture runtime resolves while covered', async () => {
+    function CoveredHarness({ open, showTop }: { open: boolean; showTop: boolean }) {
+      return (
+        <>
+          <button type="button">Behind all</button>
+          <BottomSheet isOpen={open} onClose={vi.fn()} title="Settings">
+            <button type="button">Inside sheet</button>
+          </BottomSheet>
+          <SessionTimeoutModal
+            isOpen={showTop}
+            onStay={vi.fn()}
+            onSignOut={vi.fn()}
+            minutesRemaining={2}
+          />
+        </>
+      );
+    }
+
+    // Mount closed first so the sheet starts from its normal closed state before opening.
+    const { rerender } = render(<CoveredHarness open={false} showTop={false} />);
+    mobileState.value = true;
+    rerender(<CoveredHarness open showTop={false} />);
+    await screen.findByRole('dialog', { name: 'Settings' });
+
+    rerender(<CoveredHarness open showTop />);
+    const topDialog = screen.getByRole('dialog', { name: 'Still there?' });
+    expect(topDialog.contains(document.activeElement)).toBe(true);
+
+    // Once the deferred gesture chunk loads, the covered sheet upgrades in place without
+    // tearing down its stack entry or stealing focus from the covering modal.
+    await waitFor(() => {
+      expect(document.querySelector('.cursor-grab')).not.toBeNull();
+    });
+    expect(topDialog.contains(document.activeElement)).toBe(true);
+    expect(topDialog).toHaveAttribute('aria-modal', 'true');
+    expect(topDialog.closest('[inert]')).toBeNull();
+    expect(screen.getByText('Inside sheet').closest('[inert]')).not.toBeNull();
   });
 
   it('does not steal focus or reorder the stack when isMobile flips while covered by another modal', async () => {
@@ -187,5 +240,108 @@ describe('BottomSheet focus', () => {
     expect(topDialog).toHaveAttribute('aria-modal', 'true');
     expect(topDialog.closest('[inert]')).toBeNull();
     expect(screen.getByText('Inside sheet').closest('[inert]')).not.toBeNull();
+  });
+
+  describe('when the gesture runtime arrives while the mobile sheet is open', () => {
+    function Counter() {
+      const [count, setCount] = useState(0);
+      return (
+        <button type="button" onClick={() => setCount(count + 1)}>
+          Count {count}
+        </button>
+      );
+    }
+
+    function UpgradeHarness({ showTop = false }: { showTop?: boolean }) {
+      return (
+        <>
+          <button type="button">Behind all</button>
+          <BottomSheet isOpen onClose={vi.fn()} title="Settings">
+            <Counter />
+            <input aria-label="Display name" />
+          </BottomSheet>
+          <SessionTimeoutModal
+            isOpen={showTop}
+            onStay={vi.fn()}
+            onSignOut={vi.fn()}
+            minutesRemaining={2}
+          />
+        </>
+      );
+    }
+
+    const runtimeLoaded = () => document.querySelector('.cursor-grab') !== null;
+
+    it('keeps typed text, child state, focus and the dialog node', async () => {
+      mobileState.value = true;
+      render(<UpgradeHarness />);
+
+      const dialog = screen.getByRole('dialog', { name: 'Settings' });
+      expect(runtimeLoaded()).toBe(false);
+      const input = screen.getByRole('textbox', { name: 'Display name' }) as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'typed before the chunk' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Count 0' }));
+      input.focus();
+
+      await waitFor(() => expect(runtimeLoaded()).toBe(true));
+
+      expect(screen.getByRole('dialog', { name: 'Settings' })).toBe(dialog);
+      expect(screen.getByRole('textbox', { name: 'Display name' })).toBe(input);
+      expect(input.value).toBe('typed before the chunk');
+      expect(screen.getByRole('button', { name: 'Count 1' })).toBeInTheDocument();
+      expect(document.activeElement).toBe(input);
+    });
+
+    it('keeps the sheet state and leaves focus on a covering SessionTimeoutModal', async () => {
+      mobileState.value = true;
+      const { rerender } = render(<UpgradeHarness />);
+      const input = screen.getByRole('textbox', { name: 'Display name' }) as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'kept' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Count 0' }));
+
+      rerender(<UpgradeHarness showTop />);
+      const topDialog = screen.getByRole('dialog', { name: 'Still there?' });
+      expect(topDialog.contains(document.activeElement)).toBe(true);
+
+      await waitFor(() => expect(runtimeLoaded()).toBe(true));
+
+      expect(topDialog.contains(document.activeElement)).toBe(true);
+      expect(topDialog.closest('[inert]')).toBeNull();
+      expect(screen.getByRole('textbox', { name: 'Display name', hidden: true })).toBe(input);
+      expect(input.value).toBe('kept');
+      expect(screen.getByRole('button', { name: 'Count 1', hidden: true })).toBeInTheDocument();
+      expect(input.closest('[inert]')).not.toBeNull();
+    });
+  });
+
+  // PR #312: on a phone the sheet slid up, then back to translateY(innerHeight), and
+  // stayed there. useSpring re-applied its initial props when React re-attached effects.
+  // StrictMode re-attaches them on purpose, so it reproduces this in a unit test.
+  it('stays on screen after opening under StrictMode once the runtime is loaded', async () => {
+    mobileState.value = true;
+    // Load the gesture runtime first, the way the library does after its first paint.
+    const preload = render(
+      <BottomSheet isOpen onClose={vi.fn()} title="Warm up">
+        <span>warm</span>
+      </BottomSheet>
+    );
+    await waitFor(() => expect(document.querySelector('.cursor-grab')).not.toBeNull());
+    preload.unmount();
+
+    function StrictHarness({ open }: { open: boolean }) {
+      return (
+        <StrictMode>
+          <BottomSheet isOpen={open} onClose={vi.fn()} title="Settings">
+            <button type="button">Inside</button>
+          </BottomSheet>
+        </StrictMode>
+      );
+    }
+    const { rerender } = render(<StrictHarness open={false} />);
+    rerender(<StrictHarness open />);
+    const dialog = await screen.findByRole('dialog', { name: 'Settings' });
+
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    expect(dialog.style.transform).toBe('');
   });
 });

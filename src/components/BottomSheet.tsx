@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useDrag } from '@use-gesture/react';
-import { useSpring, animated, config } from '@react-spring/web';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
-import { useSpringReducedMotion } from '../utils/springMotion';
+import { useGestureRuntime, type GestureRuntime } from '../utils/gestureRuntime';
 import { ModalBackdropButton } from './ModalBackdropButton';
+// Type only: erased at build, so react-spring stays out of the static shell (A1c).
+import type { SpringValue as SpringValueType } from '@react-spring/web';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -50,14 +50,194 @@ const DISMISS_THRESHOLD = 100;
 // This matches iOS behavior where a quick flick dismisses regardless of drag distance
 const VELOCITY_THRESHOLD = 0.5;
 
+interface MobileSheetMotionProps {
+  runtime: GestureRuntime;
+  isOpen: boolean;
+  /** The sheet was already on screen (static) when the runtime arrived: start at rest. */
+  startOpen: boolean;
+  onClose: () => void;
+  onExited: () => void;
+  sheetRef: RefObject<HTMLElement | null>;
+  backdropRef: RefObject<HTMLDivElement | null>;
+  handleRef: RefObject<HTMLDivElement | null>;
+  titleRef: RefObject<HTMLHeadingElement | null>;
+}
+
+/**
+ * Spring and drag behaviour for the mobile sheet (A1c). Renders nothing: it writes the
+ * sheet's transform and the backdrop's opacity straight to the DOM nodes the sheet
+ * already rendered, so the sheet and its children never remount when the gesture chunk
+ * arrives while the sheet is open. Must render after the sheet in the tree, so the
+ * sheet's refs are attached before this component's layout effects run.
+ */
+function MobileSheetMotion({
+  runtime,
+  isOpen,
+  startOpen,
+  onClose,
+  onExited,
+  sheetRef,
+  backdropRef,
+  handleRef,
+  titleRef,
+}: MobileSheetMotionProps) {
+  const { useDrag, SpringValue, config, useSpringReducedMotion } = runtime;
+  const reducedMotion = useSpringReducedMotion();
+
+  const applyY = useCallback(
+    (value: number) => {
+      const sheet = sheetRef.current;
+      if (!sheet) return;
+      sheet.style.transform = value === 0 ? '' : `translate3d(0, ${value}px, 0)`;
+    },
+    [sheetRef]
+  );
+
+  const applyBackdropOpacity = useCallback(
+    (value: number) => {
+      const backdrop = backdropRef.current;
+      if (!backdrop) return;
+      backdrop.style.opacity = value === 1 ? '' : String(value);
+    },
+    [backdropRef]
+  );
+
+  // Where the sheet and backdrop are, kept across spring re-creation.
+  const yRef = useRef(startOpen ? 0 : window.innerHeight);
+  const opacityRef = useRef(startOpen ? 1 : 0);
+  const ySpringRef = useRef<SpringValueType<number> | null>(null);
+  const opacitySpringRef = useRef<SpringValueType<number> | null>(null);
+
+  // The springs are plain SpringValues owned by this effect, not useSpring. useSpring
+  // re-applies its initial props from its own layout effect and stops its controllers in
+  // an effect cleanup; when React detaches and re-attaches effects (StrictMode in
+  // development, Suspense or Activity in production) that sent the sheet back to its
+  // off-screen start and left it there (PR #312). Here a re-attach makes fresh springs
+  // that start from wherever the sheet actually is.
+  useLayoutEffect(() => {
+    const ySpring = new SpringValue(yRef.current, {
+      config: config.stiff,
+      onChange: (_result, spring) => {
+        const value = spring.get();
+        yRef.current = value;
+        applyY(value);
+      },
+    });
+    const opacitySpring = new SpringValue(opacityRef.current, {
+      config: config.default,
+      onChange: (_result, spring) => {
+        const value = spring.get();
+        opacityRef.current = value;
+        applyBackdropOpacity(value);
+      },
+    });
+    ySpringRef.current = ySpring;
+    opacitySpringRef.current = opacitySpring;
+    // Write the starting position before the first paint.
+    applyY(yRef.current);
+    applyBackdropOpacity(opacityRef.current);
+    return () => {
+      ySpringRef.current = null;
+      opacitySpringRef.current = null;
+      ySpring.stop();
+      opacitySpring.stop();
+    };
+  }, [SpringValue, config, applyY, applyBackdropOpacity]);
+
+  // Open and close. Declared after the spring effect, so on a re-attach it runs against
+  // the fresh springs.
+  useLayoutEffect(() => {
+    const ySpring = ySpringRef.current;
+    const opacitySpring = opacitySpringRef.current;
+    if (!ySpring || !opacitySpring) return;
+
+    if (isOpen) {
+      void ySpring.start({ to: 0, immediate: reducedMotion });
+      void opacitySpring.start({ to: 1, immediate: reducedMotion });
+      return;
+    }
+
+    void opacitySpring.start({ to: 0, immediate: reducedMotion });
+    if (reducedMotion) {
+      void ySpring.start({ to: window.innerHeight, immediate: true });
+      queueMicrotask(onExited);
+      return;
+    }
+    void ySpring.start({
+      to: window.innerHeight,
+      onRest: (result: { finished?: boolean }) => {
+        if (result.finished !== false) onExited();
+      },
+    });
+  }, [isOpen, reducedMotion, onExited]);
+
+  const moveSheet = (props: { to: number; immediate?: boolean; config?: object }) => {
+    void ySpringRef.current?.start(props);
+  };
+
+  // Drag to dismiss - bound to the handle and the title only, never the content.
+  const handleDrag = ({
+    movement: [, my],
+    velocity: [, vy],
+    down,
+    cancel,
+  }: {
+    movement: [number, number];
+    velocity: [number, number];
+    down: boolean;
+    cancel: () => void;
+  }) => {
+    // Only allow dragging down
+    if (my < 0) {
+      moveSheet({ to: 0, immediate: true });
+      return;
+    }
+
+    if (down) {
+      // While dragging, follow finger
+      moveSheet({ to: my, immediate: true });
+      return;
+    }
+
+    // On release, check if should dismiss
+    const shouldDismiss = my > DISMISS_THRESHOLD || (vy > VELOCITY_THRESHOLD && my > 30);
+    if (shouldDismiss) {
+      moveSheet({
+        to: window.innerHeight,
+        immediate: reducedMotion,
+        config: { ...config.stiff, velocity: vy },
+      });
+      void opacitySpringRef.current?.start({ to: 0, immediate: reducedMotion });
+      if (reducedMotion) {
+        onClose();
+      } else {
+        // Wait for animation then close
+        setTimeout(onClose, 200);
+      }
+      cancel();
+    } else {
+      // Snap back
+      moveSheet({ to: 0, immediate: reducedMotion });
+    }
+  };
+
+  const dragOptions = {
+    from: () => [0, yRef.current] as [number, number],
+    filterTaps: true,
+    bounds: { top: 0 },
+    rubberband: true,
+  };
+  useDrag(handleDrag, { ...dragOptions, target: handleRef });
+  useDrag(handleDrag, { ...dragOptions, target: titleRef });
+
+  return null;
+}
+
 /**
  * iOS-style bottom sheet modal.
  *
- * On mobile: Slides up from bottom, drag handle to dismiss
- * On desktop: Falls back to centered modal behavior
- *
- * Uses react-spring for physics-based animations matching
- * the swipe gesture feel elsewhere in the app.
+ * On mobile: Slides up from bottom, drag handle to dismiss (gesture/spring runtime loaded lazily, A1c)
+ * On desktop: Falls back to centered modal behavior without loading gesture libraries
  */
 export function BottomSheet({
   isOpen,
@@ -70,108 +250,41 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const isMobile = useMobileDetect();
   const keyboardHeight = useKeyboardHeight();
-  const reducedMotion = useSpringReducedMotion();
-
-  // Track whether component should render (allows animation to complete before unmount)
-  const [shouldRender, setShouldRender] = useState(isOpen);
-
-  // Spring for sheet position (0 = fully open, positive = dragging down)
-  const [{ y }, api] = useSpring(() => ({
-    y: window.innerHeight, // Start off-screen
-    config: config.stiff,
-  }));
-
-  // Spring for backdrop opacity
-  const [{ backdropOpacity }, backdropApi] = useSpring(() => ({
-    backdropOpacity: 0,
-    config: config.default,
-  }));
-
-  // Handle open/close animations
-  // Using queueMicrotask to defer setState and avoid synchronous render cascade
-  useEffect(() => {
-    if (isOpen) {
-      // Defer to next microtask to avoid synchronous setState in effect
-      queueMicrotask(() => setShouldRender(true));
-      api.start({ y: 0, immediate: reducedMotion });
-      backdropApi.start({ backdropOpacity: 1, immediate: reducedMotion });
-    } else {
-      api.start({
-        y: window.innerHeight,
-        immediate: reducedMotion,
-        onRest: () => setShouldRender(false), // Unmount after close animation
-      });
-      backdropApi.start({ backdropOpacity: 0, immediate: reducedMotion });
-      if (reducedMotion) {
-        queueMicrotask(() => setShouldRender(false));
-      }
-    }
-  }, [isOpen, api, backdropApi, reducedMotion]);
+  const runtime = useGestureRuntime(isMobile && isOpen ? 'immediate' : 'passive');
+  const [openedWithoutRuntime, setOpenedWithoutRuntime] = useState(() => isOpen && isMobile && !runtime);
+  // Keeps the mobile sheet mounted while its close animation runs.
+  const [isExiting, setIsExiting] = useState(false);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
+    setIsExiting(!isOpen && isMobile && runtime !== null);
+  }
+  const handleExited = useCallback(() => setIsExiting(false), []);
 
   const sheetRef = useRef<HTMLElement | null>(null);
-  const isRendered = shouldRender && isOpen;
+  const backdropRef = useRef<HTMLDivElement | null>(null);
+  const handleRef = useRef<HTMLDivElement | null>(null);
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setOpenedWithoutRuntime(false);
+    } else if (isMobile && !runtime) {
+      setOpenedWithoutRuntime(true);
+    }
+  }, [isOpen, isMobile, runtime]);
+
+  // The mobile sheet keeps one DOM node whether or not the gesture runtime has loaded,
+  // so the node only changes when isMobile flips.
   useModalFocusTrap({
-    isOpen: isRendered,
+    isOpen,
     onClose,
     dialogRef: sheetRef,
     nodeKey: isMobile,
   });
 
-  // Drag to dismiss gesture - bound to handle area only
-  const bind = useDrag(
-    ({ movement: [, my], velocity: [, vy], down, cancel }) => {
-      // Only allow dragging down
-      if (my < 0) {
-        api.start({ y: 0, immediate: true });
-        return;
-      }
-
-      if (down) {
-        // While dragging, follow finger
-        api.start({ y: my, immediate: true });
-      } else {
-        // On release, check if should dismiss
-        const shouldDismiss =
-          my > DISMISS_THRESHOLD || (vy > VELOCITY_THRESHOLD && my > 30);
-
-        if (shouldDismiss) {
-          // Dismiss with velocity
-          api.start({
-            y: window.innerHeight,
-            immediate: reducedMotion,
-            config: { ...config.stiff, velocity: vy },
-          });
-          backdropApi.start({ backdropOpacity: 0, immediate: reducedMotion });
-          if (reducedMotion) {
-            onClose();
-          } else {
-            // Wait for animation then close
-            setTimeout(onClose, 200);
-          }
-          cancel();
-        } else {
-          // Snap back
-          api.start({ y: 0, immediate: reducedMotion });
-        }
-      }
-    },
-    {
-      from: () => [0, y.get()],
-      filterTaps: true,
-      bounds: { top: 0 },
-      rubberband: true,
-      enabled: isMobile,
-    }
-  );
-
-  // Don't render if closed and animation complete
-  if (!shouldRender) {
-    return null;
-  }
-
-  // Desktop fallback: centered modal
+  // Desktop fallback: centered modal (never loads react-spring or use-gesture)
   if (!isMobile) {
-    // Gate desktop render on isOpen directly (no animation needed)
     if (!isOpen) return null;
 
     return (
@@ -226,11 +339,17 @@ export function BottomSheet({
     );
   }
 
-  // Mobile: bottom sheet
+  // Mobile: one sheet tree before and after the gesture chunk arrives (A1c). Until it
+  // arrives the sheet is static and closes with its button, Escape or the backdrop.
+  if (!isOpen && !isExiting) return null;
+
+  const dragClass = runtime ? 'cursor-grab active:cursor-grabbing touch-none' : '';
+
   return (
     <>
       {/* Backdrop — keeps inline styles instead of .modal-backdrop per DESIGN.md */}
-      <animated.div
+      <div
+        ref={backdropRef}
         data-modal-backdrop="true"
         aria-hidden="true"
         className="fixed inset-0 z-50"
@@ -238,15 +357,14 @@ export function BottomSheet({
           background: 'rgba(0, 0, 0, 0.6)',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
-          opacity: backdropOpacity,
           pointerEvents: isOpen ? 'auto' : 'none',
         }}
         onClick={onClose}
       />
 
       {/* Sheet */}
-      <animated.div
-        ref={(el: HTMLDivElement | null) => { sheetRef.current = el; }}
+      <div
+        ref={(el) => { sheetRef.current = el; }}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'bottom-sheet-title' : undefined}
@@ -257,7 +375,6 @@ export function BottomSheet({
           ${className}
         `}
         style={{
-          y,
           maxHeight: `${maxHeightPercent}vh`,
           background: 'var(--color-bg-primary)',
           // Safe area padding for iPhone home indicator
@@ -265,12 +382,9 @@ export function BottomSheet({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Drag handle - ONLY this area captures drag gestures */}
+        {/* Drag handle - ONLY this area and the title capture drag gestures */}
         {showHandle && (
-          <div
-            {...bind()}
-            className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing touch-none"
-          >
+          <div ref={handleRef} className={`flex justify-center pt-3 pb-2 ${dragClass}`}>
             <div
               className="w-10 h-1 rounded-full"
               style={{ background: 'var(--color-bg-tertiary)' }}
@@ -278,7 +392,7 @@ export function BottomSheet({
           </div>
         )}
 
-        {/* Header with title and close button - title area is draggable */}
+        {/* Header with title and close button */}
         <div
           className="px-6 pb-3 border-b flex items-center justify-between"
           style={{ borderColor: 'var(--glass-border)' }}
@@ -287,9 +401,9 @@ export function BottomSheet({
           <div className="w-8" />
           {title && (
             <h2
+              ref={titleRef}
               id="bottom-sheet-title"
-              {...bind()}
-              className="text-lg font-medium text-center flex-1 cursor-grab active:cursor-grabbing touch-none"
+              className={`text-lg font-medium text-center flex-1 ${dragClass}`}
               style={{
                 fontFamily: 'var(--font-display)',
                 color: 'var(--color-text-primary)',
@@ -310,7 +424,22 @@ export function BottomSheet({
         >
           {children}
         </div>
-      </animated.div>
+      </div>
+
+      {/* After the sheet, so its refs are attached before the motion layout effects run. */}
+      {runtime && (
+        <MobileSheetMotion
+          runtime={runtime}
+          isOpen={isOpen}
+          startOpen={openedWithoutRuntime}
+          onClose={onClose}
+          onExited={handleExited}
+          sheetRef={sheetRef}
+          backdropRef={backdropRef}
+          handleRef={handleRef}
+          titleRef={titleRef}
+        />
+      )}
     </>
   );
 }

@@ -1,8 +1,6 @@
-import { useRef, useState, useCallback, memo } from 'react';
-import { useDrag } from '@use-gesture/react';
-import { useSpring, animated, config } from '@react-spring/web';
+import { useRef, useState, useCallback, useEffect, memo, type RefObject } from 'react';
 import type { Note, NoteDeleteHandler } from '../types';
-import { useSpringReducedMotion } from '../utils/springMotion';
+import { useGestureRuntime, type GestureRuntime } from '../utils/gestureRuntime';
 import { NoteCard } from './NoteCard';
 
 interface SwipeableNoteCardProps {
@@ -23,34 +21,56 @@ const ACTION_THRESHOLD = 80; // Distance to reveal action
 const TRIGGER_THRESHOLD = 140; // Distance to auto-trigger action
 const VELOCITY_TRIGGER = 1.2; // Velocity to auto-trigger
 
-/**
- * Swipeable wrapper for NoteCard with iOS-like gesture actions.
- *
- * - Swipe right → Pin/Unpin action (gold)
- * - Spring physics for native feel
- * - Haptic feedback at thresholds
- */
-export const SwipeableNoteCard = memo(function SwipeableNoteCard({
-  note,
-  onClick,
-  onDelete,
+interface SwipeableNoteCardGestureLayerProps {
+  runtime: GestureRuntime;
+  containerRef: RefObject<HTMLDivElement | null>;
+  cardWrapperRef: RefObject<HTMLDivElement | null>;
+  noteId: string;
+  pinned: boolean;
+  disabled: boolean;
+  onTogglePin: (id: string, pinned: boolean) => void;
+}
+
+function SwipeableNoteCardGestureLayer({
+  runtime,
+  containerRef,
+  cardWrapperRef,
+  noteId,
+  pinned,
+  disabled,
   onTogglePin,
-  disabled = false,
-  isCompact = false,
-  keepPin,
-  searchQuery,
-  searchMatchTerms,
-  isFocused = false,
-}: SwipeableNoteCardProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+}: SwipeableNoteCardGestureLayerProps) {
+  const { useDrag, useSpring, animated, config, useSpringReducedMotion } = runtime;
   const [isTriggering, setIsTriggering] = useState(false);
   const reducedMotion = useSpringReducedMotion();
+
+  const applyCardTransform = useCallback(
+    (nextX: number) => {
+      const wrapper = cardWrapperRef.current;
+      if (!wrapper) return;
+      wrapper.style.transform = nextX === 0 ? '' : `translate3d(${nextX}px, 0, 0)`;
+    },
+    [cardWrapperRef]
+  );
 
   // Spring animation for the card position
   const [{ x }, api] = useSpring(() => ({
     x: 0,
     config: { ...config.stiff, clamp: true },
+    onChange: ({ value }: { value: { x: number } }) => {
+      applyCardTransform(value.x);
+    },
   }));
+
+  // Clean up any in-flight inline styles if the gesture layer unmounts mid-drag.
+  useEffect(() => {
+    const container = containerRef.current;
+    const wrapper = cardWrapperRef.current;
+    return () => {
+      if (wrapper) wrapper.style.transform = '';
+      if (container) container.style.pointerEvents = '';
+    };
+  }, [containerRef, cardWrapperRef]);
 
   // Haptic feedback helper
   const triggerHaptic = useCallback((intensity: 'light' | 'medium' | 'heavy' = 'medium') => {
@@ -67,7 +87,8 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
 
     if (reducedMotion) {
       api.start({ x: 0, immediate: true });
-      onTogglePin(note.id, !note.pinned);
+      applyCardTransform(0);
+      onTogglePin(noteId, !pinned);
       setIsTriggering(false);
       return;
     }
@@ -77,14 +98,16 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
       x: 0,
       config: config.wobbly,
       onRest: () => {
-        onTogglePin(note.id, !note.pinned);
+        applyCardTransform(0);
+        onTogglePin(noteId, !pinned);
         setIsTriggering(false);
       },
     });
-  }, [api, note.id, note.pinned, onTogglePin, reducedMotion, triggerHaptic]);
+  }, [api, applyCardTransform, config.wobbly, noteId, pinned, onTogglePin, reducedMotion, triggerHaptic]);
 
-  // Gesture binding (right-swipe only for pin/unpin)
-  const bind = useDrag(
+  // Gesture binding attached directly to cardWrapperRef so NoteCard never remounts
+  // when the deferred gesture runtime activates after first paint.
+  useDrag(
     ({ movement: [mx], velocity: [vx], direction: [dx], down, cancel, memo = { hapticTriggered: false } }) => {
       if (disabled || isTriggering) {
         cancel?.();
@@ -129,12 +152,21 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
         }
 
         // Snap back to center
-        api.start({ x: 0, immediate: reducedMotion, config: config.stiff });
+        api.start({
+          x: 0,
+          immediate: reducedMotion,
+          config: config.stiff,
+          onRest: () => applyCardTransform(0),
+        });
+        if (reducedMotion) {
+          applyCardTransform(0);
+        }
       }
 
       return memo;
     },
     {
+      target: cardWrapperRef,
       axis: 'x',
       filterTaps: true,
       bounds: { left: 0, right: 200 },
@@ -152,49 +184,87 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
   });
 
   return (
+    <animated.div
+      className="absolute inset-y-0 left-0 flex items-center justify-start pl-6 pointer-events-none"
+      style={{
+        opacity: pinOpacity,
+        background: pinned
+          ? 'linear-gradient(to right, var(--color-text-tertiary), var(--color-text-secondary))' // Gray for unpin
+          : 'linear-gradient(to right, var(--color-accent), var(--color-accent-hover))', // Accent for pin
+        borderRadius: 'var(--radius-card)',
+        width: '100%',
+      }}
+    >
+      <animated.div
+        style={{ transform: pinScale.to((s) => `scale(${s})`), color: 'var(--color-on-accent)' }}
+        className="flex flex-col items-center"
+      >
+        <svg
+          className="size-7"
+          fill={pinned ? 'none' : 'currentColor'}
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+          />
+        </svg>
+        <span className="text-xs font-medium mt-1">{pinned ? 'Unpin' : 'Pin'}</span>
+      </animated.div>
+    </animated.div>
+  );
+}
+
+/**
+ * Swipeable wrapper for NoteCard with iOS-like gesture actions.
+ *
+ * - Swipe right → Pin/Unpin action
+ * - Spring physics loaded after first paint (A1c); card renders and works normally before
+ * - Haptic feedback at thresholds
+ */
+export const SwipeableNoteCard = memo(function SwipeableNoteCard({
+  note,
+  onClick,
+  onDelete,
+  onTogglePin,
+  disabled = false,
+  isCompact = false,
+  keepPin,
+  searchQuery,
+  searchMatchTerms,
+  isFocused = false,
+}: SwipeableNoteCardProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cardWrapperRef = useRef<HTMLDivElement>(null);
+  const runtime = useGestureRuntime('after-paint');
+
+  return (
     <div
       ref={containerRef}
       className="relative overflow-hidden touch-pan-y"
       style={{ borderRadius: 'var(--radius-card)' }}
     >
-      {/* Pin action (right side - revealed on right swipe) */}
-      <animated.div
-        className="absolute inset-y-0 left-0 flex items-center justify-start pl-6 pointer-events-none"
-        style={{
-          opacity: pinOpacity,
-          background: note.pinned
-            ? 'linear-gradient(to right, var(--color-text-tertiary), var(--color-text-secondary))' // Gray for unpin
-            : 'linear-gradient(to right, var(--color-accent), var(--color-accent-hover))', // Gold for pin
-          borderRadius: 'var(--radius-card)',
-          width: '100%',
-        }}
-      >
-        <animated.div
-          style={{ transform: pinScale.to((s) => `scale(${s})`), color: 'var(--color-on-accent)' }}
-          className="flex flex-col items-center"
-        >
-          <svg
-            className="size-7"
-            fill={note.pinned ? 'none' : 'currentColor'}
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-            />
-          </svg>
-          <span className="text-xs font-medium mt-1">{note.pinned ? 'Unpin' : 'Pin'}</span>
-        </animated.div>
-      </animated.div>
+      {/* Pin action backdrop and drag listener activate once the gesture chunk loads. */}
+      {runtime && (
+        <SwipeableNoteCardGestureLayer
+          runtime={runtime}
+          containerRef={containerRef}
+          cardWrapperRef={cardWrapperRef}
+          noteId={note.id}
+          pinned={note.pinned}
+          disabled={disabled}
+          onTogglePin={onTogglePin}
+        />
+      )}
 
-      {/* Animated card */}
-      <animated.div
-        {...bind()}
+      {/* Card wrapper stays the same DOM element before and after gesture activation. */}
+      <div
+        ref={cardWrapperRef}
+        className="relative"
         style={{
-          x,
           touchAction: 'pan-y',
         }}
       >
@@ -209,7 +279,7 @@ export const SwipeableNoteCard = memo(function SwipeableNoteCard({
           searchQuery={searchQuery}
           searchMatchTerms={searchMatchTerms}
         />
-      </animated.div>
+      </div>
     </div>
   );
 }, (prev, next) => prev.note === next.note && prev.disabled === next.disabled && prev.isCompact === next.isCompact && prev.keepPin === next.keepPin && prev.searchQuery === next.searchQuery && prev.searchMatchTerms === next.searchMatchTerms && prev.isFocused === next.isFocused);

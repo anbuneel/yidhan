@@ -6,6 +6,7 @@
     "limitKB is what the build may not exceed. Where it is above targetKB, it is the value measured in CI after the last landed step, rounded up to the next whole KB, plus 1 KB of headroom (DECISIONS.md, 2026-11-08): a feature that has to live in the entry path may grow it by a few hundred bytes without a budget decision. Lower it to the new measurement plus 1 KB as each step lands; never raise it otherwise without a DECISIONS.md entry.",
     "Once a budget meets its target, limitKB is the lower of the target and the measurement plus 1 KB: the target is the promise, so CI never lets a build pass above it. landingJsBeforeLoad is at its 90 KB target with 0.1 KB to spare; appShellJs met its 330 KB target with step 7.",
     "Shell-size PR 1 (docs/plans/2026-11-27-shell-size-and-snappiness-proposal.md) lowered appShellJs, largestChunk and precache to their measurements plus 1 KB. The targets are unchanged: the owner lowers them after PR 2.",
+    "Shell-size PR 2 (library feel) moved the gesture libraries out of the shell: appShellJs 298.6 -> 278.8 KB, limit lowered to 280. The same split raised precache 962.5 -> 966.1 KB, limit raised to 968 (DECISIONS.md, 2026-11-28): the gesture libraries compress about 2.3 KB worse in a chunk of their own, and the PR adds about 1 KB of code.",
     "landingPageTotal: the browser spec counts every request until network idle; the build check can only count what index.html names, so it measures less.",
     "landingPageTotal and precache were raised on 2026-11-09 for the Newsreader display cut the owner chose for big titles (DECISIONS.md). Both targets moved with the limits, so the rule above still holds.",
     "precache.forbidden also keeps every HTML file but index.html out: the JavaScript-off documents for the public pages (item 60) serve only visitors who cannot run the worker."
@@ -23,10 +24,10 @@
     "reachesTargetWith": "step 5 (reached: 290.9 KB in the browser); raised for the display cut on 2026-11-09 (measured: 307.8 KB)"
   },
   "appShellJs": {
-    "limitKB": 300,
+    "limitKB": 280,
     "targetKB": 330,
     "measures": "JS to render the unlocked library, Editor excluded (gzip): the entry path, the app shell (lazy since step 5) and what it imports, and Sentry, which loads after load since step 2. Session Replay was removed (shell-size plan D2)",
-    "reachesTargetWith": "step 7 (reached: 325.4 KB); shell-size PR 1 measured 317.3 KB, and 298.5 KB without Sentry tracing (A7)"
+    "reachesTargetWith": "step 7 (reached: 325.4 KB); shell-size PR 1 measured 317.3 KB, and 298.5 KB without Sentry tracing (A7); shell-size PR 2 measured 278.8 KB (A1c)"
   },
   "largestChunk": {
     "limitKB": 118,
@@ -35,7 +36,7 @@
     "reachesTargetWith": "step 5 (reached: 136.4 KB); shell-size PR 1 measured 116.1 KB"
   },
   "precache": {
-    "limitKB": 964,
+    "limitKB": 968,
     "targetKB": 1108,
     "measures": "Precache transfer: every URL in dist/sw.js, counted once",
     "maxPngKB": 100,

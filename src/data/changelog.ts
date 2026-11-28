@@ -7,6 +7,12 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.27.2', date: '2026-11-27', changes: [
+    { type: 'improvement', text: 'The library opens and scrolls faster when you have long notes. Cards now prepare only the preview they show instead of processing the whole note' },
+    { type: 'improvement', text: 'Returning to the library from a note shows your cards immediately, and search results appear sooner as you type' },
+    { type: 'improvement', text: 'The sync indicator updates as soon as a change is saved or synced, including changes made in another tab. It no longer checks every ten seconds, which saves battery' },
+    { type: 'fix', text: 'On a phone, the Settings sheet no longer slides back off the screen the first time you open it' },
+  ] },
   { version: '3.27.1', date: '2026-11-27', changes: [
     { type: 'improvement', text: 'The app loads less code before your library shows. Sign-in, the Practice Space, sharing, export and a few rare dialogs now load when you open them, and Settings no longer loads the editor' },
     { type: 'improvement', text: 'Error reports no longer include session replay. Nothing records the page while you write; Sentry still receives crash reports, with your notes stripped out' },

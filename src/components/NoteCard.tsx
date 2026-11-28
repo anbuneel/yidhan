@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useLayoutEffect, useCallback, memo } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback, memo } from 'react';
 import type { Note, NoteDeleteHandler } from '../types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { TagBadgeList } from './TagBadge';
@@ -18,6 +18,328 @@ interface NoteCardProps {
   searchQuery?: string;
   searchMatchTerms?: readonly string[];
   isFocused?: boolean;
+}
+
+interface PreviewLimits {
+  /** Stop at a block boundary after this many blocks with text. */
+  maxBlocks: number;
+  /** Stop at a block boundary after this many blocks, empty ones included. */
+  maxTotalBlocks: number;
+  /** Stop at a block boundary once this much text has been read. */
+  maxTextChars: number;
+  /** Cut inside a block (at a word end) once this much text has been read. */
+  hardTextChars: number;
+}
+
+/** Full cards clip at 8em, so a few blocks are always enough. */
+const FULL_PREVIEW_LIMITS: PreviewLimits = {
+  maxBlocks: 8,
+  maxTotalBlocks: 20,
+  maxTextChars: 800,
+  hardTextChars: 1200,
+};
+
+/** Compact cards show the first 80 characters of plain text, however many lines that is. */
+const COMPACT_PREVIEW_CHARS = 80;
+const COMPACT_PREVIEW_LIMITS: PreviewLimits = {
+  maxBlocks: Infinity,
+  maxTotalBlocks: Infinity,
+  maxTextChars: COMPACT_PREVIEW_CHARS + 1,
+  hardTextChars: COMPACT_PREVIEW_CHARS + 200,
+};
+
+const VOID_HTML_TAGS = new Set([
+  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+  'link', 'meta', 'param', 'source', 'track', 'wbr',
+]);
+
+const LEAF_BLOCK_TAGS = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre']);
+const CONTAINER_BLOCK_TAGS = new Set(['li', 'blockquote', 'div']);
+
+function findTagEnd(html: string, start: number): number {
+  let quote: '"' | "'" | null = null;
+  for (let i = start; i < html.length; i++) {
+    const ch = html[i];
+    if (quote) {
+      if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+    } else if (ch === '>') {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function closeOpenTags(openStack: string[]): string {
+  let suffix = '';
+  for (let i = openStack.length - 1; i >= 0; i--) {
+    suffix += `</${openStack[i]}>`;
+  }
+  return suffix;
+}
+
+/**
+ * Slice long note HTML to its first few blocks before DOMPurify runs so card
+ * previews do not parse and mount an entire multi-thousand-word document only
+ * to clip it at 8em. The returned fragment must still pass through sanitizeHtml.
+ */
+function truncateHtmlForPreview(
+  html: string,
+  limits: PreviewLimits = FULL_PREVIEW_LIMITS
+): { html: string; truncated: boolean } {
+  if (!html) return { html, truncated: false };
+  const cut = (fragment: string) => ({ html: fragment, truncated: true });
+
+  const openStack: string[] = [];
+  const countedInsideContainer: boolean[] = [];
+  let nonEmptyBlocks = 0;
+  let totalBlocks = 0;
+  let textChars = 0;
+  let blockHasText = false;
+  let rawTextTag: 'script' | 'style' | null = null;
+  let i = 0;
+
+  while (i < html.length) {
+    if (html[i] === '<') {
+      if (html.startsWith('<!--', i)) {
+        const endComment = html.indexOf('-->', i + 4);
+        i = endComment === -1 ? html.length : endComment + 3;
+        continue;
+      }
+
+      const end = findTagEnd(html, i + 1);
+      if (end === -1) break;
+
+      const rawTag = html.slice(i + 1, end).trim();
+      const nextPos = end + 1;
+
+      if (!rawTag || rawTag[0] === '!' || rawTag[0] === '?') {
+        i = nextPos;
+        continue;
+      }
+
+      const isClosing = rawTag[0] === '/';
+      const nameMatch = (isClosing ? rawTag.slice(1) : rawTag).match(/^([a-zA-Z][a-zA-Z0-9-]*)/);
+      if (!nameMatch) {
+        i = nextPos;
+        continue;
+      }
+
+      const tagName = nameMatch[1].toLowerCase();
+
+      if (rawTextTag) {
+        if (isClosing && tagName === rawTextTag) {
+          rawTextTag = null;
+        }
+        i = nextPos;
+        continue;
+      }
+
+      if (!isClosing) {
+        const isSelfClosing = rawTag.endsWith('/') || VOID_HTML_TAGS.has(tagName);
+        if (tagName === 'script' || tagName === 'style') {
+          if (!isSelfClosing) rawTextTag = tagName;
+          i = nextPos;
+          continue;
+        }
+        if (tagName === 'hr') {
+          totalBlocks += 1;
+          nonEmptyBlocks += 1;
+          blockHasText = false;
+          if (countedInsideContainer.length > 0) {
+            countedInsideContainer[countedInsideContainer.length - 1] = true;
+          }
+          if (
+            openStack.length === 0 &&
+            nextPos < html.length &&
+            (nonEmptyBlocks >= limits.maxBlocks ||
+              totalBlocks >= limits.maxTotalBlocks ||
+              textChars >= limits.maxTextChars)
+          ) {
+            return cut(html.slice(0, nextPos));
+          }
+        } else if (!isSelfClosing) {
+          openStack.push(tagName);
+          if (CONTAINER_BLOCK_TAGS.has(tagName)) {
+            countedInsideContainer.push(false);
+          }
+        }
+        i = nextPos;
+        continue;
+      }
+
+      // Closing tag: unwind stack to matching open tag if present.
+      const matchIndex = openStack.lastIndexOf(tagName);
+      let hadChildBlock = false;
+      if (matchIndex !== -1) {
+        for (let k = openStack.length - 1; k >= matchIndex; k--) {
+          if (CONTAINER_BLOCK_TAGS.has(openStack[k])) {
+            const popped = countedInsideContainer.pop() ?? false;
+            if (k === matchIndex) hadChildBlock = popped;
+          }
+        }
+        openStack.length = matchIndex;
+      }
+
+      let countedThisTag = false;
+      if (LEAF_BLOCK_TAGS.has(tagName)) {
+        totalBlocks += 1;
+        if (blockHasText) nonEmptyBlocks += 1;
+        blockHasText = false;
+        countedThisTag = true;
+      } else if (CONTAINER_BLOCK_TAGS.has(tagName) && !hadChildBlock) {
+        if (tagName === 'li' || openStack.length === 0) {
+          totalBlocks += 1;
+          if (blockHasText) nonEmptyBlocks += 1;
+          blockHasText = false;
+          countedThisTag = true;
+        }
+      }
+
+      if (countedThisTag && countedInsideContainer.length > 0) {
+        countedInsideContainer[countedInsideContainer.length - 1] = true;
+      }
+
+      const insideListItem = openStack.includes('li');
+      const isSafeBoundary =
+        openStack.length === 0 ||
+        tagName === 'li' ||
+        (LEAF_BLOCK_TAGS.has(tagName) && !insideListItem);
+
+      if (
+        isSafeBoundary &&
+        nextPos < html.length &&
+        (nonEmptyBlocks >= limits.maxBlocks ||
+          totalBlocks >= limits.maxTotalBlocks ||
+          textChars >= limits.maxTextChars)
+      ) {
+        return cut(html.slice(0, nextPos) + closeOpenTags(openStack));
+      }
+
+      i = nextPos;
+      continue;
+    }
+
+    // Text run up to the next tag.
+    const nextTag = html.indexOf('<', i);
+    const textEnd = nextTag === -1 ? html.length : nextTag;
+
+    if (rawTextTag) {
+      i = textEnd;
+      continue;
+    }
+
+    let pos = i;
+    while (pos < textEnd) {
+      const ch = html[pos];
+      if (ch === '&') {
+        const semi = html.indexOf(';', pos + 1);
+        if (semi !== -1 && semi < textEnd && semi - pos <= 10) {
+          pos = semi + 1;
+          textChars += 1;
+          blockHasText = true;
+        } else {
+          pos += 1;
+          textChars += 1;
+          blockHasText = true;
+        }
+      } else {
+        if (ch > ' ') blockHasText = true;
+        textChars += 1;
+        pos += 1;
+      }
+
+      if (textChars >= limits.hardTextChars && pos < html.length) {
+        // Advance slightly to finish the current word without crossing a tag or entity.
+        let wordEnd = pos;
+        const limit = Math.min(textEnd, pos + 40);
+        while (wordEnd < limit && html[wordEnd] > ' ' && html[wordEnd] !== '&') {
+          wordEnd += 1;
+        }
+        return cut(html.slice(0, wordEnd) + closeOpenTags(openStack));
+      }
+    }
+
+    i = textEnd;
+  }
+
+  return { html, truncated: false };
+}
+
+type OverflowListener = (isOverflowing: boolean) => void;
+
+const overflowListeners = new Map<HTMLElement, OverflowListener>();
+const pendingOverflowChecks = new Set<HTMLElement>();
+let sharedOverflowObserver: ResizeObserver | null = null;
+let overflowFrameId: number | null = null;
+
+function flushOverflowChecks(): void {
+  overflowFrameId = null;
+  if (pendingOverflowChecks.size === 0) return;
+
+  // Read every queued preview before issuing any state updates so layout is
+  // measured once per animation frame instead of interleaved per card.
+  const measurements: Array<[OverflowListener, boolean]> = [];
+  pendingOverflowChecks.forEach((element) => {
+    const listener = overflowListeners.get(element);
+    if (!listener || !element.isConnected) return;
+    measurements.push([listener, element.scrollHeight > element.clientHeight]);
+  });
+  pendingOverflowChecks.clear();
+
+  for (const [listener, isOverflowing] of measurements) {
+    listener(isOverflowing);
+  }
+}
+
+function scheduleOverflowCheck(element: HTMLElement): void {
+  pendingOverflowChecks.add(element);
+  if (overflowFrameId !== null) return;
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+    overflowFrameId = window.requestAnimationFrame(flushOverflowChecks);
+  } else {
+    flushOverflowChecks();
+  }
+}
+
+function ensureSharedOverflowObserver(): ResizeObserver | null {
+  if (sharedOverflowObserver) return sharedOverflowObserver;
+  if (typeof ResizeObserver === 'undefined') return null;
+
+  sharedOverflowObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.target instanceof HTMLElement && overflowListeners.has(entry.target)) {
+        scheduleOverflowCheck(entry.target);
+      }
+    }
+  });
+  return sharedOverflowObserver;
+}
+
+function observePreviewOverflow(element: HTMLElement, listener: OverflowListener): () => void {
+  overflowListeners.set(element, listener);
+  const observer = ensureSharedOverflowObserver();
+  observer?.observe(element);
+  scheduleOverflowCheck(element);
+
+  return () => {
+    overflowListeners.delete(element);
+    pendingOverflowChecks.delete(element);
+    sharedOverflowObserver?.unobserve(element);
+    if (overflowListeners.size === 0) {
+      sharedOverflowObserver?.disconnect();
+      sharedOverflowObserver = null;
+      if (
+        overflowFrameId !== null &&
+        typeof window !== 'undefined' &&
+        typeof window.cancelAnimationFrame === 'function'
+      ) {
+        window.cancelAnimationFrame(overflowFrameId);
+        overflowFrameId = null;
+      }
+    }
+  };
 }
 
 /**
@@ -58,11 +380,6 @@ export const NoteCard = memo(function NoteCard({
   noteIdRef.current = note.id;
   onDeleteRef.current = onDelete;
 
-  // Plain text for compact mode and search (memoized to avoid repeated DOMPurify calls)
-  const plainText = useMemo(() => htmlToPlainText(note.content), [note.content]);
-  const compactPreview = plainText.slice(0, 80) + (plainText.length > 80 ? '...' : '');
-  // Sanitized HTML preview preserves task list checkboxes, formatting structure
-  const htmlPreview = useMemo(() => sanitizeHtml(note.content), [note.content]);
   const parsedSearchTerms = useMemo(
     () => searchQuery
       ? parseSearchQuery(searchQuery).textTerms.map(({ normalized }) => normalized)
@@ -70,37 +387,63 @@ export const NoteCard = memo(function NoteCard({
     [searchQuery]
   );
   const searchTerms = searchMatchTerms ?? parsedSearchTerms;
-  const highlightedTitle = useMemo(() => {
-    if (searchTerms.length === 0) return sanitizeText(note.title);
-    return highlightSearchText(htmlToPlainText(note.title), searchTerms);
-  }, [note.title, searchTerms]);
+  const hasSearchTerms = searchTerms.length > 0;
 
-  useLayoutEffect(() => {
-    if (isCompact) return;
+  // Run DOMPurify only for what this render mode needs: compact cards and
+  // search results need plain text; full cards without a search snippet need HTML.
+  // Outside search, slice long notes on block boundaries before sanitising.
+  // Compact cards cut by text length only, never by block count, so a note of
+  // many short lines shows the same 80 characters it always did.
+  const needsPlainText = isCompact || hasSearchTerms;
+  const { plainText, plainTextTruncated } = useMemo(() => {
+    if (!needsPlainText) return { plainText: '', plainTextTruncated: false };
+    if (hasSearchTerms) return { plainText: htmlToPlainText(note.content), plainTextTruncated: false };
+    const preview = truncateHtmlForPreview(note.content, COMPACT_PREVIEW_LIMITS);
+    return { plainText: htmlToPlainText(preview.html), plainTextTruncated: preview.truncated };
+  }, [needsPlainText, hasSearchTerms, note.content]);
+  const compactPreview = isCompact
+    ? plainText.slice(0, COMPACT_PREVIEW_CHARS) +
+      (plainText.length > COMPACT_PREVIEW_CHARS || plainTextTruncated ? '...' : '')
+    : '';
+  // Search snippets cover every content match. Operators are metadata filters,
+  // so only the parsed free-text remainder is highlighted.
+  const searchSnippet = useMemo(() => {
+    if (!hasSearchTerms) return null;
+    return buildSearchSnippet(plainText, searchTerms);
+  }, [hasSearchTerms, plainText, searchTerms]);
+  const needsHtmlPreview = !isCompact && !searchSnippet;
+  // Sanitized HTML preview preserves task list checkboxes, formatting structure
+  const htmlPreview = useMemo(
+    () => (needsHtmlPreview ? sanitizeHtml(truncateHtmlForPreview(note.content).html) : ''),
+    [needsHtmlPreview, note.content]
+  );
+  const highlightedTitle = useMemo(() => {
+    if (!hasSearchTerms) return sanitizeText(note.title);
+    return highlightSearchText(htmlToPlainText(note.title), searchTerms);
+  }, [hasSearchTerms, note.title, searchTerms]);
+
+  useEffect(() => {
+    if (!needsHtmlPreview) {
+      setIsPreviewOverflowing(false);
+      return;
+    }
 
     const preview = previewRef.current;
     if (!preview) return;
 
-    const updateOverflow = () => {
-      const isOverflowing = preview.scrollHeight > preview.clientHeight;
+    return observePreviewOverflow(preview, (isOverflowing) => {
       setIsPreviewOverflowing((current) =>
         current === isOverflowing ? current : isOverflowing
       );
-    };
+    });
+  }, [needsHtmlPreview]);
 
-    updateOverflow();
-    const resizeObserver = new ResizeObserver(updateOverflow);
-    resizeObserver.observe(preview);
-
-    return () => resizeObserver.disconnect();
-  }, [htmlPreview, isCompact]);
-
-  // Search snippets cover every content match. Operators are metadata filters,
-  // so only the parsed free-text remainder is highlighted.
-  const searchSnippet = useMemo(() => {
-    if (searchTerms.length === 0) return null;
-    return buildSearchSnippet(plainText, searchTerms);
-  }, [plainText, searchTerms]);
+  useEffect(() => {
+    if (!needsHtmlPreview) return;
+    const preview = previewRef.current;
+    if (!preview) return;
+    scheduleOverflowCheck(preview);
+  }, [htmlPreview, needsHtmlPreview]);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -178,12 +521,12 @@ export const NoteCard = memo(function NoteCard({
         relative
         overflow-hidden
         flex flex-col
-        transition-all duration-300
+        transition-[box-shadow,transform,scale] duration-300
         focus:outline-none
         focus:ring-2
         focus:ring-[var(--color-accent)]
         focus:ring-offset-2
-        ${isDecorative ? '' : 'cursor-pointer active:scale-[0.98]'}
+        ${isDecorative ? 'note-card-decorative' : 'cursor-pointer active:scale-[0.98]'}
         ${isDeleting ? 'deleting' : ''}
         ${isCompact ? 'note-card-compact p-3' : 'p-6 pb-5'}
       `}
@@ -191,21 +534,11 @@ export const NoteCard = memo(function NoteCard({
         background: 'linear-gradient(to bottom, var(--color-card-bg), color-mix(in srgb, var(--color-card-bg) 97%, var(--color-accent)))',
         border: '1px solid var(--glass-border)',
         borderRadius: 'var(--radius-card)',
-        boxShadow: isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)',
         transitionTimingFunction: 'var(--ease-out-quint)',
         // Full cards size to their content so the masonry actually staggers;
         // the preview caps its own height below. Compact keeps a fixed clamp.
         minHeight: isCompact ? 'auto' : undefined,
         maxHeight: isCompact ? '120px' : undefined,
-      }}
-      onMouseEnter={(e) => {
-        if (!isCompact && !isDecorative) {
-          e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (isDecorative) return;
-        e.currentTarget.style.boxShadow = isCompact ? 'var(--shadow-sm)' : 'var(--shadow-md)';
       }}
     >
       {!isDecorative && (

@@ -454,6 +454,7 @@ nav,
 }
 
 /* Search snippet highlighting */
+.note-card mark,
 .note-card-entrance mark {
   background: var(--color-accent-glow);
   color: var(--color-text-primary);
@@ -461,17 +462,16 @@ nav,
   border-radius: 2px;
 }
 
-/* Delete: gentle collapse with subtle rotation */
+/* Delete: gentle collapse with subtle rotation (compositor-only: transform + opacity) */
 @keyframes card-delete {
   to {
     opacity: 0;
     transform: scale(0.85) rotate(1.5deg);
-    filter: blur(2px);
   }
 }
 
 .note-card.deleting {
-  will-change: transform, opacity, filter;
+  will-change: transform, opacity;
   animation: card-delete 0.3s ease-out forwards;
   pointer-events: none;
 }
@@ -839,6 +839,21 @@ nav,
 
 .rich-text-editor .ProseMirror.shared-note-content input[type="checkbox"] {
   opacity: 0.7;
+}
+
+/* Note Card Elevation (C13: CSS :hover replaces JS mouseenter/mouseleave style writes) */
+.note-card {
+  box-shadow: var(--shadow-md);
+}
+
+.note-card.note-card-compact {
+  box-shadow: var(--shadow-sm);
+}
+
+@media (hover: hover) {
+  .note-card:not(.note-card-compact):not(.note-card-decorative):hover {
+    box-shadow: var(--shadow-lg);
+  }
 }
 
 /* Note Card Preview - Scaled down rich text */

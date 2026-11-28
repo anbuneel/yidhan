@@ -17,14 +17,6 @@ function confirmPasswordField(page: Page): Locator {
   return page.getByLabel('Confirm new password', { exact: true });
 }
 
-// App bug, not a spec problem. On a phone the Settings sheet slides up, then
-// slides back off-screen within about a second of its first open after a page
-// load, and stays mounted there. Nothing in it can be tapped. A second open stays
-// put. Seen on the dev server and on a production build. The tests that only
-// check the sheet is in the DOM still pass; the ones that click inside it cannot.
-const PHONE_SHEET_BUG =
-  'Settings bottom sheet slides off-screen after its first open on a phone viewport';
-
 /** The Profile tab's way into offboarding. It reads "Let go of Yidhan →". */
 function letGoButton(page: Page): Locator {
   return page.getByRole('button', { name: /let go of yidhan/i });
@@ -79,8 +71,7 @@ test.describe('Settings', () => {
       await expect(emailField).toBeDisabled();
     });
 
-    test('updates display name', async ({ authenticatedPage: page, isMobile }) => {
-      test.fixme(isMobile, PHONE_SHEET_BUG);
+    test('updates display name', async ({ authenticatedPage: page }) => {
       await openSettings(page);
 
       const nameField = page.getByLabel('Display name', { exact: true });
@@ -112,8 +103,7 @@ test.describe('Settings', () => {
   });
 
   test.describe('Password Settings', () => {
-    test('shows password tab for email users', async ({ authenticatedPage: page, isMobile }) => {
-      test.fixme(isMobile, PHONE_SHEET_BUG);
+    test('shows password tab for email users', async ({ authenticatedPage: page }) => {
       await requirePasswordTab(page);
 
       await expect(newPasswordField(page)).toBeVisible();
@@ -123,8 +113,7 @@ test.describe('Settings', () => {
     // The form's own checks run first: every field is `required` and the new
     // password has `minLength={8}`. A short password is stopped by the browser, so
     // the app's "at least 8 characters" message never renders. Assert the block.
-    test('validates password length', async ({ authenticatedPage: page, isMobile }) => {
-      test.fixme(isMobile, PHONE_SHEET_BUG);
+    test('validates password length', async ({ authenticatedPage: page }) => {
       await requirePasswordTab(page);
 
       await currentPasswordField(page).fill(WRONG_CURRENT_PASSWORD);
@@ -140,8 +129,7 @@ test.describe('Settings', () => {
       await expect(page.getByText(/password updated|current password is incorrect/i)).toHaveCount(0);
     });
 
-    test('validates password match', async ({ authenticatedPage: page, isMobile }) => {
-      test.fixme(isMobile, PHONE_SHEET_BUG);
+    test('validates password match', async ({ authenticatedPage: page }) => {
       await requirePasswordTab(page);
 
       // The current password is required before the form submits at all. The
@@ -200,8 +188,7 @@ test.describe('Settings', () => {
       await expect(letGoButton(page)).toBeVisible();
     });
 
-    test('opens offboarding modal', async ({ authenticatedPage: page, isMobile }) => {
-      test.fixme(isMobile, PHONE_SHEET_BUG);
+    test('opens offboarding modal', async ({ authenticatedPage: page }) => {
       await openSettings(page);
 
       await letGoButton(page).click();

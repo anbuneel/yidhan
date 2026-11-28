@@ -8,6 +8,8 @@ import { LogoMark } from './LogoMark';
 import { TimeRibbon } from './TimeRibbon';
 import { PullToRefresh } from './PullToRefresh';
 import { useTouchCapable, useMobileDetect } from '../hooks/useMobileDetect';
+import { scheduleGestureRuntimeAfterPaint } from '../utils/gestureRuntime';
+import { hasLibraryPaintedInSession, markLibraryPaintedInSession } from '../utils/libraryEntrance';
 import {
   groupNotesByChapter,
   getDefaultExpansionState,
@@ -23,8 +25,8 @@ import { scrollRegionProps } from '../routing';
 /** A locked card without a retry wired up simply does nothing on click. */
 const noop = () => undefined;
 
-// Mobile breakpoint matching masonry grid (700px)
-const MOBILE_BREAKPOINT = 700;
+// Mobile breakpoint matching masonry grid (< 700px)
+const COMPACT_VIEWPORT_QUERY = '(max-width: 699px)';
 
 interface ChapteredLibraryProps {
   footerRef?: RefObject<HTMLElement | null>;
@@ -124,21 +126,62 @@ function ChapteredLibraryView({
   onBasisChange,
   onSortChange,
 }: ChapteredLibraryProps) {
-  // Auto-detect compact mode based on viewport width (mobile = compact)
+  // Auto-detect compact mode via matchMedia (avoids resize churn when mobile browser chrome hides)
   const [isCompact, setIsCompact] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth < MOBILE_BREAKPOINT;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false;
+    }
+    return window.matchMedia(COMPACT_VIEWPORT_QUERY).matches;
   });
 
-  // Update compact mode on viewport resize
   useEffect(() => {
-    const handleResize = () => {
-      setIsCompact(window.innerWidth < MOBILE_BREAKPOINT);
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+    const mediaQuery = window.matchMedia(COMPACT_VIEWPORT_QUERY);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsCompact(event.matches);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+    if (typeof mediaQuery.addListener === 'function') {
+      mediaQuery.addListener(handleChange);
+      return () => {
+        if (typeof mediaQuery.removeListener === 'function') {
+          mediaQuery.removeListener(handleChange);
+        }
+      };
+    }
   }, []);
+
+  // Entrance stagger runs only on the first library load of the session, never on
+  // back-navigation (remount) or search results.
+  const [allowEntranceStagger, setAllowEntranceStagger] = useState(
+    () => !hasLibraryPaintedInSession() && !isSearching
+  );
+
+  useEffect(() => {
+    if (!isLoading && notes.length > 0) {
+      markLibraryPaintedInSession();
+    }
+  }, [isLoading, notes.length]);
+
+  useEffect(() => {
+    if (isSearching && allowEntranceStagger) {
+      setAllowEntranceStagger(false);
+    }
+  }, [isSearching, allowEntranceStagger]);
+
+  const animateEntrance = allowEntranceStagger && !isSearching;
+
+  // Defer @react-spring and @use-gesture until after the library paints, on every device (A1c).
+  useEffect(() => {
+    if (isLoading && notes.length === 0) return;
+    return scheduleGestureRuntimeAfterPaint();
+  }, [isLoading, notes.length]);
 
   // Detect touch capability for pull-to-refresh
   const isTouchDevice = useTouchCapable();
@@ -290,7 +333,7 @@ function ChapteredLibraryView({
               {onNewNote && (
                 <button type="button"
                   onClick={onNewNote}
-                  className="px-6 py-3 font-medium transition-all duration-300 mb-4 touch-press focus-ring"
+                  className="px-6 py-3 font-medium transition-[background-color,transform] duration-300 mb-4 touch-press focus-ring"
                   style={{
                     fontFamily: 'var(--font-body)',
                     background: 'var(--color-cta-bg)',
@@ -378,6 +421,7 @@ function ChapteredLibraryView({
           searchQuery={searchQuery}
           searchMatchTerms={searchMatchTerms}
           isSearching={isSearching}
+          animateEntrance={animateEntrance}
           focusedNoteId={focusedNoteId}
         />
       ))}

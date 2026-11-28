@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChapteredLibrary } from './ChapteredLibrary';
+import { resetLibraryEntranceForTests } from '../utils/libraryEntrance';
 import { createMockNote } from '../test/factories';
 
 // Mock the two grouping functions, keeping the module's real vocabulary — the arrange
@@ -21,6 +22,8 @@ vi.mock('./ChapterSection', () => ({
     chapterKey,
     label,
     notes,
+    isCompact,
+    animateEntrance,
     onNoteClick,
     onNoteDelete,
     onTogglePin,
@@ -28,11 +31,18 @@ vi.mock('./ChapterSection', () => ({
     chapterKey: string;
     label: string;
     notes: { id: string }[];
+    isCompact?: boolean;
+    animateEntrance?: boolean;
     onNoteClick: (id: string) => void;
     onNoteDelete: (id: string) => void;
     onTogglePin: (id: string, pinned: boolean) => void;
   }) => (
-    <div data-testid={`chapter-${chapterKey}`} id={`chapter-${chapterKey}`}>
+    <div
+      data-testid={`chapter-${chapterKey}`}
+      id={`chapter-${chapterKey}`}
+      data-compact={String(Boolean(isCompact))}
+      data-animate-entrance={String(Boolean(animateEntrance))}
+    >
       <h2>{label}</h2>
       <span data-testid={`${chapterKey}-count`}>{notes.length} notes</span>
       {notes.map((note) => (
@@ -106,6 +116,7 @@ describe('ChapteredLibrary', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetLibraryEntranceForTests();
     // Set default mock implementations
     vi.mocked(temporalGrouping.groupNotesByChapter).mockReturnValue([]);
     vi.mocked(temporalGrouping.getDefaultExpansionState).mockReturnValue({
@@ -613,6 +624,93 @@ describe('ChapteredLibrary', () => {
       const { rerender } = render(<ChapteredLibrary {...defaultProps} notes={someNotes} />);
       rerender(<ChapteredLibrary {...defaultProps} notes={[]} />);
       expect(announcer()).toHaveTextContent('Your notes await.');
+    });
+  });
+
+  describe('responsive compact mode (C19)', () => {
+    it('tracks compact mode via matchMedia change events without a window resize listener', () => {
+      const originalMatchMedia = window.matchMedia;
+      const listeners = new Set<(event: MediaQueryListEvent) => void>();
+      let matches = false;
+
+      const compactMql = {
+        get matches() { return matches; },
+        media: '(max-width: 699px)',
+        onchange: null,
+        addEventListener: vi.fn((_type: string, cb: (event: MediaQueryListEvent) => void) => {
+          listeners.add(cb);
+        }),
+        removeEventListener: vi.fn((_type: string, cb: (event: MediaQueryListEvent) => void) => {
+          listeners.delete(cb);
+        }),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      };
+
+      window.matchMedia = vi.fn((query: string) => {
+        if (query === '(max-width: 699px)') return compactMql as unknown as MediaQueryList;
+        return {
+          matches: false,
+          media: query,
+          onchange: null,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        } as unknown as MediaQueryList;
+      });
+
+      const addListenerSpy = vi.spyOn(window, 'addEventListener');
+      const note = createMockNote({ id: 'n-compact' });
+      vi.mocked(temporalGrouping.groupNotesByChapter).mockReturnValue([
+        { key: 'thisWeek', label: 'This week', notes: [note] },
+      ]);
+
+      try {
+        const { unmount } = render(<ChapteredLibrary {...defaultProps} notes={[note]} />);
+        expect(addListenerSpy.mock.calls.some(([type]) => type === 'resize')).toBe(false);
+        expect(screen.getByTestId('chapter-thisWeek')).toHaveAttribute('data-compact', 'false');
+
+        matches = true;
+        act(() => {
+          listeners.forEach((cb) => cb({ matches: true, media: '(max-width: 699px)' } as MediaQueryListEvent));
+        });
+        expect(screen.getByTestId('chapter-thisWeek')).toHaveAttribute('data-compact', 'true');
+
+        unmount();
+        expect(compactMql.removeEventListener).toHaveBeenCalledTimes(1);
+      } finally {
+        window.matchMedia = originalMatchMedia;
+      }
+    });
+  });
+
+  describe('entrance stagger lifecycle (C9)', () => {
+    it('staggers on first library load, skips on remount (back-navigation), and skips on search', () => {
+      const note = createMockNote({ id: 'n-stagger' });
+      vi.mocked(temporalGrouping.groupNotesByChapter).mockReturnValue([
+        { key: 'thisWeek', label: 'This week', notes: [note] },
+      ]);
+
+      // First library load: stagger enabled.
+      const firstMount = render(<ChapteredLibrary {...defaultProps} notes={[note]} />);
+      expect(screen.getByTestId('chapter-thisWeek')).toHaveAttribute('data-animate-entrance', 'true');
+
+      // Entering search disables stagger, and clearing search does not re-stagger.
+      firstMount.rerender(
+        <ChapteredLibrary {...defaultProps} notes={[note]} isSearching searchQuery="n" />
+      );
+      expect(screen.getByTestId('chapter-thisWeek')).toHaveAttribute('data-animate-entrance', 'false');
+
+      firstMount.rerender(<ChapteredLibrary {...defaultProps} notes={[note]} />);
+      expect(screen.getByTestId('chapter-thisWeek')).toHaveAttribute('data-animate-entrance', 'false');
+      firstMount.unmount();
+
+      // Returning from a note remounts ChapteredLibrary: stagger stays skipped.
+      render(<ChapteredLibrary {...defaultProps} notes={[note]} />);
+      expect(screen.getByTestId('chapter-thisWeek')).toHaveAttribute('data-animate-entrance', 'false');
     });
   });
 

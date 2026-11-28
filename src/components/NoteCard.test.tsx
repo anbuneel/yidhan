@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { createMockNote } from '../test/factories';
 import type { NoteDeleteHandler } from '../types';
+import * as sanitize from '../utils/sanitize';
 import { NoteCard } from './NoteCard';
 
 function setPreviewHeight(preview: HTMLElement, clientHeight: number, scrollHeight: number) {
@@ -143,7 +144,7 @@ describe('NoteCard delete button on compact cards', () => {
 });
 
 describe('NoteCard preview mask', () => {
-  it('does not mask a one-line preview', () => {
+  it('does not mask a one-line preview', async () => {
     const { container, rerenderCard } = renderPreviewCard('<p>One clear line.</p>');
     const preview = container.querySelector<HTMLElement>('.note-card-preview');
     if (!preview) throw new Error('Full card preview was not rendered');
@@ -151,10 +152,10 @@ describe('NoteCard preview mask', () => {
     setPreviewHeight(preview, 24, 24);
     rerenderCard('<p>One clear line, updated.</p>');
 
-    expect(preview).not.toHaveClass('note-card-preview-overflowing');
+    await waitFor(() => expect(preview).not.toHaveClass('note-card-preview-overflowing'));
   });
 
-  it('does not mask a preview exactly at the overflow boundary', () => {
+  it('does not mask a preview exactly at the overflow boundary', async () => {
     const { container, rerenderCard } = renderPreviewCard('<p>Boundary preview.</p>');
     const preview = container.querySelector<HTMLElement>('.note-card-preview');
     if (!preview) throw new Error('Full card preview was not rendered');
@@ -162,21 +163,58 @@ describe('NoteCard preview mask', () => {
     setPreviewHeight(preview, 128, 128);
     rerenderCard('<p>Boundary preview, updated.</p>');
 
-    expect(preview).not.toHaveClass('note-card-preview-overflowing');
+    await waitFor(() => expect(preview).not.toHaveClass('note-card-preview-overflowing'));
   });
 
-  it('masks overflowing full previews but keeps compact cards on their truncation path', () => {
+  it('masks overflowing full previews but keeps compact cards on their truncation path', async () => {
     const { container, rerenderCard } = renderPreviewCard('<p>Long preview.</p>');
     const preview = container.querySelector<HTMLElement>('.note-card-preview');
     if (!preview) throw new Error('Full card preview was not rendered');
 
     setPreviewHeight(preview, 128, 129);
     rerenderCard('<p>Long preview with another clipped line.</p>');
-    expect(preview).toHaveClass('note-card-preview-overflowing');
+    await waitFor(() => expect(preview).toHaveClass('note-card-preview-overflowing'));
 
     rerenderCard('<p>Long preview with another clipped line.</p>', true);
     expect(container.querySelector('.note-card-preview')).toBeNull();
     expect(container.querySelector('.note-card-preview-overflowing')).toBeNull();
+  });
+
+  it('shares one ResizeObserver across many full cards and skips observing compact cards (C4)', async () => {
+    const observerSpy = vi.spyOn(window, 'ResizeObserver');
+
+    const compactRender = render(
+      <NoteCard note={createMockNote({ id: 'compact-1' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} isCompact />
+    );
+    expect(observerSpy).not.toHaveBeenCalled();
+    compactRender.unmount();
+
+    const fullRender = render(
+      <>
+        <NoteCard note={createMockNote({ id: 'full-1' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+        <NoteCard note={createMockNote({ id: 'full-2' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+        <NoteCard note={createMockNote({ id: 'full-3' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+      </>
+    );
+
+    expect(observerSpy).toHaveBeenCalledTimes(1);
+    const sharedInstance = observerSpy.mock.results[0].value as { observe: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> };
+    expect(sharedInstance.observe).toHaveBeenCalledTimes(3);
+
+    fullRender.unmount();
+    expect(sharedInstance.disconnect).toHaveBeenCalledTimes(1);
+
+    // Remount after all cards unmounted must create a clean observer and detect overflow.
+    const remount = render(
+      <NoteCard note={createMockNote({ id: 'full-4' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+    expect(observerSpy).toHaveBeenCalledTimes(2);
+    const preview = remount.container.querySelector<HTMLElement>('.note-card-preview')!;
+    setPreviewHeight(preview, 128, 200);
+    remount.rerender(
+      <NoteCard note={createMockNote({ id: 'full-4', content: '<p>Updated overflow</p>' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+    await waitFor(() => expect(preview).toHaveClass('note-card-preview-overflowing'));
   });
 });
 
@@ -223,5 +261,265 @@ describe('NoteCard search highlighting', () => {
 
     expect(container.querySelector('mark')).toHaveTextContent('harvest');
     expect(container.querySelector('.search-snippet')).toHaveTextContent('orchard harvest');
+  });
+});
+
+describe('NoteCard sanitization per render mode (C2)', () => {
+  it('does not run htmlToPlainText on a full card outside search, and still sanitises HTML', () => {
+    const plainSpy = vi.spyOn(sanitize, 'htmlToPlainText');
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const note = createMockNote({
+      id: 'c2-full',
+      title: 'Safe title',
+      content: '<p>Visible <strong>text</strong></p><script>window.__xss=1</script><img src="x" onerror="alert(1)" />',
+    });
+
+    const { container } = render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+
+    expect(plainSpy).not.toHaveBeenCalled();
+    expect(htmlSpy).toHaveBeenCalledTimes(1);
+    const preview = container.querySelector('.note-card-preview');
+    expect(preview).toHaveTextContent('Visible text');
+    expect(preview?.querySelector('script')).toBeNull();
+    expect(preview?.querySelector('img')).toBeNull();
+  });
+
+  it('does not run sanitizeHtml on a compact card outside search', () => {
+    const plainSpy = vi.spyOn(sanitize, 'htmlToPlainText');
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const note = createMockNote({
+      id: 'c2-compact',
+      content: '<p>Compact <em>preview</em> text</p>',
+    });
+
+    render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} isCompact />
+    );
+
+    expect(htmlSpy).not.toHaveBeenCalled();
+    expect(plainSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Compact preview text')).toBeInTheDocument();
+  });
+
+  it('does not run sanitizeHtml when a search card renders a content snippet', () => {
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const note = createMockNote({
+      id: 'c2-search',
+      title: 'Notes',
+      content: '<p>Found the <strong>lantern</strong> in the shed.</p>',
+    });
+
+    const { container } = render(
+      <NoteCard
+        note={note}
+        onClick={vi.fn()}
+        onDelete={vi.fn()}
+        onTogglePin={vi.fn()}
+        searchQuery="lantern"
+      />
+    );
+
+    expect(htmlSpy).not.toHaveBeenCalled();
+    expect(container.querySelector('.search-snippet mark')).toHaveTextContent('lantern');
+  });
+
+  it('falls back to sanitized HTML when search matches only the title on a full card', () => {
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const note = createMockNote({
+      id: 'c2-title-only',
+      title: 'Lantern notes',
+      content: '<p>Body without that word.</p>',
+    });
+
+    const { container } = render(
+      <NoteCard
+        note={note}
+        onClick={vi.fn()}
+        onDelete={vi.fn()}
+        onTogglePin={vi.fn()}
+        searchQuery="lantern"
+      />
+    );
+
+    expect(htmlSpy).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('.note-card-preview')).toHaveTextContent('Body without that word.');
+  });
+});
+
+describe('NoteCard compact preview (F2)', () => {
+  function compactText(content: string): string {
+    const note = createMockNote({ id: 'f2', content });
+    const { container, unmount } = render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} isCompact />
+    );
+    const text = container.querySelector('p.truncate')?.textContent ?? '';
+    unmount();
+    return text;
+  }
+
+  // What main showed: the first 80 characters of the whole note's plain text.
+  function mainCompactText(content: string): string {
+    const plain = sanitize.htmlToPlainText(content);
+    return plain.slice(0, 80) + (plain.length > 80 ? '...' : '');
+  }
+
+  it('shows every line of a note made of 14 short lines, as main does', () => {
+    const content = Array.from({ length: 14 }, (_, i) => `<p>item${i}</p>`).join('');
+    const text = compactText(content);
+    expect(text).toBe(mainCompactText(content));
+    expect(text).toContain('item13');
+    expect(text.endsWith('...')).toBe(false);
+  });
+
+  it('does not add an ellipsis to a short note that was not cut', () => {
+    const content = '<p>Milk</p><p>Eggs</p><p>Bread</p>';
+    expect(compactText(content)).toBe('MilkEggsBread');
+  });
+
+  it('adds an ellipsis when a note of many short lines is cut', () => {
+    const content = Array.from({ length: 60 }, (_, i) => `<p>line ${i}</p>`).join('');
+    const text = compactText(content);
+    expect(text).toBe(mainCompactText(content));
+    expect(text.endsWith('...')).toBe(true);
+  });
+
+  it('adds an ellipsis when one long paragraph is cut', () => {
+    const content = `<p>${'word '.repeat(400)}</p>`;
+    const text = compactText(content);
+    expect(text).toBe(mainCompactText(content));
+    expect(text.endsWith('...')).toBe(true);
+  });
+
+  it('matches main for a long task list', () => {
+    const content =
+      '<ul data-type="taskList">' +
+      Array.from(
+        { length: 30 },
+        (_, i) => `<li data-checked="false" data-type="taskItem"><label><input type="checkbox"><span></span></label><div><p>t${i}</p></div></li>`
+      ).join('') +
+      '</ul>';
+    expect(compactText(content)).toBe(mainCompactText(content));
+  });
+});
+
+describe('NoteCard preview block truncation (C3)', () => {
+  it('does not truncate short notes and preserves their full visible text', () => {
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const content = '<p>First line with <strong>bold</strong>.</p><p>Second line.</p>';
+    const note = createMockNote({ id: 'c3-short', content });
+
+    const { container } = render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+
+    expect(htmlSpy).toHaveBeenCalledWith(content);
+    expect(container.querySelector('.note-card-preview')).toHaveTextContent('First line with bold.Second line.');
+  });
+
+  it('truncates a long multi-block note on block boundaries before sanitising', () => {
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const blocks = Array.from({ length: 40 }, (_, i) => `<p>Paragraph ${i + 1}: steady writing across the page.</p>`);
+    const content = blocks.join('');
+    const note = createMockNote({ id: 'c3-long', content });
+
+    const { container } = render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+
+    expect(htmlSpy).toHaveBeenCalledTimes(1);
+    const passedToSanitize = htmlSpy.mock.calls[0][0];
+    expect(passedToSanitize.length).toBeLessThan(content.length / 2);
+    expect(passedToSanitize.endsWith('</p>')).toBe(true);
+    expect(passedToSanitize).not.toContain('Paragraph 40');
+    expect(container.querySelector('.note-card-preview')).toHaveTextContent('Paragraph 1');
+    expect(container.querySelector('.note-card-preview')).not.toHaveTextContent('Paragraph 40');
+  });
+
+  it('closes open list tags when truncating a long task list before sanitising', () => {
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const items = Array.from(
+      { length: 25 },
+      (_, i) =>
+        `<li data-checked="${i % 2 === 0 ? 'true' : 'false'}" data-type="taskItem"><label><input type="checkbox" ${i % 2 === 0 ? 'checked="checked"' : ''}><span></span></label><div><p>Task item ${i + 1}</p></div></li>`
+    ).join('');
+    const content = `<ul data-type="taskList">${items}</ul>`;
+    const note = createMockNote({ id: 'c3-tasks', content });
+
+    const { container } = render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+
+    const passedToSanitize = htmlSpy.mock.calls[0][0];
+    expect(passedToSanitize.endsWith('</ul>')).toBe(true);
+    expect(passedToSanitize).not.toContain('Task item 25');
+    expect(container.querySelectorAll('.note-card-preview li').length).toBe(8);
+  });
+
+  it('bounds a single giant paragraph and still sanitises dangerous markup', () => {
+    const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');
+    const words = Array.from({ length: 600 }, (_, i) => `word${i}`).join(' ');
+    const content = `<p><script>alert(1)</script>${words}</p>`;
+    const note = createMockNote({ id: 'c3-giant', content });
+
+    const { container } = render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+
+    const passedToSanitize = htmlSpy.mock.calls[0][0];
+    expect(passedToSanitize.length).toBeLessThan(content.length / 2);
+    expect(passedToSanitize.endsWith('</p>')).toBe(true);
+    expect(container.querySelector('.note-card-preview script')).toBeNull();
+    expect(container.querySelector('.note-card-preview')).toHaveTextContent('word0');
+  });
+
+  it('does not truncate before search snippet matching so deep matches still highlight', () => {
+    const filler = Array.from({ length: 30 }, (_, i) => `<p>Filler paragraph ${i + 1} with ordinary words.</p>`).join('');
+    const note = createMockNote({
+      id: 'c3-deep-search',
+      title: 'Long note',
+      content: `${filler}<p>Hidden needle near the end.</p>`,
+    });
+
+    const { container } = render(
+      <NoteCard
+        note={note}
+        onClick={vi.fn()}
+        onDelete={vi.fn()}
+        onTogglePin={vi.fn()}
+        searchQuery="needle"
+      />
+    );
+
+    expect(container.querySelector('.search-snippet mark')).toHaveTextContent('needle');
+  });
+});
+
+describe('NoteCard hover shadow via CSS (C13)', () => {
+  it('does not write inline boxShadow on mouse enter or leave', () => {
+    const { container } = render(
+      <NoteCard note={createMockNote({ id: 'c13-full' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} />
+    );
+    const card = container.querySelector<HTMLElement>('.note-card')!;
+
+    expect(card.style.boxShadow).toBe('');
+    expect(card).not.toHaveClass('note-card-decorative');
+    expect(card).not.toHaveClass('note-card-compact');
+
+    fireEvent.mouseEnter(card);
+    expect(card.style.boxShadow).toBe('');
+    fireEvent.mouseLeave(card);
+    expect(card.style.boxShadow).toBe('');
+  });
+
+  it('marks decorative cards so hover elevation rules skip them', () => {
+    const { container } = render(
+      <NoteCard note={createMockNote({ id: 'c13-deco' })} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} isDecorative />
+    );
+    const card = container.querySelector<HTMLElement>('.note-card')!;
+    expect(card).toHaveClass('note-card-decorative');
+    fireEvent.mouseEnter(card);
+    expect(card.style.boxShadow).toBe('');
   });
 });
