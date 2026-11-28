@@ -1,6 +1,9 @@
 import { Extension, InputRule } from '@tiptap/core';
-
-const SMART_TYPOGRAPHY_STORAGE_KEY = 'yidhan:editor:smart-typography';
+import {
+  SMART_TYPOGRAPHY_CHANGE_EVENT,
+  loadSmartTypographyPreference,
+  setSmartTypographyPreference,
+} from './smartTypographyPreference';
 
 export interface SmartTypographyStorage {
   enabled: boolean;
@@ -17,31 +20,6 @@ declare module '@tiptap/core' {
   interface Storage {
     smartTypography: SmartTypographyStorage;
   }
-}
-
-/** Fired on window when Settings changes the preference, so an open editor follows. */
-const SMART_TYPOGRAPHY_CHANGE_EVENT = 'yidhan:smart-typography-change';
-
-export function loadSmartTypographyPreference(): boolean {
-  try {
-    return localStorage.getItem(SMART_TYPOGRAPHY_STORAGE_KEY) !== 'false';
-  } catch {
-    return true;
-  }
-}
-
-function persistSmartTypographyPreference(enabled: boolean): void {
-  try {
-    localStorage.setItem(SMART_TYPOGRAPHY_STORAGE_KEY, String(enabled));
-  } catch {
-    // The setting still applies for this editor session when storage is unavailable.
-  }
-}
-
-/** Settings → Editor writes the preference here. Every open editor picks it up. */
-export function setSmartTypographyPreference(enabled: boolean): void {
-  persistSmartTypographyPreference(enabled);
-  window.dispatchEvent(new CustomEvent<boolean>(SMART_TYPOGRAPHY_CHANGE_EVENT, { detail: enabled }));
 }
 
 type SmartReplacement = { match: RegExp; replace: string };

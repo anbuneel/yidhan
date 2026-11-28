@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { loadSmartTypographyPreference, setSmartTypographyPreference } from '../editor/SmartTypography';
+import { loadSmartTypographyPreference, setSmartTypographyPreference } from '../editor/smartTypographyPreference';
 import { TEXT_SIZE_LABELS, TEXT_SIZES, loadTextSize, setTextSize, type TextSize } from '../editor/textSize';
 
 /** Settings → Editor: text size and smart typography. Both are saved on this device. */
