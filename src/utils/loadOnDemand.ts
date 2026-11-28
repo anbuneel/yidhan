@@ -1,6 +1,6 @@
 import { isChunkLoadError } from './updateRecovery';
 
-const RETRY_DELAY_MS = 1000;
+export const RETRY_DELAY_MS = 1000;
 
 /**
  * `import()` for code that loads when the reader clicks something: export, import,

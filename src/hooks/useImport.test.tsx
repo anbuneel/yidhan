@@ -6,18 +6,14 @@ const toastError = vi.hoisted(() => vi.fn());
 vi.mock('react-hot-toast', () => ({
   default: Object.assign(vi.fn(), { success: vi.fn(), error: toastError }),
 }));
-// The import body is a lazy chunk. A service worker update can make its URL stale, and
-// then the import() itself rejects, before anything is written.
-vi.mock('../utils/importFile', () => {
-  throw new Error('Failed to fetch dynamically imported module: /assets/importFile-old.js');
-});
-// Export and backup code are lazy too since shell-size plan A5.
-vi.mock('../utils/exportImport', () => {
-  throw new Error('Failed to fetch dynamically imported module: /assets/exportImport-old.js');
-});
-vi.mock('../utils/encryptedBackup', () => {
-  throw new Error('Failed to fetch dynamically imported module: /assets/encryptedBackup-old.js');
-});
+// Import, export and backup code load through loadOnDemand, which retries a chunk
+// error once (src/utils/loadOnDemand.test.ts covers that). Here it has already given
+// up: the URL went stale after an app update, so every load rejects. These tests check
+// what the hook tells the reader then, and that it loads nothing it does not need.
+const loadOnDemand = vi.hoisted(() => vi.fn(() =>
+  Promise.reject(new Error('Failed to fetch dynamically imported module: /assets/stale.js'))
+));
+vi.mock('../utils/loadOnDemand', () => ({ loadOnDemand }));
 
 import { useImport } from './useImport';
 
@@ -48,34 +44,38 @@ describe('useImport when the import code cannot load', () => {
     const { result } = hook();
     toastError.mockClear();
     act(() => result.current.handleExportJSON());
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Export could not load. Reload the page and try again.'), { timeout: 3000 });
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Export could not load. Reload the page and try again.'));
     toastError.mockClear();
     act(() => result.current.handleExportMarkdown());
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Export could not load. Reload the page and try again.'), { timeout: 3000 });
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Export could not load. Reload the page and try again.'));
   });
 
   it('asks for a backup passphrase without loading code, then says the backup code could not load', async () => {
     const { result } = hook();
+    loadOnDemand.mockClear();
     await act(async () => {
       await result.current.handleImportFile(new File(['{}'], 'notes.yidhan'));
     });
     expect(result.current.backupRestore.pendingFile?.name).toBe('notes.yidhan');
+    expect(loadOnDemand).not.toHaveBeenCalled();
 
     act(() => result.current.backupRestore.onSubmit('a long passphrase'));
     await waitFor(() => expect(result.current.backupRestore.error).toBe(
       'The backup code could not load. Reload the page and try again.'
-    ), { timeout: 3000 });
+    ));
     expect(result.current.backupRestore.isBusy).toBe(false);
   });
 
   it('turns away an oversized file before loading any code', async () => {
     const { result } = hook();
     toastError.mockClear();
+    loadOnDemand.mockClear();
     const big = new File(['x'], 'big.json');
     Object.defineProperty(big, 'size', { value: 11 * 1024 * 1024 });
     await act(async () => {
       await result.current.handleImportFile(big);
     });
     expect(toastError).toHaveBeenCalledWith('File too large. Maximum size is 10MB.');
+    expect(loadOnDemand).not.toHaveBeenCalled();
   });
 });
