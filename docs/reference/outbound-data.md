@@ -7,7 +7,9 @@ carries them out through a side door. So this is an inventory, not a summary: if
 request type is not listed here, it should not exist, and if a field is not listed
 against a request, sending it is a regression.
 
-Verified against the code on 2026-09-07. The scrubber behaviour described here is
+Verified against the code on 2026-09-07. Section 7 (Sentry) was re-checked on
+2026-11-27, after session replay and performance tracing were removed; the other
+sections were not. The scrubber behaviour described here is
 covered by `src/utils/sentryScrubber.test.ts`; if you change a field list, change the
 test in the same commit.
 
@@ -155,6 +157,12 @@ There is **no session replay**. It was removed on 2026-11-27 (`DECISIONS.md`): i
 recorder watched the page on every signed-in session, and with note text masked and
 cards and the editor blocked, a replay showed little. The build fails if its code
 returns (`scripts/check-bundle-budget.mjs`).
+
+There is **no performance tracing** either. No traces or spans are collected, and no
+page-load timings or web vitals are sent: there is no tracing integration and no
+`tracesSampleRate` (`src/utils/sentryClient.ts`), and `__SENTRY_TRACING__` is false in
+`vite.config.ts`. It was removed on 2026-11-27 (`DECISIONS.md`). The build fails if
+tracing code returns.
 
 **What Sentry can still receive:** the shape of an error, a stack trace, the route
 name, the browser and OS, and a user id when one is set. Not note text, not a
