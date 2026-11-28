@@ -493,7 +493,7 @@ export const NoteCard = memo(function NoteCard({
         relative
         overflow-hidden
         flex flex-col
-        transition-all duration-300
+        transition-[box-shadow,transform] duration-300
         focus:outline-none
         focus:ring-2
         focus:ring-[var(--color-accent)]
