@@ -36,6 +36,12 @@ describe('SecurityPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('says there is no session recording or tracing anywhere, not only on shared letters', () => {
+    render(<SecurityPage {...nav} />);
+    expect(screen.getByText(/no\s+session recording and no performance tracing on any page/i)).toBeInTheDocument();
+    expect(screen.queryByText(/switched off entirely on a shared-letter page/i)).not.toBeInTheDocument();
+  });
+
   it('names the metadata that stays visible', () => {
     render(<SecurityPage {...nav} />);
 

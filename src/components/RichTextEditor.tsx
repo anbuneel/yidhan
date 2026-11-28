@@ -12,7 +12,7 @@ import { useEffect, useEffectEvent, useRef, useMemo, useCallback, useState } fro
 import { SlashCommand } from './SlashCommand';
 import { FindReplace } from '../editor/FindReplace';
 import { SmartTypography } from '../editor/SmartTypography';
-import { markdownToHtml } from '../utils/exportImport';
+import { markdownToHtml } from '../utils/markdownToHtml';
 import { sanitizeHtml } from '../utils/sanitize';
 import {
   saveCursorPosition as persistCursorPosition,

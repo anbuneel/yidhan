@@ -9,6 +9,13 @@ import { publicPageDocumentsPlugin } from './scripts/public-page-documents.mjs'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Sentry's tree-shaking flags (shell-size plan A7). Its packages check these at build
+  // time: false drops the SDK's debug logging and its tracing code. Errors are all we
+  // send, so neither is used.
+  define: {
+    __SENTRY_DEBUG__: false,
+    __SENTRY_TRACING__: false,
+  },
   build: {
     // Keep fonts and the logo masks as files, even under the default inline
     // limit (the 4KB seed mask is). An inlined font is embedded in the CSS as
@@ -49,9 +56,15 @@ export default defineConfig({
           // Loaded with import() by src/lib/argon2.ts on the first key derivation; named
           // so the budget check can assert the app shell never imports it statically.
           if (id.includes('/node_modules/hash-wasm/')) return 'vendor-hash-wasm'
-          // Replay apart from the rest of Sentry: it is imported later, on its own
-          // (src/utils/sentryReplay.ts), and never on shared-note routes.
-          if (/\/node_modules\/@sentry-internal\/replay(-canvas)?\//.test(id)) return 'vendor-sentry-replay'
+          // Tiptap, ProseMirror and their small helpers load with the Editor. Named so the
+          // budget check can assert the app shell and Settings never import them
+          // statically. Left to Rollup, the chunk took the name of whatever app module
+          // it shared, and Settings pulled it in through a preference helper.
+          if (
+            /\/node_modules\/(@tiptap\/|prosemirror-[^/]+\/|orderedmap\/|rope-sequence\/|w3c-keyname\/|linkifyjs\/)/.test(id)
+          ) {
+            return 'vendor-tiptap'
+          }
           if (/\/node_modules\/@sentry(-internal)?\//.test(id)) return 'vendor-sentry'
           return undefined
         },

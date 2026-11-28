@@ -15,10 +15,10 @@
 
 import { argon2id } from '../lib/argon2';
 import { toBase64, fromBase64 } from '../lib/encryption';
+import { BACKUP_FILE_EXTENSION } from './fileLimits';
 
 export const BACKUP_FORMAT = 'yidhan-backup';
 export const BACKUP_FORMAT_VERSION = 1;
-export const BACKUP_FILE_EXTENSION = '.yidhan';
 
 /** Same cost as the vault's KDF. A backup is offline-attackable, so it gets the same. */
 const BACKUP_ARGON2_PARAMS = {

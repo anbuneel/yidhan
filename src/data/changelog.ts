@@ -7,6 +7,11 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  { version: '3.27.1', date: '2026-11-27', changes: [
+    { type: 'improvement', text: 'The app loads less code before your library shows. Sign-in, the Practice Space, sharing, export and a few rare dialogs now load when you open them, and Settings no longer loads the editor' },
+    { type: 'improvement', text: 'Error reports no longer include session replay. Nothing records the page while you write; Sentry still receives crash reports, with your notes stripped out' },
+    { type: 'improvement', text: 'Sentry no longer receives performance timings. It gets crash reports only, and the app has less code to load' },
+  ] },
   { version: '3.27.0', date: '2026-11-27', changes: [
     { type: 'feature', text: 'Start a note from the app icon. In the installed app, long-press or right-click the icon and choose New note. If you are signed out or locked, you sign in or unlock first' },
     { type: 'feature', text: 'Ctrl+Alt+N (Cmd+Option+N on a Mac) starts a new note from inside a note. The note you are in is saved first. In the library, N still does it' },

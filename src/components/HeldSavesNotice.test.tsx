@@ -44,6 +44,8 @@ vi.mock('../utils/exportImport', () => ({
   exportNoteToMarkdown: vi.fn().mockReturnValue('# Test'),
   getSanitizedFilename: vi.fn().mockReturnValue('test'),
   downloadFile: vi.fn(),
+}));
+vi.mock('../utils/noteClipboard', () => ({
   copyNoteToClipboard: clipboardMock.copyNoteToClipboard,
   copyNoteWithFormatting: vi.fn().mockResolvedValue(undefined),
 }));

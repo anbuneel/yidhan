@@ -30,6 +30,7 @@ import { Logo } from '../components/Logo';
 import { DEMO_SEARCH_INPUT_ID, scheduleSearchFocus } from '../utils/searchFocus';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { getLoadedEditorComponent, loadEditorComponent } from '../utils/editorLoader';
+import { useEditorWarmup } from '../hooks/useEditorWarmup';
 
 // Lazy load heavy components
 const Editor = lazyWithRetry(loadEditorComponent);
@@ -200,11 +201,8 @@ export function DemoPage({
     }
   }, [preloadEditorRoute]);
 
-  useEffect(() => {
-    if (view === 'library') {
-      void preloadEditorRoute();
-    }
-  }, [view, preloadEditorRoute]);
+  // On idle or on a card's pointer or focus, as in the signed-in library (C17).
+  useEditorWarmup(view === 'library', preloadEditorRoute);
 
   // Tag-filtered notes (pre-search baseline)
   const tagFilteredNotes = useMemo(() => {

@@ -18,8 +18,19 @@ vi.mock('./AppShell', () => ({
   },
 }));
 
-const markAppShellStarted = vi.fn();
-vi.mock('./appShellStarted', () => ({ markAppShellStarted: () => markAppShellStarted() }));
+// The signed-out screens' chunks (shell-size plan A2). Root warms the one the app
+// shell is about to show; these spies record which.
+const preloads = vi.hoisted(() => ({ auth: vi.fn(), demo: vi.fn(), notFound: vi.fn() }));
+vi.mock('../components/entryScreenChunks', () => ({
+  Auth: { preload: preloads.auth },
+  DemoPage: { preload: preloads.demo },
+  NotFoundPage: { preload: preloads.notFound },
+}));
+const preloaded = () => ({
+  auth: preloads.auth.mock.calls.length,
+  demo: preloads.demo.mock.calls.length,
+  notFound: preloads.notFound.mock.calls.length,
+});
 
 const SESSION_KEY = 'sb-abcdefghijklmnop-auth-token';
 
@@ -32,7 +43,8 @@ afterEach(() => {
   window.history.replaceState(null, '', '/');
   document.documentElement.classList.remove(LANDING_HANDOFF_CLASS);
   appShellRender.mockClear();
-  markAppShellStarted.mockClear();
+  Object.values(preloads).forEach((spy) => spy.mockClear());
+  window.localStorage.clear();
 });
 
 describe('Root', () => {
@@ -41,8 +53,6 @@ describe('Root', () => {
     expect(await screen.findAllByRole('button', { name: /^try writing$/i })).not.toHaveLength(0);
     expect(screen.queryByTestId('app-shell')).toBeNull();
     expect(appShellRender).not.toHaveBeenCalled();
-    // Session Replay waits for this; an anonymous landing visit never sends it.
-    expect(markAppShellStarted).not.toHaveBeenCalled();
   });
 
   it('renders a public page for an anonymous visitor without loading the app shell', async () => {
@@ -56,7 +66,6 @@ describe('Root', () => {
     visit('/');
     expect(await screen.findByTestId('app-shell')).toHaveTextContent('direct:none');
     expect(screen.queryByRole('button', { name: /^try writing$/i })).toBeNull();
-    expect(markAppShellStarted).toHaveBeenCalled();
   });
 
   it('loads the app shell straight away for an OAuth callback', async () => {
@@ -79,7 +88,6 @@ describe('Root', () => {
     await user.click(signIn);
     expect(await screen.findByTestId('app-shell')).toHaveTextContent('from-public:login');
     expect(document.documentElement).toHaveClass(LANDING_HANDOFF_CLASS);
-    expect(markAppShellStarted).toHaveBeenCalled();
   });
 
   it('hands over with the sign-up modal requested from Create an account', async () => {
@@ -169,5 +177,73 @@ describe('Root', () => {
     release();
     expect(await screen.findByTestId('app-shell')).toBeInTheDocument();
     vi.doUnmock('./AppShell');
+  });
+
+  describe('warming the signed-out screen chunks', () => {
+    it('warms nothing on an anonymous landing or public page visit', async () => {
+      const { unmount } = visit('/');
+      await screen.findAllByRole('button', { name: /^try writing$/i });
+      unmount();
+      visit('/privacy');
+      await screen.findByRole('heading', { level: 1 });
+      expect(preloaded()).toEqual({ auth: 0, demo: 0, notFound: 0 });
+    });
+
+    it('warms nothing for a signed-in reader on /', async () => {
+      window.localStorage.setItem(SESSION_KEY, '{}');
+      visit('/');
+      await screen.findByTestId('app-shell');
+      expect(preloaded()).toEqual({ auth: 0, demo: 0, notFound: 0 });
+    });
+
+    it('warms Auth when sign-in is clicked, not the Practice Space', async () => {
+      const user = userEvent.setup();
+      visit('/');
+      await user.click((await screen.findAllByRole('button', { name: /^sign in$/i }))[0]);
+      await screen.findByTestId('app-shell');
+      expect(preloaded()).toEqual({ auth: 1, demo: 0, notFound: 0 });
+    });
+
+    it('warms the Practice Space from Try writing, not Auth', async () => {
+      const user = userEvent.setup();
+      visit('/');
+      await user.click((await screen.findAllByRole('button', { name: /^try writing$/i }))[0]);
+      await screen.findByTestId('app-shell');
+      expect(preloaded()).toEqual({ auth: 0, demo: 1, notFound: 0 });
+    });
+
+    it('warms the screen of a direct visit: the Practice Space, a 404, a recovery link', async () => {
+      let view = visit('/demo');
+      await screen.findByTestId('app-shell');
+      expect(preloaded()).toEqual({ auth: 0, demo: 1, notFound: 0 });
+      view.unmount();
+
+      view = visit('/no-such-page');
+      await screen.findByTestId('app-shell');
+      expect(preloads.notFound).toHaveBeenCalledTimes(1);
+      view.unmount();
+
+      visit('/#access_token=a&refresh_token=b&type=recovery');
+      await screen.findByTestId('app-shell');
+      expect(preloads.auth).toHaveBeenCalledTimes(1);
+    });
+
+    it('warms Auth for our own password-reset redirect, /?reset=true&code=', async () => {
+      visit('/?reset=true&code=abc');
+      await screen.findByTestId('app-shell');
+      expect(preloaded()).toEqual({ auth: 1, demo: 0, notFound: 0 });
+    });
+
+    it('does not warm Auth for a sign-in callback that is not a reset', async () => {
+      let view = visit('/?code=abc');
+      await screen.findByTestId('app-shell');
+      view.unmount();
+      view = visit('/?reset=false&code=abc');
+      await screen.findByTestId('app-shell');
+      view.unmount();
+      visit('/#access_token=a&refresh_token=b&type=magiclink');
+      await screen.findByTestId('app-shell');
+      expect(preloads.auth).not.toHaveBeenCalled();
+    });
   });
 });

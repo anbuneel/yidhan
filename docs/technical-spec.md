@@ -693,7 +693,7 @@ npm run check       # Full CI: typecheck + lint + test + build
 ┌─────────────────────────────────────────────────────────┐
 │                      SENTRY                              │
 ├─────────────────────────────────────────────────────────┤
-│  Error tracking, session replay (content masked)        │
+│  Error tracking (scrubbed; no session replay)           │
 └─────────────────────────────────────────────────────────┘
 ```
 

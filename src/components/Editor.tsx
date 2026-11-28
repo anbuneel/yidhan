@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { MAX_NOTE_TITLE_LENGTH } from '../utils/validation';
 import { heldSaves } from '../stores/heldSaves';
 import { noteSaveQueue } from '../stores/noteSaveQueue';
-import { useState, useEffect, useLayoutEffect, useEffectEvent, useRef, useCallback } from 'react';
+import { Suspense, useState, useEffect, useLayoutEffect, useEffectEvent, useRef, useCallback } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { getSaveLabel } from '../utils/saveStatus';
 import { isFieldOutsideNote, isModAltN, isModN } from '../utils/newNoteShortcut';
@@ -21,7 +21,8 @@ import { EditorSidebar } from './EditorSidebar';
 import { EditorMetrics } from './EditorMetrics';
 import { FindReplacePanel } from './FindReplacePanel';
 import { TagSelector } from './TagSelector';
-import { ShareModal } from './ShareModal';
+import { ErrorBoundary } from './ErrorBoundary';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { formatShortDate, formatRelativeTime } from '../utils/formatTime';
 import { HeaderShell } from './HeaderShell';
 import { Logo } from './Logo';
@@ -30,13 +31,8 @@ import { ModalBackdropButton } from './ModalBackdropButton';
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap';
 import { useMobileDetect } from '../hooks/useMobileDetect';
 import { useKeyboardHeightCssVariable } from '../hooks/useKeyboardHeight';
-import {
-  exportNoteToMarkdown,
-  getSanitizedFilename,
-  downloadFile,
-  copyNoteToClipboard,
-  copyNoteWithFormatting,
-} from '../utils/exportImport';
+import { copyNoteToClipboard, copyNoteWithFormatting } from '../utils/noteClipboard';
+import { loadOnDemand } from '../utils/loadOnDemand';
 import {
   saveScrollPosition,
   getEditorPosition,
@@ -146,6 +142,16 @@ const SAVE_LABEL_ICON: Record<ReturnType<typeof getSaveLabel>, SyncStateKind> = 
   'Saved here': 'saved',
   Synced: 'synced',
 };
+
+// Share is rare, so its modal (and the share crypto) loads on first use. Opening the
+// export menu starts the fetch; the share item also waits on a save first. Copy stays
+// eager (noteClipboard): a clipboard write must run inside the click.
+const loadShareModal = () => import('./ShareModal').then((m) => ({ default: m.ShareModal }));
+const ShareModal = lazyWithRetry(loadShareModal);
+
+// The Markdown download loads the export code on first use (shell-size plan A5). The
+// export menu warms it too, so the click rarely waits.
+const loadExportCode = () => loadOnDemand(() => import('../utils/exportImport'));
 
 /**
  * One instance per note: `NoteEditorView` keys it by `note.id` (issue #288), so a
@@ -1172,12 +1178,19 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onNewNote,
   };
 
   // Export handlers
-  const handleExportMarkdown = () => {
+  const handleExportMarkdown = async () => {
     const currentNote = { ...note, title, content };
-    const markdown = exportNoteToMarkdown(currentNote);
-    const filename = `${getSanitizedFilename(title)}.md`;
-    downloadFile(markdown, filename, 'text/markdown');
     setShowExportMenu(false);
+    let code: Awaited<ReturnType<typeof loadExportCode>>;
+    try {
+      code = await loadExportCode();
+    } catch (error) {
+      console.error('Export code failed to load:', error);
+      toast.error('Export could not load. Reload the page and try again.');
+      return;
+    }
+    const markdown = code.exportNoteToMarkdown(currentNote);
+    code.downloadFile(markdown, `${code.getSanitizedFilename(currentNote.title)}.md`, 'text/markdown');
   };
 
   // Copy handlers
@@ -1364,7 +1377,13 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onNewNote,
       <div className="relative" ref={exportMenuRef}>
         <button type="button"
           {...exportTriggerProps}
-          onClick={() => setShowExportMenu(!showExportMenu)}
+          onClick={() => {
+            if (!showExportMenu) {
+              void loadExportCode().catch(() => {});
+              if (sharingEnabled && !isDemo) void loadShareModal().catch(() => {});
+            }
+            setShowExportMenu(!showExportMenu);
+          }}
           className="
             size-9
             rounded-full
@@ -2051,13 +2070,17 @@ export function Editor({ note, tags, userId, onBack, onRequestSearch, onNewNote,
       )}
 
       {/* Share Modal - only rendered in authenticated mode when sharing is enabled */}
-      {sharingEnabled && !isDemo && (
-        <ShareModal
-          isOpen={showShareModal}
-          onClose={() => setShowShareModal(false)}
-          note={note}
-          userId={userId}
-        />
+      {sharingEnabled && !isDemo && showShareModal && (
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <ShareModal
+              isOpen
+              onClose={() => setShowShareModal(false)}
+              note={note}
+              userId={userId}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </div>
   );

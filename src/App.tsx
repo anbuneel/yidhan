@@ -5,6 +5,7 @@ import { FadedNotesScreen } from './components/FadedNotesScreen';
 import { NoteEditorView } from './components/NoteEditorView';
 import { AppModals } from './components/AppModals';
 import { renderEntryScreen } from './components/entryScreens';
+import { Auth as AuthScreen } from './components/entryScreenChunks';
 import { renderAccountGate } from './components/accountGates';
 import { LoadingFallback } from './components/LoadingFallback';
 import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
@@ -23,6 +24,7 @@ import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useLibraryCardNavigation } from './hooks/useLibraryCardNavigation';
 import { useAppLoader } from './hooks/useAppLoader';
 import { useEditorChunk } from './hooks/useEditorChunk';
+import { useEditorWarmup } from './hooks/useEditorWarmup';
 import { useShareRoute } from './hooks/useShareRoute';
 import { useVisibleNoteSearch } from './hooks/useVisibleNotes';
 import { useLibraryArrangement } from './hooks/useLibraryArrangement';
@@ -218,11 +220,15 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
     }
   }, [isDemo, user, replaceRoute]);
 
+  // Signed out, sign-in or sign-up is the likely next step (the Practice Space offers
+  // both). Warm the Auth chunk so the modal opens without waiting (shell-size plan A2).
   useEffect(() => {
-    if (user && isEncryptionSetup && isUnlocked && view === 'library') {
-      void preloadEditorRoute();
-    }
-  }, [user, isEncryptionSetup, isUnlocked, view, preloadEditorRoute]);
+    if (!authLoading && !user) void AuthScreen.preload();
+  }, [authLoading, user]);
+
+  // On idle, or at once on a note card's pointer or focus: not the moment of unlock,
+  // where it competed with decrypt and first render (shell-size plan C17).
+  useEditorWarmup(Boolean(user && isEncryptionSetup && isUnlocked && view === 'library'), preloadEditorRoute);
 
   // Show WelcomeBackPrompt when user signs in during grace period
   useEffect(() => {

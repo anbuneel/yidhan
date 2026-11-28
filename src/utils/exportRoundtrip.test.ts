@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
-import { htmlToMarkdown, markdownToHtml, exportFullAccountData, parseImportedJSON } from './exportImport';
+import { htmlToMarkdown, exportFullAccountData, parseImportedJSON } from './exportImport';
+import { markdownToHtml } from './markdownToHtml';
 import { sanitizeHtml } from './sanitize';
 import { createMockNote, createMockTag } from '../test/factories';
 it('roundtrips combinations of editor blocks, alignment, marks, Unicode and escaped punctuation', () => {

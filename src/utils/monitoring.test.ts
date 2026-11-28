@@ -1,21 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const loaded = vi.hoisted(() => ({ replay: 0, client: 0 }));
+const loaded = vi.hoisted(() => ({ client: 0 }));
 const fakeSentry = vi.hoisted(() => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
   addBreadcrumb: vi.fn(),
-  addIntegration: vi.fn(),
   startSentry: vi.fn(),
 }));
 
 vi.mock('./sentryClient', () => {
   loaded.client += 1;
-  return { startSentry: fakeSentry.startSentry, addIntegration: fakeSentry.addIntegration };
-});
-vi.mock('./sentryReplay', () => {
-  loaded.replay += 1;
-  return { createReplayIntegration: () => ({ name: 'Replay' }) };
+  return { startSentry: fakeSentry.startSentry };
 });
 
 import {
@@ -139,67 +134,33 @@ describe('before Sentry initialises', () => {
 });
 
 describe('startMonitoring', () => {
-  // Order matters: the shared route runs first, before anything has imported Replay.
-  it('never imports Replay on a shared-note route', async () => {
-    await startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test', pathname: '/s/abcdefghijklmnopqrstuvwx' });
-
-    expect(fakeSentry.startSentry).toHaveBeenCalledWith({
-      dsn: 'https://k@example.invalid/1',
-      environment: 'test',
-      isSharedRoute: true,
-    });
-    expect(loaded.replay).toBe(0);
-    expect(fakeSentry.addIntegration).not.toHaveBeenCalled();
-  });
-
-  it('adds Replay after init everywhere else, and flushes what was queued', async () => {
+  it('initialises Sentry after load and flushes what was queued', async () => {
     captureMessage('queued before init');
-    await startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test', pathname: '/' });
+    await startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test' });
 
-    expect(fakeSentry.startSentry).toHaveBeenCalledWith(expect.objectContaining({ isSharedRoute: false }));
+    expect(fakeSentry.startSentry).toHaveBeenCalledWith({ dsn: 'https://k@example.invalid/1', environment: 'test' });
     expect(fakeSentry.captureMessage).toHaveBeenCalledWith('queued before init', undefined);
-    expect(loaded.replay).toBe(1);
-    expect(fakeSentry.addIntegration).toHaveBeenCalledWith({ name: 'Replay' });
-    expect(fakeSentry.startSentry.mock.invocationCallOrder[0]).toBeLessThan(
-      fakeSentry.addIntegration.mock.invocationCallOrder[0]
-    );
+    expect(loaded.client).toBe(1);
   });
 
-  it('holds Replay until replayAfter settles, and Sentry does not wait for it', async () => {
-    fakeSentry.addIntegration.mockClear();
-    let release: () => void = () => {};
-    const replayAfter = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const started = startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test', pathname: '/', replayAfter });
-    await vi.waitFor(() => expect(fakeSentry.startSentry).toHaveBeenCalled());
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(fakeSentry.addIntegration).not.toHaveBeenCalled();
+  // Session Replay is gone (shell-size plan D2). Errors thrown before Sentry loads must
+  // still reach it, on every route, shared notes included.
+  it.each(['/', '/demo', '/s/abcdefghijklmnopqrstuvwx'])('reports an error thrown before Sentry loads, on %s', async (path) => {
+    window.history.replaceState(null, '', path);
+    bufferUncaughtErrors();
+    const early = new Error(`early on ${path}`);
+    window.dispatchEvent(uncaught(early));
+    expect(fakeSentry.captureException).not.toHaveBeenCalled();
 
-    release();
-    await started;
-    expect(fakeSentry.addIntegration).toHaveBeenCalledWith({ name: 'Replay' });
-  });
+    await startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test' });
 
-  it('does not add Replay if the app shell starts on a shared-note route', async () => {
-    fakeSentry.addIntegration.mockClear();
-    let release: () => void = () => {};
-    const replayAfter = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const started = startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test', pathname: '/', replayAfter });
-    await vi.waitFor(() => expect(fakeSentry.startSentry).toHaveBeenCalled());
-    // Back from the landing to a letter: that navigation is what starts the app shell.
-    window.history.pushState(null, '', '/s/abcdefghijklmnopqrstuv');
-    release();
-    await started;
-    expect(fakeSentry.addIntegration).not.toHaveBeenCalled();
+    expect(fakeSentry.captureException).toHaveBeenCalledWith(early, { mechanism: { type: 'onerror', handled: false } });
     window.history.replaceState(null, '', '/');
   });
 
   it('waits for the load event before loading Sentry', async () => {
     const readyState = vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
-    const started = startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test', pathname: '/' });
+    const started = startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test' });
     await Promise.resolve();
     expect(fakeSentry.startSentry).not.toHaveBeenCalled();
 
@@ -216,7 +177,7 @@ describe('startMonitoring', () => {
       throw new Error('init failed');
     });
     await expect(
-      startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test', pathname: '/' })
+      startMonitoring({ dsn: 'https://k@example.invalid/1', environment: 'test' })
     ).resolves.toBeUndefined();
     captureMessage('after failure');
     attachReporter(reporter());

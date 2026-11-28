@@ -215,8 +215,8 @@ export function SecurityPage({
               </p>
               <p>
                 Error reports are stripped before they are sent: note titles and content,
-                passphrases, keys, share tokens and link fragments are removed, and session
-                recordings are switched off entirely on a shared-letter page. The full
+                passphrases, keys, share tokens and link fragments are removed. There is no
+                session recording and no performance tracing on any page. The full
                 inventory — every request type and every field it may carry — is kept in
                 the repository as <code>docs/reference/outbound-data.md</code>.
               </p>
