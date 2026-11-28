@@ -19,6 +19,49 @@ reasoning is sourced from the plans now in `docs/archive/`, not invented.
 
 ---
 
+## 2026-11-27 — Argon2id runs in a Web Worker; the unlocked key stays on the main thread
+
+**Status:** Active
+
+**Why:** Argon2id at 64 MB and 3 iterations ran on the main thread, so the unlock screen
+froze for the whole derivation. The timing harness measured `unlock.longestTask` at about
+1.4 s on one run and 0.8 s on another at 4x CPU throttle, with the frame gap the same
+size: the spinner could not move. Shell-size plan item C1.
+
+**Decision:** Every Argon2id call (legacy 64-byte key, 32-byte KEK, backup key) goes
+through `deriveArgon2id` in `src/lib/argon2.ts`, which runs it in a same-origin worker
+file (`src/lib/argon2.worker.ts`). The passphrase and a copy of the salt go over
+`postMessage`; the derived bytes come back as a transferred `ArrayBuffer` and are then
+used exactly as before. The keys are held on the main thread as today.
+
+- Roadmap item 102 (holding the unlocked key inside a Worker) is deliberately not done
+  here. This moves only the derivation.
+- One worker per derivation, terminated after its reply. Terminating frees the 64 MB of
+  wasm memory at once and leaves nothing that ever saw a passphrase. Cost: a worker
+  start and a wasm compile per unlock, tens of milliseconds, against an unlock that
+  takes a second. To keep that off the unlock, an empty spare worker is started on idle
+  after sign-in and after each derivation. It has seen no request and holds no secret.
+  It also keeps the worker code in memory, so a deploy that removes the old file does
+  not break the next unlock (the reason item 61 step 7 preloaded the chunk).
+- Fallback: when a worker cannot be created, fails to load, crashes or reports an
+  error, the same derivation runs on the main thread through the existing lazy
+  `vendor-hash-wasm` chunk. A reply of the wrong shape or length is an error, never a
+  key, and is not retried. Key-check verification is unchanged.
+- Cancellation: a lock, sign-out or user change terminates running workers and makes
+  pending calls reject with `KdfCancelledError`. Passphrase unlock also counts attempts,
+  so a result that finishes after a lock, an account switch or a newer attempt installs
+  nothing and is not counted as a wrong passphrase. This guard is new: while the main
+  thread was blocked, nothing could happen during a derivation.
+
+**Rejected:** Keeping one worker warm across unlocks (the 64 MB stays allocated in a
+context that saw a passphrase, to save a few tens of milliseconds). A blob or inline
+worker (the CSP allows one, but a file is precached and inspectable). Dropping the
+main-thread fallback (old Android WebViews and a failed worker fetch would then lock the
+user out). Moving the key into the worker as well (item 102: every encrypt and decrypt
+would cross a message boundary; a separate decision).
+
+---
+
 ## 2026-11-28 — Precache limit raised 964 → 968 KB for the deferred gesture chunk
 
 **Status:** Active
