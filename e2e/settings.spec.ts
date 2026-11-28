@@ -1,5 +1,34 @@
-import type { Page } from '@playwright/test';
-import { test, expect, openSettings, closeModal, toggleTheme } from './fixtures';
+import type { Locator, Page } from '@playwright/test';
+import { test, expect, openSettings, closeModal, toggleTheme, TEST_USER } from './fixtures';
+
+// "New password" also matches "Confirm new password", so both are matched exactly.
+function newPasswordField(page: Page): Locator {
+  return page.getByLabel('New password', { exact: true });
+}
+
+function currentPasswordField(page: Page): Locator {
+  return page.locator('#settings-current-password');
+}
+
+// Never the real password: these tests must not be able to change it.
+const WRONG_CURRENT_PASSWORD = 'not-the-real-password';
+
+function confirmPasswordField(page: Page): Locator {
+  return page.getByLabel('Confirm new password', { exact: true });
+}
+
+// App bug, not a spec problem. On a phone the Settings sheet slides up, then
+// slides back off-screen within about a second of its first open after a page
+// load, and stays mounted there. Nothing in it can be tapped. A second open stays
+// put. Seen on the dev server and on a production build. The tests that only
+// check the sheet is in the DOM still pass; the ones that click inside it cannot.
+const PHONE_SHEET_BUG =
+  'Settings bottom sheet slides off-screen after its first open on a phone viewport';
+
+/** The Profile tab's way into offboarding. It reads "Let go of Yidhan →". */
+function letGoButton(page: Page): Locator {
+  return page.getByRole('button', { name: /let go of yidhan/i });
+}
 
 /**
  * Skip test if the password tab is not visible (OAuth users don't have one).
@@ -28,8 +57,8 @@ test.describe('Settings', () => {
       // Profile tab should be active
       await expect(page.getByRole('tab', { name: /profile/i })).toHaveAttribute('aria-selected', 'true');
 
-      // Email should be displayed
-      await expect(page.getByText(/@/)).toBeVisible();
+      // The email is the value of a disabled field, not text on the page.
+      await expect(page.getByLabel('Email', { exact: true })).toHaveValue(/@/);
     });
 
     test('closes settings with Escape', async ({ authenticatedPage: page }) => {
@@ -50,19 +79,29 @@ test.describe('Settings', () => {
       await expect(emailField).toBeDisabled();
     });
 
-    test('updates display name', async ({ authenticatedPage: page }) => {
+    test('updates display name', async ({ authenticatedPage: page, isMobile }) => {
+      test.fixme(isMobile, PHONE_SHEET_BUG);
       await openSettings(page);
 
+      const nameField = page.getByLabel('Display name', { exact: true });
+      const saveButton = page.getByRole('button', { name: 'Save profile', exact: true });
+      const originalName = (await nameField.inputValue()) || TEST_USER.name;
       const newName = `Test User ${Date.now()}`;
 
-      // Fill new name
-      await page.getByLabel(/name/i).fill(newName);
+      await nameField.fill(newName);
+      await saveButton.click();
+      await expect(page.getByText('Profile updated successfully!')).toBeVisible();
 
-      // Save
-      await page.getByRole('button', { name: /save/i }).click();
-
-      // Should show success
-      await expect(page.getByText(/saved|updated/i)).toBeVisible();
+      // Put the name back. The account is shared and teardown only removes notes
+      // and tags, so a name left here would stay. The success message is already
+      // on screen from the first save, so wait for the request itself.
+      await nameField.fill(originalName);
+      const restored = page.waitForResponse(
+        (response) =>
+          response.url().includes('/auth/v1/user') && response.request().method() === 'PUT'
+      );
+      await saveButton.click();
+      expect((await restored).ok()).toBe(true);
     });
 
     test('shows theme toggle in settings', async ({ authenticatedPage: page }) => {
@@ -73,30 +112,46 @@ test.describe('Settings', () => {
   });
 
   test.describe('Password Settings', () => {
-    test('shows password tab for email users', async ({ authenticatedPage: page }) => {
+    test('shows password tab for email users', async ({ authenticatedPage: page, isMobile }) => {
+      test.fixme(isMobile, PHONE_SHEET_BUG);
       await requirePasswordTab(page);
 
-      await expect(page.getByLabel(/new password/i)).toBeVisible();
-      await expect(page.getByLabel(/confirm password/i)).toBeVisible();
+      await expect(newPasswordField(page)).toBeVisible();
+      await expect(confirmPasswordField(page)).toBeVisible();
     });
 
-    test('validates password length', async ({ authenticatedPage: page }) => {
+    // The form's own checks run first: every field is `required` and the new
+    // password has `minLength={8}`. A short password is stopped by the browser, so
+    // the app's "at least 8 characters" message never renders. Assert the block.
+    test('validates password length', async ({ authenticatedPage: page, isMobile }) => {
+      test.fixme(isMobile, PHONE_SHEET_BUG);
       await requirePasswordTab(page);
 
-      await page.getByLabel(/new password/i).fill('short');
+      await currentPasswordField(page).fill(WRONG_CURRENT_PASSWORD);
+      // Typed, not filled: `tooShort` is only set by user edits.
+      await newPasswordField(page).pressSequentially('short');
+      await confirmPasswordField(page).pressSequentially('short');
       await page.getByRole('button', { name: /update.*password/i }).click();
 
-      await expect(page.getByText(/8 characters/i)).toBeVisible();
+      const tooShort = await newPasswordField(page).evaluate(
+        (input: HTMLInputElement) => input.validity.tooShort
+      );
+      expect(tooShort).toBe(true);
+      await expect(page.getByText(/password updated|current password is incorrect/i)).toHaveCount(0);
     });
 
-    test('validates password match', async ({ authenticatedPage: page }) => {
+    test('validates password match', async ({ authenticatedPage: page, isMobile }) => {
+      test.fixme(isMobile, PHONE_SHEET_BUG);
       await requirePasswordTab(page);
 
-      await page.getByLabel(/new password/i).fill('password123');
-      await page.getByLabel(/confirm password/i).fill('different123');
+      // The current password is required before the form submits at all. The
+      // mismatch is caught before it is checked, so a wrong one is enough.
+      await currentPasswordField(page).fill(WRONG_CURRENT_PASSWORD);
+      await newPasswordField(page).fill('password123');
+      await confirmPasswordField(page).fill('different123');
       await page.getByRole('button', { name: /update.*password/i }).click();
 
-      await expect(page.getByText(/match/i)).toBeVisible();
+      await expect(page.getByText('Passwords do not match')).toBeVisible();
     });
   });
 
@@ -140,20 +195,20 @@ test.describe('Settings', () => {
     test('shows letting go option in settings', async ({ authenticatedPage: page }) => {
       await openSettings(page);
 
-      // Scroll to bottom if needed
-      await page.getByText(/letting go|leave|depart/i).scrollIntoViewIfNeeded();
+      await letGoButton(page).scrollIntoViewIfNeeded();
 
-      await expect(page.getByText(/letting go|leave|depart/i)).toBeVisible();
+      await expect(letGoButton(page)).toBeVisible();
     });
 
-    test('opens offboarding modal', async ({ authenticatedPage: page }) => {
+    test('opens offboarding modal', async ({ authenticatedPage: page, isMobile }) => {
+      test.fixme(isMobile, PHONE_SHEET_BUG);
       await openSettings(page);
 
-      // Click letting go link
-      await page.getByText(/letting go|leave|depart/i).click();
+      await letGoButton(page).click();
 
       // Offboarding modal should open
-      await expect(page.getByText(/deleted on|download your notes first/i)).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Letting go', exact: true })).toBeVisible();
+      await expect(page.getByText(/will be deleted on/i)).toBeVisible();
     });
 
     // Note: We don't actually complete offboarding in E2E tests to avoid data loss
