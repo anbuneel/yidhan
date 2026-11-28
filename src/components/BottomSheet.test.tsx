@@ -241,4 +241,77 @@ describe('BottomSheet focus', () => {
     expect(topDialog.closest('[inert]')).toBeNull();
     expect(screen.getByText('Inside sheet').closest('[inert]')).not.toBeNull();
   });
+
+  describe('when the gesture runtime arrives while the mobile sheet is open', () => {
+    function Counter() {
+      const [count, setCount] = useState(0);
+      return (
+        <button type="button" onClick={() => setCount(count + 1)}>
+          Count {count}
+        </button>
+      );
+    }
+
+    function UpgradeHarness({ showTop = false }: { showTop?: boolean }) {
+      return (
+        <>
+          <button type="button">Behind all</button>
+          <BottomSheet isOpen onClose={vi.fn()} title="Settings">
+            <Counter />
+            <input aria-label="Display name" />
+          </BottomSheet>
+          <SessionTimeoutModal
+            isOpen={showTop}
+            onStay={vi.fn()}
+            onSignOut={vi.fn()}
+            minutesRemaining={2}
+          />
+        </>
+      );
+    }
+
+    const runtimeLoaded = () => document.querySelector('.cursor-grab') !== null;
+
+    it('keeps typed text, child state, focus and the dialog node', async () => {
+      mobileState.value = true;
+      render(<UpgradeHarness />);
+
+      const dialog = screen.getByRole('dialog', { name: 'Settings' });
+      expect(runtimeLoaded()).toBe(false);
+      const input = screen.getByRole('textbox', { name: 'Display name' }) as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'typed before the chunk' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Count 0' }));
+      input.focus();
+
+      await waitFor(() => expect(runtimeLoaded()).toBe(true));
+
+      expect(screen.getByRole('dialog', { name: 'Settings' })).toBe(dialog);
+      expect(screen.getByRole('textbox', { name: 'Display name' })).toBe(input);
+      expect(input.value).toBe('typed before the chunk');
+      expect(screen.getByRole('button', { name: 'Count 1' })).toBeInTheDocument();
+      expect(document.activeElement).toBe(input);
+    });
+
+    it('keeps the sheet state and leaves focus on a covering SessionTimeoutModal', async () => {
+      mobileState.value = true;
+      const { rerender } = render(<UpgradeHarness />);
+      const input = screen.getByRole('textbox', { name: 'Display name' }) as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'kept' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Count 0' }));
+
+      rerender(<UpgradeHarness showTop />);
+      const topDialog = screen.getByRole('dialog', { name: 'Still there?' });
+      expect(topDialog.contains(document.activeElement)).toBe(true);
+
+      await waitFor(() => expect(runtimeLoaded()).toBe(true));
+
+      expect(topDialog.contains(document.activeElement)).toBe(true);
+      expect(topDialog.closest('[inert]')).toBeNull();
+      expect(screen.getByRole('textbox', { name: 'Display name', hidden: true })).toBe(input);
+      expect(input.value).toBe('kept');
+      expect(screen.getByRole('button', { name: 'Count 1', hidden: true })).toBeInTheDocument();
+      expect(input.closest('[inert]')).not.toBeNull();
+    });
+  });
+
 });
