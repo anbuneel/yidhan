@@ -137,7 +137,19 @@ account with a few hundred notes.
 off-screen on its first open after a page load. It reproduces on `main`. Not part of this
 plan's items; PR 2 neither causes nor fixes it.
 
-PR 2 (#310) is reviewed and being fixed. Then: PR 1 and PR 2 were built in parallel; their files are disjoint. Then PR 3
+**PR 2 landed 2026-11-28 (#313, superseding #310).** App shell 298.6 → 278.8 KB gzip,
+limit 280. The precache limit rose 964 → 968 KB by the owner's decision: the gesture
+libraries compress slightly worse in their own chunk. Gemini built it; Opus reviewed it
+and, with Gemini unreachable, fixed the findings: sheet contents survive the gesture
+chunk loading, compact cards keep their lines, the sync indicator follows other tabs
+through Dexie `liveQuery`, and a failed gesture load retries without a reload. The
+same PR fixed the phone Settings sheet bug from #312. Left out: C7 (it needed
+`App.tsx`, now free) and C16 (`content-visibility` broke the progressive-render check,
+focus rings and scroll restoration). Merged without a real-phone check, by the owner's
+call. The timing gain claimed for it could not be confirmed: reruns were noise.
+
+Still to do from the plan: lower `appShellJs.targetKB` from 330 with a `DECISIONS.md`
+entry; C7; and the remaining PRs. PR 3
 and PR 5 in parallel, then PR 4, then PR 6.
 
 No PR unless a measurement justifies it: A6, A8, C14, C18.
