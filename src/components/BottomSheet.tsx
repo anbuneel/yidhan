@@ -53,7 +53,6 @@ interface MobileSpringBottomSheetProps {
   isOpen: boolean;
   wasAlreadyOpen: boolean;
   onClose: () => void;
-  onRenderChange: (rendered: boolean) => void;
   sheetRef: MutableRefObject<HTMLElement | null>;
   children: ReactNode;
   title?: string;
@@ -68,7 +67,6 @@ function MobileSpringBottomSheet({
   isOpen,
   wasAlreadyOpen,
   onClose,
-  onRenderChange,
   sheetRef,
   children,
   title,
@@ -114,10 +112,6 @@ function MobileSpringBottomSheet({
       }
     }
   }, [isOpen, api, backdropApi, reducedMotion]);
-
-  useEffect(() => {
-    onRenderChange(shouldRender && isOpen);
-  }, [shouldRender, isOpen, onRenderChange]);
 
   // Drag to dismiss gesture - bound to handle area only
   const bind = useDrag(
@@ -166,7 +160,7 @@ function MobileSpringBottomSheet({
     }
   );
 
-  if (!shouldRender) {
+  if (!isOpen && !shouldRender) {
     return null;
   }
 
@@ -276,7 +270,6 @@ export function BottomSheet({
   const isMobile = useMobileDetect();
   const keyboardHeight = useKeyboardHeight();
   const runtime = useGestureRuntime(isMobile && isOpen ? 'immediate' : 'passive');
-  const [mobileRendered, setMobileRendered] = useState(isOpen);
   const [openedWithoutRuntime, setOpenedWithoutRuntime] = useState(() => isOpen && isMobile && !runtime);
   const sheetRef = useRef<HTMLElement | null>(null);
 
@@ -288,9 +281,8 @@ export function BottomSheet({
     }
   }, [isOpen, isMobile, runtime]);
 
-  const isRendered = isMobile ? (runtime ? mobileRendered && isOpen : isOpen) : isOpen;
   useModalFocusTrap({
-    isOpen: isRendered,
+    isOpen,
     onClose,
     dialogRef: sheetRef,
     nodeKey: `${isMobile}-${Boolean(runtime)}`,
@@ -360,7 +352,6 @@ export function BottomSheet({
         isOpen={isOpen}
         wasAlreadyOpen={openedWithoutRuntime}
         onClose={onClose}
-        onRenderChange={setMobileRendered}
         sheetRef={sheetRef}
         title={title}
         maxHeightPercent={maxHeightPercent}
