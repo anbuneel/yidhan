@@ -46,6 +46,12 @@ const toHex = (bytes: Uint8Array) => Array.from(bytes, (b) => b.toString(16).pad
 const fromHex = (hex: string) => Uint8Array.from(hex.match(/../g)!, (h) => parseInt(h, 16));
 
 const loadState = vi.hoisted(() => ({ failures: 0, loads: 0 }));
+const { mockAddBreadcrumb } = vi.hoisted(() => ({ mockAddBreadcrumb: vi.fn() }));
+
+vi.mock('../../utils/reliabilityTelemetry', () => ({
+  addReliabilityBreadcrumb: mockAddBreadcrumb,
+  reportReliabilityIssue: vi.fn(),
+}));
 
 // Each import of the fallback chunk runs this factory; while `failures` is above
 // zero it throws, the way a dynamic import rejects when the chunk cannot be fetched.
@@ -82,6 +88,7 @@ beforeEach(async () => {
   FakeArgon2Worker.hold = false;
   FakeArgon2Worker.throwOnCreate = null;
   FakeArgon2Worker.failOnPost = false;
+  mockAddBreadcrumb.mockReset();
 });
 
 afterEach(() => {
@@ -303,6 +310,67 @@ describe('when workers fail, the tab stops starting them', () => {
     await pending;
     await flush();
     expect(FakeArgon2Worker.instances).toHaveLength(1);
+  });
+});
+
+describe('a fallback leaves one constant breadcrumb', () => {
+  const unavailable = {
+    category: 'vault',
+    message: 'Key derivation worker unavailable; using the main thread',
+    level: 'warning',
+    data: { source: 'argon2_worker', reason: 'worker_unavailable' },
+  };
+
+  it('once per tab when workers fail to load, and the error event is cancelled', async () => {
+    const { deriveArgon2id } = await freshArgon2();
+    FakeArgon2Worker.failOnPost = true;
+    await deriveArgon2id({ ...CHEAP, password: 'SECRET-PASSPHRASE-MARKER' });
+    await deriveArgon2id(CHEAP);
+    expect(FakeArgon2Worker.instances[0].errorDefaultPrevented).toBe(true);
+    expect(mockAddBreadcrumb.mock.calls).toEqual([[unavailable]]);
+  });
+
+  it('when a spare fails to load, its error event is cancelled too', async () => {
+    const { preloadArgon2 } = await freshArgon2();
+    preloadArgon2();
+    FakeArgon2Worker.instances[0].fail();
+    expect(FakeArgon2Worker.instances[0].errorDefaultPrevented).toBe(true);
+    expect(mockAddBreadcrumb.mock.calls).toEqual([[unavailable]]);
+  });
+
+  it('when a worker cannot be created', async () => {
+    const { deriveArgon2id } = await freshArgon2();
+    FakeArgon2Worker.throwOnCreate = new Error('SecurityError: SECRET-PASSPHRASE-MARKER');
+    await deriveArgon2id(CHEAP);
+    expect(mockAddBreadcrumb.mock.calls).toEqual([[unavailable]]);
+  });
+
+  it('when a worker reports an error', async () => {
+    const { deriveArgon2id } = await freshArgon2();
+    FakeArgon2Worker.hold = true;
+    const pending = deriveArgon2id(CHEAP);
+    await vi.waitFor(() => expect(used()).toHaveLength(1));
+    const worker = used()[0];
+    worker.reply({ type: 'error', id: (worker.posted[0].data as { id: number }).id });
+    await pending;
+    expect(mockAddBreadcrumb.mock.calls).toEqual([[{
+      category: 'vault',
+      message: 'Key derivation worker reported an error; using the main thread',
+      level: 'warning',
+      data: { source: 'argon2_worker', reason: 'worker_error' },
+    }]]);
+  });
+
+  it('nothing for a worker that works, or with no Worker support at all', async () => {
+    await (await freshArgon2()).deriveArgon2id(CHEAP);
+    await (await freshArgon2({ worker: false })).deriveArgon2id(CHEAP);
+    expect(mockAddBreadcrumb).not.toHaveBeenCalled();
+  });
+
+  it('passes the Sentry scrubber unchanged, so nothing in it is a secret field', async () => {
+    const { scrubSensitiveData } = await import('../../utils/sentryScrubber');
+    expect(scrubSensitiveData(unavailable.data)).toEqual(unavailable.data);
+    expect(JSON.stringify(unavailable)).not.toMatch(/SECRET|passphrase|salt/i);
   });
 });
 

@@ -27,6 +27,8 @@ export class FakeArgon2Worker {
   posted: { data: unknown; transfer: Transferable[] }[] = [];
   /** A reply the handler produced while `hold` was on. */
   held: Reply | null = null;
+  /** Whether the client called preventDefault on the last error event. */
+  errorDefaultPrevented = false;
 
   constructor() {
     if (FakeArgon2Worker.throwOnCreate) throw FakeArgon2Worker.throwOnCreate;
@@ -67,7 +69,11 @@ export class FakeArgon2Worker {
   /** Fire an error event, as a worker that failed to load or crashed does. */
   fail(): void {
     if (this.terminated) return;
-    this.onerror?.({ preventDefault: () => undefined, message: 'worker failed' } as unknown as ErrorEvent);
+    this.errorDefaultPrevented = false;
+    this.onerror?.({
+      preventDefault: () => { this.errorDefaultPrevented = true; },
+      message: 'worker failed',
+    } as unknown as ErrorEvent);
   }
 
   terminate(): void {

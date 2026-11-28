@@ -29,6 +29,7 @@
 
 import type * as Argon2Wasm from './argon2Wasm';
 import { readArgon2Reply, type Argon2Params, type Argon2WorkerRequest } from './argon2Protocol';
+import { addReliabilityBreadcrumb } from '../utils/reliabilityTelemetry';
 
 export type { Argon2Params } from './argon2Protocol';
 
@@ -115,12 +116,35 @@ const WORKER_FAILED = Symbol('worker failed');
 const WORKER_REPORTED_ERROR = Symbol('worker reported an error');
 type WorkerOutcome = Uint8Array | typeof WORKER_FAILED | typeof WORKER_REPORTED_ERROR;
 
+/**
+ * Leave a trace when a worker that should have run did not, so a regression that
+ * breaks workers for a whole browser class shows up in reports instead of silently
+ * bringing the freeze back. Constant strings only: no error text, parameters or ids.
+ */
+function noteFallback(reason: 'worker_unavailable' | 'worker_error'): void {
+  addReliabilityBreadcrumb({
+    category: 'vault',
+    message: reason === 'worker_unavailable'
+      ? 'Key derivation worker unavailable; using the main thread'
+      : 'Key derivation worker reported an error; using the main thread',
+    level: 'warning',
+    data: { source: 'argon2_worker', reason },
+  });
+}
+
+/** Record that workers do not work in this tab, once. */
+function markWorkersUnavailable(): void {
+  if (workersUnavailable) return;
+  workersUnavailable = true;
+  noteFallback('worker_unavailable');
+}
+
 function spawnWorker(): Worker | null {
   if (!workerFactory || workersUnavailable) return null;
   try {
     return workerFactory();
   } catch {
-    workersUnavailable = true;
+    markWorkersUnavailable();
     return null;
   }
 }
@@ -150,7 +174,7 @@ function startSpare(): void {
     event.preventDefault();
     worker.terminate();
     if (spare === worker) spare = null;
-    workersUnavailable = true;
+    markWorkersUnavailable();
     void loadHashWasm().catch(() => undefined);
   };
 }
@@ -257,7 +281,8 @@ export async function deriveArgon2id(params: Argon2Params): Promise<Uint8Array> 
       startSpare();
       return result;
     }
-    if (result === WORKER_FAILED) workersUnavailable = true;
+    if (result === WORKER_FAILED) markWorkersUnavailable();
+    else noteFallback('worker_error');
     if (startedIn !== generation) throw new KdfCancelledError();
   }
   return runOnMainThread(params, startedIn);
