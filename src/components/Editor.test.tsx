@@ -10,6 +10,7 @@ import { resetHeldSaves } from '../stores/heldSaves';
 import { createMockNote, createMockTag } from '../test/factories';
 import { useAuth } from '../contexts/AuthContext';
 import * as exportImport from '../utils/exportImport';
+import * as noteClipboard from '../utils/noteClipboard';
 
 const keyboardEditor = vi.hoisted(() => ({
   commands: { focus: vi.fn(), setContent: vi.fn() },
@@ -114,6 +115,8 @@ vi.mock('../utils/exportImport', () => ({
   exportNoteToMarkdown: vi.fn().mockReturnValue('# Test'),
   getSanitizedFilename: vi.fn().mockReturnValue('test'),
   downloadFile: vi.fn(),
+}));
+vi.mock('../utils/noteClipboard', () => ({
   copyNoteToClipboard: vi.fn().mockResolvedValue(undefined),
   copyNoteWithFormatting: vi.fn().mockResolvedValue(undefined),
 }));
@@ -602,7 +605,7 @@ describe('Editor', () => {
       await user.click(screen.getByLabelText('Share and export'));
       await user.click(screen.getByText('Copy as text'));
 
-      expect(exportImport.copyNoteToClipboard).toHaveBeenCalled();
+      expect(noteClipboard.copyNoteToClipboard).toHaveBeenCalled();
     });
 
     it('copies note with formatting', async () => {
@@ -612,7 +615,7 @@ describe('Editor', () => {
       await user.click(screen.getByLabelText('Share and export'));
       await user.click(screen.getByText('Copy with formatting'));
 
-      expect(exportImport.copyNoteWithFormatting).toHaveBeenCalled();
+      expect(noteClipboard.copyNoteWithFormatting).toHaveBeenCalled();
     });
 
     it('downloads markdown', async () => {
@@ -622,8 +625,10 @@ describe('Editor', () => {
       await user.click(screen.getByLabelText('Share and export'));
       await user.click(screen.getByText('Download (.md)'));
 
+      // The export code is a lazy chunk (shell-size plan A5), so the download follows
+      // a dynamic import.
+      await waitFor(() => expect(exportImport.downloadFile).toHaveBeenCalled());
       expect(exportImport.exportNoteToMarkdown).toHaveBeenCalled();
-      expect(exportImport.downloadFile).toHaveBeenCalled();
     });
 
     it('share option is visible with E2EE sharing enabled', async () => {
@@ -913,7 +918,7 @@ describe('Editor', () => {
       });
 
       await waitFor(() => {
-        expect(exportImport.copyNoteToClipboard).toHaveBeenCalled();
+        expect(noteClipboard.copyNoteToClipboard).toHaveBeenCalled();
       });
     });
 
@@ -1119,7 +1124,7 @@ describe('Editor', () => {
     await act(async () => { await Promise.resolve(); });
     fireEvent.click(screen.getByRole('button', { name: 'Copy', exact: true }));
     await act(async () => { await Promise.resolve(); });
-    expect(exportImport.copyNoteToClipboard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Rescue me' }));
+    expect(noteClipboard.copyNoteToClipboard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Rescue me' }));
     expect(screen.getByText('Copied')).toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
     expect(screen.queryByText('Copied')).not.toBeInTheDocument();
@@ -1129,7 +1134,7 @@ describe('Editor', () => {
   });
 
   it('says so when the clipboard refuses, keeping the draft and its actions on screen', async () => {
-    vi.mocked(exportImport.copyNoteToClipboard).mockRejectedValueOnce(new Error('Clipboard blocked'));
+    vi.mocked(noteClipboard.copyNoteToClipboard).mockRejectedValueOnce(new Error('Clipboard blocked'));
     render(<Editor {...defaultProps} onUpdate={vi.fn().mockRejectedValue(new Error('Disk unavailable'))} />);
     fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Rescue me' } });
     fireEvent.keyDown(window, { key: 'Escape' });
@@ -1143,7 +1148,7 @@ describe('Editor', () => {
 
   it('keeps the clipboard warning while background checkpoints keep failing', async () => {
     vi.useFakeTimers();
-    vi.mocked(exportImport.copyNoteToClipboard).mockRejectedValueOnce(new Error('Clipboard blocked'));
+    vi.mocked(noteClipboard.copyNoteToClipboard).mockRejectedValueOnce(new Error('Clipboard blocked'));
     render(<Editor {...defaultProps} onUpdate={vi.fn().mockRejectedValue(new Error('Disk unavailable'))} />);
     fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Rescue me' } });
     fireEvent.keyDown(window, { key: 'Escape' });
@@ -1954,7 +1959,7 @@ describe('Editor', () => {
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Copy me' } });
       fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Copy' }));
       await act(async () => { await Promise.resolve(); });
-      expect(exportImport.copyNoteToClipboard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Copy me' }));
+      expect(noteClipboard.copyNoteToClipboard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Copy me' }));
       expect(defaultProps.onBack).not.toHaveBeenCalled();
       expect(screen.getByTestId('released-draft-banner')).toBeInTheDocument();
     });
@@ -2015,7 +2020,7 @@ describe('Editor', () => {
     });
 
     it('starts the released banner without an earlier copy failure', async () => {
-      vi.mocked(exportImport.copyNoteToClipboard).mockRejectedValueOnce(new Error('denied'));
+      vi.mocked(noteClipboard.copyNoteToClipboard).mockRejectedValueOnce(new Error('denied'));
       const update = vi.fn().mockRejectedValue(new Error('offline'));
       const { rerender } = render(<Editor {...defaultProps} onUpdate={update} />);
       fireEvent.change(screen.getByDisplayValue('Test Note'), { target: { value: 'Words' } });

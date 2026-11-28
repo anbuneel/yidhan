@@ -11,22 +11,8 @@ import toast from 'react-hot-toast';
 import type { Note, Tag } from '../types';
 import type { DerivedKeys } from '../lib/encryption';
 import { KdfLoadError } from '../lib/argon2';
-import {
-  exportNotesToJSON,
-  downloadFile,
-  readFileAsText,
-  downloadMarkdownZip,
-  partitionExportableNotes,
-  describeOmittedNotes,
-  ValidationError,
-  MAX_IMPORT_FILE_SIZE,
-} from '../utils/exportImport';
-import {
-  BACKUP_FILE_EXTENSION,
-  BackupFormatError,
-  BackupPassphraseError,
-  openEncryptedBackup,
-} from '../utils/encryptedBackup';
+import { BACKUP_FILE_EXTENSION, MAX_IMPORT_FILE_SIZE } from '../utils/fileLimits';
+import { loadOnDemand } from '../utils/loadOnDemand';
 import type { NotesSync } from './useNotesSync';
 import type { ImportProgress } from '../components/ImportProgressOverlay';
 
@@ -58,6 +44,34 @@ export interface BackupRestore {
   onCancel: () => void;
 }
 
+// Export, import and backup code loads on the reader's click, not with the app shell
+// (shell-size plan A5). Each failure to load says so and suggests a reload; nothing
+// reloads by itself, because held saves live only in memory.
+const loadExportCode = () => loadOnDemand(() => import('../utils/exportImport'));
+const loadBackupCode = () => loadOnDemand(() => import('../utils/encryptedBackup'));
+const loadImportCode = () => loadOnDemand(() => import('../utils/importFile'));
+
+type ExportCode = Awaited<ReturnType<typeof loadExportCode>>;
+
+async function withExportCode(run: (code: ExportCode) => void): Promise<void> {
+  let code: ExportCode;
+  try {
+    code = await loadExportCode();
+  } catch (error) {
+    console.error('Export code failed to load:', error);
+    toast.error('Export could not load. Reload the page and try again.');
+    return;
+  }
+  run(code);
+}
+
+/** An export that quietly omits notes is worse than one that says it did (item 41). */
+function reportOmittedFromExport(code: ExportCode, noteList: Note[]) {
+  const { omittedCount } = code.partitionExportableNotes(noteList);
+  const message = code.describeOmittedNotes(omittedCount);
+  if (message) toast(message, { duration: 6000, icon: '\u26A0\uFE0F' });
+}
+
 export function useImport({
   userId,
   keys,
@@ -76,36 +90,31 @@ export function useImport({
   const [backupRestoreError, setBackupRestoreError] = useState<string | null>(null);
   const [isOpeningBackup, setIsOpeningBackup] = useState(false);
 
-  // An export that quietly omits notes is worse than one that says it did. A note whose
-  // ciphertext would not open has nothing to write, so it is left out and counted
-  // (item 41).
-  const reportOmittedFromExport = useCallback((noteList: Note[]) => {
-    const { omittedCount } = partitionExportableNotes(noteList);
-    const message = describeOmittedNotes(omittedCount);
-    if (message) toast(message, { duration: 6000, icon: '\u26A0\uFE0F' });
-  }, []);
-
   // Export to JSON
   const handleExportJSON = useCallback(() => {
-    const json = exportNotesToJSON(notes, tags);
-    const now = new Date();
-    const date = now.toISOString().split('T')[0];
-    const time = now.toTimeString().slice(0, 8).replace(/:/g, ''); // HHMMSS
-    downloadFile(json, `yidhan-backup-${date}-${time}.json`, 'application/json');
-    reportOmittedFromExport(notes);
-  }, [notes, tags, reportOmittedFromExport]);
+    void withExportCode((code) => {
+      const json = code.exportNotesToJSON(notes, tags);
+      const now = new Date();
+      const date = now.toISOString().split('T')[0];
+      const time = now.toTimeString().slice(0, 8).replace(/:/g, ''); // HHMMSS
+      code.downloadFile(json, `yidhan-backup-${date}-${time}.json`, 'application/json');
+      reportOmittedFromExport(code, notes);
+    });
+  }, [notes, tags]);
 
   // Export to Markdown
   const handleExportMarkdown = useCallback(() => {
-    // downloadMarkdownZip returns a promise, so a throw inside it arrives as a
-    // rejection rather than synchronously. Unhandled, the export would fail
-    // with no sign at all — the one outcome a backup must never have.
-    downloadMarkdownZip(notes).catch((error: unknown) => {
-      console.error('Markdown export failed:', error);
-      toast.error('Could not save the Markdown export');
+    void withExportCode((code) => {
+      // downloadMarkdownZip returns a promise, so a throw inside it arrives as a
+      // rejection rather than synchronously. Unhandled, the export would fail
+      // with no sign at all: the one outcome a backup must never have.
+      code.downloadMarkdownZip(notes).catch((error: unknown) => {
+        console.error('Markdown export failed:', error);
+        toast.error('Could not save the Markdown export');
+      });
+      reportOmittedFromExport(code, notes);
     });
-    reportOmittedFromExport(notes);
-  }, [notes, reportOmittedFromExport]);
+  }, [notes]);
 
   // Import file (JSON, Markdown, or a decrypted `.yidhan` payload)
   const handleImportFile = useCallback(async (file: File, decryptedBackup?: string) => {
@@ -143,8 +152,9 @@ export function useImport({
       // The parsing and writing load on demand: import is rare, and the app shell has
       // no room to spare (scripts/bundle-budget.json).
       let importFile: typeof import('../utils/importFile').importFile;
+      let ValidationError: typeof import('../utils/exportImport').ValidationError;
       try {
-        ({ importFile } = await import('../utils/importFile'));
+        [{ importFile }, { ValidationError }] = await Promise.all([loadImportCode(), loadExportCode()]);
       } catch (error) {
         // The code did not load (often an app update mid-session). Nothing was written.
         // No automatic reload: held saves live only in memory.
@@ -152,15 +162,17 @@ export function useImport({
         toast.error('Import could not load. Reload the page and try again.');
         return;
       }
-      await importFile(file, decryptedBackup, {
-        userId, keys, tags, setTags, setImportProgress, reloadAfterImport,
-      });
-    } catch (error) {
-      console.error('Import failed:', error);
-      if (error instanceof ValidationError) {
-        toast.error(`Import failed: ${error.message}`);
-      } else {
-        toast.error('Failed to import file. Please check the file format.');
+      try {
+        await importFile(file, decryptedBackup, {
+          userId, keys, tags, setTags, setImportProgress, reloadAfterImport,
+        });
+      } catch (error) {
+        console.error('Import failed:', error);
+        if (error instanceof ValidationError) {
+          toast.error(`Import failed: ${error.message}`);
+        } else {
+          toast.error('Failed to import file. Please check the file format.');
+        }
       }
     } finally {
       setImportProgress(null);
@@ -176,15 +188,22 @@ export function useImport({
 
     setIsOpeningBackup(true);
     setBackupRestoreError(null);
+    let backup: Awaited<ReturnType<typeof loadBackupCode>> | null = null;
     try {
-      const payload = await openEncryptedBackup(await readFileAsText(file), passphrase);
+      const [loadedBackup, { readFileAsText }] = await Promise.all([loadBackupCode(), loadExportCode()]);
+      backup = loadedBackup;
+      const payload = await backup.openEncryptedBackup(await readFileAsText(file), passphrase);
       setPendingBackupFile(null);
       await handleImportFile(file, payload);
     } catch (error) {
       // A damaged file and a wrong passphrase are different problems, and only one of
-      // them is something the reader can do anything about. Say which.
-      const message =
-        error instanceof BackupFormatError || error instanceof BackupPassphraseError || error instanceof KdfLoadError
+      // them is something the reader can do anything about. Say which. Code that did
+      // not load is a third, and a reload fixes it.
+      const message = !backup
+        ? 'The backup code could not load. Reload the page and try again.'
+        : error instanceof backup.BackupFormatError ||
+            error instanceof backup.BackupPassphraseError ||
+            error instanceof KdfLoadError
           ? error.message
           : 'That backup could not be opened.';
       console.error('Failed to open backup:', error);

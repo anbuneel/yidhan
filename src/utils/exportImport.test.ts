@@ -4,7 +4,6 @@ import {
   exportNotesToJSON,
   parseImportedJSON,
   htmlToMarkdown,
-  markdownToHtml,
   parseMultiNoteMarkdown,
   exportNoteToJSON,
   exportNoteToMarkdown,
@@ -12,11 +11,6 @@ import {
   downloadMarkdownZip,
   readFileAsText,
   getSanitizedFilename,
-  formatNoteForClipboard,
-  formatNoteForClipboardHtml,
-  htmlToPlainText,
-  copyNoteToClipboard,
-  copyNoteWithFormatting,
   downloadFile,
   ValidationError,
   MAX_IMPORT_NOTES,
@@ -26,6 +20,14 @@ import {
   partitionExportableNotes,
   describeOmittedNotes,
 } from './exportImport';
+import { markdownToHtml } from './markdownToHtml';
+import {
+  copyNoteToClipboard,
+  copyNoteWithFormatting,
+  formatNoteForClipboard,
+  formatNoteForClipboardHtml,
+  htmlToPlainText,
+} from './noteClipboard';
 import type { Note } from '../types';
 import { createMockNote, createMockTag } from '../test/factories';
 

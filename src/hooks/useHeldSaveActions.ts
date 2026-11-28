@@ -11,7 +11,7 @@ import { noteSaveQueue } from '../stores/noteSaveQueue';
 import { retryHeldSave } from '../utils/retryHeldSave';
 import { VaultLockedSaveError } from '../utils/saveErrors';
 import { keepReleasedDraft } from '../utils/keepReleasedDraft';
-import { copyNoteToClipboard } from '../utils/exportImport';
+import { copyNoteToClipboard } from '../utils/noteClipboard';
 import { withNotesFirst } from '../utils/notesFirst';
 import type { UpdateNotes } from './useNotesSync';
 

@@ -12,9 +12,9 @@ import type { DerivedKeys } from '../lib/encryption';
 import {
   parseImportedJSON,
   readFileAsText,
-  markdownToHtml,
   parseMultiNoteMarkdown,
 } from './exportImport';
+import { markdownToHtml } from './markdownToHtml';
 import { sanitizeHtml } from './sanitize';
 import { createEncryptedNote, createEncryptedNotesBatch } from '../services/encryptedNotes';
 import { addTagToNoteOffline } from '../services/offlineNotes';
