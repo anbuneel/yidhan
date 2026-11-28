@@ -454,6 +454,7 @@ nav,
 }
 
 /* Search snippet highlighting */
+.note-card mark,
 .note-card-entrance mark {
   background: var(--color-accent-glow);
   color: var(--color-text-primary);
