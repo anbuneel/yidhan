@@ -348,6 +348,62 @@ describe('NoteCard sanitization per render mode (C2)', () => {
   });
 });
 
+describe('NoteCard compact preview (F2)', () => {
+  function compactText(content: string): string {
+    const note = createMockNote({ id: 'f2', content });
+    const { container, unmount } = render(
+      <NoteCard note={note} onClick={vi.fn()} onDelete={vi.fn()} onTogglePin={vi.fn()} isCompact />
+    );
+    const text = container.querySelector('p.truncate')?.textContent ?? '';
+    unmount();
+    return text;
+  }
+
+  // What main showed: the first 80 characters of the whole note's plain text.
+  function mainCompactText(content: string): string {
+    const plain = sanitize.htmlToPlainText(content);
+    return plain.slice(0, 80) + (plain.length > 80 ? '...' : '');
+  }
+
+  it('shows every line of a note made of 14 short lines, as main does', () => {
+    const content = Array.from({ length: 14 }, (_, i) => `<p>item${i}</p>`).join('');
+    const text = compactText(content);
+    expect(text).toBe(mainCompactText(content));
+    expect(text).toContain('item13');
+    expect(text.endsWith('...')).toBe(false);
+  });
+
+  it('does not add an ellipsis to a short note that was not cut', () => {
+    const content = '<p>Milk</p><p>Eggs</p><p>Bread</p>';
+    expect(compactText(content)).toBe('MilkEggsBread');
+  });
+
+  it('adds an ellipsis when a note of many short lines is cut', () => {
+    const content = Array.from({ length: 60 }, (_, i) => `<p>line ${i}</p>`).join('');
+    const text = compactText(content);
+    expect(text).toBe(mainCompactText(content));
+    expect(text.endsWith('...')).toBe(true);
+  });
+
+  it('adds an ellipsis when one long paragraph is cut', () => {
+    const content = `<p>${'word '.repeat(400)}</p>`;
+    const text = compactText(content);
+    expect(text).toBe(mainCompactText(content));
+    expect(text.endsWith('...')).toBe(true);
+  });
+
+  it('matches main for a long task list', () => {
+    const content =
+      '<ul data-type="taskList">' +
+      Array.from(
+        { length: 30 },
+        (_, i) => `<li data-checked="false" data-type="taskItem"><label><input type="checkbox"><span></span></label><div><p>t${i}</p></div></li>`
+      ).join('') +
+      '</ul>';
+    expect(compactText(content)).toBe(mainCompactText(content));
+  });
+});
+
 describe('NoteCard preview block truncation (C3)', () => {
   it('does not truncate short notes and preserves their full visible text', () => {
     const htmlSpy = vi.spyOn(sanitize, 'sanitizeHtml');

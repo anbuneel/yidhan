@@ -20,10 +20,33 @@ interface NoteCardProps {
   isFocused?: boolean;
 }
 
-const PREVIEW_MAX_BLOCKS = 8;
-const PREVIEW_MAX_TOTAL_BLOCKS = 20;
-const PREVIEW_MAX_TEXT_CHARS = 800;
-const PREVIEW_HARD_TEXT_CHARS = 1200;
+interface PreviewLimits {
+  /** Stop at a block boundary after this many blocks with text. */
+  maxBlocks: number;
+  /** Stop at a block boundary after this many blocks, empty ones included. */
+  maxTotalBlocks: number;
+  /** Stop at a block boundary once this much text has been read. */
+  maxTextChars: number;
+  /** Cut inside a block (at a word end) once this much text has been read. */
+  hardTextChars: number;
+}
+
+/** Full cards clip at 8em, so a few blocks are always enough. */
+const FULL_PREVIEW_LIMITS: PreviewLimits = {
+  maxBlocks: 8,
+  maxTotalBlocks: 20,
+  maxTextChars: 800,
+  hardTextChars: 1200,
+};
+
+/** Compact cards show the first 80 characters of plain text, however many lines that is. */
+const COMPACT_PREVIEW_CHARS = 80;
+const COMPACT_PREVIEW_LIMITS: PreviewLimits = {
+  maxBlocks: Infinity,
+  maxTotalBlocks: Infinity,
+  maxTextChars: COMPACT_PREVIEW_CHARS + 1,
+  hardTextChars: COMPACT_PREVIEW_CHARS + 200,
+};
 
 const VOID_HTML_TAGS = new Set([
   'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
@@ -61,8 +84,12 @@ function closeOpenTags(openStack: string[]): string {
  * previews do not parse and mount an entire multi-thousand-word document only
  * to clip it at 8em. The returned fragment must still pass through sanitizeHtml.
  */
-function truncateHtmlForPreview(html: string): string {
-  if (!html) return html;
+function truncateHtmlForPreview(
+  html: string,
+  limits: PreviewLimits = FULL_PREVIEW_LIMITS
+): { html: string; truncated: boolean } {
+  if (!html) return { html, truncated: false };
+  const cut = (fragment: string) => ({ html: fragment, truncated: true });
 
   const openStack: string[] = [];
   const countedInsideContainer: boolean[] = [];
@@ -126,11 +153,11 @@ function truncateHtmlForPreview(html: string): string {
           if (
             openStack.length === 0 &&
             nextPos < html.length &&
-            (nonEmptyBlocks >= PREVIEW_MAX_BLOCKS ||
-              totalBlocks >= PREVIEW_MAX_TOTAL_BLOCKS ||
-              textChars >= PREVIEW_MAX_TEXT_CHARS)
+            (nonEmptyBlocks >= limits.maxBlocks ||
+              totalBlocks >= limits.maxTotalBlocks ||
+              textChars >= limits.maxTextChars)
           ) {
-            return html.slice(0, nextPos);
+            return cut(html.slice(0, nextPos));
           }
         } else if (!isSelfClosing) {
           openStack.push(tagName);
@@ -183,11 +210,11 @@ function truncateHtmlForPreview(html: string): string {
       if (
         isSafeBoundary &&
         nextPos < html.length &&
-        (nonEmptyBlocks >= PREVIEW_MAX_BLOCKS ||
-          totalBlocks >= PREVIEW_MAX_TOTAL_BLOCKS ||
-          textChars >= PREVIEW_MAX_TEXT_CHARS)
+        (nonEmptyBlocks >= limits.maxBlocks ||
+          totalBlocks >= limits.maxTotalBlocks ||
+          textChars >= limits.maxTextChars)
       ) {
-        return html.slice(0, nextPos) + closeOpenTags(openStack);
+        return cut(html.slice(0, nextPos) + closeOpenTags(openStack));
       }
 
       i = nextPos;
@@ -223,21 +250,21 @@ function truncateHtmlForPreview(html: string): string {
         pos += 1;
       }
 
-      if (textChars >= PREVIEW_HARD_TEXT_CHARS && pos < html.length) {
+      if (textChars >= limits.hardTextChars && pos < html.length) {
         // Advance slightly to finish the current word without crossing a tag or entity.
-        let cut = pos;
+        let wordEnd = pos;
         const limit = Math.min(textEnd, pos + 40);
-        while (cut < limit && html[cut] > ' ' && html[cut] !== '&') {
-          cut += 1;
+        while (wordEnd < limit && html[wordEnd] > ' ' && html[wordEnd] !== '&') {
+          wordEnd += 1;
         }
-        return html.slice(0, cut) + closeOpenTags(openStack);
+        return cut(html.slice(0, wordEnd) + closeOpenTags(openStack));
       }
     }
 
     i = textEnd;
   }
 
-  return html;
+  return { html, truncated: false };
 }
 
 type OverflowListener = (isOverflowing: boolean) => void;
@@ -365,17 +392,18 @@ export const NoteCard = memo(function NoteCard({
   // Run DOMPurify only for what this render mode needs: compact cards and
   // search results need plain text; full cards without a search snippet need HTML.
   // Outside search, slice long notes on block boundaries before sanitising.
+  // Compact cards cut by text length only, never by block count, so a note of
+  // many short lines shows the same 80 characters it always did.
   const needsPlainText = isCompact || hasSearchTerms;
-  const plainText = useMemo(
-    () => (
-      needsPlainText
-        ? htmlToPlainText(hasSearchTerms ? note.content : truncateHtmlForPreview(note.content))
-        : ''
-    ),
-    [needsPlainText, hasSearchTerms, note.content]
-  );
+  const { plainText, plainTextTruncated } = useMemo(() => {
+    if (!needsPlainText) return { plainText: '', plainTextTruncated: false };
+    if (hasSearchTerms) return { plainText: htmlToPlainText(note.content), plainTextTruncated: false };
+    const preview = truncateHtmlForPreview(note.content, COMPACT_PREVIEW_LIMITS);
+    return { plainText: htmlToPlainText(preview.html), plainTextTruncated: preview.truncated };
+  }, [needsPlainText, hasSearchTerms, note.content]);
   const compactPreview = isCompact
-    ? plainText.slice(0, 80) + (plainText.length > 80 ? '...' : '')
+    ? plainText.slice(0, COMPACT_PREVIEW_CHARS) +
+      (plainText.length > COMPACT_PREVIEW_CHARS || plainTextTruncated ? '...' : '')
     : '';
   // Search snippets cover every content match. Operators are metadata filters,
   // so only the parsed free-text remainder is highlighted.
@@ -386,7 +414,7 @@ export const NoteCard = memo(function NoteCard({
   const needsHtmlPreview = !isCompact && !searchSnippet;
   // Sanitized HTML preview preserves task list checkboxes, formatting structure
   const htmlPreview = useMemo(
-    () => (needsHtmlPreview ? sanitizeHtml(truncateHtmlForPreview(note.content)) : ''),
+    () => (needsHtmlPreview ? sanitizeHtml(truncateHtmlForPreview(note.content).html) : ''),
     [needsHtmlPreview, note.content]
   );
   const highlightedTitle = useMemo(() => {
