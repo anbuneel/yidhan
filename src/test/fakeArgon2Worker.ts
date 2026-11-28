@@ -17,6 +17,8 @@ export class FakeArgon2Worker {
   static hold = false;
   /** When set, the next workers fail to construct with this error. */
   static throwOnCreate: Error | null = null;
+  /** When true, a request makes the worker fail, as one whose file a deploy removed. */
+  static failOnPost = false;
 
   onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
   onerror: ((event: ErrorEvent) => void) | null = null;
@@ -33,6 +35,10 @@ export class FakeArgon2Worker {
 
   postMessage(data: unknown, transfer: Transferable[] = []): void {
     this.posted.push({ data, transfer });
+    if (FakeArgon2Worker.failOnPost) {
+      setTimeout(() => this.fail(), 0);
+      return;
+    }
     // A structured clone, roughly: the worker gets its own salt buffer.
     const request = data as Record<string, unknown>;
     const copy = { ...request, salt: new Uint8Array(request.salt as Uint8Array) };
@@ -78,6 +84,7 @@ export class FakeArgon2Worker {
 /** Route Argon2id through fake workers until resetFakeArgon2Worker(). */
 export function installFakeArgon2Worker(): void {
   FakeArgon2Worker.instances = [];
+  FakeArgon2Worker.failOnPost = false;
   FakeArgon2Worker.hold = false;
   FakeArgon2Worker.throwOnCreate = null;
   setArgon2WorkerFactoryForTests(() => new FakeArgon2Worker() as unknown as Worker);
@@ -86,6 +93,7 @@ export function installFakeArgon2Worker(): void {
 /** Back to jsdom's default: no Worker, so the main-thread fallback. */
 export function resetFakeArgon2Worker(): void {
   FakeArgon2Worker.hold = false;
+  FakeArgon2Worker.failOnPost = false;
   FakeArgon2Worker.throwOnCreate = null;
   setArgon2WorkerFactoryForTests(null);
   FakeArgon2Worker.instances = [];

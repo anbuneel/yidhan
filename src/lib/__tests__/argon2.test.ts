@@ -81,6 +81,7 @@ beforeEach(async () => {
   FakeArgon2Worker.instances = [];
   FakeArgon2Worker.hold = false;
   FakeArgon2Worker.throwOnCreate = null;
+  FakeArgon2Worker.failOnPost = false;
 });
 
 afterEach(() => {
@@ -159,14 +160,37 @@ describe('the worker path', () => {
     expect(used()).toEqual(FakeArgon2Worker.instances.slice(0, 2));
   });
 
-  it('preloadArgon2 starts an empty worker, not the main-thread chunk', async () => {
+  it('preloadArgon2 starts an empty worker and loads the fallback chunk once', async () => {
     const { deriveArgon2id, preloadArgon2 } = await freshArgon2();
     preloadArgon2();
     expect(FakeArgon2Worker.instances).toHaveLength(1);
     expect(FakeArgon2Worker.instances[0].posted).toHaveLength(0);
+    await vi.waitFor(() => expect(loadState.loads).toBe(1));
     await deriveArgon2id(CHEAP);
     expect(used()).toEqual([FakeArgon2Worker.instances[0]]);
-    expect(loadState.loads).toBe(0);
+    expect(loadState.loads).toBe(1);
+  });
+
+  it('re-arms the spare at once, so a second derivation in the same unlock takes it', async () => {
+    const { deriveArgon2id } = await freshArgon2();
+    await deriveArgon2id(CHEAP);
+    expect(FakeArgon2Worker.instances).toHaveLength(2);
+    await deriveArgon2id(CHEAP);
+    expect(used()).toEqual(FakeArgon2Worker.instances.slice(0, 2));
+  });
+
+  it('after a deploy removes the worker file and the chunk URL, the next derivation uses the warmed chunk', async () => {
+    const { deriveArgon2id, preloadArgon2 } = await freshArgon2();
+    preloadArgon2();
+    await vi.waitFor(() => expect(loadState.loads).toBe(1));
+    const expected = await deriveArgon2id(CHEAP);
+    expect(used()).toHaveLength(1);
+
+    // Deploy: every worker now fails to load, and so would a fresh chunk import.
+    FakeArgon2Worker.failOnPost = true;
+    loadState.failures = 99;
+    await expect(deriveArgon2id(CHEAP)).resolves.toEqual(expected);
+    expect(loadState.loads).toBe(1);
   });
 
   it('a spare that fails to load is dropped and the fallback chunk is warmed', async () => {

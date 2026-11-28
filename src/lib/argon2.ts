@@ -5,8 +5,13 @@
 // The derivation runs in a Web Worker (src/lib/argon2.worker.ts), so the unlock
 // screen stays live for the second or more it takes. Each worker runs one
 // derivation and is then terminated, which also frees its 64 MB of wasm memory. A
-// fresh, empty worker is started on idle (preloadArgon2) so the next unlock does not
-// wait for one, and so its code is loaded before a deploy can remove the file.
+// fresh, empty worker is started on idle (preloadArgon2), and again straight after
+// each derivation, so the next one does not wait for a worker to start.
+//
+// A deploy can remove the worker file mid-session. A worker started after that fails
+// to load, so preloadArgon2 also loads the main-thread fallback chunk: it is then in
+// the module registry for the life of the tab, and a fallback after a deploy needs
+// no fetch. Loading it allocates no wasm memory until a derivation runs.
 //
 // Fallback: when a worker cannot be created, fails to load, or reports an error, the
 // same derivation runs on the main thread through ./argon2Wasm, loaded with import()
@@ -137,14 +142,6 @@ function startSpare(): void {
   };
 }
 
-function startSpareWhenIdle(): void {
-  if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
-    window.requestIdleCallback(startSpare, { timeout: 5000 });
-  } else {
-    setTimeout(startSpare, 0);
-  }
-}
-
 function runInWorker(worker: Worker, params: Argon2Params): Promise<Uint8Array | typeof FALLBACK> {
   return new Promise((resolve, reject) => {
     const id = nextRequestId++;
@@ -236,7 +233,9 @@ export async function deriveArgon2id(params: Argon2Params): Promise<Uint8Array> 
   const worker = takeWorker();
   if (worker) {
     const result = await runInWorker(worker, params);
-    startSpareWhenIdle();
+    // Now, not on idle: a vault unlock with a wrong passphrase runs a second
+    // derivation (the legacy fields) straight after the first.
+    startSpare();
     if (result !== FALLBACK) {
       if (startedIn !== generation) {
         result.fill(0);
@@ -260,9 +259,11 @@ export function cancelArgon2Derivations(): void {
 }
 
 /**
- * Start an empty worker now, so a later unlock does not wait on it. Without Worker
- * support, fetch the fallback chunk instead. A failure is ignored here.
+ * Start an empty worker now, so a later unlock does not wait on it, and load the
+ * main-thread fallback chunk, so a fallback after a deploy needs no fetch. A failure
+ * is ignored here.
  */
 export function preloadArgon2(): void {
   startSpare();
+  void loadHashWasm().catch(() => undefined);
 }
