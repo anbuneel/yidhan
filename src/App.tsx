@@ -5,6 +5,7 @@ import { FadedNotesScreen } from './components/FadedNotesScreen';
 import { NoteEditorView } from './components/NoteEditorView';
 import { AppModals } from './components/AppModals';
 import { renderEntryScreen } from './components/entryScreens';
+import { Auth as AuthScreen } from './components/entryScreenChunks';
 import { renderAccountGate } from './components/accountGates';
 import { LoadingFallback } from './components/LoadingFallback';
 import { LIBRARY_SEARCH_INPUT_ID, scheduleSearchFocus } from './utils/searchFocus';
@@ -217,6 +218,12 @@ function App({ fromPublicShell = false, initialAuthModal }: AppProps = {}) {
       replaceRoute({ name: 'library' });
     }
   }, [isDemo, user, replaceRoute]);
+
+  // Signed out, sign-in or sign-up is the likely next step (the Practice Space offers
+  // both). Warm the Auth chunk so the modal opens without waiting (shell-size plan A2).
+  useEffect(() => {
+    if (!authLoading && !user) void AuthScreen.preload();
+  }, [authLoading, user]);
 
   useEffect(() => {
     if (user && isEncryptionSetup && isUnlocked && view === 'library') {

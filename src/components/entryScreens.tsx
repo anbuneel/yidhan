@@ -1,14 +1,12 @@
 import { Suspense, type ReactNode } from 'react';
 import type { Theme } from '../types';
 import { isPublicPageRoute, type Route } from '../routing';
-import { Auth } from './Auth';
 import { LandingPage } from './LandingPage';
-import { NotFoundPage } from './NotFoundPage';
 import { PublicPage, type PublicPageNav } from './PublicPage';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingFallback } from './LoadingFallback';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
-import { DemoPage } from '../pages/DemoPage';
+import { Auth, DemoPage, NotFoundPage } from './entryScreenChunks';
 
 const SharedNoteView = lazyWithRetry(() =>
   import('./SharedNoteView').then((m) => ({ default: m.SharedNoteView }))
@@ -71,25 +69,35 @@ export function renderEntryScreen({
   onSettingsClick,
   authModal: authModalState,
 }: EntryScreenProps): ReactNode | null {
+  // Auth is a lazy chunk. Root starts its fetch when sign-in is clicked, beside the app
+  // shell's, so the modal usually renders at once; if not, it appears when it arrives.
   const authModal = authModalState.isOpen ? (
-    <Auth
-      theme={theme}
-      onThemeToggle={onThemeToggle}
-      initialMode={authModalState.mode}
-      isModal
-      onClose={authModalState.onClose}
-    />
+    <ErrorBoundary>
+      <Suspense fallback={null}>
+        <Auth
+          theme={theme}
+          onThemeToggle={onThemeToggle}
+          initialMode={authModalState.mode}
+          isModal
+          onClose={authModalState.onClose}
+        />
+      </Suspense>
+    </ErrorBoundary>
   ) : null;
 
   // A recovery link wins over everything, even an authenticated session.
   if (isPasswordRecovery) {
     return (
-      <Auth
-        theme={theme}
-        onThemeToggle={onThemeToggle}
-        initialMode="reset"
-        onPasswordResetComplete={onPasswordResetComplete}
-      />
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback />}>
+          <Auth
+            theme={theme}
+            onThemeToggle={onThemeToggle}
+            initialMode="reset"
+            onPasswordResetComplete={onPasswordResetComplete}
+          />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 

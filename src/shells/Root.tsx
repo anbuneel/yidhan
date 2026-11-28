@@ -12,12 +12,26 @@
 
 import { Suspense, startTransition, useCallback, useEffect, useState } from 'react';
 import { isSupabaseSessionKey, readGateInput, shouldStartApp } from '../appGate';
+import { Auth, DemoPage, NotFoundPage } from '../components/entryScreenChunks';
 import { LoadingFallback } from '../components/LoadingFallback';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
+import { parseRoute } from '../routing/routes';
 import { markAppShellStarted } from './appShellStarted';
 import { PublicShell, type AppStart } from './PublicShell';
 
 const AppShell = lazyWithRetry(() => import('./AppShell'));
+
+/**
+ * Starts the fetch for the signed-out screen the app shell is about to show, beside
+ * the app shell's own fetch, so it is there when the shell renders and does not flash
+ * a fallback (shell-size plan A2). Signed-in readers never need these chunks.
+ */
+function preloadEntryScreen(start: AppStart) {
+  if (start.authModal || /(^|[#&?])type=recovery(&|$)/.test(window.location.hash)) void Auth.preload();
+  const route = parseRoute(window.location.pathname, { allowPlayground: import.meta.env.DEV });
+  if (route.name === 'demo') void DemoPage.preload();
+  else if (route.name === 'notFound') void NotFoundPage.preload();
+}
 
 /** Stops the landing hero replaying its entrance when the app shell remounts it. */
 export const LANDING_HANDOFF_CLASS = 'landing-handoff';
@@ -32,9 +46,17 @@ export function Root() {
     if (started) markAppShellStarted();
   }, [started]);
 
+  // A load that starts in the app shell (a direct visit to /demo, a 404, a recovery
+  // link) warms its screen at once. Later starts warm it in startApp.
+  const [initialStart] = useState(start);
+  useEffect(() => {
+    if (initialStart) preloadEntryScreen(initialStart);
+  }, [initialStart]);
+
   const startApp = useCallback((next: AppStart) => {
     // Only sign-in and sign-up remount the landing page under the auth modal.
     if (next.authModal) document.documentElement.classList.add(LANDING_HANDOFF_CLASS);
+    preloadEntryScreen(next);
     startTransition(() => {
       // Once started, the app shell owns every route; a second request changes nothing.
       setStart((current) => current ?? next);
